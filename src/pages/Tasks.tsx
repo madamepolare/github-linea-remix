@@ -61,19 +61,20 @@ export default function Tasks() {
               </Button>
             </>
           }
-        >
-          {view !== "archive" && (
-            <TaskFilters
-              status={statusFilter}
-              priority={priorityFilter}
-              assignee={assigneeFilter}
-              onStatusChange={setStatusFilter}
-              onPriorityChange={setPriorityFilter}
-              onAssigneeChange={setAssigneeFilter}
-              onClearAll={clearFilters}
-            />
-          )}
-        </PageHeader>
+          filters={
+            view !== "archive" ? (
+              <TaskFilters
+                status={statusFilter}
+                priority={priorityFilter}
+                assignee={assigneeFilter}
+                onStatusChange={setStatusFilter}
+                onPriorityChange={setPriorityFilter}
+                onAssigneeChange={setAssigneeFilter}
+                onClearAll={clearFilters}
+              />
+            ) : undefined
+          }
+        />
 
         {/* Content */}
         <div className="flex-1 overflow-auto p-6">
