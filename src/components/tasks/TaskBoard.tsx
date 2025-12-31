@@ -3,9 +3,10 @@ import { useTasks, Task } from "@/hooks/useTasks";
 import { TaskCard } from "./TaskCard";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, MoreHorizontal } from "lucide-react";
+import { Plus, MoreHorizontal, CheckSquare } from "lucide-react";
 
 const COLUMNS: { id: Task["status"]; label: string; icon?: string }[] = [
   { id: "todo", label: "To Do" },
@@ -17,9 +18,10 @@ const COLUMNS: { id: Task["status"]; label: string; icon?: string }[] = [
 interface TaskBoardProps {
   statusFilter?: string | null;
   priorityFilter?: string | null;
+  onCreateTask?: () => void;
 }
 
-export function TaskBoard({ statusFilter, priorityFilter }: TaskBoardProps) {
+export function TaskBoard({ statusFilter, priorityFilter, onCreateTask }: TaskBoardProps) {
   const { tasks, isLoading, updateTaskStatus } = useTasks();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -69,6 +71,19 @@ export function TaskBoard({ statusFilter, priorityFilter }: TaskBoardProps) {
           </div>
         ))}
       </div>
+    );
+  }
+
+  // Check if all tasks are empty
+  const totalTasks = tasks?.length || 0;
+  if (totalTasks === 0 && !statusFilter && !priorityFilter) {
+    return (
+      <EmptyState
+        icon={CheckSquare}
+        title="Aucune tâche"
+        description="Créez votre première tâche pour commencer à organiser votre travail."
+        action={onCreateTask ? { label: "Créer une tâche", onClick: onCreateTask } : undefined}
+      />
     );
   }
 

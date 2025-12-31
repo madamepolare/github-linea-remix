@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,7 @@ import {
   Pencil,
   Trash2,
   Eye,
+  Users,
 } from "lucide-react";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { ContactDetailSheet } from "./ContactDetailSheet";
@@ -77,6 +79,22 @@ export function CRMContactsTable({ onCreateContact }: CRMContactsTableProps) {
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show empty state when no contacts exist at all
+  if (contacts.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <EmptyState
+            icon={Users}
+            title="Aucun contact"
+            description="Ajoutez votre premier contact pour commencer à gérer vos relations clients."
+            action={{ label: "Créer un contact", onClick: onCreateContact }}
+          />
         </CardContent>
       </Card>
     );

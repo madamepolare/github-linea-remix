@@ -77,7 +77,11 @@ export default function Tasks() {
         }
       >
         {view === "board" && (
-          <TaskBoard statusFilter={statusFilter} priorityFilter={priorityFilter} />
+          <TaskBoard 
+            statusFilter={statusFilter} 
+            priorityFilter={priorityFilter} 
+            onCreateTask={() => setCreateOpen(true)}
+          />
         )}
         {view === "list" && <TaskListView />}
         {view === "archive" && <TaskArchiveView />}
