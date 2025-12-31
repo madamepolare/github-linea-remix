@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -20,6 +20,8 @@ import {
   Search,
   Bell,
   Plus,
+  LogOut,
+  ChevronsUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItem {
   title: string;
@@ -68,6 +79,8 @@ export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, activeWorkspace, workspaces, signOut, setActiveWorkspace } = useAuth();
 
   const toggleExpanded = (title: string) => {
     setExpandedItems((prev) =>
@@ -81,6 +94,24 @@ export function AppSidebar() {
     if (href === "/") return location.pathname === "/";
     return location.pathname.startsWith(href);
   };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
+
+  const handleWorkspaceSwitch = async (workspaceId: string) => {
+    await setActiveWorkspace(workspaceId);
+  };
+
+  const userInitials = profile?.full_name
+    ? profile.full_name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : user?.email?.slice(0, 2).toUpperCase() || "??";
 
   const NavItemComponent = ({ item }: { item: NavItem }) => {
     const active = isActive(item.href);
@@ -223,6 +254,50 @@ export function AppSidebar() {
         </Button>
       </div>
 
+      {/* Workspace Switcher */}
+      {!collapsed && activeWorkspace && (
+        <div className="px-4 py-3 border-b border-sidebar-border">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex w-full items-center gap-3 rounded-lg bg-sidebar-accent/50 px-3 py-2 text-left transition-colors hover:bg-sidebar-accent">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary/20 text-sidebar-primary font-semibold text-sm">
+                  {activeWorkspace.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">
+                    {activeWorkspace.name}
+                  </p>
+                  <p className="text-xs text-sidebar-foreground/60 capitalize">
+                    {activeWorkspace.plan} plan
+                  </p>
+                </div>
+                <ChevronsUpDown className="h-4 w-4 text-sidebar-foreground/50" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {workspaces.map((workspace) => (
+                <DropdownMenuItem
+                  key={workspace.id}
+                  onClick={() => handleWorkspaceSwitch(workspace.id)}
+                  className={cn(
+                    workspace.id === activeWorkspace.id && "bg-muted"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10 text-xs font-semibold text-primary">
+                      {workspace.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span>{workspace.name}</span>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+
       {/* Search */}
       {!collapsed && (
         <div className="px-4 py-3">
@@ -267,35 +342,51 @@ export function AppSidebar() {
 
       {/* User Profile */}
       <div className="border-t border-sidebar-border p-3">
-        <div
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-sidebar-accent cursor-pointer",
-            collapsed && "justify-center px-0"
-          )}
-        >
-          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-sidebar-primary to-accent flex items-center justify-center text-sm font-semibold text-sidebar-primary-foreground">
-            JD
-          </div>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">
-                Jean Dupont
-              </p>
-              <p className="text-xs text-sidebar-foreground/60 truncate">
-                Studio Arc
-              </p>
-            </div>
-          )}
-          {!collapsed && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 shrink-0 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-sidebar-accent cursor-pointer",
+                collapsed && "justify-center px-0"
+              )}
             >
-              <Bell className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-sidebar-primary to-accent flex items-center justify-center text-sm font-semibold text-sidebar-primary-foreground">
+                {userInitials}
+              </div>
+              {!collapsed && (
+                <>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-medium text-sidebar-foreground truncate">
+                      {profile?.full_name || "User"}
+                    </p>
+                    <p className="text-xs text-sidebar-foreground/60 truncate">
+                      {profile?.job_title || user?.email}
+                    </p>
+                  </div>
+                  <Bell className="h-4 w-4 shrink-0 text-sidebar-foreground/60" />
+                </>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div>
+                <p className="font-medium">{profile?.full_name || "User"}</p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate("/settings")}>
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </motion.aside>
   );
