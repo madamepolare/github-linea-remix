@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTasks, Task } from "@/hooks/useTasks";
 import { TaskCard } from "./TaskCard";
 import { TaskDetailSheet } from "./TaskDetailSheet";
+import { QuickTaskRow } from "./QuickTaskRow";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -12,7 +13,12 @@ const COLUMNS: { id: Task["status"]; label: string; color: string }[] = [
   { id: "done", label: "Terminé", color: "bg-green-500/20" },
 ];
 
-export function TaskBoard() {
+interface TaskBoardProps {
+  statusFilter?: string | null;
+  priorityFilter?: string | null;
+}
+
+export function TaskBoard({ statusFilter, priorityFilter }: TaskBoardProps) {
   const { tasks, isLoading, updateTaskStatus } = useTasks();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -40,8 +46,23 @@ export function TaskBoard() {
   };
 
   const getTasksByStatus = (status: Task["status"]) => {
-    return tasks?.filter((task) => task.status === status) || [];
+    let filtered = tasks?.filter((task) => task.status === status) || [];
+    
+    // Apply filters
+    if (statusFilter && statusFilter !== status) {
+      return [];
+    }
+    if (priorityFilter) {
+      filtered = filtered.filter((task) => task.priority === priorityFilter);
+    }
+    
+    return filtered;
   };
+
+  // If status filter is active, only show that column
+  const columnsToShow = statusFilter 
+    ? COLUMNS.filter(col => col.id === statusFilter)
+    : COLUMNS;
 
   if (isLoading) {
     return (
@@ -59,8 +80,11 @@ export function TaskBoard() {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 h-full">
-        {COLUMNS.map((column) => {
+      <div className={cn(
+        "grid gap-4 h-full",
+        statusFilter ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+      )}>
+        {columnsToShow.map((column) => {
           const columnTasks = getTasksByStatus(column.id);
           return (
             <div
@@ -98,6 +122,9 @@ export function TaskBoard() {
                     <TaskCard task={task} onClick={() => setSelectedTask(task)} />
                   </div>
                 ))}
+
+                {/* Quick Add Row */}
+                <QuickTaskRow defaultStatus={column.id} />
               </div>
             </div>
           );
