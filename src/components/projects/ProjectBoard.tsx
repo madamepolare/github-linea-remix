@@ -1,9 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { useProjects } from "@/hooks/useProjects";
-import { Plus } from "lucide-react";
+import { FolderKanban } from "lucide-react";
 
 const phases = [
   { id: "planning", label: "Planning", color: "bg-blue-500" },
@@ -13,7 +14,11 @@ const phases = [
   { id: "completed", label: "Completed", color: "bg-muted" },
 ];
 
-export function ProjectBoard() {
+interface ProjectBoardProps {
+  onCreateProject?: () => void;
+}
+
+export function ProjectBoard({ onCreateProject }: ProjectBoardProps) {
   const { projects, isLoading } = useProjects();
 
   const getProjectsByPhase = (phaseId: string) => 
@@ -29,6 +34,20 @@ export function ProjectBoard() {
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  // Check if no projects at all
+  if (projects.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center p-6">
+        <EmptyState
+          icon={FolderKanban}
+          title="Aucun projet"
+          description="Créez votre premier projet pour organiser vos tâches et suivre votre progression."
+          action={onCreateProject ? { label: "Créer un projet", onClick: onCreateProject } : undefined}
+        />
       </div>
     );
   }

@@ -43,8 +43,8 @@ export default function Projects() {
         contentPadding={false}
         contentOverflow="hidden"
       >
-        {view === "timeline" && <ProjectTimeline />}
-        {view === "board" && <ProjectBoard />}
+        {view === "timeline" && <ProjectTimeline onCreateProject={() => setCreateOpen(true)} />}
+        {view === "board" && <ProjectBoard onCreateProject={() => setCreateOpen(true)} />}
         {view === "list" && (
           <div className="flex items-center justify-center h-96 p-6">
             <p className="text-sm text-muted-foreground">Vue liste à venir...</p>

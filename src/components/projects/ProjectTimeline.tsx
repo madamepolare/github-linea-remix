@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, eachMonthOfInterval, addMonths, subMonths, differenceInDays, isSameDay, startOfDay } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, FolderKanban } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { useProjects, Project } from "@/hooks/useProjects";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +17,11 @@ const phaseColors: Record<string, string> = {
   completed: "bg-muted",
 };
 
-export function ProjectTimeline() {
+interface ProjectTimelineProps {
+  onCreateProject?: () => void;
+}
+
+export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
   const { projects, isLoading } = useProjects();
   const [viewDate, setViewDate] = useState(new Date());
   
@@ -54,16 +59,13 @@ export function ProjectTimeline() {
 
   if (projects.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full py-16">
-        <div className="text-center space-y-3">
-          <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto">
-            <Plus className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-medium">No projects yet</h3>
-          <p className="text-sm text-muted-foreground max-w-sm">
-            Create your first project to see it in the timeline view
-          </p>
-        </div>
+      <div className="flex items-center justify-center h-full p-6">
+        <EmptyState
+          icon={FolderKanban}
+          title="Aucun projet"
+          description="Créez votre premier projet pour le visualiser dans la timeline."
+          action={onCreateProject ? { label: "Créer un projet", onClick: onCreateProject } : undefined}
+        />
       </div>
     );
   }
