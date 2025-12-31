@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -13,7 +12,6 @@ import {
   ChevronLeft,
   ChevronDown,
   Search,
-  Bell,
   LogOut,
   ChevronsUpDown,
   HelpCircle,
@@ -34,6 +32,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSidebarStore } from "@/hooks/useSidebarStore";
+import { useState } from "react";
 
 interface NavItem {
   title: string;
@@ -58,7 +58,7 @@ const bottomNavigation: NavItem[] = [
 ];
 
 export function AppSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, toggle } = useSidebarStore();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -103,30 +103,30 @@ export function AppSidebar() {
     const content = (
       <div
         className={cn(
-          "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
+          "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150",
           active
-            ? "bg-sidebar-accent text-sidebar-accent-foreground"
-            : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+            ? "bg-foreground text-background font-medium"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
       >
         <item.icon
           className={cn(
             "h-[18px] w-[18px] shrink-0 transition-colors",
-            active ? "text-sidebar-primary" : "text-sidebar-muted group-hover:text-sidebar-foreground/80"
+            active ? "text-background" : "text-muted-foreground group-hover:text-foreground"
           )}
         />
         {!collapsed && (
           <>
             <span className="flex-1 truncate">{item.title}</span>
             {item.badge && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium">
                 {item.badge}
               </span>
             )}
             {hasChildren && (
               <ChevronDown
                 className={cn(
-                  "h-4 w-4 text-sidebar-muted transition-transform duration-200",
+                  "h-4 w-4 text-muted-foreground transition-transform duration-200",
                   isExpanded && "rotate-180"
                 )}
               />
@@ -145,7 +145,7 @@ export function AppSidebar() {
           <TooltipContent side="right" className="flex items-center gap-2">
             {item.title}
             {item.badge && (
-              <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium">
                 {item.badge}
               </span>
             )}
@@ -172,7 +172,7 @@ export function AppSidebar() {
                 transition={{ duration: 0.15 }}
                 className="overflow-hidden"
               >
-                <div className="ml-7 mt-1 space-y-0.5 border-l border-sidebar-border pl-3">
+                <div className="ml-7 mt-1 space-y-0.5 border-l border-border pl-3">
                   {item.children?.map((child) => (
                     <NavLink
                       key={child.href}
@@ -180,8 +180,8 @@ export function AppSidebar() {
                       className={cn(
                         "block rounded-md px-3 py-1.5 text-sm transition-colors",
                         location.pathname === child.href
-                          ? "text-sidebar-primary font-medium"
-                          : "text-sidebar-muted hover:text-sidebar-foreground"
+                          ? "text-foreground font-medium"
+                          : "text-muted-foreground hover:text-foreground"
                       )}
                     >
                       {child.title}
@@ -201,12 +201,12 @@ export function AppSidebar() {
   return (
     <motion.aside
       initial={false}
-      animate={{ width: collapsed ? 64 : 240 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
-      className="fixed left-0 top-0 z-40 flex h-screen flex-col bg-sidebar border-r border-sidebar-border"
+      animate={{ width: collapsed ? 72 : 260 }}
+      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+      className="fixed left-0 top-0 z-40 flex h-screen flex-col bg-background border-r border-border"
     >
-      {/* Logo */}
-      <div className="flex h-14 items-center justify-between px-3">
+      {/* Logo & Collapse */}
+      <div className="flex h-14 items-center justify-between px-4 border-b border-border">
         <NavLink to="/" className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground">
             <span className="text-background text-sm font-bold">A</span>
@@ -215,46 +215,57 @@ export function AppSidebar() {
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-base font-semibold text-sidebar-foreground tracking-tight"
+              className="text-base font-semibold text-foreground tracking-tight"
             >
               ARCHIMIND
             </motion.span>
           )}
         </NavLink>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          className="h-7 w-7 text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent"
-        >
-          <ChevronLeft
-            className={cn(
-              "h-4 w-4 transition-transform duration-150",
-              collapsed && "rotate-180"
-            )}
-          />
-        </Button>
+        {!collapsed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggle}
+            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        )}
       </div>
+
+      {/* Collapsed toggle */}
+      {collapsed && (
+        <div className="flex justify-center py-3 border-b border-border">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggle}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
+            <ChevronLeft className="h-4 w-4 rotate-180" />
+          </Button>
+        </div>
+      )}
 
       {/* Workspace Switcher */}
       {!collapsed && activeWorkspace && (
-        <div className="px-3 pb-3">
+        <div className="px-3 py-3 border-b border-border">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-sidebar-accent">
-                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-sidebar-accent text-sidebar-foreground font-medium text-xs">
+              <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-muted">
+                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground text-background font-medium text-xs">
                   {activeWorkspace.name.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-sidebar-foreground truncate">
+                  <p className="text-sm font-medium text-foreground truncate">
                     {activeWorkspace.name}
                   </p>
                 </div>
-                <ChevronsUpDown className="h-4 w-4 text-sidebar-muted" />
+                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-52">
-              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal uppercase tracking-wide">Workspaces</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal uppercase tracking-wider">Workspaces</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {workspaces.map((workspace) => (
                 <DropdownMenuItem
@@ -265,7 +276,7 @@ export function AppSidebar() {
                   )}
                 >
                   <div className="flex items-center gap-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded bg-muted text-xs font-medium text-foreground">
+                    <div className="flex h-6 w-6 items-center justify-center rounded bg-foreground text-background text-xs font-medium">
                       {workspace.name.slice(0, 2).toUpperCase()}
                     </div>
                     <span className="text-sm">{workspace.name}</span>
@@ -279,11 +290,11 @@ export function AppSidebar() {
 
       {/* Search */}
       {!collapsed && (
-        <div className="px-3 pb-2">
-          <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground">
-            <Search className="h-4 w-4" />
+        <div className="px-3 py-2">
+          <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground border border-border">
+            <Search className="h-4 w-4" strokeWidth={1.5} />
             <span>Search...</span>
-            <kbd className="ml-auto text-2xs font-mono text-sidebar-muted bg-sidebar-accent rounded px-1.5 py-0.5">
+            <kbd className="ml-auto text-2xs font-mono text-muted-foreground bg-muted rounded px-1.5 py-0.5">
               ⌘K
             </kbd>
           </button>
@@ -291,8 +302,8 @@ export function AppSidebar() {
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-2 py-2 scrollbar-thin">
-        <div className="space-y-0.5">
+      <nav className="flex-1 overflow-y-auto px-3 py-3 scrollbar-thin">
+        <div className="space-y-1">
           {navigation.map((item) => (
             <NavItemComponent key={item.title} item={item} />
           ))}
@@ -300,48 +311,45 @@ export function AppSidebar() {
       </nav>
 
       {/* Bottom Navigation */}
-      <div className="border-t border-sidebar-border px-2 py-2">
+      <div className="border-t border-border px-3 py-2">
         {bottomNavigation.map((item) => (
           <NavItemComponent key={item.title} item={item} />
         ))}
         
         {!collapsed && (
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground">
-            <HelpCircle className="h-[18px] w-[18px]" />
-            <span>Need Help?</span>
+          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <HelpCircle className="h-[18px] w-[18px]" strokeWidth={1.5} />
+            <span>Help & Support</span>
           </button>
         )}
       </div>
 
       {/* User Profile */}
-      <div className="border-t border-sidebar-border p-2">
+      <div className="border-t border-border p-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-sidebar-accent cursor-pointer",
+                "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-muted cursor-pointer",
                 collapsed && "justify-center px-0"
               )}
             >
-              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-foreground">
+              <div className="h-8 w-8 rounded-full bg-foreground flex items-center justify-center text-xs font-medium text-background">
                 {userInitials}
               </div>
               {!collapsed && (
-                <>
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-sm font-medium text-sidebar-foreground truncate">
-                      {profile?.full_name || "User"}
-                    </p>
-                    <p className="text-xs text-sidebar-muted truncate">
-                      {profile?.job_title || user?.email}
-                    </p>
-                  </div>
-                  <Bell className="h-4 w-4 shrink-0 text-sidebar-muted" />
-                </>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {profile?.full_name || "User"}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {profile?.job_title || user?.email}
+                  </p>
+                </div>
               )}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuContent align={collapsed ? "center" : "end"} side={collapsed ? "right" : "top"} className="w-52">
             <DropdownMenuLabel>
               <div>
                 <p className="font-medium text-sm">{profile?.full_name || "User"}</p>
@@ -350,12 +358,12 @@ export function AppSidebar() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/settings")}>
-              <Settings className="h-4 w-4 mr-2" />
+              <Settings className="h-4 w-4 mr-2" strokeWidth={1.5} />
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-              <LogOut className="h-4 w-4 mr-2" />
+              <LogOut className="h-4 w-4 mr-2" strokeWidth={1.5} />
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
