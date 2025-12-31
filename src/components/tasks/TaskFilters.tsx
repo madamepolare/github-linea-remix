@@ -47,12 +47,12 @@ export function TaskFilters({
   return (
     <div className="flex flex-wrap items-center gap-3">
       {/* Status Filter */}
-      <Select value={status || ""} onValueChange={(v) => onStatusChange(v || null)}>
+      <Select value={status || "all"} onValueChange={(v) => onStatusChange(v === "all" ? null : v)}>
         <SelectTrigger className="w-[140px]">
           <SelectValue placeholder="Statut" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Tous les statuts</SelectItem>
+          <SelectItem value="all">Tous les statuts</SelectItem>
           {statusOptions.map((opt) => (
             <SelectItem key={opt.value} value={opt.value}>
               {opt.label}
@@ -62,12 +62,12 @@ export function TaskFilters({
       </Select>
 
       {/* Priority Filter */}
-      <Select value={priority || ""} onValueChange={(v) => onPriorityChange(v || null)}>
+      <Select value={priority || "all"} onValueChange={(v) => onPriorityChange(v === "all" ? null : v)}>
         <SelectTrigger className="w-[140px]">
           <SelectValue placeholder="Priorité" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Toutes priorités</SelectItem>
+          <SelectItem value="all">Toutes priorités</SelectItem>
           {priorityOptions.map((opt) => (
             <SelectItem key={opt.value} value={opt.value}>
               {opt.label}
