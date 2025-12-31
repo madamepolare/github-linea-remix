@@ -28,6 +28,8 @@ export interface CreateActivityInput {
   description?: string;
   scheduled_at?: string;
   duration_minutes?: number;
+  is_completed?: boolean;
+  outcome?: string;
 }
 
 export function useLeadActivities(options?: { leadId?: string; contactId?: string }) {

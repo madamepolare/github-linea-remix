@@ -32,6 +32,7 @@ import {
   Users,
 } from "lucide-react";
 import { useCRMCompanies, CRMCompany } from "@/hooks/useCRMCompanies";
+import { CompanyDetailSheet } from "./CompanyDetailSheet";
 
 const industryLabels: Record<string, string> = {
   maitre_ouvrage: "Maître d'ouvrage",
@@ -56,6 +57,7 @@ interface CRMCompanyTableProps {
 export function CRMCompanyTable({ onCreateCompany }: CRMCompanyTableProps) {
   const { companies, isLoading, deleteCompany } = useCRMCompanies();
   const [search, setSearch] = useState("");
+  const [selectedCompany, setSelectedCompany] = useState<CRMCompany | null>(null);
 
   const filteredCompanies = companies.filter(
     (company) =>
@@ -130,6 +132,7 @@ export function CRMCompanyTable({ onCreateCompany }: CRMCompanyTableProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     className="group cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedCompany(company)}
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -235,6 +238,12 @@ export function CRMCompanyTable({ onCreateCompany }: CRMCompanyTableProps) {
           </div>
         )}
       </CardContent>
+      
+      <CompanyDetailSheet
+        company={selectedCompany}
+        open={!!selectedCompany}
+        onOpenChange={(open) => !open && setSelectedCompany(null)}
+      />
     </Card>
   );
 }
