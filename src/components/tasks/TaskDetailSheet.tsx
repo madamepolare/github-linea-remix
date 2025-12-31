@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Task, useTasks } from "@/hooks/useTasks";
 import { useTaskComments } from "@/hooks/useTaskComments";
 import { useTaskTimeEntries } from "@/hooks/useTaskTimeEntries";
+import { useAuth } from "@/contexts/AuthContext";
+import { SubtasksManager } from "./SubtasksManager";
 import {
   Sheet,
   SheetContent,
@@ -47,6 +49,7 @@ const priorityOptions = [
 ];
 
 export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetProps) {
+  const { activeWorkspace } = useAuth();
   const { updateTask, deleteTask } = useTasks();
   const { comments, createComment } = useTaskComments(task?.id || null);
   const { timeEntries, totalHours, createTimeEntry } = useTaskTimeEntries(task?.id || null);
@@ -104,8 +107,12 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
         </SheetHeader>
 
         <Tabs defaultValue="details" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="details">Détails</TabsTrigger>
+            <TabsTrigger value="subtasks">
+              <CheckSquare className="h-3 w-3 mr-1" />
+              Sous-tâches
+            </TabsTrigger>
             <TabsTrigger value="comments">
               <MessageSquare className="h-3 w-3 mr-1" />
               {comments?.length || 0}
@@ -183,6 +190,12 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
+          </TabsContent>
+
+          <TabsContent value="subtasks" className="space-y-4">
+            {activeWorkspace && (
+              <SubtasksManager taskId={task.id} workspaceId={activeWorkspace.id} />
+            )}
           </TabsContent>
 
           <TabsContent value="comments" className="space-y-4">
