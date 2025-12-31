@@ -12,6 +12,7 @@ import Settings from "./pages/Settings";
 import AcceptInvite from "./pages/AcceptInvite";
 import CRM from "./pages/CRM";
 import Tasks from "./pages/Tasks";
+import Projects from "./pages/Projects";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Tasks />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects"
+              element={
+                <ProtectedRoute>
+                  <Projects />
                 </ProtectedRoute>
               }
             />

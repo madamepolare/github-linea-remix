@@ -41,7 +41,7 @@ export default function Projects() {
 
             <div className="flex items-center gap-3">
               <ViewSwitcher
-                views={[
+                options={[
                   { value: "timeline", label: "Timeline" },
                   { value: "board", label: "Board" },
                   { value: "list", label: "List" },
