@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Users, Building2, Target, Plus, Loader2 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Users, Building2, Target } from "lucide-react";
 import { CRMContactsTable } from "@/components/crm/CRMContactsTable";
 import { CRMCompanyTable } from "@/components/crm/CRMCompanyTable";
 import { LeadPipeline } from "@/components/crm/LeadPipeline";
@@ -29,17 +28,15 @@ export default function CRM() {
   const getCreateAction = () => {
     switch (activeTab) {
       case "contacts":
-        return { label: "Nouveau Contact", action: () => setCreateContactOpen(true) };
+        return { label: "Contact", onClick: () => setCreateContactOpen(true) };
       case "companies":
-        return { label: "Nouvelle Entreprise", action: () => setCreateCompanyOpen(true) };
+        return { label: "Entreprise", onClick: () => setCreateCompanyOpen(true) };
       case "leads":
-        return { label: "Nouvelle Opportunité", action: () => setCreateLeadOpen(true) };
+        return { label: "Opportunité", onClick: () => setCreateLeadOpen(true) };
       default:
-        return null;
+        return undefined;
     }
   };
-
-  const createAction = getCreateAction();
 
   return (
     <MainLayout>
@@ -48,27 +45,20 @@ export default function CRM() {
           icon={Target}
           title="CRM"
           description="Gérez vos contacts, entreprises et opportunités"
-          actions={
-            createAction && (
-              <Button onClick={createAction.action}>
-                <Plus className="h-4 w-4 mr-2" />
-                {createAction.label}
-              </Button>
-            )
-          }
+          primaryAction={getCreateAction()}
           tabs={
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="bg-muted/50 p-1">
-                <TabsTrigger value="contacts" className="gap-2">
-                  <Users className="h-4 w-4" />
+              <TabsList className="h-9 p-1 bg-transparent border-0">
+                <TabsTrigger value="contacts" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
+                  <Users className="h-3.5 w-3.5" strokeWidth={1.5} />
                   Contacts
                 </TabsTrigger>
-                <TabsTrigger value="companies" className="gap-2">
-                  <Building2 className="h-4 w-4" />
+                <TabsTrigger value="companies" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
+                  <Building2 className="h-3.5 w-3.5" strokeWidth={1.5} />
                   Entreprises
                 </TabsTrigger>
-                <TabsTrigger value="leads" className="gap-2">
-                  <Target className="h-4 w-4" />
+                <TabsTrigger value="leads" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
+                  <Target className="h-3.5 w-3.5" strokeWidth={1.5} />
                   Opportunités
                 </TabsTrigger>
               </TabsList>
@@ -87,7 +77,7 @@ export default function CRM() {
           {activeTab === "leads" && (
             pipelinesLoading || createDefaultPipeline.isPending ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : pipelines.length > 0 ? (
               <LeadPipeline pipeline={pipelines[0]} onCreateLead={() => setCreateLeadOpen(true)} />

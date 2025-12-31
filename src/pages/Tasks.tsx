@@ -6,9 +6,8 @@ import { TaskListView } from "@/components/tasks/TaskListView";
 import { TaskArchiveView } from "@/components/tasks/TaskArchiveView";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutGrid, List, Plus, Calendar, Archive, CheckSquare } from "lucide-react";
+import { LayoutGrid, List, Calendar, Archive, CheckSquare } from "lucide-react";
 
 type ViewType = "board" | "list" | "calendar" | "archive";
 
@@ -32,34 +31,31 @@ export default function Tasks() {
           icon={CheckSquare}
           title="Tâches"
           description="Gérez et suivez vos tâches"
+          primaryAction={{
+            label: "Nouveau",
+            onClick: () => setCreateOpen(true),
+          }}
           actions={
-            <>
-              <Tabs value={view} onValueChange={(v) => setView(v as ViewType)}>
-                <TabsList>
-                  <TabsTrigger value="board" className="gap-2">
-                    <LayoutGrid className="h-4 w-4" />
-                    <span className="hidden sm:inline">Tableau</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="list" className="gap-2">
-                    <List className="h-4 w-4" />
-                    <span className="hidden sm:inline">Liste</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="calendar" className="gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span className="hidden sm:inline">Calendrier</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="archive" className="gap-2">
-                    <Archive className="h-4 w-4" />
-                    <span className="hidden sm:inline">Archives</span>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              <Button onClick={() => setCreateOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nouvelle tâche
-              </Button>
-            </>
+            <Tabs value={view} onValueChange={(v) => setView(v as ViewType)}>
+              <TabsList className="h-9 p-1 bg-muted/50">
+                <TabsTrigger value="board" className="h-7 px-2.5 text-xs gap-1.5">
+                  <LayoutGrid className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  <span className="hidden sm:inline">Board</span>
+                </TabsTrigger>
+                <TabsTrigger value="list" className="h-7 px-2.5 text-xs gap-1.5">
+                  <List className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  <span className="hidden sm:inline">Liste</span>
+                </TabsTrigger>
+                <TabsTrigger value="calendar" className="h-7 px-2.5 text-xs gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  <span className="hidden sm:inline">Cal</span>
+                </TabsTrigger>
+                <TabsTrigger value="archive" className="h-7 px-2.5 text-xs gap-1.5">
+                  <Archive className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  <span className="hidden sm:inline">Arch</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           }
           filters={
             view !== "archive" ? (
@@ -84,8 +80,8 @@ export default function Tasks() {
           {view === "list" && <TaskListView />}
           {view === "archive" && <TaskArchiveView />}
           {view === "calendar" && (
-            <div className="flex items-center justify-center h-96 border rounded-lg bg-muted/20">
-              <p className="text-muted-foreground">Vue calendrier à venir...</p>
+            <div className="flex items-center justify-center h-96 border border-dashed border-border rounded-lg bg-muted/20">
+              <p className="text-sm text-muted-foreground">Vue calendrier à venir...</p>
             </div>
           )}
         </div>
