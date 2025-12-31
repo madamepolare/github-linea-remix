@@ -5,12 +5,13 @@ import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, MoreHorizontal } from "lucide-react";
 
-const COLUMNS: { id: Task["status"]; label: string; color: string }[] = [
-  { id: "todo", label: "À faire", color: "bg-muted" },
-  { id: "in_progress", label: "En cours", color: "bg-blue-500/20" },
-  { id: "review", label: "En revue", color: "bg-amber-500/20" },
-  { id: "done", label: "Terminé", color: "bg-green-500/20" },
+const COLUMNS: { id: Task["status"]; label: string; icon?: string }[] = [
+  { id: "todo", label: "To Do" },
+  { id: "in_progress", label: "In Progress" },
+  { id: "review", label: "In Review" },
+  { id: "done", label: "Done" },
 ];
 
 interface TaskBoardProps {
@@ -47,19 +48,12 @@ export function TaskBoard({ statusFilter, priorityFilter }: TaskBoardProps) {
 
   const getTasksByStatus = (status: Task["status"]) => {
     let filtered = tasks?.filter((task) => task.status === status) || [];
-    
-    // Apply filters
-    if (statusFilter && statusFilter !== status) {
-      return [];
-    }
     if (priorityFilter) {
       filtered = filtered.filter((task) => task.priority === priorityFilter);
     }
-    
     return filtered;
   };
 
-  // If status filter is active, only show that column
   const columnsToShow = statusFilter 
     ? COLUMNS.filter(col => col.id === statusFilter)
     : COLUMNS;
@@ -69,9 +63,9 @@ export function TaskBoard({ statusFilter, priorityFilter }: TaskBoardProps) {
       <div className="grid grid-cols-4 gap-4">
         {COLUMNS.map((column) => (
           <div key={column.id} className="space-y-3">
-            <Skeleton className="h-8 w-full" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+            <Skeleton className="h-28 w-full rounded-xl" />
+            <Skeleton className="h-28 w-full rounded-xl" />
           </div>
         ))}
       </div>
@@ -89,25 +83,30 @@ export function TaskBoard({ statusFilter, priorityFilter }: TaskBoardProps) {
           return (
             <div
               key={column.id}
-              className={cn(
-                "flex flex-col rounded-lg border bg-card/50 min-h-[500px]",
-                draggedTaskId && "ring-2 ring-primary/20"
-              )}
+              className="kanban-column flex flex-col rounded-xl min-h-[500px] bg-surface"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >
               {/* Column Header */}
-              <div className={cn("px-3 py-2 rounded-t-lg flex items-center justify-between", column.color)}>
+              <div className="kanban-column-header flex items-center justify-between px-3 py-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">{column.label}</span>
-                  <span className="text-xs text-muted-foreground bg-background/50 px-2 py-0.5 rounded-full">
+                  <span className="font-medium text-sm text-foreground">{column.label}</span>
+                  <span className="text-xs text-muted-foreground bg-background rounded-full px-2 py-0.5">
                     {columnTasks.length}
                   </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button className="p-1 rounded hover:bg-background text-muted-foreground">
+                    <Plus className="h-4 w-4" />
+                  </button>
+                  <button className="p-1 rounded hover:bg-background text-muted-foreground">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
 
               {/* Tasks List */}
-              <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+              <div className="flex-1 px-2 pb-2 space-y-2 overflow-y-auto scrollbar-thin">
                 {columnTasks.map((task) => (
                   <div
                     key={task.id}
@@ -115,15 +114,15 @@ export function TaskBoard({ statusFilter, priorityFilter }: TaskBoardProps) {
                     onDragStart={(e) => handleDragStart(e, task.id)}
                     onDragEnd={handleDragEnd}
                     className={cn(
-                      "cursor-grab active:cursor-grabbing",
-                      draggedTaskId === task.id && "opacity-50"
+                      "cursor-grab active:cursor-grabbing transition-all duration-150",
+                      draggedTaskId === task.id && "opacity-50 scale-[0.98]"
                     )}
                   >
                     <TaskCard task={task} onClick={() => setSelectedTask(task)} />
                   </div>
                 ))}
 
-                {/* Quick Add Row */}
+                {/* Quick Add */}
                 <QuickTaskRow defaultStatus={column.id} />
               </div>
             </div>
