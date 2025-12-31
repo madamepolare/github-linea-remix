@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 interface ViewSwitcherProps {
   value: string;
@@ -13,21 +14,32 @@ interface ViewSwitcherProps {
 
 export function ViewSwitcher({ value, onChange, options, className }: ViewSwitcherProps) {
   return (
-    <div className={cn("inline-flex items-center p-1 rounded-lg bg-muted", className)}>
+    <div className={cn("inline-flex items-center p-1 rounded-lg bg-muted/50 border border-border/50", className)}>
       {options.map((option) => (
-        <button
+        <motion.button
           key={option.value}
           onClick={() => onChange(option.value)}
           className={cn(
-            "inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-150",
+            "relative inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-150",
             value === option.value
-              ? "bg-background text-foreground shadow-sm"
+              ? "text-foreground"
               : "text-muted-foreground hover:text-foreground"
           )}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
         >
-          {option.icon}
-          <span>{option.label}</span>
-        </button>
+          {value === option.value && (
+            <motion.div
+              layoutId="viewSwitcherActive"
+              className="absolute inset-0 bg-background rounded-md shadow-sm border border-border/50"
+              transition={{ type: "spring", duration: 0.3, bounce: 0.15 }}
+            />
+          )}
+          <span className="relative z-10 flex items-center gap-1.5">
+            {option.icon}
+            {option.label}
+          </span>
+        </motion.button>
       ))}
     </div>
   );

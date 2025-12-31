@@ -33,7 +33,7 @@ const Dashboard = () => {
           {/* Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatsCard
-              title="Active Projects"
+              title="Projets actifs"
               value={24}
               change={{ value: 12, type: "increase" }}
               icon={FolderKanban}
@@ -41,7 +41,7 @@ const Dashboard = () => {
               delay={0}
             />
             <StatsCard
-              title="Pending Invoices"
+              title="Factures en attente"
               value="€142,580"
               change={{ value: 8, type: "increase" }}
               icon={Receipt}
@@ -49,7 +49,7 @@ const Dashboard = () => {
               delay={1}
             />
             <StatsCard
-              title="Active Tenders"
+              title="Appels d'offres"
               value={7}
               change={{ value: 3, type: "decrease" }}
               icon={Trophy}
@@ -57,7 +57,7 @@ const Dashboard = () => {
               delay={2}
             />
             <StatsCard
-              title="Team Members"
+              title="Membres"
               value={18}
               change={{ value: 2, type: "increase" }}
               icon={Users}

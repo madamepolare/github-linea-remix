@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Users, Settings as SettingsIcon, User } from "lucide-react";
 import { WorkspaceSettings } from "@/components/settings/WorkspaceSettings";
 import { MembersSettings } from "@/components/settings/MembersSettings";
@@ -19,17 +19,17 @@ export default function Settings() {
           description="Gérez votre workspace et votre compte"
           tabs={
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="bg-muted/50 p-1">
-                <TabsTrigger value="workspace" className="gap-2">
-                  <Building2 className="h-4 w-4" />
+              <TabsList className="h-9 p-1 bg-transparent border-0">
+                <TabsTrigger value="workspace" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
+                  <Building2 className="h-3.5 w-3.5" strokeWidth={1.5} />
                   Workspace
                 </TabsTrigger>
-                <TabsTrigger value="members" className="gap-2">
-                  <Users className="h-4 w-4" />
+                <TabsTrigger value="members" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
+                  <Users className="h-3.5 w-3.5" strokeWidth={1.5} />
                   Membres
                 </TabsTrigger>
-                <TabsTrigger value="profile" className="gap-2">
-                  <User className="h-4 w-4" />
+                <TabsTrigger value="profile" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
+                  <User className="h-3.5 w-3.5" strokeWidth={1.5} />
                   Profil
                 </TabsTrigger>
               </TabsList>

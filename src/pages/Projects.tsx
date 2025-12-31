@@ -5,8 +5,7 @@ import { ProjectTimeline } from "@/components/projects/ProjectTimeline";
 import { ProjectBoard } from "@/components/projects/ProjectBoard";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 import { ViewSwitcher } from "@/components/ui/view-switcher";
-import { Button } from "@/components/ui/button";
-import { Plus, FolderKanban } from "lucide-react";
+import { FolderKanban } from "lucide-react";
 
 type ViewType = "timeline" | "board" | "list";
 
@@ -21,23 +20,20 @@ export default function Projects() {
           icon={FolderKanban}
           title="Projets"
           description="Gérez vos projets et suivez leur progression"
+          primaryAction={{
+            label: "Nouveau",
+            onClick: () => setCreateOpen(true),
+          }}
           actions={
-            <>
-              <ViewSwitcher
-                options={[
-                  { value: "timeline", label: "Timeline" },
-                  { value: "board", label: "Board" },
-                  { value: "list", label: "List" },
-                ]}
-                value={view}
-                onChange={(v) => setView(v as ViewType)}
-              />
-
-              <Button onClick={() => setCreateOpen(true)}>
-                <Plus className="h-4 w-4 mr-1.5" />
-                Nouveau Projet
-              </Button>
-            </>
+            <ViewSwitcher
+              options={[
+                { value: "timeline", label: "Timeline" },
+                { value: "board", label: "Board" },
+                { value: "list", label: "Liste" },
+              ]}
+              value={view}
+              onChange={(v) => setView(v as ViewType)}
+            />
           }
         />
 
@@ -46,8 +42,10 @@ export default function Projects() {
           {view === "timeline" && <ProjectTimeline />}
           {view === "board" && <ProjectBoard />}
           {view === "list" && (
-            <div className="p-6 text-center text-muted-foreground">
-              Vue liste à venir...
+            <div className="flex items-center justify-center h-96 p-6">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Vue liste à venir...</p>
+              </div>
             </div>
           )}
         </div>
