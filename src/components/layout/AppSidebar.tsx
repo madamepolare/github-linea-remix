@@ -205,63 +205,25 @@ export function AppSidebar() {
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       className="fixed left-0 top-0 z-40 flex h-screen flex-col bg-background border-r border-border"
     >
-      {/* Logo & Collapse */}
-      <div className="flex h-14 items-center justify-between px-4 border-b border-border">
-        <NavLink to="/" className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground">
-            <span className="text-background text-sm font-bold">A</span>
-          </div>
-          {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-base font-semibold text-foreground tracking-tight"
-            >
-              ARCHIMIND
-            </motion.span>
-          )}
-        </NavLink>
-        {!collapsed && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggle}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-
-      {/* Collapsed toggle */}
-      {collapsed && (
-        <div className="flex justify-center py-3 border-b border-border">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggle}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
-          >
-            <ChevronLeft className="h-4 w-4 rotate-180" />
-          </Button>
-        </div>
-      )}
-
-      {/* Workspace Switcher */}
-      {!collapsed && activeWorkspace && (
-        <div className="px-3 py-3 border-b border-border">
+      {/* Workspace Switcher (top) */}
+      <div className="flex items-center justify-between h-14 px-3 border-b border-border">
+        {activeWorkspace ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-muted">
-                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground text-background font-medium text-xs">
-                  {activeWorkspace.name.slice(0, 2).toUpperCase()}
+              <button className="flex flex-1 items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background font-semibold text-sm">
+                  {activeWorkspace.name.slice(0, 1).toUpperCase()}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {activeWorkspace.name}
-                  </p>
-                </div>
-                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                {!collapsed && (
+                  <>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {activeWorkspace.name}
+                      </p>
+                    </div>
+                    <ChevronsUpDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </>
+                )}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-52">
@@ -285,6 +247,38 @@ export function AppSidebar() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+        ) : (
+          <div className="flex items-center gap-2.5 px-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground">
+              <span className="text-background text-sm font-bold">A</span>
+            </div>
+            {!collapsed && <span className="text-sm font-semibold">Loading...</span>}
+          </div>
+        )}
+        
+        {!collapsed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggle}
+            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
+      {/* Collapsed toggle */}
+      {collapsed && (
+        <div className="flex justify-center py-3 border-b border-border">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggle}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+          >
+            <ChevronLeft className="h-4 w-4 rotate-180" />
+          </Button>
         </div>
       )}
 
