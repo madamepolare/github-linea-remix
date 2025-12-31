@@ -11,6 +11,7 @@ import Onboarding from "./pages/Onboarding";
 import Settings from "./pages/Settings";
 import AcceptInvite from "./pages/AcceptInvite";
 import CRM from "./pages/CRM";
+import Tasks from "./pages/Tasks";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CRM />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tasks"
+              element={
+                <ProtectedRoute>
+                  <Tasks />
                 </ProtectedRoute>
               }
             />

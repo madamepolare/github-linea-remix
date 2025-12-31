@@ -461,6 +461,231 @@ export type Database = {
           },
         ]
       }
+      task_comments: {
+        Row: {
+          author_id: string | null
+          content: string
+          created_at: string | null
+          id: string
+          mentions: string[] | null
+          task_id: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          mentions?: string[] | null
+          task_id: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          author_id?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          mentions?: string[] | null
+          task_id?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_dependencies: {
+        Row: {
+          created_at: string | null
+          dependency_type: string | null
+          depends_on_id: string
+          id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dependency_type?: string | null
+          depends_on_id: string
+          id?: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dependency_type?: string | null
+          depends_on_id?: string
+          id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_dependencies_depends_on_id_fkey"
+            columns: ["depends_on_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_dependencies_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_time_entries: {
+        Row: {
+          created_at: string | null
+          date: string
+          description: string | null
+          duration_minutes: number
+          ended_at: string | null
+          id: string
+          is_billable: boolean | null
+          started_at: string | null
+          task_id: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          description?: string | null
+          duration_minutes: number
+          ended_at?: string | null
+          id?: string
+          is_billable?: boolean | null
+          started_at?: string | null
+          task_id: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          description?: string | null
+          duration_minutes?: number
+          ended_at?: string | null
+          id?: string
+          is_billable?: boolean | null
+          started_at?: string | null
+          task_id?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_time_entries_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_time_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          actual_hours: number | null
+          assigned_to: string[] | null
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          estimated_hours: number | null
+          id: string
+          parent_id: string | null
+          priority: string | null
+          project_id: string | null
+          sort_order: number | null
+          start_date: string | null
+          status: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          actual_hours?: number | null
+          assigned_to?: string[] | null
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          estimated_hours?: number | null
+          id?: string
+          parent_id?: string | null
+          priority?: string | null
+          project_id?: string | null
+          sort_order?: number | null
+          start_date?: string | null
+          status?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          actual_hours?: number | null
+          assigned_to?: string[] | null
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          estimated_hours?: number | null
+          id?: string
+          parent_id?: string | null
+          priority?: string | null
+          project_id?: string | null
+          sort_order?: number | null
+          start_date?: string | null
+          status?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_invites: {
         Row: {
           created_at: string
