@@ -2,16 +2,27 @@ import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { TaskListView } from "@/components/tasks/TaskListView";
+import { TaskArchiveView } from "@/components/tasks/TaskArchiveView";
+import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutGrid, List, Plus, Calendar } from "lucide-react";
+import { LayoutGrid, List, Plus, Calendar, Archive } from "lucide-react";
 
-type ViewType = "board" | "list" | "calendar";
+type ViewType = "board" | "list" | "calendar" | "archive";
 
 export default function Tasks() {
   const [view, setView] = useState<ViewType>("board");
   const [createOpen, setCreateOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
+  const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
+
+  const clearFilters = () => {
+    setStatusFilter(null);
+    setPriorityFilter(null);
+    setAssigneeFilter(null);
+  };
 
   return (
     <MainLayout>
@@ -24,7 +35,6 @@ export default function Tasks() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* View Switcher */}
             <Tabs value={view} onValueChange={(v) => setView(v as ViewType)}>
               <TabsList>
                 <TabsTrigger value="board" className="gap-2">
@@ -39,6 +49,10 @@ export default function Tasks() {
                   <Calendar className="h-4 w-4" />
                   <span className="hidden sm:inline">Calendrier</span>
                 </TabsTrigger>
+                <TabsTrigger value="archive" className="gap-2">
+                  <Archive className="h-4 w-4" />
+                  <span className="hidden sm:inline">Archives</span>
+                </TabsTrigger>
               </TabsList>
             </Tabs>
 
@@ -49,10 +63,26 @@ export default function Tasks() {
           </div>
         </div>
 
+        {/* Filters */}
+        {view !== "archive" && (
+          <TaskFilters
+            status={statusFilter}
+            priority={priorityFilter}
+            assignee={assigneeFilter}
+            onStatusChange={setStatusFilter}
+            onPriorityChange={setPriorityFilter}
+            onAssigneeChange={setAssigneeFilter}
+            onClearAll={clearFilters}
+          />
+        )}
+
         {/* Content */}
         <div className="min-h-[600px]">
-          {view === "board" && <TaskBoard />}
+          {view === "board" && (
+            <TaskBoard statusFilter={statusFilter} priorityFilter={priorityFilter} />
+          )}
           {view === "list" && <TaskListView />}
+          {view === "archive" && <TaskArchiveView />}
           {view === "calendar" && (
             <div className="flex items-center justify-center h-96 border rounded-lg bg-muted/20">
               <p className="text-muted-foreground">Vue calendrier à venir...</p>

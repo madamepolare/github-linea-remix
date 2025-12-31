@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
 import { Task, useTasks } from "@/hooks/useTasks";
 import { useTaskComments } from "@/hooks/useTaskComments";
-import { useTaskTimeEntries } from "@/hooks/useTaskTimeEntries";
 import { useAuth } from "@/contexts/AuthContext";
 import { SubtasksManager } from "./SubtasksManager";
+import { TaskTimeTracker } from "./TaskTimeTracker";
+import { MultiAssigneePicker } from "./MultiAssigneePicker";
+import { InlineDatePicker } from "./InlineDatePicker";
+import { TagInput } from "./TagInput";
+import { MentionInput } from "./MentionInput";
 import {
   Sheet,
   SheetContent,
@@ -14,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -23,9 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, CheckSquare, Clock, MessageSquare, Save, Trash2 } from "lucide-react";
+import { CheckSquare, Clock, MessageSquare, Save, Trash2, Archive } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface TaskDetailSheetProps {
   task: Task | null;
@@ -38,7 +42,6 @@ const statusOptions = [
   { value: "in_progress", label: "En cours" },
   { value: "review", label: "En revue" },
   { value: "done", label: "Terminé" },
-  { value: "archived", label: "Archivé" },
 ];
 
 const priorityOptions = [
@@ -52,14 +55,18 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
   const { activeWorkspace } = useAuth();
   const { updateTask, deleteTask } = useTasks();
   const { comments, createComment } = useTaskComments(task?.id || null);
-  const { timeEntries, totalHours, createTimeEntry } = useTaskTimeEntries(task?.id || null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<Task["status"]>("todo");
   const [priority, setPriority] = useState<Task["priority"]>("medium");
+  const [dueDate, setDueDate] = useState<Date | null>(null);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [assignedTo, setAssignedTo] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [estimatedHours, setEstimatedHours] = useState("");
   const [newComment, setNewComment] = useState("");
-  const [timeMinutes, setTimeMinutes] = useState("");
+  const [commentMentions, setCommentMentions] = useState<string[]>([]);
 
   useEffect(() => {
     if (task) {
@@ -67,12 +74,36 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
       setDescription(task.description || "");
       setStatus(task.status);
       setPriority(task.priority);
+      setDueDate(task.due_date ? new Date(task.due_date) : null);
+      setStartDate(task.start_date ? new Date(task.start_date) : null);
+      setAssignedTo(task.assigned_to || []);
+      setTags(task.tags || []);
+      setEstimatedHours(task.estimated_hours?.toString() || "");
     }
   }, [task]);
 
   const handleSave = () => {
     if (!task) return;
-    updateTask.mutate({ id: task.id, title, description, status, priority });
+    updateTask.mutate({
+      id: task.id,
+      title,
+      description,
+      status,
+      priority,
+      due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
+      start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
+      assigned_to: assignedTo.length > 0 ? assignedTo : null,
+      tags: tags.length > 0 ? tags : null,
+      estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
+    });
+    toast.success("Tâche mise à jour");
+  };
+
+  const handleArchive = () => {
+    if (!task) return;
+    updateTask.mutate({ id: task.id, status: "archived" as Task["status"] });
+    toast.success("Tâche archivée");
+    onOpenChange(false);
   };
 
   const handleDelete = () => {
@@ -85,23 +116,14 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
     if (!newComment.trim()) return;
     createComment.mutate(newComment);
     setNewComment("");
-  };
-
-  const handleAddTimeEntry = () => {
-    const minutes = parseInt(timeMinutes);
-    if (isNaN(minutes) || minutes <= 0) return;
-    createTimeEntry.mutate({
-      duration_minutes: minutes,
-      date: new Date().toISOString().split("T")[0],
-    });
-    setTimeMinutes("");
+    setCommentMentions([]);
   };
 
   if (!task) return null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader className="mb-6">
           <SheetTitle>Détails de la tâche</SheetTitle>
         </SheetHeader>
@@ -113,16 +135,17 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
               <CheckSquare className="h-3 w-3 mr-1" />
               Sous-tâches
             </TabsTrigger>
+            <TabsTrigger value="time">
+              <Clock className="h-3 w-3 mr-1" />
+              Temps
+            </TabsTrigger>
             <TabsTrigger value="comments">
               <MessageSquare className="h-3 w-3 mr-1" />
               {comments?.length || 0}
             </TabsTrigger>
-            <TabsTrigger value="time">
-              <Clock className="h-3 w-3 mr-1" />
-              {totalHours}h
-            </TabsTrigger>
           </TabsList>
 
+          {/* Details Tab */}
           <TabsContent value="details" className="space-y-4">
             <div className="space-y-2">
               <Label>Titre</Label>
@@ -131,7 +154,7 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
 
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -160,53 +183,100 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
               </div>
             </div>
 
-            <div className="pt-4 border-t space-y-2 text-sm text-muted-foreground">
-              {task.due_date && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>Échéance: {format(new Date(task.due_date), "d MMMM yyyy", { locale: fr })}</span>
-                </div>
-              )}
-              {task.estimated_hours && (
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  <span>Estimation: {task.estimated_hours}h</span>
-                </div>
-              )}
-              {task.tags && task.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {task.tags.map((tag) => (
-                    <Badge key={tag} variant="outline">{tag}</Badge>
-                  ))}
-                </div>
-              )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Date de début</Label>
+                <InlineDatePicker
+                  value={startDate}
+                  onChange={setStartDate}
+                  placeholder="Début"
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Échéance</Label>
+                <InlineDatePicker
+                  value={dueDate}
+                  onChange={setDueDate}
+                  placeholder="Échéance"
+                  className="w-full"
+                />
+              </div>
             </div>
 
-            <div className="flex gap-2 pt-4">
+            <div className="space-y-2">
+              <Label>Assignés</Label>
+              <MultiAssigneePicker
+                value={assignedTo}
+                onChange={setAssignedTo}
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Estimation (heures)</Label>
+              <Input
+                type="number"
+                step="0.5"
+                value={estimatedHours}
+                onChange={(e) => setEstimatedHours(e.target.value)}
+                placeholder="4"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <TagInput value={tags} onChange={setTags} />
+            </div>
+
+            <div className="flex gap-2 pt-4 border-t">
               <Button onClick={handleSave} className="flex-1">
                 <Save className="h-4 w-4 mr-2" />Enregistrer
               </Button>
-              <Button variant="destructive" size="icon" onClick={handleDelete}>
+              <Button variant="outline" size="icon" onClick={handleArchive} title="Archiver">
+                <Archive className="h-4 w-4" />
+              </Button>
+              <Button variant="destructive" size="icon" onClick={handleDelete} title="Supprimer">
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </TabsContent>
 
+          {/* Subtasks Tab */}
           <TabsContent value="subtasks" className="space-y-4">
             {activeWorkspace && (
               <SubtasksManager taskId={task.id} workspaceId={activeWorkspace.id} />
             )}
           </TabsContent>
 
+          {/* Time Tab */}
+          <TabsContent value="time" className="space-y-4">
+            <TaskTimeTracker taskId={task.id} />
+          </TabsContent>
+
+          {/* Comments Tab */}
           <TabsContent value="comments" className="space-y-4">
-            <div className="flex gap-2">
-              <Textarea placeholder="Ajouter un commentaire..." value={newComment} onChange={(e) => setNewComment(e.target.value)} rows={2} className="flex-1" />
-              <Button onClick={handleAddComment} size="icon"><MessageSquare className="h-4 w-4" /></Button>
+            <div className="space-y-2">
+              <MentionInput
+                value={newComment}
+                onChange={setNewComment}
+                onMentionsChange={setCommentMentions}
+                placeholder="Ajouter un commentaire... Utilisez @ pour mentionner"
+                rows={2}
+              />
+              <Button onClick={handleAddComment} disabled={!newComment.trim()}>
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Commenter
+              </Button>
             </div>
+
             <div className="space-y-3">
               {comments?.map((comment) => (
                 <div key={comment.id} className="p-3 rounded-lg bg-muted/50 space-y-1">
-                  <p className="text-sm">{comment.content}</p>
+                  <p className="text-sm whitespace-pre-wrap">
+                    {comment.content.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, "@$1")}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {comment.created_at && format(new Date(comment.created_at), "d MMM yyyy à HH:mm", { locale: fr })}
                   </p>
@@ -214,31 +284,6 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
               ))}
               {(!comments || comments.length === 0) && (
                 <p className="text-center text-muted-foreground py-8">Aucun commentaire</p>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="time" className="space-y-4">
-            <div className="flex gap-2 items-end">
-              <div className="flex-1 space-y-1">
-                <Label>Durée (minutes)</Label>
-                <Input type="number" placeholder="30" value={timeMinutes} onChange={(e) => setTimeMinutes(e.target.value)} />
-              </div>
-              <Button onClick={handleAddTimeEntry}><Clock className="h-4 w-4 mr-2" />Ajouter</Button>
-            </div>
-            <div className="p-4 rounded-lg bg-muted/50 text-center">
-              <p className="text-2xl font-semibold">{totalHours}h</p>
-              <p className="text-sm text-muted-foreground">Temps total</p>
-            </div>
-            <div className="space-y-2">
-              {timeEntries?.map((entry) => (
-                <div key={entry.id} className="flex items-center justify-between p-2 rounded border">
-                  <p className="text-sm font-medium">{Math.floor(entry.duration_minutes / 60)}h {entry.duration_minutes % 60}min</p>
-                  <p className="text-xs text-muted-foreground">{format(new Date(entry.date), "d MMM", { locale: fr })}</p>
-                </div>
-              ))}
-              {(!timeEntries || timeEntries.length === 0) && (
-                <p className="text-center text-muted-foreground py-8">Aucune entrée de temps</p>
               )}
             </div>
           </TabsContent>
