@@ -17,6 +17,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -305,8 +306,8 @@ export function AppSidebar() {
         </div>
       </nav>
 
-      {/* Bottom Navigation */}
       <div className="border-t border-border px-3 py-2 space-y-0.5">
+        <NotificationsDropdown collapsed={collapsed} />
         <ThemeToggle collapsed={collapsed} />
         
         {bottomNavigation.map((item) => (
