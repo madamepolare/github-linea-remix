@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import { TaskArchiveView } from "@/components/tasks/TaskArchiveView";
@@ -7,7 +8,7 @@ import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutGrid, List, Plus, Calendar, Archive } from "lucide-react";
+import { LayoutGrid, List, Plus, Calendar, Archive, CheckSquare } from "lucide-react";
 
 type ViewType = "board" | "list" | "calendar" | "archive";
 
@@ -26,58 +27,56 @@ export default function Tasks() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold">Tâches</h1>
-            <p className="text-muted-foreground">Gérez et suivez vos tâches</p>
-          </div>
+      <div className="flex flex-col h-full">
+        <PageHeader
+          icon={CheckSquare}
+          title="Tâches"
+          description="Gérez et suivez vos tâches"
+          actions={
+            <>
+              <Tabs value={view} onValueChange={(v) => setView(v as ViewType)}>
+                <TabsList>
+                  <TabsTrigger value="board" className="gap-2">
+                    <LayoutGrid className="h-4 w-4" />
+                    <span className="hidden sm:inline">Tableau</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="list" className="gap-2">
+                    <List className="h-4 w-4" />
+                    <span className="hidden sm:inline">Liste</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="calendar" className="gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span className="hidden sm:inline">Calendrier</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="archive" className="gap-2">
+                    <Archive className="h-4 w-4" />
+                    <span className="hidden sm:inline">Archives</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
 
-          <div className="flex items-center gap-3">
-            <Tabs value={view} onValueChange={(v) => setView(v as ViewType)}>
-              <TabsList>
-                <TabsTrigger value="board" className="gap-2">
-                  <LayoutGrid className="h-4 w-4" />
-                  <span className="hidden sm:inline">Tableau</span>
-                </TabsTrigger>
-                <TabsTrigger value="list" className="gap-2">
-                  <List className="h-4 w-4" />
-                  <span className="hidden sm:inline">Liste</span>
-                </TabsTrigger>
-                <TabsTrigger value="calendar" className="gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span className="hidden sm:inline">Calendrier</span>
-                </TabsTrigger>
-                <TabsTrigger value="archive" className="gap-2">
-                  <Archive className="h-4 w-4" />
-                  <span className="hidden sm:inline">Archives</span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle tâche
-            </Button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        {view !== "archive" && (
-          <TaskFilters
-            status={statusFilter}
-            priority={priorityFilter}
-            assignee={assigneeFilter}
-            onStatusChange={setStatusFilter}
-            onPriorityChange={setPriorityFilter}
-            onAssigneeChange={setAssigneeFilter}
-            onClearAll={clearFilters}
-          />
-        )}
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nouvelle tâche
+              </Button>
+            </>
+          }
+        >
+          {view !== "archive" && (
+            <TaskFilters
+              status={statusFilter}
+              priority={priorityFilter}
+              assignee={assigneeFilter}
+              onStatusChange={setStatusFilter}
+              onPriorityChange={setPriorityFilter}
+              onAssigneeChange={setAssigneeFilter}
+              onClearAll={clearFilters}
+            />
+          )}
+        </PageHeader>
 
         {/* Content */}
-        <div className="min-h-[600px]">
+        <div className="flex-1 overflow-auto p-6">
           {view === "board" && (
             <TaskBoard statusFilter={statusFilter} priorityFilter={priorityFilter} />
           )}

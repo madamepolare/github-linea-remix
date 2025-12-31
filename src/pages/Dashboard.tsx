@@ -1,4 +1,5 @@
 import { MainLayout } from "@/components/layout/MainLayout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { WelcomeHeader } from "@/components/dashboard/WelcomeHeader";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { QuickActions } from "@/components/dashboard/QuickActions";
@@ -11,31 +12,21 @@ import {
   Receipt,
   Users,
   Trophy,
-  TrendingUp,
+  LayoutDashboard,
 } from "lucide-react";
 
 const Dashboard = () => {
   return (
     <MainLayout>
-      <div className="min-h-screen">
-        {/* Header */}
-        <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex h-16 items-center justify-between px-6">
-            <div className="flex items-center gap-4">
-              <h2 className="font-display text-xl font-semibold text-foreground">
-                Dashboard
-              </h2>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <TrendingUp className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </header>
+      <div className="flex flex-col h-full">
+        <PageHeader
+          icon={LayoutDashboard}
+          title="Dashboard"
+          description="Aperçu de votre activité"
+        />
 
         {/* Main Content */}
-        <div className="p-6 space-y-6">
+        <div className="flex-1 overflow-auto p-6 space-y-6">
           {/* Welcome */}
           <WelcomeHeader />
 
