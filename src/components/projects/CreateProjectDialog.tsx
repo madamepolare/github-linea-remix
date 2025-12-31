@@ -17,27 +17,56 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
+import { useProjects } from "@/hooks/useProjects";
+import { useAuth } from "@/contexts/AuthContext";
+import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
+import { format } from "date-fns";
 
 interface CreateProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+const colors = [
+  { value: "#000000", label: "Black" },
+  { value: "#3B82F6", label: "Blue" },
+  { value: "#10B981", label: "Green" },
+  { value: "#F59E0B", label: "Amber" },
+  { value: "#8B5CF6", label: "Purple" },
+  { value: "#EF4444", label: "Red" },
+  { value: "#EC4899", label: "Pink" },
+];
+
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
+  const { activeWorkspace, user } = useAuth();
+  const { createProject } = useProjects();
+  
   const [name, setName] = useState("");
   const [client, setClient] = useState("");
   const [phase, setPhase] = useState("planning");
   const [description, setDescription] = useState("");
+  const [color, setColor] = useState("#000000");
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [budget, setBudget] = useState("");
 
   const handleCreate = () => {
-    if (!name.trim()) {
-      toast.error("Project name is required");
-      return;
-    }
+    if (!name.trim() || !activeWorkspace?.id) return;
     
-    // TODO: Implement actual project creation
-    toast.success("Project created");
+    createProject.mutate({
+      workspace_id: activeWorkspace.id,
+      name: name.trim(),
+      client: client.trim() || null,
+      phase,
+      status: "active",
+      description: description.trim() || null,
+      color,
+      start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
+      end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
+      budget: budget ? parseFloat(budget) : null,
+      created_by: user?.id || null,
+    });
+    
     onOpenChange(false);
     resetForm();
   };
@@ -47,6 +76,10 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     setClient("");
     setPhase("planning");
     setDescription("");
+    setColor("#000000");
+    setStartDate(null);
+    setEndDate(null);
+    setBudget("");
   };
 
   return (
@@ -58,7 +91,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Project Name</Label>
+            <Label htmlFor="name">Project Name *</Label>
             <Input
               id="name"
               value={name}
@@ -67,29 +100,96 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="client">Client</Label>
-            <Input
-              id="client"
-              value={client}
-              onChange={(e) => setClient(e.target.value)}
-              placeholder="Client name..."
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="client">Client</Label>
+              <Input
+                id="client"
+                value={client}
+                onChange={(e) => setClient(e.target.value)}
+                placeholder="Client name..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phase">Phase</Label>
+              <Select value={phase} onValueChange={setPhase}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="planning">Planning</SelectItem>
+                  <SelectItem value="design">Design</SelectItem>
+                  <SelectItem value="execution">Execution</SelectItem>
+                  <SelectItem value="review">Review</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="phase">Initial Phase</Label>
-            <Select value={phase} onValueChange={setPhase}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="planning">Planning</SelectItem>
-                <SelectItem value="design">Design</SelectItem>
-                <SelectItem value="execution">Execution</SelectItem>
-                <SelectItem value="review">Review</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Start Date</Label>
+              <InlineDatePicker
+                value={startDate}
+                onChange={setStartDate}
+                placeholder="Select date"
+                className="w-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>End Date</Label>
+              <InlineDatePicker
+                value={endDate}
+                onChange={setEndDate}
+                placeholder="Select date"
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="budget">Budget</Label>
+              <Input
+                id="budget"
+                type="number"
+                value={budget}
+                onChange={(e) => setBudget(e.target.value)}
+                placeholder="10000"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <Select value={color} onValueChange={setColor}>
+                <SelectTrigger>
+                  <SelectValue>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: color }}
+                      />
+                      {colors.find(c => c.value === color)?.label}
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {colors.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: c.value }}
+                        />
+                        {c.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -108,7 +208,9 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleCreate}>Create Project</Button>
+          <Button onClick={handleCreate} disabled={!name.trim()}>
+            Create Project
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
