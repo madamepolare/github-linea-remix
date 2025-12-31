@@ -16,6 +16,7 @@ import {
   ChevronsUpDown,
   HelpCircle,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -305,7 +306,9 @@ export function AppSidebar() {
       </nav>
 
       {/* Bottom Navigation */}
-      <div className="border-t border-border px-3 py-2">
+      <div className="border-t border-border px-3 py-2 space-y-0.5">
+        <ThemeToggle collapsed={collapsed} />
+        
         {bottomNavigation.map((item) => (
           <NavItemComponent key={item.title} item={item} />
         ))}
