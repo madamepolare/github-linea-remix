@@ -178,7 +178,6 @@ function LeadCard({ lead, stageColor, onDragStart, onClick }: LeadCardProps) {
       )}
       style={{ borderLeftColor: stageColor || "#6366f1", borderLeftWidth: 3 }}
     >
-    >
       <div className="flex items-start justify-between gap-2 mb-2">
         <h4 className="font-medium line-clamp-2">{lead.title}</h4>
         <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 cursor-grab" />
