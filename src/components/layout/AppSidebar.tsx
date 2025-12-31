@@ -11,13 +11,13 @@ import {
   Settings,
   ChevronLeft,
   ChevronDown,
-  Search,
   LogOut,
   ChevronsUpDown,
   HelpCircle,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
+import { CommandTrigger } from "@/components/command-palette/CommandTrigger";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -284,16 +284,10 @@ export function AppSidebar() {
         </div>
       )}
 
-      {/* Search */}
+      {/* Command Palette Trigger */}
       {!collapsed && (
         <div className="px-3 py-2">
-          <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground border border-border">
-            <Search className="h-4 w-4" strokeWidth={1.5} />
-            <span>Search...</span>
-            <kbd className="ml-auto text-2xs font-mono text-muted-foreground bg-muted rounded px-1.5 py-0.5">
-              ⌘K
-            </kbd>
-          </button>
+          <CommandTrigger />
         </div>
       )}
 
