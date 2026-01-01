@@ -170,11 +170,33 @@ export function useLeads(options?: { pipelineId?: string; stageId?: string; stat
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    onMutate: async ({ leadId, stageId }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey });
+
+      // Snapshot the previous value
+      const previousLeads = queryClient.getQueryData(queryKey);
+
+      // Optimistically update the cache
+      queryClient.setQueryData(
+        queryKey,
+        (old: Lead[] | undefined) =>
+          old?.map((lead) =>
+            lead.id === leadId ? { ...lead, stage_id: stageId } : lead
+          )
+      );
+
+      return { previousLeads };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousLeads) {
+        queryClient.setQueryData(queryKey, context.previousLeads);
+      }
       toast({ variant: "destructive", title: "Erreur", description: error.message });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
     },
   });
 

@@ -1,17 +1,18 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { cn } from "@/lib/utils";
-import { useProjects } from "@/hooks/useProjects";
-import { FolderKanban } from "lucide-react";
+import { KanbanBoard, KanbanColumn, KanbanCard } from "@/components/shared/KanbanBoard";
+import { useProjects, Project } from "@/hooks/useProjects";
+import { FolderKanban, Calendar, Users } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 const phases = [
-  { id: "planning", label: "Planning", color: "bg-blue-500" },
-  { id: "design", label: "Design", color: "bg-amber-500" },
-  { id: "execution", label: "Execution", color: "bg-green-500" },
-  { id: "review", label: "Review", color: "bg-purple-500" },
-  { id: "completed", label: "Completed", color: "bg-muted" },
+  { id: "planning", label: "Planification", color: "#3b82f6" },
+  { id: "design", label: "Conception", color: "#f59e0b" },
+  { id: "execution", label: "Exécution", color: "#22c55e" },
+  { id: "review", label: "Revue", color: "#8b5cf6" },
+  { id: "completed", label: "Terminé", color: "#6b7280" },
 ];
 
 interface ProjectBoardProps {
@@ -19,27 +20,22 @@ interface ProjectBoardProps {
 }
 
 export function ProjectBoard({ onCreateProject }: ProjectBoardProps) {
-  const { projects, isLoading } = useProjects();
+  const { projects, isLoading, updateProject } = useProjects();
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  const getProjectsByPhase = (phaseId: string) => 
-    projects.filter(p => p.phase === phaseId);
+  const handleDrop = (projectId: string, _fromColumn: string, toColumn: string) => {
+    updateProject.mutate({ id: projectId, phase: toColumn });
+  };
 
-  if (isLoading) {
-    return (
-      <div className="h-full overflow-x-auto p-6">
-        <div className="flex gap-4">
-          {phases.map((phase) => (
-            <div key={phase.id} className="w-72 flex-shrink-0">
-              <Skeleton className="h-[400px] w-full rounded-lg" />
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const kanbanColumns: KanbanColumn<Project>[] = phases.map((phase) => ({
+    id: phase.id,
+    label: phase.label,
+    color: phase.color,
+    items: projects.filter((p) => p.phase === phase.id),
+  }));
 
   // Check if no projects at all
-  if (projects.length === 0) {
+  if (!isLoading && projects.length === 0) {
     return (
       <div className="h-full flex items-center justify-center p-6">
         <EmptyState
@@ -53,59 +49,74 @@ export function ProjectBoard({ onCreateProject }: ProjectBoardProps) {
   }
 
   return (
-    <div className="h-full overflow-x-auto p-6">
-      <div className="flex gap-4 min-w-max">
-        {phases.map((phase) => {
-          const phaseProjects = getProjectsByPhase(phase.id);
-          
-          return (
-            <div key={phase.id} className="w-72 flex-shrink-0">
-              <div className="kanban-column">
-                <div className="kanban-column-header border-b border-border">
-                  <div className={cn("w-2 h-2 rounded-full", phase.color)} />
-                  <span className="text-sm font-medium">{phase.label}</span>
-                  <span className="text-xs text-muted-foreground ml-auto">
-                    {phaseProjects.length}
-                  </span>
-                </div>
+    <KanbanBoard<Project>
+      columns={kanbanColumns}
+      isLoading={isLoading}
+      onDrop={handleDrop}
+      getItemId={(project) => project.id}
+      renderCard={(project, isDragging) => (
+        <ProjectKanbanCard
+          project={project}
+          onClick={() => setSelectedProject(project)}
+          isDragging={isDragging}
+        />
+      )}
+      className="pt-4"
+    />
+  );
+}
 
-                <div className="p-2 space-y-2 flex-1">
-                  {phaseProjects.map((project) => (
-                    <Card key={project.id} className="task-card">
-                      <CardContent className="p-3 space-y-3">
-                        <div>
-                          <p className="text-sm font-medium leading-snug">{project.name}</p>
-                          {project.client && (
-                            <p className="text-xs text-muted-foreground mt-0.5">{project.client}</p>
-                          )}
-                        </div>
+interface ProjectKanbanCardProps {
+  project: Project;
+  onClick: () => void;
+  isDragging: boolean;
+}
 
-                        <div className="flex items-center justify-between">
-                          <Badge variant="secondary" className="text-2xs capitalize">
-                            {phase.label}
-                          </Badge>
-                          
-                          {project.budget && (
-                            <span className="text-xs text-muted-foreground">
-                              ${project.budget.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+function ProjectKanbanCard({ project, onClick, isDragging }: ProjectKanbanCardProps) {
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "EUR",
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
 
-                  {phaseProjects.length === 0 && (
-                    <div className="text-center py-8 text-sm text-muted-foreground">
-                      No projects
-                    </div>
-                  )}
-                </div>
-              </div>
+  return (
+    <KanbanCard onClick={onClick} accentColor={project.color || undefined}>
+      <div className="space-y-2.5">
+        {/* Project name and client */}
+        <div>
+          <p className="text-sm font-medium leading-snug line-clamp-2">{project.name}</p>
+          {project.client && (
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">{project.client}</p>
+          )}
+        </div>
+
+        {/* Status badge */}
+        {project.status && (
+          <Badge variant="secondary" className="text-2xs capitalize">
+            {project.status}
+          </Badge>
+        )}
+
+        {/* Footer: Budget and dates */}
+        <div className="flex items-center justify-between gap-2 pt-1">
+          {project.budget ? (
+            <span className="text-xs font-medium text-primary">
+              {formatCurrency(project.budget)}
+            </span>
+          ) : (
+            <span />
+          )}
+
+          {project.end_date && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              <span>{format(new Date(project.end_date), "d MMM", { locale: fr })}</span>
             </div>
-          );
-        })}
+          )}
+        </div>
       </div>
-    </div>
+    </KanbanCard>
   );
 }

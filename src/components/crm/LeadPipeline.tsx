@@ -1,13 +1,10 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Building2, DollarSign, GripVertical } from "lucide-react";
-import { useLeads, Lead, Pipeline, PipelineStage } from "@/hooks/useLeads";
+import { KanbanBoard, KanbanColumn, KanbanCard } from "@/components/shared/KanbanBoard";
+import { Plus, Building2, DollarSign } from "lucide-react";
+import { useLeads, Lead, Pipeline } from "@/hooks/useLeads";
 import { LeadDetailSheet } from "./LeadDetailSheet";
-import { cn } from "@/lib/utils";
 
 interface LeadPipelineProps {
   pipeline: Pipeline;
@@ -17,34 +14,11 @@ interface LeadPipelineProps {
 export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
   const { leads, isLoading, updateLeadStage } = useLeads({ pipelineId: pipeline.id });
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [draggedLead, setDraggedLead] = useState<Lead | null>(null);
 
   const stages = pipeline.stages || [];
 
-  const getLeadsByStage = (stageId: string) => {
-    return leads.filter((lead) => lead.stage_id === stageId);
-  };
-
-  const getTotalValue = (stageLeads: Lead[]) => {
-    return stageLeads.reduce((sum, lead) => sum + (lead.estimated_value || 0), 0);
-  };
-
-  const handleDragStart = (e: React.DragEvent, lead: Lead) => {
-    setDraggedLead(lead);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDrop = (e: React.DragEvent, stageId: string) => {
-    e.preventDefault();
-    if (draggedLead && draggedLead.stage_id !== stageId) {
-      updateLeadStage.mutate({ leadId: draggedLead.id, stageId });
-    }
-    setDraggedLead(null);
+  const handleDrop = (leadId: string, _fromColumn: string, toColumn: string) => {
+    updateLeadStage.mutate({ leadId, stageId: toColumn });
   };
 
   const formatCurrency = (value: number) => {
@@ -55,82 +29,53 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
     }).format(value);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex-shrink-0 w-72">
-            <Skeleton className="h-8 w-full mb-4" />
-            <div className="space-y-3">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const getTotalValue = (stageLeads: Lead[]) => {
+    return stageLeads.reduce((sum, lead) => sum + (lead.estimated_value || 0), 0);
+  };
+
+  const kanbanColumns: KanbanColumn<Lead>[] = stages.map((stage) => {
+    const stageLeads = leads.filter((lead) => lead.stage_id === stage.id);
+    const totalValue = getTotalValue(stageLeads);
+
+    return {
+      id: stage.id,
+      label: stage.name,
+      color: stage.color || "#6366f1",
+      items: stageLeads,
+      metadata: totalValue > 0 ? (
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <DollarSign className="h-3.5 w-3.5" />
+          <span className="font-medium">{formatCurrency(totalValue)}</span>
+        </div>
+      ) : undefined,
+    };
+  });
 
   return (
     <>
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {stages.map((stage) => {
-          const stageLeads = getLeadsByStage(stage.id);
-          const totalValue = getTotalValue(stageLeads);
+      <div className="flex gap-4 overflow-x-auto pb-4 px-6 h-full pt-4">
+        <KanbanBoard<Lead>
+          columns={kanbanColumns}
+          isLoading={isLoading}
+          onDrop={handleDrop}
+          getItemId={(lead) => lead.id}
+          renderCard={(lead, isDragging) => (
+            <LeadKanbanCard
+              lead={lead}
+              stageColor={stages.find(s => s.id === lead.stage_id)?.color}
+              onClick={() => setSelectedLead(lead)}
+              isDragging={isDragging}
+            />
+          )}
+          emptyColumnContent="Aucune opportunité"
+          className="px-0"
+        />
 
-          return (
-            <div
-              key={stage.id}
-              className="flex-shrink-0 w-72"
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, stage.id)}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: stage.color || "#6366f1" }}
-                  />
-                  <h3 className="font-medium">{stage.name}</h3>
-                  <Badge variant="secondary" className="text-xs">
-                    {stageLeads.length}
-                  </Badge>
-                </div>
-              </div>
-
-              {totalValue > 0 && (
-                <p className="text-sm text-muted-foreground mb-3 flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />
-                  {formatCurrency(totalValue)}
-                </p>
-              )}
-
-              <div className="space-y-3 min-h-[200px]">
-                {stageLeads.map((lead) => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    stageColor={stage.color}
-                    onDragStart={(e) => handleDragStart(e, lead)}
-                    onClick={() => setSelectedLead(lead)}
-                  />
-                ))}
-
-                {stageLeads.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground text-sm border border-dashed rounded-lg">
-                    Aucune opportunité
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Add stage button */}
+        {/* Add lead button */}
         <div className="flex-shrink-0 w-72">
           <Button
             variant="outline"
-            className="w-full h-full min-h-[200px] border-dashed"
+            className="w-full h-full min-h-[300px] border-dashed hover:border-primary/50 hover:bg-primary/5 transition-colors"
             onClick={onCreateLead}
           >
             <Plus className="h-5 w-5 mr-2" />
@@ -148,14 +93,14 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
   );
 }
 
-interface LeadCardProps {
+interface LeadKanbanCardProps {
   lead: Lead;
   stageColor?: string | null;
-  onDragStart: (e: React.DragEvent) => void;
   onClick: () => void;
+  isDragging: boolean;
 }
 
-function LeadCard({ lead, stageColor, onDragStart, onClick }: LeadCardProps) {
+function LeadKanbanCard({ lead, stageColor, onClick, isDragging }: LeadKanbanCardProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
@@ -164,48 +109,51 @@ function LeadCard({ lead, stageColor, onDragStart, onClick }: LeadCardProps) {
     }).format(value);
   };
 
+  // Calculate weighted value
+  const weightedValue = lead.estimated_value && lead.probability
+    ? lead.estimated_value * (lead.probability / 100)
+    : null;
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -2 }}
-      draggable
-      onDragStart={onDragStart as any}
-      onClick={onClick}
-      className={cn(
-        "p-4 rounded-lg border bg-card cursor-pointer transition-all",
-        "hover:shadow-md hover:border-primary/20"
-      )}
-      style={{ borderLeftColor: stageColor || "#6366f1", borderLeftWidth: 3 }}
-    >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <h4 className="font-medium line-clamp-2">{lead.title}</h4>
-        <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 cursor-grab" />
-      </div>
+    <KanbanCard onClick={onClick} accentColor={stageColor || undefined}>
+      <div className="space-y-2.5">
+        {/* Title */}
+        <p className="text-sm font-medium leading-snug line-clamp-2">{lead.title}</p>
 
-      {lead.company && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-          <Building2 className="h-3 w-3" />
-          <span className="truncate">{lead.company.name}</span>
-        </div>
-      )}
+        {/* Company */}
+        {lead.company && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Building2 className="h-3 w-3" />
+            <span className="truncate">{lead.company.name}</span>
+          </div>
+        )}
 
-      {lead.estimated_value && (
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-xs">
-            {formatCurrency(lead.estimated_value)}
-          </Badge>
+        {/* Value and probability */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {lead.estimated_value && (
+            <Badge variant="secondary" className="text-2xs font-medium">
+              {formatCurrency(lead.estimated_value)}
+            </Badge>
+          )}
           {lead.probability && (
-            <span className="text-xs text-muted-foreground">{lead.probability}%</span>
+            <span className="text-xs text-muted-foreground">
+              {lead.probability}%
+            </span>
+          )}
+          {weightedValue && (
+            <span className="text-2xs text-muted-foreground">
+              (~{formatCurrency(weightedValue)})
+            </span>
           )}
         </div>
-      )}
 
-      {lead.next_action && (
-        <p className="text-xs text-muted-foreground mt-2 line-clamp-1">
-          → {lead.next_action}
-        </p>
-      )}
-    </motion.div>
+        {/* Next action */}
+        {lead.next_action && (
+          <p className="text-xs text-muted-foreground line-clamp-1 pt-1 border-t border-border/30">
+            → {lead.next_action}
+          </p>
+        )}
+      </div>
+    </KanbanCard>
   );
 }
