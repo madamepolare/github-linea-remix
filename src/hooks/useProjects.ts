@@ -87,12 +87,34 @@ export function useProjects() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    onMutate: async ({ id, ...updates }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["projects", activeWorkspace?.id] });
+
+      // Snapshot the previous value
+      const previousProjects = queryClient.getQueryData(["projects", activeWorkspace?.id]);
+
+      // Optimistically update the cache
+      queryClient.setQueryData(
+        ["projects", activeWorkspace?.id],
+        (old: Project[] | undefined) =>
+          old?.map((project) =>
+            project.id === id ? { ...project, ...updates } : project
+          )
+      );
+
+      return { previousProjects };
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousProjects) {
+        queryClient.setQueryData(["projects", activeWorkspace?.id], context.previousProjects);
+      }
       toast.error("Failed to update project");
       console.error(error);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
   });
 

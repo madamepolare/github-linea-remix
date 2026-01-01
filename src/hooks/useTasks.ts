@@ -143,11 +143,35 @@ export function useTasks(options?: UseTasksOptions) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    onMutate: async ({ id, status }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+
+      // Snapshot the previous value
+      const previousTasks = queryClient.getQueryData(["tasks", activeWorkspace?.id, options]);
+
+      // Optimistically update the cache
+      queryClient.setQueryData(
+        ["tasks", activeWorkspace?.id, options],
+        (old: Task[] | undefined) =>
+          old?.map((task) =>
+            task.id === id
+              ? { ...task, status, completed_at: status === "done" ? new Date().toISOString() : null }
+              : task
+          )
+      );
+
+      return { previousTasks };
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["tasks", activeWorkspace?.id, options], context.previousTasks);
+      }
       toast.error("Failed to update task status: " + error.message);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 
