@@ -151,6 +151,86 @@ export type Database = {
           },
         ]
       }
+      crm_emails: {
+        Row: {
+          body: string
+          company_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          created_by: string | null
+          from_email: string | null
+          id: string
+          lead_id: string | null
+          opened_at: string | null
+          sent_at: string | null
+          status: string | null
+          subject: string
+          to_email: string
+          workspace_id: string
+        }
+        Insert: {
+          body: string
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          from_email?: string | null
+          id?: string
+          lead_id?: string | null
+          opened_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject: string
+          to_email: string
+          workspace_id: string
+        }
+        Update: {
+          body?: string
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          from_email?: string | null
+          id?: string
+          lead_id?: string | null
+          opened_at?: string | null
+          sent_at?: string | null
+          status?: string | null
+          subject?: string
+          to_email?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_emails_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_emails_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_emails_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_emails_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_pipeline_stages: {
         Row: {
           color: string | null
@@ -245,9 +325,11 @@ export type Database = {
           id: string
           is_completed: boolean | null
           lead_id: string | null
+          meeting_link: string | null
           outcome: string | null
           scheduled_at: string | null
           title: string
+          updated_at: string | null
           workspace_id: string
         }
         Insert: {
@@ -261,9 +343,11 @@ export type Database = {
           id?: string
           is_completed?: boolean | null
           lead_id?: string | null
+          meeting_link?: string | null
           outcome?: string | null
           scheduled_at?: string | null
           title: string
+          updated_at?: string | null
           workspace_id: string
         }
         Update: {
@@ -277,9 +361,11 @@ export type Database = {
           id?: string
           is_completed?: boolean | null
           lead_id?: string | null
+          meeting_link?: string | null
           outcome?: string | null
           scheduled_at?: string | null
           title?: string
+          updated_at?: string | null
           workspace_id?: string
         }
         Relationships: [

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useMemo, useEffect } from "react";
 
 export interface PipelineStage {
   id: string;
@@ -114,6 +115,62 @@ export function useLeads(options?: { pipelineId?: string; stageId?: string; stat
     enabled: !!activeWorkspace?.id,
   });
 
+  // Setup realtime subscription
+  useEffect(() => {
+    if (!activeWorkspace?.id) return;
+
+    const channel = supabase
+      .channel("leads-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "leads",
+          filter: `workspace_id=eq.${activeWorkspace.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["leads"] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeWorkspace?.id, queryClient]);
+
+  // Stats
+  const stats = useMemo(() => {
+    if (!leads) return { total: 0, totalValue: 0, weightedValue: 0, wonValue: 0, lostCount: 0 };
+
+    const total = leads.length;
+    const totalValue = leads.reduce((sum, l) => sum + (Number(l.estimated_value) || 0), 0);
+    const weightedValue = leads.reduce((sum, l) => {
+      const value = Number(l.estimated_value) || 0;
+      const prob = (l.probability || 50) / 100;
+      return sum + value * prob;
+    }, 0);
+    const wonValue = leads
+      .filter((l) => l.status === "won" || l.won_at)
+      .reduce((sum, l) => sum + (Number(l.estimated_value) || 0), 0);
+    const lostCount = leads.filter((l) => l.status === "lost" || l.lost_at).length;
+
+    return { total, totalValue, weightedValue, wonValue, lostCount };
+  }, [leads]);
+
+  // Group by status
+  const leadsByStatus = useMemo(() => {
+    if (!leads) return {};
+    const grouped: Record<string, Lead[]> = {};
+    leads.forEach((lead) => {
+      const status = lead.status || "new";
+      if (!grouped[status]) grouped[status] = [];
+      grouped[status].push(lead);
+    });
+    return grouped;
+  }, [leads]);
+
   const createLead = useMutation({
     mutationFn: async (input: CreateLeadInput) => {
       const { data, error } = await supabase
@@ -131,6 +188,7 @@ export function useLeads(options?: { pipelineId?: string; stageId?: string; stat
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-companies"] });
       toast({ title: "Opportunité créée" });
     },
     onError: (error: Error) => {
@@ -171,25 +229,16 @@ export function useLeads(options?: { pipelineId?: string; stageId?: string; stat
       return data;
     },
     onMutate: async ({ leadId, stageId }) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey });
-
-      // Snapshot the previous value
+      await queryClient.cancelQueries({ queryKey: ["leads"] });
       const previousLeads = queryClient.getQueryData(queryKey);
 
-      // Optimistically update the cache
-      queryClient.setQueryData(
-        queryKey,
-        (old: Lead[] | undefined) =>
-          old?.map((lead) =>
-            lead.id === leadId ? { ...lead, stage_id: stageId } : lead
-          )
+      queryClient.setQueryData(queryKey, (old: Lead[] | undefined) =>
+        old?.map((lead) => (lead.id === leadId ? { ...lead, stage_id: stageId } : lead))
       );
 
       return { previousLeads };
     },
     onError: (error: Error, _variables, context) => {
-      // Rollback on error
       if (context?.previousLeads) {
         queryClient.setQueryData(queryKey, context.previousLeads);
       }
@@ -207,6 +256,7 @@ export function useLeads(options?: { pipelineId?: string; stageId?: string; stat
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-companies"] });
       toast({ title: "Opportunité supprimée" });
     },
     onError: (error: Error) => {
@@ -218,6 +268,8 @@ export function useLeads(options?: { pipelineId?: string; stageId?: string; stat
     leads: leads || [],
     isLoading,
     error,
+    stats,
+    leadsByStatus,
     createLead,
     updateLead,
     updateLeadStage,
@@ -246,10 +298,9 @@ export function usePipelines() {
 
       if (error) throw error;
 
-      // Sort stages within each pipeline
       return (data as Pipeline[]).map((p) => ({
         ...p,
-        stages: p.stages?.sort((a, b) => a.sort_order - b.sort_order) || [],
+        stages: p.stages?.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0)) || [],
       }));
     },
     enabled: !!activeWorkspace?.id,
@@ -280,7 +331,6 @@ export function usePipelines() {
 
   const createDefaultPipeline = useMutation({
     mutationFn: async () => {
-      // Create the pipeline
       const { data: pipeline, error: pipelineError } = await supabase
         .from("crm_pipelines")
         .insert({
@@ -293,14 +343,14 @@ export function usePipelines() {
 
       if (pipelineError) throw pipelineError;
 
-      // Create default stages
       const stages = [
-        { name: "Nouveau", color: "#6366f1", probability: 10, sort_order: 0 },
-        { name: "Qualifié", color: "#8b5cf6", probability: 25, sort_order: 1 },
-        { name: "Proposition", color: "#ec4899", probability: 50, sort_order: 2 },
-        { name: "Négociation", color: "#f97316", probability: 75, sort_order: 3 },
-        { name: "Gagné", color: "#22c55e", probability: 100, sort_order: 4 },
-        { name: "Perdu", color: "#ef4444", probability: 0, sort_order: 5 },
+        { name: "Nouveau", color: "#6b7280", probability: 10, sort_order: 0 },
+        { name: "Contacté", color: "#3b82f6", probability: 20, sort_order: 1 },
+        { name: "RDV planifié", color: "#8b5cf6", probability: 40, sort_order: 2 },
+        { name: "Proposition", color: "#ec4899", probability: 60, sort_order: 3 },
+        { name: "Négociation", color: "#f97316", probability: 80, sort_order: 4 },
+        { name: "Gagné", color: "#22c55e", probability: 100, sort_order: 5 },
+        { name: "Perdu", color: "#ef4444", probability: 0, sort_order: 6 },
       ];
 
       const { error: stagesError } = await supabase.from("crm_pipeline_stages").insert(
