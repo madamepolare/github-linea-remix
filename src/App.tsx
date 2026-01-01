@@ -12,6 +12,9 @@ import Onboarding from "./pages/Onboarding";
 import Settings from "./pages/Settings";
 import AcceptInvite from "./pages/AcceptInvite";
 import CRM from "./pages/CRM";
+import CompanyDetail from "./pages/CompanyDetail";
+import ContactDetail from "./pages/ContactDetail";
+import LeadDetail from "./pages/LeadDetail";
 import Tasks from "./pages/Tasks";
 import Projects from "./pages/Projects";
 import NotFound from "./pages/NotFound";
@@ -43,6 +46,30 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CRM />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/crm/companies/:id"
+              element={
+                <ProtectedRoute>
+                  <CompanyDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/crm/contacts/:id"
+              element={
+                <ProtectedRoute>
+                  <ContactDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/crm/leads/:id"
+              element={
+                <ProtectedRoute>
+                  <LeadDetail />
                 </ProtectedRoute>
               }
             />
