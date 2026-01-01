@@ -2,28 +2,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useMemo, useEffect } from "react";
+import {
+  CRMCompany,
+  CRMCompanyEnriched,
+  CompanyCategory,
+  CompanyType,
+  CRMFilters,
+  COMPANY_CATEGORIES,
+  getCompanyTypeConfig,
+} from "@/lib/crmTypes";
 
-export interface CRMCompany {
-  id: string;
-  workspace_id: string;
-  name: string;
-  industry: string | null;
-  email: string | null;
-  phone: string | null;
-  website: string | null;
-  address: string | null;
-  city: string | null;
-  postal_code: string | null;
-  country: string | null;
-  logo_url: string | null;
-  notes: string | null;
-  bet_specialties: string[] | null;
-  billing_email: string | null;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-  contacts_count?: number;
-}
+export type { CRMCompany, CRMCompanyEnriched };
 
 export interface CreateCompanyInput {
   name: string;
@@ -40,32 +30,166 @@ export interface CreateCompanyInput {
   billing_email?: string;
 }
 
-export function useCRMCompanies(options?: { industry?: string }) {
+export function useCRMCompanies(filters?: Partial<CRMFilters>) {
   const { activeWorkspace, user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const queryKey = ["crm-companies", activeWorkspace?.id, options?.industry];
+  const queryKey = ["crm-companies", activeWorkspace?.id];
 
-  const { data: companies, isLoading, error } = useQuery({
+  // Fetch companies with contacts and leads counts
+  const { data, isLoading, error } = useQuery({
     queryKey,
     queryFn: async () => {
-      let query = supabase
+      // Fetch companies
+      const { data: companies, error: companiesError } = await supabase
         .from("crm_companies")
         .select("*")
         .eq("workspace_id", activeWorkspace!.id)
         .order("name");
 
-      if (options?.industry) {
-        query = query.eq("industry", options.industry);
-      }
+      if (companiesError) throw companiesError;
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as CRMCompany[];
+      // Fetch contacts grouped by company
+      const { data: contacts, error: contactsError } = await supabase
+        .from("contacts")
+        .select("id, name, email, phone, crm_company_id")
+        .eq("workspace_id", activeWorkspace!.id);
+
+      if (contactsError) throw contactsError;
+
+      // Fetch leads grouped by company
+      const { data: leads, error: leadsError } = await supabase
+        .from("leads")
+        .select("id, crm_company_id, estimated_value")
+        .eq("workspace_id", activeWorkspace!.id);
+
+      if (leadsError) throw leadsError;
+
+      // Enrich companies with counts
+      const enrichedCompanies: CRMCompanyEnriched[] = (companies || []).map((company) => {
+        const companyContacts = contacts?.filter((c) => c.crm_company_id === company.id) || [];
+        const companyLeads = leads?.filter((l) => l.crm_company_id === company.id) || [];
+        const primaryContact = companyContacts[0] || null;
+
+        return {
+          ...company,
+          contacts_count: companyContacts.length,
+          leads_count: companyLeads.length,
+          leads_value: companyLeads.reduce((sum, l) => sum + (Number(l.estimated_value) || 0), 0),
+          primary_contact: primaryContact
+            ? {
+                id: primaryContact.id,
+                name: primaryContact.name,
+                email: primaryContact.email,
+                phone: primaryContact.phone,
+              }
+            : null,
+        };
+      });
+
+      return enrichedCompanies;
     },
     enabled: !!activeWorkspace?.id,
   });
+
+  // Setup realtime subscription
+  useEffect(() => {
+    if (!activeWorkspace?.id) return;
+
+    const channel = supabase
+      .channel("crm-companies-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "crm_companies",
+          filter: `workspace_id=eq.${activeWorkspace.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeWorkspace?.id, queryClient, queryKey]);
+
+  // Apply filters
+  const filteredCompanies = useMemo(() => {
+    if (!data) return [];
+    let result = [...data];
+
+    if (filters?.category && filters.category !== "all") {
+      const categoryConfig = COMPANY_CATEGORIES.find((c) => c.id === filters.category);
+      const allowedTypes = categoryConfig?.types || [];
+      result = result.filter((c) => allowedTypes.includes(c.industry as CompanyType));
+    }
+
+    if (filters?.companyType && filters.companyType !== "all") {
+      result = result.filter((c) => c.industry === filters.companyType);
+    }
+
+    if (filters?.search) {
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter(
+        (c) =>
+          c.name.toLowerCase().includes(searchLower) ||
+          c.city?.toLowerCase().includes(searchLower) ||
+          c.email?.toLowerCase().includes(searchLower) ||
+          c.primary_contact?.name.toLowerCase().includes(searchLower)
+      );
+    }
+
+    if (filters?.letterFilter) {
+      result = result.filter((c) =>
+        c.name.toUpperCase().startsWith(filters.letterFilter!)
+      );
+    }
+
+    // Sorting
+    const sortBy = filters?.sortBy || "name";
+    const sortDir = filters?.sortDir || "asc";
+    result.sort((a, b) => {
+      let aVal: any = a[sortBy as keyof CRMCompanyEnriched];
+      let bVal: any = b[sortBy as keyof CRMCompanyEnriched];
+      
+      if (typeof aVal === "string") aVal = aVal.toLowerCase();
+      if (typeof bVal === "string") bVal = bVal.toLowerCase();
+      
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [data, filters]);
+
+  // Stats by category
+  const statsByCategory = useMemo(() => {
+    if (!data) return {};
+    const stats: Record<CompanyCategory, number> = {
+      all: data.length,
+      client: 0,
+      bet: 0,
+      partenaire: 0,
+      entreprise: 0,
+      fournisseur: 0,
+      conseil: 0,
+      admin: 0,
+      autre: 0,
+    };
+
+    data.forEach((company) => {
+      const config = getCompanyTypeConfig(company.industry);
+      stats[config.category]++;
+    });
+
+    return stats;
+  }, [data]);
 
   const createCompany = useMutation({
     mutationFn: async (input: CreateCompanyInput) => {
@@ -127,9 +251,11 @@ export function useCRMCompanies(options?: { industry?: string }) {
   });
 
   return {
-    companies: companies || [],
+    companies: filteredCompanies,
+    allCompanies: data || [],
     isLoading,
     error,
+    statsByCategory,
     createCompany,
     updateCompany,
     deleteCompany,
