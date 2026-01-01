@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Table,
@@ -31,10 +32,11 @@ import {
   Users,
   Building2,
   Target,
+  ExternalLink,
 } from "lucide-react";
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
-import { CompanyDetailSheet } from "./CompanyDetailSheet";
 import { CompanyCategory, getCompanyTypeConfig } from "@/lib/crmTypes";
+import { InlineEditCell } from "./InlineEditCell";
 import { cn } from "@/lib/utils";
 
 export interface CRMCompanyTableProps {
@@ -44,8 +46,8 @@ export interface CRMCompanyTableProps {
 }
 
 export function CRMCompanyTable({ category = "all", search = "", onCreateCompany }: CRMCompanyTableProps) {
-  const { companies, isLoading, deleteCompany } = useCRMCompanies({ category, search });
-  const [selectedCompany, setSelectedCompany] = useState<CRMCompanyEnriched | null>(null);
+  const navigate = useNavigate();
+  const { companies, isLoading, deleteCompany, updateCompany } = useCRMCompanies({ category, search });
   const [letterFilter, setLetterFilter] = useState<string | null>(null);
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -153,15 +155,18 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.02 }}
                         className="group cursor-pointer hover:bg-muted/50"
-                        onClick={() => setSelectedCompany(company)}
+                        onClick={() => navigate(`/crm/companies/${company.id}`)}
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary font-semibold text-sm">
                               {company.name.slice(0, 2).toUpperCase()}
                             </div>
-                            <div>
-                              <p className="font-medium">{company.name}</p>
+                            <div className="flex-1">
+                              <InlineEditCell
+                                value={company.name}
+                                onSave={(value) => updateCompany.mutate({ id: company.id, name: value })}
+                              />
                               {company.primary_contact && (
                                 <p className="text-xs text-muted-foreground">
                                   {company.primary_contact.name}
@@ -242,13 +247,9 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setSelectedCompany(company)}>
-                                <Users className="h-4 w-4 mr-2" />
+                              <DropdownMenuItem onClick={() => navigate(`/crm/companies/${company.id}`)}>
+                                <ExternalLink className="h-4 w-4 mr-2" />
                                 Voir détails
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Modifier
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive"
@@ -272,12 +273,6 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
           </CardContent>
         </Card>
       </div>
-
-      <CompanyDetailSheet
-        company={selectedCompany}
-        open={!!selectedCompany}
-        onOpenChange={(open) => !open && setSelectedCompany(null)}
-      />
     </>
   );
 }
