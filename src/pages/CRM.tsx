@@ -108,7 +108,7 @@ export default function CRM() {
       case "contacts":
         return `${allContacts.length} contacts`;
       case "companies":
-        const count = statsByCategory[selectedCategory] || 0;
+        const count = (statsByCategory as Record<string, number>)[selectedCategory] || 0;
         return `${count} entreprise${count > 1 ? "s" : ""}`;
       default:
         return "";
@@ -198,14 +198,14 @@ export default function CRM() {
                     <span>Toutes</span>
                   </div>
                   <Badge variant="secondary" className="text-2xs h-5 px-1.5">
-                    {statsByCategory.all || 0}
+                    {(statsByCategory as Record<string, number>)?.all ?? 0}
                   </Badge>
                 </button>
 
                 {/* Categories with collapsible sub-types */}
                 {COMPANY_CATEGORIES.filter((cat) => cat.id !== "all").map((category) => {
                   const Icon = CATEGORY_ICONS[category.id] || Building2;
-                  const count = statsByCategory[category.id] || 0;
+                  const count = (statsByCategory as Record<string, number>)[category.id] || 0;
                   const isExpanded = expandedCategories.has(category.id);
                   const isSelected = view === "companies" && selectedCategory === category.id;
                   const hasSubTypes = category.types && category.types.length > 1;
