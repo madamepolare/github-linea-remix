@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -22,20 +23,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MOE_CATEGORIES, MOE_ROLES, type MOECategory, getRolesByCategory } from "@/lib/projectTypes";
+import { MOE_CATEGORIES, MOE_ROLES, BET_SPECIALTIES, type MOECategory, getRolesByCategory, getBETSpecialtyLabel } from "@/lib/projectTypes";
 import { cn } from "@/lib/utils";
 import {
   Building2,
   Calculator,
   Compass,
-  Crown,
   HardHat,
   Mail,
   Phone,
   Plus,
   Search,
   Shield,
-  Trash2,
   User,
   X,
 } from "lucide-react";
@@ -55,7 +54,7 @@ const CATEGORY_ICONS: Record<MOECategory, any> = {
 };
 
 export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
-  const { moeTeam, isLoading, addMember, updateMember, removeMember } = useProjectMOE(projectId);
+  const { moeTeam, isLoading, addMember, removeMember } = useProjectMOE(projectId);
   const { companies } = useCRMCompanies();
   const { contacts } = useContacts();
   
@@ -65,17 +64,27 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState("");
+  const [selectedBETSpecialties, setSelectedBETSpecialties] = useState<string[]>([]);
   const [isUs, setIsUs] = useState(false);
 
   const resetForm = () => {
     setSelectedCompanyId(null);
     setSelectedContactId(null);
     setSelectedRole("");
+    setSelectedBETSpecialties([]);
     setCompanySearch("");
     setIsUs(false);
   };
 
   const handleAdd = () => {
+    // For BET, store specialties in notes field as JSON
+    let notes: string | undefined;
+    if (selectedCategory === "bet" && selectedBETSpecialties.length > 0) {
+      notes = JSON.stringify({ specialties: selectedBETSpecialties });
+    } else if (isUs) {
+      notes = "Notre agence";
+    }
+
     const roleToUse = selectedRole || selectedCategory;
     
     addMember.mutate({
@@ -83,7 +92,7 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
       contact_id: selectedContactId || undefined,
       role: roleToUse,
       is_lead: isUs,
-      notes: isUs ? "Notre agence" : undefined,
+      notes,
     });
 
     setIsAddOpen(false);
@@ -94,7 +103,15 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
     removeMember.mutate(memberId);
   };
 
-  // Get role config from role value
+  const toggleBETSpecialty = (specialty: string) => {
+    setSelectedBETSpecialties(prev =>
+      prev.includes(specialty)
+        ? prev.filter(s => s !== specialty)
+        : [...prev, specialty]
+    );
+  };
+
+  // Get role label
   const getRoleLabel = (roleValue: string) => {
     const role = MOE_ROLES.find(r => r.value === roleValue);
     return role?.label || roleValue;
@@ -104,6 +121,17 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
   const getCategoryFromRole = (roleValue: string): MOECategory => {
     const role = MOE_ROLES.find(r => r.value === roleValue);
     return role?.category || "entreprise";
+  };
+
+  // Parse BET specialties from notes
+  const getBETSpecialties = (notes: string | null): string[] => {
+    if (!notes) return [];
+    try {
+      const parsed = JSON.parse(notes);
+      return parsed.specialties || [];
+    } catch {
+      return [];
+    }
   };
 
   // Filter companies by search
@@ -126,21 +154,21 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
   }, {} as Record<MOECategory, typeof moeTeam>);
 
   if (isLoading) {
-    return <Skeleton className="h-48 w-full" />;
+    return <Skeleton className="h-32 w-full" />;
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-medium text-sm">Équipe projet</h3>
-        <Button variant="ghost" size="sm" onClick={() => { resetForm(); setIsAddOpen(true); }}>
-          <Plus className="h-4 w-4 mr-1" />
+        <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => { resetForm(); setIsAddOpen(true); }}>
+          <Plus className="h-3.5 w-3.5 mr-1" />
           Ajouter
         </Button>
       </div>
 
       {/* Categories display */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {MOE_CATEGORIES.map((category) => {
           const members = membersByCategory[category.value];
           const CategoryIcon = CATEGORY_ICONS[category.value];
@@ -148,96 +176,79 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
           if (members.length === 0) return null;
 
           return (
-            <div key={category.value} className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <CategoryIcon className="h-3.5 w-3.5" style={{ color: category.color }} />
+            <div key={category.value} className="space-y-1">
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground uppercase tracking-wider">
+                <CategoryIcon className="h-3 w-3" style={{ color: category.color }} />
                 <span>{category.labelPlural}</span>
               </div>
-              <div className="space-y-1.5">
-                {members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 group"
-                  >
-                    <Avatar className="h-7 w-7">
-                      <AvatarFallback 
-                        className="text-xs"
-                        style={{ backgroundColor: `${category.color}20`, color: category.color }}
-                      >
-                        {member.crm_company?.name?.[0] || member.contact?.name?.[0] || "?"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-medium truncate">
-                          {member.crm_company?.name || member.contact?.name || "Non défini"}
-                        </span>
-                        {member.is_lead && (
-                          <Badge variant="secondary" className="text-[10px] px-1 py-0">Nous</Badge>
+              <div className="space-y-1">
+                {members.map((member) => {
+                  const betSpecialties = getBETSpecialties(member.notes);
+                  
+                  return (
+                    <div
+                      key={member.id}
+                      className="flex items-center gap-2 p-1.5 rounded-md bg-muted/40 group text-sm"
+                    >
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback 
+                          className="text-[10px]"
+                          style={{ backgroundColor: `${category.color}15`, color: category.color }}
+                        >
+                          {member.crm_company?.name?.[0] || member.contact?.name?.[0] || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-medium truncate">
+                            {member.crm_company?.name || member.contact?.name || "Non défini"}
+                          </span>
+                          {member.is_lead && (
+                            <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">Nous</Badge>
+                          )}
+                        </div>
+                        {betSpecialties.length > 0 && (
+                          <div className="flex flex-wrap gap-0.5 mt-0.5">
+                            {betSpecialties.map(s => (
+                              <span key={s} className="text-[10px] text-muted-foreground bg-muted px-1 rounded">
+                                {getBETSpecialtyLabel(s)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {member.contact && member.crm_company && !betSpecialties.length && (
+                          <span className="text-[11px] text-muted-foreground truncate block">
+                            {member.contact.name}
+                          </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{getRoleLabel(member.role)}</span>
-                        {member.contact && member.crm_company && (
-                          <>
-                            <span>•</span>
-                            <span className="truncate">{member.contact.name}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {(member.crm_company?.email || member.contact?.email) && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          asChild
-                        >
-                          <a href={`mailto:${member.contact?.email || member.crm_company?.email}`}>
-                            <Mail className="h-3 w-3" />
-                          </a>
-                        </Button>
-                      )}
-                      {(member.crm_company?.phone || member.contact?.phone) && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          asChild
-                        >
-                          <a href={`tel:${member.contact?.phone || member.crm_company?.phone}`}>
-                            <Phone className="h-3 w-3" />
-                          </a>
-                        </Button>
-                      )}
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 text-destructive"
+                        className="h-5 w-5 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"
                         onClick={() => handleRemove(member.id)}
                       >
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
         })}
 
         {moeTeam.length === 0 && (
-          <div className="text-center py-6 text-muted-foreground text-sm">
-            <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>Aucun membre dans l'équipe</p>
+          <div className="text-center py-4 text-muted-foreground text-xs">
+            <User className="h-6 w-6 mx-auto mb-1.5 opacity-50" />
+            <p>Aucun membre</p>
             <Button 
               variant="link" 
               size="sm" 
               onClick={() => { resetForm(); setIsAddOpen(true); }}
-              className="mt-1"
+              className="mt-0.5 h-auto p-0 text-xs"
             >
-              Ajouter un membre
+              Ajouter
             </Button>
           </div>
         )}
@@ -254,7 +265,7 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
             {/* Category selection */}
             <div className="space-y-2">
               <Label>Catégorie</Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {MOE_CATEGORIES.map((cat) => {
                   const Icon = CATEGORY_ICONS[cat.value];
                   return (
@@ -266,10 +277,11 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
                       onClick={() => {
                         setSelectedCategory(cat.value);
                         setSelectedRole("");
+                        setSelectedBETSpecialties([]);
                       }}
-                      className="gap-1.5"
+                      className="gap-1 h-8 text-xs"
                     >
-                      <Icon className="h-3.5 w-3.5" />
+                      <Icon className="h-3 w-3" />
                       {cat.label}
                     </Button>
                   );
@@ -277,13 +289,13 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
               </div>
             </div>
 
-            {/* Role selection */}
-            {categoryRoles.length > 1 && (
+            {/* Role selection (for non-BET) */}
+            {selectedCategory !== "bet" && categoryRoles.length > 1 && (
               <div className="space-y-2">
-                <Label>Rôle spécifique</Label>
+                <Label>Rôle</Label>
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un rôle..." />
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Sélectionner..." />
                   </SelectTrigger>
                   <SelectContent>
                     {categoryRoles.map((role) => (
@@ -298,10 +310,10 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
 
             {/* Is us toggle for architects */}
             {selectedCategory === "architecte" && (
-              <div className="flex items-center justify-between p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-center justify-between p-2.5 bg-primary/5 border border-primary/20 rounded-lg">
                 <div>
-                  <Label className="font-medium">C'est nous</Label>
-                  <p className="text-xs text-muted-foreground">Notre agence sur ce projet</p>
+                  <Label className="font-medium text-sm">C'est nous</Label>
+                  <p className="text-[11px] text-muted-foreground">Notre agence</p>
                 </div>
                 <Switch checked={isUs} onCheckedChange={setIsUs} />
               </div>
@@ -311,24 +323,24 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
             <div className="space-y-2">
               <Label>Entreprise</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input 
                   placeholder="Rechercher..."
                   value={companySearch}
                   onChange={(e) => setCompanySearch(e.target.value)}
-                  className="pl-9"
+                  className="pl-8 h-9"
                 />
               </div>
               
               {companySearch && (
-                <ScrollArea className="h-40 border rounded-md">
+                <ScrollArea className="h-32 border rounded-md">
                   <div className="p-1">
                     {filteredCompanies.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Aucune entreprise trouvée
+                      <p className="text-xs text-muted-foreground text-center py-3">
+                        Aucune entreprise
                       </p>
                     ) : (
-                      filteredCompanies.slice(0, 20).map((company) => (
+                      filteredCompanies.slice(0, 15).map((company) => (
                         <button
                           key={company.id}
                           type="button"
@@ -338,13 +350,13 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
                             setCompanySearch("");
                           }}
                           className={cn(
-                            "w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors",
+                            "w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition-colors",
                             selectedCompanyId === company.id
                               ? "bg-primary text-primary-foreground"
                               : "hover:bg-muted"
                           )}
                         >
-                          <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                          <Building2 className="h-3 w-3 flex-shrink-0" />
                           <span className="truncate">{company.name}</span>
                         </button>
                       ))
@@ -356,15 +368,15 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
               {selectedCompanyId && (
                 <div className="flex items-center justify-between p-2 bg-muted rounded-md">
                   <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    <span className="text-sm font-medium">
+                    <Building2 className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">
                       {companies.find(c => c.id === selectedCompanyId)?.name}
                     </span>
                   </div>
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    className="h-6 w-6"
+                    className="h-5 w-5"
                     onClick={() => { setSelectedCompanyId(null); setSelectedContactId(null); }}
                   >
                     <X className="h-3 w-3" />
@@ -372,6 +384,33 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
                 </div>
               )}
             </div>
+
+            {/* BET Specialties selection (multi-select) */}
+            {selectedCategory === "bet" && selectedCompanyId && (
+              <div className="space-y-2">
+                <Label>Spécialités (plusieurs possibles)</Label>
+                <div className="grid grid-cols-2 gap-1.5 p-2 border rounded-md max-h-40 overflow-y-auto">
+                  {BET_SPECIALTIES.map((specialty) => (
+                    <label
+                      key={specialty.value}
+                      className={cn(
+                        "flex items-center gap-2 p-1.5 rounded cursor-pointer text-xs transition-colors",
+                        selectedBETSpecialties.includes(specialty.value)
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      <Checkbox
+                        checked={selectedBETSpecialties.includes(specialty.value)}
+                        onCheckedChange={() => toggleBETSpecialty(specialty.value)}
+                        className="h-3.5 w-3.5"
+                      />
+                      {specialty.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Contact selection */}
             {selectedCompanyId && companyContacts.length > 0 && (
@@ -381,11 +420,11 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
                   value={selectedContactId || "none"} 
                   onValueChange={(v) => setSelectedContactId(v === "none" ? null : v)}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un contact..." />
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Sélectionner..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Aucun contact</SelectItem>
+                    <SelectItem value="none">Aucun</SelectItem>
                     {companyContacts.map((contact) => (
                       <SelectItem key={contact.id} value={contact.id}>
                         {contact.name}
@@ -398,10 +437,14 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsAddOpen(false); resetForm(); }}>
+            <Button variant="outline" size="sm" onClick={() => { setIsAddOpen(false); resetForm(); }}>
               Annuler
             </Button>
-            <Button onClick={handleAdd}>
+            <Button 
+              size="sm" 
+              onClick={handleAdd}
+              disabled={selectedCategory === "bet" && selectedBETSpecialties.length === 0 && !!selectedCompanyId}
+            >
               Ajouter
             </Button>
           </DialogFooter>

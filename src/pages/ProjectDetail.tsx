@@ -228,82 +228,121 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Main content */}
-      <div className="lg:col-span-2 space-y-6">
-        {/* AI Summary */}
+      {/* Left column - Info & Team */}
+      <div className="space-y-4">
+        {/* Project Info Card */}
         <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Résumé AI
-              </CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={onRefreshSummary}
-                disabled={isGeneratingSummary}
-              >
-                {isGeneratingSummary ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-                <span className="ml-1.5">{isGeneratingSummary ? "Génération..." : "Actualiser"}</span>
-              </Button>
-            </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Informations</CardTitle>
           </CardHeader>
-          <CardContent>
-            {project.ai_summary ? (
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{project.ai_summary}</p>
-            ) : (
-              <div className="text-center py-4">
-                <Sparkles className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground mb-3">
-                  Aucun résumé disponible
-                </p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={onRefreshSummary}
-                  disabled={isGeneratingSummary}
-                >
-                  {isGeneratingSummary ? (
-                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-4 w-4 mr-1.5" />
-                  )}
-                  Générer le résumé
-                </Button>
+          <CardContent className="space-y-3">
+            {project.crm_company && (
+              <div className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground">Client</p>
+                  <p className="text-sm font-medium truncate">{project.crm_company.name}</p>
+                </div>
+              </div>
+            )}
+
+            {project.city && (
+              <div className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground">Localisation</p>
+                  <p className="text-sm font-medium">
+                    {project.address && `${project.address}, `}{project.city}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {(project.start_date || project.end_date) && (
+              <div className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground">Dates</p>
+                  <p className="text-sm font-medium">
+                    {project.start_date && format(parseISO(project.start_date), "dd/MM/yy", { locale: fr })}
+                    {project.start_date && project.end_date && " → "}
+                    {project.end_date && format(parseISO(project.end_date), "dd/MM/yy", { locale: fr })}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {project.surface_area && (
+              <div className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                  <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground">Surface</p>
+                  <p className="text-sm font-medium">{project.surface_area} m²</p>
+                </div>
+              </div>
+            )}
+
+            {project.budget && (
+              <div className="flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                  <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground">Budget</p>
+                  <p className="text-sm font-medium">{project.budget.toLocaleString("fr-FR")} €</p>
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
 
+        {/* MOE Team */}
+        <Card>
+          <CardContent className="pt-4">
+            <ProjectMOESection projectId={project.id} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Center column - Progress & Phases */}
+      <div className="space-y-4">
         {/* Progress */}
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Avancement</CardTitle>
-              <span className="text-2xl font-bold">{progressPercent}%</span>
+              <CardTitle className="text-sm">Avancement</CardTitle>
+              <span className="text-xl font-bold text-primary">{progressPercent}%</span>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             <Progress value={progressPercent} className="h-2" />
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>{completedPhases} / {phases.length} phases terminées</span>
-              {inProgressPhase && <span>En cours: {inProgressPhase.name}</span>}
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{completedPhases}/{phases.length} phases</span>
+              {inProgressPhase && (
+                <Badge variant="secondary" className="text-[10px]">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {inProgressPhase.name}
+                </Badge>
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Phases Timeline */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Phases du projet</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Phases</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-1.5">
               {phases.map((phase, index) => {
                 const statusConfig = PHASE_STATUS_CONFIG[phase.status as keyof typeof PHASE_STATUS_CONFIG] || PHASE_STATUS_CONFIG.pending;
                 
@@ -311,41 +350,38 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                   <div
                     key={phase.id}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg border transition-colors",
+                      "flex items-center gap-2 p-2 rounded-md border transition-colors",
                       phase.status === "in_progress" && "border-primary bg-primary/5",
-                      phase.status === "completed" && "border-muted bg-muted/30",
-                      phase.status === "pending" && "border-border"
+                      phase.status === "completed" && "border-transparent bg-muted/50",
+                      phase.status === "pending" && "border-transparent"
                     )}
                   >
                     <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium"
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-medium flex-shrink-0"
                       style={{
                         backgroundColor: phase.status === "completed" ? "hsl(var(--primary))" : phase.color || "#e5e7eb",
                         color: phase.status === "completed" ? "white" : "inherit",
                       }}
                     >
                       {phase.status === "completed" ? (
-                        <CheckCircle2 className="h-4 w-4" />
+                        <CheckCircle2 className="h-3.5 w-3.5" />
                       ) : (
                         index + 1
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={cn(
-                        "font-medium text-sm",
+                        "text-xs font-medium",
                         phase.status === "completed" && "line-through text-muted-foreground"
                       )}>
                         {phase.name}
                       </p>
-                      {phase.end_date && (
-                        <p className="text-xs text-muted-foreground">
-                          Échéance : {format(parseISO(phase.end_date), "d MMM yyyy", { locale: fr })}
-                        </p>
-                      )}
                     </div>
-                    <Badge variant={phase.status === "in_progress" ? "default" : "secondary"} className="text-xs">
-                      {statusConfig.label}
-                    </Badge>
+                    {phase.end_date && (
+                      <span className="text-[10px] text-muted-foreground">
+                        {format(parseISO(phase.end_date), "dd/MM", { locale: fr })}
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -354,103 +390,74 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
         </Card>
       </div>
 
-      {/* Sidebar */}
-      <div className="space-y-6">
-        {/* Project Info */}
+      {/* Right column - AI Summary & Notes */}
+      <div className="space-y-4">
+        {/* AI Summary */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Informations</CardTitle>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Résumé AI
+              </CardTitle>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 px-2"
+                onClick={onRefreshSummary}
+                disabled={isGeneratingSummary}
+              >
+                {isGeneratingSummary ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {project.crm_company && (
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Client</p>
-                  <p className="text-sm font-medium">{project.crm_company.name}</p>
-                </div>
-              </div>
-            )}
-
-            {project.city && (
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Localisation</p>
-                  <p className="text-sm font-medium">
-                    {project.address && `${project.address}, `}{project.city}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {project.surface_area && (
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                  <FolderKanban className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Surface</p>
-                  <p className="text-sm font-medium">{project.surface_area} m²</p>
-                </div>
-              </div>
-            )}
-
-            {project.budget && (
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                  <Wallet className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Budget</p>
-                  <p className="text-sm font-medium">
-                    {project.budget.toLocaleString("fr-FR")} €
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {project.start_date && (
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Dates</p>
-                  <p className="text-sm font-medium">
-                    {format(parseISO(project.start_date), "d MMMM yyyy", { locale: fr })}
-                    {project.end_date && (
-                      <> → {format(parseISO(project.end_date), "d MMMM yyyy", { locale: fr })}</>
-                    )}
-                  </p>
-                </div>
+          <CardContent>
+            {project.ai_summary ? (
+              <p className="text-xs text-muted-foreground leading-relaxed">{project.ai_summary}</p>
+            ) : (
+              <div className="text-center py-3">
+                <Sparkles className="h-6 w-6 mx-auto text-muted-foreground/40 mb-1.5" />
+                <p className="text-[11px] text-muted-foreground mb-2">Aucun résumé</p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={onRefreshSummary}
+                  disabled={isGeneratingSummary}
+                >
+                  {isGeneratingSummary ? (
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3 mr-1" />
+                  )}
+                  Générer
+                </Button>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* MOE Team Section */}
+        {/* Description / Notes */}
         <Card>
-          <CardContent className="pt-4">
-            <ProjectMOESection projectId={project.id} />
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {project.description ? (
+              <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                {project.description}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground/60 italic">
+                Aucune note pour ce projet
+              </p>
+            )}
           </CardContent>
         </Card>
-
-        {/* Description */}
-        {project.description && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Description</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{project.description}</p>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
