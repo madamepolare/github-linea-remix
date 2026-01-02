@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   Building2,
   Calendar,
+  CalendarDays,
   CheckCircle2,
   Clock,
   FileText,
@@ -38,6 +39,7 @@ import { ProjectPhasesTab } from "@/components/projects/ProjectPhasesTab";
 import { ProjectMOETab } from "@/components/projects/ProjectMOETab";
 import { ProjectDeliverablesTab } from "@/components/projects/ProjectDeliverablesTab";
 import { ProjectChantierTab } from "@/components/projects/ProjectChantierTab";
+import { ProjectPlanningTab } from "@/components/projects/ProjectPlanningTab";
 import { EntityTasksList } from "@/components/tasks/EntityTasksList";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -174,11 +176,11 @@ export default function ProjectDetail() {
                 Vue d'ensemble
               </TabsTrigger>
               <TabsTrigger
-                value="phases"
+                value="planning"
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4"
               >
-                <Calendar className="h-4 w-4 mr-2" />
-                Phases
+                <CalendarDays className="h-4 w-4 mr-2" />
+                Planning
               </TabsTrigger>
               <TabsTrigger
                 value="tasks"
@@ -193,13 +195,6 @@ export default function ProjectDetail() {
               >
                 <Users className="h-4 w-4 mr-2" />
                 Équipe MOE
-              </TabsTrigger>
-              <TabsTrigger
-                value="deliverables"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4"
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Livrables
               </TabsTrigger>
               <TabsTrigger
                 value="chantier"
@@ -223,12 +218,11 @@ export default function ProjectDetail() {
               isGeneratingSummary={isGeneratingSummary}
             />
           )}
-          {activeTab === "phases" && <ProjectPhasesTab projectId={project.id} />}
+          {activeTab === "planning" && <ProjectPlanningTab projectId={project.id} />}
           {activeTab === "tasks" && (
             <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
           )}
           {activeTab === "moe" && <ProjectMOETab projectId={project.id} />}
-          {activeTab === "deliverables" && <ProjectDeliverablesTab projectId={project.id} />}
           {activeTab === "chantier" && <ProjectChantierTab projectId={project.id} />}
         </div>
       </div>
