@@ -12,8 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ClientSelector } from './ClientSelector';
-import { QuoteGridEditor } from './QuoteGridEditor';
-import { FeeCalculator } from './FeeCalculator';
+import { FeesAndQuoteEditor } from './FeesAndQuoteEditor';
 import { TermsEditor } from './TermsEditor';
 import { ConstructionBudgetField } from './ConstructionBudgetField';
 import { DocumentVersionHistory } from './DocumentVersionHistory';
@@ -64,7 +63,7 @@ export function CommercialDocumentBuilder({
       isOptional: !phase.is_included,
       deliverables: phase.deliverables || [],
       sortOrder: phase.sort_order,
-      percentageFee: phase.percentage_fee || 15 // Default 15%
+      percentageFee: phase.percentage_fee || 15
     }));
   };
 
@@ -78,7 +77,7 @@ export function CommercialDocumentBuilder({
         phase_code: item.code || '',
         phase_name: item.designation,
         phase_description: item.description,
-        percentage_fee: item.percentageFee || 15, // Sync percentage
+        percentage_fee: item.percentageFee || 15,
         amount: item.amount,
         is_included: !item.isOptional,
         deliverables: item.deliverables,
@@ -198,9 +197,8 @@ export function CommercialDocumentBuilder({
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="general">Général</TabsTrigger>
-          <TabsTrigger value="devis">Devis</TabsTrigger>
           <TabsTrigger value="fees">Honoraires</TabsTrigger>
           <TabsTrigger value="terms">Conditions</TabsTrigger>
         </TabsList>
@@ -320,7 +318,7 @@ export function CommercialDocumentBuilder({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Budget honoraires (€)</Label>
+                <Label>Budget honoraires estimé (€)</Label>
                 <Input
                   type="number"
                   value={document.project_budget || ''}
@@ -344,25 +342,15 @@ export function CommercialDocumentBuilder({
         />
       </TabsContent>
 
-      {/* Devis Tab - Quote Grid Editor */}
-      <TabsContent value="devis" className="space-y-6">
-        <QuoteGridEditor
+      {/* Fees Tab - Combined Fees + Quote */}
+      <TabsContent value="fees" className="space-y-6">
+        <FeesAndQuoteEditor
           items={quoteItems}
           projectType={document.project_type || 'interior'}
           onItemsChange={handleQuoteItemsChange}
-          baseFee={document.total_amount || 0}
           document={document}
           onDocumentChange={onDocumentChange}
           documentId={documentId}
-        />
-      </TabsContent>
-
-      {/* Fees Tab */}
-      <TabsContent value="fees" className="space-y-6">
-        <FeeCalculator
-          document={document}
-          phases={phases}
-          onDocumentChange={onDocumentChange}
         />
       </TabsContent>
 
