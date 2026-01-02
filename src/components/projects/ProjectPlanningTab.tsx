@@ -645,7 +645,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       </div>
 
       {/* Calendar */}
-      <div className="bg-card rounded-lg border p-4 calendar-container">
+      <div className="bg-card rounded-xl border p-6 calendar-container">
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
