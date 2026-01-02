@@ -5,6 +5,7 @@ import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProject } from "@/hooks/useProjects";
 import { useProjectMOE } from "@/hooks/useProjectMOE";
 import { useTasks } from "@/hooks/useTasks";
+import { useMeetingVersions } from "@/hooks/useMeetingVersions";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   ArrowLeft, ChevronDown, ChevronUp, Download, GripVertical,
-  Loader2, Mail, Save, Sparkles,
+  Loader2, Mail, Save, Sparkles, History,
 } from "lucide-react";
 
 import { AttendeesSection } from "./meeting-report/AttendeesSection";
@@ -30,6 +31,7 @@ import { ObservationsSection } from "./meeting-report/ObservationsSection";
 import { TasksSection } from "./meeting-report/TasksSection";
 import { AIRewriteButton } from "./meeting-report/AIRewriteButton";
 import { SendEmailDialog } from "./meeting-report/SendEmailDialog";
+import { VersionHistorySheet } from "./meeting-report/VersionHistorySheet";
 import { ReportSection, AttendeeWithType, ExternalTask, EmailRecipient } from "./meeting-report/types";
 
 interface MeetingReportBuilderProps {
@@ -45,6 +47,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
   const { allContacts } = useContacts();
   const { companies } = useCRMCompanies();
   const { tasks, createTask, updateTaskStatus } = useTasks({ projectId });
+  const { versions, createVersion, latestVersionNumber } = useMeetingVersions(meeting.id);
   const { profile } = useAuth();
 
   const [reportSections, setReportSections] = useState<ReportSection[]>([
@@ -64,6 +67,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
   const [externalTasks, setExternalTasks] = useState<ExternalTask[]>([]);
   const [observationComments, setObservationComments] = useState<Record<string, string>>({});
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
 
   const autoSaveTimeout = useRef<NodeJS.Timeout | null>(null);
   const lastSavedData = useRef<string>("");
@@ -199,6 +203,18 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
     }
   };
 
+  const handleCreateVersion = async () => {
+    try {
+      await createVersion.mutateAsync({
+        notes: localMeeting.notes,
+        attendees: localMeeting.attendees,
+      });
+      toast.success(`Version ${latestVersionNumber + 1} créée`);
+    } catch (error) {
+      toast.error("Erreur lors de la création de la version");
+    }
+  };
+
   const handleGenerateAISummary = async () => {
     setIsGeneratingAI(true);
     try {
@@ -279,6 +295,17 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setIsVersionHistoryOpen(true)}>
+            <History className="h-4 w-4 mr-1" />
+            Historique
+            {latestVersionNumber > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">{latestVersionNumber}</Badge>
+            )}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleCreateVersion} disabled={createVersion.isPending}>
+            {createVersion.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+            Version
+          </Button>
           <Button variant="outline" size="sm" onClick={handleGenerateAISummary} disabled={isGeneratingAI}>
             {isGeneratingAI ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />}
             Synthèse AI
@@ -430,6 +457,14 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
         defaultSubject={`CR ${localMeeting.meeting_number} - ${project?.name || "Projet"}`}
         projectName={project?.name || "Projet"}
         onSend={handleSendEmail}
+      />
+
+      <VersionHistorySheet
+        open={isVersionHistoryOpen}
+        onOpenChange={setIsVersionHistoryOpen}
+        meetingId={meeting.id}
+        currentNotes={localMeeting.notes}
+        currentAttendees={localMeeting.attendees}
       />
     </div>
   );
