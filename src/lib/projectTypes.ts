@@ -107,38 +107,47 @@ export const MOE_CATEGORIES: MOECategoryConfig[] = [
   { value: "entreprise", label: "Entreprise", labelPlural: "Entreprises", icon: "HardHat", color: "#EF4444" },
 ];
 
+// BET Specialties - a single BET company can have multiple
+export const BET_SPECIALTIES = [
+  { value: "structure", label: "Structure" },
+  { value: "fluides", label: "Fluides" },
+  { value: "electricite", label: "Électricité" },
+  { value: "thermique", label: "Thermique" },
+  { value: "environnement", label: "Environnement" },
+  { value: "acoustique", label: "Acoustique" },
+  { value: "vrd", label: "VRD" },
+  { value: "economie", label: "Économie" },
+  { value: "eclairage", label: "Éclairage" },
+  { value: "geotechnique", label: "Géotechnique" },
+];
+
 // Legacy MOE_ROLES for backward compatibility
 export const MOE_ROLES = [
   { value: "architecte", label: "Architecte", category: "architecte" as MOECategory },
   { value: "architecte_interieur", label: "Architecte d'intérieur", category: "architecte" as MOECategory },
-  { value: "client", label: "Maître d'ouvrage", category: "client" as MOECategory },
-  { value: "amo", label: "Assistant MOA", category: "amo" as MOECategory },
-  { value: "bet_structure", label: "BET Structure", category: "bet" as MOECategory },
-  { value: "bet_fluides", label: "BET Fluides", category: "bet" as MOECategory },
-  { value: "bet_electricite", label: "BET Électricité", category: "bet" as MOECategory },
-  { value: "bet_thermique", label: "BET Thermique", category: "bet" as MOECategory },
-  { value: "bet_acoustique", label: "BET Acoustique", category: "bet" as MOECategory },
-  { value: "bet_vrd", label: "BET VRD", category: "bet" as MOECategory },
-  { value: "economiste", label: "Économiste", category: "bet" as MOECategory },
   { value: "paysagiste", label: "Paysagiste", category: "architecte" as MOECategory },
   { value: "scenographe", label: "Scénographe", category: "architecte" as MOECategory },
   { value: "graphiste", label: "Graphiste", category: "architecte" as MOECategory },
-  { value: "eclairagiste", label: "Éclairagiste", category: "bet" as MOECategory },
+  { value: "client", label: "Maître d'ouvrage", category: "client" as MOECategory },
+  { value: "client_representant", label: "Représentant MOA", category: "client" as MOECategory },
+  { value: "amo", label: "Assistant MOA", category: "amo" as MOECategory },
   { value: "opc", label: "OPC", category: "amo" as MOECategory },
   { value: "csps", label: "CSPS", category: "amo" as MOECategory },
   { value: "controle_technique", label: "Bureau de contrôle", category: "amo" as MOECategory },
+  { value: "bet", label: "BET", category: "bet" as MOECategory },
   { value: "geometre", label: "Géomètre", category: "bet" as MOECategory },
   { value: "entreprise_generale", label: "Entreprise générale", category: "entreprise" as MOECategory },
   { value: "entreprise_lot", label: "Entreprise de lot", category: "entreprise" as MOECategory },
   { value: "autre", label: "Autre", category: "entreprise" as MOECategory }
 ];
 
-export function getMOECategoryConfig(category: MOECategory): MOECategoryConfig {
-  return MOE_CATEGORIES.find(c => c.value === category) || MOE_CATEGORIES[0];
-}
-
 export function getRolesByCategory(category: MOECategory) {
   return MOE_ROLES.filter(r => r.category === category);
+}
+
+export function getBETSpecialtyLabel(value: string): string {
+  const specialty = BET_SPECIALTIES.find(s => s.value === value);
+  return specialty?.label || value;
 }
 
 export const LOT_STATUS = [
