@@ -29,11 +29,12 @@ import {
 import { AttendeesSection } from "./meeting-report/AttendeesSection";
 import { ObservationsSection } from "./meeting-report/ObservationsSection";
 import { TasksSection } from "./meeting-report/TasksSection";
-import { AttentionItemsSection, AttentionItem } from "./meeting-report/AttentionItemsSection";
+import { AttentionItemsSection } from "./meeting-report/AttentionItemsSection";
 import { AIRewriteButton } from "./meeting-report/AIRewriteButton";
 import { SendEmailDialog } from "./meeting-report/SendEmailDialog";
 import { VersionHistorySheet } from "./meeting-report/VersionHistorySheet";
 import { ReportSection, AttendeeWithType, ExternalTask, EmailRecipient } from "./meeting-report/types";
+import { useMeetingAttentionItems } from "@/hooks/useMeetingAttentionItems";
 
 interface MeetingReportBuilderProps {
   projectId: string;
@@ -49,6 +50,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
   const { companies } = useCRMCompanies();
   const { tasks, createTask, updateTaskStatus } = useTasks({ projectId });
   const { versions, createVersion, latestVersionNumber } = useMeetingVersions(meeting.id);
+  const { items: attentionItems, createItem: createAttentionItem, updateItem: updateAttentionItem, deleteItem: deleteAttentionItem } = useMeetingAttentionItems(meeting.id);
   const { profile } = useAuth();
 
   const [reportSections, setReportSections] = useState<ReportSection[]>([
@@ -67,7 +69,6 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
   const [aiSummary, setAiSummary] = useState("");
   const [selectedContactToAdd, setSelectedContactToAdd] = useState<string | null>(null);
   const [externalTasks, setExternalTasks] = useState<ExternalTask[]>([]);
-  const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
   const [observationComments, setObservationComments] = useState<Record<string, string>>({});
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
@@ -401,10 +402,12 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
                   {section.id === "attention" && (
                     <AttentionItemsSection
                       items={attentionItems}
-                      onAddItem={(item) => setAttentionItems(prev => [...prev, { ...item, id: crypto.randomUUID() }])}
-                      onUpdateItem={(id, updates) => setAttentionItems(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i))}
-                      onRemoveItem={(id) => setAttentionItems(prev => prev.filter(i => i.id !== id))}
-                      attendeeNames={attendeesWithType.map(a => ({ name: a.name, type: a.type || "other" }))}
+                      companies={companies}
+                      lots={lots}
+                      meetingId={meeting.id}
+                      onCreateItem={(item) => createAttentionItem.mutate(item)}
+                      onUpdateItem={(id, updates) => updateAttentionItem.mutate({ id, ...updates })}
+                      onDeleteItem={(id) => deleteAttentionItem.mutate(id)}
                     />
                   )}
 
