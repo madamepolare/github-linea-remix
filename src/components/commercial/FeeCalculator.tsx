@@ -33,21 +33,37 @@ export function FeeCalculator({
         }
         return 0;
       case 'fixed':
-        return phases.reduce((sum, p) => p.is_included ? sum + (p.amount || 0) : sum, 0);
+        return document.total_amount || 0;
       case 'hourly':
         if (document.hourly_rate) {
           // Estimate based on phases
           return includedPhases.length * 40 * document.hourly_rate; // 40h estimate per phase
         }
         return 0;
+      case 'mixed':
+        // For mixed, use total_amount as base
+        return document.total_amount || 0;
       default:
-        return 0;
+        return document.total_amount || 0;
     }
   };
 
   const baseFee = document.project_budget && document.fee_percentage
     ? document.project_budget * (document.fee_percentage / 100)
-    : 0;
+    : document.total_amount || 0;
+
+  const total = calculateTotal();
+
+  // Calculate phase amounts based on total
+  const getPhaseAmount = (phase: CommercialDocumentPhase) => {
+    if (document.fee_mode === 'fixed' || document.fee_mode === 'mixed') {
+      return (document.total_amount || 0) * (phase.percentage_fee / 100);
+    }
+    if (document.fee_mode === 'percentage' && baseFee) {
+      return baseFee * (phase.percentage_fee / 100);
+    }
+    return phase.amount || 0;
+  };
 
   return (
     <div className="space-y-6">
@@ -58,11 +74,11 @@ export function FeeCalculator({
         </CardHeader>
         <CardContent>
           <RadioGroup
-            value={document.fee_mode || 'percentage'}
+            value={document.fee_mode || 'fixed'}
             onValueChange={(v) => onDocumentChange({ ...document, fee_mode: v as FeeMode })}
             className="grid grid-cols-2 gap-4"
           >
-            {(['percentage', 'fixed', 'hourly', 'mixed'] as FeeMode[]).map((mode) => (
+            {(['fixed', 'percentage', 'hourly', 'mixed'] as FeeMode[]).map((mode) => (
               <div key={mode} className="flex items-center space-x-2">
                 <RadioGroupItem value={mode} id={mode} />
                 <Label htmlFor={mode} className="cursor-pointer">
@@ -80,7 +96,32 @@ export function FeeCalculator({
           <CardTitle>Calcul des honoraires</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {(document.fee_mode === 'percentage' || document.fee_mode === 'mixed') && (
+          {/* Fixed / Forfait Mode */}
+          {(document.fee_mode === 'fixed' || document.fee_mode === 'mixed' || !document.fee_mode) && (
+            <div className="space-y-4">
+              <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">Montant forfaitaire HT (€)</Label>
+                  <Input
+                    type="number"
+                    value={document.total_amount || ''}
+                    onChange={(e) => onDocumentChange({ 
+                      ...document, 
+                      total_amount: parseFloat(e.target.value) || undefined 
+                    })}
+                    placeholder="Ex: 12500"
+                    className="text-lg font-medium h-12"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Montant total de la mission (hors TVA)
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Percentage Mode */}
+          {(document.fee_mode === 'percentage') && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -113,7 +154,7 @@ export function FeeCalculator({
               {baseFee > 0 && (
                 <div className="p-3 bg-muted rounded-lg">
                   <div className="flex justify-between text-sm">
-                    <span>Base de calcul</span>
+                    <span>Base de calcul ({document.fee_percentage}% de {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(document.project_budget || 0)})</span>
                     <span className="font-medium">
                       {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(baseFee)}
                     </span>
@@ -123,7 +164,8 @@ export function FeeCalculator({
             </div>
           )}
 
-          {(document.fee_mode === 'hourly' || document.fee_mode === 'mixed') && (
+          {/* Hourly Mode */}
+          {(document.fee_mode === 'hourly') && (
             <div className="space-y-2">
               <Label>Taux horaire (€/h)</Label>
               <Input
@@ -142,12 +184,10 @@ export function FeeCalculator({
 
           {/* Summary */}
           <div className="space-y-3">
-            <div className="text-sm font-medium">Récapitulatif</div>
+            <div className="text-sm font-medium">Répartition par phase</div>
             
             {includedPhases.map((phase) => {
-              const phaseAmount = document.fee_mode === 'percentage' && baseFee
-                ? baseFee * (phase.percentage_fee / 100)
-                : phase.amount || 0;
+              const phaseAmount = getPhaseAmount(phase);
               
               return (
                 <div key={phase.id} className="flex justify-between text-sm">
@@ -167,21 +207,21 @@ export function FeeCalculator({
             <div className="flex justify-between font-semibold">
               <span>Total HT</span>
               <span className="text-lg">
-                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(calculateTotal())}
+                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(total)}
               </span>
             </div>
 
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>TVA (20%)</span>
               <span>
-                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(calculateTotal() * 0.2)}
+                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(total * 0.2)}
               </span>
             </div>
 
             <div className="flex justify-between font-bold text-primary">
               <span>Total TTC</span>
               <span className="text-xl">
-                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(calculateTotal() * 1.2)}
+                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(total * 1.2)}
               </span>
             </div>
           </div>

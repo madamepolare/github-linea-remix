@@ -40,10 +40,11 @@ const CommercialDocument = () => {
     document_type: initialType,
     title: '',
     project_type: 'interior',
-    fee_mode: 'percentage',
+    fee_mode: 'fixed',
     fee_percentage: 10,
     validity_days: 30,
-    status: 'draft'
+    status: 'draft',
+    total_amount: 0
   });
 
   const [phases, setPhases] = useState<CommercialDocumentPhase[]>([]);
@@ -98,14 +99,23 @@ const CommercialDocument = () => {
   };
 
   const calculateTotal = () => {
+    // For fixed/mixed mode, use total_amount directly
+    if (documentData.fee_mode === 'fixed' || documentData.fee_mode === 'mixed') {
+      return documentData.total_amount || 0;
+    }
+    // For percentage mode, calculate from budget and percentage
     if (documentData.fee_mode === 'percentage' && documentData.project_budget && documentData.fee_percentage) {
       const baseFee = documentData.project_budget * (documentData.fee_percentage / 100);
-      const phasesTotal = phases
+      const totalPercentage = phases
         .filter(p => p.is_included)
-        .reduce((sum, p) => sum + (baseFee * p.percentage_fee / 100), 0);
-      return phasesTotal || baseFee;
+        .reduce((sum, p) => sum + p.percentage_fee, 0);
+      return baseFee * (totalPercentage / 100);
     }
-    return phases.reduce((sum, p) => sum + (p.amount || 0), 0);
+    // For hourly mode
+    if (documentData.fee_mode === 'hourly' && documentData.hourly_rate) {
+      return phases.filter(p => p.is_included).length * 40 * documentData.hourly_rate;
+    }
+    return documentData.total_amount || 0;
   };
 
   if (!isNew && documentQuery.isLoading) {

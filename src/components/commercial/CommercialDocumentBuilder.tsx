@@ -255,6 +255,10 @@ export function CommercialDocumentBuilder({
           onPhasesChange={onPhasesChange}
           projectBudget={document.project_budget}
           feePercentage={document.fee_percentage}
+          totalAmount={document.total_amount}
+          document={document}
+          onDocumentChange={onDocumentChange}
+          documentId={documentId}
         />
       </TabsContent>
 
