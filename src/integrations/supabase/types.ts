@@ -538,6 +538,54 @@ export type Database = {
           },
         ]
       }
+      meeting_report_versions: {
+        Row: {
+          attendees: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          meeting_id: string
+          notes: string | null
+          version_number: number
+          workspace_id: string
+        }
+        Insert: {
+          attendees?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meeting_id: string
+          notes?: string | null
+          version_number?: number
+          workspace_id: string
+        }
+        Update: {
+          attendees?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          meeting_id?: string
+          notes?: string | null
+          version_number?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_report_versions_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "project_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_report_versions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_url: string | null
