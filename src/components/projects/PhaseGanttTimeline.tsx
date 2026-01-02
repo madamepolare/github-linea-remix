@@ -1,16 +1,26 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
-import { format, parseISO, differenceInDays, addDays, startOfMonth, endOfMonth, eachMonthOfInterval } from "date-fns";
+import { format, parseISO, differenceInDays, addDays, startOfMonth, endOfMonth, eachMonthOfInterval, startOfYear, endOfYear, eachWeekOfInterval, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { ProjectPhase } from "@/hooks/useProjectPhases";
 import { PhaseDependency } from "@/hooks/usePhaseDependencies";
 import { PHASE_STATUS_CONFIG, PhaseStatus } from "@/lib/projectTypes";
-import { CheckCircle2, GripVertical, Calendar } from "lucide-react";
+import { CheckCircle2, GripVertical, Calendar, ZoomIn, ZoomOut } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type ZoomLevel = "day" | "week" | "month" | "year";
+
 interface PhaseGanttTimelineProps {
   phases: ProjectPhase[];
   dependencies: PhaseDependency[];
@@ -28,6 +38,13 @@ interface DragState {
   originalEndDate: Date | null;
 }
 
+const ZOOM_CONFIG: Record<ZoomLevel, { label: string; unitWidth: number }> = {
+  day: { label: "Jour", unitWidth: 30 },
+  week: { label: "Semaine", unitWidth: 20 },
+  month: { label: "Mois", unitWidth: 8 },
+  year: { label: "Année", unitWidth: 2 },
+};
+
 export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhaseUpdate }: PhaseGanttTimelineProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -38,6 +55,7 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
   const [editingPhase, setEditingPhase] = useState<string | null>(null);
   const [editStartDate, setEditStartDate] = useState<Date | undefined>(undefined);
   const [editEndDate, setEditEndDate] = useState<Date | undefined>(undefined);
+  const [zoomLevel, setZoomLevel] = useState<ZoomLevel>("month");
 
   useEffect(() => {
     if (containerRef.current) {
@@ -61,16 +79,17 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
     }
   }, [containerWidth, phases]);
 
-  // Calculate timeline bounds based on phase deadlines
+  // Calculate timeline bounds based on phase deadlines and zoom level
   const { timelineStart, timelineEnd, totalDays } = useMemo(() => {
     const phasesWithDates = phases.filter((p) => p.start_date || p.end_date);
     
     if (phasesWithDates.length === 0) {
       const now = new Date();
+      const bufferDays = zoomLevel === "year" ? 365 : zoomLevel === "month" ? 120 : 60;
       return {
-        timelineStart: startOfMonth(addDays(now, -30)),
-        timelineEnd: endOfMonth(addDays(now, 120)),
-        totalDays: 150,
+        timelineStart: zoomLevel === "year" ? startOfYear(addDays(now, -180)) : startOfMonth(addDays(now, -30)),
+        timelineEnd: zoomLevel === "year" ? endOfYear(addDays(now, 365)) : endOfMonth(addDays(now, bufferDays)),
+        totalDays: zoomLevel === "year" ? 730 : 150,
       };
     }
 
@@ -83,19 +102,37 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
     const minDate = new Date(Math.min(...allDates.map((d) => d.getTime())));
     const maxDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
 
-    const start = startOfMonth(addDays(minDate, -14));
-    const end = endOfMonth(addDays(maxDate, 30));
+    // Adjust buffer based on zoom level
+    const bufferBefore = zoomLevel === "year" ? 60 : zoomLevel === "month" ? 30 : 14;
+    const bufferAfter = zoomLevel === "year" ? 90 : zoomLevel === "month" ? 60 : 30;
+    
+    const start = zoomLevel === "year" 
+      ? startOfYear(addDays(minDate, -bufferBefore))
+      : startOfMonth(addDays(minDate, -bufferBefore));
+    const end = zoomLevel === "year"
+      ? endOfYear(addDays(maxDate, bufferAfter))
+      : endOfMonth(addDays(maxDate, bufferAfter));
     const days = differenceInDays(end, start) || 150;
 
     return { timelineStart: start, timelineEnd: end, totalDays: days };
-  }, [phases]);
+  }, [phases, zoomLevel]);
 
-  // Generate months for header
+  // Generate time periods for header based on zoom level
   const months = useMemo(() => {
     return eachMonthOfInterval({ start: timelineStart, end: timelineEnd });
   }, [timelineStart, timelineEnd]);
 
-  const dayWidth = containerWidth > 0 ? Math.max((containerWidth - 200) / totalDays, 3) : 10;
+  const years = useMemo(() => {
+    const yearList: Date[] = [];
+    let current = startOfYear(timelineStart);
+    while (current <= timelineEnd) {
+      yearList.push(current);
+      current = addDays(endOfYear(current), 1);
+    }
+    return yearList;
+  }, [timelineStart, timelineEnd]);
+
+  const dayWidth = ZOOM_CONFIG[zoomLevel].unitWidth;
   const chartWidth = totalDays * dayWidth;
 
   // Calculate positions for each phase (with preview support)
@@ -296,27 +333,70 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
 
   return (
     <div className={cn("border rounded-lg overflow-hidden bg-card", dragState && "cursor-grabbing select-none")}>
-      {/* Header with months */}
+      {/* Zoom controls */}
+      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+        <span className="text-sm font-medium">Timeline des phases</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <ZoomOut className="h-3.5 w-3.5" />
+          </div>
+          <Select value={zoomLevel} onValueChange={(v) => setZoomLevel(v as ZoomLevel)}>
+            <SelectTrigger className="w-[110px] h-7 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="day">Jour</SelectItem>
+              <SelectItem value="week">Semaine</SelectItem>
+              <SelectItem value="month">Mois</SelectItem>
+              <SelectItem value="year">Année</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <ZoomIn className="h-3.5 w-3.5" />
+          </div>
+        </div>
+      </div>
+
+      {/* Header with time periods */}
       <div className="flex border-b bg-muted/50">
         <div className="w-[200px] flex-shrink-0 px-3 py-2 font-medium text-sm border-r">
           Phases
         </div>
         <div className="flex-1 overflow-x-auto" ref={containerRef}>
           <div style={{ width: chartWidth, minWidth: "100%" }} className="flex">
-            {months.map((month) => {
-              const monthEnd = endOfMonth(month);
-              const monthDays = differenceInDays(monthEnd, month) + 1;
-              
-              return (
-                <div
-                  key={month.toISOString()}
-                  className="text-xs text-muted-foreground py-2 px-2 border-r"
-                  style={{ width: monthDays * dayWidth }}
-                >
-                  {format(month, "MMM yyyy", { locale: fr })}
-                </div>
-              );
-            })}
+            {zoomLevel === "year" ? (
+              years.map((year) => {
+                const yearEnd = endOfYear(year);
+                const yearDays = differenceInDays(yearEnd, year) + 1;
+                
+                return (
+                  <div
+                    key={year.toISOString()}
+                    className="text-xs text-muted-foreground py-2 px-2 border-r font-medium"
+                    style={{ width: yearDays * dayWidth }}
+                  >
+                    {format(year, "yyyy")}
+                  </div>
+                );
+              })
+            ) : (
+              months.map((month) => {
+                const monthEnd = endOfMonth(month);
+                const monthDays = differenceInDays(monthEnd, month) + 1;
+                
+                return (
+                  <div
+                    key={month.toISOString()}
+                    className="text-xs text-muted-foreground py-2 px-2 border-r"
+                    style={{ width: monthDays * dayWidth }}
+                  >
+                    {zoomLevel === "day" || zoomLevel === "week" 
+                      ? format(month, "MMMM yyyy", { locale: fr })
+                      : format(month, "MMM yyyy", { locale: fr })}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>
