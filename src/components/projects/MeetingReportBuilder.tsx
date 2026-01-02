@@ -34,6 +34,7 @@ import { AIRewriteButton } from "./meeting-report/AIRewriteButton";
 import { SendEmailDialog } from "./meeting-report/SendEmailDialog";
 import { VersionHistorySheet } from "./meeting-report/VersionHistorySheet";
 import { ReportSection, AttendeeWithType, ExternalTask, EmailRecipient } from "./meeting-report/types";
+import { PDFPreviewDialog } from "./meeting-report/PDFPreviewDialog";
 import { useMeetingAttentionItems } from "@/hooks/useMeetingAttentionItems";
 
 interface MeetingReportBuilderProps {
@@ -72,6 +73,9 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
   const [observationComments, setObservationComments] = useState<Record<string, string>>({});
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [pdfFileName, setPdfFileName] = useState("");
 
   // Track if there are unsaved changes
   const savedDataRef = useRef<string>(JSON.stringify({
@@ -236,7 +240,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
       const meetingObservations = observations.filter(o => o.meeting_id === meeting.id);
       const chantierTasks = (tasks || []).filter(t => t.module === "chantier");
       
-      generateMeetingPDF({
+      const { blob, fileName } = generateMeetingPDF({
         meeting: localMeeting,
         observations: meetingObservations,
         attentionItems: attentionItems.map(item => ({
@@ -261,7 +265,10 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
         projectClient: project?.client || undefined,
         aiSummary: aiSummary || undefined,
       });
-      toast.success("PDF généré avec succès");
+      
+      setPdfBlob(blob);
+      setPdfFileName(fileName);
+      setPdfPreviewOpen(true);
     } catch (error) {
       toast.error("Erreur lors de la génération du PDF");
     }
@@ -493,6 +500,13 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
         onRestore={(notes, attendees) => {
           setLocalMeeting({ ...localMeeting, notes, attendees });
         }}
+      />
+
+      <PDFPreviewDialog
+        open={pdfPreviewOpen}
+        onOpenChange={setPdfPreviewOpen}
+        pdfBlob={pdfBlob}
+        fileName={pdfFileName}
       />
     </div>
   );
