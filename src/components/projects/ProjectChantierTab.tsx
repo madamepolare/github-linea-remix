@@ -670,7 +670,7 @@ interface MeetingsSectionProps {
 
 // Meetings Section
 function MeetingsSection({ projectId, onOpenReport, onSendConvocation }: MeetingsSectionProps) {
-  const { meetings, meetingsLoading, observations, createMeeting, updateMeeting, deleteMeeting } = useChantier(projectId);
+  const { meetings, meetingsLoading, observations, lots, createMeeting, updateMeeting, deleteMeeting } = useChantier(projectId);
   const { data: project } = useProject(projectId);
   const { allContacts } = useContacts();
   const { companies } = useCRMCompanies();
@@ -752,13 +752,26 @@ function MeetingsSection({ projectId, onOpenReport, onSendConvocation }: Meeting
     );
 
     try {
-      generateMeetingPDF({
+      const meetingReportData = meeting.report_data as unknown as import("@/hooks/useMeetingReportData").ReportData | null;
+      const { blob, fileName } = generateMeetingPDF({
         meeting,
         observations: meetingObservations,
         projectName: project?.name || "Projet",
         projectAddress: project?.address || undefined,
         projectClient: project?.client || undefined,
+        reportData: meetingReportData || undefined,
+        lots: (lots || []).map(l => ({ id: l.id, name: l.name })),
       });
+      
+      // Download the PDF
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       toast.success("PDF généré avec succès");
     } catch (error) {
       console.error("Error generating PDF:", error);

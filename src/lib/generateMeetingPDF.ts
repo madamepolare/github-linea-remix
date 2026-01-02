@@ -4,6 +4,7 @@ import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ProjectMeeting, ProjectObservation, MeetingAttendee } from "@/hooks/useChantier";
 import { OBSERVATION_STATUS, OBSERVATION_PRIORITY } from "@/lib/projectTypes";
+import { ReportData, LotProgress, BlockingPoint, TechnicalDecision } from "@/hooks/useMeetingReportData";
 
 interface AttentionItem {
   id: string;
@@ -24,6 +25,11 @@ interface TaskItem {
   assigned_to?: string[] | null;
 }
 
+interface LotInfo {
+  id: string;
+  name: string;
+}
+
 interface MeetingPDFData {
   meeting: ProjectMeeting;
   observations: ProjectObservation[];
@@ -33,6 +39,8 @@ interface MeetingPDFData {
   projectAddress?: string;
   projectClient?: string;
   aiSummary?: string;
+  reportData?: ReportData;
+  lots?: LotInfo[];
 }
 
 export function generateMeetingPDF({
@@ -44,10 +52,13 @@ export function generateMeetingPDF({
   projectAddress,
   projectClient,
   aiSummary,
+  reportData,
+  lots = [],
 }: MeetingPDFData): { blob: Blob; fileName: string } {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   let yPos = 20;
+  let sectionNumber = 1;
 
   // Helper function to check and add new page if needed
   const checkPageBreak = (requiredSpace: number = 40) => {
@@ -57,10 +68,49 @@ export function generateMeetingPDF({
     }
   };
 
-  // Title with meeting number
+  // Helper to add a section title
+  const addSectionTitle = (title: string) => {
+    checkPageBreak(30);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0);
+    doc.text(`${sectionNumber}. ${title}`, 14, yPos);
+    sectionNumber++;
+    yPos += 6;
+  };
+
+  // Helper to add subsection text
+  const addSubsectionTitle = (title: string) => {
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(60);
+    doc.text(title, 14, yPos);
+    yPos += 5;
+  };
+
+  // Helper to add normal text
+  const addText = (text: string, indent: number = 14) => {
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0);
+    const splitText = doc.splitTextToSize(text, pageWidth - indent - 14);
+    doc.text(splitText, indent, yPos);
+    yPos += splitText.length * 4 + 2;
+  };
+
+  // Helper to get lot name by id
+  const getLotName = (lotId: string | null): string => {
+    if (!lotId) return "-";
+    const lot = lots.find(l => l.id === lotId);
+    return lot?.name || "-";
+  };
+
+  // ========================
+  // HEADER
+  // ========================
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text(`Réunion de chantier n°${meeting.meeting_number || 1}`, pageWidth / 2, yPos, {
+  doc.text(`Compte rendu de chantier n°${meeting.meeting_number || 1}`, pageWidth / 2, yPos, {
     align: "center",
   });
 
@@ -125,16 +175,11 @@ export function generateMeetingPDF({
   yPos += 15;
 
   // ========================
-  // SECTION 1: Attendees
+  // SECTION 1: Participants
   // ========================
   const attendees = meeting.attendees || [];
   if (attendees.length > 0) {
-    checkPageBreak(60);
-    
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("1. Participants", 14, yPos);
-    yPos += 3;
+    addSectionTitle("Participants");
 
     const presentAttendees = attendees.filter((a: MeetingAttendee) => a.present);
     const absentAttendees = attendees.filter((a: MeetingAttendee) => !a.present);
@@ -180,33 +225,211 @@ export function generateMeetingPDF({
   }
 
   // ========================
-  // SECTION 2: Notes
+  // SECTION 2: Contexte (from reportData)
   // ========================
-  if (meeting.notes) {
-    checkPageBreak(50);
-    
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("2. Notes & Ordre du jour", 14, yPos);
-    yPos += 6;
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    const splitNotes = doc.splitTextToSize(meeting.notes, pageWidth - 28);
-    doc.text(splitNotes, 14, yPos);
-    yPos += splitNotes.length * 5 + 10;
+  if (reportData?.context) {
+    addSectionTitle("Contexte");
+    addText(reportData.context);
+    yPos += 5;
   }
 
   // ========================
-  // SECTION 3: Attention Items (Points abordés)
+  // SECTION 3: Notes / Ordre du jour
+  // ========================
+  if (meeting.notes) {
+    addSectionTitle("Notes & Ordre du jour");
+    addText(meeting.notes);
+    yPos += 5;
+  }
+
+  // ========================
+  // SECTION 4: Avancement général (from reportData)
+  // ========================
+  if (reportData?.general_progress) {
+    addSectionTitle("Avancement général");
+    
+    const statusLabels: Record<string, string> = {
+      on_track: "✓ Conforme au planning",
+      slight_delay: "⚠ Léger retard",
+      critical: "✗ Retard critique",
+    };
+    
+    const statusColors: Record<string, number[]> = {
+      on_track: [34, 139, 34],
+      slight_delay: [255, 165, 0],
+      critical: [220, 53, 69],
+    };
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    const status = reportData.general_progress.status || "on_track";
+    const statusColor = statusColors[status] || [0, 0, 0];
+    doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+    doc.text(statusLabels[status] || status, 14, yPos);
+    doc.setTextColor(0);
+    yPos += 6;
+    
+    if (reportData.general_progress.comment) {
+      addText(reportData.general_progress.comment);
+    }
+    yPos += 5;
+  }
+
+  // ========================
+  // SECTION 5: Avancement par lots (from reportData)
+  // ========================
+  if (reportData?.lot_progress && reportData.lot_progress.length > 0) {
+    addSectionTitle("Avancement par lots");
+    
+    const lotProgressData = reportData.lot_progress.map((lp: LotProgress) => [
+      getLotName(lp.lot_id),
+      `${lp.progress_percent}%`,
+      lp.works_done.substring(0, 50) + (lp.works_done.length > 50 ? "..." : ""),
+      lp.works_planned.substring(0, 50) + (lp.works_planned.length > 50 ? "..." : ""),
+    ]);
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Lot", "Avancement", "Travaux réalisés", "Travaux prévus"]],
+      body: lotProgressData,
+      theme: "striped",
+      headStyles: {
+        fillColor: [66, 66, 66],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+        overflow: "linebreak",
+      },
+      columnStyles: {
+        0: { cellWidth: 35 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 55 },
+        3: { cellWidth: 55 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
+  }
+
+  // ========================
+  // SECTION 6: Points techniques (from reportData)
+  // ========================
+  if (reportData?.technical_decisions && reportData.technical_decisions.length > 0) {
+    addSectionTitle("Points techniques & Décisions");
+    
+    const techData = reportData.technical_decisions.map((td: TechnicalDecision, index: number) => [
+      `${index + 1}`,
+      td.description.substring(0, 60) + (td.description.length > 60 ? "..." : ""),
+      td.decision.substring(0, 60) + (td.decision.length > 60 ? "..." : ""),
+      td.reference_doc || "-",
+    ]);
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["#", "Description", "Décision", "Réf. doc"]],
+      body: techData,
+      theme: "striped",
+      headStyles: {
+        fillColor: [66, 66, 66],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+        overflow: "linebreak",
+      },
+      columnStyles: {
+        0: { cellWidth: 10 },
+        1: { cellWidth: 60 },
+        2: { cellWidth: 60 },
+        3: { cellWidth: 35 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
+  }
+
+  // ========================
+  // SECTION 7: Points bloquants (from reportData)
+  // ========================
+  if (reportData?.blocking_points && reportData.blocking_points.length > 0) {
+    addSectionTitle("Points bloquants");
+    
+    const statusLabels: Record<string, string> = {
+      open: "Ouvert",
+      in_progress: "En cours",
+      resolved: "Résolu",
+    };
+    
+    const blockingData = reportData.blocking_points.map((bp: BlockingPoint, index: number) => {
+      const resolutionDate = bp.resolution_date
+        ? format(parseISO(bp.resolution_date), "dd/MM/yyyy")
+        : "-";
+      
+      return [
+        `${index + 1}`,
+        bp.description.substring(0, 50) + (bp.description.length > 50 ? "..." : ""),
+        getLotName(bp.lot_id),
+        bp.responsibility || "-",
+        bp.consequence.substring(0, 30) + (bp.consequence.length > 30 ? "..." : ""),
+        statusLabels[bp.status] || bp.status,
+        resolutionDate,
+      ];
+    });
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["#", "Description", "Lot", "Responsabilité", "Conséquence", "Statut", "Résolution"]],
+      body: blockingData,
+      theme: "striped",
+      headStyles: {
+        fillColor: [66, 66, 66],
+        textColor: 255,
+        fontStyle: "bold",
+      },
+      styles: {
+        fontSize: 7,
+        cellPadding: 2,
+        overflow: "linebreak",
+      },
+      columnStyles: {
+        0: { cellWidth: 8 },
+        1: { cellWidth: 40 },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 18 },
+        6: { cellWidth: 20 },
+      },
+      margin: { left: 14, right: 14 },
+      didParseCell: (data) => {
+        if (data.column.index === 5 && data.section === "body") {
+          const status = reportData.blocking_points[data.row.index]?.status;
+          if (status === "resolved") {
+            data.cell.styles.textColor = [34, 139, 34];
+          } else if (status === "open") {
+            data.cell.styles.textColor = [220, 53, 69];
+          } else {
+            data.cell.styles.textColor = [255, 165, 0];
+          }
+        }
+      },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 10;
+  }
+
+  // ========================
+  // SECTION 8: Points abordés (Attention Items)
   // ========================
   if (attentionItems.length > 0) {
-    checkPageBreak(60);
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text(`3. Points abordés (${attentionItems.length})`, 14, yPos);
-    yPos += 3;
+    addSectionTitle("Points abordés");
 
     const urgencyLabels: Record<string, string> = {
       critical: "Critique",
@@ -272,15 +495,10 @@ export function generateMeetingPDF({
   }
 
   // ========================
-  // SECTION 4: Observations
+  // SECTION 9: Observations & Réserves
   // ========================
   if (observations.length > 0) {
-    checkPageBreak(60);
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text(`4. Observations & Réserves (${observations.length})`, 14, yPos);
-    yPos += 3;
+    addSectionTitle("Observations & Réserves");
 
     const observationData = observations.map((obs, index) => {
       const statusConfig = OBSERVATION_STATUS.find((s) => s.value === obs.status);
@@ -349,15 +567,10 @@ export function generateMeetingPDF({
   }
 
   // ========================
-  // SECTION 5: Tasks
+  // SECTION 10: Actions & Tâches
   // ========================
   if (tasks.length > 0) {
-    checkPageBreak(60);
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text(`5. Actions & Tâches (${tasks.length})`, 14, yPos);
-    yPos += 3;
+    addSectionTitle("Actions & Tâches");
 
     const statusLabels: Record<string, string> = {
       todo: "À faire",
@@ -425,15 +638,132 @@ export function generateMeetingPDF({
   }
 
   // ========================
-  // SECTION 6: AI Summary
+  // SECTION 11: Planning (from reportData)
+  // ========================
+  if (reportData?.planning && (reportData.planning.contractual_reminder || reportData.planning.delays_noted || reportData.planning.corrective_actions)) {
+    addSectionTitle("Planning");
+    
+    if (reportData.planning.contractual_reminder) {
+      addSubsectionTitle("Rappel contractuel:");
+      addText(reportData.planning.contractual_reminder);
+    }
+    
+    if (reportData.planning.delays_noted) {
+      addSubsectionTitle("Retards constatés:");
+      addText(reportData.planning.delays_noted);
+    }
+    
+    if (reportData.planning.corrective_actions) {
+      addSubsectionTitle("Actions correctives:");
+      addText(reportData.planning.corrective_actions);
+    }
+    
+    if (reportData.planning.delivery_impact) {
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(220, 53, 69);
+      doc.text("⚠ Impact sur la livraison signalé", 14, yPos);
+      doc.setTextColor(0);
+      yPos += 6;
+    }
+    
+    yPos += 5;
+  }
+
+  // ========================
+  // SECTION 12: Questions financières (from reportData)
+  // ========================
+  if (reportData?.financial?.enabled) {
+    addSectionTitle("Questions financières");
+    
+    if (reportData.financial.supplementary_works) {
+      addSubsectionTitle("Travaux supplémentaires:");
+      addText(reportData.financial.supplementary_works);
+    }
+    
+    if (reportData.financial.pending_quotes) {
+      addSubsectionTitle("Devis en attente:");
+      addText(reportData.financial.pending_quotes);
+    }
+    
+    if (reportData.financial.service_orders) {
+      addSubsectionTitle("Ordres de service:");
+      addText(reportData.financial.service_orders);
+    }
+    
+    yPos += 5;
+  }
+
+  // ========================
+  // SECTION 13: SQE (from reportData)
+  // ========================
+  if (reportData?.sqe) {
+    const hasSQEContent = !reportData.sqe.safety_ok || 
+                          !reportData.sqe.cleanliness_ok || 
+                          reportData.sqe.sps_observations || 
+                          reportData.sqe.nuisances_comment;
+    
+    if (hasSQEContent) {
+      addSectionTitle("Sécurité, Qualité, Environnement (SQE)");
+      
+      // Safety status
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      const safetyIcon = reportData.sqe.safety_ok ? "✓" : "✗";
+      const safetyColor = reportData.sqe.safety_ok ? [34, 139, 34] : [220, 53, 69];
+      doc.setTextColor(safetyColor[0], safetyColor[1], safetyColor[2]);
+      doc.text(`${safetyIcon} Sécurité: ${reportData.sqe.safety_ok ? "Conforme" : "Non conforme"}`, 14, yPos);
+      doc.setTextColor(0);
+      yPos += 5;
+      
+      if (reportData.sqe.sps_observations) {
+        addSubsectionTitle("Observations SPS:");
+        addText(reportData.sqe.sps_observations);
+      }
+      
+      // Cleanliness status
+      const cleanIcon = reportData.sqe.cleanliness_ok ? "✓" : "✗";
+      const cleanColor = reportData.sqe.cleanliness_ok ? [34, 139, 34] : [220, 53, 69];
+      doc.setTextColor(cleanColor[0], cleanColor[1], cleanColor[2]);
+      doc.text(`${cleanIcon} Propreté: ${reportData.sqe.cleanliness_ok ? "Satisfaisante" : "À améliorer"}`, 14, yPos);
+      doc.setTextColor(0);
+      yPos += 5;
+      
+      if (reportData.sqe.nuisances_comment) {
+        addSubsectionTitle("Nuisances environnementales:");
+        addText(reportData.sqe.nuisances_comment);
+      }
+      
+      yPos += 5;
+    }
+  }
+
+  // ========================
+  // SECTION 14: Prochaine réunion (from reportData)
+  // ========================
+  if (reportData?.next_meeting?.date) {
+    addSectionTitle("Prochaine réunion");
+    
+    const locationLabels: Record<string, string> = {
+      site: "Sur site",
+      remote: "Visioconférence",
+      office: "En agence",
+    };
+    
+    const nextMeetingDate = format(parseISO(reportData.next_meeting.date), "EEEE d MMMM yyyy", { locale: fr });
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Date: ${nextMeetingDate} à ${reportData.next_meeting.time || "09:00"}`, 14, yPos);
+    yPos += 5;
+    doc.text(`Lieu: ${locationLabels[reportData.next_meeting.location_type] || reportData.next_meeting.location_type}`, 14, yPos);
+    yPos += 10;
+  }
+
+  // ========================
+  // SECTION 15: AI Summary
   // ========================
   if (aiSummary) {
-    checkPageBreak(50);
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("6. Synthèse AI", 14, yPos);
-    yPos += 6;
+    addSectionTitle("Synthèse AI");
 
     doc.setDrawColor(200);
     doc.setFillColor(245, 245, 250);
@@ -447,6 +777,29 @@ export function generateMeetingPDF({
     doc.setFont("helvetica", "italic");
     doc.text(splitSummary, 18, yPos + 4);
     yPos += boxHeight + 10;
+  }
+
+  // ========================
+  // SECTION 16: Mentions légales (from reportData)
+  // ========================
+  if (reportData?.legal_mention) {
+    checkPageBreak(30);
+    
+    doc.setDrawColor(180);
+    doc.setFillColor(250, 250, 250);
+    
+    const legalText = reportData.legal_mention.replace("{DELAY}", reportData.legal_delay_days?.toString() || "7");
+    const splitLegal = doc.splitTextToSize(legalText, pageWidth - 36);
+    const legalBoxHeight = splitLegal.length * 4 + 8;
+    
+    doc.roundedRect(14, yPos, pageWidth - 28, legalBoxHeight, 2, 2, "FD");
+    
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(80);
+    doc.text(splitLegal, 18, yPos + 5);
+    doc.setTextColor(0);
+    yPos += legalBoxHeight + 10;
   }
 
   // Footer on all pages
