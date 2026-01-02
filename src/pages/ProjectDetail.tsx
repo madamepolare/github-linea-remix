@@ -38,7 +38,7 @@ import { ProjectPhasesTab } from "@/components/projects/ProjectPhasesTab";
 import { ProjectMOETab } from "@/components/projects/ProjectMOETab";
 import { ProjectDeliverablesTab } from "@/components/projects/ProjectDeliverablesTab";
 import { ProjectChantierTab } from "@/components/projects/ProjectChantierTab";
-import { ProjectTasksTab } from "@/components/projects/ProjectTasksTab";
+import { EntityTasksList } from "@/components/tasks/EntityTasksList";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -224,7 +224,9 @@ export default function ProjectDetail() {
             />
           )}
           {activeTab === "phases" && <ProjectPhasesTab projectId={project.id} />}
-          {activeTab === "tasks" && <ProjectTasksTab projectId={project.id} />}
+          {activeTab === "tasks" && (
+            <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
+          )}
           {activeTab === "moe" && <ProjectMOETab projectId={project.id} />}
           {activeTab === "deliverables" && <ProjectDeliverablesTab projectId={project.id} />}
           {activeTab === "chantier" && <ProjectChantierTab projectId={project.id} />}
