@@ -135,6 +135,11 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
   const dayWidth = ZOOM_CONFIG[zoomLevel].unitWidth;
   const chartWidth = totalDays * dayWidth;
 
+  // Generate a key based on phases data to force re-render when phases change
+  const phasesKey = useMemo(() => {
+    return phases.map(p => `${p.id}-${p.start_date}-${p.end_date}`).join("|");
+  }, [phases]);
+
   // Calculate positions for each phase (with preview support)
   const phasePositions = useMemo(() => {
     const positions: Record<string, { left: number; width: number; startDate: Date | null; endDate: Date | null }> = {};
@@ -187,7 +192,7 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
     });
 
     return positions;
-  }, [phases, timelineStart, dayWidth, previewDates]);
+  }, [phases, timelineStart, dayWidth, previewDates, phasesKey]);
 
   // Build dependency map for visual connections
   const dependencyLines = useMemo(() => {
