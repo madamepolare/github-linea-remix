@@ -49,6 +49,10 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
   const containerRef = useRef<HTMLDivElement>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const todayRef = useRef<HTMLDivElement>(null);
+
+  // Keep the latest dragged dates in a ref so mouseup always has the final value
+  const previewRef = useRef<Record<string, { start_date?: Date; end_date?: Date }>>({});
+
   const [containerWidth, setContainerWidth] = useState(0);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [previewDates, setPreviewDates] = useState<Record<string, { start_date?: Date; end_date?: Date }>>({});
@@ -241,17 +245,17 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!dragState) return;
-    
+
     const deltaX = e.clientX - dragState.startX;
     const deltaDays = Math.round(deltaX / dayWidth);
-    
+
     if (deltaDays === 0) return;
-    
+
     const { phaseId, type, originalStartDate, originalEndDate } = dragState;
-    
+
     let newStartDate = originalStartDate;
     let newEndDate = originalEndDate;
-    
+
     if (type === "move") {
       if (originalStartDate) newStartDate = addDays(originalStartDate, deltaDays);
       if (originalEndDate) newEndDate = addDays(originalEndDate, deltaDays);
@@ -268,29 +272,35 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
         newEndDate = addDays(newStartDate, 1);
       }
     }
-    
-    setPreviewDates({
-      [phaseId]: {
-        start_date: newStartDate || undefined,
-        end_date: newEndDate || undefined,
-      }
-    });
+
+    const nextPreview = {
+      start_date: newStartDate || undefined,
+      end_date: newEndDate || undefined,
+    };
+
+    // Save both in state (for rendering) and in a ref (so mouseup always has the latest)
+    previewRef.current[phaseId] = nextPreview;
+    setPreviewDates((prev) => ({
+      ...prev,
+      [phaseId]: nextPreview,
+    }));
   }, [dragState, dayWidth]);
 
   const handleMouseUp = useCallback(() => {
     if (!dragState) return;
-    
-    const preview = previewDates[dragState.phaseId];
-    if (preview && onPhaseUpdate) {
+
+    const latestPreview = previewRef.current[dragState.phaseId];
+    if (latestPreview && onPhaseUpdate) {
       onPhaseUpdate(dragState.phaseId, {
-        start_date: preview.start_date ? format(preview.start_date, "yyyy-MM-dd") : undefined,
-        end_date: preview.end_date ? format(preview.end_date, "yyyy-MM-dd") : undefined,
+        start_date: latestPreview.start_date ? format(latestPreview.start_date, "yyyy-MM-dd") : undefined,
+        end_date: latestPreview.end_date ? format(latestPreview.end_date, "yyyy-MM-dd") : undefined,
       });
     }
-    
+
     setDragState(null);
+    previewRef.current = {};
     setPreviewDates({});
-  }, [dragState, previewDates, onPhaseUpdate]);
+  }, [dragState, onPhaseUpdate]);
 
   useEffect(() => {
     if (dragState) {
