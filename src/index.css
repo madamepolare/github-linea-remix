@@ -361,3 +361,207 @@
     transform: translateY(-1px);
   }
 }
+
+/* FullCalendar - Programa Design System Integration */
+.calendar-container {
+  --fc-border-color: hsl(var(--border));
+  --fc-button-bg-color: hsl(var(--secondary));
+  --fc-button-border-color: hsl(var(--border));
+  --fc-button-text-color: hsl(var(--foreground));
+  --fc-button-hover-bg-color: hsl(var(--muted));
+  --fc-button-hover-border-color: hsl(var(--border));
+  --fc-button-active-bg-color: hsl(var(--primary));
+  --fc-button-active-border-color: hsl(var(--primary));
+  --fc-today-bg-color: hsl(var(--accent) / 0.08);
+  --fc-now-indicator-color: hsl(var(--accent));
+  --fc-neutral-bg-color: hsl(var(--surface));
+  --fc-page-bg-color: hsl(var(--card));
+  --fc-event-border-color: transparent;
+}
+
+/* Calendar header toolbar */
+.calendar-container .fc .fc-toolbar {
+  @apply flex-wrap gap-3 mb-4;
+}
+
+.calendar-container .fc .fc-toolbar-title {
+  @apply text-lg font-semibold text-foreground capitalize;
+}
+
+/* Calendar navigation buttons */
+.calendar-container .fc .fc-button {
+  @apply px-3 py-1.5 text-sm font-medium rounded-md border transition-all duration-150;
+  background: hsl(var(--background));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+  box-shadow: none !important;
+  text-transform: capitalize;
+}
+
+.calendar-container .fc .fc-button:hover {
+  background: hsl(var(--muted));
+  border-color: hsl(var(--border));
+}
+
+.calendar-container .fc .fc-button:focus {
+  @apply outline-none ring-2 ring-ring/20 ring-offset-0;
+}
+
+.calendar-container .fc .fc-button-primary:not(:disabled).fc-button-active,
+.calendar-container .fc .fc-button-primary:not(:disabled):active {
+  background: hsl(var(--foreground));
+  border-color: hsl(var(--foreground));
+  color: hsl(var(--background));
+}
+
+.calendar-container .fc .fc-button-group {
+  @apply gap-0;
+}
+
+.calendar-container .fc .fc-button-group > .fc-button {
+  @apply rounded-none first:rounded-l-md last:rounded-r-md -ml-px first:ml-0;
+}
+
+.calendar-container .fc .fc-prev-button,
+.calendar-container .fc .fc-next-button {
+  @apply px-2;
+}
+
+/* Today button */
+.calendar-container .fc .fc-today-button {
+  @apply px-3;
+}
+
+.calendar-container .fc .fc-today-button:disabled {
+  @apply opacity-40 cursor-not-allowed;
+}
+
+/* Calendar table styles */
+.calendar-container .fc .fc-scrollgrid {
+  @apply border-border rounded-lg overflow-hidden;
+}
+
+.calendar-container .fc .fc-scrollgrid-section > * {
+  @apply border-border;
+}
+
+.calendar-container .fc .fc-col-header-cell {
+  @apply py-3 font-medium text-sm;
+  background: hsl(var(--surface));
+  color: hsl(var(--text-secondary));
+}
+
+.calendar-container .fc .fc-col-header-cell-cushion {
+  @apply capitalize;
+}
+
+.calendar-container .fc .fc-daygrid-day {
+  @apply transition-colors duration-100;
+}
+
+.calendar-container .fc .fc-daygrid-day:hover {
+  background: hsl(var(--muted) / 0.3);
+}
+
+.calendar-container .fc .fc-daygrid-day-frame {
+  @apply min-h-[100px];
+}
+
+.calendar-container .fc .fc-daygrid-day-top {
+  @apply flex-row p-1.5;
+}
+
+.calendar-container .fc .fc-daygrid-day-number {
+  @apply text-sm font-medium px-2 py-0.5 rounded-md transition-colors;
+  color: hsl(var(--text-secondary));
+}
+
+.calendar-container .fc .fc-day-today .fc-daygrid-day-number {
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
+}
+
+.calendar-container .fc .fc-day-other .fc-daygrid-day-number {
+  color: hsl(var(--text-tertiary));
+  opacity: 0.6;
+}
+
+/* Events styling */
+.calendar-container .fc .fc-event {
+  @apply border-0 rounded-md text-xs font-medium cursor-pointer transition-transform duration-100;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.calendar-container .fc .fc-event:hover {
+  @apply scale-[1.02];
+  box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+}
+
+.calendar-container .fc .fc-event-main {
+  @apply py-0.5 px-1.5;
+}
+
+.calendar-container .fc .fc-daygrid-event {
+  @apply mt-0.5 mx-1;
+}
+
+.calendar-container .fc .fc-daygrid-more-link {
+  @apply text-xs font-medium px-1.5 py-0.5 rounded;
+  color: hsl(var(--text-secondary));
+}
+
+.calendar-container .fc .fc-daygrid-more-link:hover {
+  background: hsl(var(--muted));
+}
+
+/* Background events (phases) */
+.calendar-container .fc .fc-bg-event {
+  @apply opacity-100;
+}
+
+/* Time grid styles */
+.calendar-container .fc .fc-timegrid-slot {
+  @apply h-10;
+}
+
+.calendar-container .fc .fc-timegrid-slot-label {
+  @apply text-xs;
+  color: hsl(var(--text-tertiary));
+}
+
+.calendar-container .fc .fc-timegrid-axis-cushion {
+  @apply text-xs;
+  color: hsl(var(--text-tertiary));
+}
+
+/* Now indicator */
+.calendar-container .fc .fc-timegrid-now-indicator-line {
+  @apply border-2;
+  border-color: hsl(var(--accent));
+}
+
+.calendar-container .fc .fc-timegrid-now-indicator-arrow {
+  border-color: hsl(var(--accent));
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+}
+
+/* Popover for more events */
+.calendar-container .fc .fc-popover {
+  @apply bg-popover border-border rounded-lg shadow-lg;
+}
+
+.calendar-container .fc .fc-popover-header {
+  @apply bg-surface px-3 py-2 text-sm font-medium rounded-t-lg;
+  color: hsl(var(--foreground));
+}
+
+.calendar-container .fc .fc-popover-body {
+  @apply p-2;
+}
+
+/* Dark mode adjustments are handled by CSS variables */
+.dark .calendar-container .fc .fc-day-today .fc-daygrid-day-number {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
