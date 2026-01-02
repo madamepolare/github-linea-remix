@@ -135,7 +135,7 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
             </div>
 
             {/* Category & Type */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className={isBET ? "space-y-2" : "grid grid-cols-2 gap-4"}>
               <div className="space-y-2">
                 <Label>Catégorie</Label>
                 <Select
@@ -158,28 +158,30 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select
-                  value={form.watch("industry")}
-                  onValueChange={(v) => form.setValue("industry", v)}
-                  disabled={!selectedCategory}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categoryTypes.map((type) => {
-                      const config = COMPANY_TYPE_CONFIG[type];
-                      return (
-                        <SelectItem key={type} value={type}>
-                          {config.label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!isBET && (
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <Select
+                    value={form.watch("industry")}
+                    onValueChange={(v) => form.setValue("industry", v)}
+                    disabled={!selectedCategory}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categoryTypes.map((type) => {
+                        const config = COMPANY_TYPE_CONFIG[type];
+                        return (
+                          <SelectItem key={type} value={type}>
+                            {config.label}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             {/* BET Specialties */}

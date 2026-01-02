@@ -266,7 +266,7 @@ export default function CompanyDetail() {
                   <h3 className="font-medium text-sm text-muted-foreground">Type d'entreprise</h3>
                   {isEditing ? (
                     <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className={selectedCategory === "bet" ? "space-y-2" : "grid grid-cols-2 gap-2"}>
                         <div>
                           <label className="text-xs text-muted-foreground">Catégorie</label>
                           <Select
@@ -289,31 +289,33 @@ export default function CompanyDetail() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div>
-                          <label className="text-xs text-muted-foreground">Type</label>
-                          <Select
-                            value={(editData.industry as string) || ""}
-                            onValueChange={(v) => setEditData({ ...editData, industry: v })}
-                            disabled={!selectedCategory}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(selectedCategory
-                                ? COMPANY_CATEGORIES.find((c) => c.id === selectedCategory)?.types || []
-                                : []
-                              ).map((type) => {
-                                const config = COMPANY_TYPE_CONFIG[type];
-                                return (
-                                  <SelectItem key={type} value={type}>
-                                    {config.label}
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {selectedCategory !== "bet" && (
+                          <div>
+                            <label className="text-xs text-muted-foreground">Type</label>
+                            <Select
+                              value={(editData.industry as string) || ""}
+                              onValueChange={(v) => setEditData({ ...editData, industry: v })}
+                              disabled={!selectedCategory}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(selectedCategory
+                                  ? COMPANY_CATEGORIES.find((c) => c.id === selectedCategory)?.types || []
+                                  : []
+                                ).map((type) => {
+                                  const config = COMPANY_TYPE_CONFIG[type];
+                                  return (
+                                    <SelectItem key={type} value={type}>
+                                      {config.label}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
 
                       {selectedCategory === "bet" && (
