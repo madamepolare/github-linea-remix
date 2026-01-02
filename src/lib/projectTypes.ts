@@ -109,10 +109,10 @@ export const MOE_ROLES = [
 ];
 
 export const LOT_STATUS = [
-  { value: "pending", label: "En attente" },
-  { value: "in_progress", label: "En cours" },
-  { value: "completed", label: "Terminé" },
-  { value: "on_hold", label: "Suspendu" }
+  { value: "pending", label: "En attente", color: "#6B7280" },
+  { value: "in_progress", label: "En cours", color: "#3B82F6" },
+  { value: "completed", label: "Terminé", color: "#10B981" },
+  { value: "on_hold", label: "Suspendu", color: "#F59E0B" }
 ];
 
 export const OBSERVATION_PRIORITY = [

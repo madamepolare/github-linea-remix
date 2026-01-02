@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ProjectTimeline } from "@/components/projects/ProjectTimeline";
 import { ProjectBoard } from "@/components/projects/ProjectBoard";
+import { ProjectListView } from "@/components/projects/ProjectListView";
+import { ProjectGridView } from "@/components/projects/ProjectGridView";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 import { ViewSwitcher } from "@/components/ui/view-switcher";
 import { FolderKanban } from "lucide-react";
 
-type ViewType = "timeline" | "board" | "list";
+type ViewType = "timeline" | "board" | "list" | "grid";
 
 export default function Projects() {
   const [view, setView] = useState<ViewType>("timeline");
@@ -35,6 +37,7 @@ export default function Projects() {
               { value: "timeline", label: "Timeline" },
               { value: "board", label: "Board" },
               { value: "list", label: "Liste" },
+              { value: "grid", label: "Grille" },
             ]}
             value={view}
             onChange={(v) => setView(v as ViewType)}
@@ -45,11 +48,8 @@ export default function Projects() {
       >
         {view === "timeline" && <ProjectTimeline onCreateProject={() => setCreateOpen(true)} />}
         {view === "board" && <ProjectBoard onCreateProject={() => setCreateOpen(true)} />}
-        {view === "list" && (
-          <div className="flex items-center justify-center h-96 p-6">
-            <p className="text-sm text-muted-foreground">Vue liste à venir...</p>
-          </div>
-        )}
+        {view === "list" && <ProjectListView onCreateProject={() => setCreateOpen(true)} />}
+        {view === "grid" && <ProjectGridView onCreateProject={() => setCreateOpen(true)} />}
       </PageLayout>
 
       <CreateProjectDialog open={createOpen} onOpenChange={setCreateOpen} />
