@@ -252,12 +252,21 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
     : null;
 
   const activatePhase = (phaseId: string) => {
-    // Complete current phase if exists and different
-    if (currentPhase && currentPhase.id !== phaseId) {
-      updatePhase.mutate({ id: currentPhase.id, status: "completed" });
-    }
-    updatePhase.mutate({ id: phaseId, status: "in_progress" });
-    toast.success("Phase activée");
+    const targetPhase = phases.find(p => p.id === phaseId);
+    if (!targetPhase) return;
+    
+    // Mark all phases before this one as completed, this one as in_progress, and after as pending
+    const targetIndex = phases.findIndex(p => p.id === phaseId);
+    phases.forEach((phase, index) => {
+      if (index < targetIndex && phase.status !== "completed") {
+        updatePhase.mutate({ id: phase.id, status: "completed" });
+      } else if (index === targetIndex && phase.status !== "in_progress") {
+        updatePhase.mutate({ id: phase.id, status: "in_progress" });
+      } else if (index > targetIndex && phase.status !== "pending") {
+        updatePhase.mutate({ id: phase.id, status: "pending" });
+      }
+    });
+    toast.success(`Phase "${targetPhase.name}" activée`);
   };
 
   const completeCurrentAndActivateNext = () => {
@@ -321,16 +330,17 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                     <div key={phase.id} className="flex items-center">
                       <button
                         onClick={() => {
-                          if (isPending) {
+                          if (!isActive) {
                             activatePhase(phase.id);
-                          } else if (isActive) {
+                          } else if (nextPhase) {
                             completeCurrentAndActivateNext();
                           }
                         }}
+                        title={isCompleted ? "Cliquer pour revenir à cette phase" : isActive ? "Phase actuelle" : "Cliquer pour activer"}
                         className={cn(
-                          "relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all min-w-max",
+                          "relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all min-w-max cursor-pointer",
                           isActive && "bg-primary text-primary-foreground shadow-lg scale-105",
-                          isCompleted && "bg-muted text-muted-foreground",
+                          isCompleted && "bg-muted text-muted-foreground hover:bg-muted/80",
                           isPending && "bg-background border border-border hover:border-primary/50 hover:bg-primary/5"
                         )}
                       >
