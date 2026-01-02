@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,10 +16,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useProjects } from "@/hooks/useProjects";
-import { useAuth } from "@/contexts/AuthContext";
+import { useProjects, CreateProjectInput } from "@/hooks/useProjects";
+import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  PROJECT_TYPES,
+  ProjectType,
+  DEFAULT_PHASES,
+  PHASE_COLORS,
+} from "@/lib/projectTypes";
+import {
+  Building2,
+  Sofa,
+  Theater,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  MapPin,
+  Calendar,
+  Wallet,
+} from "lucide-react";
 
 interface CreateProjectDialogProps {
   open: boolean;
@@ -28,190 +46,478 @@ interface CreateProjectDialogProps {
 }
 
 const colors = [
-  { value: "#000000", label: "Black" },
-  { value: "#3B82F6", label: "Blue" },
-  { value: "#10B981", label: "Green" },
-  { value: "#F59E0B", label: "Amber" },
-  { value: "#8B5CF6", label: "Purple" },
-  { value: "#EF4444", label: "Red" },
-  { value: "#EC4899", label: "Pink" },
+  { value: "#3B82F6", label: "Bleu" },
+  { value: "#10B981", label: "Vert" },
+  { value: "#F59E0B", label: "Ambre" },
+  { value: "#8B5CF6", label: "Violet" },
+  { value: "#EF4444", label: "Rouge" },
+  { value: "#EC4899", label: "Rose" },
+  { value: "#06B6D4", label: "Cyan" },
+  { value: "#000000", label: "Noir" },
 ];
 
+const STEPS = [
+  { id: "type", label: "Type" },
+  { id: "info", label: "Informations" },
+  { id: "client", label: "Client" },
+  { id: "phases", label: "Phases" },
+  { id: "dates", label: "Dates & Budget" },
+];
+
+const iconMap: Record<string, React.ElementType> = {
+  "Sofa": Sofa,
+  "Building2": Building2,
+  "Theater": Theater,
+};
+
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
-  const { activeWorkspace, user } = useAuth();
   const { createProject } = useProjects();
+  const { companies, isLoading: companiesLoading } = useCRMCompanies();
   
+  const [step, setStep] = useState(0);
+  const [projectType, setProjectType] = useState<ProjectType | null>(null);
   const [name, setName] = useState("");
-  const [client, setClient] = useState("");
-  const [phase, setPhase] = useState("planning");
   const [description, setDescription] = useState("");
-  const [color, setColor] = useState("#000000");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [surfaceArea, setSurfaceArea] = useState("");
+  const [color, setColor] = useState("#3B82F6");
+  const [crmCompanyId, setCrmCompanyId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [budget, setBudget] = useState("");
+  const [phases, setPhases] = useState<{ name: string; description: string; color: string }[]>([]);
+
+  // Initialize phases when project type is selected
+  useEffect(() => {
+    if (projectType) {
+      const defaultPhases = DEFAULT_PHASES[projectType] || [];
+      setPhases(
+        defaultPhases.map((phase, index) => ({
+          name: phase.name,
+          description: phase.description,
+          color: PHASE_COLORS[index % PHASE_COLORS.length],
+        }))
+      );
+    }
+  }, [projectType]);
 
   const handleCreate = () => {
-    if (!name.trim() || !activeWorkspace?.id) return;
+    if (!name.trim() || !projectType) return;
     
-    createProject.mutate({
-      workspace_id: activeWorkspace.id,
+    const input: CreateProjectInput = {
       name: name.trim(),
-      client: client.trim() || null,
-      phase,
-      status: "active",
+      project_type: projectType,
       description: description.trim() || null,
+      crm_company_id: crmCompanyId,
+      address: address.trim() || null,
+      city: city.trim() || null,
+      surface_area: surfaceArea ? parseFloat(surfaceArea) : null,
       color,
       start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
       end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
       budget: budget ? parseFloat(budget) : null,
-      created_by: user?.id || null,
-    });
+    };
     
+    createProject.mutate(input);
     onOpenChange(false);
     resetForm();
   };
 
   const resetForm = () => {
+    setStep(0);
+    setProjectType(null);
     setName("");
-    setClient("");
-    setPhase("planning");
     setDescription("");
-    setColor("#000000");
+    setAddress("");
+    setCity("");
+    setSurfaceArea("");
+    setColor("#3B82F6");
+    setCrmCompanyId(null);
     setStartDate(null);
     setEndDate(null);
     setBudget("");
+    setPhases([]);
   };
 
+  const canProceed = () => {
+    switch (step) {
+      case 0:
+        return !!projectType;
+      case 1:
+        return !!name.trim();
+      case 2:
+        return true; // Client is optional
+      case 3:
+        return phases.length > 0;
+      case 4:
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  const nextStep = () => {
+    if (step < STEPS.length - 1 && canProceed()) {
+      setStep(step + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (step > 0) {
+      setStep(step - 1);
+    }
+  };
+
+  const selectedCompany = companies.find(c => c.id === crmCompanyId);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Create New Project</DialogTitle>
+    <Dialog open={open} onOpenChange={(open) => { if (!open) resetForm(); onOpenChange(open); }}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="pb-4 border-b border-border">
+          <DialogTitle>Nouveau projet</DialogTitle>
+          
+          {/* Step indicators */}
+          <div className="flex items-center gap-1 pt-4">
+            {STEPS.map((s, index) => (
+              <div key={s.id} className="flex items-center">
+                <button
+                  onClick={() => index < step && setStep(index)}
+                  disabled={index > step}
+                  className={cn(
+                    "flex items-center justify-center w-7 h-7 rounded-full text-xs font-medium transition-all",
+                    index < step && "bg-primary text-primary-foreground cursor-pointer",
+                    index === step && "bg-primary text-primary-foreground ring-2 ring-primary/20",
+                    index > step && "bg-muted text-muted-foreground cursor-not-allowed"
+                  )}
+                >
+                  {index < step ? <Check className="h-3.5 w-3.5" /> : index + 1}
+                </button>
+                {index < STEPS.length - 1 && (
+                  <div className={cn(
+                    "w-8 h-0.5 mx-1",
+                    index < step ? "bg-primary" : "bg-muted"
+                  )} />
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground pt-2">{STEPS[step].label}</p>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Project Name *</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter project name..."
-            />
-          </div>
+        <div className="flex-1 overflow-y-auto py-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              {/* Step 1: Project Type */}
+              {step === 0 && (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Sélectionnez le type de projet pour générer automatiquement les phases adaptées.
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {PROJECT_TYPES.map((type) => {
+                      const Icon = iconMap[type.icon] || Building2;
+                      return (
+                        <button
+                          key={type.value}
+                          onClick={() => setProjectType(type.value)}
+                          className={cn(
+                            "flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all",
+                            projectType === type.value
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50 hover:bg-muted/50"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-12 h-12 rounded-full flex items-center justify-center",
+                            projectType === type.value ? "bg-primary text-primary-foreground" : "bg-muted"
+                          )}>
+                            <Icon className="h-6 w-6" />
+                          </div>
+                          <span className="font-medium text-sm">{type.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="client">Client</Label>
-              <Input
-                id="client"
-                value={client}
-                onChange={(e) => setClient(e.target.value)}
-                placeholder="Client name..."
-              />
-            </div>
+              {/* Step 2: Project Info */}
+              {step === 1 && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nom du projet *</Label>
+                    <Input
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ex: Rénovation appartement Haussmannien"
+                      autoFocus
+                    />
+                  </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phase">Phase</Label>
-              <Select value={phase} onValueChange={setPhase}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="planning">Planning</SelectItem>
-                  <SelectItem value="design">Design</SelectItem>
-                  <SelectItem value="execution">Execution</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Start Date</Label>
-              <InlineDatePicker
-                value={startDate}
-                onChange={setStartDate}
-                placeholder="Select date"
-                className="w-full"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>End Date</Label>
-              <InlineDatePicker
-                value={endDate}
-                onChange={setEndDate}
-                placeholder="Select date"
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="budget">Budget</Label>
-              <Input
-                id="budget"
-                type="number"
-                value={budget}
-                onChange={(e) => setBudget(e.target.value)}
-                placeholder="10000"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <Select value={color} onValueChange={setColor}>
-                <SelectTrigger>
-                  <SelectValue>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: color }}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="address">
+                        <MapPin className="h-3.5 w-3.5 inline mr-1" />
+                        Adresse
+                      </Label>
+                      <Input
+                        id="address"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="123 rue de Paris"
                       />
-                      {colors.find(c => c.value === color)?.label}
                     </div>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {colors.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: c.value }}
-                        />
-                        {c.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="city">Ville</Label>
+                      <Input
+                        id="city"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="Paris"
+                      />
+                    </div>
+                  </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Project description..."
-              rows={3}
-            />
-          </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="surface">Surface (m²)</Label>
+                      <Input
+                        id="surface"
+                        type="number"
+                        value={surfaceArea}
+                        onChange={(e) => setSurfaceArea(e.target.value)}
+                        placeholder="150"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Couleur</Label>
+                      <div className="flex gap-2 flex-wrap">
+                        {colors.map((c) => (
+                          <button
+                            key={c.value}
+                            onClick={() => setColor(c.value)}
+                            className={cn(
+                              "w-8 h-8 rounded-full transition-all",
+                              color === c.value && "ring-2 ring-offset-2 ring-primary"
+                            )}
+                            style={{ backgroundColor: c.value }}
+                            title={c.label}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Décrivez brièvement le projet..."
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Client Selection */}
+              {step === 2 && (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Sélectionnez un client depuis le CRM ou passez cette étape.
+                  </p>
+                  
+                  <div className="space-y-2">
+                    <Label>Client (optionnel)</Label>
+                    <Select 
+                      value={crmCompanyId || "none"} 
+                      onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un client..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Aucun client</SelectItem>
+                        {companies
+                          .filter(c => c.industry === "client_particulier" || c.industry === "client_professionnel" || c.industry === "promoteur" || c.industry === "investisseur")
+                          .map((company) => (
+                            <SelectItem key={company.id} value={company.id}>
+                              {company.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedCompany && (
+                    <div className="p-4 rounded-lg border border-border bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Building2 className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{selectedCompany.name}</p>
+                          {selectedCompany.email && (
+                            <p className="text-sm text-muted-foreground">{selectedCompany.email}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 4: Phases Preview */}
+              {step === 3 && (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Les phases suivantes seront créées automatiquement. Vous pourrez les modifier après création.
+                  </p>
+                  
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {phases.map((phase, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card"
+                      >
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: phase.color }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">{phase.name}</p>
+                          {phase.description && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {phase.description}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground">#{index + 1}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 5: Dates & Budget */}
+              {step === 4 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>
+                        <Calendar className="h-3.5 w-3.5 inline mr-1" />
+                        Date de début
+                      </Label>
+                      <InlineDatePicker
+                        value={startDate}
+                        onChange={setStartDate}
+                        placeholder="Sélectionner..."
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Date de fin prévue</Label>
+                      <InlineDatePicker
+                        value={endDate}
+                        onChange={setEndDate}
+                        placeholder="Sélectionner..."
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="budget">
+                      <Wallet className="h-3.5 w-3.5 inline mr-1" />
+                      Budget (€)
+                    </Label>
+                    <Input
+                      id="budget"
+                      type="number"
+                      value={budget}
+                      onChange={(e) => setBudget(e.target.value)}
+                      placeholder="50000"
+                    />
+                  </div>
+
+                  {/* Summary */}
+                  <div className="mt-6 p-4 rounded-lg border border-border bg-muted/30">
+                    <h4 className="font-medium mb-3">Récapitulatif</h4>
+                    <dl className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <dt className="text-muted-foreground">Type</dt>
+                        <dd className="font-medium">
+                          {PROJECT_TYPES.find(t => t.value === projectType)?.label}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="text-muted-foreground">Nom</dt>
+                        <dd className="font-medium truncate max-w-48">{name}</dd>
+                      </div>
+                      {selectedCompany && (
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Client</dt>
+                          <dd className="font-medium">{selectedCompany.name}</dd>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <dt className="text-muted-foreground">Phases</dt>
+                        <dd className="font-medium">{phases.length} phases</dd>
+                      </div>
+                      {budget && (
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Budget</dt>
+                          <dd className="font-medium">{parseFloat(budget).toLocaleString("fr-FR")} €</dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-4 border-t border-border">
+          <Button
+            variant="ghost"
+            onClick={step === 0 ? () => onOpenChange(false) : prevStep}
+          >
+            {step === 0 ? (
+              "Annuler"
+            ) : (
+              <>
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Retour
+              </>
+            )}
           </Button>
-          <Button onClick={handleCreate} disabled={!name.trim()}>
-            Create Project
-          </Button>
-        </DialogFooter>
+
+          {step < STEPS.length - 1 ? (
+            <Button onClick={nextStep} disabled={!canProceed()}>
+              Suivant
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleCreate} 
+              disabled={!canProceed() || createProject.isPending}
+            >
+              {createProject.isPending ? "Création..." : "Créer le projet"}
+            </Button>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

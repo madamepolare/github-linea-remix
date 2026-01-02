@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { ProjectType, generateDefaultPhases } from "@/lib/projectTypes";
 
 export interface Project {
   id: string;
@@ -18,7 +19,36 @@ export interface Project {
   created_by: string | null;
   created_at: string;
   updated_at: string;
-  members?: ProjectMember[];
+  // New fields
+  project_type: ProjectType | null;
+  crm_company_id: string | null;
+  address: string | null;
+  city: string | null;
+  surface_area: number | null;
+  ai_summary: string | null;
+  current_phase_id: string | null;
+  // Relations
+  crm_company?: {
+    id: string;
+    name: string;
+    logo_url: string | null;
+  } | null;
+  phases?: ProjectPhase[];
+}
+
+export interface ProjectPhase {
+  id: string;
+  project_id: string;
+  workspace_id: string;
+  name: string;
+  description: string | null;
+  sort_order: number;
+  start_date: string | null;
+  end_date: string | null;
+  status: string;
+  color: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ProjectMember {
@@ -33,8 +63,23 @@ export interface ProjectMember {
   };
 }
 
+export interface CreateProjectInput {
+  name: string;
+  project_type: ProjectType;
+  description?: string | null;
+  client?: string | null;
+  crm_company_id?: string | null;
+  address?: string | null;
+  city?: string | null;
+  surface_area?: number | null;
+  color?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  budget?: number | null;
+}
+
 export function useProjects() {
-  const { activeWorkspace } = useAuth();
+  const { activeWorkspace, user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: projects, isLoading, error } = useQuery({
@@ -42,35 +87,105 @@ export function useProjects() {
     queryFn: async () => {
       if (!activeWorkspace?.id) return [];
 
-      const { data, error } = await supabase
+      // Fetch projects with CRM company relation
+      const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
-        .select("*")
+        .select(`
+          *,
+          crm_company:crm_companies(id, name, logo_url)
+        `)
         .eq("workspace_id", activeWorkspace.id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      return data as Project[];
+      if (projectsError) throw projectsError;
+
+      // Fetch phases for all projects
+      const projectIds = projectsData?.map(p => p.id) || [];
+      
+      if (projectIds.length > 0) {
+        const { data: phasesData, error: phasesError } = await supabase
+          .from("project_phases")
+          .select("*")
+          .in("project_id", projectIds)
+          .order("sort_order", { ascending: true });
+
+        if (phasesError) throw phasesError;
+
+        // Map phases to projects
+        return projectsData?.map(project => ({
+          ...project,
+          phases: phasesData?.filter(phase => phase.project_id === project.id) || []
+        })) as Project[];
+      }
+
+      return projectsData as Project[];
     },
     enabled: !!activeWorkspace?.id,
   });
 
   const createProject = useMutation({
-    mutationFn: async (project: Omit<Project, "id" | "created_at" | "updated_at" | "members">) => {
-      const { data, error } = await supabase
+    mutationFn: async (input: CreateProjectInput) => {
+      if (!activeWorkspace?.id || !user?.id) {
+        throw new Error("Missing workspace or user");
+      }
+
+      // Create the project
+      const { data: project, error: projectError } = await supabase
         .from("projects")
-        .insert(project)
+        .insert({
+          workspace_id: activeWorkspace.id,
+          created_by: user.id,
+          name: input.name,
+          project_type: input.project_type,
+          description: input.description || null,
+          client: input.client || null,
+          crm_company_id: input.crm_company_id || null,
+          address: input.address || null,
+          city: input.city || null,
+          surface_area: input.surface_area || null,
+          color: input.color || "#3B82F6",
+          start_date: input.start_date || null,
+          end_date: input.end_date || null,
+          budget: input.budget || null,
+          phase: "planning",
+          status: "active",
+        })
         .select()
         .single();
 
-      if (error) throw error;
-      return data;
+      if (projectError) throw projectError;
+
+      // Generate default phases for the project type
+      const defaultPhases = generateDefaultPhases(input.project_type);
+      
+      if (defaultPhases.length > 0) {
+        const phasesToInsert = defaultPhases.map((phase, index) => ({
+          workspace_id: activeWorkspace.id,
+          project_id: project.id,
+          name: phase.name,
+          description: phase.description,
+          sort_order: index,
+          status: index === 0 ? "in_progress" : "pending",
+          color: phase.color,
+        }));
+
+        const { error: phasesError } = await supabase
+          .from("project_phases")
+          .insert(phasesToInsert);
+
+        if (phasesError) {
+          console.error("Error creating phases:", phasesError);
+        }
+      }
+
+      return project;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Project created");
+      toast.success("Projet créé");
     },
     onError: (error) => {
-      toast.error("Failed to create project");
+      toast.error("Erreur lors de la création du projet");
       console.error(error);
     },
   });
@@ -88,13 +203,9 @@ export function useProjects() {
       return data;
     },
     onMutate: async ({ id, ...updates }) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["projects", activeWorkspace?.id] });
-
-      // Snapshot the previous value
       const previousProjects = queryClient.getQueryData(["projects", activeWorkspace?.id]);
 
-      // Optimistically update the cache
       queryClient.setQueryData(
         ["projects", activeWorkspace?.id],
         (old: Project[] | undefined) =>
@@ -106,11 +217,10 @@ export function useProjects() {
       return { previousProjects };
     },
     onError: (error, _variables, context) => {
-      // Rollback on error
       if (context?.previousProjects) {
         queryClient.setQueryData(["projects", activeWorkspace?.id], context.previousProjects);
       }
-      toast.error("Failed to update project");
+      toast.error("Erreur lors de la mise à jour");
       console.error(error);
     },
     onSettled: () => {
@@ -129,10 +239,10 @@ export function useProjects() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Project deleted");
+      toast.success("Projet supprimé");
     },
     onError: (error) => {
-      toast.error("Failed to delete project");
+      toast.error("Erreur lors de la suppression");
       console.error(error);
     },
   });
@@ -145,6 +255,41 @@ export function useProjects() {
     updateProject,
     deleteProject,
   };
+}
+
+export function useProject(projectId: string | null) {
+  const { activeWorkspace } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useQuery({
+    queryKey: ["project", projectId, activeWorkspace?.id],
+    queryFn: async () => {
+      if (!projectId) return null;
+
+      const { data, error } = await supabase
+        .from("projects")
+        .select(`
+          *,
+          crm_company:crm_companies(id, name, logo_url, email, phone)
+        `)
+        .eq("id", projectId)
+        .single();
+
+      if (error) throw error;
+
+      // Fetch phases
+      const { data: phases, error: phasesError } = await supabase
+        .from("project_phases")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("sort_order", { ascending: true });
+
+      if (phasesError) throw phasesError;
+
+      return { ...data, phases } as Project;
+    },
+    enabled: !!projectId && !!activeWorkspace?.id,
+  });
 }
 
 export function useProjectMembers(projectId: string | null) {

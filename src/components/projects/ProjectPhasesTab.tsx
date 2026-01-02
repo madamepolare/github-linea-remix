@@ -1,0 +1,346 @@
+import { useState } from "react";
+import { useProjectPhases } from "@/hooks/useProjectPhases";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
+import { format, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { PHASE_STATUS_CONFIG, PHASE_COLORS } from "@/lib/projectTypes";
+import {
+  Calendar,
+  CheckCircle2,
+  Clock,
+  GripVertical,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+
+interface ProjectPhasesTabProps {
+  projectId: string;
+}
+
+export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
+  const { phases, isLoading, createPhase, updatePhase, deletePhase } = useProjectPhases(projectId);
+  const [editingPhase, setEditingPhase] = useState<any | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  const [formName, setFormName] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+  const [formStatus, setFormStatus] = useState("pending");
+  const [formColor, setFormColor] = useState(PHASE_COLORS[0]);
+  const [formStartDate, setFormStartDate] = useState<Date | null>(null);
+  const [formEndDate, setFormEndDate] = useState<Date | null>(null);
+
+  const resetForm = () => {
+    setFormName("");
+    setFormDescription("");
+    setFormStatus("pending");
+    setFormColor(PHASE_COLORS[phases.length % PHASE_COLORS.length]);
+    setFormStartDate(null);
+    setFormEndDate(null);
+  };
+
+  const openEditDialog = (phase: any) => {
+    setEditingPhase(phase);
+    setFormName(phase.name);
+    setFormDescription(phase.description || "");
+    setFormStatus(phase.status);
+    setFormColor(phase.color || PHASE_COLORS[0]);
+    setFormStartDate(phase.start_date ? parseISO(phase.start_date) : null);
+    setFormEndDate(phase.end_date ? parseISO(phase.end_date) : null);
+  };
+
+  const handleCreate = () => {
+    if (!formName.trim()) return;
+
+    createPhase.mutate({
+      name: formName.trim(),
+      description: formDescription.trim() || undefined,
+      status: formStatus,
+      color: formColor,
+      start_date: formStartDate ? format(formStartDate, "yyyy-MM-dd") : undefined,
+      end_date: formEndDate ? format(formEndDate, "yyyy-MM-dd") : undefined,
+      sort_order: phases.length,
+    });
+
+    setIsCreateOpen(false);
+    resetForm();
+  };
+
+  const handleUpdate = () => {
+    if (!editingPhase || !formName.trim()) return;
+
+    updatePhase.mutate({
+      id: editingPhase.id,
+      name: formName.trim(),
+      description: formDescription.trim() || null,
+      status: formStatus,
+      color: formColor,
+      start_date: formStartDate ? format(formStartDate, "yyyy-MM-dd") : null,
+      end_date: formEndDate ? format(formEndDate, "yyyy-MM-dd") : null,
+    });
+
+    setEditingPhase(null);
+    resetForm();
+  };
+
+  const handleDelete = (phaseId: string) => {
+    if (confirm("Supprimer cette phase ?")) {
+      deletePhase.mutate(phaseId);
+    }
+  };
+
+  const handleStatusChange = (phaseId: string, newStatus: string) => {
+    updatePhase.mutate({ id: phaseId, status: newStatus });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-20 w-full" />
+        ))}
+      </div>
+    );
+  }
+
+  if (phases.length === 0) {
+    return (
+      <EmptyState
+        icon={Calendar}
+        title="Aucune phase"
+        description="Ajoutez des phases pour organiser votre projet."
+        action={{ label: "Ajouter une phase", onClick: () => setIsCreateOpen(true) }}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium">Phases du projet</h3>
+        <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+          <Plus className="h-4 w-4 mr-1" />
+          Ajouter
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {phases.map((phase, index) => {
+          const statusConfig = PHASE_STATUS_CONFIG[phase.status as keyof typeof PHASE_STATUS_CONFIG] || PHASE_STATUS_CONFIG.pending;
+
+          return (
+            <Card key={phase.id} className={cn(
+              "transition-all",
+              phase.status === "in_progress" && "border-primary"
+            )}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-2 pt-1">
+                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium text-white"
+                      style={{ backgroundColor: phase.color || "#3B82F6" }}
+                    >
+                      {phase.status === "completed" ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className={cn(
+                        "font-medium",
+                        phase.status === "completed" && "line-through text-muted-foreground"
+                      )}>
+                        {phase.name}
+                      </h4>
+                      <Badge variant="secondary" className="text-xs">
+                        {statusConfig.label}
+                      </Badge>
+                    </div>
+                    {phase.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{phase.description}</p>
+                    )}
+                    {(phase.start_date || phase.end_date) && (
+                      <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {phase.start_date && format(parseISO(phase.start_date), "d MMM yyyy", { locale: fr })}
+                        {phase.start_date && phase.end_date && " → "}
+                        {phase.end_date && format(parseISO(phase.end_date), "d MMM yyyy", { locale: fr })}
+                      </p>
+                    )}
+                  </div>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {phase.status !== "in_progress" && (
+                        <DropdownMenuItem onClick={() => handleStatusChange(phase.id, "in_progress")}>
+                          <Clock className="h-4 w-4 mr-2" />
+                          Marquer en cours
+                        </DropdownMenuItem>
+                      )}
+                      {phase.status !== "completed" && (
+                        <DropdownMenuItem onClick={() => handleStatusChange(phase.id, "completed")}>
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Marquer terminée
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onClick={() => openEditDialog(phase)}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Modifier
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleDelete(phase.id)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Supprimer
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={isCreateOpen || !!editingPhase} onOpenChange={(open) => {
+        if (!open) {
+          setIsCreateOpen(false);
+          setEditingPhase(null);
+          resetForm();
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingPhase ? "Modifier la phase" : "Nouvelle phase"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nom *</Label>
+              <Input
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="Ex: Esquisse"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Input
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="Description de la phase..."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Statut</Label>
+                <Select value={formStatus} onValueChange={setFormStatus}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PHASE_STATUS_CONFIG).map(([value, config]) => (
+                      <SelectItem key={value} value={value}>
+                        {config.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Couleur</Label>
+                <div className="flex gap-2 flex-wrap">
+                  {PHASE_COLORS.slice(0, 8).map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setFormColor(color)}
+                      className={cn(
+                        "w-6 h-6 rounded-full transition-all",
+                        formColor === color && "ring-2 ring-offset-2 ring-primary"
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Date de début</Label>
+                <InlineDatePicker
+                  value={formStartDate}
+                  onChange={setFormStartDate}
+                  placeholder="Sélectionner..."
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Date de fin</Label>
+                <InlineDatePicker
+                  value={formEndDate}
+                  onChange={setFormEndDate}
+                  placeholder="Sélectionner..."
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsCreateOpen(false); setEditingPhase(null); resetForm(); }}>
+              Annuler
+            </Button>
+            <Button onClick={editingPhase ? handleUpdate : handleCreate} disabled={!formName.trim()}>
+              {editingPhase ? "Enregistrer" : "Créer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
