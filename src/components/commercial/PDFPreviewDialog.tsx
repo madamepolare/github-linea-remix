@@ -35,7 +35,10 @@ export function PDFPreviewDialog({
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      const pdfBlob = await generateCommercialPDF(document, phases, total);
+      const pdfBlob = await generateCommercialPDF(document, phases, total, {
+        includeConditions: true,
+        includeSignature: true
+      });
       const url = URL.createObjectURL(pdfBlob);
       setPdfUrl(url);
     } catch (error) {

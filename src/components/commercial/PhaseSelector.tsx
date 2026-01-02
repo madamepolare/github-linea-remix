@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AIPhaseSuggestion } from './AIPhaseSuggestion';
 import {
+  CommercialDocument,
   CommercialDocumentPhase,
   ProjectType,
   PHASES_BY_PROJECT_TYPE
@@ -18,6 +20,10 @@ interface PhaseSelectorProps {
   onPhasesChange: (phases: CommercialDocumentPhase[]) => void;
   projectBudget?: number;
   feePercentage?: number;
+  totalAmount?: number;
+  document?: Partial<CommercialDocument>;
+  onDocumentChange?: (doc: Partial<CommercialDocument>) => void;
+  documentId?: string;
 }
 
 export function PhaseSelector({
@@ -25,14 +31,19 @@ export function PhaseSelector({
   projectType,
   onPhasesChange,
   projectBudget,
-  feePercentage
+  feePercentage,
+  totalAmount,
+  document,
+  onDocumentChange,
+  documentId
 }: PhaseSelectorProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-  const baseFee = projectBudget && feePercentage 
+  // Use totalAmount if available (forfait mode), otherwise calculate from percentage
+  const baseFee = totalAmount || (projectBudget && feePercentage 
     ? projectBudget * (feePercentage / 100) 
-    : 0;
+    : 0);
 
   const toggleExpanded = (id: string) => {
     const newExpanded = new Set(expandedPhases);
@@ -129,6 +140,14 @@ export function PhaseSelector({
         <div className="flex items-center justify-between">
           <CardTitle>Phases de la mission</CardTitle>
           <div className="flex items-center gap-2">
+            {document && onDocumentChange && (
+              <AIPhaseSuggestion
+                document={document}
+                onPhasesChange={onPhasesChange}
+                onDocumentChange={onDocumentChange}
+                documentId={documentId}
+              />
+            )}
             <Badge variant={totalPercentage === 100 ? 'default' : 'secondary'}>
               Total: {totalPercentage.toFixed(0)}%
             </Badge>
