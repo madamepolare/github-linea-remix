@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { ProjectPhase } from "@/hooks/useProjectPhases";
 import { PhaseDependency } from "@/hooks/usePhaseDependencies";
 import { PHASE_STATUS_CONFIG, PhaseStatus } from "@/lib/projectTypes";
-import { CheckCircle2, GripVertical, Calendar, ZoomIn, ZoomOut } from "lucide-react";
+import { CheckCircle2, GripVertical, Calendar, ZoomIn, ZoomOut, Magnet } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 
 type ZoomLevel = "day" | "week" | "month" | "year";
+type SnapMode = "none" | "day" | "week";
 
 interface PhaseGanttTimelineProps {
   phases: ProjectPhase[];
@@ -60,6 +61,7 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
   const [editStartDate, setEditStartDate] = useState<Date | undefined>(undefined);
   const [editEndDate, setEditEndDate] = useState<Date | undefined>(undefined);
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>("month");
+  const [snapMode, setSnapMode] = useState<SnapMode>("day");
 
   useEffect(() => {
     if (containerRef.current) {
@@ -247,9 +249,18 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
     if (!dragState) return;
 
     const deltaX = e.clientX - dragState.startX;
-    const deltaDays = Math.round(deltaX / dayWidth);
+    let deltaDays = Math.round(deltaX / dayWidth);
 
-    if (deltaDays === 0) return;
+    // Apply snap mode
+    if (snapMode === "week") {
+      deltaDays = Math.round(deltaDays / 7) * 7;
+    } else if (snapMode === "none") {
+      // Keep exact pixel-based delta (still rounded to nearest day for DB)
+      deltaDays = Math.round(deltaX / dayWidth);
+    }
+    // "day" mode: deltaDays is already rounded to nearest day
+
+    if (deltaDays === 0 && snapMode !== "none") return;
 
     const { phaseId, type, originalStartDate, originalEndDate } = dragState;
 
@@ -284,7 +295,7 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
       ...prev,
       [phaseId]: nextPreview,
     }));
-  }, [dragState, dayWidth]);
+  }, [dragState, dayWidth, snapMode]);
 
   const handleMouseUp = useCallback(() => {
     if (!dragState) return;
@@ -348,26 +359,44 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
 
   return (
     <div className={cn("border rounded-lg overflow-hidden bg-card", dragState && "cursor-grabbing select-none")}>
-      {/* Zoom controls */}
+      {/* Toolbar: zoom & snap controls */}
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
         <span className="text-sm font-medium">Timeline des phases</span>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <ZoomOut className="h-3.5 w-3.5" />
+        <div className="flex items-center gap-4">
+          {/* Snap mode selector */}
+          <div className="flex items-center gap-2">
+            <Magnet className="h-3.5 w-3.5 text-muted-foreground" />
+            <Select value={snapMode} onValueChange={(v) => setSnapMode(v as SnapMode)}>
+              <SelectTrigger className="w-[100px] h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Libre</SelectItem>
+                <SelectItem value="day">Jour</SelectItem>
+                <SelectItem value="week">Semaine</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={zoomLevel} onValueChange={(v) => setZoomLevel(v as ZoomLevel)}>
-            <SelectTrigger className="w-[110px] h-7 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="day">Jour</SelectItem>
-              <SelectItem value="week">Semaine</SelectItem>
-              <SelectItem value="month">Mois</SelectItem>
-              <SelectItem value="year">Année</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <ZoomIn className="h-3.5 w-3.5" />
+
+          {/* Zoom selector */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <ZoomOut className="h-3.5 w-3.5" />
+            </div>
+            <Select value={zoomLevel} onValueChange={(v) => setZoomLevel(v as ZoomLevel)}>
+              <SelectTrigger className="w-[110px] h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="day">Jour</SelectItem>
+                <SelectItem value="week">Semaine</SelectItem>
+                <SelectItem value="month">Mois</SelectItem>
+                <SelectItem value="year">Année</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <ZoomIn className="h-3.5 w-3.5" />
+            </div>
           </div>
         </div>
       </div>
