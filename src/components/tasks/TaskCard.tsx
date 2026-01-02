@@ -2,11 +2,29 @@ import { Task } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CheckSquare } from "lucide-react";
+import { CheckSquare, Circle, Clock, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { LinkedEntityBadge } from "./EntitySelector";
 import { RelatedEntityType } from "@/lib/taskTypes";
+
+const statusConfig = {
+  todo: {
+    color: "bg-muted-foreground/60",
+    icon: Circle,
+    label: "À faire",
+  },
+  in_progress: {
+    color: "bg-amber-500",
+    icon: Clock,
+    label: "En cours",
+  },
+  done: {
+    color: "bg-emerald-500",
+    icon: CheckCircle2,
+    label: "Terminé",
+  },
+} as const;
 
 interface TaskCardProps {
   task: Task;
@@ -16,14 +34,36 @@ interface TaskCardProps {
 export function TaskCard({ task, onClick }: TaskCardProps) {
   const subtaskCount = task.subtasks?.length || 0;
   const completedSubtasks = task.subtasks?.filter((s) => s.status === "done").length || 0;
+  const status = (task.status || "todo") as keyof typeof statusConfig;
+  const config = statusConfig[status] || statusConfig.todo;
+  const StatusIcon = config.icon;
 
   return (
     <div
       onClick={onClick}
-      className="task-card bg-card rounded-xl p-4 cursor-pointer border border-border transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-muted-foreground/20"
+      className="task-card bg-card rounded-xl p-4 cursor-pointer border border-border transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-muted-foreground/20 relative overflow-hidden"
     >
+      {/* Status indicator bar */}
+      <div className={cn("absolute top-0 left-0 w-1 h-full", config.color)} />
+      
+      {/* Status badge */}
+      <div className="flex items-center gap-1.5 mb-2">
+        <StatusIcon className={cn("h-3.5 w-3.5", 
+          status === "todo" && "text-muted-foreground",
+          status === "in_progress" && "text-amber-500",
+          status === "done" && "text-emerald-500"
+        )} />
+        <span className={cn("text-xs font-medium",
+          status === "todo" && "text-muted-foreground",
+          status === "in_progress" && "text-amber-500",
+          status === "done" && "text-emerald-500"
+        )}>
+          {config.label}
+        </span>
+      </div>
+
       {/* Title */}
-      <h4 className="font-medium text-sm text-foreground leading-snug mb-2">
+      <h4 className="font-medium text-sm text-foreground leading-snug mb-2 pl-0">
         {task.title}
       </h4>
 
