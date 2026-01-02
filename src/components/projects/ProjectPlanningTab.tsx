@@ -74,9 +74,9 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const { events, isLoading: eventsLoading, createEvent, updateEvent, deleteEvent } = useCalendarEvents(projectId);
   const { phases, updatePhase } = useProjectPhases(projectId);
-  const { deliverables } = useProjectDeliverables(projectId);
+  const { deliverables, createDeliverable } = useProjectDeliverables(projectId);
   const { tasks } = useTasks();
-  const { quickTasks, pendingTasks } = useQuickTasksDB();
+  const { quickTasks, pendingTasks, createQuickTask } = useQuickTasksDB();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -99,6 +99,15 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   // Phase edit form state
   const [phaseStartDate, setPhaseStartDate] = useState("");
   const [phaseEndDate, setPhaseEndDate] = useState("");
+
+  // Quick creation dialogs
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [quickCreateDate, setQuickCreateDate] = useState<string>("");
+  const [isQuickTaskOpen, setIsQuickTaskOpen] = useState(false);
+  const [isDeliverableOpen, setIsDeliverableOpen] = useState(false);
+  const [quickTaskTitle, setQuickTaskTitle] = useState("");
+  const [deliverableName, setDeliverableName] = useState("");
+  const [deliverableDescription, setDeliverableDescription] = useState("");
 
   // Project-specific tasks
   const projectTasks = useMemo(() => {
@@ -347,7 +356,45 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   };
 
   const handleDateClick = (info: any) => {
-    openCreateDialog(info.date);
+    const dateStr = format(info.date, "yyyy-MM-dd");
+    setQuickCreateDate(dateStr);
+    setIsQuickCreateOpen(true);
+  };
+
+  const handleQuickCreateSelect = (type: "event" | "quicktask" | "deliverable") => {
+    setIsQuickCreateOpen(false);
+    if (type === "event") {
+      openCreateDialog(new Date(quickCreateDate));
+    } else if (type === "quicktask") {
+      setQuickTaskTitle("");
+      setIsQuickTaskOpen(true);
+    } else if (type === "deliverable") {
+      setDeliverableName("");
+      setDeliverableDescription("");
+      setIsDeliverableOpen(true);
+    }
+  };
+
+  const handleCreateQuickTask = () => {
+    if (!quickTaskTitle.trim()) return;
+    createQuickTask.mutate({
+      title: quickTaskTitle.trim(),
+      due_date: quickCreateDate,
+    });
+    setIsQuickTaskOpen(false);
+    setQuickTaskTitle("");
+  };
+
+  const handleCreateDeliverable = () => {
+    if (!deliverableName.trim()) return;
+    createDeliverable.mutate({
+      name: deliverableName.trim(),
+      description: deliverableDescription.trim() || null,
+      due_date: quickCreateDate,
+    });
+    setIsDeliverableOpen(false);
+    setDeliverableName("");
+    setDeliverableDescription("");
   };
 
   const handleEventDrop = (info: any) => {
@@ -777,6 +824,130 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
             </Button>
             <Button onClick={handleUpdatePhase}>
               Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Create Selector Dialog */}
+      <Dialog open={isQuickCreateOpen} onOpenChange={setIsQuickCreateOpen}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="text-center">
+              Créer pour le {quickCreateDate && format(parseISO(quickCreateDate), "d MMMM", { locale: fr })}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Button
+              variant="outline"
+              className="h-12 justify-start gap-3"
+              onClick={() => handleQuickCreateSelect("event")}
+            >
+              <CalendarIcon className="h-5 w-5 text-violet-500" />
+              <div className="text-left">
+                <div className="font-medium">Événement</div>
+                <div className="text-xs text-muted-foreground">Réunion, jalon, rappel</div>
+              </div>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 justify-start gap-3"
+              onClick={() => handleQuickCreateSelect("quicktask")}
+            >
+              <Zap className="h-5 w-5 text-orange-500" />
+              <div className="text-left">
+                <div className="font-medium">Tâche rapide</div>
+                <div className="text-xs text-muted-foreground">À faire rapidement</div>
+              </div>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 justify-start gap-3"
+              onClick={() => handleQuickCreateSelect("deliverable")}
+            >
+              <FileText className="h-5 w-5 text-red-500" />
+              <div className="text-left">
+                <div className="font-medium">Livrable</div>
+                <div className="text-xs text-muted-foreground">Document à remettre</div>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Task Creation Dialog */}
+      <Dialog open={isQuickTaskOpen} onOpenChange={setIsQuickTaskOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-orange-500" />
+              Nouvelle tâche rapide
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-2 bg-muted rounded text-sm text-center">
+              Pour le {quickCreateDate && format(parseISO(quickCreateDate), "d MMMM yyyy", { locale: fr })}
+            </div>
+            <div className="space-y-2">
+              <Label>Titre *</Label>
+              <Input
+                value={quickTaskTitle}
+                onChange={(e) => setQuickTaskTitle(e.target.value)}
+                placeholder="Ex: Appeler le client"
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && handleCreateQuickTask()}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsQuickTaskOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleCreateQuickTask} disabled={!quickTaskTitle.trim()}>
+              Créer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deliverable Creation Dialog */}
+      <Dialog open={isDeliverableOpen} onOpenChange={setIsDeliverableOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-red-500" />
+              Nouveau livrable
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-2 bg-muted rounded text-sm text-center">
+              Échéance : {quickCreateDate && format(parseISO(quickCreateDate), "d MMMM yyyy", { locale: fr })}
+            </div>
+            <div className="space-y-2">
+              <Label>Nom *</Label>
+              <Input
+                value={deliverableName}
+                onChange={(e) => setDeliverableName(e.target.value)}
+                placeholder="Ex: Plans d'exécution"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={deliverableDescription}
+                onChange={(e) => setDeliverableDescription(e.target.value)}
+                placeholder="Notes ou détails..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeliverableOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleCreateDeliverable} disabled={!deliverableName.trim()}>
+              Créer
             </Button>
           </DialogFooter>
         </DialogContent>
