@@ -587,7 +587,7 @@ interface MeetingsSectionProps {
 }
 
 // Meetings Section
-function MeetingsSection({ projectId }: { projectId: string }) {
+function MeetingsSection({ projectId, onOpenReport }: { projectId: string; onOpenReport: (meeting: ProjectMeeting) => void }) {
   const { meetings, meetingsLoading, observations, createMeeting, updateMeeting, deleteMeeting } = useChantier(projectId);
   const { data: project } = useProject(projectId);
   const { allContacts } = useContacts();
@@ -819,6 +819,10 @@ function MeetingsSection({ projectId }: { projectId: string }) {
                         <DropdownMenuItem onClick={() => handleGeneratePDF(meeting)}>
                           <Download className="h-4 w-4 mr-2" />
                           Générer PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onOpenReport(meeting)}>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Rédiger le compte rendu
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handleDelete(meeting.id)} className="text-destructive">
