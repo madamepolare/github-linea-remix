@@ -273,6 +273,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
+            <p className="text-sm text-muted-foreground">Réunion de chantier n°{localMeeting.meeting_number || 1}</p>
             <h2 className="font-semibold text-lg">{localMeeting.title}</h2>
             <p className="text-sm text-muted-foreground">
               {format(parseISO(localMeeting.meeting_date), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
