@@ -2,7 +2,7 @@ import { MeetingAttendee, ProjectMeeting, ProjectObservation, ObservationStatus 
 
 export interface ReportSection {
   id: string;
-  type: "header" | "attendees" | "notes" | "observations" | "tasks" | "summary";
+  type: "header" | "attendees" | "notes" | "attention" | "observations" | "tasks" | "summary";
   title: string;
   expanded: boolean;
 }
@@ -33,4 +33,15 @@ export interface EmailRecipient {
   name: string;
   type: string;
   selected: boolean;
+}
+
+export interface AttentionItem {
+  id: string;
+  assignee_name: string;
+  assignee_type: "bet" | "entreprise" | "moa" | "other";
+  description: string;
+  urgency: "low" | "normal" | "high" | "critical";
+  due_date: string | null;
+  comment: string;
+  progress: number;
 }
