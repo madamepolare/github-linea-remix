@@ -34,7 +34,7 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PROJECT_TYPES, PHASE_STATUS_CONFIG } from "@/lib/projectTypes";
 import { ProjectChantierTab } from "@/components/projects/ProjectChantierTab";
-import { ProjectDeliverablesTab } from "@/components/projects/ProjectDeliverablesTab";
+import { ProjectEventsTab } from "@/components/projects/ProjectEventsTab";
 import { ProjectMOESection } from "@/components/projects/ProjectMOESection";
 import { PhaseGanttTimeline } from "@/components/projects/PhaseGanttTimeline";
 import { PhaseQuickEditDialog } from "@/components/projects/PhaseQuickEditDialog";
@@ -131,8 +131,19 @@ export default function ProjectDetail() {
                       style={{ backgroundColor: project.color || "#3B82F6" }}
                     />
                     <h1 className="text-xl font-semibold">{project.name}</h1>
+                    {currentPhase && (
+                      <Badge 
+                        variant="secondary" 
+                        className="bg-primary/10 text-primary border-primary/20"
+                      >
+                        <Clock className="h-3 w-3 mr-1" />
+                        {currentPhase.name}
+                      </Badge>
+                    )}
                     {projectType && (
-                      <Badge variant="secondary">{projectType.label}</Badge>
+                      <Badge variant="outline" className="text-muted-foreground">
+                        {projectType.label}
+                      </Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
@@ -146,12 +157,6 @@ export default function ProjectDetail() {
                       <span className="flex items-center gap-1.5">
                         <MapPin className="h-3.5 w-3.5" />
                         {project.city}
-                      </span>
-                    )}
-                    {currentPhase && (
-                      <span className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5" />
-                        Phase: {currentPhase.name}
                       </span>
                     )}
                   </div>
@@ -176,11 +181,11 @@ export default function ProjectDetail() {
                 Vue d'ensemble
               </TabsTrigger>
               <TabsTrigger
-                value="deliverables"
+                value="events"
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4"
               >
-                <FileText className="h-4 w-4 mr-2" />
-                Livrables
+                <Calendar className="h-4 w-4 mr-2" />
+                Événements
               </TabsTrigger>
               <TabsTrigger
                 value="tasks"
@@ -213,7 +218,7 @@ export default function ProjectDetail() {
               isUpdatingProject={updateProject.isPending}
             />
           )}
-          {activeTab === "deliverables" && <ProjectDeliverablesTab projectId={project.id} />}
+          {activeTab === "events" && <ProjectEventsTab projectId={project.id} />}
           {activeTab === "tasks" && (
             <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
           )}
