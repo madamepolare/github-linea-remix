@@ -541,6 +541,7 @@ export type Database = {
       meeting_attention_items: {
         Row: {
           assignee_company_ids: string[] | null
+          assignee_lot_ids: string[] | null
           assignee_names: string[] | null
           assignee_type: string
           comment: string | null
@@ -558,6 +559,7 @@ export type Database = {
         }
         Insert: {
           assignee_company_ids?: string[] | null
+          assignee_lot_ids?: string[] | null
           assignee_names?: string[] | null
           assignee_type?: string
           comment?: string | null
@@ -575,6 +577,7 @@ export type Database = {
         }
         Update: {
           assignee_company_ids?: string[] | null
+          assignee_lot_ids?: string[] | null
           assignee_names?: string[] | null
           assignee_type?: string
           comment?: string | null
