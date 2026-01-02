@@ -331,7 +331,19 @@ export const useCommercialDocuments = () => {
 
   // Accept document and create project
   const acceptAndCreateProject = useMutation({
-    mutationFn: async ({ documentId, phases }: { documentId: string; phases: CommercialDocumentPhase[] }) => {
+    mutationFn: async ({ 
+      documentId, 
+      phases,
+      useAIPlanning = true,
+      projectStartDate,
+      projectEndDate
+    }: { 
+      documentId: string; 
+      phases: CommercialDocumentPhase[];
+      useAIPlanning?: boolean;
+      projectStartDate?: string;
+      projectEndDate?: string;
+    }) => {
       if (!activeWorkspace?.id) throw new Error('No workspace');
       
       const { data: { user } } = await supabase.auth.getUser();
@@ -345,6 +357,60 @@ export const useCommercialDocuments = () => {
         .single();
 
       if (docError) throw docError;
+
+      // Prepare phases for planning
+      const includedPhases = phases.filter(p => p.is_included);
+      let plannedPhases: Array<{
+        name: string;
+        start_date: string | null;
+        end_date: string | null;
+      }> = includedPhases.map(p => ({
+        name: p.phase_name,
+        start_date: p.start_date || null,
+        end_date: p.end_date || null
+      }));
+
+      // Use AI to suggest phase planning if enabled and we have dates
+      const startDate = projectStartDate || new Date().toISOString().split('T')[0];
+      if (useAIPlanning && includedPhases.length > 0) {
+        try {
+          const { data: planningData, error: planningError } = await supabase.functions.invoke(
+            'suggest-phase-planning',
+            {
+              body: {
+                phases: includedPhases.map(p => ({
+                  name: p.phase_name,
+                  percentage_fee: p.percentage_fee || 15
+                })),
+                projectType: doc.project_type,
+                projectStartDate: startDate,
+                projectEndDate: projectEndDate,
+                projectDescription: doc.description,
+                projectBudget: doc.construction_budget || doc.project_budget,
+                projectSurface: doc.project_surface
+              }
+            }
+          );
+
+          if (!planningError && planningData?.planned_phases) {
+            console.log('AI planning result:', planningData);
+            // Map AI suggestions back to phases
+            plannedPhases = includedPhases.map(phase => {
+              const aiPhase = planningData.planned_phases.find(
+                (p: any) => p.name.toLowerCase().includes(phase.phase_name.toLowerCase()) ||
+                           phase.phase_name.toLowerCase().includes(p.name.toLowerCase())
+              );
+              return {
+                name: phase.phase_name,
+                start_date: aiPhase?.start_date || null,
+                end_date: aiPhase?.end_date || null
+              };
+            });
+          }
+        } catch (err) {
+          console.error('AI planning failed, using default:', err);
+        }
+      }
 
       // Create project from document
       const { data: project, error: projectError } = await supabase
@@ -360,6 +426,8 @@ export const useCommercialDocuments = () => {
           city: doc.project_city,
           surface_area: doc.project_surface,
           budget: doc.project_budget,
+          start_date: startDate,
+          end_date: projectEndDate,
           color: '#3B82F6',
           phase: 'planning',
           status: 'active'
@@ -369,21 +437,22 @@ export const useCommercialDocuments = () => {
 
       if (projectError) throw projectError;
 
-      // Create project phases from document phases
-      if (phases.length > 0) {
-        const projectPhases = phases
-          .filter(p => p.is_included)
-          .map((phase, index) => ({
+      // Create project phases from document phases with AI planning
+      if (includedPhases.length > 0) {
+        const projectPhases = includedPhases.map((phase, index) => {
+          const planned = plannedPhases.find(p => p.name === phase.phase_name);
+          return {
             workspace_id: activeWorkspace.id,
             project_id: project.id,
             name: phase.phase_name,
             description: phase.phase_description,
             sort_order: index,
             status: 'pending' as const,
-            start_date: phase.start_date,
-            end_date: phase.end_date,
+            start_date: planned?.start_date || phase.start_date,
+            end_date: planned?.end_date || phase.end_date,
             color: null
-          }));
+          };
+        });
 
         const { error: phasesError } = await supabase
           .from('project_phases')
@@ -412,7 +481,7 @@ export const useCommercialDocuments = () => {
       queryClient.invalidateQueries({ queryKey: ['commercial-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commercial-document', data.document.id] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success('Document accepté et projet créé');
+      toast.success('Document accepté et projet créé avec planning IA');
     },
     onError: (error) => {
       toast.error('Erreur lors de la création du projet');
