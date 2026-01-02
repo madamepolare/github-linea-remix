@@ -46,6 +46,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Clock,
+  Copy,
   Download,
   Eye,
   FileStack,
@@ -164,7 +165,12 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
 
 // Reports Section - Liste des comptes rendus
 function ReportsSection({ projectId, onOpenReport }: { projectId: string; onOpenReport: (meeting: ProjectMeeting) => void }) {
-  const { meetings, meetingsLoading }  = useChantier(projectId);
+  const { meetings, meetingsLoading, duplicateMeeting }  = useChantier(projectId);
+
+  const handleDuplicate = (e: React.MouseEvent, meeting: ProjectMeeting) => {
+    e.stopPropagation();
+    duplicateMeeting.mutate(meeting);
+  };
 
   if (meetingsLoading) {
     return <Skeleton className="h-48 w-full" />;
@@ -209,6 +215,15 @@ function ReportsSection({ projectId, onOpenReport }: { projectId: string; onOpen
                       {attendees.length > 0 && ` • ${presentCount}/${attendees.length} présents`}
                     </p>
                   </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={(e) => handleDuplicate(e, meeting)}
+                    disabled={duplicateMeeting.isPending}
+                    title="Dupliquer ce compte rendu"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
                   <Button variant="outline" size="sm">
                     <Pencil className="h-4 w-4 mr-1" />
                     Éditer

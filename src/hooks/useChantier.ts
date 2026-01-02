@@ -323,6 +323,55 @@ export function useChantier(projectId: string | null) {
     },
   });
 
+  const duplicateMeeting = useMutation({
+    mutationFn: async (sourceMeeting: ProjectMeeting) => {
+      if (!projectId || !activeWorkspace?.id) {
+        throw new Error("Missing project or workspace");
+      }
+      // Get next meeting number
+      const { data: existing } = await supabase
+        .from("project_meetings")
+        .select("meeting_number")
+        .eq("project_id", projectId)
+        .order("meeting_number", { ascending: false })
+        .limit(1);
+
+      const nextNumber = (existing?.[0]?.meeting_number || 0) + 1;
+
+      const insertData = {
+        project_id: projectId,
+        workspace_id: activeWorkspace.id,
+        title: `${sourceMeeting.title} (copie)`,
+        meeting_date: new Date().toISOString(),
+        meeting_number: nextNumber,
+        location: sourceMeeting.location,
+        attendees: sourceMeeting.attendees ? JSON.parse(JSON.stringify(sourceMeeting.attendees)) : [],
+        notes: sourceMeeting.notes,
+        report_data: sourceMeeting.report_data ? JSON.parse(JSON.stringify(sourceMeeting.report_data)) : null,
+      };
+
+      const { data, error } = await supabase
+        .from("project_meetings")
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return {
+        ...data,
+        attendees: (data.attendees as unknown as MeetingAttendee[]) || []
+      } as ProjectMeeting;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-meetings", projectId] });
+      toast.success("Compte rendu dupliqué");
+    },
+    onError: (error) => {
+      toast.error("Erreur lors de la duplication");
+      console.error(error);
+    },
+  });
+
   // -------------------- OBSERVATIONS --------------------
   const { data: observations, isLoading: observationsLoading } = useQuery({
     queryKey: ["project-observations", projectId],
@@ -426,6 +475,7 @@ export function useChantier(projectId: string | null) {
     createMeeting,
     updateMeeting,
     deleteMeeting,
+    duplicateMeeting,
     // Observations
     observations: observations || [],
     observationsLoading,
