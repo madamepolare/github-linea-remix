@@ -44,7 +44,7 @@ export function generateMeetingPDF({
   projectAddress,
   projectClient,
   aiSummary,
-}: MeetingPDFData): void {
+}: MeetingPDFData): { blob: Blob; fileName: string } {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   let yPos = 20;
@@ -474,7 +474,8 @@ export function generateMeetingPDF({
     );
   }
 
-  // Save
+  // Return blob and filename
   const fileName = `CR_Chantier_${meeting.meeting_number || 1}_${projectName.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
-  doc.save(fileName);
+  const blob = doc.output("blob");
+  return { blob, fileName };
 }
