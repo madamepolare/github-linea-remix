@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useProject } from "@/hooks/useProjects";
+import { useProjectPhases } from "@/hooks/useProjectPhases";
+import { usePhaseDependencies } from "@/hooks/usePhaseDependencies";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,9 +14,9 @@ import {
   ArrowLeft,
   Building2,
   Calendar,
-  CalendarDays,
   CheckCircle2,
   Clock,
+  FileText,
   FolderKanban,
   HardHat,
   ListTodo,
@@ -30,8 +32,9 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PROJECT_TYPES, PHASE_STATUS_CONFIG } from "@/lib/projectTypes";
 import { ProjectChantierTab } from "@/components/projects/ProjectChantierTab";
-import { ProjectPlanningTab } from "@/components/projects/ProjectPlanningTab";
+import { ProjectDeliverablesTab } from "@/components/projects/ProjectDeliverablesTab";
 import { ProjectMOESection } from "@/components/projects/ProjectMOESection";
+import { PhaseGanttTimeline } from "@/components/projects/PhaseGanttTimeline";
 import { EntityTasksList } from "@/components/tasks/EntityTasksList";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -168,11 +171,11 @@ export default function ProjectDetail() {
                 Vue d'ensemble
               </TabsTrigger>
               <TabsTrigger
-                value="planning"
+                value="deliverables"
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4"
               >
-                <CalendarDays className="h-4 w-4 mr-2" />
-                Planning
+                <FileText className="h-4 w-4 mr-2" />
+                Livrables
               </TabsTrigger>
               <TabsTrigger
                 value="tasks"
@@ -203,7 +206,7 @@ export default function ProjectDetail() {
               isGeneratingSummary={isGeneratingSummary}
             />
           )}
-          {activeTab === "planning" && <ProjectPlanningTab projectId={project.id} />}
+          {activeTab === "deliverables" && <ProjectDeliverablesTab projectId={project.id} />}
           {activeTab === "tasks" && (
             <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
           )}
@@ -225,128 +228,126 @@ interface OverviewTabProps {
 function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary }: OverviewTabProps) {
   const completedPhases = phases.filter((p) => p.status === "completed").length;
   const inProgressPhase = phases.find((p) => p.status === "in_progress");
+  const { dependencies } = usePhaseDependencies(project.id);
+  const { updatePhase } = useProjectPhases(project.id);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left column - Info & Team */}
-      <div className="space-y-4">
-        {/* Project Info Card */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Informations</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {project.crm_company && (
-              <div className="flex items-start gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+    <div className="space-y-6">
+      {/* Top row - Info cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left - Project Info & Team */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Informations</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {project.crm_company && (
+                <div className="flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-muted-foreground">Client</p>
+                    <p className="text-sm font-medium truncate">{project.crm_company.name}</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] text-muted-foreground">Client</p>
-                  <p className="text-sm font-medium truncate">{project.crm_company.name}</p>
-                </div>
-              </div>
-            )}
-
-            {project.city && (
-              <div className="flex items-start gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] text-muted-foreground">Localisation</p>
-                  <p className="text-sm font-medium">
-                    {project.address && `${project.address}, `}{project.city}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {(project.start_date || project.end_date) && (
-              <div className="flex items-start gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] text-muted-foreground">Dates</p>
-                  <p className="text-sm font-medium">
-                    {project.start_date && format(parseISO(project.start_date), "dd/MM/yy", { locale: fr })}
-                    {project.start_date && project.end_date && " → "}
-                    {project.end_date && format(parseISO(project.end_date), "dd/MM/yy", { locale: fr })}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {project.surface_area && (
-              <div className="flex items-start gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] text-muted-foreground">Surface</p>
-                  <p className="text-sm font-medium">{project.surface_area} m²</p>
-                </div>
-              </div>
-            )}
-
-            {project.budget && (
-              <div className="flex items-start gap-2.5">
-                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] text-muted-foreground">Budget</p>
-                  <p className="text-sm font-medium">{project.budget.toLocaleString("fr-FR")} €</p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* MOE Team */}
-        <Card>
-          <CardContent className="pt-4">
-            <ProjectMOESection projectId={project.id} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Center column - Progress & Phases */}
-      <div className="space-y-4">
-        {/* Progress */}
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm">Avancement</CardTitle>
-              <span className="text-xl font-bold text-primary">{progressPercent}%</span>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Progress value={progressPercent} className="h-2" />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{completedPhases}/{phases.length} phases</span>
-              {inProgressPhase && (
-                <Badge variant="secondary" className="text-[10px]">
-                  <Clock className="h-3 w-3 mr-1" />
-                  {inProgressPhase.name}
-                </Badge>
               )}
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Phases Timeline */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Phases</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1.5">
-              {phases.map((phase, index) => {
-                const statusConfig = PHASE_STATUS_CONFIG[phase.status as keyof typeof PHASE_STATUS_CONFIG] || PHASE_STATUS_CONFIG.pending;
-                
-                return (
+              {project.city && (
+                <div className="flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-muted-foreground">Localisation</p>
+                    <p className="text-sm font-medium">
+                      {project.address && `${project.address}, `}{project.city}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {(project.start_date || project.end_date) && (
+                <div className="flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-muted-foreground">Dates</p>
+                    <p className="text-sm font-medium">
+                      {project.start_date && format(parseISO(project.start_date), "dd/MM/yy", { locale: fr })}
+                      {project.start_date && project.end_date && " → "}
+                      {project.end_date && format(parseISO(project.end_date), "dd/MM/yy", { locale: fr })}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {project.surface_area && (
+                <div className="flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <FolderKanban className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-muted-foreground">Surface</p>
+                    <p className="text-sm font-medium">{project.surface_area} m²</p>
+                  </div>
+                </div>
+              )}
+
+              {project.budget && (
+                <div className="flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                    <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-muted-foreground">Budget</p>
+                    <p className="text-sm font-medium">{project.budget.toLocaleString("fr-FR")} €</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* MOE Team */}
+          <Card>
+            <CardContent className="pt-4">
+              <ProjectMOESection projectId={project.id} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Center - Progress & Phase List */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">Avancement</CardTitle>
+                <span className="text-xl font-bold text-primary">{progressPercent}%</span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Progress value={progressPercent} className="h-2" />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{completedPhases}/{phases.length} phases</span>
+                {inProgressPhase && (
+                  <Badge variant="secondary" className="text-[10px]">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {inProgressPhase.name}
+                  </Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Phases</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1.5">
+                {phases.map((phase, index) => (
                   <div
                     key={phase.id}
                     className={cn(
@@ -383,82 +384,93 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                       </span>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Right column - AI Summary & Notes */}
-      <div className="space-y-4">
-        {/* AI Summary */}
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                Résumé AI
-              </CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 px-2"
-                onClick={onRefreshSummary}
-                disabled={isGeneratingSummary}
-              >
-                {isGeneratingSummary ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {project.ai_summary ? (
-              <p className="text-xs text-muted-foreground leading-relaxed">{project.ai_summary}</p>
-            ) : (
-              <div className="text-center py-3">
-                <Sparkles className="h-6 w-6 mx-auto text-muted-foreground/40 mb-1.5" />
-                <p className="text-[11px] text-muted-foreground mb-2">Aucun résumé</p>
+        {/* Right - AI Summary */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Résumé AI
+                </CardTitle>
                 <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-7 text-xs"
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 px-2"
                   onClick={onRefreshSummary}
                   disabled={isGeneratingSummary}
                 >
                   {isGeneratingSummary ? (
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Sparkles className="h-3 w-3 mr-1" />
+                    <RefreshCw className="h-3.5 w-3.5" />
                   )}
-                  Générer
                 </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              {project.ai_summary ? (
+                <p className="text-xs text-muted-foreground leading-relaxed">{project.ai_summary}</p>
+              ) : (
+                <div className="text-center py-3">
+                  <Sparkles className="h-6 w-6 mx-auto text-muted-foreground/40 mb-1.5" />
+                  <p className="text-[11px] text-muted-foreground mb-2">Aucun résumé</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={onRefreshSummary}
+                    disabled={isGeneratingSummary}
+                  >
+                    {isGeneratingSummary ? (
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3 w-3 mr-1" />
+                    )}
+                    Générer
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-        {/* Description / Notes */}
+          {/* Description */}
+          {project.description && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Description</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground leading-relaxed">{project.description}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Gantt Timeline */}
+      {phases.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Notes</CardTitle>
+            <CardTitle className="text-sm">Planning des phases</CardTitle>
           </CardHeader>
           <CardContent>
-            {project.description ? (
-              <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                {project.description}
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground/60 italic">
-                Aucune note pour ce projet
-              </p>
-            )}
+            <PhaseGanttTimeline
+              phases={phases}
+              dependencies={dependencies}
+              onPhaseUpdate={(phaseId, updates) => {
+                updatePhase.mutate({ id: phaseId, ...updates });
+              }}
+            />
           </CardContent>
         </Card>
-      </div>
+      )}
     </div>
   );
 }
