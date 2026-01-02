@@ -29,6 +29,7 @@ import {
 import { AttendeesSection } from "./meeting-report/AttendeesSection";
 import { ObservationsSection } from "./meeting-report/ObservationsSection";
 import { TasksSection } from "./meeting-report/TasksSection";
+import { AttentionItemsSection, AttentionItem } from "./meeting-report/AttentionItemsSection";
 import { AIRewriteButton } from "./meeting-report/AIRewriteButton";
 import { SendEmailDialog } from "./meeting-report/SendEmailDialog";
 import { VersionHistorySheet } from "./meeting-report/VersionHistorySheet";
@@ -54,6 +55,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
     { id: "header", type: "header", title: "Informations de la réunion", expanded: true },
     { id: "attendees", type: "attendees", title: "Liste des présents", expanded: true },
     { id: "notes", type: "notes", title: "Notes & Ordre du jour", expanded: true },
+    { id: "attention", type: "attention", title: "Points d'attention", expanded: true },
     { id: "observations", type: "observations", title: "Observations & Réserves", expanded: true },
     { id: "tasks", type: "tasks", title: "Actions & Tâches", expanded: true },
     { id: "summary", type: "summary", title: "Synthèse AI", expanded: false },
@@ -65,6 +67,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
   const [aiSummary, setAiSummary] = useState("");
   const [selectedContactToAdd, setSelectedContactToAdd] = useState<string | null>(null);
   const [externalTasks, setExternalTasks] = useState<ExternalTask[]>([]);
+  const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
   const [observationComments, setObservationComments] = useState<Record<string, string>>({});
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
@@ -316,10 +319,6 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
           <Button variant="outline" size="sm" onClick={() => setIsEmailDialogOpen(true)}>
             <Mail className="h-4 w-4 mr-1" />Envoyer
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
-            Sauvegarder
-          </Button>
         </div>
       </div>
 
@@ -397,6 +396,16 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
                       </div>
                       <Textarea value={localMeeting.notes || ""} onChange={(e) => setLocalMeeting({ ...localMeeting, notes: e.target.value })} placeholder="Points abordés, décisions prises..." rows={6} className="resize-none" />
                     </div>
+                  )}
+
+                  {section.id === "attention" && (
+                    <AttentionItemsSection
+                      items={attentionItems}
+                      onAddItem={(item) => setAttentionItems(prev => [...prev, { ...item, id: crypto.randomUUID() }])}
+                      onUpdateItem={(id, updates) => setAttentionItems(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i))}
+                      onRemoveItem={(id) => setAttentionItems(prev => prev.filter(i => i.id !== id))}
+                      attendeeNames={attendeesWithType.map(a => ({ name: a.name, type: a.type || "other" }))}
+                    />
                   )}
 
                   {section.id === "observations" && (
