@@ -20,7 +20,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
   return (
     <div
       onClick={onClick}
-      className="task-card bg-card rounded-xl p-4 cursor-pointer border border-border"
+      className="task-card bg-card rounded-xl p-4 cursor-pointer border border-border transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-muted-foreground/20"
     >
       {/* Title */}
       <h4 className="font-medium text-sm text-foreground leading-snug mb-2">
