@@ -817,6 +817,7 @@ export type Database = {
           created_by: string | null
           id: string
           task_id: string
+          title: string | null
           updated_at: string | null
           workspace_id: string
         }
@@ -826,6 +827,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           task_id: string
+          title?: string | null
           updated_at?: string | null
           workspace_id: string
         }
@@ -835,6 +837,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           task_id?: string
+          title?: string | null
           updated_at?: string | null
           workspace_id?: string
         }

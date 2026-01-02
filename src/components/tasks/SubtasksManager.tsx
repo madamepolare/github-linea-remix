@@ -9,9 +9,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, GripVertical, MessageCircle, Send } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Trash2, GripVertical, MessageCircle, Send, Sparkles, ChevronDown, Wand2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTaskExchanges } from "@/hooks/useTaskExchanges";
+import { useTaskExchanges, TaskExchange } from "@/hooks/useTaskExchanges";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -31,7 +37,11 @@ export function SubtasksManager({ taskId, workspaceId }: SubtasksManagerProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [newSubtask, setNewSubtask] = useState("");
-  const [newExchange, setNewExchange] = useState("");
+  const [newExchangeTitle, setNewExchangeTitle] = useState("");
+  const [newExchangeContent, setNewExchangeContent] = useState("");
+  const [aiInputText, setAiInputText] = useState("");
+  const [showAiInput, setShowAiInput] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Exchanges hook
   const { exchanges, isLoading: exchangesLoading, createExchange, deleteExchange } = useTaskExchanges(taskId);
@@ -114,14 +124,77 @@ export function SubtasksManager({ taskId, workspaceId }: SubtasksManagerProps) {
 
   const handleAddExchange = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newExchange.trim()) return;
-    createExchange.mutate(newExchange.trim());
-    setNewExchange("");
+    if (!newExchangeContent.trim()) return;
+    const nextNumber = (exchanges?.length || 0) + 1;
+    const title = newExchangeTitle.trim() || `Aller-retour #${nextNumber}`;
+    createExchange.mutate({ title, content: newExchangeContent.trim() });
+    setNewExchangeTitle("");
+    setNewExchangeContent("");
+  };
+
+  const generateSubtasksFromText = async (text: string) => {
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-subtasks', {
+        body: { text }
+      });
+      
+      if (error) throw error;
+      
+      const generatedSubtasks = data.subtasks as string[];
+      if (generatedSubtasks && generatedSubtasks.length > 0) {
+        for (const subtaskTitle of generatedSubtasks) {
+          await createSubtask.mutateAsync(subtaskTitle);
+        }
+        toast.success(`${generatedSubtasks.length} sous-tâches générées`);
+        setAiInputText("");
+        setShowAiInput(false);
+      } else {
+        toast.error("Aucune sous-tâche générée");
+      }
+    } catch (error) {
+      console.error('Error generating subtasks:', error);
+      toast.error("Erreur lors de la génération");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const generateSubtasksFromExchange = async (exchange: TaskExchange) => {
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-subtasks', {
+        body: { exchangeContent: exchange.content }
+      });
+      
+      if (error) throw error;
+      
+      const generatedSubtasks = data.subtasks as string[];
+      if (generatedSubtasks && generatedSubtasks.length > 0) {
+        for (const subtaskTitle of generatedSubtasks) {
+          await createSubtask.mutateAsync(subtaskTitle);
+        }
+        toast.success(`${generatedSubtasks.length} sous-tâches générées depuis "${exchange.title || 'Aller-retour'}"`);
+      } else {
+        toast.error("Aucune sous-tâche générée");
+      }
+    } catch (error) {
+      console.error('Error generating subtasks:', error);
+      toast.error("Erreur lors de la génération");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const completedCount = subtasks?.filter((s) => s.status === "done").length || 0;
   const totalCount = subtasks?.length || 0;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+  // Get exchange index for display
+  const getExchangeIndex = (exchange: TaskExchange) => {
+    const index = exchanges?.findIndex(e => e.id === exchange.id) ?? 0;
+    return index + 1;
+  };
 
   return (
     <Tabs defaultValue="subtasks" className="space-y-4">
@@ -137,6 +210,78 @@ export function SubtasksManager({ taskId, workspaceId }: SubtasksManagerProps) {
 
       {/* Subtasks Tab */}
       <TabsContent value="subtasks" className="space-y-4">
+        {/* AI Generation Button */}
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={isGenerating}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Générer IA
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => setShowAiInput(true)}>
+                <Wand2 className="h-4 w-4 mr-2" />
+                À partir d'un texte
+              </DropdownMenuItem>
+              {exchanges && exchanges.length > 0 && (
+                <>
+                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                    Depuis un aller-retour
+                  </div>
+                  {exchanges.map((exchange) => (
+                    <DropdownMenuItem
+                      key={exchange.id}
+                      onClick={() => generateSubtasksFromExchange(exchange)}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      #{getExchangeIndex(exchange)} {exchange.title || "Sans titre"}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {isGenerating && (
+            <span className="text-sm text-muted-foreground animate-pulse">
+              Génération en cours...
+            </span>
+          )}
+        </div>
+
+        {/* AI Text Input */}
+        {showAiInput && (
+          <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
+            <Textarea
+              placeholder="Décrivez les sous-tâches à générer..."
+              value={aiInputText}
+              onChange={(e) => setAiInputText(e.target.value)}
+              rows={3}
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => generateSubtasksFromText(aiInputText)}
+                disabled={!aiInputText.trim() || isGenerating}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Générer
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setShowAiInput(false);
+                  setAiInputText("");
+                }}
+              >
+                Annuler
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Progress Header */}
         {totalCount > 0 && (
           <div className="space-y-2">
@@ -218,13 +363,12 @@ export function SubtasksManager({ taskId, workspaceId }: SubtasksManagerProps) {
           {exchanges?.map((exchange) => (
             <div
               key={exchange.id}
-              className="group p-3 rounded-lg bg-muted/50 space-y-1"
+              className="group p-3 rounded-lg bg-muted/50 space-y-2"
             >
-              <p className="text-sm whitespace-pre-wrap">{exchange.content}</p>
               <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">
-                  {exchange.created_at && format(new Date(exchange.created_at), "d MMM yyyy à HH:mm", { locale: fr })}
-                </p>
+                <span className="text-xs font-semibold text-primary">
+                  #{getExchangeIndex(exchange)} {exchange.title || "Sans titre"}
+                </span>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -234,6 +378,10 @@ export function SubtasksManager({ taskId, workspaceId }: SubtasksManagerProps) {
                   <Trash2 className="h-3 w-3 text-muted-foreground" />
                 </Button>
               </div>
+              <p className="text-sm whitespace-pre-wrap">{exchange.content}</p>
+              <p className="text-xs text-muted-foreground">
+                {exchange.created_at && format(new Date(exchange.created_at), "d MMM yyyy à HH:mm", { locale: fr })}
+              </p>
             </div>
           ))}
 
@@ -250,15 +398,20 @@ export function SubtasksManager({ taskId, workspaceId }: SubtasksManagerProps) {
 
         {/* Add Exchange Form */}
         <form onSubmit={handleAddExchange} className="space-y-2">
+          <Input
+            placeholder={`Titre (optionnel, ex: Aller-retour #${(exchanges?.length || 0) + 1})`}
+            value={newExchangeTitle}
+            onChange={(e) => setNewExchangeTitle(e.target.value)}
+          />
           <Textarea
-            placeholder="Ajouter un aller-retour..."
-            value={newExchange}
-            onChange={(e) => setNewExchange(e.target.value)}
+            placeholder="Contenu de l'aller-retour..."
+            value={newExchangeContent}
+            onChange={(e) => setNewExchangeContent(e.target.value)}
             rows={2}
           />
-          <Button type="submit" disabled={!newExchange.trim() || createExchange.isPending} className="w-full">
+          <Button type="submit" disabled={!newExchangeContent.trim() || createExchange.isPending} className="w-full">
             <Send className="h-4 w-4 mr-2" />
-            Envoyer
+            Ajouter #{(exchanges?.length || 0) + 1}
           </Button>
         </form>
       </TabsContent>
