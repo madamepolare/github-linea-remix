@@ -220,11 +220,17 @@ export function QuoteGridEditor({
     }
   };
 
+  // Separate phases from other items
+  const phaseItems = items.filter(i => i.type === 'phase');
+  const otherItems = items.filter(i => i.type !== 'phase');
+
   // Calculate totals
   const requiredItems = items.filter(i => !i.isOptional && i.type !== 'discount');
   const optionalItems = items.filter(i => i.isOptional);
   const discountItems = items.filter(i => i.type === 'discount');
 
+  const subtotalPhases = phaseItems.filter(i => !i.isOptional).reduce((sum, i) => sum + i.amount, 0);
+  const subtotalOther = otherItems.filter(i => !i.isOptional && i.type !== 'discount').reduce((sum, i) => sum + i.amount, 0);
   const subtotalRequired = requiredItems.reduce((sum, i) => sum + i.amount, 0);
   const subtotalOptional = optionalItems.reduce((sum, i) => sum + i.amount, 0);
   const totalDiscount = discountItems.reduce((sum, i) => sum + Math.abs(i.amount), 0);
@@ -236,6 +242,267 @@ export function QuoteGridEditor({
 
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
+
+  const renderItemRow = (item: QuoteLineItem, index: number, itemList: QuoteLineItem[]) => {
+    const globalIndex = items.findIndex(i => i.id === item.id);
+    
+    return (
+      <Collapsible
+        key={item.id}
+        open={expandedItems.has(item.id)}
+      >
+        <div
+          draggable
+          onDragStart={() => handleDragStart(globalIndex)}
+          onDragOver={(e) => handleDragOver(e, globalIndex)}
+          onDragEnd={handleDragEnd}
+          className={`border rounded-lg transition-all ${
+            draggedIndex === globalIndex ? 'opacity-50' : ''
+          } ${item.isOptional ? 'border-dashed border-muted-foreground/30' : 'border-border'} 
+          ${TYPE_COLORS[item.type].replace('bg-', 'hover:bg-').replace('/10', '/5')}`}
+        >
+          {/* Main Row */}
+          <div className="grid grid-cols-12 gap-2 p-3 items-center">
+            {/* Drag handle + Type badge */}
+            <div className="col-span-1 flex items-center gap-1">
+              <div className="cursor-grab">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className={`p-1.5 rounded ${TYPE_COLORS[item.type]}`}>
+                {TYPE_ICONS[item.type]}
+              </div>
+            </div>
+
+            {/* Designation */}
+            <div className="col-span-4 md:col-span-4 space-y-1">
+              <div className="flex items-center gap-2">
+                {item.code && (
+                  <Badge variant="outline" className="shrink-0 text-xs">
+                    {item.code}
+                  </Badge>
+                )}
+                <Input
+                  value={item.designation}
+                  onChange={(e) => updateItem(item.id, { designation: e.target.value })}
+                  className="h-8 font-medium"
+                  placeholder="Désignation..."
+                />
+              </div>
+              {item.description && (
+                <p className="text-xs text-muted-foreground truncate pl-1">
+                  {item.description}
+                </p>
+              )}
+            </div>
+
+            {/* Quantity */}
+            <div className="col-span-1 hidden md:block">
+              <Input
+                type="number"
+                value={item.quantity}
+                onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
+                className="h-8 text-center"
+                min={0}
+                step={0.5}
+              />
+            </div>
+
+            {/* Unit */}
+            <div className="col-span-2 hidden md:block">
+              <Select
+                value={item.unit}
+                onValueChange={(value) => updateItem(item.id, { unit: value })}
+              >
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LINE_ITEM_UNITS.map(unit => (
+                    <SelectItem key={unit.value} value={unit.value}>
+                      {unit.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Unit Price */}
+            <div className="col-span-2 hidden md:block">
+              <div className="relative">
+                <Input
+                  type="number"
+                  value={item.unitPrice}
+                  onChange={(e) => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                  className="h-8 text-right pr-6"
+                  min={0}
+                  step={10}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">€</span>
+              </div>
+            </div>
+
+            {/* Amount */}
+            <div className="col-span-2 flex items-center justify-end gap-2">
+              <span className={`font-semibold ${item.type === 'discount' ? 'text-red-600' : ''}`}>
+                {item.type === 'discount' ? '-' : ''}{formatCurrency(item.amount)}
+              </span>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => toggleExpanded(item.id)}>
+                    {expandedItems.has(item.id) ? 'Réduire' : 'Détails'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => duplicateItem(item)}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Dupliquer
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => updateItem(item.id, { isOptional: !item.isOptional })}
+                  >
+                    {item.isOptional ? 'Marquer obligatoire' : 'Marquer optionnel'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => deleteItem(item.id)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Supprimer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <CollapsibleTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => toggleExpanded(item.id)}
+                >
+                  {expandedItems.has(item.id) ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </div>
+
+          {/* Expanded Content */}
+          <CollapsibleContent>
+            <div className="px-4 pb-4 pt-2 border-t border-border/50 space-y-4">
+              {/* Description */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Description</label>
+                <Textarea
+                  value={item.description || ''}
+                  onChange={(e) => updateItem(item.id, { description: e.target.value })}
+                  placeholder="Description de la prestation..."
+                  rows={2}
+                  className="text-sm"
+                />
+              </div>
+
+              {/* Mobile: Qty, Unit, Price */}
+              <div className="grid grid-cols-3 gap-3 md:hidden">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Quantité</label>
+                  <Input
+                    type="number"
+                    value={item.quantity}
+                    onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
+                    className="h-8"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Unité</label>
+                  <Select
+                    value={item.unit}
+                    onValueChange={(value) => updateItem(item.id, { unit: value })}
+                  >
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LINE_ITEM_UNITS.map(unit => (
+                        <SelectItem key={unit.value} value={unit.value}>
+                          {unit.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Prix unit.</label>
+                  <Input
+                    type="number"
+                    value={item.unitPrice}
+                    onChange={(e) => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                    className="h-8"
+                  />
+                </div>
+              </div>
+
+              {/* Deliverables (for phases) */}
+              {item.type === 'phase' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Livrables</label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => addDeliverable(item.id)}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Ajouter
+                    </Button>
+                  </div>
+                  <div className="space-y-1">
+                    {item.deliverables.map((deliverable, dIndex) => (
+                      <div key={dIndex} className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <Input
+                          value={deliverable}
+                          onChange={(e) => updateDeliverable(item.id, dIndex, e.target.value)}
+                          className="h-7 text-sm"
+                          placeholder="Nom du livrable"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          onClick={() => removeDeliverable(item.id, dIndex)}
+                        >
+                          <Trash2 className="h-3 w-3 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Options */}
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={item.isOptional}
+                    onCheckedChange={(checked) => updateItem(item.id, { isOptional: !!checked })}
+                  />
+                  Optionnel
+                </label>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -327,293 +594,166 @@ export function QuoteGridEditor({
         </CardHeader>
       </Card>
 
-      {/* Grid Header */}
-      <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        <div className="col-span-1"></div>
-        <div className="col-span-4">Désignation</div>
-        <div className="col-span-1 text-center">Qté</div>
-        <div className="col-span-2 text-center">Unité</div>
-        <div className="col-span-2 text-right">Prix unit.</div>
-        <div className="col-span-2 text-right">Montant</div>
-      </div>
-
-      {/* Items */}
-      <div className="space-y-2">
-        {items.map((item, index) => (
-          <Collapsible
-            key={item.id}
-            open={expandedItems.has(item.id)}
-          >
-            <div
-              draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragEnd={handleDragEnd}
-              className={`border rounded-lg transition-all ${
-                draggedIndex === index ? 'opacity-50' : ''
-              } ${item.isOptional ? 'border-dashed border-muted-foreground/30' : 'border-border'} 
-              ${TYPE_COLORS[item.type].replace('bg-', 'hover:bg-').replace('/10', '/5')}`}
-            >
-              {/* Main Row */}
-              <div className="grid grid-cols-12 gap-2 p-3 items-center">
-                {/* Drag handle + Type badge */}
-                <div className="col-span-1 flex items-center gap-1">
-                  <div className="cursor-grab">
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className={`p-1.5 rounded ${TYPE_COLORS[item.type]}`}>
-                    {TYPE_ICONS[item.type]}
-                  </div>
-                </div>
-
-                {/* Designation */}
-                <div className="col-span-4 md:col-span-4 space-y-1">
-                  <div className="flex items-center gap-2">
-                    {item.code && (
-                      <Badge variant="outline" className="shrink-0 text-xs">
-                        {item.code}
-                      </Badge>
-                    )}
-                    <Input
-                      value={item.designation}
-                      onChange={(e) => updateItem(item.id, { designation: e.target.value })}
-                      className="h-8 font-medium"
-                      placeholder="Désignation..."
-                    />
-                  </div>
-                  {item.description && (
-                    <p className="text-xs text-muted-foreground truncate pl-1">
-                      {item.description}
-                    </p>
-                  )}
-                </div>
-
-                {/* Quantity */}
-                <div className="col-span-1 hidden md:block">
-                  <Input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
-                    className="h-8 text-center"
-                    min={0}
-                    step={0.5}
-                  />
-                </div>
-
-                {/* Unit */}
-                <div className="col-span-2 hidden md:block">
-                  <Select
-                    value={item.unit}
-                    onValueChange={(value) => updateItem(item.id, { unit: value })}
-                  >
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LINE_ITEM_UNITS.map(unit => (
-                        <SelectItem key={unit.value} value={unit.value}>
-                          {unit.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Unit Price */}
-                <div className="col-span-2 hidden md:block">
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      value={item.unitPrice}
-                      onChange={(e) => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
-                      className="h-8 text-right pr-6"
-                      min={0}
-                      step={10}
-                    />
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">€</span>
-                  </div>
-                </div>
-
-                {/* Amount */}
-                <div className="col-span-2 flex items-center justify-end gap-2">
-                  <span className={`font-semibold ${item.type === 'discount' ? 'text-red-600' : ''}`}>
-                    {item.type === 'discount' ? '-' : ''}{formatCurrency(item.amount)}
-                  </span>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => toggleExpanded(item.id)}>
-                        {expandedItems.has(item.id) ? 'Réduire' : 'Détails'}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => duplicateItem(item)}>
-                        <Copy className="h-4 w-4 mr-2" />
-                        Dupliquer
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => updateItem(item.id, { isOptional: !item.isOptional })}
-                      >
-                        {item.isOptional ? 'Marquer obligatoire' : 'Marquer optionnel'}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={() => deleteItem(item.id)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Supprimer
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <CollapsibleTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => toggleExpanded(item.id)}
-                    >
-                      {expandedItems.has(item.id) ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </CollapsibleTrigger>
-                </div>
+      {/* Section 1: Phases de mission */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded ${TYPE_COLORS.phase}`}>
+                {TYPE_ICONS.phase}
               </div>
-
-              {/* Expanded Content */}
-              <CollapsibleContent>
-                <div className="px-4 pb-4 pt-2 border-t border-border/50 space-y-4">
-                  {/* Description */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Description</label>
-                    <Textarea
-                      value={item.description || ''}
-                      onChange={(e) => updateItem(item.id, { description: e.target.value })}
-                      placeholder="Description de la prestation..."
-                      rows={2}
-                      className="text-sm"
-                    />
-                  </div>
-
-                  {/* Mobile: Qty, Unit, Price */}
-                  <div className="grid grid-cols-3 gap-3 md:hidden">
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Quantité</label>
-                      <Input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
-                        className="h-8"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Unité</label>
-                      <Select
-                        value={item.unit}
-                        onValueChange={(value) => updateItem(item.id, { unit: value })}
-                      >
-                        <SelectTrigger className="h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LINE_ITEM_UNITS.map(unit => (
-                            <SelectItem key={unit.value} value={unit.value}>
-                              {unit.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs text-muted-foreground">Prix unit.</label>
-                      <Input
-                        type="number"
-                        value={item.unitPrice}
-                        onChange={(e) => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
-                        className="h-8"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Deliverables (for phases) */}
-                  {item.type === 'phase' && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium">Livrables</label>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => addDeliverable(item.id)}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Ajouter
-                        </Button>
-                      </div>
-                      <div className="space-y-1">
-                        {item.deliverables.map((deliverable, dIndex) => (
-                          <div key={dIndex} className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">•</span>
-                            <Input
-                              value={deliverable}
-                              onChange={(e) => updateDeliverable(item.id, dIndex, e.target.value)}
-                              className="h-7 text-sm"
-                              placeholder="Nom du livrable"
-                            />
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 shrink-0"
-                              onClick={() => removeDeliverable(item.id, dIndex)}
-                            >
-                              <Trash2 className="h-3 w-3 text-muted-foreground" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Options */}
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={item.isOptional}
-                        onCheckedChange={(checked) => updateItem(item.id, { isOptional: !!checked })}
-                      />
-                      Optionnel
-                    </label>
-                  </div>
-                </div>
-              </CollapsibleContent>
+              <div>
+                <CardTitle className="text-base">Phases de mission</CardTitle>
+                <p className="text-xs text-muted-foreground">Ces phases seront créées dans le projet associé</p>
+              </div>
             </div>
-          </Collapsible>
-        ))}
-
-        {items.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
-            <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Aucune ligne dans le devis</p>
-            <p className="text-xs mt-1">Utilisez le menu "Templates" ou "Ajouter" pour commencer</p>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">{phaseItems.length} phase(s)</Badge>
+              {subtotalPhases > 0 && (
+                <Badge variant="secondary">{formatCurrency(subtotalPhases)}</Badge>
+              )}
+              <Button size="sm" variant="outline" onClick={() => addItem('phase')}>
+                <Plus className="h-4 w-4 mr-1" />
+                Phase
+              </Button>
+            </div>
           </div>
-        )}
-      </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {/* Grid Header for phases */}
+          {phaseItems.length > 0 && (
+            <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b mb-2">
+              <div className="col-span-1"></div>
+              <div className="col-span-4">Phase</div>
+              <div className="col-span-1 text-center">Qté</div>
+              <div className="col-span-2 text-center">Unité</div>
+              <div className="col-span-2 text-right">Prix unit.</div>
+              <div className="col-span-2 text-right">Montant</div>
+            </div>
+          )}
+          
+          <div className="space-y-2">
+            {phaseItems.map((item, index) => renderItemRow(item, index, phaseItems))}
+            
+            {phaseItems.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                <FileText className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Aucune phase ajoutée</p>
+                <p className="text-xs mt-1">Utilisez "Suggérer avec l'IA" ou ajoutez manuellement</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 2: Prestations complémentaires */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded ${TYPE_COLORS.prestation}`}>
+                {TYPE_ICONS.prestation}
+              </div>
+              <div>
+                <CardTitle className="text-base">Prestations complémentaires</CardTitle>
+                <p className="text-xs text-muted-foreground">Services additionnels, frais, options, remises</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {otherItems.length > 0 && (
+                <Badge variant="outline">{otherItems.length} ligne(s)</Badge>
+              )}
+              {subtotalOther > 0 && (
+                <Badge variant="secondary">{formatCurrency(subtotalOther)}</Badge>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Ajouter
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => addItem('prestation')}>
+                    {TYPE_ICONS.prestation}
+                    <span className="ml-2">Prestation</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addItem('option')}>
+                    {TYPE_ICONS.option}
+                    <span className="ml-2">Option</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => addItem('expense')}>
+                    {TYPE_ICONS.expense}
+                    <span className="ml-2">Frais</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addItem('provision')}>
+                    {TYPE_ICONS.provision}
+                    <span className="ml-2">Provision</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => addItem('discount')}>
+                    {TYPE_ICONS.discount}
+                    <span className="ml-2">Remise</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                    Prestations courantes
+                  </div>
+                  {COMMON_ADDITIONAL_ITEMS.slice(0, 4).map((item, idx) => (
+                    <DropdownMenuItem key={idx} onClick={() => addCommonItem(item)}>
+                      <span className="ml-2">{item.designation}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {/* Grid Header for other items */}
+          {otherItems.length > 0 && (
+            <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b mb-2">
+              <div className="col-span-1"></div>
+              <div className="col-span-4">Désignation</div>
+              <div className="col-span-1 text-center">Qté</div>
+              <div className="col-span-2 text-center">Unité</div>
+              <div className="col-span-2 text-right">Prix unit.</div>
+              <div className="col-span-2 text-right">Montant</div>
+            </div>
+          )}
+          
+          <div className="space-y-2">
+            {otherItems.map((item, index) => renderItemRow(item, index, otherItems))}
+            
+            {otherItems.length === 0 && (
+              <div className="text-center py-6 text-muted-foreground border border-dashed rounded-lg">
+                <Package className="h-5 w-5 mx-auto mb-1 opacity-50" />
+                <p className="text-xs">Aucune prestation complémentaire</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Totals */}
       {items.length > 0 && (
         <Card>
           <CardContent className="pt-4">
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Sous-total prestations</span>
-                <span className="font-medium">{formatCurrency(subtotalRequired)}</span>
-              </div>
+              {subtotalPhases > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Phases de mission</span>
+                  <span className="font-medium">{formatCurrency(subtotalPhases)}</span>
+                </div>
+              )}
+              
+              {subtotalOther > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Prestations complémentaires</span>
+                  <span className="font-medium">{formatCurrency(subtotalOther)}</span>
+                </div>
+              )}
               
               {optionalItems.length > 0 && (
                 <div className="flex justify-between text-sm">
