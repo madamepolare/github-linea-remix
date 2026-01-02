@@ -198,6 +198,9 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
           phases={phases}
           dependencies={dependencies}
           onPhaseClick={(phase) => openEditDialog(phase)}
+          onPhaseUpdate={(phaseId, updates) => {
+            updatePhase.mutate({ id: phaseId, ...updates });
+          }}
         />
       ) : (
         <div className="space-y-3">
