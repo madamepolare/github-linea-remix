@@ -22,7 +22,9 @@ const schema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   postal_code: z.string().optional(),
+  country: z.string().optional(),
   billing_email: z.string().email("Email invalide").optional().or(z.literal("")),
+  logo_url: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -63,7 +65,9 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
       address: "",
       city: "", 
       postal_code: "",
+      country: "France",
       billing_email: "",
+      logo_url: "",
       notes: "",
     },
   });
@@ -80,7 +84,9 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
         address: company.address || "",
         city: company.city || "",
         postal_code: company.postal_code || "",
+        country: company.country || "France",
         billing_email: company.billing_email || "",
+        logo_url: company.logo_url || "",
         notes: company.notes || "",
       });
       setSelectedSpecialties(company.bet_specialties || []);
@@ -111,7 +117,9 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
       address: data.address || null,
       city: data.city || null,
       postal_code: data.postal_code || null,
+      country: data.country || null,
       billing_email: data.billing_email || null,
+      logo_url: data.logo_url || null,
       notes: data.notes || null,
       bet_specialties: isBET && selectedSpecialties.length > 0 ? selectedSpecialties : null,
     });
@@ -209,6 +217,16 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
               <Label>Code postal</Label>
               <Input {...form.register("postal_code")} placeholder="75001" />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Pays</Label>
+            <Input {...form.register("country")} placeholder="France" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>URL du logo</Label>
+            <Input {...form.register("logo_url")} placeholder="https://..." />
           </div>
 
           {/* Billing */}

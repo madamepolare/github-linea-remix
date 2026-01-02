@@ -18,13 +18,16 @@ const schema = z.object({
   title: z.string().min(2, "Le titre doit contenir au moins 2 caractères"),
   crm_company_id: z.string().optional(),
   contact_id: z.string().optional(),
+  pipeline_id: z.string().optional(),
   stage_id: z.string().optional(),
+  status: z.string().optional(),
   estimated_value: z.string().optional(),
   probability: z.number().min(0).max(100).optional(),
   source: z.string().optional(),
   next_action: z.string().optional(),
   next_action_date: z.string().optional(),
   description: z.string().optional(),
+  lost_reason: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -52,25 +55,29 @@ export function EditLeadDialog({ lead, open, onOpenChange }: EditLeadDialogProps
   const { companies } = useCRMCompanies();
   const { contacts } = useContacts();
 
-  // Find the pipeline stages for this lead
-  const pipeline = pipelines.find(p => p.id === lead?.pipeline_id);
-  const stages = pipeline?.stages || [];
-
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { 
       title: "", 
       crm_company_id: "", 
       contact_id: "",
+      pipeline_id: "",
       stage_id: "", 
+      status: "active",
       estimated_value: "", 
       probability: 50,
       source: "",
       next_action: "",
       next_action_date: "",
-      description: "" 
+      description: "",
+      lost_reason: "",
     },
   });
+
+  // Find the pipeline and stages for this lead
+  const currentPipelineId = form.watch("pipeline_id") || lead?.pipeline_id;
+  const pipeline = pipelines.find(p => p.id === currentPipelineId);
+  const stages = pipeline?.stages || [];
 
   // Pre-fill form when lead changes
   useEffect(() => {
@@ -79,19 +86,24 @@ export function EditLeadDialog({ lead, open, onOpenChange }: EditLeadDialogProps
         title: lead.title || "",
         crm_company_id: lead.crm_company_id || "",
         contact_id: lead.contact_id || "",
+        pipeline_id: lead.pipeline_id || "",
         stage_id: lead.stage_id || "",
+        status: lead.status || "active",
         estimated_value: lead.estimated_value?.toString() || "",
         probability: lead.probability || 50,
         source: lead.source || "",
         next_action: lead.next_action || "",
         next_action_date: lead.next_action_date?.split('T')[0] || "",
         description: lead.description || "",
+        lost_reason: lead.lost_reason || "",
       });
     }
   }, [lead, form]);
 
   const selectedCompanyId = form.watch("crm_company_id");
   const probability = form.watch("probability") || 50;
+  const currentStatus = form.watch("status");
+  const isLost = currentStatus === "lost";
 
   // Filter contacts by selected company
   const filteredContacts = selectedCompanyId 
@@ -106,13 +118,18 @@ export function EditLeadDialog({ lead, open, onOpenChange }: EditLeadDialogProps
       title: data.title,
       crm_company_id: data.crm_company_id || null,
       contact_id: data.contact_id || null,
+      pipeline_id: data.pipeline_id || null,
       stage_id: data.stage_id || null,
+      status: data.status || null,
       estimated_value: data.estimated_value ? parseFloat(data.estimated_value) : null,
       probability: data.probability,
       source: data.source || null,
       next_action: data.next_action || null,
       next_action_date: data.next_action_date || null,
       description: data.description || null,
+      lost_reason: data.status === "lost" ? (data.lost_reason || null) : null,
+      won_at: data.status === "won" ? new Date().toISOString() : lead.won_at,
+      lost_at: data.status === "lost" ? new Date().toISOString() : lead.lost_at,
     });
     onOpenChange(false);
   };
@@ -180,8 +197,27 @@ export function EditLeadDialog({ lead, open, onOpenChange }: EditLeadDialogProps
             )}
           </div>
 
-          {/* Stage & Value */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Pipeline & Stage & Status */}
+          <div className="grid grid-cols-3 gap-4">
+            {pipelines.length > 0 && (
+              <div className="space-y-2">
+                <Label>Pipeline</Label>
+                <Select 
+                  value={form.watch("pipeline_id") || ""} 
+                  onValueChange={(v) => {
+                    form.setValue("pipeline_id", v);
+                    form.setValue("stage_id", ""); // Reset stage when pipeline changes
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                  <SelectContent>
+                    {pipelines.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {stages.length > 0 && (
               <div className="space-y-2">
                 <Label>Étape</Label>
@@ -204,9 +240,35 @@ export function EditLeadDialog({ lead, open, onOpenChange }: EditLeadDialogProps
               </div>
             )}
             <div className="space-y-2">
-              <Label>Valeur estimée (€)</Label>
-              <Input {...form.register("estimated_value")} type="number" placeholder="150000" />
+              <Label>Statut</Label>
+              <Select value={form.watch("status") || "active"} onValueChange={(v) => form.setValue("status", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">Nouveau</SelectItem>
+                  <SelectItem value="active">Actif</SelectItem>
+                  <SelectItem value="won">Gagné</SelectItem>
+                  <SelectItem value="lost">Perdu</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+          </div>
+
+          {/* Lost Reason - only show when status is lost */}
+          {isLost && (
+            <div className="space-y-2">
+              <Label>Raison de la perte</Label>
+              <Textarea 
+                {...form.register("lost_reason")} 
+                placeholder="Pourquoi cette opportunité a-t-elle été perdue ?" 
+                rows={2} 
+              />
+            </div>
+          )}
+
+          {/* Value */}
+          <div className="space-y-2">
+            <Label>Valeur estimée (€)</Label>
+            <Input {...form.register("estimated_value")} type="number" placeholder="150000" />
           </div>
 
           {/* Probability Slider */}

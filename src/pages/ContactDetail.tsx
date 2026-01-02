@@ -268,6 +268,41 @@ export default function ContactDetail() {
                             </SelectContent>
                           </Select>
                         </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground">Localisation</label>
+                          <Input
+                            value={editData.location || ""}
+                            onChange={(e) => setEditData({ ...editData, location: e.target.value })}
+                            placeholder="Paris, France"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground">URL de l'avatar</label>
+                          <Input
+                            value={editData.avatar_url || ""}
+                            onChange={(e) => setEditData({ ...editData, avatar_url: e.target.value })}
+                            placeholder="https://..."
+                          />
+                        </div>
+                        {allCompanies.length > 0 && (
+                          <div>
+                            <label className="text-xs text-muted-foreground">Entreprise</label>
+                            <Select
+                              value={editData.crm_company_id || ""}
+                              onValueChange={(v) => setEditData({ ...editData, crm_company_id: v || null })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="">Aucune</SelectItem>
+                                {allCompanies.map((c) => (
+                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="space-y-3">

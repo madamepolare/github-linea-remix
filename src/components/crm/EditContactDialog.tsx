@@ -20,6 +20,7 @@ const schema = z.object({
   contact_type: z.string().optional(),
   crm_company_id: z.string().optional(),
   location: z.string().optional(),
+  avatar_url: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -45,6 +46,7 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
       contact_type: "client",
       crm_company_id: "",
       location: "",
+      avatar_url: "",
       notes: "",
     },
   });
@@ -60,6 +62,7 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
         contact_type: contact.contact_type || "client",
         crm_company_id: contact.crm_company_id || "",
         location: contact.location || "",
+        avatar_url: contact.avatar_url || "",
         notes: contact.notes || "",
       });
     }
@@ -77,6 +80,7 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
       contact_type: data.contact_type || null,
       crm_company_id: data.crm_company_id || null,
       location: data.location || null,
+      avatar_url: data.avatar_url || null,
       notes: data.notes || null,
     });
     onOpenChange(false);
@@ -152,6 +156,11 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
           <div className="space-y-2">
             <Label>Localisation</Label>
             <Input {...form.register("location")} placeholder="Paris, France" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>URL de l'avatar</Label>
+            <Input {...form.register("avatar_url")} placeholder="https://..." />
           </div>
 
           <div className="space-y-2">

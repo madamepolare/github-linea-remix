@@ -12,6 +12,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft,
   Building2,
   Users,
@@ -29,7 +36,7 @@ import {
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useLeads, Lead } from "@/hooks/useLeads";
-import { getCompanyTypeConfig, COMPANY_TYPE_CONFIG, CompanyType } from "@/lib/crmTypes";
+import { getCompanyTypeConfig, COMPANY_TYPE_CONFIG, CompanyType, COMPANY_CATEGORIES } from "@/lib/crmTypes";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -213,6 +220,50 @@ export default function CompanyDetail() {
           <TabsContent value="overview" className="mt-4">
             <Card>
               <CardContent className="p-6 grid md:grid-cols-2 gap-6">
+                {/* Type & Industry */}
+                <div className="space-y-4">
+                  <h3 className="font-medium text-sm text-muted-foreground">Type d'entreprise</h3>
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground">Type</label>
+                        <Select
+                          value={editData.industry || ""}
+                          onValueChange={(v) => setEditData({ ...editData, industry: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="maitre_ouvrage">Maître d'ouvrage</SelectItem>
+                            <SelectItem value="moe">Maître d'œuvre</SelectItem>
+                            <SelectItem value="bet">Bureau d'études (BET)</SelectItem>
+                            <SelectItem value="entreprise">Entreprise générale</SelectItem>
+                            <SelectItem value="fournisseur">Fournisseur</SelectItem>
+                            <SelectItem value="partenaire">Partenaire</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">URL du logo</label>
+                        <Input
+                          value={editData.logo_url || ""}
+                          onChange={(e) => setEditData({ ...editData, logo_url: e.target.value })}
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="gap-1.5">
+                        <div className={cn("w-2 h-2 rounded-full", typeConfig.color)} />
+                        {typeConfig.label}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                {/* Contact Info */}
                 <div className="space-y-4">
                   <h3 className="font-medium text-sm text-muted-foreground">Coordonnées</h3>
                   {isEditing ? (
@@ -239,6 +290,14 @@ export default function CompanyDetail() {
                           value={editData.website || ""}
                           onChange={(e) => setEditData({ ...editData, website: e.target.value })}
                           placeholder="https://..."
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">Email de facturation</label>
+                        <Input
+                          value={editData.billing_email || ""}
+                          onChange={(e) => setEditData({ ...editData, billing_email: e.target.value })}
+                          placeholder="facturation@example.com"
                         />
                       </div>
                     </div>
@@ -274,6 +333,12 @@ export default function CompanyDetail() {
                           <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
                         </a>
                       )}
+                      {company.billing_email && (
+                        <div className="flex items-center gap-3 p-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Facturation: {company.billing_email}</span>
+                        </div>
+                      )}
                       {!company.email && !company.phone && !company.website && (
                         <p className="text-sm text-muted-foreground">Aucune coordonnée</p>
                       )}
@@ -308,6 +373,13 @@ export default function CompanyDetail() {
                           />
                         </div>
                       </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">Pays</label>
+                        <Input
+                          value={editData.country || "France"}
+                          onChange={(e) => setEditData({ ...editData, country: e.target.value })}
+                        />
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-1 text-sm">
@@ -317,7 +389,7 @@ export default function CompanyDetail() {
                           {company.postal_code} {company.city}
                         </p>
                       )}
-                      {company.country && company.country !== "France" && <p>{company.country}</p>}
+                      {company.country && <p>{company.country}</p>}
                       {!company.address && !company.city && (
                         <p className="text-muted-foreground">Aucune adresse</p>
                       )}
