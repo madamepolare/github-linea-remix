@@ -18,6 +18,7 @@ export interface QuoteLineItem {
   phaseId?: string; // For grouping items under a phase
   deliverables: string[];
   sortOrder: number;
+  percentageFee?: number; // Percentage for fee distribution (for phases)
 }
 
 export interface QuoteTemplate {
