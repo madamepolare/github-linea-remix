@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import {
+  AlertTriangle,
   ArrowLeft,
   Building2,
   Calendar,
@@ -26,7 +27,7 @@ import {
   RefreshCw,
   Sparkles,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PROJECT_TYPES } from "@/lib/projectTypes";
@@ -108,41 +109,32 @@ export default function ProjectDetail() {
     <MainLayout>
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <div className="flex-shrink-0 border-b border-border bg-background">
-          <div className="px-6 py-4">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 border-b border-border bg-card">
+          <div className="px-6 py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => navigate("/projects")}
-                  className="mt-1"
+                  className="h-9 w-9 rounded-full hover:bg-muted"
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <div>
+                <div
+                  className="w-1.5 h-10 rounded-full"
+                  style={{ backgroundColor: project.color || "#3B82F6" }}
+                />
+                <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-3">
-                    <div
-                      className="w-3 h-8 rounded-full"
-                      style={{ backgroundColor: project.color || "#3B82F6" }}
-                    />
-                    <h1 className="text-xl font-semibold">{project.name}</h1>
-                    {currentPhase && (
-                      <Badge 
-                        variant="secondary" 
-                        className="bg-primary/10 text-primary border-primary/20"
-                      >
-                        <Clock className="h-3 w-3 mr-1" />
-                        {currentPhase.name}
-                      </Badge>
-                    )}
+                    <h1 className="text-xl font-semibold tracking-tight">{project.name}</h1>
                     {projectType && (
-                      <Badge variant="outline" className="text-muted-foreground">
+                      <Badge variant="outline" className="text-xs font-normal text-muted-foreground border-border">
                         {projectType.label}
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     {project.crm_company && (
                       <span className="flex items-center gap-1.5">
                         <Building2 className="h-3.5 w-3.5" />
@@ -155,44 +147,54 @@ export default function ProjectDetail() {
                         {project.city}
                       </span>
                     )}
+                    {currentPhase && (
+                      <>
+                        <span className="text-border">•</span>
+                        <Badge 
+                          variant="secondary" 
+                          className="bg-primary/10 text-primary border-0 font-normal"
+                        >
+                          <Clock className="h-3 w-3 mr-1" />
+                          {currentPhase.name}
+                        </Badge>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button variant="outline" size="icon" className="h-9 w-9 rounded-full">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="px-6">
-            <TabsList className="h-10 bg-transparent p-0 border-b-0">
+            <TabsList className="h-10 bg-transparent p-0 gap-1">
               <TabsTrigger
                 value="overview"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4"
+                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
                 Vue d'ensemble
               </TabsTrigger>
               <TabsTrigger
                 value="planning"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4"
+                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
               >
                 <Calendar className="h-4 w-4 mr-2" />
                 Calendrier
               </TabsTrigger>
               <TabsTrigger
                 value="tasks"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4"
+                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
               >
                 <ListTodo className="h-4 w-4 mr-2" />
                 Tâches
               </TabsTrigger>
               <TabsTrigger
                 value="chantier"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4"
+                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
               >
                 <HardHat className="h-4 w-4 mr-2" />
                 Chantier
@@ -346,6 +348,7 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                   const isCompleted = phase.status === "completed";
                   const isPending = phase.status === "pending";
                   const hasDate = phase.start_date || phase.end_date;
+                  const isOverdue = !isCompleted && phase.end_date && isPast(parseISO(phase.end_date)) && !isToday(parseISO(phase.end_date));
                   
                   return (
                     <div key={phase.id} className="flex items-center">
@@ -354,15 +357,23 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                         title={isCompleted ? "Cliquer pour revenir à cette phase" : isActive ? "Phase actuelle" : "Cliquer pour activer"}
                         className={cn(
                           "relative flex flex-col items-start gap-0.5 px-3 py-2 rounded-lg transition-all min-w-max cursor-pointer",
-                          isActive && "bg-primary text-primary-foreground shadow-lg scale-105",
+                          isActive && !isOverdue && "bg-primary text-primary-foreground shadow-lg scale-105",
+                          isActive && isOverdue && "bg-destructive text-destructive-foreground shadow-lg scale-105",
                           isCompleted && "bg-muted text-muted-foreground hover:bg-muted/80",
-                          isPending && "bg-background border border-border hover:border-primary/50 hover:bg-primary/5"
+                          isPending && !isOverdue && "bg-background border border-border hover:border-primary/50 hover:bg-primary/5",
+                          isPending && isOverdue && "bg-destructive/10 border border-destructive/30 hover:border-destructive/50"
                         )}
                       >
+                        {isOverdue && (
+                          <div className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5">
+                            <AlertTriangle className="h-3 w-3" />
+                          </div>
+                        )}
                         <div className="flex items-center gap-2">
                           <div className={cn(
                             "w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
-                            isActive && "bg-primary-foreground/20",
+                            isActive && !isOverdue && "bg-primary-foreground/20",
+                            isActive && isOverdue && "bg-destructive-foreground/20",
                             isCompleted && "bg-success text-success-foreground",
                             isPending && "bg-muted-foreground/20"
                           )}>
@@ -382,11 +393,15 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                         {hasDate && (
                           <span className={cn(
                             "text-[10px] pl-7 whitespace-nowrap",
-                            isActive ? "text-primary-foreground/70" : "text-muted-foreground"
+                            isActive && !isOverdue && "text-primary-foreground/70",
+                            isActive && isOverdue && "text-destructive-foreground/70",
+                            !isActive && isOverdue && "text-destructive",
+                            !isActive && !isOverdue && "text-muted-foreground"
                           )}>
                             {phase.start_date && format(parseISO(phase.start_date), "dd MMM", { locale: fr })}
                             {phase.start_date && phase.end_date && " → "}
                             {phase.end_date && format(parseISO(phase.end_date), "dd MMM", { locale: fr })}
+                            {isOverdue && " (en retard)"}
                           </span>
                         )}
                       </button>
