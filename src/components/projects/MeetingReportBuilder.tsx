@@ -244,6 +244,8 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
         projectAddress: project?.address || undefined,
         projectClient: project?.client || undefined,
         aiSummary: aiSummary || undefined,
+        reportData,
+        lots: lots.map(l => ({ id: l.id, name: l.name })),
       });
       
       setPdfBlob(blob);
