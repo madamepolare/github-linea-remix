@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useProject, useProjects } from "@/hooks/useProjects";
@@ -241,13 +241,90 @@ interface OverviewTabProps {
 
 function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary, onUpdateProject, isUpdatingProject }: OverviewTabProps) {
   const completedPhases = phases.filter((p) => p.status === "completed").length;
-  const inProgressPhase = phases.find((p) => p.status === "in_progress");
   const { dependencies } = usePhaseDependencies(project.id);
   const { updatePhase, createPhase, deletePhase, reorderPhases } = useProjectPhases(project.id);
   const [phaseEditOpen, setPhaseEditOpen] = useState(false);
   const [projectEditOpen, setProjectEditOpen] = useState(false);
+  const { updateProject } = useProjects();
 
   const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
+
+  // Determine current phase based on today's date
+  const currentPhaseByDate = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Sort phases by start_date
+    const sortedPhases = [...phases].sort((a, b) => {
+      if (!a.start_date && !b.start_date) return a.sort_order - b.sort_order;
+      if (!a.start_date) return 1;
+      if (!b.start_date) return -1;
+      return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+    });
+
+    // Find the phase where today falls between start and end
+    for (const phase of sortedPhases) {
+      if (phase.start_date && phase.end_date) {
+        const start = new Date(phase.start_date);
+        const end = new Date(phase.end_date);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        
+        if (today >= start && today <= end) {
+          return phase;
+        }
+      }
+    }
+
+    // If no exact match, find the closest upcoming phase
+    for (const phase of sortedPhases) {
+      if (phase.start_date) {
+        const start = new Date(phase.start_date);
+        start.setHours(0, 0, 0, 0);
+        if (today < start) {
+          return phase;
+        }
+      }
+    }
+
+    // Return the last phase if we're past all dates
+    return sortedPhases[sortedPhases.length - 1] || null;
+  }, [phases]);
+
+  // Update phase statuses based on today's date
+  useEffect(() => {
+    if (!phases.length) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    phases.forEach(phase => {
+      if (phase.start_date && phase.end_date) {
+        const start = new Date(phase.start_date);
+        const end = new Date(phase.end_date);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+
+        let expectedStatus: "pending" | "in_progress" | "completed" = "pending";
+        
+        if (today > end) {
+          expectedStatus = "completed";
+        } else if (today >= start && today <= end) {
+          expectedStatus = "in_progress";
+        }
+
+        // Only update if status doesn't match and it's not manually overridden
+        if (phase.status !== expectedStatus) {
+          updatePhase.mutate({ id: phase.id, status: expectedStatus });
+        }
+      }
+    });
+
+    // Also update project's current_phase_id if it differs
+    if (currentPhaseByDate && project.current_phase_id !== currentPhaseByDate.id) {
+      updateProject.mutate({ id: project.id, current_phase_id: currentPhaseByDate.id });
+    }
+  }, [phases, currentPhaseByDate?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cyclePhaseStatus = (phase: any) => {
     const statusOrder: Array<"pending" | "in_progress" | "completed"> = ["pending", "in_progress", "completed"];
@@ -338,6 +415,7 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
             <CardContent className="py-5">
               <h3 className="text-sm font-medium mb-4">Planning</h3>
               <PhaseGanttTimeline
+                key={phases.map(p => `${p.id}-${p.start_date}-${p.end_date}`).join("|")}
                 phases={phases}
                 dependencies={dependencies}
                 onPhaseUpdate={(phaseId, updates) => {
