@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTasks, Task } from "@/hooks/useTasks";
+import { RelatedEntityType } from "@/lib/taskTypes";
+import { EntitySelector } from "./EntitySelector";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +30,8 @@ interface CreateTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultStatus?: Task["status"];
+  defaultRelatedType?: RelatedEntityType;
+  defaultRelatedId?: string;
 }
 
 const priorityOptions = [
@@ -44,7 +48,13 @@ const statusOptions = [
   { value: "done", label: "Terminé" },
 ];
 
-export function CreateTaskDialog({ open, onOpenChange, defaultStatus = "todo" }: CreateTaskDialogProps) {
+export function CreateTaskDialog({ 
+  open, 
+  onOpenChange, 
+  defaultStatus = "todo",
+  defaultRelatedType,
+  defaultRelatedId,
+}: CreateTaskDialogProps) {
   const { createTask } = useTasks();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -52,10 +62,42 @@ export function CreateTaskDialog({ open, onOpenChange, defaultStatus = "todo" }:
   const [priority, setPriority] = useState<Task["priority"]>("medium");
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [estimatedHours, setEstimatedHours] = useState("");
+  const [relatedType, setRelatedType] = useState<RelatedEntityType | null>(defaultRelatedType || null);
+  const [relatedId, setRelatedId] = useState<string | null>(defaultRelatedId || null);
+
+  // Reset form when dialog opens with new defaults
+  useEffect(() => {
+    if (open) {
+      setRelatedType(defaultRelatedType || null);
+      setRelatedId(defaultRelatedId || null);
+    }
+  }, [open, defaultRelatedType, defaultRelatedId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+
+    // Map related type to specific field
+    const entityFields: Partial<Task> = {};
+    if (relatedType && relatedId) {
+      entityFields.related_type = relatedType;
+      entityFields.related_id = relatedId;
+      
+      switch (relatedType) {
+        case "project":
+          entityFields.project_id = relatedId;
+          break;
+        case "lead":
+          entityFields.lead_id = relatedId;
+          break;
+        case "company":
+          entityFields.crm_company_id = relatedId;
+          break;
+        case "contact":
+          entityFields.contact_id = relatedId;
+          break;
+      }
+    }
 
     await createTask.mutateAsync({
       title,
@@ -64,6 +106,7 @@ export function CreateTaskDialog({ open, onOpenChange, defaultStatus = "todo" }:
       priority,
       due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
       estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
+      ...entityFields,
     });
 
     // Reset form
@@ -73,6 +116,8 @@ export function CreateTaskDialog({ open, onOpenChange, defaultStatus = "todo" }:
     setPriority("medium");
     setDueDate(undefined);
     setEstimatedHours("");
+    setRelatedType(null);
+    setRelatedId(null);
     onOpenChange(false);
   };
 
@@ -105,6 +150,14 @@ export function CreateTaskDialog({ open, onOpenChange, defaultStatus = "todo" }:
               rows={3}
             />
           </div>
+
+          {/* Entity Selector */}
+          <EntitySelector
+            entityType={relatedType}
+            entityId={relatedId}
+            onEntityTypeChange={setRelatedType}
+            onEntityIdChange={setRelatedId}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

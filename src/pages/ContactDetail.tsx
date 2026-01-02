@@ -32,6 +32,7 @@ import {
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useLeads, Lead } from "@/hooks/useLeads";
+import { EntityTasksList } from "@/components/tasks/EntityTasksList";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -187,6 +188,7 @@ export default function ContactDetail() {
         <Tabs defaultValue="info">
           <TabsList>
             <TabsTrigger value="info">Informations</TabsTrigger>
+            <TabsTrigger value="tasks">Tâches</TabsTrigger>
             <TabsTrigger value="leads">Opportunités ({contactLeads.length})</TabsTrigger>
           </TabsList>
 
@@ -349,6 +351,10 @@ export default function ContactDetail() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="tasks" className="mt-4">
+            <EntityTasksList entityType="contact" entityId={contact.id} entityName={contact.name} />
           </TabsContent>
 
           <TabsContent value="leads" className="mt-4">

@@ -2,9 +2,11 @@ import { Task } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CheckSquare, Calendar } from "lucide-react";
+import { CheckSquare } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { LinkedEntityBadge } from "./EntitySelector";
+import { RelatedEntityType } from "@/lib/taskTypes";
 
 interface TaskCardProps {
   task: Task;
@@ -24,6 +26,15 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
       <h4 className="font-medium text-sm text-foreground leading-snug mb-2">
         {task.title}
       </h4>
+
+      {/* Linked Entity */}
+      {task.related_type && task.related_id && (
+        <LinkedEntityBadge 
+          entityType={task.related_type as RelatedEntityType} 
+          entityId={task.related_id} 
+          className="mb-2"
+        />
+      )}
 
       {/* Phase badge */}
       {task.tags && task.tags.length > 0 && (

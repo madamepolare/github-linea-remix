@@ -8,6 +8,8 @@ import { MultiAssigneePicker } from "./MultiAssigneePicker";
 import { InlineDatePicker } from "./InlineDatePicker";
 import { TagInput } from "./TagInput";
 import { MentionInput } from "./MentionInput";
+import { EntitySelector, LinkedEntityBadge } from "./EntitySelector";
+import { RelatedEntityType } from "@/lib/taskTypes";
 import {
   Sheet,
   SheetContent,
@@ -26,10 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckSquare, Clock, MessageSquare, Save, Trash2, Archive } from "lucide-react";
+import { CheckSquare, Clock, MessageSquare, Save, Trash2, Archive, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface TaskDetailSheetProps {
   task: Task | null;
@@ -55,6 +58,7 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
   const { activeWorkspace } = useAuth();
   const { updateTask, deleteTask } = useTasks();
   const { comments, createComment } = useTaskComments(task?.id || null);
+  const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -67,6 +71,8 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
   const [estimatedHours, setEstimatedHours] = useState("");
   const [newComment, setNewComment] = useState("");
   const [commentMentions, setCommentMentions] = useState<string[]>([]);
+  const [relatedType, setRelatedType] = useState<RelatedEntityType | null>(null);
+  const [relatedId, setRelatedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (task) {
@@ -79,11 +85,41 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
       setAssignedTo(task.assigned_to || []);
       setTags(task.tags || []);
       setEstimatedHours(task.estimated_hours?.toString() || "");
+      setRelatedType((task.related_type as RelatedEntityType) || null);
+      setRelatedId(task.related_id || null);
     }
   }, [task]);
 
   const handleSave = () => {
     if (!task) return;
+
+    // Map related type to specific field
+    const entityFields: Partial<Task> = {
+      related_type: relatedType,
+      related_id: relatedId,
+      project_id: null,
+      lead_id: null,
+      crm_company_id: null,
+      contact_id: null,
+    };
+
+    if (relatedType && relatedId) {
+      switch (relatedType) {
+        case "project":
+          entityFields.project_id = relatedId;
+          break;
+        case "lead":
+          entityFields.lead_id = relatedId;
+          break;
+        case "company":
+          entityFields.crm_company_id = relatedId;
+          break;
+        case "contact":
+          entityFields.contact_id = relatedId;
+          break;
+      }
+    }
+
     updateTask.mutate({
       id: task.id,
       title,
@@ -95,6 +131,7 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
       assigned_to: assignedTo.length > 0 ? assignedTo : null,
       tags: tags.length > 0 ? tags : null,
       estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
+      ...entityFields,
     });
     toast.success("Tâche mise à jour");
   };
@@ -117,6 +154,31 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
     createComment.mutate(newComment);
     setNewComment("");
     setCommentMentions([]);
+  };
+
+  const handleNavigateToEntity = () => {
+    if (!relatedType || !relatedId) return;
+    
+    let path = "";
+    switch (relatedType) {
+      case "project":
+        path = `/projects/${relatedId}`;
+        break;
+      case "lead":
+        path = `/crm/leads/${relatedId}`;
+        break;
+      case "company":
+        path = `/crm/companies/${relatedId}`;
+        break;
+      case "contact":
+        path = `/crm/contacts/${relatedId}`;
+        break;
+    }
+    
+    if (path) {
+      onOpenChange(false);
+      navigate(path);
+    }
   };
 
   if (!task) return null;
@@ -155,6 +217,30 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
             <div className="space-y-2">
               <Label>Description</Label>
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+            </div>
+
+            {/* Entity Linking */}
+            <div className="space-y-2 p-3 rounded-lg bg-muted/50 border">
+              <div className="flex items-center gap-2 mb-2">
+                <Link2 className="h-4 w-4 text-muted-foreground" />
+                <Label className="text-sm">Entité liée</Label>
+              </div>
+              
+              {relatedType && relatedId && (
+                <div className="flex items-center gap-2 mb-2">
+                  <LinkedEntityBadge entityType={relatedType} entityId={relatedId} />
+                  <Button variant="ghost" size="sm" onClick={handleNavigateToEntity} className="h-6 text-xs">
+                    Voir
+                  </Button>
+                </div>
+              )}
+              
+              <EntitySelector
+                entityType={relatedType}
+                entityId={relatedId}
+                onEntityTypeChange={setRelatedType}
+                onEntityIdChange={setRelatedId}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
