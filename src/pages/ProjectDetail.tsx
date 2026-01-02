@@ -181,7 +181,7 @@ export default function ProjectDetail() {
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4"
               >
                 <Calendar className="h-4 w-4 mr-2" />
-                Planning
+                Calendrier
               </TabsTrigger>
               <TabsTrigger
                 value="tasks"
