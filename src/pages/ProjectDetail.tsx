@@ -249,119 +249,215 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
 
   const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
 
+  const cyclePhaseStatus = (phase: any) => {
+    const statusOrder: Array<"pending" | "in_progress" | "completed"> = ["pending", "in_progress", "completed"];
+    const currentIndex = statusOrder.indexOf(phase.status || "pending");
+    const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
+    updatePhase.mutate({ id: phase.id, status: nextStatus });
+  };
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Project Info - Compact inline layout */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-start justify-between mb-4">
-            <h3 className="text-sm font-medium text-muted-foreground">Informations du projet</h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-7 px-2 text-xs"
-              onClick={() => setProjectEditOpen(true)}
-            >
-              <Pencil className="h-3 w-3 mr-1" />
-              Modifier
-            </Button>
-          </div>
-          
-          <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
-            {projectType && (
-              <div className="flex items-center gap-2">
-                <FolderKanban className="h-4 w-4 text-muted-foreground" />
-                <span>{projectType.label}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-              <span>{project.crm_company?.name || <span className="text-muted-foreground italic">Client non défini</span>}</span>
-            </div>
-            {project.city && (
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span>{project.city}</span>
-              </div>
-            )}
-            {(project.start_date || project.end_date) && (
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  {project.start_date && format(parseISO(project.start_date), "MMM yyyy", { locale: fr })}
-                  {project.start_date && project.end_date && " → "}
-                  {project.end_date && format(parseISO(project.end_date), "MMM yyyy", { locale: fr })}
-                </span>
-              </div>
-            )}
-            {project.surface_area && (
-              <div className="flex items-center gap-2">
-                <Ruler className="h-4 w-4 text-muted-foreground" />
-                <span>{project.surface_area} m²</span>
-              </div>
-            )}
-            {project.budget && (
-              <div className="flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-muted-foreground" />
-                <span>{project.budget.toLocaleString("fr-FR")} €</span>
-              </div>
-            )}
-          </div>
-
-          {project.description && (
-            <p className="mt-4 pt-4 border-t text-sm text-muted-foreground leading-relaxed">
-              {project.description}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Progress Bar - Simple inline */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-medium">Avancement</span>
-              <span className="text-2xl font-bold text-primary">{progressPercent}%</span>
-            </div>
-            <span className="text-sm text-muted-foreground">
-              {completedPhases}/{phases.length} phases
-            </span>
-          </div>
-          <Progress value={progressPercent} className="h-2" />
-        </CardContent>
-      </Card>
-
-      {/* AI Summary - Optional, compact */}
-      {(project.ai_summary || phases.length > 0) && (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Left Column - Main Info */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* Project Info */}
         <Card>
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">Résumé AI</span>
+          <CardContent className="py-5">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-sm font-medium">Informations</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 px-2 text-xs"
+                onClick={() => setProjectEditOpen(true)}
+              >
+                <Pencil className="h-3 w-3 mr-1" />
+                Modifier
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+              {projectType && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Type</p>
+                  <p className="font-medium">{projectType.label}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Client</p>
+                <p className="font-medium">{project.crm_company?.name || <span className="text-muted-foreground italic">Non défini</span>}</p>
+              </div>
+              {project.city && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Ville</p>
+                  <p className="font-medium">{project.city}</p>
+                </div>
+              )}
+              {(project.start_date || project.end_date) && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Période</p>
+                  <p className="font-medium">
+                    {project.start_date && format(parseISO(project.start_date), "MMM yy", { locale: fr })}
+                    {project.start_date && project.end_date && " → "}
+                    {project.end_date && format(parseISO(project.end_date), "MMM yy", { locale: fr })}
+                  </p>
+                </div>
+              )}
+              {project.surface_area && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Surface</p>
+                  <p className="font-medium">{project.surface_area} m²</p>
+                </div>
+              )}
+              {project.budget && (
+                <div>
+                  <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
+                  <p className="font-medium">{project.budget.toLocaleString("fr-FR")} €</p>
+                </div>
+              )}
+            </div>
+
+            {project.description && (
+              <p className="mt-4 pt-4 border-t text-sm text-muted-foreground leading-relaxed">
+                {project.description}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* MOE Team */}
+        <Card>
+          <CardContent className="py-5">
+            <ProjectMOESection projectId={project.id} />
+          </CardContent>
+        </Card>
+
+        {/* Gantt Timeline */}
+        {phases.length > 0 && (
+          <Card>
+            <CardContent className="py-5">
+              <h3 className="text-sm font-medium mb-4">Planning</h3>
+              <PhaseGanttTimeline
+                phases={phases}
+                dependencies={dependencies}
+                onPhaseUpdate={(phaseId, updates) => {
+                  updatePhase.mutate({ id: phaseId, ...updates });
+                }}
+              />
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Right Column - Progress & Phases */}
+      <div className="space-y-6">
+        {/* Progress */}
+        <Card>
+          <CardContent className="py-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium">Avancement</h3>
+              <span className="text-xl font-bold text-primary">{progressPercent}%</span>
+            </div>
+            <Progress value={progressPercent} className="h-2 mb-2" />
+            <p className="text-xs text-muted-foreground">{completedPhases}/{phases.length} phases terminées</p>
+          </CardContent>
+        </Card>
+
+        {/* Phases List */}
+        {phases.length > 0 && (
+          <Card>
+            <CardContent className="py-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-medium">Phases</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setPhaseEditOpen(true)}
+                >
+                  <Pencil className="h-3 w-3 mr-1" />
+                  Gérer
+                </Button>
+              </div>
+              <div className="space-y-1.5">
+                {phases.map((phase, index) => (
+                  <button
+                    key={phase.id}
+                    onClick={() => cyclePhaseStatus(phase)}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 p-2 rounded-lg transition-all text-left",
+                      "hover:bg-muted/50 cursor-pointer",
+                      phase.status === "in_progress" && "bg-primary/5 ring-1 ring-primary/20",
+                      phase.status === "completed" && "bg-muted/30"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium flex-shrink-0 transition-colors",
+                        phase.status === "completed" && "bg-primary text-primary-foreground",
+                        phase.status === "in_progress" && "bg-primary/20 text-primary ring-2 ring-primary",
+                        phase.status === "pending" && "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {phase.status === "completed" ? (
+                        <CheckCircle2 className="h-3 w-3" />
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                    <span className={cn(
+                      "flex-1 text-sm truncate",
+                      phase.status === "completed" && "line-through text-muted-foreground"
+                    )}>
+                      {phase.name}
+                    </span>
+                    <Badge 
+                      variant="secondary" 
+                      className={cn(
+                        "text-[9px] px-1.5 py-0",
+                        phase.status === "in_progress" && "bg-primary/10 text-primary",
+                        phase.status === "completed" && "bg-emerald-500/10 text-emerald-600",
+                        phase.status === "pending" && "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {phase.status === "completed" ? "✓" : phase.status === "in_progress" ? "En cours" : "À faire"}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* AI Summary */}
+        <Card>
+          <CardContent className="py-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                <h3 className="text-sm font-medium">Résumé AI</h3>
               </div>
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-7 px-2"
+                className="h-6 w-6 p-0"
                 onClick={onRefreshSummary}
                 disabled={isGeneratingSummary}
               >
                 {isGeneratingSummary ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="h-3 w-3 animate-spin" />
                 ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
+                  <RefreshCw className="h-3 w-3" />
                 )}
               </Button>
             </div>
             {project.ai_summary ? (
-              <p className="text-sm text-muted-foreground leading-relaxed">{project.ai_summary}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{project.ai_summary}</p>
             ) : (
               <Button 
                 variant="outline" 
                 size="sm"
-                className="h-8 text-xs"
+                className="w-full h-8 text-xs"
                 onClick={onRefreshSummary}
                 disabled={isGeneratingSummary}
               >
@@ -370,95 +466,12 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                 ) : (
                   <Sparkles className="h-3 w-3 mr-1" />
                 )}
-                Générer un résumé
+                Générer
               </Button>
             )}
           </CardContent>
         </Card>
-      )}
-
-      {/* MOE Team */}
-      <Card>
-        <CardContent className="py-4">
-          <ProjectMOESection projectId={project.id} />
-        </CardContent>
-      </Card>
-
-      {/* Phases List - Compact */}
-      {phases.length > 0 && (
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm font-medium">Phases du projet</span>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 px-2 text-xs"
-                onClick={() => setPhaseEditOpen(true)}
-              >
-                <Pencil className="h-3 w-3 mr-1" />
-                Gérer
-              </Button>
-            </div>
-            <div className="space-y-2">
-              {phases.map((phase, index) => (
-                <div
-                  key={phase.id}
-                  className={cn(
-                    "flex items-center gap-3 p-2 rounded-lg transition-colors",
-                    phase.status === "in_progress" && "bg-primary/5 border border-primary/20",
-                    phase.status === "completed" && "bg-muted/50",
-                    phase.status === "pending" && "hover:bg-muted/30"
-                  )}
-                >
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
-                    style={{
-                      backgroundColor: phase.status === "completed" ? "hsl(var(--primary))" : phase.color || "#e5e7eb",
-                      color: phase.status === "completed" ? "white" : "inherit",
-                    }}
-                  >
-                    {phase.status === "completed" ? (
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                    ) : (
-                      index + 1
-                    )}
-                  </div>
-                  <span className={cn(
-                    "flex-1 text-sm",
-                    phase.status === "completed" && "line-through text-muted-foreground"
-                  )}>
-                    {phase.name}
-                  </span>
-                  {phase.start_date && phase.end_date && (
-                    <span className="text-xs text-muted-foreground">
-                      {format(parseISO(phase.start_date), "dd/MM", { locale: fr })} - {format(parseISO(phase.end_date), "dd/MM", { locale: fr })}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Gantt Timeline - Full width */}
-      {phases.length > 0 && (
-        <Card>
-          <CardContent className="py-4">
-            <div className="mb-4">
-              <span className="text-sm font-medium">Planning</span>
-            </div>
-            <PhaseGanttTimeline
-              phases={phases}
-              dependencies={dependencies}
-              onPhaseUpdate={(phaseId, updates) => {
-                updatePhase.mutate({ id: phaseId, ...updates });
-              }}
-            />
-          </CardContent>
-        </Card>
-      )}
+      </div>
 
       {/* Dialogs */}
       <PhaseQuickEditDialog
