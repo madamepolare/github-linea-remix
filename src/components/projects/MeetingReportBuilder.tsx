@@ -410,6 +410,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
                       meetingId={meeting.id}
                       onStatusChange={(id, status) => updateObservation.mutate({ id, status, resolved_at: status === "resolved" ? new Date().toISOString() : null })}
                       onAddObservation={(obs) => createObservation.mutate({ ...obs, meeting_id: meeting.id, priority: obs.priority as any })}
+                      onUpdateObservation={(id, updates) => updateObservation.mutate({ id, ...updates })}
                       onUpdateComment={(id, comment) => setObservationComments(prev => ({ ...prev, [id]: comment }))}
                       observationComments={observationComments}
                     />

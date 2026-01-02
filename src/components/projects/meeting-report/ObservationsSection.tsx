@@ -12,10 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
+import { FileUpload } from "@/components/shared/FileUpload";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Clock, MessageSquare, Plus } from "lucide-react";
+import { Clock, MessageSquare, Plus, Image, X } from "lucide-react";
 import { ProjectObservation, ObservationStatus, ProjectLot } from "@/hooks/useChantier";
 import { OBSERVATION_PRIORITY, OBSERVATION_STATUS } from "@/lib/projectTypes";
 
@@ -30,7 +31,9 @@ interface ObservationsSectionProps {
     lot_id?: string;
     priority: string;
     due_date?: string;
+    photo_urls?: string[];
   }) => void;
+  onUpdateObservation: (id: string, updates: Partial<ProjectObservation>) => void;
   onUpdateComment: (id: string, comment: string) => void;
   observationComments: Record<string, string>;
 }
@@ -42,6 +45,7 @@ export function ObservationsSection({
   meetingId,
   onStatusChange,
   onAddObservation,
+  onUpdateObservation,
   onUpdateComment,
   observationComments,
 }: ObservationsSectionProps) {
@@ -50,6 +54,7 @@ export function ObservationsSection({
   const [lotId, setLotId] = useState<string | null>(null);
   const [priority, setPriority] = useState("normal");
   const [dueDate, setDueDate] = useState<Date | null>(null);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
 
   // Get all unresolved observations from the project (not just this meeting)
   const unresolvedFromOtherMeetings = allProjectObservations.filter(
@@ -69,12 +74,22 @@ export function ObservationsSection({
       lot_id: lotId || undefined,
       priority,
       due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : undefined,
+      photo_urls: photoUrls.length > 0 ? photoUrls : undefined,
     });
     setDescription("");
     setLotId(null);
     setPriority("normal");
     setDueDate(null);
+    setPhotoUrls([]);
     setShowAddForm(false);
+  };
+
+  const handlePhotoUpload = (obsId: string, newUrls: string[], existingUrls: string[]) => {
+    onUpdateObservation(obsId, { photo_urls: [...existingUrls, ...newUrls] });
+  };
+
+  const handlePhotoRemove = (obsId: string, urlToRemove: string, existingUrls: string[]) => {
+    onUpdateObservation(obsId, { photo_urls: existingUrls.filter(u => u !== urlToRemove) });
   };
 
   return (
@@ -103,6 +118,17 @@ export function ObservationsSection({
             rows={2}
             className="text-sm"
           />
+          
+          {/* Photo upload for new observation */}
+          <FileUpload
+            bucket="observation-files"
+            folder={`observations/${meetingId}`}
+            existingUrls={photoUrls}
+            onUpload={(urls) => setPhotoUrls(prev => [...prev, ...urls])}
+            onRemove={(url) => setPhotoUrls(prev => prev.filter(u => u !== url))}
+            maxFiles={5}
+          />
+          
           <div className="flex gap-2 flex-wrap">
             <Select value={lotId || "none"} onValueChange={(v) => setLotId(v === "none" ? null : v)}>
               <SelectTrigger className="w-[160px] h-8 text-xs">
@@ -177,6 +203,17 @@ export function ObservationsSection({
                     )}>
                       {obs.description}
                     </p>
+                    
+                    {/* Photo display and upload */}
+                    <FileUpload
+                      bucket="observation-files"
+                      folder={`observations/${obs.meeting_id || obs.id}`}
+                      existingUrls={obs.photo_urls || []}
+                      onUpload={(urls) => handlePhotoUpload(obs.id, urls, obs.photo_urls || [])}
+                      onRemove={(url) => handlePhotoRemove(obs.id, url, obs.photo_urls || [])}
+                      maxFiles={5}
+                    />
+                    
                     <div className="flex items-center gap-2 flex-wrap">
                       <Badge variant="secondary" className="text-xs">
                         {statusConfig?.label || obs.status}
