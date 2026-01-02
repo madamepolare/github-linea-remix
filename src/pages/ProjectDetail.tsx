@@ -23,6 +23,7 @@ import {
   Loader2,
   MapPin,
   MoreHorizontal,
+  Pencil,
   RefreshCw,
   Sparkles,
   Wallet,
@@ -35,6 +36,7 @@ import { ProjectChantierTab } from "@/components/projects/ProjectChantierTab";
 import { ProjectDeliverablesTab } from "@/components/projects/ProjectDeliverablesTab";
 import { ProjectMOESection } from "@/components/projects/ProjectMOESection";
 import { PhaseGanttTimeline } from "@/components/projects/PhaseGanttTimeline";
+import { PhaseQuickEditDialog } from "@/components/projects/PhaseQuickEditDialog";
 import { EntityTasksList } from "@/components/tasks/EntityTasksList";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -229,7 +231,8 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
   const completedPhases = phases.filter((p) => p.status === "completed").length;
   const inProgressPhase = phases.find((p) => p.status === "in_progress");
   const { dependencies } = usePhaseDependencies(project.id);
-  const { updatePhase } = useProjectPhases(project.id);
+  const { updatePhase, createPhase, deletePhase, reorderPhases } = useProjectPhases(project.id);
+  const [phaseEditOpen, setPhaseEditOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -343,7 +346,17 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Phases</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">Phases</CardTitle>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 px-2"
+                  onClick={() => setPhaseEditOpen(true)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-1.5">
@@ -458,7 +471,18 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
       {phases.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Planning des phases</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">Planning des phases</CardTitle>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-7 px-2"
+                onClick={() => setPhaseEditOpen(true)}
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                Éditer
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <PhaseGanttTimeline
@@ -471,6 +495,17 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
           </CardContent>
         </Card>
       )}
+
+      {/* Phase Quick Edit Dialog */}
+      <PhaseQuickEditDialog
+        open={phaseEditOpen}
+        onOpenChange={setPhaseEditOpen}
+        phases={phases}
+        onCreatePhase={(phase) => createPhase.mutate(phase)}
+        onUpdatePhase={(id, updates) => updatePhase.mutate({ id, ...updates })}
+        onDeletePhase={(id) => deletePhase.mutate(id)}
+        onReorderPhases={(orderedIds) => reorderPhases.mutate(orderedIds)}
+      />
     </div>
   );
 }
