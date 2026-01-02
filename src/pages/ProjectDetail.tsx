@@ -22,8 +22,10 @@ import {
   FolderKanban,
   HardHat,
   ListTodo,
+  Loader2,
   MapPin,
   MoreHorizontal,
+  RefreshCw,
   Sparkles,
   Users,
   Wallet,
@@ -37,12 +39,39 @@ import { ProjectMOETab } from "@/components/projects/ProjectMOETab";
 import { ProjectDeliverablesTab } from "@/components/projects/ProjectDeliverablesTab";
 import { ProjectChantierTab } from "@/components/projects/ProjectChantierTab";
 import { ProjectTasksTab } from "@/components/projects/ProjectTasksTab";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: project, isLoading } = useProject(id || null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+
+  const handleGenerateSummary = async () => {
+    if (!id) return;
+    
+    setIsGeneratingSummary(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-project-summary", {
+        body: { projectId: id },
+      });
+
+      if (error) throw error;
+      
+      // Invalidate project query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["project", id] });
+      toast.success("Résumé généré avec succès");
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      toast.error("Erreur lors de la génération du résumé");
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -186,7 +215,13 @@ export default function ProjectDetail() {
         {/* Content */}
         <div className="flex-1 overflow-auto p-6">
           {activeTab === "overview" && (
-            <OverviewTab project={project} phases={phases} progressPercent={progressPercent} />
+            <OverviewTab 
+              project={project} 
+              phases={phases} 
+              progressPercent={progressPercent}
+              onRefreshSummary={handleGenerateSummary}
+              isGeneratingSummary={isGeneratingSummary}
+            />
           )}
           {activeTab === "phases" && <ProjectPhasesTab projectId={project.id} />}
           {activeTab === "tasks" && <ProjectTasksTab projectId={project.id} />}
@@ -203,9 +238,11 @@ interface OverviewTabProps {
   project: any;
   phases: any[];
   progressPercent: number;
+  onRefreshSummary: () => void;
+  isGeneratingSummary: boolean;
 }
 
-function OverviewTab({ project, phases, progressPercent }: OverviewTabProps) {
+function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary }: OverviewTabProps) {
   const completedPhases = phases.filter((p) => p.status === "completed").length;
   const inProgressPhase = phases.find((p) => p.status === "in_progress");
 
@@ -214,19 +251,54 @@ function OverviewTab({ project, phases, progressPercent }: OverviewTabProps) {
       {/* Main content */}
       <div className="lg:col-span-2 space-y-6">
         {/* AI Summary */}
-        {project.ai_summary && (
-          <Card>
-            <CardHeader className="pb-3">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-primary" />
                 Résumé AI
               </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{project.ai_summary}</p>
-            </CardContent>
-          </Card>
-        )}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onRefreshSummary}
+                disabled={isGeneratingSummary}
+              >
+                {isGeneratingSummary ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                <span className="ml-1.5">{isGeneratingSummary ? "Génération..." : "Actualiser"}</span>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {project.ai_summary ? (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{project.ai_summary}</p>
+            ) : (
+              <div className="text-center py-4">
+                <Sparkles className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground mb-3">
+                  Aucun résumé disponible
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onRefreshSummary}
+                  disabled={isGeneratingSummary}
+                >
+                  {isGeneratingSummary ? (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-1.5" />
+                  )}
+                  Générer le résumé
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Progress */}
         <Card>
