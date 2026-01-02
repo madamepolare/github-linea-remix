@@ -111,12 +111,12 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
 
   // Project-specific tasks
   const projectTasks = useMemo(() => {
-    return tasks.filter(t => t.project_id === projectId && t.due_date);
+    return (tasks || []).filter(t => t.project_id === projectId && t.due_date);
   }, [tasks, projectId]);
 
   // Quick tasks with due dates
   const quickTasksWithDates = useMemo(() => {
-    return pendingTasks.filter(t => t.due_date);
+    return (pendingTasks || []).filter(t => t.due_date);
   }, [pendingTasks]);
 
   // Convert all items to FullCalendar events
