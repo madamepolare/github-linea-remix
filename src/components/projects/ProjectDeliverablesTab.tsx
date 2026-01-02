@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -22,16 +23,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isPast } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { DELIVERABLE_STATUS } from "@/lib/projectTypes";
 import {
+  AlertCircle,
   CheckCircle2,
   Clock,
   ExternalLink,
   File,
   FileText,
+  Filter,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -46,6 +49,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 interface ProjectDeliverablesTabProps {
   projectId: string;
@@ -56,6 +65,8 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
   const { phases } = useProjectPhases(projectId);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingDeliverable, setEditingDeliverable] = useState<any | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterPhase, setFilterPhase] = useState<string>("all");
 
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -140,19 +151,64 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
     );
   }
 
+  // Stats
+  const totalCount = deliverables.length;
+  const pendingCount = deliverables.filter(d => d.status === "pending").length;
+  const inProgressCount = deliverables.filter(d => d.status === "in_progress").length;
+  const deliveredCount = deliverables.filter(d => d.status === "delivered").length;
+  const validatedCount = deliverables.filter(d => d.status === "validated").length;
+  const overdueCount = deliverables.filter(d => 
+    d.due_date && isPast(parseISO(d.due_date)) && d.status !== "delivered" && d.status !== "validated"
+  ).length;
+  
+  const progressPercent = totalCount > 0 
+    ? Math.round(((deliveredCount + validatedCount) / totalCount) * 100) 
+    : 0;
+
+  // Filtering
+  const filteredDeliverables = deliverables.filter(d => {
+    if (filterStatus !== "all" && d.status !== filterStatus) return false;
+    if (filterPhase !== "all") {
+      if (filterPhase === "none" && d.phase_id !== null) return false;
+      if (filterPhase !== "none" && d.phase_id !== filterPhase) return false;
+    }
+    return true;
+  });
+
   if (deliverables.length === 0) {
     return (
-      <EmptyState
-        icon={FileText}
-        title="Aucun livrable"
-        description="Ajoutez des livrables pour chaque phase du projet."
-        action={{ label: "Ajouter un livrable", onClick: () => setIsCreateOpen(true) }}
-      />
+      <>
+        <EmptyState
+          icon={FileText}
+          title="Aucun livrable"
+          description="Ajoutez des livrables pour chaque phase du projet."
+          action={{ label: "Ajouter un livrable", onClick: () => setIsCreateOpen(true) }}
+        />
+        <DeliverableDialog
+          isOpen={isCreateOpen}
+          onClose={() => { setIsCreateOpen(false); resetForm(); }}
+          formName={formName}
+          setFormName={setFormName}
+          formDescription={formDescription}
+          setFormDescription={setFormDescription}
+          formPhaseId={formPhaseId}
+          setFormPhaseId={setFormPhaseId}
+          formStatus={formStatus}
+          setFormStatus={setFormStatus}
+          formDueDate={formDueDate}
+          setFormDueDate={setFormDueDate}
+          formFileUrl={formFileUrl}
+          setFormFileUrl={setFormFileUrl}
+          phases={phases}
+          onSubmit={handleCreate}
+          isEditing={false}
+        />
+      </>
     );
   }
 
   // Group by phase
-  const groupedByPhase = deliverables.reduce((acc, deliverable) => {
+  const groupedByPhase = filteredDeliverables.reduce((acc, deliverable) => {
     const phaseId = deliverable.phase_id || "no-phase";
     if (!acc[phaseId]) acc[phaseId] = [];
     acc[phaseId].push(deliverable);
@@ -161,244 +217,464 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium">Livrables du projet</h3>
+      {/* Stats Bar */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <Card className="col-span-2">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-muted-foreground">Progression</span>
+              <span className="text-sm font-medium">{progressPercent}%</span>
+            </div>
+            <Progress value={progressPercent} className="h-2" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-amber-600">{pendingCount}</div>
+            <div className="text-xs text-muted-foreground">En attente</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600">{inProgressCount}</div>
+            <div className="text-xs text-muted-foreground">En cours</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-600">{deliveredCount + validatedCount}</div>
+            <div className="text-xs text-muted-foreground">Livrés</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <div className={cn("text-2xl font-bold", overdueCount > 0 ? "text-destructive" : "text-muted-foreground")}>
+              {overdueCount}
+            </div>
+            <div className="text-xs text-muted-foreground">En retard</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters & Actions */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[140px] h-8">
+              <SelectValue placeholder="Statut" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous statuts</SelectItem>
+              {DELIVERABLE_STATUS.map((status) => (
+                <SelectItem key={status.value} value={status.value}>
+                  {status.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterPhase} onValueChange={setFilterPhase}>
+            <SelectTrigger className="w-[160px] h-8">
+              <SelectValue placeholder="Phase" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes phases</SelectItem>
+              <SelectItem value="none">Sans phase</SelectItem>
+              {phases.map((phase) => (
+                <SelectItem key={phase.id} value={phase.id}>
+                  {phase.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" />
-          Ajouter
+          Ajouter un livrable
         </Button>
       </div>
 
-      <div className="space-y-6">
-        {Object.entries(groupedByPhase).map(([phaseId, items]) => {
-          const phase = phases.find(p => p.id === phaseId);
-          
-          return (
-            <div key={phaseId}>
-              <h4 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                {phase && (
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: phase.color || "#3B82F6" }}
-                  />
-                )}
-                {phase?.name || "Sans phase"}
-              </h4>
-              <div className="grid gap-3">
-                {items.map((deliverable) => {
-                  const statusConfig = DELIVERABLE_STATUS.find(s => s.value === deliverable.status) || DELIVERABLE_STATUS[0];
+      {/* Deliverables List */}
+      <Tabs defaultValue="by-phase" className="w-full">
+        <TabsList>
+          <TabsTrigger value="by-phase">Par phase</TabsTrigger>
+          <TabsTrigger value="all">Liste complète</TabsTrigger>
+        </TabsList>
 
-                  return (
-                    <Card key={deliverable.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <div className={cn(
-                            "w-10 h-10 rounded-lg flex items-center justify-center",
-                            deliverable.status === "validated" ? "bg-green-100 text-green-600" :
-                            deliverable.status === "delivered" ? "bg-blue-100 text-blue-600" :
-                            "bg-muted text-muted-foreground"
-                          )}>
-                            {deliverable.status === "validated" ? (
-                              <CheckCircle2 className="h-5 w-5" />
-                            ) : (
-                              <File className="h-5 w-5" />
-                            )}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{deliverable.name}</span>
-                              <Badge 
-                                variant="secondary" 
-                                className="text-xs"
-                                style={{ 
-                                  backgroundColor: statusConfig.color + "20",
-                                  color: statusConfig.color 
-                                }}
-                              >
-                                {statusConfig.label}
-                              </Badge>
-                            </div>
-                            {deliverable.description && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {deliverable.description}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                              {deliverable.due_date && (
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  Échéance: {format(parseISO(deliverable.due_date), "d MMMM yyyy", { locale: fr })}
-                                </span>
-                              )}
-                              {deliverable.delivered_at && (
-                                <span className="flex items-center gap-1">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  Livré: {format(parseISO(deliverable.delivered_at), "d MMM yyyy", { locale: fr })}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1">
-                            {deliverable.file_url && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8"
-                                onClick={() => window.open(deliverable.file_url!, "_blank")}
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                {deliverable.status === "pending" && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(deliverable.id, "in_progress")}>
-                                    <Clock className="h-4 w-4 mr-2" />
-                                    En cours
-                                  </DropdownMenuItem>
-                                )}
-                                {deliverable.status !== "delivered" && deliverable.status !== "validated" && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(deliverable.id, "delivered")}>
-                                    <Upload className="h-4 w-4 mr-2" />
-                                    Marquer livré
-                                  </DropdownMenuItem>
-                                )}
-                                {deliverable.status === "delivered" && (
-                                  <DropdownMenuItem onClick={() => handleStatusChange(deliverable.id, "validated")}>
-                                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                                    Valider
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem onClick={() => openEditDialog(deliverable)}>
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  Modifier
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => handleDelete(deliverable.id)}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Supprimer
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+        <TabsContent value="by-phase" className="space-y-6 mt-4">
+          {Object.entries(groupedByPhase).map(([phaseId, items]) => {
+            const phase = phases.find(p => p.id === phaseId);
+            const phaseDelivered = items.filter(d => d.status === "delivered" || d.status === "validated").length;
+            const phaseProgress = items.length > 0 ? Math.round((phaseDelivered / items.length) * 100) : 0;
+            
+            return (
+              <div key={phaseId}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {phase && (
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: phase.color || "#3B82F6" }}
+                      />
+                    )}
+                    <h4 className="font-medium">{phase?.name || "Sans phase"}</h4>
+                    <Badge variant="secondary" className="text-xs">
+                      {items.length} livrable{items.length > 1 ? "s" : ""}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">{phaseProgress}%</span>
+                    <Progress value={phaseProgress} className="w-20 h-1.5" />
+                  </div>
+                </div>
+                <div className="grid gap-3">
+                  {items.map((deliverable) => (
+                    <DeliverableCard
+                      key={deliverable.id}
+                      deliverable={deliverable}
+                      onEdit={() => openEditDialog(deliverable)}
+                      onDelete={() => handleDelete(deliverable.id)}
+                      onStatusChange={handleStatusChange}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </TabsContent>
+
+        <TabsContent value="all" className="mt-4">
+          <div className="grid gap-3">
+            {filteredDeliverables.map((deliverable) => {
+              const phase = phases.find(p => p.id === deliverable.phase_id);
+              return (
+                <DeliverableCard
+                  key={deliverable.id}
+                  deliverable={deliverable}
+                  phase={phase}
+                  showPhase
+                  onEdit={() => openEditDialog(deliverable)}
+                  onDelete={() => handleDelete(deliverable.id)}
+                  onStatusChange={handleStatusChange}
+                />
+              );
+            })}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isCreateOpen || !!editingDeliverable} onOpenChange={(open) => {
-        if (!open) {
-          setIsCreateOpen(false);
-          setEditingDeliverable(null);
-          resetForm();
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingDeliverable ? "Modifier le livrable" : "Nouveau livrable"}</DialogTitle>
-          </DialogHeader>
+      <DeliverableDialog
+        isOpen={isCreateOpen || !!editingDeliverable}
+        onClose={() => { setIsCreateOpen(false); setEditingDeliverable(null); resetForm(); }}
+        formName={formName}
+        setFormName={setFormName}
+        formDescription={formDescription}
+        setFormDescription={setFormDescription}
+        formPhaseId={formPhaseId}
+        setFormPhaseId={setFormPhaseId}
+        formStatus={formStatus}
+        setFormStatus={setFormStatus}
+        formDueDate={formDueDate}
+        setFormDueDate={setFormDueDate}
+        formFileUrl={formFileUrl}
+        setFormFileUrl={setFormFileUrl}
+        phases={phases}
+        onSubmit={editingDeliverable ? handleUpdate : handleCreate}
+        isEditing={!!editingDeliverable}
+      />
+    </div>
+  );
+}
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nom *</Label>
-              <Input
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Ex: Plans d'exécution"
-              />
+// Deliverable Card Component
+function DeliverableCard({
+  deliverable,
+  phase,
+  showPhase = false,
+  onEdit,
+  onDelete,
+  onStatusChange,
+}: {
+  deliverable: any;
+  phase?: any;
+  showPhase?: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onStatusChange: (id: string, status: DeliverableStatus) => void;
+}) {
+  const statusConfig = DELIVERABLE_STATUS.find(s => s.value === deliverable.status) || DELIVERABLE_STATUS[0];
+  const isOverdue = deliverable.due_date && 
+    isPast(parseISO(deliverable.due_date)) && 
+    deliverable.status !== "delivered" && 
+    deliverable.status !== "validated";
+
+  return (
+    <Card className={cn(
+      "transition-colors",
+      isOverdue && "border-destructive/50 bg-destructive/5"
+    )}>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className={cn(
+            "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+            deliverable.status === "validated" ? "bg-green-100 text-green-600" :
+            deliverable.status === "delivered" ? "bg-blue-100 text-blue-600" :
+            deliverable.status === "in_progress" ? "bg-amber-100 text-amber-600" :
+            "bg-muted text-muted-foreground"
+          )}>
+            {deliverable.status === "validated" ? (
+              <CheckCircle2 className="h-5 w-5" />
+            ) : isOverdue ? (
+              <AlertCircle className="h-5 w-5 text-destructive" />
+            ) : (
+              <File className="h-5 w-5" />
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium">{deliverable.name}</span>
+              <Badge 
+                variant="secondary" 
+                className="text-xs"
+                style={{ 
+                  backgroundColor: statusConfig.color + "20",
+                  color: statusConfig.color 
+                }}
+              >
+                {statusConfig.label}
+              </Badge>
+              {showPhase && phase && (
+                <Badge variant="outline" className="text-xs">
+                  <div
+                    className="w-2 h-2 rounded-full mr-1"
+                    style={{ backgroundColor: phase.color || "#3B82F6" }}
+                  />
+                  {phase.name}
+                </Badge>
+              )}
+              {isOverdue && (
+                <Badge variant="destructive" className="text-xs">
+                  En retard
+                </Badge>
+              )}
             </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                placeholder="Description du livrable..."
-                rows={2}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Phase</Label>
-                <Select value={formPhaseId || "none"} onValueChange={(v) => setFormPhaseId(v === "none" ? null : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sans phase</SelectItem>
-                    {phases.map((phase) => (
-                      <SelectItem key={phase.id} value={phase.id}>
-                        {phase.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Statut</Label>
-                <Select value={formStatus} onValueChange={(v) => setFormStatus(v as DeliverableStatus)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DELIVERABLE_STATUS.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>
-                        {status.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Date d'échéance</Label>
-              <InlineDatePicker
-                value={formDueDate}
-                onChange={setFormDueDate}
-                placeholder="Sélectionner..."
-                className="w-full"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>URL du fichier</Label>
-              <Input
-                value={formFileUrl}
-                onChange={(e) => setFormFileUrl(e.target.value)}
-                placeholder="https://..."
-              />
+            {deliverable.description && (
+              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                {deliverable.description}
+              </p>
+            )}
+            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
+              {deliverable.due_date && (
+                <span className={cn(
+                  "flex items-center gap-1",
+                  isOverdue && "text-destructive font-medium"
+                )}>
+                  <Clock className="h-3 w-3" />
+                  Échéance: {format(parseISO(deliverable.due_date), "d MMMM yyyy", { locale: fr })}
+                </span>
+              )}
+              {deliverable.delivered_at && (
+                <span className="flex items-center gap-1 text-green-600">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Livré: {format(parseISO(deliverable.delivered_at), "d MMM yyyy", { locale: fr })}
+                </span>
+              )}
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsCreateOpen(false); setEditingDeliverable(null); resetForm(); }}>
-              Annuler
-            </Button>
-            <Button onClick={editingDeliverable ? handleUpdate : handleCreate} disabled={!formName.trim()}>
-              {editingDeliverable ? "Enregistrer" : "Créer"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          <div className="flex items-center gap-1 shrink-0">
+            {deliverable.file_url && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={() => window.open(deliverable.file_url!, "_blank")}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onEdit}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Modifier
+                </DropdownMenuItem>
+                {deliverable.status === "pending" && (
+                  <DropdownMenuItem onClick={() => onStatusChange(deliverable.id, "in_progress")}>
+                    <Clock className="h-4 w-4 mr-2" />
+                    En cours
+                  </DropdownMenuItem>
+                )}
+                {deliverable.status !== "delivered" && deliverable.status !== "validated" && (
+                  <DropdownMenuItem onClick={() => onStatusChange(deliverable.id, "delivered")}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Marquer livré
+                  </DropdownMenuItem>
+                )}
+                {deliverable.status === "delivered" && (
+                  <DropdownMenuItem onClick={() => onStatusChange(deliverable.id, "validated")}>
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                    Valider
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem 
+                  onClick={onDelete}
+                  className="text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Deliverable Dialog Component
+function DeliverableDialog({
+  isOpen,
+  onClose,
+  formName,
+  setFormName,
+  formDescription,
+  setFormDescription,
+  formPhaseId,
+  setFormPhaseId,
+  formStatus,
+  setFormStatus,
+  formDueDate,
+  setFormDueDate,
+  formFileUrl,
+  setFormFileUrl,
+  phases,
+  onSubmit,
+  isEditing,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  formName: string;
+  setFormName: (v: string) => void;
+  formDescription: string;
+  setFormDescription: (v: string) => void;
+  formPhaseId: string | null;
+  setFormPhaseId: (v: string | null) => void;
+  formStatus: DeliverableStatus;
+  setFormStatus: (v: DeliverableStatus) => void;
+  formDueDate: Date | null;
+  setFormDueDate: (v: Date | null) => void;
+  formFileUrl: string;
+  setFormFileUrl: (v: string) => void;
+  phases: any[];
+  onSubmit: () => void;
+  isEditing: boolean;
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? "Modifier le livrable" : "Nouveau livrable"}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Nom *</Label>
+            <Input
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder="Ex: Plans d'exécution"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              placeholder="Description du livrable..."
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Phase</Label>
+              <Select value={formPhaseId || "none"} onValueChange={(v) => setFormPhaseId(v === "none" ? null : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sans phase</SelectItem>
+                  {phases.map((phase) => (
+                    <SelectItem key={phase.id} value={phase.id}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: phase.color || "#3B82F6" }}
+                        />
+                        {phase.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Statut</Label>
+              <Select value={formStatus} onValueChange={(v) => setFormStatus(v as DeliverableStatus)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DELIVERABLE_STATUS.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Date d'échéance</Label>
+            <InlineDatePicker
+              value={formDueDate}
+              onChange={setFormDueDate}
+              placeholder="Sélectionner..."
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>URL du fichier</Label>
+            <Input
+              value={formFileUrl}
+              onChange={(e) => setFormFileUrl(e.target.value)}
+              placeholder="https://..."
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button onClick={onSubmit} disabled={!formName.trim()}>
+            {isEditing ? "Enregistrer" : "Créer"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
