@@ -168,51 +168,80 @@ export default function LeadDetail() {
 
   return (
     <MainLayout>
-      <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/crm")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-semibold">{lead.title}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              {lead.stage && (
-                <Badge
-                  style={{ backgroundColor: lead.stage.color || "#6366f1" }}
-                  className="text-white"
+        <div className="flex-shrink-0 border-b border-border bg-card">
+          <div className="px-6 py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/crm")}
+                  className="h-9 w-9 rounded-full hover:bg-muted"
                 >
-                  {lead.stage.name}
-                </Badge>
-              )}
-              {lead.status === "won" && (
-                <Badge className="bg-emerald-500 text-white">Gagné</Badge>
-              )}
-              {lead.status === "lost" && (
-                <Badge className="bg-destructive text-white">Perdu</Badge>
-              )}
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Target className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-xl font-semibold tracking-tight">{lead.title}</h1>
+                    {lead.stage && (
+                      <Badge
+                        style={{ backgroundColor: lead.stage.color || "#6366f1" }}
+                        className="text-white text-xs"
+                      >
+                        {lead.stage.name}
+                      </Badge>
+                    )}
+                    {lead.status === "won" && (
+                      <Badge className="bg-emerald-500 text-white text-xs">Gagné</Badge>
+                    )}
+                    {lead.status === "lost" && (
+                      <Badge className="bg-destructive text-white text-xs">Perdu</Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    {lead.estimated_value && (
+                      <span>{formatCurrency(lead.estimated_value)}</span>
+                    )}
+                    {lead.probability && (
+                      <>
+                        <span className="text-border">•</span>
+                        <span>{lead.probability}% probabilité</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {isEditing ? (
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
+                      <X className="h-4 w-4 mr-2" />
+                      Annuler
+                    </Button>
+                    <Button size="sm" onClick={handleSave} disabled={updateLead.isPending}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Enregistrer
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Modifier
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            {isEditing ? (
-              <>
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
-                  <X className="h-4 w-4 mr-2" />
-                  Annuler
-                </Button>
-                <Button onClick={handleSave} disabled={updateLead.isPending}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Enregistrer
-                </Button>
-              </>
-            ) : (
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Modifier
-              </Button>
-            )}
-          </div>
         </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-6">
+          <div className="max-w-5xl mx-auto space-y-6">
 
         {/* Stats Cards */}
         <div className="grid grid-cols-4 gap-4">
@@ -593,6 +622,8 @@ export default function LeadDetail() {
                 </CardContent>
               </Card>
             )}
+          </div>
+        </div>
           </div>
         </div>
       </div>

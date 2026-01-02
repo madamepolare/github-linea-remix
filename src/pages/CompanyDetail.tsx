@@ -142,75 +142,91 @@ export default function CompanyDetail() {
 
   return (
     <MainLayout>
-      <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/crm")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center gap-4 flex-1">
-            <div
-              className={cn(
-                "h-14 w-14 rounded-xl flex items-center justify-center text-white font-bold text-lg",
-                typeConfig.color
-              )}
-            >
-              {company.logo_url ? (
-                <img
-                  src={company.logo_url}
-                  alt={company.name}
-                  className="h-full w-full object-cover rounded-xl"
-                />
-              ) : (
-                company.name.slice(0, 2).toUpperCase()
-              )}
-            </div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-semibold">{company.name}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className="gap-1.5">
-                  <div className={cn("w-2 h-2 rounded-full", typeConfig.color)} />
-                  {typeConfig.label}
-                </Badge>
-                {company.city && (
-                  <span className="text-sm text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {company.city}
-                  </span>
+        <div className="flex-shrink-0 border-b border-border bg-card">
+          <div className="px-6 py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/crm")}
+                  className="h-9 w-9 rounded-full hover:bg-muted"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div
+                  className={cn(
+                    "h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-sm",
+                    typeConfig.color
+                  )}
+                >
+                  {company.logo_url ? (
+                    <img
+                      src={company.logo_url}
+                      alt={company.name}
+                      className="h-full w-full object-cover rounded-full"
+                    />
+                  ) : (
+                    company.name.slice(0, 2).toUpperCase()
+                  )}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-xl font-semibold tracking-tight">{company.name}</h1>
+                    <Badge variant="outline" className="text-xs font-normal gap-1.5">
+                      <div className={cn("w-2 h-2 rounded-full", typeConfig.color)} />
+                      {typeConfig.label}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    {company.city && (
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5" />
+                        {company.city}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {isEditing ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditing(false);
+                        if (company) {
+                          setEditData(company);
+                          setSelectedCategory(getCategoryFromIndustry(company.industry));
+                          setSelectedSpecialties(company.bet_specialties || []);
+                        }
+                      }}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Annuler
+                    </Button>
+                    <Button size="sm" onClick={handleSave} disabled={updateCompany.isPending}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Enregistrer
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Modifier
+                  </Button>
                 )}
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            {isEditing ? (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditing(false);
-                    if (company) {
-                      setEditData(company);
-                      setSelectedCategory(getCategoryFromIndustry(company.industry));
-                      setSelectedSpecialties(company.bet_specialties || []);
-                    }
-                  }}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Annuler
-                </Button>
-                <Button onClick={handleSave} disabled={updateCompany.isPending}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Enregistrer
-                </Button>
-              </>
-            ) : (
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Modifier
-              </Button>
-            )}
-          </div>
         </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-6">
+          <div className="max-w-6xl mx-auto space-y-6">
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
@@ -672,6 +688,8 @@ export default function CompanyDetail() {
             />
           </TabsContent>
         </Tabs>
+          </div>
+        </div>
       </div>
     </MainLayout>
   );
