@@ -1,15 +1,29 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Send, FileDown, Eye, FileText } from 'lucide-react';
+import { ArrowLeft, Save, Send, FileDown, Eye, FileText, CheckCircle, FolderPlus, ExternalLink } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { CommercialDocumentBuilder } from '@/components/commercial/CommercialDocumentBuilder';
 import { DocumentPreviewPanel } from '@/components/commercial/DocumentPreviewPanel';
 import { PDFPreviewDialog } from '@/components/commercial/PDFPreviewDialog';
+import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { 
   DocumentType, 
   DOCUMENT_TYPE_LABELS,
+  STATUS_LABELS,
+  STATUS_COLORS,
   CommercialDocument as CommercialDocumentType,
   CommercialDocumentPhase
 } from '@/lib/commercialTypes';
@@ -25,7 +39,8 @@ const CommercialDocument = () => {
     getDocument, 
     getDocumentPhases,
     createDocument, 
-    updateDocument 
+    updateDocument,
+    acceptAndCreateProject
   } = useCommercialDocuments();
 
   const documentQuery = isNew ? { data: null, isLoading: false } : getDocument(id!);
@@ -164,13 +179,81 @@ const CommercialDocument = () => {
               {isSaving ? 'Enregistrement...' : 'Enregistrer'}
             </Button>
             {!isNew && documentData.status === 'draft' && (
-              <Button variant="default">
+              <Button variant="outline">
                 <Send className="h-4 w-4 mr-2" />
                 Envoyer
               </Button>
             )}
+            {!isNew && documentData.status !== 'accepted' && documentData.status !== 'signed' && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="default" className="bg-green-600 hover:bg-green-700">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Accepter & Créer projet
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Accepter le document et créer un projet ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action va :
+                      <ul className="list-disc list-inside mt-2 space-y-1">
+                        <li>Marquer le {DOCUMENT_TYPE_LABELS[documentData.document_type!]} comme accepté</li>
+                        <li>Créer un nouveau projet avec les informations du document</li>
+                        <li>Importer les phases du devis comme phases du projet</li>
+                      </ul>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        const result = await acceptAndCreateProject.mutateAsync({
+                          documentId: id!,
+                          phases
+                        });
+                        navigate(`/projects/${result.project.id}`);
+                      }}
+                      disabled={acceptAndCreateProject.isPending}
+                    >
+                      <FolderPlus className="h-4 w-4 mr-2" />
+                      {acceptAndCreateProject.isPending ? 'Création...' : 'Confirmer'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {documentData.project_id && (
+              <Button 
+                variant="outline" 
+                onClick={() => navigate(`/projects/${documentData.project_id}`)}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Voir le projet
+              </Button>
+            )}
           </div>
         </div>
+
+        {/* Status Badge */}
+        {!isNew && documentData.status && (
+          <div className="px-6 py-2 border-b border-border bg-muted/30">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Statut:</span>
+              <Badge className={STATUS_COLORS[documentData.status as keyof typeof STATUS_COLORS]}>
+                {STATUS_LABELS[documentData.status as keyof typeof STATUS_LABELS]}
+              </Badge>
+              {documentData.project_id && (
+                <>
+                  <span className="text-sm text-muted-foreground ml-4">Projet lié:</span>
+                  <Badge variant="outline" className="cursor-pointer" onClick={() => navigate(`/projects/${documentData.project_id}`)}>
+                    {documentData.title}
+                  </Badge>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Main Content */}
         <div className={`flex-1 overflow-auto p-6`}>

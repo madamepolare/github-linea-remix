@@ -329,6 +329,97 @@ export const useCommercialDocuments = () => {
     }
   });
 
+  // Accept document and create project
+  const acceptAndCreateProject = useMutation({
+    mutationFn: async ({ documentId, phases }: { documentId: string; phases: CommercialDocumentPhase[] }) => {
+      if (!activeWorkspace?.id) throw new Error('No workspace');
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user');
+
+      // Get full document data
+      const { data: doc, error: docError } = await supabase
+        .from('commercial_documents')
+        .select('*')
+        .eq('id', documentId)
+        .single();
+
+      if (docError) throw docError;
+
+      // Create project from document
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .insert({
+          workspace_id: activeWorkspace.id,
+          created_by: user.id,
+          name: doc.title || 'Projet sans nom',
+          description: doc.description,
+          project_type: doc.project_type,
+          crm_company_id: doc.client_company_id,
+          address: doc.project_address,
+          city: doc.project_city,
+          surface_area: doc.project_surface,
+          budget: doc.project_budget,
+          color: '#3B82F6',
+          phase: 'planning',
+          status: 'active'
+        })
+        .select()
+        .single();
+
+      if (projectError) throw projectError;
+
+      // Create project phases from document phases
+      if (phases.length > 0) {
+        const projectPhases = phases
+          .filter(p => p.is_included)
+          .map((phase, index) => ({
+            workspace_id: activeWorkspace.id,
+            project_id: project.id,
+            name: phase.phase_name,
+            description: phase.phase_description,
+            sort_order: index,
+            status: 'pending' as const,
+            start_date: phase.start_date,
+            end_date: phase.end_date,
+            color: null
+          }));
+
+        const { error: phasesError } = await supabase
+          .from('project_phases')
+          .insert(projectPhases);
+
+        if (phasesError) {
+          console.error('Error creating project phases:', phasesError);
+        }
+      }
+
+      // Update document with project link and accepted status
+      const { error: updateError } = await supabase
+        .from('commercial_documents')
+        .update({
+          project_id: project.id,
+          status: 'accepted',
+          accepted_at: new Date().toISOString()
+        })
+        .eq('id', documentId);
+
+      if (updateError) throw updateError;
+
+      return { document: doc, project };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['commercial-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['commercial-document', data.document.id] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('Document accepté et projet créé');
+    },
+    onError: (error) => {
+      toast.error('Erreur lors de la création du projet');
+      console.error(error);
+    }
+  });
+
   return {
     documents: documentsQuery.data || [],
     isLoading: documentsQuery.isLoading,
@@ -343,6 +434,7 @@ export const useCommercialDocuments = () => {
     deletePhase,
     updatePhasesOrder,
     createItem,
-    deleteItem
+    deleteItem,
+    acceptAndCreateProject
   };
 };
