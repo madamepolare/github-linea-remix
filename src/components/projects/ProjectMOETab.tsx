@@ -92,16 +92,36 @@ export function ProjectMOETab({ projectId }: ProjectMOETabProps) {
     updateMember.mutate({ id: memberId, is_lead: !currentIsLead });
   };
 
-  // Filter BET companies for MOE team
-  const betCompanies = companies.filter(c => 
-    c.industry?.startsWith("bet_") || 
-    c.industry === "architecte" || 
-    c.industry === "economiste" ||
-    c.industry === "paysagiste" ||
-    c.industry === "geometre" ||
-    c.industry === "acousticien" ||
-    c.industry === "controleur_technique"
-  );
+  // All companies can be part of MOE team - group by type for better UX
+  const moeCompanyCategories = [
+    { 
+      label: "BET & Ingénierie", 
+      filter: (c: any) => c.industry?.startsWith("bet_") || c.industry === "bet"
+    },
+    { 
+      label: "Architecture & Design", 
+      filter: (c: any) => ["architecte", "architecte_interieur", "paysagiste", "scenographe", "designer"].includes(c.industry)
+    },
+    { 
+      label: "Contrôle & Coordination", 
+      filter: (c: any) => ["controleur_technique", "csps", "opc", "geometre"].includes(c.industry)
+    },
+    { 
+      label: "Économie", 
+      filter: (c: any) => c.industry === "economiste"
+    },
+    { 
+      label: "Entreprises", 
+      filter: (c: any) => ["entreprise_generale", "entreprise", "artisan"].includes(c.industry)
+    },
+    { 
+      label: "Autres partenaires", 
+      filter: (c: any) => !["bet_structure", "bet_fluides", "bet_electricite", "bet_thermique", "bet_acoustique", "bet", "architecte", "architecte_interieur", "paysagiste", "scenographe", "designer", "controleur_technique", "csps", "opc", "geometre", "economiste", "entreprise_generale", "entreprise", "artisan"].includes(c.industry)
+    }
+  ];
+  
+  // All companies available for MOE
+  const allCompanies = companies;
 
   // Get contacts for selected company
   const companyContacts = selectedCompanyId 
@@ -267,21 +287,37 @@ export function ProjectMOETab({ projectId }: ProjectMOETabProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Entreprise</Label>
+              <Label>Entreprise (CRM)</Label>
               <Select value={selectedCompanyId || "none"} onValueChange={(v) => setSelectedCompanyId(v === "none" ? null : v)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner une entreprise..." />
+                  <SelectValue placeholder="Sélectionner depuis le CRM..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px]">
                   <SelectItem value="none">Aucune entreprise</SelectItem>
-                  {betCompanies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        {company.name}
+                  {moeCompanyCategories.map((category) => {
+                    const categoryCompanies = allCompanies.filter(category.filter);
+                    if (categoryCompanies.length === 0) return null;
+                    return (
+                      <div key={category.label}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/50">
+                          {category.label}
+                        </div>
+                        {categoryCompanies.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                              {company.name}
+                              {company.city && (
+                                <span className="text-xs text-muted-foreground">
+                                  ({company.city})
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
                       </div>
-                    </SelectItem>
-                  ))}
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
