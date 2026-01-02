@@ -1,14 +1,13 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useProject, useProjects } from "@/hooks/useProjects";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
-import { usePhaseDependencies } from "@/hooks/usePhaseDependencies";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft,
@@ -16,7 +15,6 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
-  FileText,
   FolderKanban,
   HardHat,
   ListTodo,
@@ -25,18 +23,15 @@ import {
   MoreHorizontal,
   Pencil,
   RefreshCw,
-  Ruler,
   Sparkles,
-  Wallet,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { PROJECT_TYPES, PHASE_STATUS_CONFIG } from "@/lib/projectTypes";
+import { PROJECT_TYPES } from "@/lib/projectTypes";
 import { ProjectChantierTab } from "@/components/projects/ProjectChantierTab";
 import { ProjectPlanningTab } from "@/components/projects/ProjectPlanningTab";
 import { ProjectMOESection } from "@/components/projects/ProjectMOESection";
-import { PhaseGanttTimeline } from "@/components/projects/PhaseGanttTimeline";
 import { PhaseQuickEditDialog } from "@/components/projects/PhaseQuickEditDialog";
 import { EditProjectDialog } from "@/components/projects/EditProjectDialog";
 import { EntityTasksList } from "@/components/tasks/EntityTasksList";
@@ -241,7 +236,6 @@ interface OverviewTabProps {
 
 function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary, onUpdateProject, isUpdatingProject }: OverviewTabProps) {
   const completedPhases = phases.filter((p) => p.status === "completed").length;
-  const { dependencies } = usePhaseDependencies(project.id);
   const { updatePhase, createPhase, deletePhase, reorderPhases } = useProjectPhases(project.id);
   const [phaseEditOpen, setPhaseEditOpen] = useState(false);
   const [projectEditOpen, setProjectEditOpen] = useState(false);
@@ -249,265 +243,220 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
 
   const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
 
-  // Determine current phase based on today's date
-  const currentPhaseByDate = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    // Sort phases by start_date
-    const sortedPhases = [...phases].sort((a, b) => {
-      if (!a.start_date && !b.start_date) return a.sort_order - b.sort_order;
-      if (!a.start_date) return 1;
-      if (!b.start_date) return -1;
-      return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
-    });
+  // Find current phase (in_progress or first pending)
+  const currentPhase = phases.find((p) => p.status === "in_progress") || 
+                       phases.find((p) => p.status === "pending");
+  const currentPhaseIndex = currentPhase ? phases.findIndex(p => p.id === currentPhase.id) : -1;
+  const nextPhase = currentPhaseIndex >= 0 && currentPhaseIndex < phases.length - 1 
+    ? phases[currentPhaseIndex + 1] 
+    : null;
 
-    // Find the phase where today falls between start and end
-    for (const phase of sortedPhases) {
-      if (phase.start_date && phase.end_date) {
-        const start = new Date(phase.start_date);
-        const end = new Date(phase.end_date);
-        start.setHours(0, 0, 0, 0);
-        end.setHours(23, 59, 59, 999);
-        
-        if (today >= start && today <= end) {
-          return phase;
-        }
-      }
+  const activatePhase = (phaseId: string) => {
+    // Complete current phase if exists and different
+    if (currentPhase && currentPhase.id !== phaseId) {
+      updatePhase.mutate({ id: currentPhase.id, status: "completed" });
     }
+    updatePhase.mutate({ id: phaseId, status: "in_progress" });
+    toast.success("Phase activée");
+  };
 
-    // If no exact match, find the closest upcoming phase
-    for (const phase of sortedPhases) {
-      if (phase.start_date) {
-        const start = new Date(phase.start_date);
-        start.setHours(0, 0, 0, 0);
-        if (today < start) {
-          return phase;
-        }
-      }
+  const completeCurrentAndActivateNext = () => {
+    if (!currentPhase) return;
+    updatePhase.mutate({ id: currentPhase.id, status: "completed" });
+    if (nextPhase) {
+      updatePhase.mutate({ id: nextPhase.id, status: "in_progress" });
+      toast.success(`Phase "${nextPhase.name}" activée`);
+    } else {
+      toast.success("Toutes les phases sont terminées!");
     }
-
-    // Return the last phase if we're past all dates
-    return sortedPhases[sortedPhases.length - 1] || null;
-  }, [phases]);
-
-  // Update phase statuses based on today's date
-  useEffect(() => {
-    if (!phases.length) return;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    phases.forEach(phase => {
-      if (phase.start_date && phase.end_date) {
-        const start = new Date(phase.start_date);
-        const end = new Date(phase.end_date);
-        start.setHours(0, 0, 0, 0);
-        end.setHours(23, 59, 59, 999);
-
-        let expectedStatus: "pending" | "in_progress" | "completed" = "pending";
-        
-        if (today > end) {
-          expectedStatus = "completed";
-        } else if (today >= start && today <= end) {
-          expectedStatus = "in_progress";
-        }
-
-        // Only update if status doesn't match and it's not manually overridden
-        if (phase.status !== expectedStatus) {
-          updatePhase.mutate({ id: phase.id, status: expectedStatus });
-        }
-      }
-    });
-
-    // Also update project's current_phase_id if it differs
-    if (currentPhaseByDate && project.current_phase_id !== currentPhaseByDate.id) {
-      updateProject.mutate({ id: project.id, current_phase_id: currentPhaseByDate.id });
-    }
-  }, [phases, currentPhaseByDate?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const cyclePhaseStatus = (phase: any) => {
-    const statusOrder: Array<"pending" | "in_progress" | "completed"> = ["pending", "in_progress", "completed"];
-    const currentIndex = statusOrder.indexOf(phase.status || "pending");
-    const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
-    updatePhase.mutate({ id: phase.id, status: nextStatus });
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Left Column - Main Info */}
-      <div className="lg:col-span-2 space-y-6">
-        {/* Project Info */}
-        <Card>
-          <CardContent className="py-5">
-            <div className="flex items-start justify-between mb-4">
-              <h3 className="text-sm font-medium">Informations</h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 px-2 text-xs"
-                onClick={() => setProjectEditOpen(true)}
-              >
-                <Pencil className="h-3 w-3 mr-1" />
-                Modifier
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-              {projectType && (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Phase Progress - Main focus */}
+      {phases.length > 0 && (
+        <Card className="overflow-hidden">
+          <CardContent className="p-0">
+            {/* Current Phase Header */}
+            <div className="bg-primary/5 border-b border-primary/10 px-6 py-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Type</p>
-                  <p className="font-medium">{projectType.label}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Phase actuelle</p>
+                  <h2 className="text-xl font-semibold text-foreground">
+                    {currentPhase?.name || "Aucune phase active"}
+                  </h2>
                 </div>
-              )}
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Client</p>
-                <p className="font-medium">{project.crm_company?.name || <span className="text-muted-foreground italic">Non défini</span>}</p>
+                <div className="flex items-center gap-2">
+                  {currentPhase && (
+                    <Button 
+                      onClick={completeCurrentAndActivateNext}
+                      className="gap-2"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      {nextPhase ? `Passer à ${nextPhase.name}` : "Terminer"}
+                    </Button>
+                  )}
+                </div>
               </div>
-              {project.city && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Ville</p>
-                  <p className="font-medium">{project.city}</p>
+              
+              {/* Progress bar */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">{completedPhases}/{phases.length} phases</span>
+                  <span className="font-medium">{progressPercent}%</span>
                 </div>
-              )}
-              {(project.start_date || project.end_date) && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Période</p>
-                  <p className="font-medium">
-                    {project.start_date && format(parseISO(project.start_date), "MMM yy", { locale: fr })}
-                    {project.start_date && project.end_date && " → "}
-                    {project.end_date && format(parseISO(project.end_date), "MMM yy", { locale: fr })}
-                  </p>
-                </div>
-              )}
-              {project.surface_area && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Surface</p>
-                  <p className="font-medium">{project.surface_area} m²</p>
-                </div>
-              )}
-              {project.budget && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
-                  <p className="font-medium">{project.budget.toLocaleString("fr-FR")} €</p>
-                </div>
-              )}
+                <Progress value={progressPercent} className="h-2" />
+              </div>
             </div>
 
-            {project.description && (
-              <p className="mt-4 pt-4 border-t text-sm text-muted-foreground leading-relaxed">
-                {project.description}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* MOE Team */}
-        <Card>
-          <CardContent className="py-5">
-            <ProjectMOESection projectId={project.id} />
-          </CardContent>
-        </Card>
-
-        {/* Gantt Timeline */}
-        {phases.length > 0 && (
-          <Card>
-            <CardContent className="py-5">
-              <h3 className="text-sm font-medium mb-4">Planning</h3>
-              <PhaseGanttTimeline
-                key={phases.map(p => `${p.id}-${p.start_date}-${p.end_date}`).join("|")}
-                phases={phases}
-                dependencies={dependencies}
-                onPhaseUpdate={(phaseId, updates) => {
-                  updatePhase.mutate({ id: phaseId, ...updates });
-                }}
-              />
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Right Column - Progress & Phases */}
-      <div className="space-y-6">
-        {/* Progress */}
-        <Card>
-          <CardContent className="py-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium">Avancement</h3>
-              <span className="text-xl font-bold text-primary">{progressPercent}%</span>
-            </div>
-            <Progress value={progressPercent} className="h-2 mb-2" />
-            <p className="text-xs text-muted-foreground">{completedPhases}/{phases.length} phases terminées</p>
-          </CardContent>
-        </Card>
-
-        {/* Phases List */}
-        {phases.length > 0 && (
-          <Card>
-            <CardContent className="py-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium">Phases</h3>
+            {/* Phases Timeline */}
+            <div className="px-6 py-4">
+              <div className="flex items-center gap-1 overflow-x-auto pb-2">
+                {phases.map((phase, index) => {
+                  const isActive = phase.status === "in_progress";
+                  const isCompleted = phase.status === "completed";
+                  const isPending = phase.status === "pending";
+                  
+                  return (
+                    <div key={phase.id} className="flex items-center">
+                      <button
+                        onClick={() => {
+                          if (isPending) {
+                            activatePhase(phase.id);
+                          } else if (isActive) {
+                            completeCurrentAndActivateNext();
+                          }
+                        }}
+                        className={cn(
+                          "relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all min-w-max",
+                          isActive && "bg-primary text-primary-foreground shadow-lg scale-105",
+                          isCompleted && "bg-muted text-muted-foreground",
+                          isPending && "bg-background border border-border hover:border-primary/50 hover:bg-primary/5"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
+                          isActive && "bg-primary-foreground/20",
+                          isCompleted && "bg-success text-success-foreground",
+                          isPending && "bg-muted-foreground/20"
+                        )}>
+                          {isCompleted ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          ) : (
+                            index + 1
+                          )}
+                        </div>
+                        <span className={cn(
+                          "text-sm font-medium whitespace-nowrap",
+                          isCompleted && "line-through"
+                        )}>
+                          {phase.name}
+                        </span>
+                      </button>
+                      
+                      {index < phases.length - 1 && (
+                        <div className={cn(
+                          "w-6 h-0.5 mx-1 shrink-0",
+                          phases[index + 1].status === "completed" || isCompleted 
+                            ? "bg-success" 
+                            : "bg-border"
+                        )} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="flex justify-end mt-3">
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="h-7 px-2 text-xs"
+                  className="text-xs"
                   onClick={() => setPhaseEditOpen(true)}
                 >
                   <Pencil className="h-3 w-3 mr-1" />
-                  Gérer
+                  Gérer les phases
                 </Button>
               </div>
-              <div className="space-y-1.5">
-                {phases.map((phase, index) => (
-                  <button
-                    key={phase.id}
-                    onClick={() => cyclePhaseStatus(phase)}
-                    className={cn(
-                      "w-full flex items-center gap-2.5 p-2 rounded-lg transition-all text-left",
-                      "hover:bg-muted/50 cursor-pointer",
-                      phase.status === "in_progress" && "bg-primary/5 ring-1 ring-primary/20",
-                      phase.status === "completed" && "bg-muted/30"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium flex-shrink-0 transition-colors",
-                        phase.status === "completed" && "bg-primary text-primary-foreground",
-                        phase.status === "in_progress" && "bg-primary/20 text-primary ring-2 ring-primary",
-                        phase.status === "pending" && "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {phase.status === "completed" ? (
-                        <CheckCircle2 className="h-3 w-3" />
-                      ) : (
-                        index + 1
-                      )}
-                    </div>
-                    <span className={cn(
-                      "flex-1 text-sm truncate",
-                      phase.status === "completed" && "line-through text-muted-foreground"
-                    )}>
-                      {phase.name}
-                    </span>
-                    <Badge 
-                      variant="secondary" 
-                      className={cn(
-                        "text-[9px] px-1.5 py-0",
-                        phase.status === "in_progress" && "bg-primary/10 text-primary",
-                        phase.status === "completed" && "bg-emerald-500/10 text-emerald-600",
-                        phase.status === "pending" && "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {phase.status === "completed" ? "✓" : phase.status === "in_progress" ? "En cours" : "À faire"}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* AI Summary */}
+      {/* Project Info - Compact */}
+      <Card>
+        <CardContent className="py-5">
+          <div className="flex items-start justify-between mb-4">
+            <h3 className="text-sm font-medium">Informations du projet</h3>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 px-2 text-xs"
+              onClick={() => setProjectEditOpen(true)}
+            >
+              <Pencil className="h-3 w-3 mr-1" />
+              Modifier
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+            {projectType && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Type</p>
+                <p className="font-medium">{projectType.label}</p>
+              </div>
+            )}
+            <div>
+              <p className="text-xs text-muted-foreground mb-0.5">Client</p>
+              <p className="font-medium">{project.crm_company?.name || <span className="text-muted-foreground italic">—</span>}</p>
+            </div>
+            {project.city && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Ville</p>
+                <p className="font-medium">{project.city}</p>
+              </div>
+            )}
+            {(project.start_date || project.end_date) && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Période</p>
+                <p className="font-medium">
+                  {project.start_date && format(parseISO(project.start_date), "MMM yy", { locale: fr })}
+                  {project.start_date && project.end_date && " → "}
+                  {project.end_date && format(parseISO(project.end_date), "MMM yy", { locale: fr })}
+                </p>
+              </div>
+            )}
+            {project.surface_area && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Surface</p>
+                <p className="font-medium">{project.surface_area} m²</p>
+              </div>
+            )}
+            {project.budget && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
+                <p className="font-medium">{project.budget.toLocaleString("fr-FR")} €</p>
+              </div>
+            )}
+          </div>
+
+          {project.description && (
+            <p className="mt-4 pt-4 border-t text-sm text-muted-foreground leading-relaxed">
+              {project.description}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* MOE Team */}
+      <Card>
+        <CardContent className="py-5">
+          <ProjectMOESection projectId={project.id} />
+        </CardContent>
+      </Card>
+
+      {/* AI Summary - Optional */}
+      {project.ai_summary && (
         <Card>
           <CardContent className="py-5">
             <div className="flex items-center justify-between mb-3">
@@ -529,27 +478,10 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                 )}
               </Button>
             </div>
-            {project.ai_summary ? (
-              <p className="text-xs text-muted-foreground leading-relaxed">{project.ai_summary}</p>
-            ) : (
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="w-full h-8 text-xs"
-                onClick={onRefreshSummary}
-                disabled={isGeneratingSummary}
-              >
-                {isGeneratingSummary ? (
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                ) : (
-                  <Sparkles className="h-3 w-3 mr-1" />
-                )}
-                Générer
-              </Button>
-            )}
+            <p className="text-sm text-muted-foreground leading-relaxed">{project.ai_summary}</p>
           </CardContent>
         </Card>
-      </div>
+      )}
 
       {/* Dialogs */}
       <PhaseQuickEditDialog
