@@ -17,6 +17,7 @@ import ContactDetail from "./pages/ContactDetail";
 import LeadDetail from "./pages/LeadDetail";
 import Tasks from "./pages/Tasks";
 import Projects from "./pages/Projects";
+import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -86,6 +87,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Projects />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects/:id"
+              element={
+                <ProtectedRoute>
+                  <ProjectDetail />
                 </ProtectedRoute>
               }
             />

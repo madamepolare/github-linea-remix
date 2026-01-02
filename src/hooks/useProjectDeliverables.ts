@@ -1,6 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+
+export type DeliverableStatus = "pending" | "in_progress" | "delivered" | "validated";
 
 export interface ProjectDeliverable {
   id: string;
@@ -10,7 +13,7 @@ export interface ProjectDeliverable {
   name: string;
   description: string | null;
   file_url: string | null;
-  status: "pending" | "in_progress" | "delivered" | "validated";
+  status: DeliverableStatus;
   due_date: string | null;
   delivered_at: string | null;
   created_at: string;
@@ -29,11 +32,12 @@ export type CreateDeliverableInput = {
   name: string;
   description?: string | null;
   file_url?: string | null;
-  status?: string;
+  status?: DeliverableStatus;
   due_date?: string | null;
 };
 
 export function useProjectDeliverables(projectId: string | null) {
+  const { activeWorkspace } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: deliverables, isLoading, error } = useQuery({
@@ -57,10 +61,17 @@ export function useProjectDeliverables(projectId: string | null) {
   });
 
   const createDeliverable = useMutation({
-    mutationFn: async (deliverable: CreateDeliverableInput) => {
+    mutationFn: async (deliverable: Omit<CreateDeliverableInput, "project_id" | "workspace_id">) => {
+      if (!projectId || !activeWorkspace?.id) {
+        throw new Error("Missing project or workspace");
+      }
       const { data, error } = await supabase
         .from("project_deliverables")
-        .insert(deliverable)
+        .insert({
+          ...deliverable,
+          project_id: projectId,
+          workspace_id: activeWorkspace.id,
+        })
         .select()
         .single();
 

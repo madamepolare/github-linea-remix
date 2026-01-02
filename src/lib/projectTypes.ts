@@ -1,4 +1,4 @@
-import { Sofa, Building2, Theater, LucideIcon } from "lucide-react";
+// Types for project configuration
 
 export type ProjectType = "interior" | "architecture" | "scenography";
 
@@ -7,7 +7,7 @@ export type PhaseStatus = "pending" | "in_progress" | "completed";
 export interface ProjectTypeConfig {
   value: ProjectType;
   label: string;
-  icon: LucideIcon;
+  icon: string;
   description: string;
 }
 
@@ -15,19 +15,19 @@ export const PROJECT_TYPES: ProjectTypeConfig[] = [
   { 
     value: "interior", 
     label: "Intérieur", 
-    icon: Sofa,
+    icon: "Sofa",
     description: "Aménagement intérieur, design d'espace"
   },
   { 
     value: "architecture", 
     label: "Architecture", 
-    icon: Building2,
+    icon: "Building2",
     description: "Construction, rénovation, extension"
   },
   { 
     value: "scenography", 
     label: "Scénographie", 
-    icon: Theater,
+    icon: "Theater",
     description: "Exposition, événementiel, muséographie"
   },
 ];
@@ -129,10 +129,10 @@ export const OBSERVATION_STATUS = [
 ];
 
 export const DELIVERABLE_STATUS = [
-  { value: "pending", label: "À faire" },
-  { value: "in_progress", label: "En cours" },
-  { value: "delivered", label: "Livré" },
-  { value: "validated", label: "Validé" }
+  { value: "pending", label: "En attente", color: "#6B7280" },
+  { value: "in_progress", label: "En cours", color: "#F59E0B" },
+  { value: "delivered", label: "Livré", color: "#3B82F6" },
+  { value: "validated", label: "Validé", color: "#10B981" },
 ];
 
 export function getProjectTypeConfig(type: ProjectType): ProjectTypeConfig {

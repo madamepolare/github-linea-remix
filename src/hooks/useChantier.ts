@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 // ==================== LOTS ====================
@@ -73,6 +74,9 @@ export type CreateMeetingInput = {
 };
 
 // ==================== OBSERVATIONS ====================
+export type ObservationStatus = "open" | "in_progress" | "resolved";
+export type ObservationPriority = "low" | "normal" | "high" | "critical";
+
 export interface ProjectObservation {
   id: string;
   project_id: string;
@@ -80,8 +84,8 @@ export interface ProjectObservation {
   meeting_id: string | null;
   lot_id: string | null;
   description: string;
-  status: "open" | "in_progress" | "resolved";
-  priority: "low" | "normal" | "high" | "critical";
+  status: ObservationStatus;
+  priority: ObservationPriority;
   photo_urls: string[] | null;
   due_date: string | null;
   resolved_at: string | null;
@@ -106,8 +110,8 @@ export type CreateObservationInput = {
   meeting_id?: string | null;
   lot_id?: string | null;
   description: string;
-  status?: string;
-  priority?: string;
+  status?: ObservationStatus;
+  priority?: ObservationPriority;
   photo_urls?: string[];
   due_date?: string | null;
   created_by?: string | null;
@@ -115,6 +119,7 @@ export type CreateObservationInput = {
 
 // ==================== HOOK ====================
 export function useChantier(projectId: string | null) {
+  const { activeWorkspace } = useAuth();
   const queryClient = useQueryClient();
 
   // -------------------- LOTS --------------------
@@ -139,10 +144,17 @@ export function useChantier(projectId: string | null) {
   });
 
   const createLot = useMutation({
-    mutationFn: async (lot: CreateLotInput) => {
+    mutationFn: async (lot: Omit<CreateLotInput, "project_id" | "workspace_id">) => {
+      if (!projectId || !activeWorkspace?.id) {
+        throw new Error("Missing project or workspace");
+      }
       const { data, error } = await supabase
         .from("project_lots")
-        .insert(lot)
+        .insert({
+          ...lot,
+          project_id: projectId,
+          workspace_id: activeWorkspace.id,
+        })
         .select()
         .single();
 
@@ -221,20 +233,23 @@ export function useChantier(projectId: string | null) {
   });
 
   const createMeeting = useMutation({
-    mutationFn: async (meeting: CreateMeetingInput) => {
+    mutationFn: async (meeting: Omit<CreateMeetingInput, "project_id" | "workspace_id">) => {
+      if (!projectId || !activeWorkspace?.id) {
+        throw new Error("Missing project or workspace");
+      }
       // Get next meeting number
       const { data: existing } = await supabase
         .from("project_meetings")
         .select("meeting_number")
-        .eq("project_id", meeting.project_id)
+        .eq("project_id", projectId)
         .order("meeting_number", { ascending: false })
         .limit(1);
 
       const nextNumber = (existing?.[0]?.meeting_number || 0) + 1;
 
       const insertData = {
-        project_id: meeting.project_id,
-        workspace_id: meeting.workspace_id,
+        project_id: projectId,
+        workspace_id: activeWorkspace.id,
         title: meeting.title,
         meeting_date: meeting.meeting_date,
         meeting_number: nextNumber,
@@ -330,10 +345,17 @@ export function useChantier(projectId: string | null) {
   });
 
   const createObservation = useMutation({
-    mutationFn: async (observation: CreateObservationInput) => {
+    mutationFn: async (observation: Omit<CreateObservationInput, "project_id" | "workspace_id">) => {
+      if (!projectId || !activeWorkspace?.id) {
+        throw new Error("Missing project or workspace");
+      }
       const { data, error } = await supabase
         .from("project_observations")
-        .insert(observation)
+        .insert({
+          ...observation,
+          project_id: projectId,
+          workspace_id: activeWorkspace.id,
+        })
         .select()
         .single();
 

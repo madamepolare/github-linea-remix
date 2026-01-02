@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useChantier } from "@/hooks/useChantier";
+import { useChantier, ObservationStatus } from "@/hooks/useChantier";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +31,6 @@ import {
   AlertCircle,
   Building2,
   Calendar,
-  Camera,
   CheckCircle2,
   ClipboardList,
   Clock,
@@ -39,7 +38,6 @@ import {
   FileText,
   Hammer,
   MoreHorizontal,
-  Pencil,
   Plus,
   Trash2,
   Users,
@@ -97,7 +95,7 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
 
 // Lots Section
 function LotsSection({ projectId }: { projectId: string }) {
-  const { lots, isLoading, createLot, updateLot, deleteLot } = useChantier(projectId);
+  const { lots, lotsLoading, createLot, deleteLot } = useChantier(projectId);
   const { companies } = useCRMCompanies();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -143,18 +141,36 @@ function LotsSection({ projectId }: { projectId: string }) {
   // Filter entreprises
   const entreprises = companies.filter(c => c.industry?.startsWith("entreprise_") || c.industry === "artisan");
 
-  if (isLoading) {
+  if (lotsLoading) {
     return <Skeleton className="h-48 w-full" />;
   }
 
   if (lots.length === 0) {
     return (
-      <EmptyState
-        icon={Hammer}
-        title="Aucun lot"
-        description="Créez des lots pour organiser le chantier."
-        action={{ label: "Ajouter un lot", onClick: () => setIsCreateOpen(true) }}
-      />
+      <>
+        <EmptyState
+          icon={Hammer}
+          title="Aucun lot"
+          description="Créez des lots pour organiser le chantier."
+          action={{ label: "Ajouter un lot", onClick: () => setIsCreateOpen(true) }}
+        />
+        <LotCreateDialog
+          isOpen={isCreateOpen}
+          onClose={() => { setIsCreateOpen(false); resetForm(); }}
+          formName={formName}
+          setFormName={setFormName}
+          formCompanyId={formCompanyId}
+          setFormCompanyId={setFormCompanyId}
+          formBudget={formBudget}
+          setFormBudget={setFormBudget}
+          formStartDate={formStartDate}
+          setFormStartDate={setFormStartDate}
+          formEndDate={formEndDate}
+          setFormEndDate={setFormEndDate}
+          entreprises={entreprises}
+          handleCreate={handleCreate}
+        />
+      </>
     );
   }
 
@@ -233,89 +249,140 @@ function LotsSection({ projectId }: { projectId: string }) {
         })}
       </div>
 
-      {/* Create Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsCreateOpen(open); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nouveau lot</DialogTitle>
-          </DialogHeader>
+      <LotCreateDialog
+        isOpen={isCreateOpen}
+        onClose={() => { setIsCreateOpen(false); resetForm(); }}
+        formName={formName}
+        setFormName={setFormName}
+        formCompanyId={formCompanyId}
+        setFormCompanyId={setFormCompanyId}
+        formBudget={formBudget}
+        setFormBudget={setFormBudget}
+        formStartDate={formStartDate}
+        setFormStartDate={setFormStartDate}
+        formEndDate={formEndDate}
+        setFormEndDate={setFormEndDate}
+        entreprises={entreprises}
+        handleCreate={handleCreate}
+      />
+    </div>
+  );
+}
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nom du lot *</Label>
-              <Input
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Ex: Gros œuvre, Électricité..."
-              />
-            </div>
+// Lot Create Dialog Component
+function LotCreateDialog({
+  isOpen,
+  onClose,
+  formName,
+  setFormName,
+  formCompanyId,
+  setFormCompanyId,
+  formBudget,
+  setFormBudget,
+  formStartDate,
+  setFormStartDate,
+  formEndDate,
+  setFormEndDate,
+  entreprises,
+  handleCreate,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  formName: string;
+  setFormName: (v: string) => void;
+  formCompanyId: string | null;
+  setFormCompanyId: (v: string | null) => void;
+  formBudget: string;
+  setFormBudget: (v: string) => void;
+  formStartDate: Date | null;
+  setFormStartDate: (v: Date | null) => void;
+  formEndDate: Date | null;
+  setFormEndDate: (v: Date | null) => void;
+  entreprises: any[];
+  handleCreate: () => void;
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nouveau lot</DialogTitle>
+        </DialogHeader>
 
-            <div className="space-y-2">
-              <Label>Entreprise attributaire</Label>
-              <Select value={formCompanyId || "none"} onValueChange={(v) => setFormCompanyId(v === "none" ? null : v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Non attribué</SelectItem>
-                  {entreprises.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Budget (€)</Label>
-              <Input
-                type="number"
-                value={formBudget}
-                onChange={(e) => setFormBudget(e.target.value)}
-                placeholder="50000"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Date de début</Label>
-                <InlineDatePicker
-                  value={formStartDate}
-                  onChange={setFormStartDate}
-                  placeholder="Sélectionner..."
-                  className="w-full"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Date de fin</Label>
-                <InlineDatePicker
-                  value={formEndDate}
-                  onChange={setFormEndDate}
-                  placeholder="Sélectionner..."
-                  className="w-full"
-                />
-              </div>
-            </div>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Nom du lot *</Label>
+            <Input
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder="Ex: Gros œuvre, Électricité..."
+            />
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsCreateOpen(false); resetForm(); }}>
-              Annuler
-            </Button>
-            <Button onClick={handleCreate} disabled={!formName.trim()}>
-              Créer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          <div className="space-y-2">
+            <Label>Entreprise attributaire</Label>
+            <Select value={formCompanyId || "none"} onValueChange={(v) => setFormCompanyId(v === "none" ? null : v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Non attribué</SelectItem>
+                {entreprises.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Budget (€)</Label>
+            <Input
+              type="number"
+              value={formBudget}
+              onChange={(e) => setFormBudget(e.target.value)}
+              placeholder="50000"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Date de début</Label>
+              <InlineDatePicker
+                value={formStartDate}
+                onChange={setFormStartDate}
+                placeholder="Sélectionner..."
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Date de fin</Label>
+              <InlineDatePicker
+                value={formEndDate}
+                onChange={setFormEndDate}
+                placeholder="Sélectionner..."
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button onClick={handleCreate} disabled={!formName.trim()}>
+            Créer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 // Meetings Section
 function MeetingsSection({ projectId }: { projectId: string }) {
-  const { meetings, isLoading, createMeeting, deleteMeeting } = useChantier(projectId);
+  const { meetings, meetingsLoading, createMeeting, deleteMeeting } = useChantier(projectId);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const [formTitle, setFormTitle] = useState("");
@@ -350,18 +417,33 @@ function MeetingsSection({ projectId }: { projectId: string }) {
     }
   };
 
-  if (isLoading) {
+  if (meetingsLoading) {
     return <Skeleton className="h-48 w-full" />;
   }
 
   if (meetings.length === 0) {
     return (
-      <EmptyState
-        icon={Users}
-        title="Aucune réunion"
-        description="Planifiez des réunions de chantier."
-        action={{ label: "Planifier une réunion", onClick: () => setIsCreateOpen(true) }}
-      />
+      <>
+        <EmptyState
+          icon={Users}
+          title="Aucune réunion"
+          description="Planifiez des réunions de chantier."
+          action={{ label: "Planifier une réunion", onClick: () => setIsCreateOpen(true) }}
+        />
+        <MeetingCreateDialog
+          isOpen={isCreateOpen}
+          onClose={() => { setIsCreateOpen(false); resetForm(); }}
+          formTitle={formTitle}
+          setFormTitle={setFormTitle}
+          formDate={formDate}
+          setFormDate={setFormDate}
+          formLocation={formLocation}
+          setFormLocation={setFormLocation}
+          formNotes={formNotes}
+          setFormNotes={setFormNotes}
+          handleCreate={handleCreate}
+        />
+      </>
     );
   }
 
@@ -432,70 +514,112 @@ function MeetingsSection({ projectId }: { projectId: string }) {
         ))}
       </div>
 
-      {/* Create Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsCreateOpen(open); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nouvelle réunion</DialogTitle>
-          </DialogHeader>
+      <MeetingCreateDialog
+        isOpen={isCreateOpen}
+        onClose={() => { setIsCreateOpen(false); resetForm(); }}
+        formTitle={formTitle}
+        setFormTitle={setFormTitle}
+        formDate={formDate}
+        setFormDate={setFormDate}
+        formLocation={formLocation}
+        setFormLocation={setFormLocation}
+        formNotes={formNotes}
+        setFormNotes={setFormNotes}
+        handleCreate={handleCreate}
+      />
+    </div>
+  );
+}
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Titre *</Label>
-              <Input
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                placeholder="Ex: Réunion de chantier"
-              />
-            </div>
+// Meeting Create Dialog Component
+function MeetingCreateDialog({
+  isOpen,
+  onClose,
+  formTitle,
+  setFormTitle,
+  formDate,
+  setFormDate,
+  formLocation,
+  setFormLocation,
+  formNotes,
+  setFormNotes,
+  handleCreate,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  formTitle: string;
+  setFormTitle: (v: string) => void;
+  formDate: Date | null;
+  setFormDate: (v: Date | null) => void;
+  formLocation: string;
+  setFormLocation: (v: string) => void;
+  formNotes: string;
+  setFormNotes: (v: string) => void;
+  handleCreate: () => void;
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nouvelle réunion</DialogTitle>
+        </DialogHeader>
 
-            <div className="space-y-2">
-              <Label>Date et heure *</Label>
-              <InlineDatePicker
-                value={formDate}
-                onChange={setFormDate}
-                placeholder="Sélectionner..."
-                className="w-full"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Lieu</Label>
-              <Input
-                value={formLocation}
-                onChange={(e) => setFormLocation(e.target.value)}
-                placeholder="Sur site, Bureau..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Notes</Label>
-              <Textarea
-                value={formNotes}
-                onChange={(e) => setFormNotes(e.target.value)}
-                placeholder="Ordre du jour..."
-                rows={3}
-              />
-            </div>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Titre *</Label>
+            <Input
+              value={formTitle}
+              onChange={(e) => setFormTitle(e.target.value)}
+              placeholder="Ex: Réunion de chantier"
+            />
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsCreateOpen(false); resetForm(); }}>
-              Annuler
-            </Button>
-            <Button onClick={handleCreate} disabled={!formTitle.trim() || !formDate}>
-              Créer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          <div className="space-y-2">
+            <Label>Date et heure *</Label>
+            <InlineDatePicker
+              value={formDate}
+              onChange={setFormDate}
+              placeholder="Sélectionner..."
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Lieu</Label>
+            <Input
+              value={formLocation}
+              onChange={(e) => setFormLocation(e.target.value)}
+              placeholder="Sur site, Bureau..."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Notes</Label>
+            <Textarea
+              value={formNotes}
+              onChange={(e) => setFormNotes(e.target.value)}
+              placeholder="Ordre du jour..."
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button onClick={handleCreate} disabled={!formTitle.trim() || !formDate}>
+            Créer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 // Observations Section
 function ObservationsSection({ projectId }: { projectId: string }) {
-  const { observations, lots, isLoading, createObservation, updateObservation, deleteObservation } = useChantier(projectId);
+  const { observations, lots, observationsLoading, createObservation, updateObservation, deleteObservation } = useChantier(projectId);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const [formDescription, setFormDescription] = useState("");
@@ -516,7 +640,7 @@ function ObservationsSection({ projectId }: { projectId: string }) {
     createObservation.mutate({
       description: formDescription.trim(),
       lot_id: formLotId || undefined,
-      priority: formPriority,
+      priority: formPriority as any,
       due_date: formDueDate ? format(formDueDate, "yyyy-MM-dd") : undefined,
     });
 
@@ -524,7 +648,7 @@ function ObservationsSection({ projectId }: { projectId: string }) {
     resetForm();
   };
 
-  const handleStatusChange = (id: string, newStatus: string) => {
+  const handleStatusChange = (id: string, newStatus: ObservationStatus) => {
     updateObservation.mutate({
       id,
       status: newStatus,
@@ -538,27 +662,36 @@ function ObservationsSection({ projectId }: { projectId: string }) {
     }
   };
 
-  if (isLoading) {
+  if (observationsLoading) {
     return <Skeleton className="h-48 w-full" />;
   }
 
   if (observations.length === 0) {
     return (
-      <EmptyState
-        icon={ClipboardList}
-        title="Aucune observation"
-        description="Ajoutez des observations de chantier."
-        action={{ label: "Ajouter une observation", onClick: () => setIsCreateOpen(true) }}
-      />
+      <>
+        <EmptyState
+          icon={ClipboardList}
+          title="Aucune observation"
+          description="Ajoutez des observations de chantier."
+          action={{ label: "Ajouter une observation", onClick: () => setIsCreateOpen(true) }}
+        />
+        <ObservationCreateDialog
+          isOpen={isCreateOpen}
+          onClose={() => { setIsCreateOpen(false); resetForm(); }}
+          formDescription={formDescription}
+          setFormDescription={setFormDescription}
+          formLotId={formLotId}
+          setFormLotId={setFormLotId}
+          formPriority={formPriority}
+          setFormPriority={setFormPriority}
+          formDueDate={formDueDate}
+          setFormDueDate={setFormDueDate}
+          lots={lots}
+          handleCreate={handleCreate}
+        />
+      </>
     );
   }
-
-  const priorityIcons: Record<string, any> = {
-    low: null,
-    normal: null,
-    high: AlertCircle,
-    critical: AlertCircle,
-  };
 
   return (
     <div className="space-y-4">
@@ -575,7 +708,6 @@ function ObservationsSection({ projectId }: { projectId: string }) {
           const statusConfig = OBSERVATION_STATUS.find(s => s.value === obs.status) || OBSERVATION_STATUS[0];
           const priorityConfig = OBSERVATION_PRIORITY.find(p => p.value === obs.priority) || OBSERVATION_PRIORITY[1];
           const lot = lots.find(l => l.id === obs.lot_id);
-          const PriorityIcon = priorityIcons[obs.priority];
 
           return (
             <Card key={obs.id} className={cn(
@@ -611,7 +743,7 @@ function ObservationsSection({ projectId }: { projectId: string }) {
                       <Badge 
                         variant="outline" 
                         className="text-xs"
-                        style={{ borderColor: priorityConfig.color, color: priorityConfig.color }}
+                        style={{ borderColor: priorityConfig.color.replace("bg-", ""), color: priorityConfig.color.replace("bg-", "") }}
                       >
                         {priorityConfig.label}
                       </Badge>
@@ -661,80 +793,125 @@ function ObservationsSection({ projectId }: { projectId: string }) {
         })}
       </div>
 
-      {/* Create Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsCreateOpen(open); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nouvelle observation</DialogTitle>
-          </DialogHeader>
+      <ObservationCreateDialog
+        isOpen={isCreateOpen}
+        onClose={() => { setIsCreateOpen(false); resetForm(); }}
+        formDescription={formDescription}
+        setFormDescription={setFormDescription}
+        formLotId={formLotId}
+        setFormLotId={setFormLotId}
+        formPriority={formPriority}
+        setFormPriority={setFormPriority}
+        formDueDate={formDueDate}
+        setFormDueDate={setFormDueDate}
+        lots={lots}
+        handleCreate={handleCreate}
+      />
+    </div>
+  );
+}
 
-          <div className="space-y-4 py-4">
+// Observation Create Dialog Component
+function ObservationCreateDialog({
+  isOpen,
+  onClose,
+  formDescription,
+  setFormDescription,
+  formLotId,
+  setFormLotId,
+  formPriority,
+  setFormPriority,
+  formDueDate,
+  setFormDueDate,
+  lots,
+  handleCreate,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  formDescription: string;
+  setFormDescription: (v: string) => void;
+  formLotId: string | null;
+  setFormLotId: (v: string | null) => void;
+  formPriority: string;
+  setFormPriority: (v: string) => void;
+  formDueDate: Date | null;
+  setFormDueDate: (v: Date | null) => void;
+  lots: any[];
+  handleCreate: () => void;
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nouvelle observation</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Description *</Label>
+            <Textarea
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              placeholder="Décrivez l'observation..."
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Description *</Label>
-              <Textarea
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                placeholder="Décrivez l'observation..."
-                rows={3}
-              />
+              <Label>Lot concerné</Label>
+              <Select value={formLotId || "none"} onValueChange={(v) => setFormLotId(v === "none" ? null : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucun lot</SelectItem>
+                  {lots.map((lot) => (
+                    <SelectItem key={lot.id} value={lot.id}>
+                      {lot.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Lot concerné</Label>
-                <Select value={formLotId || "none"} onValueChange={(v) => setFormLotId(v === "none" ? null : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucun lot</SelectItem>
-                    {lots.map((lot) => (
-                      <SelectItem key={lot.id} value={lot.id}>
-                        {lot.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Priorité</Label>
-                <Select value={formPriority} onValueChange={setFormPriority}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OBSERVATION_PRIORITY.map((priority) => (
-                      <SelectItem key={priority.value} value={priority.value}>
-                        {priority.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <Label>Date limite</Label>
-              <InlineDatePicker
-                value={formDueDate}
-                onChange={setFormDueDate}
-                placeholder="Sélectionner..."
-                className="w-full"
-              />
+              <Label>Priorité</Label>
+              <Select value={formPriority} onValueChange={setFormPriority}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {OBSERVATION_PRIORITY.map((priority) => (
+                    <SelectItem key={priority.value} value={priority.value}>
+                      {priority.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsCreateOpen(false); resetForm(); }}>
-              Annuler
-            </Button>
-            <Button onClick={handleCreate} disabled={!formDescription.trim()}>
-              Créer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          <div className="space-y-2">
+            <Label>Date limite</Label>
+            <InlineDatePicker
+              value={formDueDate}
+              onChange={setFormDueDate}
+              placeholder="Sélectionner..."
+              className="w-full"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button onClick={handleCreate} disabled={!formDescription.trim()}>
+            Créer
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
