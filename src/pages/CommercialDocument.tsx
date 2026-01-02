@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Send, FileDown, Eye, FileText, CheckCircle, FolderPlus, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Save, Send, FileDown, Eye, FileText, CheckCircle, FolderPlus, ExternalLink, Sparkles, Calendar } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
@@ -8,6 +8,9 @@ import { CommercialDocumentBuilder } from '@/components/commercial/CommercialDoc
 import { DocumentPreviewPanel } from '@/components/commercial/DocumentPreviewPanel';
 import { PDFPreviewDialog } from '@/components/commercial/PDFPreviewDialog';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,6 +52,11 @@ const CommercialDocument = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // State for project creation dialog
+  const [useAIPlanning, setUseAIPlanning] = useState(true);
+  const [projectStartDate, setProjectStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [projectEndDate, setProjectEndDate] = useState('');
 
   // Local state for document being edited
   const [documentData, setDocumentData] = useState<Partial<CommercialDocumentType>>({
@@ -192,16 +200,67 @@ const CommercialDocument = () => {
                     Accepter & Créer projet
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent>
+                <AlertDialogContent className="max-w-lg">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Accepter le document et créer un projet ?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Cette action va :
-                      <ul className="list-disc list-inside mt-2 space-y-1">
-                        <li>Marquer le {DOCUMENT_TYPE_LABELS[documentData.document_type!]} comme accepté</li>
-                        <li>Créer un nouveau projet avec les informations du document</li>
-                        <li>Importer les phases du devis comme phases du projet</li>
-                      </ul>
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-4">
+                        <div>
+                          Cette action va :
+                          <ul className="list-disc list-inside mt-2 space-y-1">
+                            <li>Marquer le {DOCUMENT_TYPE_LABELS[documentData.document_type!]} comme accepté</li>
+                            <li>Créer un nouveau projet avec les informations du document</li>
+                            <li>Importer les {phases.filter(p => p.is_included).length} phases du devis comme phases du projet</li>
+                          </ul>
+                        </div>
+                        
+                        <div className="pt-4 border-t border-border space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-primary" />
+                              <Label htmlFor="ai-planning" className="font-medium">
+                                Planification IA
+                              </Label>
+                            </div>
+                            <Switch
+                              id="ai-planning"
+                              checked={useAIPlanning}
+                              onCheckedChange={setUseAIPlanning}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            L'IA va suggérer automatiquement les dates de début et fin de chaque phase en fonction de la durée du projet
+                          </p>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="start-date" className="flex items-center gap-1.5">
+                                <Calendar className="h-3.5 w-3.5" />
+                                Date de début
+                              </Label>
+                              <Input
+                                id="start-date"
+                                type="date"
+                                value={projectStartDate}
+                                onChange={(e) => setProjectStartDate(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="end-date" className="flex items-center gap-1.5">
+                                <Calendar className="h-3.5 w-3.5" />
+                                Date de fin
+                              </Label>
+                              <Input
+                                id="end-date"
+                                type="date"
+                                value={projectEndDate}
+                                onChange={(e) => setProjectEndDate(e.target.value)}
+                                min={projectStartDate}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -210,14 +269,18 @@ const CommercialDocument = () => {
                       onClick={async () => {
                         const result = await acceptAndCreateProject.mutateAsync({
                           documentId: id!,
-                          phases
+                          phases,
+                          useAIPlanning,
+                          projectStartDate,
+                          projectEndDate: projectEndDate || undefined
                         });
                         navigate(`/projects/${result.project.id}`);
                       }}
                       disabled={acceptAndCreateProject.isPending}
                     >
-                      <FolderPlus className="h-4 w-4 mr-2" />
-                      {acceptAndCreateProject.isPending ? 'Création...' : 'Confirmer'}
+                      {useAIPlanning && <Sparkles className="h-4 w-4 mr-2" />}
+                      {!useAIPlanning && <FolderPlus className="h-4 w-4 mr-2" />}
+                      {acceptAndCreateProject.isPending ? 'Création en cours...' : 'Créer le projet'}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
