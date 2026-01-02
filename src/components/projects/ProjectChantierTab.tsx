@@ -378,7 +378,7 @@ function ReportsSection({ projectId, onOpenReport }: { projectId: string; onOpen
 }
 
 // Lots Section
-function LotsSection({ projectId }: { projectId: string }) {
+function LotsSection({ projectId, onOpenPlanning }: { projectId: string; onOpenPlanning?: () => void }) {
   const { lots, lotsLoading, createLot, updateLot, deleteLot } = useChantier(projectId);
   const { data: project } = useProject(projectId);
   const { companies } = useCRMCompanies();

@@ -73,6 +73,26 @@ export function ChantierOverview({ projectId, onNavigate, onOpenReport, onOpenPl
 
   return (
     <div className="space-y-6">
+      {/* Central Planning Button */}
+      {onOpenPlanning && (
+        <Card 
+          className="cursor-pointer border-2 border-dashed border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all group"
+          onClick={onOpenPlanning}
+        >
+          <CardContent className="py-8 flex flex-col items-center justify-center gap-3">
+            <div className="p-4 rounded-2xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <Calendar className="h-10 w-10 text-primary" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold">Ouvrir le Planning Chantier</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Visualisez et planifiez tous les lots en mode Gantt interactif
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => onNavigate("lots")}>
