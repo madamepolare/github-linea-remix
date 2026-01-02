@@ -601,6 +601,58 @@
   @apply p-2;
 }
 
+/* List/Agenda view styles */
+.calendar-container .fc .fc-list {
+  @apply border-0 rounded-lg overflow-hidden;
+}
+
+.calendar-container .fc .fc-list-table {
+  @apply border-0;
+}
+
+.calendar-container .fc .fc-list-day {
+  @apply border-0;
+}
+
+.calendar-container .fc .fc-list-day-cushion {
+  @apply bg-muted/60 px-4 py-3 text-sm font-semibold;
+  color: hsl(var(--foreground));
+}
+
+.calendar-container .fc .fc-list-event {
+  @apply cursor-pointer transition-colors duration-150;
+}
+
+.calendar-container .fc .fc-list-event:hover td {
+  background: hsl(var(--muted) / 0.5);
+}
+
+.calendar-container .fc .fc-list-event-time {
+  @apply px-4 py-3 text-sm font-medium w-32 border-0;
+  color: hsl(var(--muted-foreground));
+}
+
+.calendar-container .fc .fc-list-event-graphic {
+  @apply px-2 py-3 border-0;
+}
+
+.calendar-container .fc .fc-list-event-dot {
+  @apply border-0 w-3 h-3 rounded-full;
+}
+
+.calendar-container .fc .fc-list-event-title {
+  @apply px-4 py-3 text-sm font-medium border-0;
+  color: hsl(var(--foreground));
+}
+
+.calendar-container .fc .fc-list-empty {
+  @apply bg-transparent py-12 text-center;
+}
+
+.calendar-container .fc .fc-list-empty-cushion {
+  @apply text-muted-foreground text-sm;
+}
+
 /* Dark mode adjustments are handled by CSS variables */
 .dark .calendar-container .fc .fc-day-today .fc-daygrid-day-number {
   background: hsl(var(--primary));

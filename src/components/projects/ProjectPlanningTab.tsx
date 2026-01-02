@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
+import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 import { useCalendarEvents, CalendarEvent } from "@/hooks/useCalendarEvents";
 import { useProjectPhases, ProjectPhase } from "@/hooks/useProjectPhases";
@@ -648,13 +649,13 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       <div className="bg-card rounded-xl border p-6 calendar-container">
         <FullCalendar
           ref={calendarRef}
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           locale={frLocale}
           headerToolbar={{
             left: "prev,next today",
             center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay,dayGridYear",
+            right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
           }}
           events={calendarEvents}
           editable={true}
@@ -674,13 +675,13 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
             month: "Mois",
             week: "Semaine",
             day: "Jour",
-            year: "Année",
+            list: "Agenda",
           }}
           views={{
-            dayGridYear: {
-              type: "dayGrid",
-              duration: { years: 1 },
-              buttonText: "Année",
+            listWeek: {
+              type: "list",
+              duration: { weeks: 1 },
+              buttonText: "Agenda",
             },
           }}
           eventContent={(eventInfo) => {
