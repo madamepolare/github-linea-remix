@@ -11,14 +11,14 @@ serve(async (req) => {
   }
 
   try {
-    const { projectType, projectDescription, projectBudget, projectSurface, documentType } = await req.json();
+    const { projectType, projectDescription, projectBudget, projectSurface, documentType, feePercentage: inputFeePercentage } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating phase suggestions for:", { projectType, documentType, projectBudget, projectSurface });
+    console.log("Generating phase suggestions for:", { projectType, documentType, projectBudget, projectSurface, inputFeePercentage });
 
     const systemPrompt = `Tu es un expert en contrats de maîtrise d'œuvre pour l'architecture et le design d'intérieur en France. 
 Tu connais parfaitement la Loi MOP, les contrats types de l'Ordre des Architectes, et les pratiques du marché.
@@ -132,7 +132,26 @@ Propose une répartition optimale des phases avec leurs pourcentages. Réponds a
     const suggestions = JSON.parse(toolCall.function.arguments);
     console.log("Parsed suggestions:", suggestions);
 
-    return new Response(JSON.stringify(suggestions), {
+    // Calculate amounts based on budget and fee percentage
+    const effectiveFeePercentage = inputFeePercentage || suggestions.feePercentage || 12;
+    const totalFee = projectBudget ? (projectBudget * effectiveFeePercentage / 100) : 0;
+    
+    // Add amounts to each phase
+    const phasesWithAmounts = suggestions.phases.map((phase: any) => ({
+      ...phase,
+      amount: phase.isIncluded ? Math.round(totalFee * phase.percentage / 100) : 0
+    }));
+
+    const result = {
+      ...suggestions,
+      phases: phasesWithAmounts,
+      feePercentage: effectiveFeePercentage,
+      totalFee
+    };
+
+    console.log("Final result with amounts:", result);
+
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 

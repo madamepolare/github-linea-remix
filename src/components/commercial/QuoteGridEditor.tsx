@@ -248,8 +248,8 @@ export function QuoteGridEditor({
               {document && onDocumentChange && (
                 <AIPhaseSuggestion
                   document={document}
-                  onPhasesChange={() => {}}
                   onDocumentChange={onDocumentChange}
+                  onQuoteItemsChange={onItemsChange}
                   documentId={documentId}
                 />
               )}
