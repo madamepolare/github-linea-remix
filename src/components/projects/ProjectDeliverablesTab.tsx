@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useProjectDeliverables } from "@/hooks/useProjectDeliverables";
+import { useProjectDeliverables, DeliverableStatus } from "@/hooks/useProjectDeliverables";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,7 +29,6 @@ import { DELIVERABLE_STATUS } from "@/lib/projectTypes";
 import {
   CheckCircle2,
   Clock,
-  Download,
   ExternalLink,
   File,
   FileText,
@@ -61,7 +60,7 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formPhaseId, setFormPhaseId] = useState<string | null>(null);
-  const [formStatus, setFormStatus] = useState("pending");
+  const [formStatus, setFormStatus] = useState<DeliverableStatus>("pending");
   const [formDueDate, setFormDueDate] = useState<Date | null>(null);
   const [formFileUrl, setFormFileUrl] = useState("");
 
@@ -79,7 +78,7 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
     setFormName(deliverable.name);
     setFormDescription(deliverable.description || "");
     setFormPhaseId(deliverable.phase_id);
-    setFormStatus(deliverable.status);
+    setFormStatus(deliverable.status as DeliverableStatus);
     setFormDueDate(deliverable.due_date ? parseISO(deliverable.due_date) : null);
     setFormFileUrl(deliverable.file_url || "");
   };
@@ -123,7 +122,7 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
     }
   };
 
-  const handleStatusChange = (id: string, newStatus: string) => {
+  const handleStatusChange = (id: string, newStatus: DeliverableStatus) => {
     updateDeliverable.mutate({ 
       id, 
       status: newStatus,
@@ -247,7 +246,7 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-8 w-8"
-                                onClick={() => window.open(deliverable.file_url, "_blank")}
+                                onClick={() => window.open(deliverable.file_url!, "_blank")}
                               >
                                 <ExternalLink className="h-4 w-4" />
                               </Button>
@@ -355,7 +354,7 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
 
               <div className="space-y-2">
                 <Label>Statut</Label>
-                <Select value={formStatus} onValueChange={setFormStatus}>
+                <Select value={formStatus} onValueChange={(v) => setFormStatus(v as DeliverableStatus)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

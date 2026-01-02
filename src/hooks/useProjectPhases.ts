@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { PhaseStatus } from "@/lib/projectTypes";
 
 export interface ProjectPhase {
   id: string;
@@ -12,13 +13,23 @@ export interface ProjectPhase {
   sort_order: number;
   start_date: string | null;
   end_date: string | null;
-  status: "pending" | "in_progress" | "completed";
+  status: PhaseStatus;
   color: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export type CreatePhaseInput = Omit<ProjectPhase, "id" | "created_at" | "updated_at">;
+export type CreatePhaseInput = {
+  project_id: string;
+  workspace_id: string;
+  name: string;
+  description?: string | null;
+  sort_order?: number;
+  start_date?: string | null;
+  end_date?: string | null;
+  status?: PhaseStatus;
+  color?: string | null;
+};
 
 export function useProjectPhases(projectId: string | null) {
   const { activeWorkspace } = useAuth();
@@ -42,10 +53,17 @@ export function useProjectPhases(projectId: string | null) {
   });
 
   const createPhase = useMutation({
-    mutationFn: async (phase: CreatePhaseInput) => {
+    mutationFn: async (phase: Omit<CreatePhaseInput, "project_id" | "workspace_id">) => {
+      if (!projectId || !activeWorkspace?.id) {
+        throw new Error("Missing project or workspace");
+      }
       const { data, error } = await supabase
         .from("project_phases")
-        .insert(phase)
+        .insert({
+          ...phase,
+          project_id: projectId,
+          workspace_id: activeWorkspace.id,
+        })
         .select()
         .single();
 

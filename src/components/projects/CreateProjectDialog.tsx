@@ -65,9 +65,9 @@ const STEPS = [
 ];
 
 const iconMap: Record<string, React.ElementType> = {
-  "Sofa": Sofa,
-  "Building2": Building2,
-  "Theater": Theater,
+  Sofa: Sofa,
+  Building2: Building2,
+  Theater: Theater,
 };
 
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {

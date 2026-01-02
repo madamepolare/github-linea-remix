@@ -14,11 +14,13 @@ export interface ProjectMOEMember {
   notes: string | null;
   created_at: string;
   updated_at: string;
-  company?: {
+  crm_company?: {
     id: string;
     name: string;
     logo_url: string | null;
     industry: string | null;
+    email: string | null;
+    phone: string | null;
   } | null;
   contact?: {
     id: string;
@@ -29,12 +31,9 @@ export interface ProjectMOEMember {
   } | null;
 }
 
-export type CreateMOEMemberInput = {
-  project_id: string;
-  workspace_id: string;
+export type CreateMOEMemberInput = Omit<ProjectMOEMember, "id" | "created_at" | "updated_at" | "crm_company" | "contact"> & {
   crm_company_id?: string | null;
   contact_id?: string | null;
-  role: string;
   is_lead?: boolean;
   notes?: string | null;
 };
@@ -52,7 +51,7 @@ export function useProjectMOE(projectId: string | null) {
         .from("project_moe_team")
         .select(`
           *,
-          company:crm_company_id (id, name, logo_url, industry),
+          crm_company:crm_company_id (id, name, logo_url, industry, email, phone),
           contact:contact_id (id, name, email, phone, avatar_url)
         `)
         .eq("project_id", projectId)
@@ -66,10 +65,17 @@ export function useProjectMOE(projectId: string | null) {
   });
 
   const addMember = useMutation({
-    mutationFn: async (member: CreateMOEMemberInput) => {
+    mutationFn: async (member: Omit<CreateMOEMemberInput, "project_id" | "workspace_id">) => {
+      if (!projectId || !activeWorkspace?.id) {
+        throw new Error("Missing project or workspace");
+      }
       const { data, error } = await supabase
         .from("project_moe_team")
-        .insert(member)
+        .insert({
+          ...member,
+          project_id: projectId,
+          workspace_id: activeWorkspace.id,
+        })
         .select()
         .single();
 

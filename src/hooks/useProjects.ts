@@ -156,7 +156,7 @@ export function useProjects() {
       if (projectError) throw projectError;
 
       // Generate default phases for the project type
-      const defaultPhases = generateDefaultPhases(input.project_type);
+      const defaultPhases = generateDefaultPhases(input.project_type, project.id, activeWorkspace.id);
       
       if (defaultPhases.length > 0) {
         const phasesToInsert = defaultPhases.map((phase, index) => ({

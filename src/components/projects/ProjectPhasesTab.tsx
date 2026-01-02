@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,7 @@ import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { PHASE_STATUS_CONFIG, PHASE_COLORS } from "@/lib/projectTypes";
+import { PHASE_STATUS_CONFIG, PHASE_COLORS, PhaseStatus } from "@/lib/projectTypes";
 import {
   Calendar,
   CheckCircle2,
@@ -54,7 +54,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
 
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
-  const [formStatus, setFormStatus] = useState("pending");
+  const [formStatus, setFormStatus] = useState<PhaseStatus>("pending");
   const [formColor, setFormColor] = useState(PHASE_COLORS[0]);
   const [formStartDate, setFormStartDate] = useState<Date | null>(null);
   const [formEndDate, setFormEndDate] = useState<Date | null>(null);
@@ -72,7 +72,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
     setEditingPhase(phase);
     setFormName(phase.name);
     setFormDescription(phase.description || "");
-    setFormStatus(phase.status);
+    setFormStatus(phase.status as PhaseStatus);
     setFormColor(phase.color || PHASE_COLORS[0]);
     setFormStartDate(phase.start_date ? parseISO(phase.start_date) : null);
     setFormEndDate(phase.end_date ? parseISO(phase.end_date) : null);
@@ -118,7 +118,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
     }
   };
 
-  const handleStatusChange = (phaseId: string, newStatus: string) => {
+  const handleStatusChange = (phaseId: string, newStatus: PhaseStatus) => {
     updatePhase.mutate({ id: phaseId, status: newStatus });
   };
 
@@ -155,7 +155,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
 
       <div className="space-y-3">
         {phases.map((phase, index) => {
-          const statusConfig = PHASE_STATUS_CONFIG[phase.status as keyof typeof PHASE_STATUS_CONFIG] || PHASE_STATUS_CONFIG.pending;
+          const statusConfig = PHASE_STATUS_CONFIG[phase.status as PhaseStatus] || PHASE_STATUS_CONFIG.pending;
 
           return (
             <Card key={phase.id} className={cn(
@@ -277,7 +277,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Statut</Label>
-                <Select value={formStatus} onValueChange={setFormStatus}>
+                <Select value={formStatus} onValueChange={(v) => setFormStatus(v as PhaseStatus)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
