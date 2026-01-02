@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useChantier, ObservationStatus, ProjectMeeting } from "@/hooks/useChantier";
+import { useChantier, ObservationStatus, ProjectMeeting, MeetingAttendee, ProjectLot, ProjectObservation } from "@/hooks/useChantier";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
+import { useContacts } from "@/hooks/useContacts";
 import { useProject } from "@/hooks/useProjects";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -41,8 +45,11 @@ import {
   FileText,
   Hammer,
   MoreHorizontal,
+  Pencil,
   Plus,
   Trash2,
+  UserCheck,
+  UserX,
   Users,
   Wallet,
 } from "lucide-react";
@@ -50,6 +57,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -99,9 +107,10 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
 
 // Lots Section
 function LotsSection({ projectId }: { projectId: string }) {
-  const { lots, lotsLoading, createLot, deleteLot } = useChantier(projectId);
+  const { lots, lotsLoading, createLot, updateLot, deleteLot } = useChantier(projectId);
   const { companies } = useCRMCompanies();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingLot, setEditingLot] = useState<ProjectLot | null>(null);
 
   const [formName, setFormName] = useState("");
   const [formCompanyId, setFormCompanyId] = useState<string | null>(null);
@@ -117,6 +126,16 @@ function LotsSection({ projectId }: { projectId: string }) {
     setFormStartDate(null);
     setFormEndDate(null);
     setFormStatus("pending");
+  };
+
+  const openEditDialog = (lot: ProjectLot) => {
+    setEditingLot(lot);
+    setFormName(lot.name);
+    setFormCompanyId(lot.crm_company_id);
+    setFormBudget(lot.budget?.toString() || "");
+    setFormStartDate(lot.start_date ? parseISO(lot.start_date) : null);
+    setFormEndDate(lot.end_date ? parseISO(lot.end_date) : null);
+    setFormStatus(lot.status);
   };
 
   const handleCreate = () => {
@@ -136,6 +155,23 @@ function LotsSection({ projectId }: { projectId: string }) {
     resetForm();
   };
 
+  const handleUpdate = () => {
+    if (!editingLot || !formName.trim()) return;
+
+    updateLot.mutate({
+      id: editingLot.id,
+      name: formName.trim(),
+      crm_company_id: formCompanyId,
+      budget: formBudget ? parseFloat(formBudget) : null,
+      start_date: formStartDate ? format(formStartDate, "yyyy-MM-dd") : null,
+      end_date: formEndDate ? format(formEndDate, "yyyy-MM-dd") : null,
+      status: formStatus,
+    });
+
+    setEditingLot(null);
+    resetForm();
+  };
+
   const handleDelete = (id: string) => {
     if (confirm("Supprimer ce lot ?")) {
       deleteLot.mutate(id);
@@ -149,7 +185,7 @@ function LotsSection({ projectId }: { projectId: string }) {
     return <Skeleton className="h-48 w-full" />;
   }
 
-  if (lots.length === 0) {
+  if (lots.length === 0 && !isCreateOpen) {
     return (
       <>
         <EmptyState
@@ -158,7 +194,7 @@ function LotsSection({ projectId }: { projectId: string }) {
           description="Créez des lots pour organiser le chantier."
           action={{ label: "Ajouter un lot", onClick: () => setIsCreateOpen(true) }}
         />
-        <LotCreateDialog
+        <LotDialog
           isOpen={isCreateOpen}
           onClose={() => { setIsCreateOpen(false); resetForm(); }}
           formName={formName}
@@ -171,8 +207,11 @@ function LotsSection({ projectId }: { projectId: string }) {
           setFormStartDate={setFormStartDate}
           formEndDate={formEndDate}
           setFormEndDate={setFormEndDate}
+          formStatus={formStatus}
+          setFormStatus={setFormStatus}
           entreprises={entreprises}
-          handleCreate={handleCreate}
+          onSubmit={handleCreate}
+          isEdit={false}
         />
       </>
     );
@@ -181,7 +220,7 @@ function LotsSection({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium">Lots du chantier</h3>
+        <h3 className="font-medium">Lots du chantier ({lots.length})</h3>
         <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" />
           Ajouter
@@ -207,7 +246,14 @@ function LotsSection({ projectId }: { projectId: string }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{lot.name}</span>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge 
+                        variant="secondary" 
+                        className="text-xs"
+                        style={{ 
+                          backgroundColor: statusConfig.color + "20",
+                          color: statusConfig.color 
+                        }}
+                      >
                         {statusConfig.label}
                       </Badge>
                     </div>
@@ -240,6 +286,11 @@ function LotsSection({ projectId }: { projectId: string }) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEditDialog(lot)}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Modifier
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleDelete(lot.id)} className="text-destructive">
                         <Trash2 className="h-4 w-4 mr-2" />
                         Supprimer
@@ -253,9 +304,9 @@ function LotsSection({ projectId }: { projectId: string }) {
         })}
       </div>
 
-      <LotCreateDialog
-        isOpen={isCreateOpen}
-        onClose={() => { setIsCreateOpen(false); resetForm(); }}
+      <LotDialog
+        isOpen={isCreateOpen || !!editingLot}
+        onClose={() => { setIsCreateOpen(false); setEditingLot(null); resetForm(); }}
         formName={formName}
         setFormName={setFormName}
         formCompanyId={formCompanyId}
@@ -266,15 +317,18 @@ function LotsSection({ projectId }: { projectId: string }) {
         setFormStartDate={setFormStartDate}
         formEndDate={formEndDate}
         setFormEndDate={setFormEndDate}
+        formStatus={formStatus}
+        setFormStatus={setFormStatus}
         entreprises={entreprises}
-        handleCreate={handleCreate}
+        onSubmit={editingLot ? handleUpdate : handleCreate}
+        isEdit={!!editingLot}
       />
     </div>
   );
 }
 
-// Lot Create Dialog Component
-function LotCreateDialog({
+// Lot Dialog Component (Create/Edit)
+function LotDialog({
   isOpen,
   onClose,
   formName,
@@ -287,8 +341,11 @@ function LotCreateDialog({
   setFormStartDate,
   formEndDate,
   setFormEndDate,
+  formStatus,
+  setFormStatus,
   entreprises,
-  handleCreate,
+  onSubmit,
+  isEdit,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -302,14 +359,17 @@ function LotCreateDialog({
   setFormStartDate: (v: Date | null) => void;
   formEndDate: Date | null;
   setFormEndDate: (v: Date | null) => void;
+  formStatus: string;
+  setFormStatus: (v: string) => void;
   entreprises: any[];
-  handleCreate: () => void;
+  onSubmit: () => void;
+  isEdit: boolean;
 }) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nouveau lot</DialogTitle>
+          <DialogTitle>{isEdit ? "Modifier le lot" : "Nouveau lot"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -339,14 +399,31 @@ function LotCreateDialog({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Budget (€)</Label>
-            <Input
-              type="number"
-              value={formBudget}
-              onChange={(e) => setFormBudget(e.target.value)}
-              placeholder="50000"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Budget (€)</Label>
+              <Input
+                type="number"
+                value={formBudget}
+                onChange={(e) => setFormBudget(e.target.value)}
+                placeholder="50000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Statut</Label>
+              <Select value={formStatus} onValueChange={setFormStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LOT_STATUS.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -375,8 +452,8 @@ function LotCreateDialog({
           <Button variant="outline" onClick={onClose}>
             Annuler
           </Button>
-          <Button onClick={handleCreate} disabled={!formName.trim()}>
-            Créer
+          <Button onClick={onSubmit} disabled={!formName.trim()}>
+            {isEdit ? "Enregistrer" : "Créer"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -386,20 +463,37 @@ function LotCreateDialog({
 
 // Meetings Section
 function MeetingsSection({ projectId }: { projectId: string }) {
-  const { meetings, meetingsLoading, observations, createMeeting, deleteMeeting } = useChantier(projectId);
+  const { meetings, meetingsLoading, observations, createMeeting, updateMeeting, deleteMeeting } = useChantier(projectId);
   const { data: project } = useProject(projectId);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const { allContacts } = useContacts();
+  const { companies } = useCRMCompanies();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingMeeting, setEditingMeeting] = useState<ProjectMeeting | null>(null);
+  const [attendeesDialogMeeting, setAttendeesDialogMeeting] = useState<ProjectMeeting | null>(null);
 
   const [formTitle, setFormTitle] = useState("");
   const [formDate, setFormDate] = useState<Date | null>(new Date());
   const [formLocation, setFormLocation] = useState("");
   const [formNotes, setFormNotes] = useState("");
+  const [formAttendees, setFormAttendees] = useState<MeetingAttendee[]>([]);
 
   const resetForm = () => {
     setFormTitle("");
     setFormDate(new Date());
     setFormLocation("");
     setFormNotes("");
+    setFormAttendees([]);
+    setEditingMeeting(null);
+  };
+
+  const openEditDialog = (meeting: ProjectMeeting) => {
+    setEditingMeeting(meeting);
+    setFormTitle(meeting.title);
+    setFormDate(parseISO(meeting.meeting_date));
+    setFormLocation(meeting.location || "");
+    setFormNotes(meeting.notes || "");
+    setFormAttendees(meeting.attendees || []);
+    setIsDialogOpen(true);
   };
 
   const handleCreate = () => {
@@ -410,9 +504,26 @@ function MeetingsSection({ projectId }: { projectId: string }) {
       meeting_date: formDate.toISOString(),
       location: formLocation.trim() || undefined,
       notes: formNotes.trim() || undefined,
+      attendees: formAttendees,
     });
 
-    setIsCreateOpen(false);
+    setIsDialogOpen(false);
+    resetForm();
+  };
+
+  const handleUpdate = () => {
+    if (!editingMeeting || !formTitle.trim() || !formDate) return;
+
+    updateMeeting.mutate({
+      id: editingMeeting.id,
+      title: formTitle.trim(),
+      meeting_date: formDate.toISOString(),
+      location: formLocation.trim() || null,
+      notes: formNotes.trim() || null,
+      attendees: formAttendees,
+    });
+
+    setIsDialogOpen(false);
     resetForm();
   };
 
@@ -422,8 +533,13 @@ function MeetingsSection({ projectId }: { projectId: string }) {
     }
   };
 
+  const handleTogglePresence = (meetingId: string, attendees: MeetingAttendee[], index: number) => {
+    const updated = [...attendees];
+    updated[index] = { ...updated[index], present: !updated[index].present };
+    updateMeeting.mutate({ id: meetingId, attendees: updated });
+  };
+
   const handleGeneratePDF = (meeting: ProjectMeeting) => {
-    // Filter observations for this meeting
     const meetingObservations = observations.filter(
       (obs) => obs.meeting_id === meeting.id
     );
@@ -447,18 +563,18 @@ function MeetingsSection({ projectId }: { projectId: string }) {
     return <Skeleton className="h-48 w-full" />;
   }
 
-  if (meetings.length === 0) {
+  if (meetings.length === 0 && !isDialogOpen) {
     return (
       <>
         <EmptyState
           icon={Users}
           title="Aucune réunion"
           description="Planifiez des réunions de chantier."
-          action={{ label: "Planifier une réunion", onClick: () => setIsCreateOpen(true) }}
+          action={{ label: "Planifier une réunion", onClick: () => setIsDialogOpen(true) }}
         />
-        <MeetingCreateDialog
-          isOpen={isCreateOpen}
-          onClose={() => { setIsCreateOpen(false); resetForm(); }}
+        <MeetingDialog
+          isOpen={isDialogOpen}
+          onClose={() => { setIsDialogOpen(false); resetForm(); }}
           formTitle={formTitle}
           setFormTitle={setFormTitle}
           formDate={formDate}
@@ -467,7 +583,12 @@ function MeetingsSection({ projectId }: { projectId: string }) {
           setFormLocation={setFormLocation}
           formNotes={formNotes}
           setFormNotes={setFormNotes}
-          handleCreate={handleCreate}
+          formAttendees={formAttendees}
+          setFormAttendees={setFormAttendees}
+          contacts={allContacts}
+          companies={companies}
+          onSubmit={handleCreate}
+          isEdit={false}
         />
       </>
     );
@@ -476,87 +597,122 @@ function MeetingsSection({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium">Réunions de chantier</h3>
-        <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+        <h3 className="font-medium">Réunions de chantier ({meetings.length})</h3>
+        <Button size="sm" onClick={() => { resetForm(); setIsDialogOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" />
           Planifier
         </Button>
       </div>
 
       <div className="grid gap-3">
-        {meetings.map((meeting) => (
-          <Card key={meeting.id}>
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <span className="text-sm font-bold text-primary">
-                    {meeting.meeting_number || "#"}
-                  </span>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{meeting.title}</span>
-                  </div>
-                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {format(parseISO(meeting.meeting_date), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
+        {meetings.map((meeting) => {
+          const attendees = meeting.attendees || [];
+          const presentCount = attendees.filter(a => a.present).length;
+          
+          return (
+            <Card key={meeting.id}>
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <span className="text-sm font-bold text-primary">
+                      {meeting.meeting_number || "#"}
                     </span>
-                    {meeting.location && (
-                      <span>{meeting.location}</span>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{meeting.title}</span>
+                      {attendees.length > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {presentCount}/{attendees.length} présents
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {format(parseISO(meeting.meeting_date), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
+                      </span>
+                      {meeting.location && (
+                        <span>{meeting.location}</span>
+                      )}
+                    </div>
+                    
+                    {/* Attendees preview */}
+                    {attendees.length > 0 && (
+                      <div className="flex items-center gap-1 mt-2">
+                        {attendees.slice(0, 5).map((att, idx) => (
+                          <Avatar key={idx} className={cn("h-6 w-6 border-2", att.present ? "border-green-500" : "border-red-400")}>
+                            <AvatarFallback className="text-xs">
+                              {att.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))}
+                        {attendees.length > 5 && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            +{attendees.length - 5}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
-                </div>
 
-                <div className="flex items-center gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8"
-                    onClick={() => handleGeneratePDF(meeting)}
-                    title="Générer le compte-rendu PDF"
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  {meeting.pdf_url && (
+                  <div className="flex items-center gap-1">
                     <Button 
                       variant="ghost" 
                       size="icon" 
                       className="h-8 w-8"
-                      onClick={() => window.open(meeting.pdf_url!, "_blank")}
-                      title="Voir le PDF enregistré"
+                      onClick={() => setAttendeesDialogMeeting(meeting)}
+                      title="Gérer les participants"
                     >
-                      <FileText className="h-4 w-4" />
+                      <Users className="h-4 w-4" />
                     </Button>
-                  )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleGeneratePDF(meeting)}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Générer PDF
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDelete(meeting.id)} className="text-destructive">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Supprimer
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8"
+                      onClick={() => handleGeneratePDF(meeting)}
+                      title="Générer le compte-rendu PDF"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEditDialog(meeting)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Modifier
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setAttendeesDialogMeeting(meeting)}>
+                          <Users className="h-4 w-4 mr-2" />
+                          Gérer les participants
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleGeneratePDF(meeting)}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Générer PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleDelete(meeting.id)} className="text-destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      <MeetingCreateDialog
-        isOpen={isCreateOpen}
-        onClose={() => { setIsCreateOpen(false); resetForm(); }}
+      <MeetingDialog
+        isOpen={isDialogOpen}
+        onClose={() => { setIsDialogOpen(false); resetForm(); }}
         formTitle={formTitle}
         setFormTitle={setFormTitle}
         formDate={formDate}
@@ -565,14 +721,38 @@ function MeetingsSection({ projectId }: { projectId: string }) {
         setFormLocation={setFormLocation}
         formNotes={formNotes}
         setFormNotes={setFormNotes}
-        handleCreate={handleCreate}
+        formAttendees={formAttendees}
+        setFormAttendees={setFormAttendees}
+        contacts={allContacts}
+        companies={companies}
+        onSubmit={editingMeeting ? handleUpdate : handleCreate}
+        isEdit={!!editingMeeting}
+      />
+
+      {/* Attendees Management Dialog */}
+      <AttendeesDialog
+        meeting={attendeesDialogMeeting}
+        onClose={() => setAttendeesDialogMeeting(null)}
+        onTogglePresence={handleTogglePresence}
+        contacts={allContacts}
+        companies={companies}
+        onAddAttendee={(attendee) => {
+          if (!attendeesDialogMeeting) return;
+          const updated = [...(attendeesDialogMeeting.attendees || []), attendee];
+          updateMeeting.mutate({ id: attendeesDialogMeeting.id, attendees: updated });
+        }}
+        onRemoveAttendee={(index) => {
+          if (!attendeesDialogMeeting) return;
+          const updated = (attendeesDialogMeeting.attendees || []).filter((_, i) => i !== index);
+          updateMeeting.mutate({ id: attendeesDialogMeeting.id, attendees: updated });
+        }}
       />
     </div>
   );
 }
 
-// Meeting Create Dialog Component
-function MeetingCreateDialog({
+// Meeting Dialog Component (Create/Edit)
+function MeetingDialog({
   isOpen,
   onClose,
   formTitle,
@@ -583,7 +763,12 @@ function MeetingCreateDialog({
   setFormLocation,
   formNotes,
   setFormNotes,
-  handleCreate,
+  formAttendees,
+  setFormAttendees,
+  contacts,
+  companies,
+  onSubmit,
+  isEdit,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -595,16 +780,50 @@ function MeetingCreateDialog({
   setFormLocation: (v: string) => void;
   formNotes: string;
   setFormNotes: (v: string) => void;
-  handleCreate: () => void;
+  formAttendees: MeetingAttendee[];
+  setFormAttendees: (v: MeetingAttendee[]) => void;
+  contacts: any[];
+  companies: any[];
+  onSubmit: () => void;
+  isEdit: boolean;
 }) {
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+
+  const addAttendee = () => {
+    if (!selectedContactId) return;
+    const contact = contacts.find(c => c.id === selectedContactId);
+    if (!contact) return;
+    
+    // Check if already added
+    if (formAttendees.some(a => a.contact_id === selectedContactId)) {
+      toast.error("Ce contact est déjà dans la liste");
+      return;
+    }
+
+    setFormAttendees([
+      ...formAttendees,
+      {
+        contact_id: contact.id,
+        company_id: contact.crm_company_id || undefined,
+        name: contact.name,
+        present: true,
+      }
+    ]);
+    setSelectedContactId(null);
+  };
+
+  const removeAttendee = (index: number) => {
+    setFormAttendees(formAttendees.filter((_, i) => i !== index));
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Nouvelle réunion</DialogTitle>
+          <DialogTitle>{isEdit ? "Modifier la réunion" : "Nouvelle réunion"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto flex-1">
           <div className="space-y-2">
             <Label>Titre *</Label>
             <Input
@@ -614,33 +833,70 @@ function MeetingCreateDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Date et heure *</Label>
-            <InlineDatePicker
-              value={formDate}
-              onChange={setFormDate}
-              placeholder="Sélectionner..."
-              className="w-full"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Date et heure *</Label>
+              <InlineDatePicker
+                value={formDate}
+                onChange={setFormDate}
+                placeholder="Sélectionner..."
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Lieu</Label>
+              <Input
+                value={formLocation}
+                onChange={(e) => setFormLocation(e.target.value)}
+                placeholder="Sur site, Bureau..."
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Lieu</Label>
-            <Input
-              value={formLocation}
-              onChange={(e) => setFormLocation(e.target.value)}
-              placeholder="Sur site, Bureau..."
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Notes</Label>
+            <Label>Notes / Ordre du jour</Label>
             <Textarea
               value={formNotes}
               onChange={(e) => setFormNotes(e.target.value)}
-              placeholder="Ordre du jour..."
-              rows={3}
+              placeholder="Points à aborder..."
+              rows={2}
             />
+          </div>
+
+          {/* Participants */}
+          <div className="space-y-2">
+            <Label>Participants</Label>
+            <div className="flex gap-2">
+              <Select value={selectedContactId || "none"} onValueChange={(v) => setSelectedContactId(v === "none" ? null : v)}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Sélectionner un contact..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sélectionner...</SelectItem>
+                  {contacts.map((contact) => (
+                    <SelectItem key={contact.id} value={contact.id}>
+                      {contact.name} {contact.company ? `(${contact.company.name})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="outline" onClick={addAttendee} disabled={!selectedContactId}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {formAttendees.length > 0 && (
+              <div className="space-y-1 mt-2">
+                {formAttendees.map((att, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded bg-muted/50">
+                    <span className="text-sm">{att.name}</span>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeAttendee(idx)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -648,13 +904,152 @@ function MeetingCreateDialog({
           <Button variant="outline" onClick={onClose}>
             Annuler
           </Button>
-          <Button onClick={handleCreate} disabled={!formTitle.trim() || !formDate}>
-            Créer
+          <Button onClick={onSubmit} disabled={!formTitle.trim() || !formDate}>
+            {isEdit ? "Enregistrer" : "Créer"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+// Attendees Management Dialog
+function AttendeesDialog({
+  meeting,
+  onClose,
+  onTogglePresence,
+  contacts,
+  companies,
+  onAddAttendee,
+  onRemoveAttendee,
+}: {
+  meeting: ProjectMeeting | null;
+  onClose: () => void;
+  onTogglePresence: (meetingId: string, attendees: MeetingAttendee[], index: number) => void;
+  contacts: any[];
+  companies: any[];
+  onAddAttendee: (attendee: MeetingAttendee) => void;
+  onRemoveAttendee: (index: number) => void;
+}) {
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+
+  if (!meeting) return null;
+
+  const attendees = meeting.attendees || [];
+
+  const handleAdd = () => {
+    if (!selectedContactId) return;
+    const contact = contacts.find(c => c.id === selectedContactId);
+    if (!contact) return;
+    
+    if (attendees.some(a => a.contact_id === selectedContactId)) {
+      toast.error("Ce contact est déjà dans la liste");
+      return;
+    }
+
+    onAddAttendee({
+      contact_id: contact.id,
+      company_id: contact.crm_company_id || undefined,
+      name: contact.name,
+      present: false,
+    });
+    setSelectedContactId(null);
+  };
+
+  return (
+    <Dialog open={!!meeting} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Participants - {meeting.title}</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {/* Add participant */}
+          <div className="flex gap-2">
+            <Select value={selectedContactId || "none"} onValueChange={(v) => setSelectedContactId(v === "none" ? null : v)}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Ajouter un participant..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sélectionner...</SelectItem>
+                {contacts.map((contact) => (
+                  <SelectItem key={contact.id} value={contact.id}>
+                    {contact.name} {contact.company ? `(${contact.company.name})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={handleAdd} disabled={!selectedContactId}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Attendees list */}
+          {attendees.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Aucun participant ajouté
+            </p>
+          ) : (
+            <ScrollArea className="h-64">
+              <div className="space-y-2">
+                {attendees.map((att, idx) => {
+                  const company = att.company_id ? companies.find(c => c.id === att.company_id) : null;
+                  
+                  return (
+                    <div 
+                      key={idx} 
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border",
+                        att.present ? "border-green-500 bg-green-50 dark:bg-green-950/30" : "border-red-400 bg-red-50 dark:bg-red-950/30"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Checkbox 
+                          checked={att.present}
+                          onCheckedChange={() => onTogglePresence(meeting.id, attendees, idx)}
+                        />
+                        <div>
+                          <p className="text-sm font-medium flex items-center gap-1">
+                            {att.present ? (
+                              <UserCheck className="h-3.5 w-3.5 text-green-600" />
+                            ) : (
+                              <UserX className="h-3.5 w-3.5 text-red-500" />
+                            )}
+                            {att.name}
+                          </p>
+                          {company && (
+                            <p className="text-xs text-muted-foreground">{company.name}</p>
+                          )}
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onRemoveAttendee(idx)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+
+          {/* Summary */}
+          {attendees.length > 0 && (
+            <div className="flex justify-between text-sm pt-2 border-t border-border">
+              <span className="text-muted-foreground">Présents</span>
+              <span className="font-medium">
+                {attendees.filter(a => a.present).length} / {attendees.length}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button onClick={onClose}>Fermer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 }
 
 // Observations Section
