@@ -14,6 +14,8 @@ import { Plus, AlertTriangle, Trash2, Calendar, Users, Building2 } from "lucide-
 import { cn } from "@/lib/utils";
 import { MeetingAttentionItem, CreateAttentionItemInput } from "@/hooks/useMeetingAttentionItems";
 
+import { ProjectMOEMember } from "@/hooks/useProjectMOE";
+
 interface Company {
   id: string;
   name: string;
@@ -23,6 +25,7 @@ interface AttentionItemsSectionProps {
   items: MeetingAttentionItem[];
   companies: Company[];
   lots: { id: string; name: string; crm_company_id: string | null }[];
+  moeTeam: ProjectMOEMember[];
   meetingId: string;
   onCreateItem: (item: CreateAttentionItemInput) => void;
   onUpdateItem: (id: string, updates: Partial<MeetingAttentionItem>) => void;
@@ -47,6 +50,7 @@ export function AttentionItemsSection({
   items,
   companies,
   lots,
+  moeTeam,
   meetingId,
   onCreateItem,
   onUpdateItem,
@@ -72,7 +76,7 @@ export function AttentionItemsSection({
   });
   const [customName, setCustomName] = useState("");
 
-  // Get companies from lots for easier selection
+  // Get companies from lots for entreprises
   const lotCompanies = lots
     .filter(l => l.crm_company_id)
     .map(l => {
@@ -80,6 +84,30 @@ export function AttentionItemsSection({
       return company ? { ...company, lotName: l.name } : null;
     })
     .filter(Boolean) as (Company & { lotName: string })[];
+
+  // Get MOE companies (BET, architects, etc.)
+  const moeCompanies = moeTeam
+    .filter(m => m.crm_company_id && m.crm_company)
+    .map(m => ({
+      id: m.crm_company_id!,
+      name: m.crm_company!.name,
+      role: m.role,
+    }));
+
+  // Get assignee options based on stakeholder type
+  const getAssigneeOptions = () => {
+    switch (newItem.stakeholder_type) {
+      case "entreprise":
+        return lotCompanies.map(c => ({ id: c.id, name: c.name, description: c.lotName }));
+      case "bet":
+      case "moa":
+        return moeCompanies.map(c => ({ id: c.id, name: c.name, description: c.role }));
+      default:
+        return [];
+    }
+  };
+
+  const assigneeOptions = getAssigneeOptions();
 
   const handleAddItem = () => {
     if (!newItem.description.trim()) return;
@@ -149,7 +177,7 @@ export function AttentionItemsSection({
       {items.length === 0 ? (
         <div className="text-center py-6 text-muted-foreground">
           <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Aucun point d'attention</p>
+          <p className="text-sm">Aucun point abordé</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -241,13 +269,13 @@ export function AttentionItemsSection({
 
       <Button variant="outline" size="sm" className="w-full" onClick={() => setIsAddDialogOpen(true)}>
         <Plus className="h-4 w-4 mr-1" />
-        Ajouter un point d'attention
+        Ajouter un point abordé
       </Button>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Nouveau point d'attention</DialogTitle>
+            <DialogTitle>Nouveau point abordé</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -261,7 +289,13 @@ export function AttentionItemsSection({
                     type="button"
                     variant={newItem.stakeholder_type === type ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setNewItem({ ...newItem, stakeholder_type: type })}
+                    onClick={() => setNewItem({ 
+                      ...newItem, 
+                      stakeholder_type: type,
+                      assignee_company_ids: [],
+                      assignee_names: [],
+                      assignee_type: "all",
+                    })}
                   >
                     {typeConfig[type].label}
                   </Button>
@@ -272,74 +306,85 @@ export function AttentionItemsSection({
             {/* Assignees */}
             <div className="space-y-2">
               <Label>Destinataires</Label>
-              <div className="space-y-2 border rounded-lg p-3 max-h-40 overflow-y-auto">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={newItem.assignee_type === "all" && newItem.assignee_company_ids.length === 0}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setNewItem({ ...newItem, assignee_type: "all", assignee_company_ids: [], assignee_names: [] });
-                      }
-                    }}
-                  />
-                  <span className="text-sm font-medium">Tous</span>
-                </label>
-                
-                {lotCompanies.length > 0 && (
-                  <>
-                    <div className="border-t my-2" />
-                    {lotCompanies.map((company) => (
-                      <label key={company.id} className="flex items-center gap-2 cursor-pointer">
-                        <Checkbox
-                          checked={newItem.assignee_company_ids.includes(company.id)}
-                          onCheckedChange={() => toggleCompanySelection(company.id)}
-                        />
-                        <Building2 className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm">{company.name}</span>
-                        <span className="text-xs text-muted-foreground">({company.lotName})</span>
-                      </label>
-                    ))}
-                  </>
-                )}
-
-                {/* Custom names */}
-                {newItem.assignee_names.length > 0 && (
-                  <>
-                    <div className="border-t my-2" />
-                    {newItem.assignee_names.map((name, idx) => (
-                      <div key={idx} className="flex items-center justify-between">
-                        <span className="text-sm">{name}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => setNewItem({
-                            ...newItem,
-                            assignee_names: newItem.assignee_names.filter((_, i) => i !== idx),
-                          })}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </>
-                )}
-              </div>
-
-              {/* Add custom name */}
-              <div className="flex gap-2">
-                <Input
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  placeholder="Ajouter un nom..."
-                  className="flex-1"
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustomName())}
-                />
-                <Button type="button" variant="outline" size="sm" onClick={addCustomName}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
+              
+              {newItem.stakeholder_type === "other" ? (
+                // Mode "Autre": uniquement ajout manuel
+                <div className="space-y-2">
+                  <div className="space-y-2 border rounded-lg p-3 max-h-40 overflow-y-auto">
+                    {newItem.assignee_names.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Aucun destinataire ajouté</p>
+                    ) : (
+                      newItem.assignee_names.map((name, idx) => (
+                        <div key={idx} className="flex items-center justify-between">
+                          <span className="text-sm">{name}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => setNewItem({
+                              ...newItem,
+                              assignee_names: newItem.assignee_names.filter((_, i) => i !== idx),
+                            })}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={customName}
+                      onChange={(e) => setCustomName(e.target.value)}
+                      placeholder="Ajouter un nom..."
+                      className="flex-1"
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustomName())}
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={addCustomName}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                // Mode entreprise/BET/MOA: liste préchargée
+                <div className="space-y-2 border rounded-lg p-3 max-h-40 overflow-y-auto">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={newItem.assignee_type === "all" && newItem.assignee_company_ids.length === 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setNewItem({ ...newItem, assignee_type: "all", assignee_company_ids: [] });
+                        }
+                      }}
+                    />
+                    <span className="text-sm font-medium">Tous</span>
+                  </label>
+                  
+                  {assigneeOptions.length > 0 ? (
+                    <>
+                      <div className="border-t my-2" />
+                      {assigneeOptions.map((option) => (
+                        <label key={option.id} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={newItem.assignee_company_ids.includes(option.id)}
+                            onCheckedChange={() => toggleCompanySelection(option.id)}
+                          />
+                          <Building2 className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-sm">{option.name}</span>
+                          <span className="text-xs text-muted-foreground">({option.description})</span>
+                        </label>
+                      ))}
+                    </>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {newItem.stakeholder_type === "entreprise" 
+                        ? "Aucune entreprise dans les lots du projet" 
+                        : "Aucune entreprise dans l'équipe MOE"}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Description */}
@@ -348,7 +393,7 @@ export function AttentionItemsSection({
               <Textarea
                 value={newItem.description}
                 onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                placeholder="Description du point d'attention..."
+                placeholder="Description du point abordé..."
                 rows={3}
               />
             </div>

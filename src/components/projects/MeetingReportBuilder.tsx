@@ -57,7 +57,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
     { id: "header", type: "header", title: "Informations de la réunion", expanded: true },
     { id: "attendees", type: "attendees", title: "Liste des présents", expanded: true },
     { id: "notes", type: "notes", title: "Notes & Ordre du jour", expanded: true },
-    { id: "attention", type: "attention", title: "Points d'attention", expanded: true },
+    { id: "attention", type: "attention", title: "Points abordés", expanded: true },
     { id: "observations", type: "observations", title: "Observations & Réserves", expanded: true },
     { id: "tasks", type: "tasks", title: "Actions & Tâches", expanded: true },
     { id: "summary", type: "summary", title: "Synthèse AI", expanded: false },
@@ -404,6 +404,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
                       items={attentionItems}
                       companies={companies}
                       lots={lots}
+                      moeTeam={moeTeam}
                       meetingId={meeting.id}
                       onCreateItem={(item) => createAttentionItem.mutate(item)}
                       onUpdateItem={(id, updates) => updateAttentionItem.mutate({ id, ...updates })}
