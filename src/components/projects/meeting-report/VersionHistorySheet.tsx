@@ -15,7 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { History, GitCompare, Clock, User, ChevronRight, Plus, Minus, Equal } from "lucide-react";
+import { History, GitCompare, Clock, User, ChevronRight, Plus, Minus, Equal, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 
 interface Version {
   id: string;
@@ -32,6 +33,7 @@ interface VersionHistorySheetProps {
   meetingId: string;
   currentNotes: string | null;
   currentAttendees: any[] | null;
+  onRestore?: (notes: string | null, attendees: any[] | null) => void;
 }
 
 interface DiffLine {
@@ -83,9 +85,17 @@ export function VersionHistorySheet({
   meetingId,
   currentNotes,
   currentAttendees,
+  onRestore,
 }: VersionHistorySheetProps) {
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [compareWithId, setCompareWithId] = useState<string | null>(null);
+
+  const handleRestore = (version: Version) => {
+    if (!onRestore) return;
+    onRestore(version.notes, version.attendees);
+    toast.success(`Version ${version.version_number} restaurée`);
+    onOpenChange(false);
+  };
 
   const { data: versions = [], isLoading } = useQuery({
     queryKey: ["meeting-versions", meetingId],
@@ -194,27 +204,43 @@ export function VersionHistorySheet({
                 </button>
 
                 {versions.map((version) => (
-                  <button
+                  <div
                     key={version.id}
-                    onClick={() => handleSelectVersion(version.id)}
                     className={cn(
-                      "w-full flex items-center justify-between p-2 rounded-md text-left text-sm transition-colors",
+                      "w-full flex items-center justify-between p-2 rounded-md text-sm transition-colors",
                       (selectedVersionId === version.id || compareWithId === version.id)
                         ? "bg-primary/10 border border-primary/30"
                         : "hover:bg-muted"
                     )}
                   >
-                    <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSelectVersion(version.id)}
+                      className="flex items-center gap-2 flex-1 text-left"
+                    >
                       <Badge variant="secondary" className="text-xs">
                         v{version.version_number}
                       </Badge>
                       <span>Version {version.version_number}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {format(parseISO(version.created_at), "dd/MM/yyyy HH:mm", { locale: fr })}
-                    </div>
-                  </button>
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {format(parseISO(version.created_at), "dd/MM/yyyy HH:mm", { locale: fr })}
+                      </span>
+                    </button>
+                    {onRestore && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRestore(version);
+                        }}
+                      >
+                        <RotateCcw className="h-3 w-3 mr-1" />
+                        Restaurer
+                      </Button>
+                    )}
+                  </div>
                 ))}
 
                 {versions.length === 0 && !isLoading && (
