@@ -63,7 +63,8 @@ export function CommercialDocumentBuilder({
       amount: phase.amount || 0,
       isOptional: !phase.is_included,
       deliverables: phase.deliverables || [],
-      sortOrder: phase.sort_order
+      sortOrder: phase.sort_order,
+      percentageFee: phase.percentage_fee || 15 // Default 15%
     }));
   };
 
@@ -77,7 +78,7 @@ export function CommercialDocumentBuilder({
         phase_code: item.code || '',
         phase_name: item.designation,
         phase_description: item.description,
-        percentage_fee: 0, // Will be calculated
+        percentage_fee: item.percentageFee || 15, // Sync percentage
         amount: item.amount,
         is_included: !item.isOptional,
         deliverables: item.deliverables,

@@ -133,7 +133,8 @@ export function QuoteGridEditor({
       amount: 0,
       isOptional: type === 'option',
       deliverables: [],
-      sortOrder: items.length
+      sortOrder: items.length,
+      percentageFee: type === 'phase' ? 15 : undefined // Default 15% for phases
     };
     onItemsChange([...items, newItem]);
     setExpandedItems(new Set([...expandedItems, newItem.id]));
@@ -224,6 +225,25 @@ export function QuoteGridEditor({
   const phaseItems = items.filter(i => i.type === 'phase');
   const otherItems = items.filter(i => i.type !== 'phase');
 
+  // Calculate total percentage for phases
+  const totalPercentage = phaseItems.filter(i => !i.isOptional).reduce((sum, i) => sum + (i.percentageFee || 0), 0);
+
+  // Get the base for calculating phase amounts
+  const feeMode = document?.fee_mode || 'fixed';
+  const constructionBudget = document?.construction_budget || 0;
+  const feePercentage = document?.fee_percentage || 0;
+  const totalAmount = document?.total_amount || 0;
+
+  // Calculate the base amount for distributing to phases
+  const getPhaseBaseAmount = () => {
+    if (feeMode === 'percentage' && constructionBudget > 0 && feePercentage > 0) {
+      return constructionBudget * (feePercentage / 100);
+    }
+    return totalAmount;
+  };
+
+  const phaseBaseAmount = getPhaseBaseAmount();
+
   // Calculate totals
   const requiredItems = items.filter(i => !i.isOptional && i.type !== 'discount');
   const optionalItems = items.filter(i => i.isOptional);
@@ -242,6 +262,231 @@ export function QuoteGridEditor({
 
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
+
+  // Calculate phase amount from percentage
+  const calculatePhaseAmount = (percentageFee: number) => {
+    if (totalPercentage > 0 && phaseBaseAmount > 0) {
+      return (percentageFee / totalPercentage) * phaseBaseAmount;
+    }
+    return 0;
+  };
+
+  const renderPhaseRow = (item: QuoteLineItem, index: number) => {
+    const globalIndex = items.findIndex(i => i.id === item.id);
+    const calculatedAmount = calculatePhaseAmount(item.percentageFee || 0);
+    
+    return (
+      <Collapsible
+        key={item.id}
+        open={expandedItems.has(item.id)}
+      >
+        <div
+          draggable
+          onDragStart={() => handleDragStart(globalIndex)}
+          onDragOver={(e) => handleDragOver(e, globalIndex)}
+          onDragEnd={handleDragEnd}
+          className={`border rounded-lg transition-all ${
+            draggedIndex === globalIndex ? 'opacity-50' : ''
+          } ${item.isOptional ? 'border-dashed border-muted-foreground/30' : 'border-border'} 
+          ${TYPE_COLORS[item.type].replace('bg-', 'hover:bg-').replace('/10', '/5')}`}
+        >
+          {/* Main Row */}
+          <div className="grid grid-cols-12 gap-2 p-3 items-center">
+            {/* Drag handle + Type badge */}
+            <div className="col-span-1 flex items-center gap-1">
+              <div className="cursor-grab">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className={`p-1.5 rounded ${TYPE_COLORS[item.type]}`}>
+                {TYPE_ICONS[item.type]}
+              </div>
+            </div>
+
+            {/* Designation */}
+            <div className="col-span-5 space-y-1">
+              <div className="flex items-center gap-2">
+                {item.code && (
+                  <Badge variant="outline" className="shrink-0 text-xs">
+                    {item.code}
+                  </Badge>
+                )}
+                <Input
+                  value={item.designation}
+                  onChange={(e) => updateItem(item.id, { designation: e.target.value })}
+                  className="h-8 font-medium"
+                  placeholder="Nom de la phase..."
+                />
+              </div>
+              {item.description && (
+                <p className="text-xs text-muted-foreground truncate pl-1">
+                  {item.description}
+                </p>
+              )}
+            </div>
+
+            {/* Percentage */}
+            <div className="col-span-2 hidden md:block">
+              <div className="relative">
+                <Input
+                  type="number"
+                  value={item.percentageFee || 0}
+                  onChange={(e) => {
+                    const newPercentage = parseFloat(e.target.value) || 0;
+                    const newAmount = calculatePhaseAmount(newPercentage);
+                    updateItem(item.id, { 
+                      percentageFee: newPercentage,
+                      unitPrice: newAmount,
+                      amount: newAmount
+                    });
+                  }}
+                  className="h-8 text-right pr-6"
+                  min={0}
+                  step={1}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+              </div>
+            </div>
+
+            {/* Calculated Amount */}
+            <div className="col-span-2 hidden md:block text-right">
+              <span className="text-sm text-muted-foreground">
+                {formatCurrency(calculatedAmount)}
+              </span>
+            </div>
+
+            {/* Actions */}
+            <div className="col-span-2 flex items-center justify-end gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => toggleExpanded(item.id)}>
+                    {expandedItems.has(item.id) ? 'Réduire' : 'Détails'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => duplicateItem(item)}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Dupliquer
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={() => updateItem(item.id, { isOptional: !item.isOptional })}
+                  >
+                    {item.isOptional ? 'Inclure' : 'Exclure'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => deleteItem(item.id)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Supprimer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <CollapsibleTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => toggleExpanded(item.id)}
+                >
+                  {expandedItems.has(item.id) ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </div>
+
+          {/* Expanded Content */}
+          <CollapsibleContent>
+            <div className="px-4 pb-4 pt-2 border-t border-border/50 space-y-4">
+              {/* Description */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Description</label>
+                <Textarea
+                  value={item.description || ''}
+                  onChange={(e) => updateItem(item.id, { description: e.target.value })}
+                  placeholder="Description de la phase..."
+                  rows={2}
+                  className="text-sm"
+                />
+              </div>
+
+              {/* Mobile: Percentage */}
+              <div className="md:hidden space-y-1">
+                <label className="text-xs text-muted-foreground">Pourcentage</label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={item.percentageFee || 0}
+                    onChange={(e) => {
+                      const newPercentage = parseFloat(e.target.value) || 0;
+                      updateItem(item.id, { percentageFee: newPercentage });
+                    }}
+                    className="h-8 pr-6"
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                </div>
+              </div>
+
+              {/* Deliverables */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Livrables</label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => addDeliverable(item.id)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Ajouter
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  {item.deliverables.map((deliverable, dIndex) => (
+                    <div key={dIndex} className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">•</span>
+                      <Input
+                        value={deliverable}
+                        onChange={(e) => updateDeliverable(item.id, dIndex, e.target.value)}
+                        className="h-7 text-sm"
+                        placeholder="Nom du livrable"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => removeDeliverable(item.id, dIndex)}
+                      >
+                        <Trash2 className="h-3 w-3 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Options */}
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={item.isOptional}
+                    onCheckedChange={(checked) => updateItem(item.id, { isOptional: !!checked })}
+                  />
+                  Exclure de la mission
+                </label>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+    );
+  };
 
   const renderItemRow = (item: QuoteLineItem, index: number, itemList: QuoteLineItem[]) => {
     const globalIndex = items.findIndex(i => i.id === item.id);
@@ -608,9 +853,11 @@ export function QuoteGridEditor({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline">{phaseItems.length} phase(s)</Badge>
-              {subtotalPhases > 0 && (
-                <Badge variant="secondary">{formatCurrency(subtotalPhases)}</Badge>
+              <Badge variant="outline" className={totalPercentage !== 100 ? 'border-amber-500 text-amber-600' : ''}>
+                {totalPercentage}% total
+              </Badge>
+              {phaseBaseAmount > 0 && (
+                <Badge variant="secondary">{formatCurrency(phaseBaseAmount)}</Badge>
               )}
               <Button size="sm" variant="outline" onClick={() => addItem('phase')}>
                 <Plus className="h-4 w-4 mr-1" />
@@ -620,20 +867,30 @@ export function QuoteGridEditor({
           </div>
         </CardHeader>
         <CardContent className="pt-0">
+          {/* Info box about fee calculation */}
+          {phaseItems.length > 0 && (
+            <div className="mb-3 p-2 bg-muted/50 rounded-lg text-xs text-muted-foreground">
+              {feeMode === 'percentage' ? (
+                <span>Mode pourcentage : {feePercentage}% de {formatCurrency(constructionBudget)} = {formatCurrency(phaseBaseAmount)}</span>
+              ) : (
+                <span>Mode forfait : montant total {formatCurrency(totalAmount)}</span>
+              )}
+            </div>
+          )}
+          
           {/* Grid Header for phases */}
           {phaseItems.length > 0 && (
             <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b mb-2">
               <div className="col-span-1"></div>
-              <div className="col-span-4">Phase</div>
-              <div className="col-span-1 text-center">Qté</div>
-              <div className="col-span-2 text-center">Unité</div>
-              <div className="col-span-2 text-right">Prix unit.</div>
+              <div className="col-span-5">Phase</div>
+              <div className="col-span-2 text-right">%</div>
               <div className="col-span-2 text-right">Montant</div>
+              <div className="col-span-2"></div>
             </div>
           )}
           
           <div className="space-y-2">
-            {phaseItems.map((item, index) => renderItemRow(item, index, phaseItems))}
+            {phaseItems.map((item, index) => renderPhaseRow(item, index))}
             
             {phaseItems.length === 0 && (
               <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
