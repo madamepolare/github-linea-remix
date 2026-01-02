@@ -313,6 +313,44 @@ export type Database = {
           },
         ]
       }
+      deliverable_email_templates: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          phase_type: string
+          subject: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          phase_type: string
+          subject: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          phase_type?: string
+          subject?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deliverable_email_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_activities: {
         Row: {
           activity_type: string
@@ -591,6 +629,206 @@ export type Database = {
           },
         ]
       }
+      project_deliverables: {
+        Row: {
+          created_at: string | null
+          delivered_at: string | null
+          description: string | null
+          due_date: string | null
+          file_url: string | null
+          id: string
+          name: string
+          phase_id: string | null
+          project_id: string
+          status: string | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          delivered_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          file_url?: string | null
+          id?: string
+          name: string
+          phase_id?: string | null
+          project_id: string
+          status?: string | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          delivered_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          file_url?: string | null
+          id?: string
+          name?: string
+          phase_id?: string | null
+          project_id?: string
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_deliverables_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "project_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_deliverables_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_deliverables_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_lots: {
+        Row: {
+          budget: number | null
+          color: string | null
+          created_at: string | null
+          crm_company_id: string | null
+          end_date: string | null
+          id: string
+          name: string
+          project_id: string
+          sort_order: number | null
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          budget?: number | null
+          color?: string | null
+          created_at?: string | null
+          crm_company_id?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          project_id: string
+          sort_order?: number | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          budget?: number | null
+          color?: string | null
+          created_at?: string | null
+          crm_company_id?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+          sort_order?: number | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_lots_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_lots_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_lots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_meetings: {
+        Row: {
+          attendees: Json | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          location: string | null
+          meeting_date: string
+          meeting_number: number | null
+          notes: string | null
+          pdf_url: string | null
+          project_id: string
+          title: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          attendees?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          location?: string | null
+          meeting_date: string
+          meeting_number?: number | null
+          notes?: string | null
+          pdf_url?: string | null
+          project_id: string
+          title: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          attendees?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          location?: string | null
+          meeting_date?: string
+          meeting_number?: number | null
+          notes?: string | null
+          pdf_url?: string | null
+          project_id?: string
+          title?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_meetings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_meetings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           created_at: string | null
@@ -623,56 +861,299 @@ export type Database = {
           },
         ]
       }
-      projects: {
+      project_moe_team: {
         Row: {
-          budget: number | null
-          client: string | null
-          color: string | null
+          contact_id: string | null
+          created_at: string | null
+          crm_company_id: string | null
+          id: string
+          is_lead: boolean | null
+          notes: string | null
+          project_id: string
+          role: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string | null
+          crm_company_id?: string | null
+          id?: string
+          is_lead?: boolean | null
+          notes?: string | null
+          project_id: string
+          role: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string | null
+          crm_company_id?: string | null
+          id?: string
+          is_lead?: boolean | null
+          notes?: string | null
+          project_id?: string
+          role?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_moe_team_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_moe_team_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_moe_team_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_moe_team_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_observations: {
+        Row: {
           created_at: string | null
           created_by: string | null
+          description: string
+          due_date: string | null
+          id: string
+          lot_id: string | null
+          meeting_id: string | null
+          photo_urls: string[] | null
+          priority: string | null
+          project_id: string
+          resolved_at: string | null
+          status: string | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          due_date?: string | null
+          id?: string
+          lot_id?: string | null
+          meeting_id?: string | null
+          photo_urls?: string[] | null
+          priority?: string | null
+          project_id: string
+          resolved_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          due_date?: string | null
+          id?: string
+          lot_id?: string | null
+          meeting_id?: string | null
+          photo_urls?: string[] | null
+          priority?: string | null
+          project_id?: string
+          resolved_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_observations_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "project_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_observations_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "project_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_observations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_observations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_phases: {
+        Row: {
+          color: string | null
+          created_at: string | null
           description: string | null
           end_date: string | null
           id: string
           name: string
-          phase: string | null
+          project_id: string
+          sort_order: number | null
           start_date: string | null
           status: string | null
           updated_at: string | null
           workspace_id: string
         }
         Insert: {
-          budget?: number | null
-          client?: string | null
           color?: string | null
           created_at?: string | null
-          created_by?: string | null
           description?: string | null
           end_date?: string | null
           id?: string
           name: string
-          phase?: string | null
+          project_id: string
+          sort_order?: number | null
           start_date?: string | null
           status?: string | null
           updated_at?: string | null
           workspace_id: string
         }
         Update: {
-          budget?: number | null
-          client?: string | null
           color?: string | null
           created_at?: string | null
-          created_by?: string | null
           description?: string | null
           end_date?: string | null
           id?: string
           name?: string
-          phase?: string | null
+          project_id?: string
+          sort_order?: number | null
           start_date?: string | null
           status?: string | null
           updated_at?: string | null
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_phases_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_phases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          address: string | null
+          ai_summary: string | null
+          budget: number | null
+          city: string | null
+          client: string | null
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          crm_company_id: string | null
+          current_phase_id: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          phase: string | null
+          project_type: string | null
+          start_date: string | null
+          status: string | null
+          surface_area: number | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          address?: string | null
+          ai_summary?: string | null
+          budget?: number | null
+          city?: string | null
+          client?: string | null
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          crm_company_id?: string | null
+          current_phase_id?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          phase?: string | null
+          project_type?: string | null
+          start_date?: string | null
+          status?: string | null
+          surface_area?: number | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          address?: string | null
+          ai_summary?: string | null
+          budget?: number | null
+          city?: string | null
+          client?: string | null
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          crm_company_id?: string | null
+          current_phase_id?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          phase?: string | null
+          project_type?: string | null
+          start_date?: string | null
+          status?: string | null
+          surface_area?: number | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_current_phase_id_fkey"
+            columns: ["current_phase_id"]
+            isOneToOne: false
+            referencedRelation: "project_phases"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "projects_workspace_id_fkey"
             columns: ["workspace_id"]
