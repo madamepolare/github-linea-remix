@@ -7,6 +7,7 @@ export interface TaskExchange {
   id: string;
   task_id: string;
   workspace_id: string;
+  title: string | null;
   content: string;
   created_by: string | null;
   created_at: string | null;
@@ -33,13 +34,14 @@ export function useTaskExchanges(taskId: string | null) {
   });
 
   const createExchange = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ title, content }: { title: string; content: string }) => {
       if (!taskId || !activeWorkspace) throw new Error("Missing task or workspace");
       const { data, error } = await supabase
         .from("task_exchanges")
         .insert({
           task_id: taskId,
           workspace_id: activeWorkspace.id,
+          title,
           content,
           created_by: user?.id,
         })
