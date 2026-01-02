@@ -54,13 +54,21 @@ export function FeeCalculator({
 
   const total = calculateTotal();
 
-  // Calculate phase amounts based on total
+  // Calculate phase amounts based on total and normalized by total percentage
   const getPhaseAmount = (phase: CommercialDocumentPhase) => {
-    if (document.fee_mode === 'fixed' || document.fee_mode === 'mixed') {
-      return (document.total_amount || 0) * (phase.percentage_fee / 100);
+    const normalizedPercentage = totalPercentagePhases > 0 
+      ? phase.percentage_fee / totalPercentagePhases 
+      : 0;
+
+    if (document.fee_mode === 'fixed' || document.fee_mode === 'mixed' || !document.fee_mode) {
+      return (document.total_amount || 0) * normalizedPercentage;
     }
     if (document.fee_mode === 'percentage' && baseFee) {
-      return baseFee * (phase.percentage_fee / 100);
+      return baseFee * normalizedPercentage;
+    }
+    if (document.fee_mode === 'hourly' && document.hourly_rate) {
+      const estimatedTotal = includedPhases.length * 40 * document.hourly_rate;
+      return estimatedTotal * normalizedPercentage;
     }
     return phase.amount || 0;
   };
