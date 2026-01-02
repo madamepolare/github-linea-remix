@@ -477,6 +477,9 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
         meetingId={meeting.id}
         currentNotes={localMeeting.notes}
         currentAttendees={localMeeting.attendees}
+        onRestore={(notes, attendees) => {
+          setLocalMeeting({ ...localMeeting, notes, attendees });
+        }}
       />
     </div>
   );
