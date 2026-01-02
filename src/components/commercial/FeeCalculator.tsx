@@ -24,11 +24,14 @@ export function FeeCalculator({
   const includedPhases = phases.filter(p => p.is_included);
   const totalPercentagePhases = includedPhases.reduce((sum, p) => sum + p.percentage_fee, 0);
 
+  // Use construction_budget as the reference for percentage calculations
+  const constructionBudget = document.construction_budget || 0;
+
   const calculateTotal = () => {
     switch (document.fee_mode) {
       case 'percentage':
-        if (document.project_budget && document.fee_percentage) {
-          const baseFee = document.project_budget * (document.fee_percentage / 100);
+        if (constructionBudget && document.fee_percentage) {
+          const baseFee = constructionBudget * (document.fee_percentage / 100);
           return baseFee * (totalPercentagePhases / 100);
         }
         return 0;
@@ -36,23 +39,26 @@ export function FeeCalculator({
         return document.total_amount || 0;
       case 'hourly':
         if (document.hourly_rate) {
-          // Estimate based on phases
-          return includedPhases.length * 40 * document.hourly_rate; // 40h estimate per phase
+          return includedPhases.length * 40 * document.hourly_rate;
         }
         return 0;
       case 'mixed':
-        // For mixed, use total_amount as base
         return document.total_amount || 0;
       default:
         return document.total_amount || 0;
     }
   };
 
-  const baseFee = document.project_budget && document.fee_percentage
-    ? document.project_budget * (document.fee_percentage / 100)
+  const baseFee = constructionBudget && document.fee_percentage
+    ? constructionBudget * (document.fee_percentage / 100)
     : document.total_amount || 0;
 
   const total = calculateTotal();
+
+  // Calculate fee percentage relative to construction budget
+  const feePercentageOfBudget = constructionBudget > 0 && total > 0
+    ? (total / constructionBudget) * 100
+    : null;
 
   // Calculate phase amounts based on total and normalized by total percentage
   const getPhaseAmount = (phase: CommercialDocumentPhase) => {
@@ -136,13 +142,17 @@ export function FeeCalculator({
                   <Label>Budget travaux (€)</Label>
                   <Input
                     type="number"
-                    value={document.project_budget || ''}
+                    value={document.construction_budget || ''}
                     onChange={(e) => onDocumentChange({ 
                       ...document, 
-                      project_budget: parseFloat(e.target.value) || undefined 
+                      construction_budget: parseFloat(e.target.value) || undefined,
+                      construction_budget_disclosed: true
                     })}
                     placeholder="0"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Lié au budget travaux de l'onglet Général
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Taux d'honoraires (%)</Label>
@@ -162,7 +172,7 @@ export function FeeCalculator({
               {baseFee > 0 && (
                 <div className="p-3 bg-muted rounded-lg">
                   <div className="flex justify-between text-sm">
-                    <span>Base de calcul ({document.fee_percentage}% de {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(document.project_budget || 0)})</span>
+                    <span>Base de calcul ({document.fee_percentage}% de {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(constructionBudget)})</span>
                     <span className="font-medium">
                       {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(baseFee)}
                     </span>
@@ -218,6 +228,21 @@ export function FeeCalculator({
                 {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(total)}
               </span>
             </div>
+
+            {/* Fee percentage of construction budget */}
+            {feePercentageOfBudget !== null && (
+              <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Ratio honoraires / travaux</span>
+                  <span className="font-semibold text-primary">
+                    {feePercentageOfBudget.toFixed(2)}%
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Sur un budget travaux de {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(constructionBudget)}
+                </p>
+              </div>
+            )}
 
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>TVA (20%)</span>
