@@ -75,7 +75,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const { events, isLoading: eventsLoading, createEvent, updateEvent, deleteEvent } = useCalendarEvents(projectId);
   const { phases, updatePhase } = useProjectPhases(projectId);
   const { deliverables, createDeliverable } = useProjectDeliverables(projectId);
-  const { tasks, createTask } = useTasks();
+  const { tasks, createTask, updateTask, deleteTask } = useTasks();
   const { quickTasks, pendingTasks, createQuickTask } = useQuickTasksDB();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -113,6 +113,21 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const [projectTaskDescription, setProjectTaskDescription] = useState("");
   const [projectTaskPriority, setProjectTaskPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
 
+  // Edit task dialog
+  const [editingTask, setEditingTask] = useState<any>(null);
+  const [editTaskTitle, setEditTaskTitle] = useState("");
+  const [editTaskDescription, setEditTaskDescription] = useState("");
+  const [editTaskPriority, setEditTaskPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
+  const [editTaskDueDate, setEditTaskDueDate] = useState("");
+  const [editTaskStatus, setEditTaskStatus] = useState<"todo" | "in_progress" | "review" | "done">("todo");
+
+  // Calendar filters
+  const [showPhases, setShowPhases] = useState(true);
+  const [showEvents, setShowEvents] = useState(true);
+  const [showTasks, setShowTasks] = useState(true);
+  const [showQuickTasks, setShowQuickTasks] = useState(true);
+  const [showDeliverables, setShowDeliverables] = useState(true);
+
   // Project-specific tasks
   const projectTasks = useMemo(() => {
     return (tasks || []).filter(t => t.project_id === projectId && t.due_date);
@@ -123,123 +138,133 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
     return (pendingTasks || []).filter(t => t.due_date);
   }, [pendingTasks]);
 
-  // Convert all items to FullCalendar events
+  // Convert all items to FullCalendar events (with filters)
   const calendarEvents = useMemo<FCEvent[]>(() => {
     const fcEvents: FCEvent[] = [];
 
     // Phases as background events (editable)
-    phases.forEach(phase => {
-      if (phase.start_date && phase.end_date) {
-        fcEvents.push({
-          id: `phase-${phase.id}`,
-          title: phase.name,
-          start: phase.start_date,
-          end: addDays(parseISO(phase.end_date), 1).toISOString().split("T")[0], // FullCalendar end is exclusive
-          allDay: true,
-          backgroundColor: `${phase.color || "#3B82F6"}30`,
-          borderColor: phase.color || "#3B82F6",
-          textColor: phase.color || "#3B82F6",
-          display: "background",
-          extendedProps: {
-            type: "phase",
-            originalData: phase,
-          },
-        });
-        // Also add a regular event for the phase label (clickable)
-        fcEvents.push({
-          id: `phase-label-${phase.id}`,
-          title: `📋 ${phase.name}`,
-          start: phase.start_date,
-          end: addDays(parseISO(phase.end_date), 1).toISOString().split("T")[0],
-          allDay: true,
-          backgroundColor: `${phase.color || "#3B82F6"}`,
-          borderColor: phase.color || "#3B82F6",
-          textColor: "#FFFFFF",
-          extendedProps: {
-            type: "phase",
-            originalData: phase,
-          },
-        });
-      }
-    });
+    if (showPhases) {
+      phases.forEach(phase => {
+        if (phase.start_date && phase.end_date) {
+          fcEvents.push({
+            id: `phase-${phase.id}`,
+            title: phase.name,
+            start: phase.start_date,
+            end: addDays(parseISO(phase.end_date), 1).toISOString().split("T")[0], // FullCalendar end is exclusive
+            allDay: true,
+            backgroundColor: `${phase.color || "#3B82F6"}30`,
+            borderColor: phase.color || "#3B82F6",
+            textColor: phase.color || "#3B82F6",
+            display: "background",
+            extendedProps: {
+              type: "phase",
+              originalData: phase,
+            },
+          });
+          // Also add a regular event for the phase label (clickable)
+          fcEvents.push({
+            id: `phase-label-${phase.id}`,
+            title: `📋 ${phase.name}`,
+            start: phase.start_date,
+            end: addDays(parseISO(phase.end_date), 1).toISOString().split("T")[0],
+            allDay: true,
+            backgroundColor: `${phase.color || "#3B82F6"}`,
+            borderColor: phase.color || "#3B82F6",
+            textColor: "#FFFFFF",
+            extendedProps: {
+              type: "phase",
+              originalData: phase,
+            },
+          });
+        }
+      });
+    }
 
     // Calendar events (meetings, milestones)
-    events.forEach(event => {
-      fcEvents.push({
-        id: `event-${event.id}`,
-        title: event.title,
-        start: event.start_datetime,
-        end: event.end_datetime || undefined,
-        allDay: event.is_all_day,
-        backgroundColor: event.event_type === "meeting" ? "#8B5CF6" : 
-                         event.event_type === "milestone" ? "#F59E0B" : "#6B7280",
-        borderColor: "transparent",
-        textColor: "#FFFFFF",
-        extendedProps: {
-          type: "event",
-          originalData: event,
-        },
+    if (showEvents) {
+      events.forEach(event => {
+        fcEvents.push({
+          id: `event-${event.id}`,
+          title: event.title,
+          start: event.start_datetime,
+          end: event.end_datetime || undefined,
+          allDay: event.is_all_day,
+          backgroundColor: event.event_type === "meeting" ? "#8B5CF6" : 
+                           event.event_type === "milestone" ? "#F59E0B" : "#6B7280",
+          borderColor: "transparent",
+          textColor: "#FFFFFF",
+          extendedProps: {
+            type: "event",
+            originalData: event,
+          },
+        });
       });
-    });
+    }
 
     // Deliverables
-    deliverables.forEach(deliverable => {
-      if (deliverable.due_date) {
-        fcEvents.push({
-          id: `deliverable-${deliverable.id}`,
-          title: `📦 ${deliverable.name}`,
-          start: deliverable.due_date,
-          allDay: true,
-          backgroundColor: deliverable.status === "delivered" || deliverable.status === "validated" 
-            ? "#10B981" : "#EF4444",
-          borderColor: "transparent",
-          textColor: "#FFFFFF",
-          extendedProps: {
-            type: "deliverable",
-            originalData: deliverable,
-          },
-        });
-      }
-    });
+    if (showDeliverables) {
+      deliverables.forEach(deliverable => {
+        if (deliverable.due_date) {
+          fcEvents.push({
+            id: `deliverable-${deliverable.id}`,
+            title: `📦 ${deliverable.name}`,
+            start: deliverable.due_date,
+            allDay: true,
+            backgroundColor: deliverable.status === "delivered" || deliverable.status === "validated" 
+              ? "#10B981" : "#EF4444",
+            borderColor: "transparent",
+            textColor: "#FFFFFF",
+            extendedProps: {
+              type: "deliverable",
+              originalData: deliverable,
+            },
+          });
+        }
+      });
+    }
 
     // Tasks
-    projectTasks.forEach(task => {
-      if (task.due_date) {
+    if (showTasks) {
+      projectTasks.forEach(task => {
+        if (task.due_date) {
+          fcEvents.push({
+            id: `task-${task.id}`,
+            title: `✓ ${task.title}`,
+            start: task.due_date,
+            allDay: true,
+            backgroundColor: task.status === "done" ? "#10B981" : "#3B82F6",
+            borderColor: "transparent",
+            textColor: "#FFFFFF",
+            extendedProps: {
+              type: "task",
+              originalData: task,
+            },
+          });
+        }
+      });
+    }
+
+    // Quick tasks
+    if (showQuickTasks) {
+      quickTasksWithDates.forEach(qt => {
         fcEvents.push({
-          id: `task-${task.id}`,
-          title: `✓ ${task.title}`,
-          start: task.due_date,
+          id: `quicktask-${qt.id}`,
+          title: `⚡ ${qt.title}`,
+          start: qt.due_date!,
           allDay: true,
-          backgroundColor: task.status === "done" ? "#10B981" : "#3B82F6",
+          backgroundColor: "#F97316",
           borderColor: "transparent",
           textColor: "#FFFFFF",
           extendedProps: {
-            type: "task",
-            originalData: task,
+            type: "quicktask",
+            originalData: qt,
           },
         });
-      }
-    });
-
-    // Quick tasks
-    quickTasksWithDates.forEach(qt => {
-      fcEvents.push({
-        id: `quicktask-${qt.id}`,
-        title: `⚡ ${qt.title}`,
-        start: qt.due_date!,
-        allDay: true,
-        backgroundColor: "#F97316",
-        borderColor: "transparent",
-        textColor: "#FFFFFF",
-        extendedProps: {
-          type: "quicktask",
-          originalData: qt,
-        },
       });
-    });
+    }
 
     return fcEvents;
-  }, [phases, events, deliverables, projectTasks, quickTasksWithDates]);
+  }, [phases, events, deliverables, projectTasks, quickTasksWithDates, showPhases, showEvents, showTasks, showQuickTasks, showDeliverables]);
 
   const resetForm = () => {
     setFormTitle("");
@@ -355,8 +380,16 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       setEditingPhase(originalData);
       setPhaseStartDate(originalData.start_date || "");
       setPhaseEndDate(originalData.end_date || "");
+    } else if (type === "task") {
+      // Open task edit dialog
+      setEditingTask(originalData);
+      setEditTaskTitle(originalData.title || "");
+      setEditTaskDescription(originalData.description || "");
+      setEditTaskPriority(originalData.priority || "medium");
+      setEditTaskDueDate(originalData.due_date || "");
+      setEditTaskStatus(originalData.status || "todo");
     }
-    // For tasks and deliverables - could open their respective dialogs in the future
+    // For deliverables and quick tasks - could open their respective dialogs in the future
   };
 
   const handleDateClick = (info: any) => {
@@ -459,6 +492,16 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
         end_date: newEndDate,
       });
       toast.success("Phase déplacée");
+    } else if (type === "task") {
+      // Task dragged - update due date
+      const newStart = info.event.start;
+      const newDueDate = format(newStart, "yyyy-MM-dd");
+      
+      updateTask.mutate({
+        id: originalData.id,
+        due_date: newDueDate,
+      });
+      toast.success("Tâche déplacée");
     } else {
       // Revert for other types
       info.revert();
@@ -503,6 +546,30 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
     toast.success("Phase mise à jour");
   };
 
+  const handleUpdateTask = () => {
+    if (!editingTask || !editTaskTitle.trim()) return;
+    
+    updateTask.mutate({
+      id: editingTask.id,
+      title: editTaskTitle.trim(),
+      description: editTaskDescription.trim() || null,
+      priority: editTaskPriority,
+      due_date: editTaskDueDate || null,
+      status: editTaskStatus,
+    });
+    
+    setEditingTask(null);
+    toast.success("Tâche mise à jour");
+  };
+
+  const handleDeleteTask = () => {
+    if (!editingTask) return;
+    if (confirm("Supprimer cette tâche ?")) {
+      deleteTask.mutate(editingTask.id);
+      setEditingTask(null);
+    }
+  };
+
   if (eventsLoading) {
     return (
       <div className="space-y-4">
@@ -514,34 +581,61 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-xs flex-wrap">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-violet-500" />
-              <span>Réunions</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-amber-500" />
-              <span>Jalons</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-blue-500" />
-              <span>Tâches</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-orange-500" />
-              <span>Tâches rapides</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded bg-red-500" />
-              <span>Livrables</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-sm border-2 border-primary/50 bg-primary/10" />
+      {/* Header with filters */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Filter toggles */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <button
+              onClick={() => setShowPhases(!showPhases)}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-full border transition-colors",
+                showPhases ? "bg-primary/10 border-primary/30" : "bg-muted/50 border-border opacity-50"
+              )}
+            >
+              <div className="w-2.5 h-2.5 rounded-sm border-2 border-primary/50 bg-primary/10" />
               <span>Phases</span>
-            </div>
+            </button>
+            <button
+              onClick={() => setShowEvents(!showEvents)}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-full border transition-colors",
+                showEvents ? "bg-violet-500/10 border-violet-500/30" : "bg-muted/50 border-border opacity-50"
+              )}
+            >
+              <div className="w-2.5 h-2.5 rounded bg-violet-500" />
+              <span>Événements</span>
+            </button>
+            <button
+              onClick={() => setShowTasks(!showTasks)}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-full border transition-colors",
+                showTasks ? "bg-blue-500/10 border-blue-500/30" : "bg-muted/50 border-border opacity-50"
+              )}
+            >
+              <div className="w-2.5 h-2.5 rounded bg-blue-500" />
+              <span>Tâches</span>
+            </button>
+            <button
+              onClick={() => setShowQuickTasks(!showQuickTasks)}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-full border transition-colors",
+                showQuickTasks ? "bg-orange-500/10 border-orange-500/30" : "bg-muted/50 border-border opacity-50"
+              )}
+            >
+              <div className="w-2.5 h-2.5 rounded bg-orange-500" />
+              <span>Rapides</span>
+            </button>
+            <button
+              onClick={() => setShowDeliverables(!showDeliverables)}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-full border transition-colors",
+                showDeliverables ? "bg-red-500/10 border-red-500/30" : "bg-muted/50 border-border opacity-50"
+              )}
+            >
+              <div className="w-2.5 h-2.5 rounded bg-red-500" />
+              <span>Livrables</span>
+            </button>
           </div>
         </div>
         <Button size="sm" onClick={() => openCreateDialog()}>
@@ -1063,6 +1157,109 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
             <Button onClick={handleCreateProjectTask} disabled={!projectTaskTitle.trim()}>
               Créer
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={!!editingTask} onOpenChange={(open) => !open && setEditingTask(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckSquare className="h-4 w-4 text-blue-500" />
+              Modifier la tâche
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Titre *</Label>
+              <Input
+                value={editTaskTitle}
+                onChange={(e) => setEditTaskTitle(e.target.value)}
+                placeholder="Titre de la tâche"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Échéance</Label>
+                <Input
+                  type="date"
+                  value={editTaskDueDate}
+                  onChange={(e) => setEditTaskDueDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Statut</Label>
+                <Select value={editTaskStatus} onValueChange={(v) => setEditTaskStatus(v as any)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todo">À faire</SelectItem>
+                    <SelectItem value="in_progress">En cours</SelectItem>
+                    <SelectItem value="review">En revue</SelectItem>
+                    <SelectItem value="done">Terminée</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Priorité</Label>
+              <Select value={editTaskPriority} onValueChange={(v) => setEditTaskPriority(v as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-3 w-3 text-gray-400" />
+                      Basse
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="medium">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-3 w-3 text-blue-500" />
+                      Moyenne
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="high">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-3 w-3 text-orange-500" />
+                      Haute
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="urgent">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-3 w-3 text-red-500" />
+                      Urgente
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={editTaskDescription}
+                onChange={(e) => setEditTaskDescription(e.target.value)}
+                placeholder="Détails de la tâche..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex justify-between sm:justify-between">
+            <Button variant="destructive" size="sm" onClick={handleDeleteTask}>
+              <Trash2 className="h-4 w-4 mr-1" />
+              Supprimer
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEditingTask(null)}>
+                Annuler
+              </Button>
+              <Button onClick={handleUpdateTask} disabled={!editTaskTitle.trim()}>
+                Enregistrer
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
