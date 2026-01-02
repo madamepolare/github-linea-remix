@@ -18,6 +18,7 @@ import { fr } from "date-fns/locale";
 import { generateMeetingPDF } from "@/lib/generateMeetingPDF";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft, Download, Loader2, Mail, Save, Sparkles, History,
   FileText, TrendingUp, AlertTriangle, Paperclip, CheckSquare,
@@ -283,6 +284,32 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
     .filter(m => m.id !== meeting.id && new Date(m.meeting_date) < new Date(meeting.meeting_date))
     .sort((a, b) => new Date(b.meeting_date).getTime() - new Date(a.meeting_date).getTime());
 
+  // Calculate report completion progress
+  const calculateProgress = () => {
+    const sections = [
+      // General tab
+      !!localMeeting.title,
+      !!localMeeting.meeting_date,
+      (localMeeting.attendees || []).length > 0,
+      !!reportData.context,
+      // Progress tab
+      !!reportData.general_progress?.comment,
+      (reportData.lot_progress || []).length > 0,
+      // Points tab
+      attentionItems.length > 0 || meetingObservations.length > 0 || (reportData.technical_decisions || []).length > 0,
+      (reportData.blocking_points || []).length > 0 || !!reportData.planning?.delays_noted,
+      // Annexes tab
+      (reportData.documents || []).length > 0,
+      // Closure tab
+      !!reportData.next_meeting?.date,
+      !!reportData.legal_mention,
+    ];
+    const completed = sections.filter(Boolean).length;
+    return Math.round((completed / sections.length) * 100);
+  };
+
+  const progressValue = calculateProgress();
+
   // Prepare contacts for GeneralTab
   const contactsForGeneralTab = allContacts.map(c => ({
     id: c.id,
@@ -337,6 +364,14 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
           </Button>
           <LoadTemplateDialog onSelectTemplate={handleApplyTemplate} />
         </div>
+      </div>
+
+      {/* Progress Indicator */}
+      <div className="flex items-center gap-3 px-1">
+        <Progress value={progressValue} className="h-2 flex-1" />
+        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+          {progressValue}% complété
+        </span>
       </div>
 
       {/* Main Content with Tabs */}
