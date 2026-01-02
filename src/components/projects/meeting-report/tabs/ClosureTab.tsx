@@ -11,7 +11,7 @@ import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { TasksSection } from "../TasksSection";
 import { ReportData, DistributionRecipient } from "@/hooks/useMeetingReportData";
 import { AttendeeWithType, ExternalTask } from "../types";
-import { Task } from "@/lib/taskTypes";
+import { Task } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 import { parseISO } from "date-fns";
 import {
