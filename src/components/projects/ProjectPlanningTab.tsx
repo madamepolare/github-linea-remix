@@ -68,6 +68,8 @@ interface FCEvent {
   borderColor?: string;
   textColor?: string;
   display?: string;
+  editable?: boolean;
+  durationEditable?: boolean;
   extendedProps: {
     type: "phase" | "event" | "task" | "deliverable" | "quicktask";
     originalData: any;
@@ -152,12 +154,13 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
             borderColor: phase.color || "#3B82F6",
             textColor: phase.color || "#3B82F6",
             display: "background",
+            editable: false, // Background events are not draggable
             extendedProps: {
               type: "phase",
               originalData: phase,
             },
           });
-          // Also add a regular event for the phase label (clickable)
+          // Also add a regular event for the phase label (clickable & draggable)
           fcEvents.push({
             id: `phase-label-${phase.id}`,
             title: `📋 ${phase.name}`,
@@ -167,6 +170,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
             backgroundColor: `${phase.color || "#3B82F6"}`,
             borderColor: phase.color || "#3B82F6",
             textColor: "#FFFFFF",
+            editable: true,
             extendedProps: {
               type: "phase",
               originalData: phase,
@@ -176,7 +180,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       });
     }
 
-    // Calendar events (meetings, milestones)
+    // Calendar events (meetings, milestones) - fully editable
     if (showEvents) {
       events.forEach(event => {
         fcEvents.push({
@@ -189,6 +193,8 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
                            event.event_type === "milestone" ? "#F59E0B" : "#6B7280",
           borderColor: "transparent",
           textColor: "#FFFFFF",
+          editable: true,
+          durationEditable: true,
           extendedProps: {
             type: "event",
             originalData: event,
@@ -197,7 +203,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       });
     }
 
-    // Deliverables
+    // Deliverables - read only for now
     if (showDeliverables) {
       deliverables.forEach(deliverable => {
         if (deliverable.due_date) {
@@ -210,6 +216,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
               ? "#10B981" : "#EF4444",
             borderColor: "transparent",
             textColor: "#FFFFFF",
+            editable: false,
             extendedProps: {
               type: "deliverable",
               originalData: deliverable,
@@ -219,7 +226,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       });
     }
 
-    // Tasks
+    // Tasks - draggable to change due date
     if (showTasks) {
       projectTasks.forEach(task => {
         if (task.due_date) {
@@ -231,6 +238,8 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
             backgroundColor: task.status === "done" ? "#10B981" : "#3B82F6",
             borderColor: "transparent",
             textColor: "#FFFFFF",
+            editable: true,
+            durationEditable: false,
             extendedProps: {
               type: "task",
               originalData: task,
@@ -240,7 +249,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       });
     }
 
-    // Quick tasks
+    // Quick tasks - read only for now
     if (showQuickTasks) {
       quickTasksWithDates.forEach(qt => {
         fcEvents.push({
@@ -251,6 +260,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
           backgroundColor: "#F97316",
           borderColor: "transparent",
           textColor: "#FFFFFF",
+          editable: false,
           extendedProps: {
             type: "quicktask",
             originalData: qt,
@@ -386,7 +396,29 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const handleDateClick = (info: any) => {
     const dateStr = format(info.date, "yyyy-MM-dd");
     setQuickCreateDate(dateStr);
+    setFormEndDate(dateStr); // Also set end date for single day
     setIsQuickCreateOpen(true);
+  };
+
+  // Handle multi-day selection for creating events spanning multiple days
+  const handleSelect = (info: any) => {
+    const startStr = format(info.start, "yyyy-MM-dd");
+    const endStr = format(addDays(info.end, -1), "yyyy-MM-dd"); // FullCalendar end is exclusive
+    
+    // If it's a multi-day selection (more than 1 day)
+    if (differenceInDays(info.end, info.start) > 1) {
+      // Open event creation directly with multi-day range
+      resetForm();
+      setFormStartDate(startStr);
+      setFormEndDate(endStr);
+      setFormIsAllDay(true);
+      setIsCreateOpen(true);
+    } else {
+      // Single day - show quick create menu
+      setQuickCreateDate(startStr);
+      setFormEndDate(startStr);
+      setIsQuickCreateOpen(true);
+    }
   };
 
   const handleQuickCreateSelect = (type: "event" | "quicktask" | "deliverable" | "projecttask") => {
@@ -613,6 +645,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
           dayMaxEvents={3}
           weekends={true}
           nowIndicator={true}
+          select={handleSelect}
           dateClick={handleDateClick}
           eventClick={handleEventClick}
           eventDrop={handleEventDrop}
