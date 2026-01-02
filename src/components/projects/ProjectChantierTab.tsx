@@ -35,6 +35,8 @@ import { LOT_STATUS, OBSERVATION_STATUS, OBSERVATION_PRIORITY } from "@/lib/proj
 import { generateMeetingPDF } from "@/lib/generateMeetingPDF";
 import { ChantierGantt } from "./ChantierGantt";
 import { MeetingReportBuilder } from "./MeetingReportBuilder";
+import { LoadLotsTemplateDialog } from "./LoadLotsTemplateDialog";
+import { DefaultLot } from "@/lib/defaultLots";
 import {
   AlertCircle,
   Building2,
@@ -44,6 +46,7 @@ import {
   Clock,
   Download,
   Eye,
+  FileStack,
   FileText,
   GanttChart,
   Hammer,
@@ -193,8 +196,10 @@ function ReportsSection({ projectId, onOpenReport }: { projectId: string; onOpen
 // Lots Section
 function LotsSection({ projectId }: { projectId: string }) {
   const { lots, lotsLoading, createLot, updateLot, deleteLot } = useChantier(projectId);
+  const { project } = useProject(projectId);
   const { companies } = useCRMCompanies();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isTemplateOpen, setIsTemplateOpen] = useState(false);
   const [editingLot, setEditingLot] = useState<ProjectLot | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "gantt">("list");
 
@@ -212,6 +217,17 @@ function LotsSection({ projectId }: { projectId: string }) {
     setFormStartDate(null);
     setFormEndDate(null);
     setFormStatus("pending");
+  };
+
+  const handleLoadLots = (lotsToLoad: DefaultLot[]) => {
+    lotsToLoad.forEach((lot, index) => {
+      createLot.mutate({
+        name: lot.name,
+        status: "pending",
+        sort_order: lots.length + index,
+      });
+    });
+    toast.success(`${lotsToLoad.length} lots importés`);
   };
 
   const openEditDialog = (lot: ProjectLot) => {
@@ -281,8 +297,14 @@ function LotsSection({ projectId }: { projectId: string }) {
         <EmptyState
           icon={Hammer}
           title="Aucun lot"
-          description="Créez des lots pour organiser le chantier."
-          action={{ label: "Ajouter un lot", onClick: () => setIsCreateOpen(true) }}
+          description="Créez des lots ou chargez un modèle prédéfini."
+          action={{ label: "Charger un modèle", onClick: () => setIsTemplateOpen(true) }}
+        />
+        <LoadLotsTemplateDialog
+          isOpen={isTemplateOpen}
+          onClose={() => setIsTemplateOpen(false)}
+          projectType={project?.project_type || null}
+          onLoadLots={handleLoadLots}
         />
         <LotDialog
           isOpen={isCreateOpen}
@@ -322,29 +344,33 @@ function LotsSection({ projectId }: { projectId: string }) {
             >
               <List className="h-4 w-4" />
             </Button>
-            <Button
-              variant={viewMode === "gantt" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 px-2"
-              onClick={() => setViewMode("gantt")}
-            >
-              <GanttChart className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
-            <Plus className="h-4 w-4 mr-1" />
-            Ajouter
+          <Button
+            variant={viewMode === "gantt" ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 px-2"
+            onClick={() => setViewMode("gantt")}
+          >
+            <GanttChart className="h-4 w-4" />
           </Button>
         </div>
+        <Button variant="outline" size="sm" onClick={() => setIsTemplateOpen(true)}>
+          <FileStack className="h-4 w-4 mr-1" />
+          Modèle
+        </Button>
+        <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+          <Plus className="h-4 w-4 mr-1" />
+          Ajouter
+        </Button>
       </div>
+    </div>
 
-      {viewMode === "gantt" ? (
-        <ChantierGantt
-          lots={lots}
-          onUpdateLot={handleGanttUpdate}
-          companies={companies}
-        />
-      ) : (
+    {viewMode === "gantt" ? (
+      <ChantierGantt
+        lots={lots}
+        onUpdateLot={handleGanttUpdate}
+        companies={companies}
+      />
+    ) : (
         <div className="grid gap-3">
           {lots.map((lot) => {
             const statusConfig = LOT_STATUS.find(s => s.value === lot.status) || LOT_STATUS[0];
@@ -423,27 +449,34 @@ function LotsSection({ projectId }: { projectId: string }) {
         </div>
       )}
 
-      <LotDialog
-        isOpen={isCreateOpen || !!editingLot}
-        onClose={() => { setIsCreateOpen(false); setEditingLot(null); resetForm(); }}
-        formName={formName}
-        setFormName={setFormName}
-        formCompanyId={formCompanyId}
-        setFormCompanyId={setFormCompanyId}
-        formBudget={formBudget}
-        setFormBudget={setFormBudget}
-        formStartDate={formStartDate}
-        setFormStartDate={setFormStartDate}
-        formEndDate={formEndDate}
-        setFormEndDate={setFormEndDate}
-        formStatus={formStatus}
-        setFormStatus={setFormStatus}
-        entreprises={entreprises}
-        onSubmit={editingLot ? handleUpdate : handleCreate}
-        isEdit={!!editingLot}
-      />
-    </div>
-  );
+    <LotDialog
+      isOpen={isCreateOpen || !!editingLot}
+      onClose={() => { setIsCreateOpen(false); setEditingLot(null); resetForm(); }}
+      formName={formName}
+      setFormName={setFormName}
+      formCompanyId={formCompanyId}
+      setFormCompanyId={setFormCompanyId}
+      formBudget={formBudget}
+      setFormBudget={setFormBudget}
+      formStartDate={formStartDate}
+      setFormStartDate={setFormStartDate}
+      formEndDate={formEndDate}
+      setFormEndDate={setFormEndDate}
+      formStatus={formStatus}
+      setFormStatus={setFormStatus}
+      entreprises={entreprises}
+      onSubmit={editingLot ? handleUpdate : handleCreate}
+      isEdit={!!editingLot}
+    />
+
+    <LoadLotsTemplateDialog
+      isOpen={isTemplateOpen}
+      onClose={() => setIsTemplateOpen(false)}
+      projectType={project?.project_type || null}
+      onLoadLots={handleLoadLots}
+    />
+  </div>
+);
 }
 
 // Lot Dialog Component (Create/Edit)
