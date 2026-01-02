@@ -582,6 +582,45 @@ export type Database = {
           },
         ]
       }
+      phase_dependencies: {
+        Row: {
+          created_at: string | null
+          depends_on_phase_id: string
+          id: string
+          lag_days: number | null
+          phase_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          depends_on_phase_id: string
+          id?: string
+          lag_days?: number | null
+          phase_id: string
+        }
+        Update: {
+          created_at?: string | null
+          depends_on_phase_id?: string
+          id?: string
+          lag_days?: number | null
+          phase_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phase_dependencies_depends_on_phase_id_fkey"
+            columns: ["depends_on_phase_id"]
+            isOneToOne: false
+            referencedRelation: "project_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phase_dependencies_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "project_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           active_workspace_id: string | null

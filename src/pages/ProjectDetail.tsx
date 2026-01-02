@@ -357,9 +357,9 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                       )}>
                         {phase.name}
                       </p>
-                      {phase.start_date && phase.end_date && (
+                      {phase.end_date && (
                         <p className="text-xs text-muted-foreground">
-                          {format(parseISO(phase.start_date), "d MMM", { locale: fr })} - {format(parseISO(phase.end_date), "d MMM yyyy", { locale: fr })}
+                          Échéance : {format(parseISO(phase.end_date), "d MMM yyyy", { locale: fr })}
                         </p>
                       )}
                     </div>
