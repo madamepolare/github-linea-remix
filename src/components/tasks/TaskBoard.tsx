@@ -1,38 +1,32 @@
 import { useState } from "react";
 import { useTasks, Task } from "@/hooks/useTasks";
+import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
 import { EmptyState } from "@/components/ui/empty-state";
 import { KanbanBoard, KanbanColumn, KanbanCard } from "@/components/shared/KanbanBoard";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CheckSquare, Calendar } from "lucide-react";
+import { CheckSquare, Calendar, MessageSquare, Plus, Building2 } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/taskTypes";
 
-const COLUMNS: { id: Task["status"]; label: string; color: string }[] = [
-  { id: "todo", label: "À faire", color: "#6b7280" },
-  { id: "in_progress", label: "En cours", color: "#3b82f6" },
-  { id: "review", label: "En revue", color: "#8b5cf6" },
-  { id: "done", label: "Terminé", color: "#22c55e" },
-];
-
-const priorityColors: Record<string, string> = {
-  urgent: "bg-red-500/10 text-red-600 border-red-200",
-  high: "bg-orange-500/10 text-orange-600 border-orange-200",
-  medium: "bg-yellow-500/10 text-yellow-600 border-yellow-200",
-  low: "bg-green-500/10 text-green-600 border-green-200",
-};
+const COLUMNS: { id: Task["status"]; label: string; color: string }[] = TASK_STATUSES
+  .filter(s => s.id !== 'archived')
+  .map(s => ({ id: s.id as Task["status"], label: s.label, color: s.color }));
 
 interface TaskBoardProps {
   statusFilter?: string | null;
   priorityFilter?: string | null;
+  entityFilter?: string;
   onCreateTask?: () => void;
 }
 
-export function TaskBoard({ statusFilter, priorityFilter, onCreateTask }: TaskBoardProps) {
+export function TaskBoard({ statusFilter, priorityFilter, entityFilter = "all", onCreateTask }: TaskBoardProps) {
   const { tasks, isLoading, updateTaskStatus } = useTasks();
+  const { companies } = useCRMCompanies();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const handleDrop = (taskId: string, _fromColumn: string, toColumn: string) => {
@@ -43,6 +37,9 @@ export function TaskBoard({ statusFilter, priorityFilter, onCreateTask }: TaskBo
     let filtered = tasks || [];
     if (priorityFilter) {
       filtered = filtered.filter((task) => task.priority === priorityFilter);
+    }
+    if (entityFilter && entityFilter !== "all") {
+      filtered = filtered.filter((task) => task.related_type === entityFilter);
     }
     return filtered;
   };
@@ -60,9 +57,15 @@ export function TaskBoard({ statusFilter, priorityFilter, onCreateTask }: TaskBo
     items: filteredTasks.filter((task) => task.status === col.id),
   }));
 
+  // Get company name by ID
+  const getCompanyName = (companyId: string | null) => {
+    if (!companyId) return null;
+    return companies?.find(c => c.id === companyId)?.name || null;
+  };
+
   // Check if all tasks are empty
   const totalTasks = tasks?.length || 0;
-  if (!isLoading && totalTasks === 0 && !statusFilter && !priorityFilter) {
+  if (!isLoading && totalTasks === 0 && !statusFilter && !priorityFilter && entityFilter === "all") {
     return (
       <EmptyState
         icon={CheckSquare}
@@ -83,6 +86,7 @@ export function TaskBoard({ statusFilter, priorityFilter, onCreateTask }: TaskBo
         renderCard={(task, isDragging) => (
           <TaskKanbanCard
             task={task}
+            companyName={getCompanyName(task.crm_company_id)}
             onClick={() => setSelectedTask(task)}
             isDragging={isDragging}
           />
@@ -104,13 +108,15 @@ export function TaskBoard({ statusFilter, priorityFilter, onCreateTask }: TaskBo
 
 interface TaskKanbanCardProps {
   task: Task;
+  companyName: string | null;
   onClick: () => void;
   isDragging: boolean;
 }
 
-function TaskKanbanCard({ task, onClick, isDragging }: TaskKanbanCardProps) {
+function TaskKanbanCard({ task, companyName, onClick, isDragging }: TaskKanbanCardProps) {
   const completedSubtasks = task.subtasks?.filter((s) => s.status === "done").length || 0;
   const totalSubtasks = task.subtasks?.length || 0;
+  const progress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
 
   const formatDueDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -119,10 +125,27 @@ function TaskKanbanCard({ task, onClick, isDragging }: TaskKanbanCardProps) {
   };
 
   const isOverdue = task.due_date && isPast(new Date(task.due_date)) && task.status !== "done";
+  const priorityConfig = TASK_PRIORITIES.find(p => p.id === task.priority);
+
+  // Get progress bar color based on status
+  const getProgressColor = () => {
+    const statusConfig = TASK_STATUSES.find(s => s.id === task.status);
+    return statusConfig?.dotClass || 'bg-primary/60';
+  };
 
   return (
     <KanbanCard onClick={onClick}>
       <div className="space-y-2.5">
+        {/* Company badge */}
+        {companyName && (
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="text-2xs px-1.5 py-0 gap-1 font-normal bg-muted/50">
+              <Building2 className="h-2.5 w-2.5" />
+              {companyName}
+            </Badge>
+          </div>
+        )}
+
         {/* Title */}
         <p className="text-sm font-medium leading-snug line-clamp-2">{task.title}</p>
 
@@ -147,27 +170,40 @@ function TaskKanbanCard({ task, onClick, isDragging }: TaskKanbanCardProps) {
               <CheckSquare className="h-3 w-3" />
               <span>{completedSubtasks}/{totalSubtasks}</span>
             </div>
-            <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-primary/60 rounded-full transition-all"
-                style={{ width: `${(completedSubtasks / totalSubtasks) * 100}%` }}
+                className={cn("h-full rounded-full transition-all", getProgressColor())}
+                style={{ width: `${progress}%` }}
               />
             </div>
           </div>
         )}
 
-        {/* Footer: Priority, Due Date, Assignees */}
+        {/* Footer: Assignees, Due Date, Comments */}
         <div className="flex items-center justify-between gap-2 pt-1">
           <div className="flex items-center gap-2">
-            {task.priority && (
-              <Badge
-                variant="outline"
-                className={cn("text-2xs capitalize px-1.5 py-0", priorityColors[task.priority])}
-              >
-                {task.priority}
-              </Badge>
+            {/* Assignees */}
+            {task.assigned_to && task.assigned_to.length > 0 && (
+              <div className="flex -space-x-1.5">
+                {task.assigned_to.slice(0, 2).map((userId, i) => (
+                  <Avatar key={userId} className="h-5 w-5 border-2 border-card">
+                    <AvatarFallback className="text-2xs bg-primary/10">
+                      {userId.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+                {task.assigned_to.length > 2 && (
+                  <div className="h-5 w-5 rounded-full bg-muted border-2 border-card flex items-center justify-center">
+                    <span className="text-2xs text-muted-foreground">+{task.assigned_to.length - 2}</span>
+                  </div>
+                )}
+              </div>
             )}
-            {task.due_date && (
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Due date button */}
+            {task.due_date ? (
               <div className={cn(
                 "flex items-center gap-1 text-xs",
                 isOverdue ? "text-destructive" : "text-muted-foreground"
@@ -175,26 +211,18 @@ function TaskKanbanCard({ task, onClick, isDragging }: TaskKanbanCardProps) {
                 <Calendar className="h-3 w-3" />
                 <span>{formatDueDate(task.due_date)}</span>
               </div>
+            ) : (
+              <button className="flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground">
+                <Plus className="h-3 w-3" />
+                <span>Date</span>
+              </button>
             )}
-          </div>
 
-          {/* Assignees */}
-          {task.assigned_to && task.assigned_to.length > 0 && (
-            <div className="flex -space-x-1.5">
-              {task.assigned_to.slice(0, 2).map((userId, i) => (
-                <Avatar key={userId} className="h-5 w-5 border-2 border-card">
-                  <AvatarFallback className="text-2xs bg-primary/10">
-                    {userId.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-              {task.assigned_to.length > 2 && (
-                <div className="h-5 w-5 rounded-full bg-muted border-2 border-card flex items-center justify-center">
-                  <span className="text-2xs text-muted-foreground">+{task.assigned_to.length - 2}</span>
-                </div>
-              )}
+            {/* Comments indicator */}
+            <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
+              <MessageSquare className="h-3 w-3" />
             </div>
-          )}
+          </div>
         </div>
       </div>
     </KanbanCard>

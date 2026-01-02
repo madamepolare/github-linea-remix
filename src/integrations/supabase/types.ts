@@ -682,6 +682,47 @@ export type Database = {
           },
         ]
       }
+      quick_tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          due_date: string | null
+          id: string
+          status: string | null
+          title: string
+          workspace_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          status?: string | null
+          title: string
+          workspace_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          status?: string | null
+          title?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quick_tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_comments: {
         Row: {
           author_id: string | null
@@ -769,6 +810,51 @@ export type Database = {
           },
         ]
       }
+      task_exchanges: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          task_id: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          task_id: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          task_id?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_exchanges_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_exchanges_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_time_entries: {
         Row: {
           created_at: string | null
@@ -830,16 +916,24 @@ export type Database = {
         Row: {
           actual_hours: number | null
           assigned_to: string[] | null
+          brief: string | null
           completed_at: string | null
+          contact_id: string | null
           created_at: string | null
           created_by: string | null
+          crm_company_id: string | null
           description: string | null
           due_date: string | null
+          end_date: string | null
           estimated_hours: number | null
           id: string
+          lead_id: string | null
+          module: string | null
           parent_id: string | null
           priority: string | null
           project_id: string | null
+          related_id: string | null
+          related_type: string | null
           sort_order: number | null
           start_date: string | null
           status: string | null
@@ -851,16 +945,24 @@ export type Database = {
         Insert: {
           actual_hours?: number | null
           assigned_to?: string[] | null
+          brief?: string | null
           completed_at?: string | null
+          contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          crm_company_id?: string | null
           description?: string | null
           due_date?: string | null
+          end_date?: string | null
           estimated_hours?: number | null
           id?: string
+          lead_id?: string | null
+          module?: string | null
           parent_id?: string | null
           priority?: string | null
           project_id?: string | null
+          related_id?: string | null
+          related_type?: string | null
           sort_order?: number | null
           start_date?: string | null
           status?: string | null
@@ -872,16 +974,24 @@ export type Database = {
         Update: {
           actual_hours?: number | null
           assigned_to?: string[] | null
+          brief?: string | null
           completed_at?: string | null
+          contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          crm_company_id?: string | null
           description?: string | null
           due_date?: string | null
+          end_date?: string | null
           estimated_hours?: number | null
           id?: string
+          lead_id?: string | null
+          module?: string | null
           parent_id?: string | null
           priority?: string | null
           project_id?: string | null
+          related_id?: string | null
+          related_type?: string | null
           sort_order?: number | null
           start_date?: string | null
           status?: string | null
@@ -891,6 +1001,27 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_parent_id_fkey"
             columns: ["parent_id"]
