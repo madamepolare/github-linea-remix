@@ -80,7 +80,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const { events, isLoading: eventsLoading, createEvent, updateEvent, deleteEvent } = useCalendarEvents(projectId);
   const { phases, updatePhase } = useProjectPhases(projectId);
-  const { deliverables, createDeliverable } = useProjectDeliverables(projectId);
+  const { deliverables, createDeliverable, updateDeliverable, deleteDeliverable } = useProjectDeliverables(projectId);
   const { tasks, createTask, updateTask, deleteTask } = useTasks();
   const { quickTasks, pendingTasks, createQuickTask } = useQuickTasksDB();
 
@@ -118,6 +118,13 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
 
   // Edit task using TaskDetailSheet
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  
+  // Edit deliverable
+  const [editingDeliverable, setEditingDeliverable] = useState<any | null>(null);
+  const [editDeliverableName, setEditDeliverableName] = useState("");
+  const [editDeliverableDescription, setEditDeliverableDescription] = useState("");
+  const [editDeliverableDueDate, setEditDeliverableDueDate] = useState("");
+  const [editDeliverableStatus, setEditDeliverableStatus] = useState<string>("pending");
 
   // Calendar filters
   const [showPhases, setShowPhases] = useState(true);
@@ -203,7 +210,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       });
     }
 
-    // Deliverables - read only for now
+    // Deliverables - editable
     if (showDeliverables) {
       deliverables.forEach(deliverable => {
         if (deliverable.due_date) {
@@ -216,7 +223,8 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
               ? "#10B981" : "#EF4444",
             borderColor: "transparent",
             textColor: "#FFFFFF",
-            editable: false,
+            editable: true,
+            durationEditable: false,
             extendedProps: {
               type: "deliverable",
               originalData: deliverable,
@@ -389,8 +397,14 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
     } else if (type === "task") {
       // Open TaskDetailSheet for full editing
       setEditingTask(originalData as Task);
+    } else if (type === "deliverable") {
+      // Open deliverable edit dialog
+      setEditingDeliverable(originalData);
+      setEditDeliverableName(originalData.name || "");
+      setEditDeliverableDescription(originalData.description || "");
+      setEditDeliverableDueDate(originalData.due_date || "");
+      setEditDeliverableStatus(originalData.status || "pending");
     }
-    // For deliverables and quick tasks - could open their respective dialogs in the future
   };
 
   const handleDateClick = (info: any) => {
@@ -459,6 +473,28 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
     setDeliverableDescription("");
   };
 
+  const handleUpdateDeliverable = () => {
+    if (!editingDeliverable || !editDeliverableName.trim()) return;
+    
+    updateDeliverable.mutate({
+      id: editingDeliverable.id,
+      name: editDeliverableName.trim(),
+      description: editDeliverableDescription.trim() || null,
+      due_date: editDeliverableDueDate || null,
+      status: editDeliverableStatus as any,
+    });
+    
+    setEditingDeliverable(null);
+    toast.success("Livrable mis à jour");
+  };
+
+  const handleDeleteDeliverable = () => {
+    if (!editingDeliverable) return;
+    if (confirm("Supprimer ce livrable ?")) {
+      deleteDeliverable.mutate(editingDeliverable.id);
+      setEditingDeliverable(null);
+    }
+  };
 
   const handleEventDrop = (info: any) => {
     const { type, originalData } = info.event.extendedProps;
@@ -507,6 +543,16 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
         due_date: newDueDate,
       });
       toast.success("Tâche déplacée");
+    } else if (type === "deliverable") {
+      // Deliverable dragged - update due date
+      const newStart = info.event.start;
+      const newDueDate = format(newStart, "yyyy-MM-dd");
+      
+      updateDeliverable.mutate({
+        id: originalData.id,
+        due_date: newDueDate,
+      });
+      toast.success("Livrable déplacé");
     } else {
       // Revert for other types
       info.revert();
@@ -1095,7 +1141,80 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Project Task Creation Sheet */}
+      {/* Deliverable Edit Dialog */}
+      <Dialog 
+        open={!!editingDeliverable} 
+        onOpenChange={(open) => !open && setEditingDeliverable(null)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-red-500" />
+              Modifier le livrable
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nom *</Label>
+              <Input
+                value={editDeliverableName}
+                onChange={(e) => setEditDeliverableName(e.target.value)}
+                placeholder="Nom du livrable"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={editDeliverableDescription}
+                onChange={(e) => setEditDeliverableDescription(e.target.value)}
+                placeholder="Notes ou détails..."
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Échéance</Label>
+              <Input
+                type="date"
+                value={editDeliverableDueDate}
+                onChange={(e) => setEditDeliverableDueDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Statut</Label>
+              <Select value={editDeliverableStatus} onValueChange={setEditDeliverableStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">En attente</SelectItem>
+                  <SelectItem value="in_progress">En cours</SelectItem>
+                  <SelectItem value="delivered">Livré</SelectItem>
+                  <SelectItem value="validated">Validé</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="flex justify-between sm:justify-between">
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={handleDeleteDeliverable}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Supprimer
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEditingDeliverable(null)}>
+                Annuler
+              </Button>
+              <Button onClick={handleUpdateDeliverable} disabled={!editDeliverableName.trim()}>
+                Enregistrer
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <TaskCreateSheet
         open={isProjectTaskSheetOpen}
         onOpenChange={setIsProjectTaskSheetOpen}
