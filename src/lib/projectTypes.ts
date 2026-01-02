@@ -88,25 +88,58 @@ export const PHASE_STATUS_CONFIG: Record<PhaseStatus, { label: string; color: st
   completed: { label: "Terminée", color: "bg-emerald-500 text-white" }
 };
 
-export const MOE_ROLES = [
-  { value: "architecte", label: "Architecte" },
-  { value: "architecte_interieur", label: "Architecte d'intérieur" },
-  { value: "bet_structure", label: "BET Structure" },
-  { value: "bet_fluides", label: "BET Fluides" },
-  { value: "bet_electricite", label: "BET Électricité" },
-  { value: "bet_thermique", label: "BET Thermique" },
-  { value: "bet_acoustique", label: "BET Acoustique" },
-  { value: "economiste", label: "Économiste" },
-  { value: "paysagiste", label: "Paysagiste" },
-  { value: "scenographe", label: "Scénographe" },
-  { value: "graphiste", label: "Graphiste" },
-  { value: "eclairagiste", label: "Éclairagiste" },
-  { value: "opc", label: "OPC" },
-  { value: "csps", label: "CSPS" },
-  { value: "controle_technique", label: "Bureau de contrôle" },
-  { value: "geometre", label: "Géomètre" },
-  { value: "autre", label: "Autre" }
+// MOE Categories for simplified team management
+export type MOECategory = "architecte" | "client" | "amo" | "bet" | "entreprise";
+
+export interface MOECategoryConfig {
+  value: MOECategory;
+  label: string;
+  labelPlural: string;
+  icon: string;
+  color: string;
+}
+
+export const MOE_CATEGORIES: MOECategoryConfig[] = [
+  { value: "architecte", label: "Architecte", labelPlural: "Architectes", icon: "Compass", color: "#8B5CF6" },
+  { value: "client", label: "Client", labelPlural: "Clients", icon: "Building2", color: "#3B82F6" },
+  { value: "amo", label: "AMO", labelPlural: "AMO", icon: "Shield", color: "#F59E0B" },
+  { value: "bet", label: "BET", labelPlural: "BET", icon: "Calculator", color: "#10B981" },
+  { value: "entreprise", label: "Entreprise", labelPlural: "Entreprises", icon: "HardHat", color: "#EF4444" },
 ];
+
+// Legacy MOE_ROLES for backward compatibility
+export const MOE_ROLES = [
+  { value: "architecte", label: "Architecte", category: "architecte" as MOECategory },
+  { value: "architecte_interieur", label: "Architecte d'intérieur", category: "architecte" as MOECategory },
+  { value: "client", label: "Maître d'ouvrage", category: "client" as MOECategory },
+  { value: "amo", label: "Assistant MOA", category: "amo" as MOECategory },
+  { value: "bet_structure", label: "BET Structure", category: "bet" as MOECategory },
+  { value: "bet_fluides", label: "BET Fluides", category: "bet" as MOECategory },
+  { value: "bet_electricite", label: "BET Électricité", category: "bet" as MOECategory },
+  { value: "bet_thermique", label: "BET Thermique", category: "bet" as MOECategory },
+  { value: "bet_acoustique", label: "BET Acoustique", category: "bet" as MOECategory },
+  { value: "bet_vrd", label: "BET VRD", category: "bet" as MOECategory },
+  { value: "economiste", label: "Économiste", category: "bet" as MOECategory },
+  { value: "paysagiste", label: "Paysagiste", category: "architecte" as MOECategory },
+  { value: "scenographe", label: "Scénographe", category: "architecte" as MOECategory },
+  { value: "graphiste", label: "Graphiste", category: "architecte" as MOECategory },
+  { value: "eclairagiste", label: "Éclairagiste", category: "bet" as MOECategory },
+  { value: "opc", label: "OPC", category: "amo" as MOECategory },
+  { value: "csps", label: "CSPS", category: "amo" as MOECategory },
+  { value: "controle_technique", label: "Bureau de contrôle", category: "amo" as MOECategory },
+  { value: "geometre", label: "Géomètre", category: "bet" as MOECategory },
+  { value: "entreprise_generale", label: "Entreprise générale", category: "entreprise" as MOECategory },
+  { value: "entreprise_lot", label: "Entreprise de lot", category: "entreprise" as MOECategory },
+  { value: "autre", label: "Autre", category: "entreprise" as MOECategory }
+];
+
+export function getMOECategoryConfig(category: MOECategory): MOECategoryConfig {
+  return MOE_CATEGORIES.find(c => c.value === category) || MOE_CATEGORIES[0];
+}
+
+export function getRolesByCategory(category: MOECategory) {
+  return MOE_ROLES.filter(r => r.category === category);
+}
 
 export const LOT_STATUS = [
   { value: "pending", label: "En attente", color: "#6B7280" },

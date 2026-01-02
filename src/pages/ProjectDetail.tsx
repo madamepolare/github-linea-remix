@@ -2,16 +2,12 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useProject } from "@/hooks/useProjects";
-import { useProjectPhases } from "@/hooks/useProjectPhases";
-import { useProjectMOE } from "@/hooks/useProjectMOE";
-import { useProjectDeliverables } from "@/hooks/useProjectDeliverables";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   ArrowLeft,
   Building2,
@@ -19,7 +15,6 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
-  FileText,
   FolderKanban,
   HardHat,
   ListTodo,
@@ -28,18 +23,15 @@ import {
   MoreHorizontal,
   RefreshCw,
   Sparkles,
-  Users,
   Wallet,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { PROJECT_TYPES, PHASE_STATUS_CONFIG, MOE_ROLES } from "@/lib/projectTypes";
-import { ProjectPhasesTab } from "@/components/projects/ProjectPhasesTab";
-import { ProjectMOETab } from "@/components/projects/ProjectMOETab";
-import { ProjectDeliverablesTab } from "@/components/projects/ProjectDeliverablesTab";
+import { PROJECT_TYPES, PHASE_STATUS_CONFIG } from "@/lib/projectTypes";
 import { ProjectChantierTab } from "@/components/projects/ProjectChantierTab";
 import { ProjectPlanningTab } from "@/components/projects/ProjectPlanningTab";
+import { ProjectMOESection } from "@/components/projects/ProjectMOESection";
 import { EntityTasksList } from "@/components/tasks/EntityTasksList";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -190,13 +182,6 @@ export default function ProjectDetail() {
                 Tâches
               </TabsTrigger>
               <TabsTrigger
-                value="moe"
-                className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Équipe MOE
-              </TabsTrigger>
-              <TabsTrigger
                 value="chantier"
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4"
               >
@@ -222,7 +207,6 @@ export default function ProjectDetail() {
           {activeTab === "tasks" && (
             <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
           )}
-          {activeTab === "moe" && <ProjectMOETab projectId={project.id} />}
           {activeTab === "chantier" && <ProjectChantierTab projectId={project.id} />}
         </div>
       </div>
@@ -446,6 +430,13 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* MOE Team Section */}
+        <Card>
+          <CardContent className="pt-4">
+            <ProjectMOESection projectId={project.id} />
           </CardContent>
         </Card>
 
