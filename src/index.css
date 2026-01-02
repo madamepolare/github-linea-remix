@@ -419,7 +419,7 @@
 }
 
 .calendar-container .fc .fc-button-group > .fc-button {
-  @apply rounded-md ml-0 border-0;
+  @apply rounded-md ml-0 border-0 min-w-fit px-3;
   background: transparent;
 }
 
@@ -429,7 +429,16 @@
 
 .calendar-container .fc .fc-button-group > .fc-button.fc-button-active {
   background: hsl(var(--background));
+  color: hsl(var(--foreground));
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Ensure all view buttons show text correctly */
+.calendar-container .fc .fc-dayGridMonth-button,
+.calendar-container .fc .fc-timeGridWeek-button,
+.calendar-container .fc .fc-timeGridDay-button,
+.calendar-container .fc .fc-listWeek-button {
+  @apply px-3;
 }
 
 .calendar-container .fc .fc-prev-button,

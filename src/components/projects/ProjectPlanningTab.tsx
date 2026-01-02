@@ -50,6 +50,8 @@ import { cn } from "@/lib/utils";
 import frLocale from "@fullcalendar/core/locales/fr";
 import { toast } from "sonner";
 import { TaskCreateSheet } from "@/components/tasks/TaskCreateSheet";
+import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
+import { Task } from "@/hooks/useTasks";
 
 interface ProjectPlanningTabProps {
   projectId: string;
@@ -112,13 +114,8 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const [deliverableName, setDeliverableName] = useState("");
   const [deliverableDescription, setDeliverableDescription] = useState("");
 
-  // Edit task dialog
-  const [editingTask, setEditingTask] = useState<any>(null);
-  const [editTaskTitle, setEditTaskTitle] = useState("");
-  const [editTaskDescription, setEditTaskDescription] = useState("");
-  const [editTaskPriority, setEditTaskPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
-  const [editTaskDueDate, setEditTaskDueDate] = useState("");
-  const [editTaskStatus, setEditTaskStatus] = useState<"todo" | "in_progress" | "review" | "done">("todo");
+  // Edit task using TaskDetailSheet
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   // Calendar filters
   const [showPhases, setShowPhases] = useState(true);
@@ -380,13 +377,8 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       setPhaseStartDate(originalData.start_date || "");
       setPhaseEndDate(originalData.end_date || "");
     } else if (type === "task") {
-      // Open task edit dialog
-      setEditingTask(originalData);
-      setEditTaskTitle(originalData.title || "");
-      setEditTaskDescription(originalData.description || "");
-      setEditTaskPriority(originalData.priority || "medium");
-      setEditTaskDueDate(originalData.due_date || "");
-      setEditTaskStatus(originalData.status || "todo");
+      // Open TaskDetailSheet for full editing
+      setEditingTask(originalData as Task);
     }
     // For deliverables and quick tasks - could open their respective dialogs in the future
   };
@@ -527,29 +519,6 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
     toast.success("Phase mise à jour");
   };
 
-  const handleUpdateTask = () => {
-    if (!editingTask || !editTaskTitle.trim()) return;
-    
-    updateTask.mutate({
-      id: editingTask.id,
-      title: editTaskTitle.trim(),
-      description: editTaskDescription.trim() || null,
-      priority: editTaskPriority,
-      due_date: editTaskDueDate || null,
-      status: editTaskStatus,
-    });
-    
-    setEditingTask(null);
-    toast.success("Tâche mise à jour");
-  };
-
-  const handleDeleteTask = () => {
-    if (!editingTask) return;
-    if (confirm("Supprimer cette tâche ?")) {
-      deleteTask.mutate(editingTask.id);
-      setEditingTask(null);
-    }
-  };
 
   if (eventsLoading) {
     return (
@@ -665,13 +634,42 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
             },
           }}
           eventContent={(eventInfo) => {
-            const { type } = eventInfo.event.extendedProps;
+            const { type, originalData } = eventInfo.event.extendedProps;
+            
+            // Icon based on type
+            const getIcon = () => {
+              switch (type) {
+                case "phase":
+                  return <Milestone className="h-3 w-3 shrink-0" />;
+                case "event":
+                  if (originalData?.event_type === "meeting") return <Video className="h-3 w-3 shrink-0" />;
+                  if (originalData?.event_type === "milestone") return <Flag className="h-3 w-3 shrink-0" />;
+                  return <Clock className="h-3 w-3 shrink-0" />;
+                case "task":
+                  return <CheckSquare className="h-3 w-3 shrink-0" />;
+                case "quicktask":
+                  return <Zap className="h-3 w-3 shrink-0" />;
+                case "deliverable":
+                  return <FileText className="h-3 w-3 shrink-0" />;
+                default:
+                  return null;
+              }
+            };
+            
+            // Remove emoji prefixes from title since we use icons now
+            const cleanTitle = eventInfo.event.title
+              .replace(/^📋\s*/, "")
+              .replace(/^📦\s*/, "")
+              .replace(/^✓\s*/, "")
+              .replace(/^⚡\s*/, "");
+            
             return (
               <div className={cn(
-                "px-1 py-0.5 text-xs truncate rounded",
-                type === "phase" && "opacity-70 font-medium"
+                "flex items-center gap-1 px-1.5 py-0.5 text-xs truncate rounded",
+                type === "phase" && "opacity-90 font-medium"
               )}>
-                {eventInfo.event.title}
+                {getIcon()}
+                <span className="truncate">{cleanTitle}</span>
               </div>
             );
           }}
@@ -1072,108 +1070,12 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
         defaultProjectId={projectId}
       />
 
-      {/* Edit Task Dialog */}
-      <Dialog open={!!editingTask} onOpenChange={(open) => !open && setEditingTask(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckSquare className="h-4 w-4 text-blue-500" />
-              Modifier la tâche
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Titre *</Label>
-              <Input
-                value={editTaskTitle}
-                onChange={(e) => setEditTaskTitle(e.target.value)}
-                placeholder="Titre de la tâche"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Échéance</Label>
-                <Input
-                  type="date"
-                  value={editTaskDueDate}
-                  onChange={(e) => setEditTaskDueDate(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Statut</Label>
-                <Select value={editTaskStatus} onValueChange={(v) => setEditTaskStatus(v as any)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todo">À faire</SelectItem>
-                    <SelectItem value="in_progress">En cours</SelectItem>
-                    <SelectItem value="review">En revue</SelectItem>
-                    <SelectItem value="done">Terminée</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Priorité</Label>
-              <Select value={editTaskPriority} onValueChange={(v) => setEditTaskPriority(v as any)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">
-                    <div className="flex items-center gap-2">
-                      <Flag className="h-3 w-3 text-gray-400" />
-                      Basse
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="medium">
-                    <div className="flex items-center gap-2">
-                      <Flag className="h-3 w-3 text-blue-500" />
-                      Moyenne
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="high">
-                    <div className="flex items-center gap-2">
-                      <Flag className="h-3 w-3 text-orange-500" />
-                      Haute
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="urgent">
-                    <div className="flex items-center gap-2">
-                      <Flag className="h-3 w-3 text-red-500" />
-                      Urgente
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={editTaskDescription}
-                onChange={(e) => setEditTaskDescription(e.target.value)}
-                placeholder="Détails de la tâche..."
-                rows={3}
-              />
-            </div>
-          </div>
-          <DialogFooter className="flex justify-between sm:justify-between">
-            <Button variant="destructive" size="sm" onClick={handleDeleteTask}>
-              <Trash2 className="h-4 w-4 mr-1" />
-              Supprimer
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setEditingTask(null)}>
-                Annuler
-              </Button>
-              <Button onClick={handleUpdateTask} disabled={!editTaskTitle.trim()}>
-                Enregistrer
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Task Detail Sheet for full editing */}
+      <TaskDetailSheet
+        task={editingTask}
+        open={!!editingTask}
+        onOpenChange={(open) => !open && setEditingTask(null)}
+      />
 
       {/* Calendar CSS overrides */}
       <style>{`
