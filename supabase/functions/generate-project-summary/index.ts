@@ -54,7 +54,20 @@ serve(async (req) => {
   }
 
   try {
-    const { projectId } = await req.json();
+    const body = await req.json();
+    
+    // Handle text rewrite request
+    if (body.type === "rewrite") {
+      return handleRewrite(body);
+    }
+    
+    // Handle meeting summary request
+    if (body.projectName && body.meetingTitle) {
+      return handleMeetingSummary(body);
+    }
+    
+    // Handle project summary request
+    const { projectId } = body;
 
     if (!projectId) {
       console.error("Missing projectId");
@@ -296,3 +309,144 @@ Génère uniquement le résumé, sans introduction ni conclusion.`;
     );
   }
 });
+
+// Handle text rewrite requests
+async function handleRewrite(body: { text: string; style: string; context?: string }) {
+  const { text, style, context } = body;
+  
+  const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!lovableApiKey) {
+    return new Response(
+      JSON.stringify({ error: "AI service not configured" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const stylePrompts: Record<string, string> = {
+    professional: "Reformule ce texte de manière plus professionnelle et formelle, adapté à un compte rendu officiel.",
+    concise: "Reformule ce texte de manière plus concise et synthétique, en gardant l'essentiel.",
+    detailed: "Reformule ce texte en ajoutant plus de détails et de précisions utiles.",
+    clear: "Reformule ce texte de manière plus claire et compréhensible.",
+  };
+
+  const prompt = `${stylePrompts[style] || stylePrompts.professional}
+
+Contexte: ${context || "document professionnel"}
+
+Texte à reformuler:
+${text}
+
+Renvoie uniquement le texte reformulé, sans introduction ni explication.`;
+
+  try {
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${lovableApiKey}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 1000,
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      console.error("AI rewrite error:", await aiResponse.text());
+      return new Response(
+        JSON.stringify({ error: "AI service error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const result = await aiResponse.json();
+    const rewritten = result.choices?.[0]?.message?.content?.trim();
+
+    return new Response(
+      JSON.stringify({ rewritten }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Rewrite error:", error);
+    return new Response(
+      JSON.stringify({ error: "Rewrite failed" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}
+
+// Handle meeting summary requests
+async function handleMeetingSummary(body: {
+  projectName: string;
+  meetingTitle: string;
+  meetingDate: string;
+  attendees: Array<{ name: string; present: boolean }>;
+  notes?: string;
+  observations: Array<{ description: string; priority: string; status: string; lot?: string }>;
+}) {
+  const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!lovableApiKey) {
+    return new Response(
+      JSON.stringify({ error: "AI service not configured" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const presentAttendees = body.attendees?.filter(a => a.present).map(a => a.name).join(", ") || "Non spécifié";
+  const obsText = body.observations?.map(o => 
+    `- ${o.description} (${o.priority}, ${o.status})${o.lot ? ` - ${o.lot}` : ""}`
+  ).join("\n") || "Aucune observation";
+
+  const prompt = `Tu es un assistant de rédaction de comptes rendus de chantier en architecture. Génère une synthèse professionnelle et concise de cette réunion.
+
+Projet: ${body.projectName}
+Réunion: ${body.meetingTitle}
+Date: ${body.meetingDate}
+Présents: ${presentAttendees}
+
+Notes de réunion:
+${body.notes || "Aucune note"}
+
+Observations:
+${obsText}
+
+Génère une synthèse de 3-5 phrases résumant les points clés, décisions et actions à suivre. En français, style professionnel.`;
+
+  try {
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${lovableApiKey}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 500,
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      console.error("AI summary error:", await aiResponse.text());
+      return new Response(
+        JSON.stringify({ error: "AI service error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const result = await aiResponse.json();
+    const summary = result.choices?.[0]?.message?.content?.trim();
+
+    return new Response(
+      JSON.stringify({ summary }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Meeting summary error:", error);
+    return new Response(
+      JSON.stringify({ error: "Summary generation failed" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+}

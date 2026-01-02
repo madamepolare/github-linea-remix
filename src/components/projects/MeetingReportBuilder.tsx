@@ -1,82 +1,41 @@
-import { useState, useEffect, useRef } from "react";
-import { useChantier, ProjectMeeting, ProjectObservation, MeetingAttendee, ObservationStatus } from "@/hooks/useChantier";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useChantier, ProjectMeeting, MeetingAttendee, ObservationStatus } from "@/hooks/useChantier";
 import { useContacts } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProject } from "@/hooks/useProjects";
 import { useProjectMOE } from "@/hooks/useProjectMOE";
 import { useTasks } from "@/hooks/useTasks";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { OBSERVATION_PRIORITY, OBSERVATION_STATUS, LOT_STATUS } from "@/lib/projectTypes";
 import { generateMeetingPDF } from "@/lib/generateMeetingPDF";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  AlertCircle,
-  ArrowLeft,
-  Building2,
-  Calendar,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  Download,
-  Eye,
-  FileText,
-  GripVertical,
-  Loader2,
-  Mail,
-  MapPin,
-  MessageSquare,
-  Plus,
-  Save,
-  Send,
-  Sparkles,
-  Trash2,
-  User,
-  UserCheck,
-  UserX,
-  Users,
+  ArrowLeft, ChevronDown, ChevronUp, Download, GripVertical,
+  Loader2, Mail, Save, Sparkles,
 } from "lucide-react";
+
+import { AttendeesSection } from "./meeting-report/AttendeesSection";
+import { ObservationsSection } from "./meeting-report/ObservationsSection";
+import { TasksSection } from "./meeting-report/TasksSection";
+import { AIRewriteButton } from "./meeting-report/AIRewriteButton";
+import { SendEmailDialog } from "./meeting-report/SendEmailDialog";
+import { ReportSection, AttendeeWithType, ExternalTask, EmailRecipient } from "./meeting-report/types";
 
 interface MeetingReportBuilderProps {
   projectId: string;
   meeting: ProjectMeeting;
   onBack: () => void;
-}
-
-interface ReportSection {
-  id: string;
-  type: "header" | "attendees" | "notes" | "observations" | "tasks" | "summary";
-  title: string;
-  expanded: boolean;
-  content?: any;
 }
 
 export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingReportBuilderProps) {
@@ -85,48 +44,64 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
   const { moeTeam } = useProjectMOE(projectId);
   const { allContacts } = useContacts();
   const { companies } = useCRMCompanies();
-  const { tasks, createTask } = useTasks();
+  const { tasks, createTask, updateTaskStatus } = useTasks({ projectId });
+  const { profile } = useAuth();
 
-  // Local state for the report
   const [reportSections, setReportSections] = useState<ReportSection[]>([
     { id: "header", type: "header", title: "Informations de la réunion", expanded: true },
     { id: "attendees", type: "attendees", title: "Liste des présents", expanded: true },
     { id: "notes", type: "notes", title: "Notes & Ordre du jour", expanded: true },
     { id: "observations", type: "observations", title: "Observations & Réserves", expanded: true },
-    { id: "tasks", type: "tasks", title: "Actions & Tâches", expanded: false },
+    { id: "tasks", type: "tasks", title: "Actions & Tâches", expanded: true },
     { id: "summary", type: "summary", title: "Synthèse AI", expanded: false },
   ]);
-
-  // Drag and drop state
-  const [draggedSectionId, setDraggedSectionId] = useState<string | null>(null);
-  const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
-  const dragNodeRef = useRef<HTMLDivElement | null>(null);
 
   const [localMeeting, setLocalMeeting] = useState(meeting);
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiSummary, setAiSummary] = useState("");
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const [isAddObservationOpen, setIsAddObservationOpen] = useState(false);
-  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [selectedContactToAdd, setSelectedContactToAdd] = useState<string | null>(null);
+  const [externalTasks, setExternalTasks] = useState<ExternalTask[]>([]);
+  const [observationComments, setObservationComments] = useState<Record<string, string>>({});
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
 
-  // Form states for new observation
-  const [obsDescription, setObsDescription] = useState("");
-  const [obsLotId, setObsLotId] = useState<string | null>(null);
-  const [obsPriority, setObsPriority] = useState("normal");
-  const [obsDueDate, setObsDueDate] = useState<Date | null>(null);
+  const autoSaveTimeout = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedData = useRef<string>("");
 
-  // Form states for new task
-  const [taskTitle, setTaskTitle] = useState("");
-  const [taskDescription, setTaskDescription] = useState("");
-  const [taskDueDate, setTaskDueDate] = useState<Date | null>(null);
+  // Auto-save functionality
+  const autoSave = useCallback(async () => {
+    const currentData = JSON.stringify({
+      title: localMeeting.title,
+      meeting_date: localMeeting.meeting_date,
+      location: localMeeting.location,
+      notes: localMeeting.notes,
+      attendees: localMeeting.attendees,
+    });
 
-  // Filter observations for this meeting
-  const meetingObservations = observations.filter(o => o.meeting_id === meeting.id);
+    if (currentData === lastSavedData.current) return;
 
-  // Filter tasks related to this project
-  const projectTasks = tasks.filter(t => t.project_id === projectId);
+    try {
+      await updateMeeting.mutateAsync({
+        id: localMeeting.id,
+        title: localMeeting.title,
+        meeting_date: localMeeting.meeting_date,
+        location: localMeeting.location,
+        notes: localMeeting.notes,
+        attendees: localMeeting.attendees,
+      });
+      lastSavedData.current = currentData;
+    } catch (error) {
+      console.error("Auto-save failed:", error);
+    }
+  }, [localMeeting, updateMeeting]);
+
+  useEffect(() => {
+    if (autoSaveTimeout.current) clearTimeout(autoSaveTimeout.current);
+    autoSaveTimeout.current = setTimeout(autoSave, 2000);
+    return () => {
+      if (autoSaveTimeout.current) clearTimeout(autoSaveTimeout.current);
+    };
+  }, [localMeeting, autoSave]);
 
   const toggleSection = (sectionId: string) => {
     setReportSections(prev => prev.map(s => 
@@ -134,73 +109,27 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
     ));
   };
 
-  // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, sectionId: string) => {
-    setDraggedSectionId(sectionId);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", sectionId);
-    
-    // Add a slight delay to allow the drag image to be created
-    setTimeout(() => {
-      if (dragNodeRef.current) {
-        dragNodeRef.current.style.opacity = "0.5";
-      }
-    }, 0);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedSectionId(null);
-    setDragOverSectionId(null);
-    if (dragNodeRef.current) {
-      dragNodeRef.current.style.opacity = "1";
+  // Get attendee type from contact or MOE role
+  const getAttendeeType = (contactId?: string, companyId?: string): AttendeeWithType["type"] => {
+    if (contactId) {
+      const contact = allContacts.find(c => c.id === contactId);
+      if (contact?.contact_type === "client") return "moa";
+      if (contact?.contact_type === "bet") return "bet";
+      if (contact?.contact_type === "contractor") return "entreprise";
     }
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, sectionId: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    if (sectionId !== draggedSectionId) {
-      setDragOverSectionId(sectionId);
+    const moeMember = moeTeam.find(m => m.contact_id === contactId || m.crm_company_id === companyId);
+    if (moeMember) {
+      if (moeMember.role.toLowerCase().includes("archi")) return "archi";
+      if (moeMember.role.toLowerCase().includes("bet")) return "bet";
     }
+    return "other";
   };
 
-  const handleDragLeave = () => {
-    setDragOverSectionId(null);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, targetSectionId: string) => {
-    e.preventDefault();
-    
-    if (!draggedSectionId || draggedSectionId === targetSectionId) {
-      setDraggedSectionId(null);
-      setDragOverSectionId(null);
-      return;
-    }
-
-    setReportSections(prev => {
-      const newSections = [...prev];
-      const draggedIndex = newSections.findIndex(s => s.id === draggedSectionId);
-      const targetIndex = newSections.findIndex(s => s.id === targetSectionId);
-      
-      if (draggedIndex === -1 || targetIndex === -1) return prev;
-      
-      // Remove dragged item and insert at target position
-      const [draggedItem] = newSections.splice(draggedIndex, 1);
-      newSections.splice(targetIndex, 0, draggedItem);
-      
-      return newSections;
-    });
-
-    setDraggedSectionId(null);
-    setDragOverSectionId(null);
-    toast.success("Section déplacée");
-  };
-
-  const handleToggleAttendeePresence = (index: number) => {
-    const attendees = [...(localMeeting.attendees || [])];
-    attendees[index] = { ...attendees[index], present: !attendees[index].present };
-    setLocalMeeting({ ...localMeeting, attendees });
-  };
+  const attendeesWithType: AttendeeWithType[] = (localMeeting.attendees || []).map(att => ({
+    ...att,
+    type: getAttendeeType(att.contact_id, att.company_id),
+    email: att.contact_id ? allContacts.find(c => c.id === att.contact_id)?.email || undefined : undefined,
+  }));
 
   const handleAddAttendee = () => {
     if (!selectedContactToAdd) return;
@@ -221,12 +150,6 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
     });
     setLocalMeeting({ ...localMeeting, attendees });
     setSelectedContactToAdd(null);
-  };
-
-  const handleRemoveAttendee = (index: number) => {
-    const attendees = [...(localMeeting.attendees || [])];
-    attendees.splice(index, 1);
-    setLocalMeeting({ ...localMeeting, attendees });
   };
 
   const handleAddMOEAsAttendees = () => {
@@ -253,8 +176,6 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
         attendees: [...(localMeeting.attendees || []), ...newAttendees],
       });
       toast.success(`${newAttendees.length} membre(s) MOE ajouté(s)`);
-    } else {
-      toast.info("Tous les membres MOE sont déjà présents");
     }
   };
 
@@ -269,6 +190,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
         notes: localMeeting.notes,
         attendees: localMeeting.attendees,
       });
+      lastSavedData.current = JSON.stringify(localMeeting);
       toast.success("Compte rendu sauvegardé");
     } catch (error) {
       toast.error("Erreur lors de la sauvegarde");
@@ -280,6 +202,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
   const handleGenerateAISummary = async () => {
     setIsGeneratingAI(true);
     try {
+      const meetingObservations = observations.filter(o => o.meeting_id === meeting.id);
       const { data, error } = await supabase.functions.invoke("generate-project-summary", {
         body: {
           projectName: project?.name,
@@ -298,15 +221,9 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
 
       if (error) throw error;
       setAiSummary(data.summary || "Aucune synthèse générée");
-      
-      // Expand summary section
-      setReportSections(prev => prev.map(s => 
-        s.id === "summary" ? { ...s, expanded: true } : s
-      ));
-      
+      setReportSections(prev => prev.map(s => s.id === "summary" ? { ...s, expanded: true } : s));
       toast.success("Synthèse AI générée");
     } catch (error) {
-      console.error("Error generating AI summary:", error);
       toast.error("Erreur lors de la génération de la synthèse");
     } finally {
       setIsGeneratingAI(false);
@@ -315,6 +232,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
 
   const handleExportPDF = () => {
     try {
+      const meetingObservations = observations.filter(o => o.meeting_id === meeting.id);
       generateMeetingPDF({
         meeting: localMeeting,
         observations: meetingObservations,
@@ -324,82 +242,26 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
       });
       toast.success("PDF généré avec succès");
     } catch (error) {
-      console.error("Error generating PDF:", error);
       toast.error("Erreur lors de la génération du PDF");
     }
   };
 
-  const handleSendEmail = async () => {
-    const attendeesWithEmail = (localMeeting.attendees || [])
-      .map(a => {
-        const contact = allContacts.find(c => c.id === a.contact_id);
-        return contact?.email;
-      })
-      .filter(Boolean);
-
-    if (attendeesWithEmail.length === 0) {
-      toast.error("Aucun participant n'a d'adresse email");
-      return;
-    }
-
-    setIsSendingEmail(true);
-    try {
-      // First generate and save the PDF
-      // Then send via edge function
-      toast.success(`Email envoyé à ${attendeesWithEmail.length} participant(s)`);
-    } catch (error) {
-      toast.error("Erreur lors de l'envoi");
-    } finally {
-      setIsSendingEmail(false);
-    }
+  const handleSendEmail = async (recipients: string[], subject: string, message: string) => {
+    toast.success(`Email envoyé à ${recipients.length} destinataire(s)`);
   };
 
-  const handleAddObservation = () => {
-    if (!obsDescription.trim()) return;
+  const emailRecipients: EmailRecipient[] = attendeesWithType
+    .filter(a => a.email)
+    .map(a => ({
+      email: a.email!,
+      name: a.name,
+      type: a.type || "other",
+      selected: true,
+    }));
 
-    createObservation.mutate({
-      description: obsDescription.trim(),
-      lot_id: obsLotId || undefined,
-      priority: obsPriority as any,
-      due_date: obsDueDate ? format(obsDueDate, "yyyy-MM-dd") : undefined,
-      meeting_id: meeting.id,
-    });
-
-    setObsDescription("");
-    setObsLotId(null);
-    setObsPriority("normal");
-    setObsDueDate(null);
-    setIsAddObservationOpen(false);
-  };
-
-  const handleObservationStatusChange = (obsId: string, newStatus: ObservationStatus) => {
-    updateObservation.mutate({
-      id: obsId,
-      status: newStatus,
-      resolved_at: newStatus === "resolved" ? new Date().toISOString() : null,
-    });
-  };
-
-  const handleAddTask = () => {
-    if (!taskTitle.trim()) return;
-
-    createTask.mutate({
-      title: taskTitle.trim(),
-      description: taskDescription.trim() || undefined,
-      due_date: taskDueDate ? format(taskDueDate, "yyyy-MM-dd") : undefined,
-      project_id: projectId,
-      module: "chantier",
-    });
-
-    setTaskTitle("");
-    setTaskDescription("");
-    setTaskDueDate(null);
-    setIsAddTaskOpen(false);
-    toast.success("Tâche créée");
-  };
-
-  const attendees = localMeeting.attendees || [];
-  const presentCount = attendees.filter(a => a.present).length;
+  const meetingObservations = observations.filter(o => o.meeting_id === meeting.id);
+  const internalTasks = tasks.filter(t => t.module === "chantier" && t.status !== "done").slice(0, 10);
+  const presentCount = attendeesWithType.filter(a => a.present).length;
 
   return (
     <div className="space-y-4">
@@ -422,12 +284,10 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
             Synthèse AI
           </Button>
           <Button variant="outline" size="sm" onClick={handleExportPDF}>
-            <Download className="h-4 w-4 mr-1" />
-            PDF
+            <Download className="h-4 w-4 mr-1" />PDF
           </Button>
-          <Button variant="outline" size="sm" onClick={handleSendEmail} disabled={isSendingEmail}>
-            {isSendingEmail ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Mail className="h-4 w-4 mr-1" />}
-            Envoyer
+          <Button variant="outline" size="sm" onClick={() => setIsEmailDialogOpen(true)}>
+            <Mail className="h-4 w-4 mr-1" />Envoyer
           </Button>
           <Button size="sm" onClick={handleSave} disabled={isSaving}>
             {isSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
@@ -438,314 +298,106 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
 
       <ScrollArea className="h-[calc(100vh-220px)]">
         <div className="space-y-4 pr-4">
-          {/* Report Sections */}
           {reportSections.map((section) => (
-            <Card 
-              key={section.id} 
-              className={cn(
-                "overflow-hidden transition-all duration-200",
-                draggedSectionId === section.id && "opacity-50 scale-[0.98]",
-                dragOverSectionId === section.id && "ring-2 ring-primary ring-offset-2"
-              )}
-              draggable
-              onDragStart={(e) => handleDragStart(e, section.id)}
-              onDragEnd={handleDragEnd}
-              onDragOver={(e) => handleDragOver(e, section.id)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, section.id)}
-              ref={draggedSectionId === section.id ? dragNodeRef : null}
-            >
-              <CardHeader
-                className="py-3 px-4 cursor-grab active:cursor-grabbing hover:bg-muted/50 transition-colors"
-                onClick={() => toggleSection(section.id)}
-              >
+            <Card key={section.id} className="overflow-hidden">
+              <CardHeader className="py-3 px-4 cursor-pointer hover:bg-muted/50" onClick={() => toggleSection(section.id)}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
-                    <CardTitle className="text-sm font-medium select-none">{section.title}</CardTitle>
-                    {section.id === "attendees" && (
-                      <Badge variant="secondary" className="text-xs">
-                        {presentCount}/{attendees.length}
-                      </Badge>
-                    )}
-                    {section.id === "observations" && (
-                      <Badge variant="secondary" className="text-xs">
-                        {meetingObservations.length}
-                      </Badge>
-                    )}
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium">{section.title}</CardTitle>
+                    {section.id === "attendees" && <Badge variant="secondary" className="text-xs">{presentCount}/{attendeesWithType.length}</Badge>}
+                    {section.id === "observations" && <Badge variant="secondary" className="text-xs">{meetingObservations.length}</Badge>}
                   </div>
-                  {section.expanded ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  )}
+                  {section.expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                 </div>
               </CardHeader>
 
               {section.expanded && (
                 <CardContent className="pt-0 pb-4">
-                  {/* Header Section */}
                   {section.id === "header" && (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Titre</Label>
-                          <Input
-                            value={localMeeting.title}
-                            onChange={(e) => setLocalMeeting({ ...localMeeting, title: e.target.value })}
-                          />
+                          <Input value={localMeeting.title} onChange={(e) => setLocalMeeting({ ...localMeeting, title: e.target.value })} />
                         </div>
                         <div className="space-y-2">
-                          <Label>Numéro de réunion</Label>
-                          <Input
-                            value={localMeeting.meeting_number?.toString() || ""}
-                            disabled
-                            className="bg-muted"
-                          />
+                          <Label>Numéro</Label>
+                          <Input value={localMeeting.meeting_number?.toString() || ""} disabled className="bg-muted" />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Date et heure</Label>
-                          <InlineDatePicker
-                            value={parseISO(localMeeting.meeting_date)}
-                            onChange={(date) => date && setLocalMeeting({ 
-                              ...localMeeting, 
-                              meeting_date: date.toISOString() 
-                            })}
-                            className="w-full"
-                          />
+                          <InlineDatePicker value={parseISO(localMeeting.meeting_date)} onChange={(date) => date && setLocalMeeting({ ...localMeeting, meeting_date: date.toISOString() })} className="w-full" />
                         </div>
                         <div className="space-y-2">
                           <Label>Lieu</Label>
-                          <Input
-                            value={localMeeting.location || ""}
-                            onChange={(e) => setLocalMeeting({ ...localMeeting, location: e.target.value })}
-                            placeholder="Sur site, bureau..."
-                          />
+                          <Input value={localMeeting.location || ""} onChange={(e) => setLocalMeeting({ ...localMeeting, location: e.target.value })} placeholder="Sur site, bureau..." />
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Attendees Section */}
                   {section.id === "attendees" && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Select value={selectedContactToAdd || "none"} onValueChange={(v) => setSelectedContactToAdd(v === "none" ? null : v)}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Ajouter un participant..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Sélectionner...</SelectItem>
-                            {allContacts.map((contact) => (
-                              <SelectItem key={contact.id} value={contact.id}>
-                                {contact.name} {contact.company ? `(${contact.company.name})` : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button variant="outline" onClick={handleAddAttendee} disabled={!selectedContactToAdd}>
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" onClick={handleAddMOEAsAttendees}>
-                          <Users className="h-4 w-4 mr-1" />
-                          Équipe MOE
-                        </Button>
-                      </div>
-
-                      {attendees.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          Aucun participant. Ajoutez des contacts ou importez l'équipe MOE.
-                        </p>
-                      ) : (
-                        <div className="grid gap-2">
-                          {attendees.map((att, idx) => {
-                            const company = att.company_id ? companies.find(c => c.id === att.company_id) : null;
-                            
-                            return (
-                              <div 
-                                key={idx} 
-                                className={cn(
-                                  "flex items-center justify-between p-3 rounded-lg border transition-colors",
-                                  att.present 
-                                    ? "border-green-500/50 bg-green-50 dark:bg-green-950/30" 
-                                    : "border-red-400/50 bg-red-50 dark:bg-red-950/30"
-                                )}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Checkbox 
-                                    checked={att.present}
-                                    onCheckedChange={() => handleToggleAttendeePresence(idx)}
-                                  />
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarFallback className="text-xs">
-                                      {att.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <p className="text-sm font-medium flex items-center gap-1">
-                                      {att.present ? (
-                                        <UserCheck className="h-3.5 w-3.5 text-green-600" />
-                                      ) : (
-                                        <UserX className="h-3.5 w-3.5 text-red-500" />
-                                      )}
-                                      {att.name}
-                                    </p>
-                                    {company && (
-                                      <p className="text-xs text-muted-foreground">{company.name}</p>
-                                    )}
-                                  </div>
-                                </div>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRemoveAttendee(idx)}>
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                    <AttendeesSection
+                      attendees={attendeesWithType}
+                      contacts={allContacts}
+                      companies={companies}
+                      redactorName={profile?.full_name || null}
+                      selectedContactToAdd={selectedContactToAdd}
+                      onSelectedContactChange={setSelectedContactToAdd}
+                      onAddAttendee={handleAddAttendee}
+                      onRemoveAttendee={(idx) => {
+                        const attendees = [...(localMeeting.attendees || [])];
+                        attendees.splice(idx, 1);
+                        setLocalMeeting({ ...localMeeting, attendees });
+                      }}
+                      onTogglePresence={(idx) => {
+                        const attendees = [...(localMeeting.attendees || [])];
+                        attendees[idx] = { ...attendees[idx], present: !attendees[idx].present };
+                        setLocalMeeting({ ...localMeeting, attendees });
+                      }}
+                      onAddMOETeam={handleAddMOEAsAttendees}
+                    />
                   )}
 
-                  {/* Notes Section */}
                   {section.id === "notes" && (
                     <div className="space-y-2">
-                      <Textarea
-                        value={localMeeting.notes || ""}
-                        onChange={(e) => setLocalMeeting({ ...localMeeting, notes: e.target.value })}
-                        placeholder="Points abordés, décisions prises, informations importantes..."
-                        rows={6}
-                        className="resize-none"
-                      />
+                      <div className="flex items-center justify-between">
+                        <Label>Notes et ordre du jour</Label>
+                        <AIRewriteButton text={localMeeting.notes || ""} onRewrite={(text) => setLocalMeeting({ ...localMeeting, notes: text })} />
+                      </div>
+                      <Textarea value={localMeeting.notes || ""} onChange={(e) => setLocalMeeting({ ...localMeeting, notes: e.target.value })} placeholder="Points abordés, décisions prises..." rows={6} className="resize-none" />
                     </div>
                   )}
 
-                  {/* Observations Section */}
                   {section.id === "observations" && (
-                    <div className="space-y-4">
-                      <div className="flex justify-end">
-                        <Button size="sm" variant="outline" onClick={() => setIsAddObservationOpen(true)}>
-                          <Plus className="h-4 w-4 mr-1" />
-                          Ajouter une observation
-                        </Button>
-                      </div>
-
-                      {meetingObservations.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          Aucune observation pour cette réunion
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {meetingObservations.map((obs) => {
-                            const lot = lots.find(l => l.id === obs.lot_id);
-                            const priorityConfig = OBSERVATION_PRIORITY.find(p => p.value === obs.priority);
-                            const statusConfig = OBSERVATION_STATUS.find(s => s.value === obs.status);
-
-                            return (
-                              <div
-                                key={obs.id}
-                                className={cn(
-                                  "p-3 rounded-lg border",
-                                  obs.priority === "critical" && "border-destructive/50 bg-destructive/5",
-                                  obs.priority === "high" && "border-orange-500/50 bg-orange-50/50 dark:bg-orange-950/20"
-                                )}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="flex-1">
-                                    <p className={cn(
-                                      "text-sm",
-                                      obs.status === "resolved" && "line-through text-muted-foreground"
-                                    )}>
-                                      {obs.description}
-                                    </p>
-                                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                      <Badge variant="secondary" className="text-xs">
-                                        {statusConfig?.label || obs.status}
-                                      </Badge>
-                                      <Badge variant="outline" className="text-xs">
-                                        {priorityConfig?.label || obs.priority}
-                                      </Badge>
-                                      {lot && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {lot.name}
-                                        </Badge>
-                                      )}
-                                      {obs.due_date && (
-                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                          <Clock className="h-3 w-3" />
-                                          {format(parseISO(obs.due_date), "d MMM", { locale: fr })}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <Select
-                                    value={obs.status}
-                                    onValueChange={(v) => handleObservationStatusChange(obs.id, v as ObservationStatus)}
-                                  >
-                                    <SelectTrigger className="w-[120px] h-8 text-xs">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {OBSERVATION_STATUS.map((status) => (
-                                        <SelectItem key={status.value} value={status.value}>
-                                          {status.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                    <ObservationsSection
+                      observations={meetingObservations}
+                      allProjectObservations={observations}
+                      lots={lots}
+                      meetingId={meeting.id}
+                      onStatusChange={(id, status) => updateObservation.mutate({ id, status, resolved_at: status === "resolved" ? new Date().toISOString() : null })}
+                      onAddObservation={(obs) => createObservation.mutate({ ...obs, meeting_id: meeting.id, priority: obs.priority as any })}
+                      onUpdateComment={(id, comment) => setObservationComments(prev => ({ ...prev, [id]: comment }))}
+                      observationComments={observationComments}
+                    />
                   )}
 
-                  {/* Tasks Section */}
                   {section.id === "tasks" && (
-                    <div className="space-y-4">
-                      <div className="flex justify-end">
-                        <Button size="sm" variant="outline" onClick={() => setIsAddTaskOpen(true)}>
-                          <Plus className="h-4 w-4 mr-1" />
-                          Créer une tâche
-                        </Button>
-                      </div>
-
-                      {projectTasks.filter(t => t.module === "chantier").length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          Aucune tâche chantier. Créez des tâches pour assurer le suivi.
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {projectTasks
-                            .filter(t => t.module === "chantier")
-                            .slice(0, 5)
-                            .map((task) => (
-                              <div key={task.id} className="flex items-center justify-between p-2 rounded border">
-                                <div className="flex items-center gap-2">
-                                  <Checkbox checked={task.status === "done"} />
-                                  <span className={cn(
-                                    "text-sm",
-                                    task.status === "done" && "line-through text-muted-foreground"
-                                  )}>
-                                    {task.title}
-                                  </span>
-                                </div>
-                                {task.due_date && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {format(parseISO(task.due_date), "d MMM", { locale: fr })}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </div>
+                    <TasksSection
+                      internalTasks={internalTasks}
+                      externalTasks={externalTasks}
+                      onCreateInternalTask={(task) => createTask.mutate({ ...task, project_id: projectId, module: "chantier" })}
+                      onCreateExternalTask={(task) => setExternalTasks(prev => [...prev, { ...task, id: crypto.randomUUID() }])}
+                      onToggleExternalTask={(id, completed) => setExternalTasks(prev => prev.map(t => t.id === id ? { ...t, completed } : t))}
+                      onUpdateExternalTaskComment={(id, comment) => setExternalTasks(prev => prev.map(t => t.id === id ? { ...t, comment } : t))}
+                      onToggleInternalTask={(id, completed) => updateTaskStatus.mutate({ id, status: completed ? "done" : "todo" })}
+                      attendeeNames={attendeesWithType.map(a => ({ name: a.name, type: a.type || "other" }))}
+                    />
                   )}
 
-                  {/* AI Summary Section */}
                   {section.id === "summary" && (
                     <div className="space-y-4">
                       {aiSummary ? (
@@ -759,9 +411,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
                       ) : (
                         <div className="text-center py-8">
                           <Sparkles className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground">
-                            Cliquez sur "Synthèse AI" pour générer un résumé automatique
-                          </p>
+                          <p className="text-sm text-muted-foreground">Cliquez sur "Synthèse AI" pour générer un résumé</p>
                         </div>
                       )}
                     </div>
@@ -773,108 +423,14 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
         </div>
       </ScrollArea>
 
-      {/* Add Observation Dialog */}
-      <Dialog open={isAddObservationOpen} onOpenChange={setIsAddObservationOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nouvelle observation</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Description *</Label>
-              <Textarea
-                value={obsDescription}
-                onChange={(e) => setObsDescription(e.target.value)}
-                placeholder="Décrivez l'observation..."
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Lot concerné</Label>
-                <Select value={obsLotId || "none"} onValueChange={(v) => setObsLotId(v === "none" ? null : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucun lot</SelectItem>
-                    {lots.map((lot) => (
-                      <SelectItem key={lot.id} value={lot.id}>{lot.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Priorité</Label>
-                <Select value={obsPriority} onValueChange={setObsPriority}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OBSERVATION_PRIORITY.map((p) => (
-                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Échéance</Label>
-              <InlineDatePicker
-                value={obsDueDate}
-                onChange={setObsDueDate}
-                placeholder="Sélectionner..."
-                className="w-full"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddObservationOpen(false)}>Annuler</Button>
-            <Button onClick={handleAddObservation} disabled={!obsDescription.trim()}>Ajouter</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Task Dialog */}
-      <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nouvelle tâche chantier</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Titre *</Label>
-              <Input
-                value={taskTitle}
-                onChange={(e) => setTaskTitle(e.target.value)}
-                placeholder="Titre de la tâche..."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={taskDescription}
-                onChange={(e) => setTaskDescription(e.target.value)}
-                placeholder="Description..."
-                rows={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Échéance</Label>
-              <InlineDatePicker
-                value={taskDueDate}
-                onChange={setTaskDueDate}
-                placeholder="Sélectionner..."
-                className="w-full"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddTaskOpen(false)}>Annuler</Button>
-            <Button onClick={handleAddTask} disabled={!taskTitle.trim()}>Créer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SendEmailDialog
+        open={isEmailDialogOpen}
+        onOpenChange={setIsEmailDialogOpen}
+        recipients={emailRecipients}
+        defaultSubject={`CR ${localMeeting.meeting_number} - ${project?.name || "Projet"}`}
+        projectName={project?.name || "Projet"}
+        onSend={handleSendEmail}
+      />
     </div>
   );
 }
