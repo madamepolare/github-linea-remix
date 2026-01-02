@@ -36,6 +36,8 @@ import { generateMeetingPDF } from "@/lib/generateMeetingPDF";
 import { ChantierGantt } from "./ChantierGantt";
 import { MeetingReportBuilder } from "./MeetingReportBuilder";
 import { LoadLotsTemplateDialog } from "./LoadLotsTemplateDialog";
+import { ChantierOverview } from "./chantier/ChantierOverview";
+import { SendConvocationDialog } from "./chantier/SendConvocationDialog";
 import { DefaultLot } from "@/lib/defaultLots";
 import {
   AlertCircle,
@@ -50,10 +52,12 @@ import {
   FileText,
   GanttChart,
   Hammer,
+  LayoutDashboard,
   List,
   MoreHorizontal,
   Pencil,
   Plus,
+  Send,
   Trash2,
   UserCheck,
   UserX,
@@ -76,8 +80,10 @@ interface ProjectChantierTabProps {
 }
 
 export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
-  const [activeTab, setActiveTab] = useState("lots");
+  const [activeTab, setActiveTab] = useState("overview");
   const [selectedMeetingForReport, setSelectedMeetingForReport] = useState<ProjectMeeting | null>(null);
+  const [convocationMeeting, setConvocationMeeting] = useState<ProjectMeeting | null>(null);
+  const { data: project } = useProject(projectId);
 
   // If a meeting is selected for report building, show the builder
   if (selectedMeetingForReport) {
@@ -94,6 +100,10 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
+          <TabsTrigger value="overview">
+            <LayoutDashboard className="h-4 w-4 mr-2" />
+            Vue d'ensemble
+          </TabsTrigger>
           <TabsTrigger value="lots">
             <Hammer className="h-4 w-4 mr-2" />
             Lots
@@ -112,12 +122,24 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="overview" className="mt-4">
+          <ChantierOverview 
+            projectId={projectId} 
+            onNavigate={setActiveTab}
+            onOpenReport={setSelectedMeetingForReport}
+          />
+        </TabsContent>
+
         <TabsContent value="lots" className="mt-4">
           <LotsSection projectId={projectId} />
         </TabsContent>
 
         <TabsContent value="meetings" className="mt-4">
-          <MeetingsSection projectId={projectId} onOpenReport={setSelectedMeetingForReport} />
+          <MeetingsSection 
+            projectId={projectId} 
+            onOpenReport={setSelectedMeetingForReport}
+            onSendConvocation={setConvocationMeeting}
+          />
         </TabsContent>
 
         <TabsContent value="reports" className="mt-4">
@@ -128,6 +150,14 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
           <ObservationsSection projectId={projectId} />
         </TabsContent>
       </Tabs>
+
+      {/* Send Convocation Dialog */}
+      <SendConvocationDialog
+        meeting={convocationMeeting}
+        projectName={project?.name || "Projet"}
+        projectId={projectId}
+        onClose={() => setConvocationMeeting(null)}
+      />
     </div>
   );
 }
@@ -631,14 +661,15 @@ function LotDialog({
   );
 }
 
-// Meetings Section - Updated to support report opening
+// Meetings Section - Updated to support report opening and convocation
 interface MeetingsSectionProps {
   projectId: string;
-  onOpenReport?: (meeting: ProjectMeeting) => void;
+  onOpenReport: (meeting: ProjectMeeting) => void;
+  onSendConvocation?: (meeting: ProjectMeeting) => void;
 }
 
 // Meetings Section
-function MeetingsSection({ projectId, onOpenReport }: { projectId: string; onOpenReport: (meeting: ProjectMeeting) => void }) {
+function MeetingsSection({ projectId, onOpenReport, onSendConvocation }: MeetingsSectionProps) {
   const { meetings, meetingsLoading, observations, createMeeting, updateMeeting, deleteMeeting } = useChantier(projectId);
   const { data: project } = useProject(projectId);
   const { allContacts } = useContacts();
@@ -834,6 +865,17 @@ function MeetingsSection({ projectId, onOpenReport }: { projectId: string; onOpe
                   </div>
 
                   <div className="flex items-center gap-1">
+                    {onSendConvocation && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => onSendConvocation(meeting)}
+                        title="Envoyer une convocation"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button 
                       variant="ghost" 
                       size="icon" 
@@ -859,6 +901,12 @@ function MeetingsSection({ projectId, onOpenReport }: { projectId: string; onOpe
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {onSendConvocation && (
+                          <DropdownMenuItem onClick={() => onSendConvocation(meeting)}>
+                            <Send className="h-4 w-4 mr-2" />
+                            Envoyer une convocation
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => openEditDialog(meeting)}>
                           <Pencil className="h-4 w-4 mr-2" />
                           Modifier
