@@ -29,6 +29,8 @@ export interface CommercialDocument {
   project_city?: string;
   project_surface?: number;
   project_budget?: number;
+  construction_budget?: number;
+  construction_budget_disclosed?: boolean;
   status: DocumentStatus;
   fee_mode: FeeMode;
   fee_percentage?: number;

@@ -134,6 +134,18 @@ export async function generateCommercialPDF(
     pdf.text(`${document.project_surface} m²`, margin + 30, y);
   }
   
+  // Construction budget
+  y += 10;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('BUDGET TRAVAUX', margin + 5, y);
+  pdf.setFont('helvetica', 'normal');
+  const budgetText = document.construction_budget_disclosed === false
+    ? 'Non communiqué'
+    : document.construction_budget 
+      ? formatCurrency(document.construction_budget)
+      : 'Non défini';
+  pdf.text(budgetText, margin + 45, y);
+  
   y += 25;
   
   // Client info

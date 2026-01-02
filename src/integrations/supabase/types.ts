@@ -133,11 +133,64 @@ export type Database = {
           },
         ]
       }
+      commercial_document_versions: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          document_id: string
+          document_snapshot: Json
+          id: string
+          notes: string | null
+          phases_snapshot: Json | null
+          version_number: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          document_id: string
+          document_snapshot: Json
+          id?: string
+          notes?: string | null
+          phases_snapshot?: Json | null
+          version_number?: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          document_id?: string
+          document_snapshot?: Json
+          id?: string
+          notes?: string | null
+          phases_snapshot?: Json | null
+          version_number?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_document_versions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_documents: {
         Row: {
           accepted_at: string | null
           client_company_id: string | null
           client_contact_id: string | null
+          construction_budget: number | null
+          construction_budget_disclosed: boolean | null
           created_at: string | null
           created_by: string | null
           currency: string | null
@@ -174,6 +227,8 @@ export type Database = {
           accepted_at?: string | null
           client_company_id?: string | null
           client_contact_id?: string | null
+          construction_budget?: number | null
+          construction_budget_disclosed?: boolean | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -210,6 +265,8 @@ export type Database = {
           accepted_at?: string | null
           client_company_id?: string | null
           client_contact_id?: string | null
+          construction_budget?: number | null
+          construction_budget_disclosed?: boolean | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
