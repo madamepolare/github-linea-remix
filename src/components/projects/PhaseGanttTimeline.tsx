@@ -1,24 +1,37 @@
-import { useMemo, useRef, useEffect, useState } from "react";
-import { format, parseISO, differenceInDays, addDays, startOfMonth, endOfMonth, eachMonthOfInterval, eachWeekOfInterval, startOfWeek } from "date-fns";
+import { useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { format, parseISO, differenceInDays, addDays, startOfMonth, endOfMonth, eachMonthOfInterval } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { ProjectPhase } from "@/hooks/useProjectPhases";
 import { PhaseDependency } from "@/hooks/usePhaseDependencies";
 import { PHASE_STATUS_CONFIG, PhaseStatus } from "@/lib/projectTypes";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, GripVertical } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface PhaseGanttTimelineProps {
   phases: ProjectPhase[];
   dependencies: PhaseDependency[];
   onPhaseClick?: (phase: ProjectPhase) => void;
+  onPhaseUpdate?: (phaseId: string, updates: { start_date?: string | null; end_date?: string | null }) => void;
 }
 
-export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: PhaseGanttTimelineProps) {
+type DragType = "move" | "resize-start" | "resize-end" | null;
+
+interface DragState {
+  phaseId: string;
+  type: DragType;
+  startX: number;
+  originalStartDate: Date | null;
+  originalEndDate: Date | null;
+}
+
+export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhaseUpdate }: PhaseGanttTimelineProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const todayRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [previewDates, setPreviewDates] = useState<Record<string, { start_date?: Date; end_date?: Date }>>({});
 
   useEffect(() => {
     if (containerRef.current) {
@@ -44,24 +57,29 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: Phase
 
   // Calculate timeline bounds based on phase deadlines
   const { timelineStart, timelineEnd, totalDays } = useMemo(() => {
-    const phasesWithDates = phases.filter((p) => p.end_date);
+    const phasesWithDates = phases.filter((p) => p.start_date || p.end_date);
     
     if (phasesWithDates.length === 0) {
       const now = new Date();
       return {
-        timelineStart: startOfMonth(now),
-        timelineEnd: endOfMonth(addDays(now, 90)),
-        totalDays: 90,
+        timelineStart: startOfMonth(addDays(now, -30)),
+        timelineEnd: endOfMonth(addDays(now, 120)),
+        totalDays: 150,
       };
     }
 
-    const dates = phasesWithDates.map((p) => parseISO(p.end_date!));
-    const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
-    const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+    const allDates: Date[] = [];
+    phasesWithDates.forEach((p) => {
+      if (p.start_date) allDates.push(parseISO(p.start_date));
+      if (p.end_date) allDates.push(parseISO(p.end_date));
+    });
+    
+    const minDate = new Date(Math.min(...allDates.map((d) => d.getTime())));
+    const maxDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
 
     const start = startOfMonth(addDays(minDate, -14));
-    const end = endOfMonth(addDays(maxDate, 14));
-    const days = differenceInDays(end, start) || 90;
+    const end = endOfMonth(addDays(maxDate, 30));
+    const days = differenceInDays(end, start) || 150;
 
     return { timelineStart: start, timelineEnd: end, totalDays: days };
   }, [phases]);
@@ -71,44 +89,62 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: Phase
     return eachMonthOfInterval({ start: timelineStart, end: timelineEnd });
   }, [timelineStart, timelineEnd]);
 
-  const dayWidth = containerWidth > 0 ? Math.max((containerWidth - 200) / totalDays, 2) : 10;
+  const dayWidth = containerWidth > 0 ? Math.max((containerWidth - 200) / totalDays, 3) : 10;
   const chartWidth = totalDays * dayWidth;
 
-  // Calculate positions for each phase
+  // Calculate positions for each phase (with preview support)
   const phasePositions = useMemo(() => {
-    const positions: Record<string, { left: number; width: number }> = {};
+    const positions: Record<string, { left: number; width: number; startDate: Date | null; endDate: Date | null }> = {};
     
     phases.forEach((phase, index) => {
-      if (phase.end_date) {
-        const deadline = parseISO(phase.end_date);
-        const daysFromStart = differenceInDays(deadline, timelineStart);
+      const preview = previewDates[phase.id];
+      const startDate = preview?.start_date || (phase.start_date ? parseISO(phase.start_date) : null);
+      const endDate = preview?.end_date || (phase.end_date ? parseISO(phase.end_date) : null);
+      
+      if (startDate && endDate) {
+        const startDays = differenceInDays(startDate, timelineStart);
+        const endDays = differenceInDays(endDate, timelineStart);
         
-        // Estimate phase duration (e.g., based on previous phase or default 14 days)
-        const prevPhase = phases[index - 1];
-        let startDay = 0;
-        
-        if (prevPhase && prevPhase.end_date) {
-          const prevDeadline = parseISO(prevPhase.end_date);
-          startDay = Math.max(0, differenceInDays(prevDeadline, timelineStart));
-        } else {
-          startDay = Math.max(0, daysFromStart - 14);
-        }
-
         positions[phase.id] = {
-          left: startDay * dayWidth,
-          width: Math.max((daysFromStart - startDay) * dayWidth, 20),
+          left: Math.max(0, startDays * dayWidth),
+          width: Math.max((endDays - startDays + 1) * dayWidth, 30),
+          startDate,
+          endDate,
+        };
+      } else if (endDate) {
+        // Only end date - estimate start 14 days before
+        const endDays = differenceInDays(endDate, timelineStart);
+        const startDays = Math.max(0, endDays - 14);
+        
+        positions[phase.id] = {
+          left: startDays * dayWidth,
+          width: Math.max((endDays - startDays + 1) * dayWidth, 30),
+          startDate: addDays(endDate, -14),
+          endDate,
+        };
+      } else if (startDate) {
+        // Only start date - extend 14 days
+        const startDays = differenceInDays(startDate, timelineStart);
+        
+        positions[phase.id] = {
+          left: Math.max(0, startDays * dayWidth),
+          width: 14 * dayWidth,
+          startDate,
+          endDate: addDays(startDate, 14),
         };
       } else {
-        // Position phases without dates at the start
+        // No dates - position at start
         positions[phase.id] = {
           left: index * 30,
           width: 80,
+          startDate: null,
+          endDate: null,
         };
       }
     });
 
     return positions;
-  }, [phases, timelineStart, dayWidth]);
+  }, [phases, timelineStart, dayWidth, previewDates]);
 
   // Build dependency map for visual connections
   const dependencyLines = useMemo(() => {
@@ -138,6 +174,87 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: Phase
     return daysFromStart * dayWidth;
   }, [timelineStart, totalDays, dayWidth]);
 
+  // Drag handlers
+  const handleMouseDown = useCallback((e: React.MouseEvent, phaseId: string, type: DragType) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const phase = phases.find(p => p.id === phaseId);
+    if (!phase) return;
+    
+    setDragState({
+      phaseId,
+      type,
+      startX: e.clientX,
+      originalStartDate: phase.start_date ? parseISO(phase.start_date) : null,
+      originalEndDate: phase.end_date ? parseISO(phase.end_date) : null,
+    });
+  }, [phases]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!dragState) return;
+    
+    const deltaX = e.clientX - dragState.startX;
+    const deltaDays = Math.round(deltaX / dayWidth);
+    
+    if (deltaDays === 0) return;
+    
+    const { phaseId, type, originalStartDate, originalEndDate } = dragState;
+    
+    let newStartDate = originalStartDate;
+    let newEndDate = originalEndDate;
+    
+    if (type === "move") {
+      if (originalStartDate) newStartDate = addDays(originalStartDate, deltaDays);
+      if (originalEndDate) newEndDate = addDays(originalEndDate, deltaDays);
+    } else if (type === "resize-start" && originalStartDate) {
+      newStartDate = addDays(originalStartDate, deltaDays);
+      // Ensure start doesn't go past end
+      if (newEndDate && newStartDate >= newEndDate) {
+        newStartDate = addDays(newEndDate, -1);
+      }
+    } else if (type === "resize-end" && originalEndDate) {
+      newEndDate = addDays(originalEndDate, deltaDays);
+      // Ensure end doesn't go before start
+      if (newStartDate && newEndDate <= newStartDate) {
+        newEndDate = addDays(newStartDate, 1);
+      }
+    }
+    
+    setPreviewDates({
+      [phaseId]: {
+        start_date: newStartDate || undefined,
+        end_date: newEndDate || undefined,
+      }
+    });
+  }, [dragState, dayWidth]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!dragState) return;
+    
+    const preview = previewDates[dragState.phaseId];
+    if (preview && onPhaseUpdate) {
+      onPhaseUpdate(dragState.phaseId, {
+        start_date: preview.start_date ? format(preview.start_date, "yyyy-MM-dd") : undefined,
+        end_date: preview.end_date ? format(preview.end_date, "yyyy-MM-dd") : undefined,
+      });
+    }
+    
+    setDragState(null);
+    setPreviewDates({});
+  }, [dragState, previewDates, onPhaseUpdate]);
+
+  useEffect(() => {
+    if (dragState) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      return () => {
+        window.removeEventListener("mousemove", handleMouseMove);
+        window.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [dragState, handleMouseMove, handleMouseUp]);
+
   if (phases.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -147,7 +264,7 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: Phase
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden bg-card">
+    <div className={cn("border rounded-lg overflow-hidden bg-card", dragState && "cursor-grabbing select-none")}>
       {/* Header with months */}
       <div className="flex border-b bg-muted/50">
         <div className="w-[200px] flex-shrink-0 px-3 py-2 font-medium text-sm border-r">
@@ -156,10 +273,8 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: Phase
         <div className="flex-1 overflow-x-auto" ref={containerRef}>
           <div style={{ width: chartWidth, minWidth: "100%" }} className="flex">
             {months.map((month) => {
-              const monthStart = month;
-              const daysFromTimelineStart = differenceInDays(monthStart, timelineStart);
               const monthEnd = endOfMonth(month);
-              const monthDays = differenceInDays(monthEnd, monthStart) + 1;
+              const monthDays = differenceInDays(monthEnd, month) + 1;
               
               return (
                 <div
@@ -232,20 +347,20 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: Phase
                     />
                   );
                 })}
-
-                {/* Today indicator */}
-                {todayPosition !== null && (
-                  <div
-                    ref={todayRef}
-                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
-                    style={{ left: todayPosition }}
-                  >
-                    <div className="absolute -top-0 left-1/2 -translate-x-1/2 bg-red-500 text-white text-2xs px-1.5 py-0.5 rounded-b font-medium whitespace-nowrap">
-                      Aujourd'hui
-                    </div>
-                  </div>
-                )}
               </svg>
+
+              {/* Today indicator */}
+              {todayPosition !== null && (
+                <div
+                  ref={todayRef}
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
+                  style={{ left: todayPosition }}
+                >
+                  <div className="absolute -top-0 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-b font-medium whitespace-nowrap">
+                    Aujourd'hui
+                  </div>
+                </div>
+              )}
 
               {/* Dependency lines */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 5 }}>
@@ -280,7 +395,8 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: Phase
                 const pos = phasePositions[phase.id];
                 if (!pos) return null;
 
-                const statusConfig = PHASE_STATUS_CONFIG[phase.status as PhaseStatus] || PHASE_STATUS_CONFIG.pending;
+                const isDragging = dragState?.phaseId === phase.id;
+                const canDrag = !!onPhaseUpdate;
 
                 return (
                   <div
@@ -292,29 +408,75 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: Phase
                         <TooltipTrigger asChild>
                           <div
                             className={cn(
-                              "absolute h-7 rounded-md cursor-pointer transition-all hover:opacity-90",
-                              phase.status === "completed" && "opacity-60"
+                              "absolute h-7 rounded-md transition-all group",
+                              phase.status === "completed" && "opacity-60",
+                              isDragging ? "shadow-lg ring-2 ring-primary z-20" : "hover:shadow-md",
+                              canDrag ? "cursor-grab" : "cursor-pointer"
                             )}
                             style={{
                               left: pos.left,
                               width: pos.width,
                               backgroundColor: phase.color || "#3B82F6",
                             }}
-                            onClick={() => onPhaseClick?.(phase)}
+                            onClick={(e) => {
+                              if (!isDragging) {
+                                onPhaseClick?.(phase);
+                              }
+                            }}
+                            onMouseDown={(e) => canDrag && handleMouseDown(e, phase.id, "move")}
                           >
-                            <div className="h-full flex items-center px-2">
+                            {/* Left resize handle */}
+                            {canDrag && (
+                              <div
+                                className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 flex items-center justify-center"
+                                onMouseDown={(e) => handleMouseDown(e, phase.id, "resize-start")}
+                              >
+                                <div className="w-0.5 h-4 bg-white/50 rounded-full" />
+                              </div>
+                            )}
+                            
+                            {/* Content */}
+                            <div className="h-full flex items-center px-2 overflow-hidden">
+                              {canDrag && (
+                                <GripVertical className="h-3 w-3 text-white/50 mr-1 flex-shrink-0" />
+                              )}
                               <span className="text-xs text-white font-medium truncate">
-                                {phase.end_date && format(parseISO(phase.end_date), "d MMM", { locale: fr })}
+                                {pos.startDate && pos.endDate 
+                                  ? `${format(pos.startDate, "d MMM", { locale: fr })} - ${format(pos.endDate, "d MMM", { locale: fr })}`
+                                  : pos.endDate 
+                                    ? format(pos.endDate, "d MMM", { locale: fr })
+                                    : phase.name
+                                }
                               </span>
                             </div>
+                            
+                            {/* Right resize handle */}
+                            {canDrag && (
+                              <div
+                                className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 flex items-center justify-center"
+                                onMouseDown={(e) => handleMouseDown(e, phase.id, "resize-end")}
+                              >
+                                <div className="w-0.5 h-4 bg-white/50 rounded-full" />
+                              </div>
+                            )}
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top">
                           <div className="text-sm">
                             <p className="font-medium">{phase.name}</p>
-                            <p className="text-muted-foreground">{statusConfig.label}</p>
-                            {phase.end_date && (
-                              <p>Échéance: {format(parseISO(phase.end_date), "d MMMM yyyy", { locale: fr })}</p>
+                            <p className="text-muted-foreground">
+                              {PHASE_STATUS_CONFIG[phase.status as PhaseStatus]?.label || phase.status}
+                            </p>
+                            {pos.startDate && (
+                              <p>Début: {format(pos.startDate, "d MMMM yyyy", { locale: fr })}</p>
+                            )}
+                            {pos.endDate && (
+                              <p>Fin: {format(pos.endDate, "d MMMM yyyy", { locale: fr })}</p>
+                            )}
+                            {canDrag && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Glisser pour déplacer, bords pour redimensionner
+                              </p>
                             )}
                           </div>
                         </TooltipContent>

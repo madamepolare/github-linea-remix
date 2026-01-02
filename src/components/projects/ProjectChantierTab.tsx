@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { LOT_STATUS, OBSERVATION_STATUS, OBSERVATION_PRIORITY } from "@/lib/projectTypes";
 import { generateMeetingPDF } from "@/lib/generateMeetingPDF";
 import { ChantierGantt } from "./ChantierGantt";
+import { MeetingReportBuilder } from "./MeetingReportBuilder";
 import {
   AlertCircle,
   Building2,
@@ -73,6 +74,18 @@ interface ProjectChantierTabProps {
 
 export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
   const [activeTab, setActiveTab] = useState("lots");
+  const [selectedMeetingForReport, setSelectedMeetingForReport] = useState<ProjectMeeting | null>(null);
+
+  // If a meeting is selected for report building, show the builder
+  if (selectedMeetingForReport) {
+    return (
+      <MeetingReportBuilder
+        projectId={projectId}
+        meeting={selectedMeetingForReport}
+        onBack={() => setSelectedMeetingForReport(null)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -86,6 +99,10 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
             <Users className="h-4 w-4 mr-2" />
             Réunions
           </TabsTrigger>
+          <TabsTrigger value="reports">
+            <FileText className="h-4 w-4 mr-2" />
+            Comptes Rendus
+          </TabsTrigger>
           <TabsTrigger value="observations">
             <Eye className="h-4 w-4 mr-2" />
             Observations
@@ -97,13 +114,78 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
         </TabsContent>
 
         <TabsContent value="meetings" className="mt-4">
-          <MeetingsSection projectId={projectId} />
+          <MeetingsSection projectId={projectId} onOpenReport={setSelectedMeetingForReport} />
+        </TabsContent>
+
+        <TabsContent value="reports" className="mt-4">
+          <ReportsSection projectId={projectId} onOpenReport={setSelectedMeetingForReport} />
         </TabsContent>
 
         <TabsContent value="observations" className="mt-4">
           <ObservationsSection projectId={projectId} />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// Reports Section - Liste des comptes rendus
+function ReportsSection({ projectId, onOpenReport }: { projectId: string; onOpenReport: (meeting: ProjectMeeting) => void }) {
+  const { meetings, meetingsLoading }  = useChantier(projectId);
+
+  if (meetingsLoading) {
+    return <Skeleton className="h-48 w-full" />;
+  }
+
+  if (meetings.length === 0) {
+    return (
+      <EmptyState
+        icon={FileText}
+        title="Aucun compte rendu"
+        description="Créez d'abord une réunion dans l'onglet Réunions, puis rédigez son compte rendu."
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium">Comptes rendus de chantier</h3>
+      </div>
+
+      <div className="grid gap-3">
+        {meetings.map((meeting) => {
+          const attendees = meeting.attendees || [];
+          const presentCount = attendees.filter(a => a.present).length;
+          
+          return (
+            <Card key={meeting.id} className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => onOpenReport(meeting)}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">CR n°{meeting.meeting_number || "?"}</span>
+                      <span className="text-muted-foreground">-</span>
+                      <span>{meeting.title}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {format(parseISO(meeting.meeting_date), "d MMMM yyyy", { locale: fr })}
+                      {attendees.length > 0 && ` • ${presentCount}/${attendees.length} présents`}
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Éditer
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -496,6 +578,12 @@ function LotDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+// Meetings Section - Updated to support report opening
+interface MeetingsSectionProps {
+  projectId: string;
+  onOpenReport?: (meeting: ProjectMeeting) => void;
 }
 
 // Meetings Section
