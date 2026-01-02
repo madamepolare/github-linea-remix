@@ -56,16 +56,14 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
   const [formDescription, setFormDescription] = useState("");
   const [formStatus, setFormStatus] = useState<PhaseStatus>("pending");
   const [formColor, setFormColor] = useState(PHASE_COLORS[0]);
-  const [formStartDate, setFormStartDate] = useState<Date | null>(null);
-  const [formEndDate, setFormEndDate] = useState<Date | null>(null);
+  const [formDeadline, setFormDeadline] = useState<Date | null>(null);
 
   const resetForm = () => {
     setFormName("");
     setFormDescription("");
     setFormStatus("pending");
     setFormColor(PHASE_COLORS[phases.length % PHASE_COLORS.length]);
-    setFormStartDate(null);
-    setFormEndDate(null);
+    setFormDeadline(null);
   };
 
   const openEditDialog = (phase: any) => {
@@ -74,8 +72,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
     setFormDescription(phase.description || "");
     setFormStatus(phase.status as PhaseStatus);
     setFormColor(phase.color || PHASE_COLORS[0]);
-    setFormStartDate(phase.start_date ? parseISO(phase.start_date) : null);
-    setFormEndDate(phase.end_date ? parseISO(phase.end_date) : null);
+    setFormDeadline(phase.end_date ? parseISO(phase.end_date) : null);
   };
 
   const handleCreate = () => {
@@ -86,8 +83,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
       description: formDescription.trim() || undefined,
       status: formStatus,
       color: formColor,
-      start_date: formStartDate ? format(formStartDate, "yyyy-MM-dd") : undefined,
-      end_date: formEndDate ? format(formEndDate, "yyyy-MM-dd") : undefined,
+      end_date: formDeadline ? format(formDeadline, "yyyy-MM-dd") : undefined,
       sort_order: phases.length,
     });
 
@@ -104,8 +100,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
       description: formDescription.trim() || null,
       status: formStatus,
       color: formColor,
-      start_date: formStartDate ? format(formStartDate, "yyyy-MM-dd") : null,
-      end_date: formEndDate ? format(formEndDate, "yyyy-MM-dd") : null,
+      end_date: formDeadline ? format(formDeadline, "yyyy-MM-dd") : null,
     });
 
     setEditingPhase(null);
@@ -193,12 +188,10 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
                     {phase.description && (
                       <p className="text-sm text-muted-foreground mt-1">{phase.description}</p>
                     )}
-                    {(phase.start_date || phase.end_date) && (
+                    {phase.end_date && (
                       <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {phase.start_date && format(parseISO(phase.start_date), "d MMM yyyy", { locale: fr })}
-                        {phase.start_date && phase.end_date && " → "}
-                        {phase.end_date && format(parseISO(phase.end_date), "d MMM yyyy", { locale: fr })}
+                        Échéance : {format(parseISO(phase.end_date), "d MMM yyyy", { locale: fr })}
                       </p>
                     )}
                   </div>
@@ -309,25 +302,14 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Date de début</Label>
-                <InlineDatePicker
-                  value={formStartDate}
-                  onChange={setFormStartDate}
-                  placeholder="Sélectionner..."
-                  className="w-full"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Date de fin</Label>
-                <InlineDatePicker
-                  value={formEndDate}
-                  onChange={setFormEndDate}
-                  placeholder="Sélectionner..."
-                  className="w-full"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Date d'échéance</Label>
+              <InlineDatePicker
+                value={formDeadline}
+                onChange={setFormDeadline}
+                placeholder="Sélectionner une échéance..."
+                className="w-full"
+              />
             </div>
           </div>
 
