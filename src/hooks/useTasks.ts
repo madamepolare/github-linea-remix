@@ -3,6 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
+export interface SubtaskPreview {
+  id: string;
+  title: string;
+  status: string;
+}
+
 export interface Task {
   id: string;
   workspace_id: string;
@@ -14,6 +20,7 @@ export interface Task {
   priority: "low" | "medium" | "high" | "urgent";
   due_date: string | null;
   start_date: string | null;
+  end_date: string | null;
   estimated_hours: number | null;
   actual_hours: number | null;
   tags: string[] | null;
@@ -23,7 +30,16 @@ export interface Task {
   sort_order: number | null;
   created_at: string | null;
   updated_at: string | null;
-  subtasks?: Task[];
+  // New fields
+  module: string | null;
+  brief: string | null;
+  related_type: string | null;
+  related_id: string | null;
+  crm_company_id: string | null;
+  contact_id: string | null;
+  lead_id: string | null;
+  // Subtasks preview (not full Task objects)
+  subtasks?: SubtaskPreview[];
 }
 
 interface UseTasksOptions {
@@ -69,7 +85,10 @@ export function useTasks(options?: UseTasksOptions) {
             .select("id, title, status")
             .eq("parent_id", task.id)
             .order("sort_order");
-          return { ...task, subtasks: subtasks || [] };
+          return { 
+            ...task, 
+            subtasks: (subtasks || []) as SubtaskPreview[] 
+          };
         })
       );
 
