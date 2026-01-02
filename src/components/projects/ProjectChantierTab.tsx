@@ -37,7 +37,7 @@ import { ChantierGantt } from "./ChantierGantt";
 import { MeetingReportBuilder } from "./MeetingReportBuilder";
 import { LoadLotsTemplateDialog } from "./LoadLotsTemplateDialog";
 import { ChantierOverview } from "./chantier/ChantierOverview";
-import { ChantierPlanningModal } from "./chantier/ChantierPlanningModal";
+import { ChantierPlanningTab } from "./chantier/ChantierPlanningTab";
 import { MeetingsAndReportsSection } from "./chantier/MeetingsAndReportsSection";
 import { SendConvocationDialog } from "./chantier/SendConvocationDialog";
 import { DefaultLot } from "@/lib/defaultLots";
@@ -86,9 +86,9 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedMeetingForReport, setSelectedMeetingForReport] = useState<ProjectMeeting | null>(null);
   const [convocationMeeting, setConvocationMeeting] = useState<ProjectMeeting | null>(null);
-  const [planningModalOpen, setPlanningModalOpen] = useState(false);
+  const [editingLot, setEditingLot] = useState<ProjectLot | null>(null);
   const { data: project } = useProject(projectId);
-  const { lots, updateLot, createLot, deleteLot } = useChantier(projectId);
+  const { lots, lotsLoading, updateLot, createLot, deleteLot } = useChantier(projectId);
   const { companies } = useCRMCompanies();
 
   // If a meeting is selected for report building, show the builder
@@ -105,14 +105,18 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
   return (
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="overview">
             <LayoutDashboard className="h-4 w-4 mr-2" />
             Vue d'ensemble
           </TabsTrigger>
+          <TabsTrigger value="planning">
+            <GanttChart className="h-4 w-4 mr-2" />
+            Planning
+          </TabsTrigger>
           <TabsTrigger value="lots">
             <Hammer className="h-4 w-4 mr-2" />
-            Lots & Intervenants
+            Lots
           </TabsTrigger>
           <TabsTrigger value="meetings">
             <FileText className="h-4 w-4 mr-2" />
@@ -129,12 +133,26 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
             projectId={projectId} 
             onNavigate={setActiveTab}
             onOpenReport={setSelectedMeetingForReport}
-            onOpenPlanning={() => setPlanningModalOpen(true)}
+            onOpenPlanning={() => setActiveTab("planning")}
+          />
+        </TabsContent>
+
+        <TabsContent value="planning" className="mt-4">
+          <ChantierPlanningTab
+            projectId={projectId}
+            lots={lots}
+            lotsLoading={lotsLoading}
+            onUpdateLot={(id, updates) => updateLot.mutate({ id, ...updates })}
+            onCreateLot={(name, start_date, end_date) => createLot.mutate({ name, start_date, end_date, status: "pending", sort_order: lots.length })}
+            onDeleteLot={(id) => deleteLot.mutate(id)}
+            onEditLot={(lot) => setEditingLot(lot)}
+            companies={companies}
+            projectName={project?.name}
           />
         </TabsContent>
 
         <TabsContent value="lots" className="mt-4">
-          <LotsSection projectId={projectId} onOpenPlanning={() => setPlanningModalOpen(true)} />
+          <LotsSection projectId={projectId} onOpenPlanning={() => setActiveTab("planning")} />
         </TabsContent>
 
         <TabsContent value="meetings" className="mt-4">
@@ -149,18 +167,6 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
           <ObservationsSection projectId={projectId} />
         </TabsContent>
       </Tabs>
-
-      {/* Planning Modal */}
-      <ChantierPlanningModal
-        isOpen={planningModalOpen}
-        onClose={() => setPlanningModalOpen(false)}
-        lots={lots}
-        onUpdateLot={(id, updates) => updateLot.mutate({ id, ...updates })}
-        onCreateLot={(name, start_date, end_date) => createLot.mutate({ name, start_date, end_date, status: "pending", sort_order: lots.length })}
-        onDeleteLot={(id) => deleteLot.mutate(id)}
-        companies={companies}
-        projectName={project?.name}
-      />
 
       {/* Send Convocation Dialog */}
       <SendConvocationDialog
