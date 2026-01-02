@@ -18,6 +18,8 @@ import LeadDetail from "./pages/LeadDetail";
 import Tasks from "./pages/Tasks";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
+import Commercial from "./pages/Commercial";
+import CommercialDocument from "./pages/CommercialDocument";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -103,6 +105,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commercial"
+              element={
+                <ProtectedRoute>
+                  <Commercial />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/commercial/:id"
+              element={
+                <ProtectedRoute>
+                  <CommercialDocument />
                 </ProtectedRoute>
               }
             />
