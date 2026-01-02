@@ -275,8 +275,8 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
       selected: true,
     }));
 
-  const meetingObservations = observations.filter(o => o.meeting_id === meeting.id);
-  const internalTasks = tasks.filter(t => t.module === "chantier" && t.status !== "done").slice(0, 10);
+  const meetingObservations = (observations || []).filter(o => o.meeting_id === meeting.id);
+  const internalTasks = (tasks || []).filter(t => t.module === "chantier" && t.status !== "done").slice(0, 10);
   const presentCount = attendeesWithType.filter(a => a.present).length;
 
   return (
