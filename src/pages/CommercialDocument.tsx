@@ -49,8 +49,9 @@ const CommercialDocument = () => {
     deletePhase
   } = useCommercialDocuments();
 
-  const documentQuery = isNew ? { data: null, isLoading: false } : getDocument(id!);
-  const phasesQuery = isNew ? { data: [], isLoading: false } : getDocumentPhases(id!);
+  // Always call hooks unconditionally with the id, they handle enabled state internally
+  const documentQuery = getDocument(isNew ? '' : (id || ''));
+  const phasesQuery = getDocumentPhases(isNew ? '' : (id || ''));
 
   const [showPreview, setShowPreview] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
