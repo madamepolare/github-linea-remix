@@ -36,6 +36,7 @@ import {
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useLeads, Lead } from "@/hooks/useLeads";
+import { EntityTasksList } from "@/components/tasks/EntityTasksList";
 import {
   getCompanyTypeConfig,
   COMPANY_TYPE_CONFIG,
@@ -256,6 +257,7 @@ export default function CompanyDetail() {
             <TabsTrigger value="overview">Informations</TabsTrigger>
             <TabsTrigger value="contacts">Contacts ({companyContacts.length})</TabsTrigger>
             <TabsTrigger value="leads">Opportunités ({companyLeads.length})</TabsTrigger>
+            <TabsTrigger value="tasks">Tâches</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-4">
@@ -660,6 +662,14 @@ export default function CompanyDetail() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="tasks" className="mt-4">
+            <EntityTasksList
+              entityType="company"
+              entityId={company.id}
+              entityName={company.name}
+            />
           </TabsContent>
         </Tabs>
       </div>

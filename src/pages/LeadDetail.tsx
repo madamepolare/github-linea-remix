@@ -432,6 +432,14 @@ export default function LeadDetail() {
                 </Card>
               </TabsContent>
 
+              <TabsContent value="tasks" className="mt-4">
+                <EntityTasksList
+                  entityType="lead"
+                  entityId={lead.id}
+                  entityName={lead.title}
+                />
+              </TabsContent>
+
               <TabsContent value="details" className="mt-4">
                 <Card>
                   <CardContent className="p-6 space-y-4">
