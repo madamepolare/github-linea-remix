@@ -62,7 +62,6 @@ export function AttentionItemsSection({
     assignee_company_ids: string[];
     assignee_lot_ids: string[];
     assignee_names: string[];
-    stakeholder_type: "bet" | "entreprise" | "moa" | "other";
     description: string;
     urgency: "low" | "normal" | "high" | "critical";
     due_date: string | null;
@@ -71,48 +70,53 @@ export function AttentionItemsSection({
     assignee_company_ids: [],
     assignee_lot_ids: [],
     assignee_names: [],
-    stakeholder_type: "entreprise",
     description: "",
     urgency: "normal",
     due_date: null,
   });
   const [customName, setCustomName] = useState("");
 
-  // Get companies from lots for entreprises
-  const lotCompanies = lots
-    .filter(l => l.crm_company_id)
-    .map(l => {
-      const company = companies.find(c => c.id === l.crm_company_id);
-      return company ? { ...company, lotName: l.name } : null;
-    })
-    .filter(Boolean) as (Company & { lotName: string })[];
-
-  // Get MOE companies (BET, architects, etc.)
+  // Get MOE companies (BET, architects, etc.) - deduplicated
   const moeCompanies = moeTeam
     .filter(m => m.crm_company_id && m.crm_company)
-    .map(m => ({
-      id: m.crm_company_id!,
-      name: m.crm_company!.name,
-      role: m.role,
-    }));
+    .reduce((acc, m) => {
+      if (!acc.find(c => c.id === m.crm_company_id)) {
+        acc.push({
+          id: m.crm_company_id!,
+          name: m.crm_company!.name,
+          role: m.role,
+        });
+      }
+      return acc;
+    }, [] as { id: string; name: string; role: string }[]);
 
-  // Get assignee options based on stakeholder type
-  const getAssigneeOptions = () => {
-    switch (newItem.stakeholder_type) {
-      case "entreprise":
-        return lotCompanies.map(c => ({ id: c.id, name: c.name, description: c.lotName }));
-      case "bet":
-      case "moa":
-        return moeCompanies.map(c => ({ id: c.id, name: c.name, description: c.role }));
-      default:
-        return [];
-    }
-  };
-
-  const assigneeOptions = getAssigneeOptions();
+  // Get lot companies - deduplicated
+  const lotCompanies = lots
+    .filter(l => l.crm_company_id)
+    .reduce((acc, l) => {
+      const company = companies.find(c => c.id === l.crm_company_id);
+      if (company && !acc.find(c => c.id === company.id)) {
+        acc.push({ ...company, lotName: l.name });
+      }
+      return acc;
+    }, [] as (Company & { lotName: string })[]);
 
   const handleAddItem = () => {
     if (!newItem.description.trim()) return;
+    
+    // Determine stakeholder_type based on selections
+    let stakeholder_type: "bet" | "entreprise" | "moa" | "other" = "other";
+    if (newItem.assignee_type === "all") {
+      stakeholder_type = "entreprise";
+    } else if (newItem.assignee_lot_ids.length > 0) {
+      stakeholder_type = "entreprise";
+    } else if (newItem.assignee_company_ids.some(id => lotCompanies.find(c => c.id === id))) {
+      stakeholder_type = "entreprise";
+    } else if (newItem.assignee_company_ids.some(id => moeCompanies.find(c => c.id === id))) {
+      stakeholder_type = "bet";
+    } else if (newItem.assignee_names.length > 0) {
+      stakeholder_type = "other";
+    }
     
     onCreateItem({
       meeting_id: meetingId,
@@ -120,7 +124,7 @@ export function AttentionItemsSection({
       assignee_company_ids: newItem.assignee_company_ids,
       assignee_lot_ids: newItem.assignee_lot_ids,
       assignee_names: newItem.assignee_names,
-      stakeholder_type: newItem.stakeholder_type,
+      stakeholder_type,
       description: newItem.description,
       urgency: newItem.urgency,
       due_date: newItem.due_date,
@@ -133,7 +137,6 @@ export function AttentionItemsSection({
       assignee_company_ids: [],
       assignee_lot_ids: [],
       assignee_names: [],
-      stakeholder_type: "entreprise",
       description: "",
       urgency: "normal",
       due_date: null,
@@ -141,20 +144,27 @@ export function AttentionItemsSection({
     setIsAddDialogOpen(false);
   };
 
-  const toggleLotSelection = (lotId: string) => {
-    const ids = newItem.assignee_lot_ids.includes(lotId)
-      ? newItem.assignee_lot_ids.filter(id => id !== lotId)
-      : [...newItem.assignee_lot_ids, lotId];
-    const hasSelection = ids.length > 0 || newItem.assignee_company_ids.length > 0;
-    setNewItem({ ...newItem, assignee_lot_ids: ids, assignee_type: hasSelection ? "specific" : "all" });
-  };
-
   const toggleCompanySelection = (companyId: string) => {
     const ids = newItem.assignee_company_ids.includes(companyId)
       ? newItem.assignee_company_ids.filter(id => id !== companyId)
       : [...newItem.assignee_company_ids, companyId];
-    const hasSelection = ids.length > 0 || newItem.assignee_lot_ids.length > 0;
+    const hasSelection = ids.length > 0 || newItem.assignee_lot_ids.length > 0 || newItem.assignee_names.length > 0;
     setNewItem({ ...newItem, assignee_company_ids: ids, assignee_type: hasSelection ? "specific" : "all" });
+  };
+
+  const toggleLotSelection = (lotId: string) => {
+    const ids = newItem.assignee_lot_ids.includes(lotId)
+      ? newItem.assignee_lot_ids.filter(id => id !== lotId)
+      : [...newItem.assignee_lot_ids, lotId];
+    const hasSelection = ids.length > 0 || newItem.assignee_company_ids.length > 0 || newItem.assignee_names.length > 0;
+    setNewItem({ ...newItem, assignee_lot_ids: ids, assignee_type: hasSelection ? "specific" : "all" });
+  };
+
+  const updateAssigneeType = () => {
+    const hasSelection = newItem.assignee_lot_ids.length > 0 || 
+                         newItem.assignee_company_ids.length > 0 || 
+                         newItem.assignee_names.length > 0;
+    return hasSelection ? "specific" : "all";
   };
 
   const addCustomName = () => {
@@ -306,135 +316,133 @@ export function AttentionItemsSection({
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Stakeholder type */}
-            <div className="space-y-2">
-              <Label>Type de destinataire</Label>
-              <div className="flex gap-2 flex-wrap">
-                {(["entreprise", "bet", "moa", "other"] as const).map((type) => (
-                  <Button
-                    key={type}
-                    type="button"
-                    variant={newItem.stakeholder_type === type ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setNewItem({ 
-                      ...newItem, 
-                      stakeholder_type: type,
-                      assignee_company_ids: [],
-                      assignee_lot_ids: [],
-                      assignee_names: [],
-                      assignee_type: "all",
-                    })}
-                  >
-                    {typeConfig[type].label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Assignees */}
+            {/* Unified Assignees Selection */}
             <div className="space-y-2">
               <Label>Destinataires</Label>
-              
-              {newItem.stakeholder_type === "other" ? (
-                // Mode "Autre": uniquement ajout manuel
-                <div className="space-y-2">
-                  <div className="space-y-2 border rounded-lg p-3 max-h-40 overflow-y-auto">
-                    {newItem.assignee_names.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Aucun destinataire ajouté</p>
-                    ) : (
-                      newItem.assignee_names.map((name, idx) => (
-                        <div key={idx} className="flex items-center justify-between">
-                          <span className="text-sm">{name}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => setNewItem({
+              <div className="space-y-2 border rounded-lg p-3 max-h-64 overflow-y-auto">
+                {/* All option */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={newItem.assignee_type === "all" && newItem.assignee_company_ids.length === 0 && newItem.assignee_lot_ids.length === 0 && newItem.assignee_names.length === 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setNewItem({ ...newItem, assignee_type: "all", assignee_company_ids: [], assignee_lot_ids: [], assignee_names: [] });
+                      }
+                    }}
+                  />
+                  <span className="text-sm font-medium">Tous</span>
+                </label>
+                
+                {/* Lots section */}
+                {lots.length > 0 && (
+                  <>
+                    <div className="border-t my-2" />
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Lots</p>
+                    {lots.map((lot) => (
+                      <label key={lot.id} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={newItem.assignee_lot_ids.includes(lot.id)}
+                          onCheckedChange={() => toggleLotSelection(lot.id)}
+                        />
+                        <Package className="h-3 w-3 text-amber-500" />
+                        <span className="text-sm">{lot.name}</span>
+                      </label>
+                    ))}
+                  </>
+                )}
+                
+                {/* Lot Companies (Entreprises) */}
+                {lotCompanies.length > 0 && (
+                  <>
+                    <div className="border-t my-2" />
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Entreprises (lots)</p>
+                    {lotCompanies.map((company) => (
+                      <label key={`lot-${company.id}`} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={newItem.assignee_company_ids.includes(company.id)}
+                          onCheckedChange={() => toggleCompanySelection(company.id)}
+                        />
+                        <Building2 className="h-3 w-3 text-amber-500" />
+                        <span className="text-sm">{company.name}</span>
+                        <span className="text-xs text-muted-foreground">({company.lotName})</span>
+                      </label>
+                    ))}
+                  </>
+                )}
+                
+                {/* MOE Companies (BET, MOA, etc.) */}
+                {moeCompanies.length > 0 && (
+                  <>
+                    <div className="border-t my-2" />
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Équipe MOE (BET, MOA...)</p>
+                    {moeCompanies.map((company) => (
+                      <label key={`moe-${company.id}`} className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={newItem.assignee_company_ids.includes(company.id)}
+                          onCheckedChange={() => toggleCompanySelection(company.id)}
+                        />
+                        <Building2 className="h-3 w-3 text-purple-500" />
+                        <span className="text-sm">{company.name}</span>
+                        <span className="text-xs text-muted-foreground">({company.role})</span>
+                      </label>
+                    ))}
+                  </>
+                )}
+
+                {/* Custom names */}
+                {newItem.assignee_names.length > 0 && (
+                  <>
+                    <div className="border-t my-2" />
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Autres</p>
+                    {newItem.assignee_names.map((name, idx) => (
+                      <div key={idx} className="flex items-center justify-between">
+                        <span className="text-sm flex items-center gap-2">
+                          <Users className="h-3 w-3 text-muted-foreground" />
+                          {name}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            const names = newItem.assignee_names.filter((_, i) => i !== idx);
+                            const hasSelection = names.length > 0 || newItem.assignee_lot_ids.length > 0 || newItem.assignee_company_ids.length > 0;
+                            setNewItem({
                               ...newItem,
-                              assignee_names: newItem.assignee_names.filter((_, i) => i !== idx),
-                            })}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      value={customName}
-                      onChange={(e) => setCustomName(e.target.value)}
-                      placeholder="Ajouter un nom..."
-                      className="flex-1"
-                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustomName())}
-                    />
-                    <Button type="button" variant="outline" size="sm" onClick={addCustomName}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                              assignee_names: names,
+                              assignee_type: hasSelection ? "custom" : "all",
+                            });
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {/* Add custom name */}
+                <div className="border-t my-2" />
+                <div className="flex gap-2">
+                  <Input
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    placeholder="Ajouter un nom personnalisé..."
+                    className="flex-1 h-8 text-sm"
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addCustomName())}
+                  />
+                  <Button type="button" variant="outline" size="sm" className="h-8" onClick={addCustomName}>
+                    <Plus className="h-3 w-3" />
+                  </Button>
                 </div>
-              ) : (
-                // Mode entreprise/BET/MOA: liste préchargée
-                <div className="space-y-2 border rounded-lg p-3 max-h-48 overflow-y-auto">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={newItem.assignee_type === "all" && newItem.assignee_company_ids.length === 0 && newItem.assignee_lot_ids.length === 0}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setNewItem({ ...newItem, assignee_type: "all", assignee_company_ids: [], assignee_lot_ids: [] });
-                        }
-                      }}
-                    />
-                    <span className="text-sm font-medium">Tous</span>
-                  </label>
-                  
-                  {/* Lots section - only for entreprise type */}
-                  {newItem.stakeholder_type === "entreprise" && lots.length > 0 && (
-                    <>
-                      <div className="border-t my-2" />
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Lots</p>
-                      {lots.map((lot) => (
-                        <label key={lot.id} className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={newItem.assignee_lot_ids.includes(lot.id)}
-                            onCheckedChange={() => toggleLotSelection(lot.id)}
-                          />
-                          <Package className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-sm">{lot.name}</span>
-                        </label>
-                      ))}
-                    </>
-                  )}
-                  
-                  {/* Companies section */}
-                  {assigneeOptions.length > 0 && (
-                    <>
-                      <div className="border-t my-2" />
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Entreprises</p>
-                      {assigneeOptions.map((option) => (
-                        <label key={option.id} className="flex items-center gap-2 cursor-pointer">
-                          <Checkbox
-                            checked={newItem.assignee_company_ids.includes(option.id)}
-                            onCheckedChange={() => toggleCompanySelection(option.id)}
-                          />
-                          <Building2 className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-sm">{option.name}</span>
-                          <span className="text-xs text-muted-foreground">({option.description})</span>
-                        </label>
-                      ))}
-                    </>
-                  )}
-                  
-                  {assigneeOptions.length === 0 && (newItem.stakeholder_type !== "entreprise" || lots.length === 0) && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {newItem.stakeholder_type === "entreprise" 
-                        ? "Aucun lot ni entreprise dans le projet" 
-                        : "Aucune entreprise dans l'équipe MOE"}
-                    </p>
-                  )}
-                </div>
-              )}
+                
+                {lots.length === 0 && lotCompanies.length === 0 && moeCompanies.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Aucun lot ni entreprise dans le projet. Ajoutez des noms personnalisés.
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Description */}
