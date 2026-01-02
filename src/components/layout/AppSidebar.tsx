@@ -5,9 +5,7 @@ import {
   Users,
   FolderKanban,
   CheckSquare,
-  Clock,
-  Calendar,
-  Receipt,
+  FileText,
   Settings,
   ChevronLeft,
   ChevronDown,
@@ -50,9 +48,7 @@ const navigation: NavItem[] = [
   { title: "Projects", icon: FolderKanban, href: "/projects" },
   { title: "Tasks", icon: CheckSquare, href: "/tasks" },
   { title: "CRM", icon: Users, href: "/crm" },
-  { title: "Planning", icon: Calendar, href: "/planning" },
-  { title: "Time Tracking", icon: Clock, href: "/time" },
-  { title: "Finance", icon: Receipt, href: "/finance" },
+  { title: "Commercial", icon: FileText, href: "/commercial" },
 ];
 
 const bottomNavigation: NavItem[] = [
