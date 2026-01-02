@@ -250,296 +250,205 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
   const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
 
   return (
-    <div className="space-y-6">
-      {/* Top Section: Project Info + Progress side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Project Details Card */}
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Project Info - Compact inline layout */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex items-start justify-between mb-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Informations du projet</h3>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 px-2 text-xs"
+              onClick={() => setProjectEditOpen(true)}
+            >
+              <Pencil className="h-3 w-3 mr-1" />
+              Modifier
+            </Button>
+          </div>
+          
+          <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm">
+            {projectType && (
+              <div className="flex items-center gap-2">
+                <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                <span>{projectType.label}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span>{project.crm_company?.name || <span className="text-muted-foreground italic">Client non défini</span>}</span>
+            </div>
+            {project.city && (
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <span>{project.city}</span>
+              </div>
+            )}
+            {(project.start_date || project.end_date) && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span>
+                  {project.start_date && format(parseISO(project.start_date), "MMM yyyy", { locale: fr })}
+                  {project.start_date && project.end_date && " → "}
+                  {project.end_date && format(parseISO(project.end_date), "MMM yyyy", { locale: fr })}
+                </span>
+              </div>
+            )}
+            {project.surface_area && (
+              <div className="flex items-center gap-2">
+                <Ruler className="h-4 w-4 text-muted-foreground" />
+                <span>{project.surface_area} m²</span>
+              </div>
+            )}
+            {project.budget && (
+              <div className="flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+                <span>{project.budget.toLocaleString("fr-FR")} €</span>
+              </div>
+            )}
+          </div>
+
+          {project.description && (
+            <p className="mt-4 pt-4 border-t text-sm text-muted-foreground leading-relaxed">
+              {project.description}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Progress Bar - Simple inline */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium">Avancement</span>
+              <span className="text-2xl font-bold text-primary">{progressPercent}%</span>
+            </div>
+            <span className="text-sm text-muted-foreground">
+              {completedPhases}/{phases.length} phases
+            </span>
+          </div>
+          <Progress value={progressPercent} className="h-2" />
+        </CardContent>
+      </Card>
+
+      {/* AI Summary - Optional, compact */}
+      {(project.ai_summary || phases.length > 0) && (
         <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Informations du projet</CardTitle>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Résumé AI</span>
+              </div>
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 size="sm" 
-                className="h-8"
-                onClick={() => setProjectEditOpen(true)}
+                className="h-7 px-2"
+                onClick={onRefreshSummary}
+                disabled={isGeneratingSummary}
               >
-                <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                Modifier
+                {isGeneratingSummary ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              {/* Type */}
-              {projectType && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <FolderKanban className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Type</p>
-                    <p className="text-sm font-medium">{projectType.label}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Client */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Building2 className="h-4 w-4 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Client</p>
-                  <p className="text-sm font-medium truncate">
-                    {project.crm_company?.name || <span className="text-muted-foreground italic">Non défini</span>}
-                  </p>
-                </div>
-              </div>
-
-              {/* Location */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <MapPin className="h-4 w-4 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Localisation</p>
-                  <p className="text-sm font-medium truncate">
-                    {project.city || <span className="text-muted-foreground italic">Non défini</span>}
-                  </p>
-                </div>
-              </div>
-
-              {/* Dates */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Calendar className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Période</p>
-                  <p className="text-sm font-medium">
-                    {project.start_date && project.end_date ? (
-                      <>
-                        {format(parseISO(project.start_date), "MMM yy", { locale: fr })}
-                        {" → "}
-                        {format(parseISO(project.end_date), "MMM yy", { locale: fr })}
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground italic">Non défini</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              {/* Surface */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Ruler className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Surface</p>
-                  <p className="text-sm font-medium">
-                    {project.surface_area ? (
-                      `${project.surface_area} m²`
-                    ) : (
-                      <span className="text-muted-foreground italic">Non défini</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              {/* Budget */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Wallet className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Budget</p>
-                  <p className="text-sm font-medium">
-                    {project.budget ? (
-                      `${project.budget.toLocaleString("fr-FR")} €`
-                    ) : (
-                      <span className="text-muted-foreground italic">Non défini</span>
-                    )}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Description */}
-            {project.description && (
-              <div className="mt-4 pt-4 border-t border-border">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1.5">Notes</p>
-                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                  {project.description}
-                </p>
-              </div>
+            {project.ai_summary ? (
+              <p className="text-sm text-muted-foreground leading-relaxed">{project.ai_summary}</p>
+            ) : (
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="h-8 text-xs"
+                onClick={onRefreshSummary}
+                disabled={isGeneratingSummary}
+              >
+                {isGeneratingSummary ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3 w-3 mr-1" />
+                )}
+                Générer un résumé
+              </Button>
             )}
           </CardContent>
         </Card>
+      )}
 
-        {/* Right: Progress + AI Summary */}
-        <div className="space-y-4">
-          {/* Progress Card */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Avancement</CardTitle>
-                <span className="text-2xl font-bold text-primary">{progressPercent}%</span>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Progress value={progressPercent} className="h-2.5" />
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{completedPhases}/{phases.length} phases terminées</span>
-                {inProgressPhase && (
-                  <Badge variant="secondary" className="text-xs">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {inProgressPhase.name}
-                  </Badge>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+      {/* MOE Team */}
+      <Card>
+        <CardContent className="py-4">
+          <ProjectMOESection projectId={project.id} />
+        </CardContent>
+      </Card>
 
-          {/* AI Summary */}
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  Résumé AI
-                </CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-7 px-2"
-                  onClick={onRefreshSummary}
-                  disabled={isGeneratingSummary}
-                >
-                  {isGeneratingSummary ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {project.ai_summary ? (
-                <p className="text-xs text-muted-foreground leading-relaxed">{project.ai_summary}</p>
-              ) : (
-                <div className="text-center py-3">
-                  <Sparkles className="h-6 w-6 mx-auto text-muted-foreground/40 mb-1.5" />
-                  <p className="text-[11px] text-muted-foreground mb-2">Aucun résumé généré</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={onRefreshSummary}
-                    disabled={isGeneratingSummary}
-                  >
-                    {isGeneratingSummary ? (
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-3 w-3 mr-1" />
-                    )}
-                    Générer
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Middle Section: MOE Team + Phase List */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* MOE Team */}
+      {/* Phases List - Compact */}
+      {phases.length > 0 && (
         <Card>
-          <CardContent className="pt-4">
-            <ProjectMOESection projectId={project.id} />
-          </CardContent>
-        </Card>
-
-        {/* Phases List */}
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Phases du projet</CardTitle>
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-sm font-medium">Phases du projet</span>
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 size="sm" 
-                className="h-8"
+                className="h-7 px-2 text-xs"
                 onClick={() => setPhaseEditOpen(true)}
               >
-                <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                <Pencil className="h-3 w-3 mr-1" />
                 Gérer
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
+            <div className="space-y-2">
               {phases.map((phase, index) => (
                 <div
                   key={phase.id}
                   className={cn(
-                    "flex items-center gap-3 p-2.5 rounded-lg border transition-colors",
-                    phase.status === "in_progress" && "border-primary bg-primary/5",
-                    phase.status === "completed" && "border-transparent bg-muted/50",
-                    phase.status === "pending" && "border-transparent hover:bg-muted/30"
+                    "flex items-center gap-3 p-2 rounded-lg transition-colors",
+                    phase.status === "in_progress" && "bg-primary/5 border border-primary/20",
+                    phase.status === "completed" && "bg-muted/50",
+                    phase.status === "pending" && "hover:bg-muted/30"
                   )}
                 >
                   <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
                     style={{
                       backgroundColor: phase.status === "completed" ? "hsl(var(--primary))" : phase.color || "#e5e7eb",
                       color: phase.status === "completed" ? "white" : "inherit",
                     }}
                   >
                     {phase.status === "completed" ? (
-                      <CheckCircle2 className="h-4 w-4" />
+                      <CheckCircle2 className="h-3.5 w-3.5" />
                     ) : (
                       index + 1
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn(
-                      "text-sm font-medium",
-                      phase.status === "completed" && "line-through text-muted-foreground"
-                    )}>
-                      {phase.name}
-                    </p>
-                    {phase.start_date && phase.end_date && (
-                      <p className="text-[11px] text-muted-foreground">
-                        {format(parseISO(phase.start_date), "dd MMM", { locale: fr })} → {format(parseISO(phase.end_date), "dd MMM", { locale: fr })}
-                      </p>
-                    )}
-                  </div>
-                  <Badge 
-                    variant="secondary" 
-                    className={cn(
-                      "text-[10px]",
-                      phase.status === "in_progress" && "bg-primary/10 text-primary",
-                      phase.status === "completed" && "bg-emerald-500/10 text-emerald-600"
-                    )}
-                  >
-                    {phase.status === "completed" ? "Terminée" : phase.status === "in_progress" ? "En cours" : "À venir"}
-                  </Badge>
+                  <span className={cn(
+                    "flex-1 text-sm",
+                    phase.status === "completed" && "line-through text-muted-foreground"
+                  )}>
+                    {phase.name}
+                  </span>
+                  {phase.start_date && phase.end_date && (
+                    <span className="text-xs text-muted-foreground">
+                      {format(parseISO(phase.start_date), "dd/MM", { locale: fr })} - {format(parseISO(phase.end_date), "dd/MM", { locale: fr })}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
 
-      {/* Bottom: Gantt Timeline */}
+      {/* Gantt Timeline - Full width */}
       {phases.length > 0 && (
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Planning des phases</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="py-4">
+            <div className="mb-4">
+              <span className="text-sm font-medium">Planning</span>
+            </div>
             <PhaseGanttTimeline
               phases={phases}
               dependencies={dependencies}
