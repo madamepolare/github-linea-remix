@@ -196,7 +196,7 @@ function ReportsSection({ projectId, onOpenReport }: { projectId: string; onOpen
 // Lots Section
 function LotsSection({ projectId }: { projectId: string }) {
   const { lots, lotsLoading, createLot, updateLot, deleteLot } = useChantier(projectId);
-  const { project } = useProject(projectId);
+  const { data: project } = useProject(projectId);
   const { companies } = useCRMCompanies();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isTemplateOpen, setIsTemplateOpen] = useState(false);
@@ -284,6 +284,22 @@ function LotsSection({ projectId }: { projectId: string }) {
     updateLot.mutate({ id, ...updates });
   };
 
+  const handleGanttCreate = (name: string, start_date: string, end_date: string) => {
+    createLot.mutate({
+      name,
+      start_date,
+      end_date,
+      status: "pending",
+      sort_order: lots.length,
+    });
+  };
+
+  const handleGanttDelete = (id: string) => {
+    if (confirm("Supprimer ce lot ?")) {
+      deleteLot.mutate(id);
+    }
+  };
+
   // Filter entreprises
   const entreprises = companies.filter(c => c.industry?.startsWith("entreprise_") || c.industry === "artisan");
 
@@ -368,6 +384,8 @@ function LotsSection({ projectId }: { projectId: string }) {
       <ChantierGantt
         lots={lots}
         onUpdateLot={handleGanttUpdate}
+        onCreateLot={handleGanttCreate}
+        onDeleteLot={handleGanttDelete}
         companies={companies}
       />
     ) : (
