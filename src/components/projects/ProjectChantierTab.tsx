@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useChantier, ObservationStatus } from "@/hooks/useChantier";
+import { useChantier, ObservationStatus, ProjectMeeting } from "@/hooks/useChantier";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
+import { useProject } from "@/hooks/useProjects";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +28,7 @@ import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { LOT_STATUS, OBSERVATION_STATUS, OBSERVATION_PRIORITY } from "@/lib/projectTypes";
+import { generateMeetingPDF } from "@/lib/generateMeetingPDF";
 import {
   AlertCircle,
   Building2,
@@ -34,6 +36,7 @@ import {
   CheckCircle2,
   ClipboardList,
   Clock,
+  Download,
   Eye,
   FileText,
   Hammer,
@@ -51,6 +54,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { toast } from "sonner";
 
 interface ProjectChantierTabProps {
   projectId: string;
@@ -382,7 +386,8 @@ function LotCreateDialog({
 
 // Meetings Section
 function MeetingsSection({ projectId }: { projectId: string }) {
-  const { meetings, meetingsLoading, createMeeting, deleteMeeting } = useChantier(projectId);
+  const { meetings, meetingsLoading, observations, createMeeting, deleteMeeting } = useChantier(projectId);
+  const { data: project } = useProject(projectId);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const [formTitle, setFormTitle] = useState("");
@@ -414,6 +419,27 @@ function MeetingsSection({ projectId }: { projectId: string }) {
   const handleDelete = (id: string) => {
     if (confirm("Supprimer cette réunion ?")) {
       deleteMeeting.mutate(id);
+    }
+  };
+
+  const handleGeneratePDF = (meeting: ProjectMeeting) => {
+    // Filter observations for this meeting
+    const meetingObservations = observations.filter(
+      (obs) => obs.meeting_id === meeting.id
+    );
+
+    try {
+      generateMeetingPDF({
+        meeting,
+        observations: meetingObservations,
+        projectName: project?.name || "Projet",
+        projectAddress: project?.address || undefined,
+        projectClient: project?.client || undefined,
+      });
+      toast.success("PDF généré avec succès");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast.error("Erreur lors de la génération du PDF");
     }
   };
 
@@ -484,12 +510,22 @@ function MeetingsSection({ projectId }: { projectId: string }) {
                 </div>
 
                 <div className="flex items-center gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8"
+                    onClick={() => handleGeneratePDF(meeting)}
+                    title="Générer le compte-rendu PDF"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
                   {meeting.pdf_url && (
                     <Button 
                       variant="ghost" 
                       size="icon" 
                       className="h-8 w-8"
                       onClick={() => window.open(meeting.pdf_url!, "_blank")}
+                      title="Voir le PDF enregistré"
                     >
                       <FileText className="h-4 w-4" />
                     </Button>
@@ -501,6 +537,10 @@ function MeetingsSection({ projectId }: { projectId: string }) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleGeneratePDF(meeting)}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Générer PDF
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDelete(meeting.id)} className="text-destructive">
                         <Trash2 className="h-4 w-4 mr-2" />
                         Supprimer
