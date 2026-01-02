@@ -21,7 +21,7 @@ import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft, Download, Loader2, Mail, Save, Sparkles, History,
-  FileText, TrendingUp, AlertTriangle, Paperclip, CheckSquare,
+  FileText, TrendingUp, AlertTriangle, Paperclip, CheckSquare, Check, Circle,
 } from "lucide-react";
 
 import { SendEmailDialog } from "./meeting-report/SendEmailDialog";
@@ -285,30 +285,53 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
     .sort((a, b) => new Date(b.meeting_date).getTime() - new Date(a.meeting_date).getTime());
 
   // Calculate report completion progress
-  const calculateProgress = () => {
-    const sections = [
-      // General tab
+  const tabCompletion = {
+    general: [
       !!localMeeting.title,
       !!localMeeting.meeting_date,
       (localMeeting.attendees || []).length > 0,
       !!reportData.context,
-      // Progress tab
+    ],
+    progress: [
       !!reportData.general_progress?.comment,
       (reportData.lot_progress || []).length > 0,
-      // Points tab
+    ],
+    points: [
       attentionItems.length > 0 || meetingObservations.length > 0 || (reportData.technical_decisions || []).length > 0,
       (reportData.blocking_points || []).length > 0 || !!reportData.planning?.delays_noted,
-      // Annexes tab
+    ],
+    annexes: [
       (reportData.documents || []).length > 0,
-      // Closure tab
+    ],
+    closure: [
       !!reportData.next_meeting?.date,
       !!reportData.legal_mention,
-    ];
-    const completed = sections.filter(Boolean).length;
-    return Math.round((completed / sections.length) * 100);
+    ],
   };
 
-  const progressValue = calculateProgress();
+  const isTabComplete = (tab: keyof typeof tabCompletion) => 
+    tabCompletion[tab].every(Boolean);
+
+  const getTabProgress = (tab: keyof typeof tabCompletion) => {
+    const items = tabCompletion[tab];
+    return items.filter(Boolean).length / items.length;
+  };
+
+  const allSections = Object.values(tabCompletion).flat();
+  const progressValue = Math.round((allSections.filter(Boolean).length / allSections.length) * 100);
+
+  const TabCompletionIndicator = ({ tab }: { tab: keyof typeof tabCompletion }) => {
+    const complete = isTabComplete(tab);
+    const progress = getTabProgress(tab);
+    
+    if (complete) {
+      return <Check className="h-3 w-3 text-green-500" />;
+    }
+    if (progress > 0) {
+      return <Circle className="h-3 w-3 text-amber-500 fill-amber-500/30" />;
+    }
+    return <Circle className="h-3 w-3 text-muted-foreground/40" />;
+  };
 
   // Prepare contacts for GeneralTab
   const contactsForGeneralTab = allContacts.map(c => ({
@@ -378,14 +401,17 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="general" className="flex items-center gap-1.5">
+            <TabCompletionIndicator tab="general" />
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Général</span>
           </TabsTrigger>
           <TabsTrigger value="progress" className="flex items-center gap-1.5">
+            <TabCompletionIndicator tab="progress" />
             <TrendingUp className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Avancement</span>
           </TabsTrigger>
           <TabsTrigger value="points" className="flex items-center gap-1.5">
+            <TabCompletionIndicator tab="points" />
             <AlertTriangle className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Points CR</span>
             {(attentionItems.length + meetingObservations.length) > 0 && (
@@ -395,10 +421,12 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
             )}
           </TabsTrigger>
           <TabsTrigger value="annexes" className="flex items-center gap-1.5">
+            <TabCompletionIndicator tab="annexes" />
             <Paperclip className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Annexes</span>
           </TabsTrigger>
           <TabsTrigger value="closure" className="flex items-center gap-1.5">
+            <TabCompletionIndicator tab="closure" />
             <CheckSquare className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Clôture</span>
           </TabsTrigger>
