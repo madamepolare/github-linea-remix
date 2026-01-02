@@ -26,9 +26,10 @@ interface ChantierOverviewProps {
   projectId: string;
   onNavigate: (tab: string) => void;
   onOpenReport: (meeting: ProjectMeeting) => void;
+  onOpenPlanning?: () => void;
 }
 
-export function ChantierOverview({ projectId, onNavigate, onOpenReport }: ChantierOverviewProps) {
+export function ChantierOverview({ projectId, onNavigate, onOpenReport, onOpenPlanning }: ChantierOverviewProps) {
   const { lots, meetings, observations, lotsLoading, meetingsLoading, observationsLoading } = useChantier(projectId);
   const { data: project } = useProject(projectId);
 
