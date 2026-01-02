@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
+import { DebouncedInput, DebouncedTextarea } from "@/components/ui/debounced-input";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Plus, AlertTriangle, Trash2, Calendar, Users, Building2, Package } from "lucide-react";
@@ -253,9 +254,9 @@ export function AttentionItemsSection({
               </div>
 
               {/* Description */}
-              <Textarea
+              <DebouncedTextarea
                 value={item.description}
-                onChange={(e) => onUpdateItem(item.id, { description: e.target.value })}
+                onChange={(value) => onUpdateItem(item.id, { description: value })}
                 placeholder="Description..."
                 rows={2}
                 className="resize-none text-sm"
@@ -293,9 +294,9 @@ export function AttentionItemsSection({
               </div>
 
               {/* Comment */}
-              <Input
+              <DebouncedInput
                 value={item.comment || ""}
-                onChange={(e) => onUpdateItem(item.id, { comment: e.target.value })}
+                onChange={(value) => onUpdateItem(item.id, { comment: value })}
                 placeholder="Commentaire..."
                 className="h-8 text-sm"
               />
