@@ -1160,6 +1160,62 @@ export type Database = {
           },
         ]
       }
+      phase_templates: {
+        Row: {
+          code: string
+          color: string | null
+          created_at: string | null
+          default_percentage: number | null
+          deliverables: Json | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          project_type: string
+          sort_order: number | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          code: string
+          color?: string | null
+          created_at?: string | null
+          default_percentage?: number | null
+          deliverables?: Json | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          project_type?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          code?: string
+          color?: string | null
+          created_at?: string | null
+          default_percentage?: number | null
+          deliverables?: Json | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          project_type?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phase_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           active_workspace_id: string | null
@@ -1745,10 +1801,13 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string | null
+          deliverables: Json | null
           description: string | null
           end_date: string | null
           id: string
           name: string
+          percentage_fee: number | null
+          phase_code: string | null
           project_id: string
           sort_order: number | null
           start_date: string | null
@@ -1759,10 +1818,13 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string | null
+          deliverables?: Json | null
           description?: string | null
           end_date?: string | null
           id?: string
           name: string
+          percentage_fee?: number | null
+          phase_code?: string | null
           project_id: string
           sort_order?: number | null
           start_date?: string | null
@@ -1773,10 +1835,13 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string | null
+          deliverables?: Json | null
           description?: string | null
           end_date?: string | null
           id?: string
           name?: string
+          percentage_fee?: number | null
+          phase_code?: string | null
           project_id?: string
           sort_order?: number | null
           start_date?: string | null

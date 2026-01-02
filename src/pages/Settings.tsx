@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Settings as SettingsIcon, User, Hammer } from "lucide-react";
+import { Building2, Users, Settings as SettingsIcon, User, Hammer, FolderKanban } from "lucide-react";
 import { WorkspaceSettings } from "@/components/settings/WorkspaceSettings";
 import { MembersSettings } from "@/components/settings/MembersSettings";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { LotsTemplatesSettings } from "@/components/settings/LotsTemplatesSettings";
+import { ProjectsSettings } from "@/components/settings/ProjectsSettings";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("workspace");
@@ -34,6 +35,10 @@ export default function Settings() {
               <Hammer className="h-3.5 w-3.5" strokeWidth={1.5} />
               Lots
             </TabsTrigger>
+            <TabsTrigger value="projects" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
+              <FolderKanban className="h-3.5 w-3.5" strokeWidth={1.5} />
+              Projets
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       }
@@ -42,6 +47,7 @@ export default function Settings() {
       {activeTab === "members" && <MembersSettings />}
       {activeTab === "profile" && <ProfileSettings />}
       {activeTab === "lots" && <LotsTemplatesSettings />}
+      {activeTab === "projects" && <ProjectsSettings />}
     </PageLayout>
   );
 }

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { useProjects, CreateProjectInput } from "@/hooks/useProjects";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
+import { usePhaseTemplates } from "@/hooks/usePhaseTemplates";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -86,11 +87,34 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [budget, setBudget] = useState("");
-  const [phases, setPhases] = useState<{ name: string; description: string; color: string }[]>([]);
+  const [phases, setPhases] = useState<{ name: string; description: string; color: string; code?: string; deliverables?: string[]; percentage_fee?: number }[]>([]);
+
+  // Fetch phase templates from database
+  const { templates: phaseTemplates, initializeDefaultsIfEmpty } = usePhaseTemplates(projectType || undefined);
 
   // Initialize phases when project type is selected
   useEffect(() => {
     if (projectType) {
+      initializeDefaultsIfEmpty.mutate(projectType);
+    }
+  }, [projectType]);
+
+  // Update phases when templates are loaded
+  useEffect(() => {
+    if (projectType && phaseTemplates.length > 0) {
+      const activeTemplates = phaseTemplates.filter(t => t.is_active);
+      setPhases(
+        activeTemplates.map((phase, index) => ({
+          name: phase.name,
+          description: phase.description || '',
+          color: phase.color || PHASE_COLORS[index % PHASE_COLORS.length],
+          code: phase.code,
+          deliverables: phase.deliverables,
+          percentage_fee: phase.default_percentage
+        }))
+      );
+    } else if (projectType) {
+      // Fallback to hardcoded defaults
       const defaultPhases = DEFAULT_PHASES[projectType] || [];
       setPhases(
         defaultPhases.map((phase, index) => ({
@@ -100,7 +124,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
         }))
       );
     }
-  }, [projectType]);
+  }, [projectType, phaseTemplates]);
 
   const handleCreate = () => {
     if (!name.trim() || !projectType) return;
