@@ -5,9 +5,12 @@ import { cn } from "@/lib/utils";
 import { ProjectPhase } from "@/hooks/useProjectPhases";
 import { PhaseDependency } from "@/hooks/usePhaseDependencies";
 import { PHASE_STATUS_CONFIG, PhaseStatus } from "@/lib/projectTypes";
-import { CheckCircle2, GripVertical } from "lucide-react";
+import { CheckCircle2, GripVertical, Calendar } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
 interface PhaseGanttTimelineProps {
   phases: ProjectPhase[];
   dependencies: PhaseDependency[];
@@ -32,6 +35,9 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
   const [containerWidth, setContainerWidth] = useState(0);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [previewDates, setPreviewDates] = useState<Record<string, { start_date?: Date; end_date?: Date }>>({});
+  const [editingPhase, setEditingPhase] = useState<string | null>(null);
+  const [editStartDate, setEditStartDate] = useState<Date | undefined>(undefined);
+  const [editEndDate, setEditEndDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -255,6 +261,31 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
     }
   }, [dragState, handleMouseMove, handleMouseUp]);
 
+  // Double-click edit handlers
+  const handleDoubleClick = useCallback((phase: ProjectPhase) => {
+    setEditingPhase(phase.id);
+    setEditStartDate(phase.start_date ? parseISO(phase.start_date) : undefined);
+    setEditEndDate(phase.end_date ? parseISO(phase.end_date) : undefined);
+  }, []);
+
+  const handleSaveEdit = useCallback(() => {
+    if (editingPhase && onPhaseUpdate) {
+      onPhaseUpdate(editingPhase, {
+        start_date: editStartDate ? format(editStartDate, "yyyy-MM-dd") : null,
+        end_date: editEndDate ? format(editEndDate, "yyyy-MM-dd") : null,
+      });
+    }
+    setEditingPhase(null);
+    setEditStartDate(undefined);
+    setEditEndDate(undefined);
+  }, [editingPhase, editStartDate, editEndDate, onPhaseUpdate]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingPhase(null);
+    setEditStartDate(undefined);
+    setEditEndDate(undefined);
+  }, []);
+
   if (phases.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -403,94 +434,152 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
                     key={phase.id}
                     className="h-12 flex items-center border-b relative"
                   >
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div
-                            className={cn(
-                              "absolute h-7 rounded-md transition-all group",
-                              phase.status === "completed" && "opacity-60",
-                              isDragging ? "shadow-lg ring-2 ring-primary z-20" : "hover:shadow-md",
-                              canDrag ? "cursor-grab" : "cursor-pointer"
-                            )}
-                            style={{
-                              left: pos.left,
-                              width: pos.width,
-                              backgroundColor: phase.color || "#3B82F6",
-                            }}
-                            onClick={(e) => {
-                              if (!isDragging) {
-                                onPhaseClick?.(phase);
-                              }
-                            }}
-                            onMouseDown={(e) => canDrag && handleMouseDown(e, phase.id, "move")}
-                          >
-                            {/* Left resize handle */}
-                            {canDrag && (
+                    <Popover 
+                      open={editingPhase === phase.id} 
+                      onOpenChange={(open) => {
+                        if (!open) handleCancelEdit();
+                      }}
+                    >
+                      <TooltipProvider>
+                        <Tooltip>
+                          <PopoverTrigger asChild>
+                            <TooltipTrigger asChild>
                               <div
-                                className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 flex items-center justify-center"
-                                onMouseDown={(e) => handleMouseDown(e, phase.id, "resize-start")}
+                                className={cn(
+                                  "absolute h-7 rounded-md transition-all group",
+                                  phase.status === "completed" && "opacity-60",
+                                  isDragging ? "shadow-lg ring-2 ring-primary z-20" : "hover:shadow-md",
+                                  editingPhase === phase.id && "ring-2 ring-primary z-20",
+                                  canDrag ? "cursor-grab" : "cursor-pointer"
+                                )}
+                                style={{
+                                  left: pos.left,
+                                  width: pos.width,
+                                  backgroundColor: phase.color || "#3B82F6",
+                                }}
+                                onClick={(e) => {
+                                  if (!isDragging && editingPhase !== phase.id) {
+                                    onPhaseClick?.(phase);
+                                  }
+                                }}
+                                onDoubleClick={(e) => {
+                                  e.stopPropagation();
+                                  if (canDrag) handleDoubleClick(phase);
+                                }}
+                                onMouseDown={(e) => canDrag && !editingPhase && handleMouseDown(e, phase.id, "move")}
                               >
-                                <div className="w-0.5 h-4 bg-white/50 rounded-full" />
-                              </div>
-                            )}
-                            
-                            {/* Content */}
-                            <div className="h-full flex items-center justify-between px-2 overflow-hidden gap-1">
-                              <div className="flex items-center min-w-0">
-                                {canDrag && (
-                                  <GripVertical className="h-3 w-3 text-white/50 mr-1 flex-shrink-0" />
+                                {/* Left resize handle */}
+                                {canDrag && !editingPhase && (
+                                  <div
+                                    className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 flex items-center justify-center"
+                                    onMouseDown={(e) => handleMouseDown(e, phase.id, "resize-start")}
+                                  >
+                                    <div className="w-0.5 h-4 bg-white/50 rounded-full" />
+                                  </div>
                                 )}
-                                {pos.startDate && (
-                                  <span className="text-[10px] text-white/90 font-medium whitespace-nowrap">
-                                    {format(pos.startDate, "d MMM", { locale: fr })}
-                                  </span>
+                                
+                                {/* Content */}
+                                <div className="h-full flex items-center justify-between px-2 overflow-hidden gap-1">
+                                  <div className="flex items-center min-w-0">
+                                    {canDrag && !editingPhase && (
+                                      <GripVertical className="h-3 w-3 text-white/50 mr-1 flex-shrink-0" />
+                                    )}
+                                    {pos.startDate && (
+                                      <span className="text-[10px] text-white/90 font-medium whitespace-nowrap">
+                                        {format(pos.startDate, "d MMM", { locale: fr })}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {pos.width > 100 && (
+                                    <span className="text-[10px] text-white/70 truncate px-1 hidden sm:block">
+                                      {phase.name}
+                                    </span>
+                                  )}
+                                  {pos.endDate && (
+                                    <span className="text-[10px] text-white/90 font-medium whitespace-nowrap">
+                                      {format(pos.endDate, "d MMM", { locale: fr })}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* Right resize handle */}
+                                {canDrag && !editingPhase && (
+                                  <div
+                                    className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 flex items-center justify-center"
+                                    onMouseDown={(e) => handleMouseDown(e, phase.id, "resize-end")}
+                                  >
+                                    <div className="w-0.5 h-4 bg-white/50 rounded-full" />
+                                  </div>
                                 )}
                               </div>
-                              {pos.width > 100 && (
-                                <span className="text-[10px] text-white/70 truncate px-1 hidden sm:block">
-                                  {phase.name}
-                                </span>
+                            </TooltipTrigger>
+                          </PopoverTrigger>
+                          <TooltipContent side="top">
+                            <div className="text-sm">
+                              <p className="font-medium">{phase.name}</p>
+                              <p className="text-muted-foreground">
+                                {PHASE_STATUS_CONFIG[phase.status as PhaseStatus]?.label || phase.status}
+                              </p>
+                              {pos.startDate && (
+                                <p>Début: {format(pos.startDate, "d MMMM yyyy", { locale: fr })}</p>
                               )}
                               {pos.endDate && (
-                                <span className="text-[10px] text-white/90 font-medium whitespace-nowrap">
-                                  {format(pos.endDate, "d MMM", { locale: fr })}
-                                </span>
+                                <p>Fin: {format(pos.endDate, "d MMMM yyyy", { locale: fr })}</p>
+                              )}
+                              {canDrag && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Double-clic pour éditer les dates
+                                </p>
                               )}
                             </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
+                      <PopoverContent className="w-auto p-4" align="start" side="bottom">
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <h4 className="font-medium">Modifier les dates</h4>
+                          </div>
+                          
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label className="text-sm">Date de début</Label>
+                              <CalendarComponent
+                                mode="single"
+                                selected={editStartDate}
+                                onSelect={setEditStartDate}
+                                disabled={(date) => editEndDate ? date > editEndDate : false}
+                                locale={fr}
+                                className="rounded-md border"
+                              />
+                            </div>
                             
-                            {/* Right resize handle */}
-                            {canDrag && (
-                              <div
-                                className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 flex items-center justify-center"
-                                onMouseDown={(e) => handleMouseDown(e, phase.id, "resize-end")}
-                              >
-                                <div className="w-0.5 h-4 bg-white/50 rounded-full" />
-                              </div>
-                            )}
+                            <div className="space-y-2">
+                              <Label className="text-sm">Date de fin</Label>
+                              <CalendarComponent
+                                mode="single"
+                                selected={editEndDate}
+                                onSelect={setEditEndDate}
+                                disabled={(date) => editStartDate ? date < editStartDate : false}
+                                locale={fr}
+                                className="rounded-md border"
+                              />
+                            </div>
                           </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          <div className="text-sm">
-                            <p className="font-medium">{phase.name}</p>
-                            <p className="text-muted-foreground">
-                              {PHASE_STATUS_CONFIG[phase.status as PhaseStatus]?.label || phase.status}
-                            </p>
-                            {pos.startDate && (
-                              <p>Début: {format(pos.startDate, "d MMMM yyyy", { locale: fr })}</p>
-                            )}
-                            {pos.endDate && (
-                              <p>Fin: {format(pos.endDate, "d MMMM yyyy", { locale: fr })}</p>
-                            )}
-                            {canDrag && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Glisser pour déplacer, bords pour redimensionner
-                              </p>
-                            )}
+                          
+                          <div className="flex justify-end gap-2 pt-2 border-t">
+                            <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                              Annuler
+                            </Button>
+                            <Button size="sm" onClick={handleSaveEdit}>
+                              Enregistrer
+                            </Button>
                           </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 );
               })}
