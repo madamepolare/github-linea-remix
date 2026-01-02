@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { PHASES_BY_PROJECT_TYPE, PhaseTemplate as CommercialPhaseTemplate } from "@/lib/commercialTypes";
+import { PHASES_BY_PROJECT_TYPE, PhaseTemplate as CommercialPhaseTemplate, PhaseCategory } from "@/lib/commercialTypes";
 
 export interface PhaseTemplate {
   id: string;
@@ -16,6 +16,7 @@ export interface PhaseTemplate {
   color: string | null;
   sort_order: number;
   is_active: boolean;
+  category: PhaseCategory;
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +31,7 @@ export interface CreatePhaseTemplateInput {
   color?: string;
   sort_order?: number;
   is_active?: boolean;
+  category?: PhaseCategory;
 }
 
 export interface UpdatePhaseTemplateInput {
@@ -42,6 +44,7 @@ export interface UpdatePhaseTemplateInput {
   color?: string | null;
   sort_order?: number;
   is_active?: boolean;
+  category?: PhaseCategory;
 }
 
 export function usePhaseTemplates(projectType?: string) {
@@ -69,7 +72,8 @@ export function usePhaseTemplates(projectType?: string) {
       
       return (data || []).map(item => ({
         ...item,
-        deliverables: Array.isArray(item.deliverables) ? item.deliverables : []
+        deliverables: Array.isArray(item.deliverables) ? item.deliverables : [],
+        category: (item.category as PhaseCategory) || 'base'
       })) as PhaseTemplate[];
     },
     enabled: !!activeWorkspace?.id,
@@ -92,6 +96,7 @@ export function usePhaseTemplates(projectType?: string) {
           color: input.color,
           sort_order: input.sort_order ?? 0,
           is_active: input.is_active ?? true,
+          category: input.category ?? 'base',
         })
         .select()
         .single();
@@ -201,6 +206,7 @@ export function usePhaseTemplates(projectType?: string) {
               deliverables: phase.deliverables || [],
               sort_order: index,
               is_active: true,
+              category: phase.category || 'base',
             }))
           );
 
@@ -250,6 +256,7 @@ export function usePhaseTemplates(projectType?: string) {
               deliverables: phase.deliverables || [],
               sort_order: index,
               is_active: true,
+              category: phase.category || 'base',
             }))
           );
 

@@ -1162,6 +1162,7 @@ export type Database = {
       }
       phase_templates: {
         Row: {
+          category: string
           code: string
           color: string | null
           created_at: string | null
@@ -1177,6 +1178,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          category?: string
           code: string
           color?: string | null
           created_at?: string | null
@@ -1192,6 +1194,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          category?: string
           code?: string
           color?: string | null
           created_at?: string | null
