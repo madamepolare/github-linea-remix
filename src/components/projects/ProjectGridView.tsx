@@ -53,7 +53,7 @@ export function ProjectGridView({ onCreateProject }: ProjectGridViewProps) {
         return (
           <Card
             key={project.id}
-            className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden group"
+            interactive
             onClick={() => navigate(`/projects/${project.id}`)}
           >
             {/* Color bar at top */}
