@@ -15,6 +15,7 @@ export interface CreateContactInput {
   role?: string;
   contact_type?: string;
   location?: string;
+  avatar_url?: string;
   notes?: string;
 }
 

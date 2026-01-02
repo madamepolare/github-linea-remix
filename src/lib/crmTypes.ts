@@ -303,3 +303,29 @@ export function getTypesByCategory(category: CompanyCategory): CompanyType[] {
   const categoryConfig = COMPANY_CATEGORIES.find((c) => c.id === category);
   return categoryConfig?.types || [];
 }
+
+// BET Specialties - Liste unifiée pour création et édition
+export const BET_SPECIALTIES = [
+  { value: "structure", label: "Structure", color: "bg-orange-500" },
+  { value: "fluides", label: "Fluides (CVC)", color: "bg-cyan-500" },
+  { value: "electricite", label: "Électricité", color: "bg-yellow-500" },
+  { value: "acoustique", label: "Acoustique", color: "bg-purple-500" },
+  { value: "thermique", label: "Thermique / RE2020", color: "bg-red-500" },
+  { value: "vrd", label: "VRD", color: "bg-amber-600" },
+  { value: "facade", label: "Façades", color: "bg-slate-500" },
+  { value: "environnement", label: "Environnement / HQE", color: "bg-green-600" },
+  { value: "economie", label: "Économie", color: "bg-blue-500" },
+  { value: "paysage", label: "Paysage", color: "bg-emerald-500" },
+  { value: "securite", label: "Sécurité incendie", color: "bg-rose-500" },
+  { value: "geotechnique", label: "Géotechnique", color: "bg-stone-500" },
+];
+
+// Contact Types - Liste unifiée pour création et édition
+export const CONTACT_TYPES = [
+  { value: "client", label: "Client" },
+  { value: "partner", label: "Partenaire" },
+  { value: "supplier", label: "Fournisseur" },
+  { value: "amo", label: "AMO" },
+  { value: "bet", label: "BET" },
+  { value: "entreprise", label: "Entreprise" },
+];

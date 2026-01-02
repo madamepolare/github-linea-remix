@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
+import { CONTACT_TYPES } from "@/lib/crmTypes";
 
 const schema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
@@ -124,12 +125,9 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
               <Select value={form.watch("contact_type")} onValueChange={(v) => form.setValue("contact_type", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="client">Client</SelectItem>
-                  <SelectItem value="partner">Partenaire</SelectItem>
-                  <SelectItem value="supplier">Fournisseur</SelectItem>
-                  <SelectItem value="amo">AMO</SelectItem>
-                  <SelectItem value="bet">BET</SelectItem>
-                  <SelectItem value="entreprise">Entreprise</SelectItem>
+                  {CONTACT_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

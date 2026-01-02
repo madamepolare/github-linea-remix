@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, X, ChevronDown } from "lucide-react";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
-import { COMPANY_CATEGORIES, COMPANY_TYPE_CONFIG, CompanyCategory, CompanyType } from "@/lib/crmTypes";
+import { COMPANY_CATEGORIES, COMPANY_TYPE_CONFIG, CompanyCategory, CompanyType, BET_SPECIALTIES } from "@/lib/crmTypes";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -43,16 +43,7 @@ interface CreateCompanyDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const BET_SPECIALTIES = [
-  { value: "structure", label: "Structure", color: "bg-orange-500" },
-  { value: "fluides", label: "Fluides (CVC)", color: "bg-cyan-500" },
-  { value: "electricite", label: "Électricité", color: "bg-yellow-500" },
-  { value: "acoustique", label: "Acoustique", color: "bg-purple-500" },
-  { value: "thermique", label: "Thermique / RE2020", color: "bg-red-500" },
-  { value: "vrd", label: "VRD", color: "bg-amber-600" },
-  { value: "facade", label: "Façades", color: "bg-slate-500" },
-  { value: "environnement", label: "Environnement / HQE", color: "bg-green-600" },
-];
+// BET_SPECIALTIES is now imported from crmTypes.ts
 
 export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogProps) {
   const { createCompany } = useCRMCompanies();
