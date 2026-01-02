@@ -1056,6 +1056,7 @@ export type Database = {
           notes: string | null
           pdf_url: string | null
           project_id: string
+          report_data: Json | null
           title: string
           updated_at: string | null
           workspace_id: string
@@ -1071,6 +1072,7 @@ export type Database = {
           notes?: string | null
           pdf_url?: string | null
           project_id: string
+          report_data?: Json | null
           title: string
           updated_at?: string | null
           workspace_id: string
@@ -1086,6 +1088,7 @@ export type Database = {
           notes?: string | null
           pdf_url?: string | null
           project_id?: string
+          report_data?: Json | null
           title?: string
           updated_at?: string | null
           workspace_id?: string
