@@ -36,7 +36,20 @@ import {
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useLeads, Lead } from "@/hooks/useLeads";
-import { getCompanyTypeConfig, COMPANY_TYPE_CONFIG, CompanyType, COMPANY_CATEGORIES } from "@/lib/crmTypes";
+import {
+  getCompanyTypeConfig,
+  COMPANY_TYPE_CONFIG,
+  CompanyType,
+  COMPANY_CATEGORIES,
+  CompanyCategory,
+  BET_SPECIALTIES,
+} from "@/lib/crmTypes";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -51,14 +64,28 @@ export default function CompanyDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<CRMCompanyEnriched>>({});
 
+  const [selectedCategory, setSelectedCategory] = useState<CompanyCategory | "">("");
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
+
   const company = allCompanies.find((c) => c.id === id);
   const companyContacts = contacts.filter((c) => c.crm_company_id === id);
   const companyLeads = leads.filter((l) => l.crm_company_id === id);
   const totalLeadValue = companyLeads.reduce((sum, l) => sum + (Number(l.estimated_value) || 0), 0);
 
+  // Helper to find category from industry type
+  const getCategoryFromIndustry = (industry: string | null | undefined): CompanyCategory | "" => {
+    if (!industry) return "";
+    for (const cat of COMPANY_CATEGORIES) {
+      if (cat.types?.includes(industry as CompanyType)) return cat.id;
+    }
+    return "";
+  };
+
   useEffect(() => {
     if (company) {
       setEditData(company);
+      setSelectedCategory(getCategoryFromIndustry(company.industry));
+      setSelectedSpecialties(company.bet_specialties || []);
     }
   }, [company]);
 
@@ -72,7 +99,11 @@ export default function CompanyDetail() {
 
   const handleSave = () => {
     if (company && editData) {
-      updateCompany.mutate({ id: company.id, ...editData });
+      updateCompany.mutate({
+        id: company.id,
+        ...editData,
+        bet_specialties: selectedCategory === "bet" ? selectedSpecialties : null,
+      });
       setIsEditing(false);
     }
   };
@@ -152,7 +183,17 @@ export default function CompanyDetail() {
           <div className="flex gap-2">
             {isEditing ? (
               <>
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    if (company) {
+                      setEditData(company);
+                      setSelectedCategory(getCategoryFromIndustry(company.industry));
+                      setSelectedSpecialties(company.bet_specialties || []);
+                    }
+                  }}
+                >
                   <X className="h-4 w-4 mr-2" />
                   Annuler
                 </Button>
@@ -225,25 +266,108 @@ export default function CompanyDetail() {
                   <h3 className="font-medium text-sm text-muted-foreground">Type d'entreprise</h3>
                   {isEditing ? (
                     <div className="space-y-3">
-                      <div>
-                        <label className="text-xs text-muted-foreground">Type</label>
-                        <Select
-                          value={editData.industry || ""}
-                          onValueChange={(v) => setEditData({ ...editData, industry: v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="maitre_ouvrage">Maître d'ouvrage</SelectItem>
-                            <SelectItem value="moe">Maître d'œuvre</SelectItem>
-                            <SelectItem value="bet">Bureau d'études (BET)</SelectItem>
-                            <SelectItem value="entreprise">Entreprise générale</SelectItem>
-                            <SelectItem value="fournisseur">Fournisseur</SelectItem>
-                            <SelectItem value="partenaire">Partenaire</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs text-muted-foreground">Catégorie</label>
+                          <Select
+                            value={selectedCategory}
+                            onValueChange={(v) => {
+                              setSelectedCategory(v as CompanyCategory);
+                              setEditData({ ...editData, industry: null });
+                              setSelectedSpecialties([]);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COMPANY_CATEGORIES.filter((c) => c.id !== "all").map((cat) => (
+                                <SelectItem key={cat.id} value={cat.id}>
+                                  {cat.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground">Type</label>
+                          <Select
+                            value={(editData.industry as string) || ""}
+                            onValueChange={(v) => setEditData({ ...editData, industry: v })}
+                            disabled={!selectedCategory}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(selectedCategory
+                                ? COMPANY_CATEGORIES.find((c) => c.id === selectedCategory)?.types || []
+                                : []
+                              ).map((type) => {
+                                const config = COMPANY_TYPE_CONFIG[type];
+                                return (
+                                  <SelectItem key={type} value={type}>
+                                    {config.label}
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
+
+                      {selectedCategory === "bet" && (
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Spécialités BET</label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="w-full justify-between h-auto min-h-10 py-2">
+                                {selectedSpecialties.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {selectedSpecialties.map((spec) => {
+                                      const specialty = BET_SPECIALTIES.find((s) => s.value === spec);
+                                      return (
+                                        <Badge key={spec} className={cn("text-white text-xs gap-1", specialty?.color)}>
+                                          {specialty?.label}
+                                          <X
+                                            className="h-3 w-3 cursor-pointer"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedSpecialties((prev) => prev.filter((s) => s !== spec));
+                                            }}
+                                          />
+                                        </Badge>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">Sélectionnez une ou plusieurs spécialités</span>
+                                )}
+                                <span className="text-muted-foreground">▾</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                              {BET_SPECIALTIES.map((spec) => (
+                                <DropdownMenuCheckboxItem
+                                  key={spec.value}
+                                  checked={selectedSpecialties.includes(spec.value)}
+                                  onSelect={(e) => e.preventDefault()}
+                                  onCheckedChange={() => {
+                                    setSelectedSpecialties((prev) =>
+                                      prev.includes(spec.value)
+                                        ? prev.filter((s) => s !== spec.value)
+                                        : [...prev, spec.value]
+                                    );
+                                  }}
+                                >
+                                  <Badge className={cn("text-white text-xs mr-2", spec.color)}>{spec.label}</Badge>
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
+
                       <div>
                         <label className="text-xs text-muted-foreground">URL du logo</label>
                         <Input
