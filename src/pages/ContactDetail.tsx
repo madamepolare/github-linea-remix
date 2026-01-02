@@ -113,76 +113,85 @@ export default function ContactDetail() {
 
   return (
     <MainLayout>
-      <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/crm")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center gap-4 flex-1">
-            <Avatar className="h-16 w-16">
-              <AvatarImage src={contact.avatar_url || undefined} />
-              <AvatarFallback className="bg-primary/10 text-primary text-xl">
-                {contact.name.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <h1 className="text-2xl font-semibold">{contact.name}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                {contact.role && (
-                  <span className="text-muted-foreground">{contact.role}</span>
+        <div className="flex-shrink-0 border-b border-border bg-card">
+          <div className="px-6 py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/crm")}
+                  className="h-9 w-9 rounded-full hover:bg-muted"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={contact.avatar_url || undefined} />
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                    {contact.name.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-xl font-semibold tracking-tight">{contact.name}</h1>
+                    {contact.contact_type && (
+                      <Badge variant="outline" className="text-xs font-normal gap-1.5">
+                        <div
+                          className={`w-2 h-2 rounded-full ${contactTypeColors[contact.contact_type] || "bg-neutral-500"}`}
+                        />
+                        {contactTypeLabels[contact.contact_type] || contact.contact_type}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    {contact.role && <span>{contact.role}</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {contact.email && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={`mailto:${contact.email}`}>
+                      <Mail className="h-4 w-4 mr-2" />
+                      Email
+                    </a>
+                  </Button>
                 )}
-                {contact.contact_type && (
-                  <Badge variant="outline" className="gap-1.5">
-                    <div
-                      className={`w-2 h-2 rounded-full ${contactTypeColors[contact.contact_type] || "bg-neutral-500"}`}
-                    />
-                    {contactTypeLabels[contact.contact_type] || contact.contact_type}
-                  </Badge>
+                {contact.phone && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={`tel:${contact.phone}`}>
+                      <Phone className="h-4 w-4 mr-2" />
+                      Appeler
+                    </a>
+                  </Button>
+                )}
+                {isEditing ? (
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
+                      <X className="h-4 w-4 mr-2" />
+                      Annuler
+                    </Button>
+                    <Button size="sm" onClick={handleSave} disabled={updateContact.isPending}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Enregistrer
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Modifier
+                  </Button>
                 )}
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            {isEditing ? (
-              <>
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
-                  <X className="h-4 w-4 mr-2" />
-                  Annuler
-                </Button>
-                <Button onClick={handleSave} disabled={updateContact.isPending}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Enregistrer
-                </Button>
-              </>
-            ) : (
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Modifier
-              </Button>
-            )}
-          </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="flex gap-2">
-          {contact.email && (
-            <Button variant="outline" asChild>
-              <a href={`mailto:${contact.email}`}>
-                <Mail className="h-4 w-4 mr-2" />
-                Envoyer un email
-              </a>
-            </Button>
-          )}
-          {contact.phone && (
-            <Button variant="outline" asChild>
-              <a href={`tel:${contact.phone}`}>
-                <Phone className="h-4 w-4 mr-2" />
-                Appeler
-              </a>
-            </Button>
-          )}
-        </div>
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-6">
+          <div className="max-w-4xl mx-auto space-y-6">
 
         {/* Content */}
         <Tabs defaultValue="info">
@@ -403,6 +412,8 @@ export default function ContactDetail() {
             </Card>
           </TabsContent>
         </Tabs>
+          </div>
+        </div>
       </div>
     </MainLayout>
   );

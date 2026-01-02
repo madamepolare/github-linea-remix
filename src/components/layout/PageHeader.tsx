@@ -60,14 +60,14 @@ export function PageHeader({
 
   return (
     <motion.header
-      className="flex-shrink-0 bg-background"
+      className="flex-shrink-0 bg-card border-b border-border"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
       {/* Main Row: Title + Actions */}
       <motion.div
-        className="px-6 py-5 border-b border-border"
+        className="px-6 py-5"
         variants={rowVariants}
       >
         <div className="flex items-center justify-between gap-4">
@@ -75,19 +75,19 @@ export function PageHeader({
           <div className="flex items-center gap-4 min-w-0">
             {Icon && (
               <motion.div
-                className="h-9 w-9 rounded-lg bg-muted/80 flex items-center justify-center flex-shrink-0 border border-border/50"
-                whileHover={{ scale: 1.02, backgroundColor: "hsl(var(--muted))" }}
+                className="h-9 w-9 rounded-full bg-muted/80 flex items-center justify-center flex-shrink-0"
+                whileHover={{ scale: 1.02 }}
                 transition={{ duration: 0.15 }}
               >
                 <Icon className="h-[18px] w-[18px] text-foreground/70" strokeWidth={1.5} />
               </motion.div>
             )}
             <div className="min-w-0">
-              <h1 className="text-lg font-medium text-foreground tracking-tight">
+              <h1 className="text-xl font-semibold text-foreground tracking-tight">
                 {title}
               </h1>
               {description && (
-                <p className="text-[13px] text-muted-foreground/80 mt-0.5">
+                <p className="text-sm text-muted-foreground mt-0.5">
                   {description}
                 </p>
               )}
@@ -95,7 +95,7 @@ export function PageHeader({
           </div>
 
           {/* Right: Actions + Primary Button */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {actions}
             
             {primaryAction && (
@@ -106,7 +106,7 @@ export function PageHeader({
                 <Button
                   onClick={primaryAction.onClick}
                   size="sm"
-                  className="h-9 gap-1.5 px-3 font-medium"
+                  className="h-9 gap-1.5 px-4 font-medium"
                 >
                   <Plus className="h-4 w-4" strokeWidth={2} />
                   <span className="hidden sm:inline">{primaryAction.label}</span>
@@ -120,7 +120,7 @@ export function PageHeader({
       {/* Tabs Row (optional) */}
       {hasTabs && (
         <motion.div
-          className="px-6 py-2 border-b border-border bg-muted/20"
+          className="px-6 pb-0"
           variants={rowVariants}
         >
           {tabs}
@@ -130,7 +130,7 @@ export function PageHeader({
       {/* Filters Row (optional) */}
       {hasFilters && (
         <motion.div
-          className="px-6 py-2.5 border-b border-border bg-muted/30"
+          className="px-6 py-3 border-t border-border/50 bg-muted/20"
           variants={rowVariants}
         >
           {filters}

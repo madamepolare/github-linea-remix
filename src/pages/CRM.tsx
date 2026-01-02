@@ -54,53 +54,60 @@ export default function CRM() {
       <MainLayout>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-border">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-2xl font-bold">CRM</h1>
-                <p className="text-sm text-muted-foreground">
-                  {totalEntities} entités · {formatCurrency(leadStats.weightedValue)} en pipeline
-                </p>
-              </div>
+          <div className="flex-shrink-0 border-b border-border bg-card">
+            <div className="px-6 py-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="h-9 w-9 rounded-full bg-muted/80 flex items-center justify-center">
+                    <Target className="h-[18px] w-[18px] text-foreground/70" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold tracking-tight">CRM</h1>
+                    <p className="text-sm text-muted-foreground">
+                      {totalEntities} entités · {formatCurrency(leadStats.weightedValue)} en pipeline
+                    </p>
+                  </div>
+                </div>
 
-              {/* Add dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Ajouter
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => setCreateCompanyOpen(true)}>
-                    <Building2 className="h-4 w-4 mr-2" />
-                    Entreprise
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setCreateContactOpen(true)}>
-                    <Users className="h-4 w-4 mr-2" />
-                    Contact
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setCreateLeadOpen(true)}>
-                    <Target className="h-4 w-4 mr-2" />
-                    Opportunité
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                {/* Add dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" className="h-9 gap-1.5 px-4">
+                      <Plus className="h-4 w-4" />
+                      <span className="hidden sm:inline">Ajouter</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setCreateCompanyOpen(true)}>
+                      <Building2 className="h-4 w-4 mr-2" />
+                      Entreprise
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCreateContactOpen(true)}>
+                      <Users className="h-4 w-4 mr-2" />
+                      Contact
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCreateLeadOpen(true)}>
+                      <Target className="h-4 w-4 mr-2" />
+                      Opportunité
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
             {/* Tabs */}
-            <Tabs value={view} onValueChange={(v) => setView(v as CRMView)}>
-              <TabsList className="bg-transparent border-b-0 p-0 h-auto gap-0">
+            <Tabs value={view} onValueChange={(v) => setView(v as CRMView)} className="px-6">
+              <TabsList className="h-10 bg-transparent p-0 gap-1">
                 <TabsTrigger
                   value="overview"
-                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none px-4 py-2.5"
+                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
                 >
                   <TrendingUp className="h-4 w-4 mr-2" />
                   Vue d'ensemble
                 </TabsTrigger>
                 <TabsTrigger
                   value="leads"
-                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none px-4 py-2.5"
+                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
                 >
                   <Target className="h-4 w-4 mr-2" />
                   Opportunités
@@ -110,7 +117,7 @@ export default function CRM() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="contacts"
-                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none px-4 py-2.5"
+                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
                 >
                   <Users className="h-4 w-4 mr-2" />
                   Contacts
@@ -120,7 +127,7 @@ export default function CRM() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="companies"
-                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary rounded-none px-4 py-2.5"
+                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
                 >
                   <Building2 className="h-4 w-4 mr-2" />
                   Entreprises
