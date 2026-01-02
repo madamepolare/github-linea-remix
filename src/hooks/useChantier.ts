@@ -57,6 +57,7 @@ export interface ProjectMeeting {
   attendees: MeetingAttendee[] | null;
   notes: string | null;
   pdf_url: string | null;
+  report_data: Record<string, unknown> | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

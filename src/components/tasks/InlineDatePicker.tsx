@@ -12,10 +12,11 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 interface InlineDatePickerProps {
-  value: Date | null;
+  value: Date | null | undefined;
   onChange: (date: Date | null) => void;
   placeholder?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export function InlineDatePicker({
@@ -23,6 +24,7 @@ export function InlineDatePicker({
   onChange,
   placeholder = "Sélectionner une date",
   className,
+  disabled = false,
 }: InlineDatePickerProps) {
   const [open, setOpen] = useState(false);
 
@@ -41,9 +43,11 @@ export function InlineDatePicker({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          disabled={disabled}
           className={cn(
             "justify-start text-left font-normal",
             !value && "text-muted-foreground",
+            disabled && "opacity-50 cursor-not-allowed",
             className
           )}
         >
