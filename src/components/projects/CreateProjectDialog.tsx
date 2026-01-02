@@ -151,7 +151,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       case 3:
         return phases.length > 0;
       case 4:
-        return true;
+        return !!startDate && !!endDate; // Dates are now required
       default:
         return false;
     }
@@ -411,11 +411,11 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               {/* Step 5: Dates & Budget */}
               {step === 4 && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>
-                        <Calendar className="h-3.5 w-3.5 inline mr-1" />
-                        Date de début
+                      <Label className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        Date de début *
                       </Label>
                       <InlineDatePicker
                         value={startDate}
@@ -423,18 +423,32 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                         placeholder="Sélectionner..."
                         className="w-full"
                       />
+                      {!startDate && (
+                        <p className="text-xs text-destructive">Requis pour calculer les phases</p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Date de fin prévue</Label>
+                      <Label>Date de fin prévue *</Label>
                       <InlineDatePicker
                         value={endDate}
                         onChange={setEndDate}
                         placeholder="Sélectionner..."
                         className="w-full"
                       />
+                      {!endDate && (
+                        <p className="text-xs text-destructive">Requis pour calculer les phases</p>
+                      )}
                     </div>
                   </div>
+
+                  {startDate && endDate && (
+                    <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <p className="text-sm text-primary">
+                        Les {phases.length} phases seront automatiquement réparties sur la durée du projet.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="budget">
