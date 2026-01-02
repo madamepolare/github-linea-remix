@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft,
@@ -239,6 +240,7 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
   const { updatePhase, createPhase, deletePhase, reorderPhases } = useProjectPhases(project.id);
   const [phaseEditOpen, setPhaseEditOpen] = useState(false);
   const [projectEditOpen, setProjectEditOpen] = useState(false);
+  const [confirmPhaseId, setConfirmPhaseId] = useState<string | null>(null);
   const { updateProject } = useProjects();
 
   const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
@@ -267,7 +269,25 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
       }
     });
     toast.success(`Phase "${targetPhase.name}" activée`);
+    setConfirmPhaseId(null);
   };
+
+  const handlePhaseClick = (phase: any, index: number) => {
+    const isActive = phase.status === "in_progress";
+    const isCompleted = phase.status === "completed";
+    
+    if (isActive && nextPhase) {
+      completeCurrentAndActivateNext();
+    } else if (isCompleted) {
+      // Show confirmation for going back
+      setConfirmPhaseId(phase.id);
+    } else {
+      // Pending phase - just activate
+      activatePhase(phase.id);
+    }
+  };
+
+  const phaseToConfirm = phases.find(p => p.id === confirmPhaseId);
 
   const completeCurrentAndActivateNext = () => {
     if (!currentPhase) return;
@@ -325,43 +345,50 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                   const isActive = phase.status === "in_progress";
                   const isCompleted = phase.status === "completed";
                   const isPending = phase.status === "pending";
+                  const hasDate = phase.start_date || phase.end_date;
                   
                   return (
                     <div key={phase.id} className="flex items-center">
                       <button
-                        onClick={() => {
-                          if (!isActive) {
-                            activatePhase(phase.id);
-                          } else if (nextPhase) {
-                            completeCurrentAndActivateNext();
-                          }
-                        }}
+                        onClick={() => handlePhaseClick(phase, index)}
                         title={isCompleted ? "Cliquer pour revenir à cette phase" : isActive ? "Phase actuelle" : "Cliquer pour activer"}
                         className={cn(
-                          "relative flex items-center gap-2 px-3 py-2 rounded-lg transition-all min-w-max cursor-pointer",
+                          "relative flex flex-col items-start gap-0.5 px-3 py-2 rounded-lg transition-all min-w-max cursor-pointer",
                           isActive && "bg-primary text-primary-foreground shadow-lg scale-105",
                           isCompleted && "bg-muted text-muted-foreground hover:bg-muted/80",
                           isPending && "bg-background border border-border hover:border-primary/50 hover:bg-primary/5"
                         )}
                       >
-                        <div className={cn(
-                          "w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
-                          isActive && "bg-primary-foreground/20",
-                          isCompleted && "bg-success text-success-foreground",
-                          isPending && "bg-muted-foreground/20"
-                        )}>
-                          {isCompleted ? (
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                          ) : (
-                            index + 1
-                          )}
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium shrink-0",
+                            isActive && "bg-primary-foreground/20",
+                            isCompleted && "bg-success text-success-foreground",
+                            isPending && "bg-muted-foreground/20"
+                          )}>
+                            {isCompleted ? (
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            ) : (
+                              index + 1
+                            )}
+                          </div>
+                          <span className={cn(
+                            "text-sm font-medium whitespace-nowrap",
+                            isCompleted && "line-through"
+                          )}>
+                            {phase.name}
+                          </span>
                         </div>
-                        <span className={cn(
-                          "text-sm font-medium whitespace-nowrap",
-                          isCompleted && "line-through"
-                        )}>
-                          {phase.name}
-                        </span>
+                        {hasDate && (
+                          <span className={cn(
+                            "text-[10px] pl-7 whitespace-nowrap",
+                            isActive ? "text-primary-foreground/70" : "text-muted-foreground"
+                          )}>
+                            {phase.start_date && format(parseISO(phase.start_date), "dd MMM", { locale: fr })}
+                            {phase.start_date && phase.end_date && " → "}
+                            {phase.end_date && format(parseISO(phase.end_date), "dd MMM", { locale: fr })}
+                          </span>
+                        )}
                       </button>
                       
                       {index < phases.length - 1 && (
@@ -514,6 +541,25 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
         }}
         isSaving={isUpdatingProject}
       />
+
+      {/* Confirmation dialog for going back to a previous phase */}
+      <AlertDialog open={!!confirmPhaseId} onOpenChange={(open) => !open && setConfirmPhaseId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revenir à une phase précédente ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vous allez réactiver la phase "{phaseToConfirm?.name}". 
+              Les phases suivantes seront remises en attente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={() => confirmPhaseId && activatePhase(confirmPhaseId)}>
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
