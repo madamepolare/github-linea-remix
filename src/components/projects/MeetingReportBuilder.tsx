@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useChantier, ProjectMeeting, ProjectObservation, MeetingAttendee, ObservationStatus } from "@/hooks/useChantier";
 import { useContacts } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
@@ -97,6 +97,11 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
     { id: "summary", type: "summary", title: "Synthèse AI", expanded: false },
   ]);
 
+  // Drag and drop state
+  const [draggedSectionId, setDraggedSectionId] = useState<string | null>(null);
+  const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
+  const dragNodeRef = useRef<HTMLDivElement | null>(null);
+
   const [localMeeting, setLocalMeeting] = useState(meeting);
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
@@ -127,6 +132,68 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
     setReportSections(prev => prev.map(s => 
       s.id === sectionId ? { ...s, expanded: !s.expanded } : s
     ));
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, sectionId: string) => {
+    setDraggedSectionId(sectionId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", sectionId);
+    
+    // Add a slight delay to allow the drag image to be created
+    setTimeout(() => {
+      if (dragNodeRef.current) {
+        dragNodeRef.current.style.opacity = "0.5";
+      }
+    }, 0);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedSectionId(null);
+    setDragOverSectionId(null);
+    if (dragNodeRef.current) {
+      dragNodeRef.current.style.opacity = "1";
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, sectionId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (sectionId !== draggedSectionId) {
+      setDragOverSectionId(sectionId);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverSectionId(null);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, targetSectionId: string) => {
+    e.preventDefault();
+    
+    if (!draggedSectionId || draggedSectionId === targetSectionId) {
+      setDraggedSectionId(null);
+      setDragOverSectionId(null);
+      return;
+    }
+
+    setReportSections(prev => {
+      const newSections = [...prev];
+      const draggedIndex = newSections.findIndex(s => s.id === draggedSectionId);
+      const targetIndex = newSections.findIndex(s => s.id === targetSectionId);
+      
+      if (draggedIndex === -1 || targetIndex === -1) return prev;
+      
+      // Remove dragged item and insert at target position
+      const [draggedItem] = newSections.splice(draggedIndex, 1);
+      newSections.splice(targetIndex, 0, draggedItem);
+      
+      return newSections;
+    });
+
+    setDraggedSectionId(null);
+    setDragOverSectionId(null);
+    toast.success("Section déplacée");
   };
 
   const handleToggleAttendeePresence = (index: number) => {
@@ -373,15 +440,29 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
         <div className="space-y-4 pr-4">
           {/* Report Sections */}
           {reportSections.map((section) => (
-            <Card key={section.id} className="overflow-hidden">
+            <Card 
+              key={section.id} 
+              className={cn(
+                "overflow-hidden transition-all duration-200",
+                draggedSectionId === section.id && "opacity-50 scale-[0.98]",
+                dragOverSectionId === section.id && "ring-2 ring-primary ring-offset-2"
+              )}
+              draggable
+              onDragStart={(e) => handleDragStart(e, section.id)}
+              onDragEnd={handleDragEnd}
+              onDragOver={(e) => handleDragOver(e, section.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, section.id)}
+              ref={draggedSectionId === section.id ? dragNodeRef : null}
+            >
               <CardHeader
-                className="py-3 px-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                className="py-3 px-4 cursor-grab active:cursor-grabbing hover:bg-muted/50 transition-colors"
                 onClick={() => toggleSection(section.id)}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                    <CardTitle className="text-sm font-medium">{section.title}</CardTitle>
+                    <GripVertical className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                    <CardTitle className="text-sm font-medium select-none">{section.title}</CardTitle>
                     {section.id === "attendees" && (
                       <Badge variant="secondary" className="text-xs">
                         {presentCount}/{attendees.length}
