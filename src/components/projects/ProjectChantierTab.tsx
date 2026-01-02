@@ -37,6 +37,8 @@ import { ChantierGantt } from "./ChantierGantt";
 import { MeetingReportBuilder } from "./MeetingReportBuilder";
 import { LoadLotsTemplateDialog } from "./LoadLotsTemplateDialog";
 import { ChantierOverview } from "./chantier/ChantierOverview";
+import { ChantierPlanningModal } from "./chantier/ChantierPlanningModal";
+import { MeetingsAndReportsSection } from "./chantier/MeetingsAndReportsSection";
 import { SendConvocationDialog } from "./chantier/SendConvocationDialog";
 import { DefaultLot } from "@/lib/defaultLots";
 import {
@@ -84,7 +86,10 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedMeetingForReport, setSelectedMeetingForReport] = useState<ProjectMeeting | null>(null);
   const [convocationMeeting, setConvocationMeeting] = useState<ProjectMeeting | null>(null);
+  const [planningModalOpen, setPlanningModalOpen] = useState(false);
   const { data: project } = useProject(projectId);
+  const { lots, updateLot, createLot, deleteLot } = useChantier(projectId);
+  const { companies } = useCRMCompanies();
 
   // If a meeting is selected for report building, show the builder
   if (selectedMeetingForReport) {
@@ -107,15 +112,11 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
           </TabsTrigger>
           <TabsTrigger value="lots">
             <Hammer className="h-4 w-4 mr-2" />
-            Lots
+            Lots & Intervenants
           </TabsTrigger>
           <TabsTrigger value="meetings">
-            <Users className="h-4 w-4 mr-2" />
-            Réunions
-          </TabsTrigger>
-          <TabsTrigger value="reports">
             <FileText className="h-4 w-4 mr-2" />
-            Comptes Rendus
+            Réunions & CR
           </TabsTrigger>
           <TabsTrigger value="observations">
             <Eye className="h-4 w-4 mr-2" />
@@ -128,29 +129,38 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
             projectId={projectId} 
             onNavigate={setActiveTab}
             onOpenReport={setSelectedMeetingForReport}
+            onOpenPlanning={() => setPlanningModalOpen(true)}
           />
         </TabsContent>
 
         <TabsContent value="lots" className="mt-4">
-          <LotsSection projectId={projectId} />
+          <LotsSection projectId={projectId} onOpenPlanning={() => setPlanningModalOpen(true)} />
         </TabsContent>
 
         <TabsContent value="meetings" className="mt-4">
-          <MeetingsSection 
+          <MeetingsAndReportsSection 
             projectId={projectId} 
             onOpenReport={setSelectedMeetingForReport}
             onSendConvocation={setConvocationMeeting}
           />
         </TabsContent>
 
-        <TabsContent value="reports" className="mt-4">
-          <ReportsSection projectId={projectId} onOpenReport={setSelectedMeetingForReport} />
-        </TabsContent>
-
         <TabsContent value="observations" className="mt-4">
           <ObservationsSection projectId={projectId} />
         </TabsContent>
       </Tabs>
+
+      {/* Planning Modal */}
+      <ChantierPlanningModal
+        isOpen={planningModalOpen}
+        onClose={() => setPlanningModalOpen(false)}
+        lots={lots}
+        onUpdateLot={(id, updates) => updateLot.mutate({ id, ...updates })}
+        onCreateLot={(name, start_date, end_date) => createLot.mutate({ name, start_date, end_date, status: "pending", sort_order: lots.length })}
+        onDeleteLot={(id) => deleteLot.mutate(id)}
+        companies={companies}
+        projectName={project?.name}
+      />
 
       {/* Send Convocation Dialog */}
       <SendConvocationDialog
