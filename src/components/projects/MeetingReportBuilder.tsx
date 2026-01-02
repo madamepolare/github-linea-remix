@@ -234,12 +234,32 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
   const handleExportPDF = () => {
     try {
       const meetingObservations = observations.filter(o => o.meeting_id === meeting.id);
+      const chantierTasks = (tasks || []).filter(t => t.module === "chantier");
+      
       generateMeetingPDF({
         meeting: localMeeting,
         observations: meetingObservations,
+        attentionItems: attentionItems.map(item => ({
+          id: item.id,
+          description: item.description,
+          urgency: item.urgency,
+          progress: item.progress,
+          due_date: item.due_date,
+          assignee_names: item.assignee_names,
+          stakeholder_type: item.stakeholder_type,
+        })),
+        tasks: chantierTasks.map(t => ({
+          id: t.id,
+          title: t.title,
+          status: t.status,
+          priority: t.priority,
+          due_date: t.due_date,
+          assigned_to: t.assigned_to,
+        })),
         projectName: project?.name || "Projet",
         projectAddress: project?.address || undefined,
         projectClient: project?.client || undefined,
+        aiSummary: aiSummary || undefined,
       });
       toast.success("PDF généré avec succès");
     } catch (error) {
