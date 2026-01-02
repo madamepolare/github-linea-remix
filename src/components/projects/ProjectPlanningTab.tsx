@@ -49,6 +49,7 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import frLocale from "@fullcalendar/core/locales/fr";
 import { toast } from "sonner";
+import { TaskCreateSheet } from "@/components/tasks/TaskCreateSheet";
 
 interface ProjectPlanningTabProps {
   projectId: string;
@@ -106,13 +107,10 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const [quickCreateDate, setQuickCreateDate] = useState<string>("");
   const [isQuickTaskOpen, setIsQuickTaskOpen] = useState(false);
   const [isDeliverableOpen, setIsDeliverableOpen] = useState(false);
-  const [isProjectTaskOpen, setIsProjectTaskOpen] = useState(false);
+  const [isProjectTaskSheetOpen, setIsProjectTaskSheetOpen] = useState(false);
   const [quickTaskTitle, setQuickTaskTitle] = useState("");
   const [deliverableName, setDeliverableName] = useState("");
   const [deliverableDescription, setDeliverableDescription] = useState("");
-  const [projectTaskTitle, setProjectTaskTitle] = useState("");
-  const [projectTaskDescription, setProjectTaskDescription] = useState("");
-  const [projectTaskPriority, setProjectTaskPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
 
   // Edit task dialog
   const [editingTask, setEditingTask] = useState<any>(null);
@@ -411,10 +409,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       setDeliverableDescription("");
       setIsDeliverableOpen(true);
     } else if (type === "projecttask") {
-      setProjectTaskTitle("");
-      setProjectTaskDescription("");
-      setProjectTaskPriority("medium");
-      setIsProjectTaskOpen(true);
+      setIsProjectTaskSheetOpen(true);
     }
   };
 
@@ -440,21 +435,6 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
     setDeliverableDescription("");
   };
 
-  const handleCreateProjectTask = () => {
-    if (!projectTaskTitle.trim()) return;
-    createTask.mutate({
-      title: projectTaskTitle.trim(),
-      description: projectTaskDescription.trim() || null,
-      due_date: quickCreateDate,
-      project_id: projectId,
-      priority: projectTaskPriority,
-      status: "todo",
-    });
-    setIsProjectTaskOpen(false);
-    setProjectTaskTitle("");
-    setProjectTaskDescription("");
-    setProjectTaskPriority("medium");
-  };
 
   const handleEventDrop = (info: any) => {
     const { type, originalData } = info.event.extendedProps;
@@ -1084,83 +1064,13 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Project Task Creation Dialog */}
-      <Dialog open={isProjectTaskOpen} onOpenChange={setIsProjectTaskOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <CheckSquare className="h-4 w-4 text-blue-500" />
-              Nouvelle tâche projet
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="p-2 bg-muted rounded text-sm text-center">
-              Échéance : {quickCreateDate && format(parseISO(quickCreateDate), "d MMMM yyyy", { locale: fr })}
-            </div>
-            <div className="space-y-2">
-              <Label>Titre *</Label>
-              <Input
-                value={projectTaskTitle}
-                onChange={(e) => setProjectTaskTitle(e.target.value)}
-                placeholder="Ex: Finaliser les plans"
-                autoFocus
-                onKeyDown={(e) => e.key === "Enter" && handleCreateProjectTask()}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Priorité</Label>
-              <Select value={projectTaskPriority} onValueChange={(v) => setProjectTaskPriority(v as any)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">
-                    <div className="flex items-center gap-2">
-                      <Flag className="h-3 w-3 text-gray-400" />
-                      Basse
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="medium">
-                    <div className="flex items-center gap-2">
-                      <Flag className="h-3 w-3 text-blue-500" />
-                      Moyenne
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="high">
-                    <div className="flex items-center gap-2">
-                      <Flag className="h-3 w-3 text-orange-500" />
-                      Haute
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="urgent">
-                    <div className="flex items-center gap-2">
-                      <Flag className="h-3 w-3 text-red-500" />
-                      Urgente
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={projectTaskDescription}
-                onChange={(e) => setProjectTaskDescription(e.target.value)}
-                placeholder="Détails de la tâche..."
-                rows={2}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsProjectTaskOpen(false)}>
-              Annuler
-            </Button>
-            <Button onClick={handleCreateProjectTask} disabled={!projectTaskTitle.trim()}>
-              Créer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Project Task Creation Sheet */}
+      <TaskCreateSheet
+        open={isProjectTaskSheetOpen}
+        onOpenChange={setIsProjectTaskSheetOpen}
+        defaultDueDate={quickCreateDate ? parseISO(quickCreateDate) : null}
+        defaultProjectId={projectId}
+      />
 
       {/* Edit Task Dialog */}
       <Dialog open={!!editingTask} onOpenChange={(open) => !open && setEditingTask(null)}>
