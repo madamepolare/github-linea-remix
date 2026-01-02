@@ -37,6 +37,7 @@ interface LeadDetailSheetProps {
   lead: Lead | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onEdit?: (lead: Lead) => void;
 }
 
 const activityTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -64,7 +65,7 @@ const sourceLabels: Record<string, string> = {
   social: "Réseaux sociaux",
 };
 
-export function LeadDetailSheet({ lead, open, onOpenChange }: LeadDetailSheetProps) {
+export function LeadDetailSheet({ lead, open, onOpenChange, onEdit }: LeadDetailSheetProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [newNote, setNewNote] = useState("");
   
