@@ -155,8 +155,14 @@ export function useProjects() {
 
       if (projectError) throw projectError;
 
-      // Generate default phases for the project type
-      const defaultPhases = generateDefaultPhases(input.project_type, project.id, activeWorkspace.id);
+      // Generate default phases for the project type with dates
+      const defaultPhases = generateDefaultPhases(
+        input.project_type, 
+        project.id, 
+        activeWorkspace.id,
+        input.start_date,
+        input.end_date
+      );
       
       if (defaultPhases.length > 0) {
         const phasesToInsert = defaultPhases.map((phase, index) => ({
@@ -165,8 +171,10 @@ export function useProjects() {
           name: phase.name,
           description: phase.description,
           sort_order: index,
-          status: index === 0 ? "in_progress" : "pending",
+          status: phase.status,
           color: phase.color,
+          start_date: phase.start_date,
+          end_date: phase.end_date,
         }));
 
         const { error: phasesError } = await supabase

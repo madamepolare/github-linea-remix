@@ -139,8 +139,48 @@ export function getProjectTypeConfig(type: ProjectType): ProjectTypeConfig {
   return PROJECT_TYPES.find(t => t.value === type) || PROJECT_TYPES[0];
 }
 
-export function generateDefaultPhases(projectType: ProjectType, projectId: string, workspaceId: string) {
+export function generateDefaultPhases(
+  projectType: ProjectType, 
+  projectId: string, 
+  workspaceId: string,
+  projectStartDate?: string | null,
+  projectEndDate?: string | null
+) {
   const phases = DEFAULT_PHASES[projectType];
+  const phaseCount = phases.length;
+  
+  // Calculate phase dates based on project dates
+  let phaseDates: { start_date: string | null; end_date: string | null }[] = [];
+  
+  if (projectStartDate && projectEndDate) {
+    const startDate = new Date(projectStartDate);
+    const endDate = new Date(projectEndDate);
+    const totalDays = Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+    const daysPerPhase = Math.floor(totalDays / phaseCount);
+    
+    let currentDate = new Date(startDate);
+    
+    for (let i = 0; i < phaseCount; i++) {
+      const phaseStart = new Date(currentDate);
+      
+      // Last phase extends to project end date
+      const phaseEnd = i === phaseCount - 1 
+        ? new Date(endDate)
+        : new Date(currentDate.getTime() + daysPerPhase * 24 * 60 * 60 * 1000);
+      
+      phaseDates.push({
+        start_date: phaseStart.toISOString().split('T')[0],
+        end_date: phaseEnd.toISOString().split('T')[0],
+      });
+      
+      // Next phase starts the day after
+      currentDate = new Date(phaseEnd.getTime() + 24 * 60 * 60 * 1000);
+    }
+  } else {
+    // No dates provided
+    phaseDates = phases.map(() => ({ start_date: null, end_date: null }));
+  }
+  
   return phases.map((phase, index) => ({
     project_id: projectId,
     workspace_id: workspaceId,
@@ -148,6 +188,8 @@ export function generateDefaultPhases(projectType: ProjectType, projectId: strin
     description: phase.description,
     sort_order: index,
     color: PHASE_COLORS[index % PHASE_COLORS.length],
-    status: index === 0 ? "in_progress" : "pending"
+    status: index === 0 ? "in_progress" : "pending",
+    start_date: phaseDates[index].start_date,
+    end_date: phaseDates[index].end_date,
   }));
 }

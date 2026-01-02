@@ -436,18 +436,27 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick, onPhase
                             )}
                             
                             {/* Content */}
-                            <div className="h-full flex items-center px-2 overflow-hidden">
-                              {canDrag && (
-                                <GripVertical className="h-3 w-3 text-white/50 mr-1 flex-shrink-0" />
+                            <div className="h-full flex items-center justify-between px-2 overflow-hidden gap-1">
+                              <div className="flex items-center min-w-0">
+                                {canDrag && (
+                                  <GripVertical className="h-3 w-3 text-white/50 mr-1 flex-shrink-0" />
+                                )}
+                                {pos.startDate && (
+                                  <span className="text-[10px] text-white/90 font-medium whitespace-nowrap">
+                                    {format(pos.startDate, "d MMM", { locale: fr })}
+                                  </span>
+                                )}
+                              </div>
+                              {pos.width > 100 && (
+                                <span className="text-[10px] text-white/70 truncate px-1 hidden sm:block">
+                                  {phase.name}
+                                </span>
                               )}
-                              <span className="text-xs text-white font-medium truncate">
-                                {pos.startDate && pos.endDate 
-                                  ? `${format(pos.startDate, "d MMM", { locale: fr })} - ${format(pos.endDate, "d MMM", { locale: fr })}`
-                                  : pos.endDate 
-                                    ? format(pos.endDate, "d MMM", { locale: fr })
-                                    : phase.name
-                                }
-                              </span>
+                              {pos.endDate && (
+                                <span className="text-[10px] text-white/90 font-medium whitespace-nowrap">
+                                  {format(pos.endDate, "d MMM", { locale: fr })}
+                                </span>
+                              )}
                             </div>
                             
                             {/* Right resize handle */}
