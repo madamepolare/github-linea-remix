@@ -538,6 +538,75 @@ export type Database = {
           },
         ]
       }
+      meeting_attention_items: {
+        Row: {
+          assignee_company_ids: string[] | null
+          assignee_names: string[] | null
+          assignee_type: string
+          comment: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string
+          due_date: string | null
+          id: string
+          meeting_id: string
+          progress: number
+          stakeholder_type: string
+          updated_at: string | null
+          urgency: string
+          workspace_id: string
+        }
+        Insert: {
+          assignee_company_ids?: string[] | null
+          assignee_names?: string[] | null
+          assignee_type?: string
+          comment?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          due_date?: string | null
+          id?: string
+          meeting_id: string
+          progress?: number
+          stakeholder_type?: string
+          updated_at?: string | null
+          urgency?: string
+          workspace_id: string
+        }
+        Update: {
+          assignee_company_ids?: string[] | null
+          assignee_names?: string[] | null
+          assignee_type?: string
+          comment?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          due_date?: string | null
+          id?: string
+          meeting_id?: string
+          progress?: number
+          stakeholder_type?: string
+          updated_at?: string | null
+          urgency?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_attention_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "project_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_attention_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_report_versions: {
         Row: {
           attendees: Json | null
