@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ClientSelector } from './ClientSelector';
-import { PhaseSelector } from './PhaseSelector';
+import { QuoteGridEditor } from './QuoteGridEditor';
 import { FeeCalculator } from './FeeCalculator';
 import { TermsEditor } from './TermsEditor';
 import {
@@ -26,6 +26,7 @@ import {
   FEE_MODE_LABELS,
   PHASES_BY_PROJECT_TYPE
 } from '@/lib/commercialTypes';
+import { QuoteLineItem } from '@/lib/quoteTemplates';
 import { DEFAULT_CLAUSES_BY_PROJECT_TYPE } from '@/lib/defaultContractClauses';
 
 interface CommercialDocumentBuilderProps {
@@ -46,8 +47,72 @@ export function CommercialDocumentBuilder({
   documentId
 }: CommercialDocumentBuilderProps) {
   const [activeTab, setActiveTab] = useState('general');
+  const [quoteItems, setQuoteItems] = useState<QuoteLineItem[]>([]);
 
-  // Initialize phases when project type changes
+  // Convert phases to quote items
+  const phasesToItems = (phases: CommercialDocumentPhase[]): QuoteLineItem[] => {
+    return phases.map(phase => ({
+      id: phase.id,
+      type: 'phase' as const,
+      code: phase.phase_code,
+      designation: phase.phase_name,
+      description: phase.phase_description,
+      quantity: 1,
+      unit: 'forfait',
+      unitPrice: phase.amount || 0,
+      amount: phase.amount || 0,
+      isOptional: !phase.is_included,
+      deliverables: phase.deliverables || [],
+      sortOrder: phase.sort_order
+    }));
+  };
+
+  // Convert quote items back to phases
+  const itemsToPhases = (items: QuoteLineItem[]): CommercialDocumentPhase[] => {
+    return items
+      .filter(item => item.type === 'phase')
+      .map((item, index) => ({
+        id: item.id,
+        document_id: documentId || '',
+        phase_code: item.code || '',
+        phase_name: item.designation,
+        phase_description: item.description,
+        percentage_fee: 0, // Will be calculated
+        amount: item.amount,
+        is_included: !item.isOptional,
+        deliverables: item.deliverables,
+        sort_order: index,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }));
+  };
+
+  // Initialize quote items from phases
+  useEffect(() => {
+    if (phases.length > 0 && quoteItems.length === 0) {
+      setQuoteItems(phasesToItems(phases));
+    }
+  }, [phases]);
+
+  // Handle quote items change
+  const handleQuoteItemsChange = (items: QuoteLineItem[]) => {
+    setQuoteItems(items);
+    // Update phases from items
+    const newPhases = itemsToPhases(items);
+    onPhasesChange(newPhases);
+    
+    // Update total amount
+    const total = items
+      .filter(i => !i.isOptional && i.type !== 'discount')
+      .reduce((sum, i) => sum + i.amount, 0);
+    const discount = items
+      .filter(i => i.type === 'discount')
+      .reduce((sum, i) => sum + Math.abs(i.amount), 0);
+    
+    onDocumentChange({ ...document, total_amount: total - discount });
+  };
+
+  // Initialize phases when project type changes (for new documents)
   useEffect(() => {
     if (isNew && phases.length === 0 && document.project_type) {
       const templatePhases = PHASES_BY_PROJECT_TYPE[document.project_type];
@@ -66,6 +131,7 @@ export function CommercialDocumentBuilder({
         updated_at: new Date().toISOString()
       }));
       onPhasesChange(initialPhases);
+      setQuoteItems(phasesToItems(initialPhases));
     }
   }, [document.project_type, isNew]);
 
@@ -114,7 +180,7 @@ export function CommercialDocumentBuilder({
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
       <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="general">Général</TabsTrigger>
-        <TabsTrigger value="phases">Phases & Mission</TabsTrigger>
+        <TabsTrigger value="devis">Devis</TabsTrigger>
         <TabsTrigger value="fees">Honoraires</TabsTrigger>
         <TabsTrigger value="terms">Conditions</TabsTrigger>
       </TabsList>
@@ -247,15 +313,13 @@ export function CommercialDocumentBuilder({
         </Card>
       </TabsContent>
 
-      {/* Phases Tab */}
-      <TabsContent value="phases" className="space-y-6">
-        <PhaseSelector
-          phases={phases}
+      {/* Devis Tab - Quote Grid Editor */}
+      <TabsContent value="devis" className="space-y-6">
+        <QuoteGridEditor
+          items={quoteItems}
           projectType={document.project_type || 'interior'}
-          onPhasesChange={onPhasesChange}
-          projectBudget={document.project_budget}
-          feePercentage={document.fee_percentage}
-          totalAmount={document.total_amount}
+          onItemsChange={handleQuoteItemsChange}
+          baseFee={document.total_amount || 0}
           document={document}
           onDocumentChange={onDocumentChange}
           documentId={documentId}
