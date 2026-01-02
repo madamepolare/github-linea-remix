@@ -974,6 +974,82 @@ export type Database = {
           },
         ]
       }
+      project_lot_interventions: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          end_date: string
+          id: string
+          lot_id: string
+          notes: string | null
+          project_id: string
+          start_date: string
+          status: string | null
+          team_size: number | null
+          title: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          lot_id: string
+          notes?: string | null
+          project_id: string
+          start_date: string
+          status?: string | null
+          team_size?: number | null
+          title: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string
+          id?: string
+          lot_id?: string
+          notes?: string | null
+          project_id?: string
+          start_date?: string
+          status?: string | null
+          team_size?: number | null
+          title?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_lot_interventions_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "project_lots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_lot_interventions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_lot_interventions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_lots: {
         Row: {
           budget: number | null
