@@ -82,10 +82,41 @@ export function AttentionItemsSection({
   const [filterUrgency, setFilterUrgency] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterProgress, setFilterProgress] = useState<string>("all");
+  const [filterAssignee, setFilterAssignee] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"created" | "urgency" | "due_date" | "progress">("created");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const urgencyOrder = { critical: 4, high: 3, normal: 2, low: 1 };
+
+  // Build assignee options for filter
+  const assigneeOptions = useMemo(() => {
+    const options: { value: string; label: string; type: "lot" | "company" | "name" }[] = [];
+    
+    // Add lots
+    lots.forEach(lot => {
+      options.push({ value: `lot:${lot.id}`, label: lot.name, type: "lot" });
+    });
+    
+    // Add companies (deduplicated)
+    const addedCompanyIds = new Set<string>();
+    companies.forEach(company => {
+      if (!addedCompanyIds.has(company.id)) {
+        options.push({ value: `company:${company.id}`, label: company.name, type: "company" });
+        addedCompanyIds.add(company.id);
+      }
+    });
+    
+    // Add custom names from items
+    const customNames = new Set<string>();
+    items.forEach(item => {
+      item.assignee_names?.forEach(name => customNames.add(name));
+    });
+    customNames.forEach(name => {
+      options.push({ value: `name:${name}`, label: name, type: "name" });
+    });
+    
+    return options;
+  }, [lots, companies, items]);
 
   const filteredAndSortedItems = useMemo(() => {
     let result = [...items];
@@ -118,6 +149,23 @@ export function AttentionItemsSection({
       }
     }
 
+    // Assignee filter
+    if (filterAssignee !== "all") {
+      const [type, id] = filterAssignee.split(":");
+      result = result.filter(item => {
+        if (item.assignee_type === "all") return true; // "Tous" matches all filters
+        
+        if (type === "lot") {
+          return item.assignee_lot_ids?.includes(id);
+        } else if (type === "company") {
+          return item.assignee_company_ids?.includes(id);
+        } else if (type === "name") {
+          return item.assignee_names?.includes(id);
+        }
+        return false;
+      });
+    }
+
     // Sort
     result.sort((a, b) => {
       let comparison = 0;
@@ -142,15 +190,16 @@ export function AttentionItemsSection({
     });
 
     return result;
-  }, [items, searchQuery, filterUrgency, filterType, filterProgress, sortBy, sortOrder]);
+  }, [items, searchQuery, filterUrgency, filterType, filterProgress, filterAssignee, sortBy, sortOrder]);
 
-  const hasActiveFilters = searchQuery || filterUrgency !== "all" || filterType !== "all" || filterProgress !== "all";
+  const hasActiveFilters = searchQuery || filterUrgency !== "all" || filterType !== "all" || filterProgress !== "all" || filterAssignee !== "all";
 
   const clearFilters = () => {
     setSearchQuery("");
     setFilterUrgency("all");
     setFilterType("all");
     setFilterProgress("all");
+    setFilterAssignee("all");
   };
 
   // Get MOE companies (BET, architects, etc.) - deduplicated
@@ -355,6 +404,56 @@ export function AttentionItemsSection({
                 <SelectItem value="complete">Terminé</SelectItem>
               </SelectContent>
             </Select>
+
+            {assigneeOptions.length > 0 && (
+              <Select value={filterAssignee} onValueChange={setFilterAssignee}>
+                <SelectTrigger className="h-7 w-[130px] text-xs">
+                  <SelectValue placeholder="Destinataire" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  {assigneeOptions.filter(o => o.type === "lot").length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Lots</div>
+                      {assigneeOptions.filter(o => o.type === "lot").map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <span className="flex items-center gap-1">
+                            <Package className="h-3 w-3 text-amber-500" />
+                            {opt.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
+                  {assigneeOptions.filter(o => o.type === "company").length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Entreprises</div>
+                      {assigneeOptions.filter(o => o.type === "company").map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <span className="flex items-center gap-1">
+                            <Building2 className="h-3 w-3 text-blue-500" />
+                            {opt.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
+                  {assigneeOptions.filter(o => o.type === "name").length > 0 && (
+                    <>
+                      <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Autres</div>
+                      {assigneeOptions.filter(o => o.type === "name").map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3 text-muted-foreground" />
+                            {opt.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
 
             <div className="h-4 w-px bg-border mx-1" />
 
