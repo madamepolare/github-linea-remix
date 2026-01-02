@@ -75,7 +75,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const { events, isLoading: eventsLoading, createEvent, updateEvent, deleteEvent } = useCalendarEvents(projectId);
   const { phases, updatePhase } = useProjectPhases(projectId);
   const { deliverables, createDeliverable } = useProjectDeliverables(projectId);
-  const { tasks } = useTasks();
+  const { tasks, createTask } = useTasks();
   const { quickTasks, pendingTasks, createQuickTask } = useQuickTasksDB();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -105,9 +105,13 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const [quickCreateDate, setQuickCreateDate] = useState<string>("");
   const [isQuickTaskOpen, setIsQuickTaskOpen] = useState(false);
   const [isDeliverableOpen, setIsDeliverableOpen] = useState(false);
+  const [isProjectTaskOpen, setIsProjectTaskOpen] = useState(false);
   const [quickTaskTitle, setQuickTaskTitle] = useState("");
   const [deliverableName, setDeliverableName] = useState("");
   const [deliverableDescription, setDeliverableDescription] = useState("");
+  const [projectTaskTitle, setProjectTaskTitle] = useState("");
+  const [projectTaskDescription, setProjectTaskDescription] = useState("");
+  const [projectTaskPriority, setProjectTaskPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
 
   // Project-specific tasks
   const projectTasks = useMemo(() => {
@@ -361,7 +365,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
     setIsQuickCreateOpen(true);
   };
 
-  const handleQuickCreateSelect = (type: "event" | "quicktask" | "deliverable") => {
+  const handleQuickCreateSelect = (type: "event" | "quicktask" | "deliverable" | "projecttask") => {
     setIsQuickCreateOpen(false);
     if (type === "event") {
       openCreateDialog(new Date(quickCreateDate));
@@ -372,6 +376,11 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       setDeliverableName("");
       setDeliverableDescription("");
       setIsDeliverableOpen(true);
+    } else if (type === "projecttask") {
+      setProjectTaskTitle("");
+      setProjectTaskDescription("");
+      setProjectTaskPriority("medium");
+      setIsProjectTaskOpen(true);
     }
   };
 
@@ -395,6 +404,22 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
     setIsDeliverableOpen(false);
     setDeliverableName("");
     setDeliverableDescription("");
+  };
+
+  const handleCreateProjectTask = () => {
+    if (!projectTaskTitle.trim()) return;
+    createTask.mutate({
+      title: projectTaskTitle.trim(),
+      description: projectTaskDescription.trim() || null,
+      due_date: quickCreateDate,
+      project_id: projectId,
+      priority: projectTaskPriority,
+      status: "todo",
+    });
+    setIsProjectTaskOpen(false);
+    setProjectTaskTitle("");
+    setProjectTaskDescription("");
+    setProjectTaskPriority("medium");
   };
 
   const handleEventDrop = (info: any) => {
@@ -852,6 +877,17 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
             <Button
               variant="outline"
               className="h-12 justify-start gap-3"
+              onClick={() => handleQuickCreateSelect("projecttask")}
+            >
+              <CheckSquare className="h-5 w-5 text-blue-500" />
+              <div className="text-left">
+                <div className="font-medium">Tâche projet</div>
+                <div className="text-xs text-muted-foreground">Tâche avec priorité et détails</div>
+              </div>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 justify-start gap-3"
               onClick={() => handleQuickCreateSelect("quicktask")}
             >
               <Zap className="h-5 w-5 text-orange-500" />
@@ -947,6 +983,84 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
               Annuler
             </Button>
             <Button onClick={handleCreateDeliverable} disabled={!deliverableName.trim()}>
+              Créer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Task Creation Dialog */}
+      <Dialog open={isProjectTaskOpen} onOpenChange={setIsProjectTaskOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckSquare className="h-4 w-4 text-blue-500" />
+              Nouvelle tâche projet
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-2 bg-muted rounded text-sm text-center">
+              Échéance : {quickCreateDate && format(parseISO(quickCreateDate), "d MMMM yyyy", { locale: fr })}
+            </div>
+            <div className="space-y-2">
+              <Label>Titre *</Label>
+              <Input
+                value={projectTaskTitle}
+                onChange={(e) => setProjectTaskTitle(e.target.value)}
+                placeholder="Ex: Finaliser les plans"
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && handleCreateProjectTask()}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Priorité</Label>
+              <Select value={projectTaskPriority} onValueChange={(v) => setProjectTaskPriority(v as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-3 w-3 text-gray-400" />
+                      Basse
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="medium">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-3 w-3 text-blue-500" />
+                      Moyenne
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="high">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-3 w-3 text-orange-500" />
+                      Haute
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="urgent">
+                    <div className="flex items-center gap-2">
+                      <Flag className="h-3 w-3 text-red-500" />
+                      Urgente
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea
+                value={projectTaskDescription}
+                onChange={(e) => setProjectTaskDescription(e.target.value)}
+                placeholder="Détails de la tâche..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsProjectTaskOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleCreateProjectTask} disabled={!projectTaskTitle.trim()}>
               Créer
             </Button>
           </DialogFooter>
