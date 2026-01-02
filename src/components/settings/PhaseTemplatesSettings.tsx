@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePhaseTemplates, PhaseTemplate, CreatePhaseTemplateInput } from "@/hooks/usePhaseTemplates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -28,16 +35,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Plus,
-  GripVertical,
   Pencil,
   Trash2,
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  Layers,
+  Puzzle,
 } from "lucide-react";
-import { PROJECT_TYPE_LABELS } from "@/lib/commercialTypes";
+import { PROJECT_TYPE_LABELS, PHASE_CATEGORY_LABELS, PhaseCategory } from "@/lib/commercialTypes";
 
-const PROJECT_TYPES = ["interior", "architecture", "scenography"] as const;
+const PROJECT_TYPES = ["architecture", "interior", "scenography"] as const;
 
 interface PhaseFormData {
   code: string;
@@ -47,6 +55,7 @@ interface PhaseFormData {
   deliverables: string[];
   color: string;
   is_active: boolean;
+  category: PhaseCategory;
 }
 
 const defaultFormData: PhaseFormData = {
@@ -57,10 +66,11 @@ const defaultFormData: PhaseFormData = {
   deliverables: [],
   color: "",
   is_active: true,
+  category: "base",
 };
 
 export function PhaseTemplatesSettings() {
-  const [activeProjectType, setActiveProjectType] = useState<string>("interior");
+  const [activeProjectType, setActiveProjectType] = useState<string>("architecture");
   const { templates, isLoading, createTemplate, updateTemplate, deleteTemplate, reorderTemplates, resetToDefaults, initializeDefaultsIfEmpty } = usePhaseTemplates(activeProjectType);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -71,16 +81,24 @@ export function PhaseTemplatesSettings() {
   const [resetConfirmType, setResetConfirmType] = useState<string | null>(null);
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
 
+  // Group templates by category
+  const groupedTemplates = useMemo(() => {
+    const base = templates.filter(t => t.category === 'base');
+    const complementary = templates.filter(t => t.category === 'complementary');
+    return { base, complementary };
+  }, [templates]);
+
   // Initialize defaults when switching project type
   useEffect(() => {
     initializeDefaultsIfEmpty.mutate(activeProjectType);
   }, [activeProjectType]);
 
-  const handleOpenCreate = () => {
+  const handleOpenCreate = (category: PhaseCategory = 'base') => {
     setEditingPhase(null);
     setFormData({
       ...defaultFormData,
       code: `PHASE_${templates.length + 1}`,
+      category,
     });
     setDeliverablesText("");
     setIsDialogOpen(true);
@@ -96,6 +114,7 @@ export function PhaseTemplatesSettings() {
       deliverables: phase.deliverables,
       color: phase.color || "",
       is_active: phase.is_active,
+      category: phase.category,
     });
     setDeliverablesText(phase.deliverables.join("\n"));
     setIsDialogOpen(true);
@@ -134,11 +153,12 @@ export function PhaseTemplatesSettings() {
     setResetConfirmType(null);
   };
 
-  const movePhase = async (index: number, direction: "up" | "down") => {
+  const movePhase = async (phaseId: string, direction: "up" | "down", categoryTemplates: PhaseTemplate[]) => {
+    const index = categoryTemplates.findIndex(t => t.id === phaseId);
     const newIndex = direction === "up" ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= templates.length) return;
+    if (newIndex < 0 || newIndex >= categoryTemplates.length) return;
 
-    const reorderedTemplates = [...templates];
+    const reorderedTemplates = [...categoryTemplates];
     const [movedItem] = reorderedTemplates.splice(index, 1);
     reorderedTemplates.splice(newIndex, 0, movedItem);
 
@@ -146,6 +166,124 @@ export function PhaseTemplatesSettings() {
       reorderedTemplates.map((t, i) => ({ id: t.id, sort_order: i }))
     );
   };
+
+  const renderPhaseCard = (phase: PhaseTemplate, index: number, categoryTemplates: PhaseTemplate[]) => (
+    <Card
+      key={phase.id}
+      className={!phase.is_active ? "opacity-50" : ""}
+    >
+      <CardHeader className="py-3 px-4">
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              disabled={index === 0}
+              onClick={() => movePhase(phase.id, "up", categoryTemplates)}
+            >
+              <ChevronUp className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              disabled={index === categoryTemplates.length - 1}
+              onClick={() => movePhase(phase.id, "down", categoryTemplates)}
+            >
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="font-mono text-xs">
+                {phase.code}
+              </Badge>
+              <CardTitle className="text-sm font-medium truncate">
+                {phase.name}
+              </CardTitle>
+              {phase.default_percentage > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {phase.default_percentage}%
+                </Badge>
+              )}
+              {!phase.is_active && (
+                <Badge variant="outline" className="text-xs text-muted-foreground">
+                  Inactive
+                </Badge>
+              )}
+            </div>
+            {phase.description && (
+              <p className="text-xs text-muted-foreground mt-1 truncate">
+                {phase.description}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() =>
+                setExpandedPhase(
+                  expandedPhase === phase.id ? null : phase.id
+                )
+              }
+            >
+              {expandedPhase === phase.id ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => handleOpenEdit(phase)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={() => setDeleteConfirmId(phase.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+
+      {expandedPhase === phase.id && (
+        <CardContent className="pt-0 pb-3 px-4">
+          <div className="pl-10">
+            {phase.deliverables.length > 0 ? (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">
+                  Livrables par défaut :
+                </p>
+                <ul className="text-sm space-y-0.5">
+                  {phase.deliverables.map((d, i) => (
+                    <li key={i} className="text-muted-foreground">
+                      • {d}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Aucun livrable défini
+              </p>
+            )}
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
 
   if (isLoading) {
     return (
@@ -163,7 +301,7 @@ export function PhaseTemplatesSettings() {
         <div>
           <h3 className="text-lg font-medium">Phases de projet</h3>
           <p className="text-sm text-muted-foreground">
-            Définissez les phases par défaut pour chaque type de projet
+            Définissez les phases par défaut pour chaque type de projet (missions de base et complémentaires)
           </p>
         </div>
       </div>
@@ -178,148 +316,78 @@ export function PhaseTemplatesSettings() {
         </TabsList>
 
         {PROJECT_TYPES.map((type) => (
-          <TabsContent key={type} value={type} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Button onClick={handleOpenCreate} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter une phase
-              </Button>
+          <TabsContent key={type} value={type} className="space-y-6">
+            <div className="flex items-center justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setResetConfirmType(type)}
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Réinitialiser
+                Réinitialiser aux valeurs par défaut
               </Button>
             </div>
 
-            <div className="space-y-2">
-              {templates.length === 0 ? (
-                <Card>
-                  <CardContent className="py-8 text-center text-muted-foreground">
-                    Aucune phase définie pour ce type de projet
-                  </CardContent>
-                </Card>
-              ) : (
-                templates.map((phase, index) => (
-                  <Card
-                    key={phase.id}
-                    className={!phase.is_active ? "opacity-50" : ""}
-                  >
-                    <CardHeader className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex flex-col gap-0.5">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5"
-                            disabled={index === 0}
-                            onClick={() => movePhase(index, "up")}
-                          >
-                            <ChevronUp className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5"
-                            disabled={index === templates.length - 1}
-                            onClick={() => movePhase(index, "down")}
-                          >
-                            <ChevronDown className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="font-mono text-xs">
-                              {phase.code}
-                            </Badge>
-                            <CardTitle className="text-sm font-medium truncate">
-                              {phase.name}
-                            </CardTitle>
-                            {phase.default_percentage > 0 && (
-                              <Badge variant="secondary" className="text-xs">
-                                {phase.default_percentage}%
-                              </Badge>
-                            )}
-                            {!phase.is_active && (
-                              <Badge variant="outline" className="text-xs text-muted-foreground">
-                                Inactive
-                              </Badge>
-                            )}
-                          </div>
-                          {phase.description && (
-                            <p className="text-xs text-muted-foreground mt-1 truncate">
-                              {phase.description}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() =>
-                              setExpandedPhase(
-                                expandedPhase === phase.id ? null : phase.id
-                              )
-                            }
-                          >
-                            {expandedPhase === phase.id ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleOpenEdit(phase)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => setDeleteConfirmId(phase.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-
-                    {expandedPhase === phase.id && (
-                      <CardContent className="pt-0 pb-3 px-4">
-                        <div className="pl-10">
-                          {phase.deliverables.length > 0 ? (
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-1">
-                                Livrables par défaut :
-                              </p>
-                              <ul className="text-sm space-y-0.5">
-                                {phase.deliverables.map((d, i) => (
-                                  <li key={i} className="text-muted-foreground">
-                                    • {d}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">
-                              Aucun livrable défini
-                            </p>
-                          )}
-                        </div>
-                      </CardContent>
-                    )}
+            {/* Missions de base */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-5 w-5 text-primary" />
+                  <h4 className="font-medium">Missions de base</h4>
+                  <Badge variant="secondary" className="text-xs">
+                    {groupedTemplates.base.length} phases
+                  </Badge>
+                </div>
+                <Button onClick={() => handleOpenCreate('base')} size="sm" variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                {groupedTemplates.base.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-6 text-center text-muted-foreground">
+                      Aucune phase de base définie
+                    </CardContent>
                   </Card>
-                ))
-              )}
+                ) : (
+                  groupedTemplates.base.map((phase, index) => 
+                    renderPhaseCard(phase, index, groupedTemplates.base)
+                  )
+                )}
+              </div>
+            </div>
+
+            {/* Missions complémentaires */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Puzzle className="h-5 w-5 text-orange-500" />
+                  <h4 className="font-medium">Missions complémentaires</h4>
+                  <Badge variant="secondary" className="text-xs">
+                    {groupedTemplates.complementary.length} phases
+                  </Badge>
+                </div>
+                <Button onClick={() => handleOpenCreate('complementary')} size="sm" variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                {groupedTemplates.complementary.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-6 text-center text-muted-foreground">
+                      Aucune mission complémentaire définie
+                    </CardContent>
+                  </Card>
+                ) : (
+                  groupedTemplates.complementary.map((phase, index) => 
+                    renderPhaseCard(phase, index, groupedTemplates.complementary)
+                  )
+                )}
+              </div>
             </div>
           </TabsContent>
         ))}
@@ -342,7 +410,7 @@ export function PhaseTemplatesSettings() {
                   id="code"
                   value={formData.code}
                   onChange={(e) =>
-                    setFormData({ ...formData, code: e.target.value })
+                    setFormData({ ...formData, code: e.target.value.toUpperCase() })
                   }
                   placeholder="ESQ"
                 />
@@ -375,6 +443,32 @@ export function PhaseTemplatesSettings() {
                 }
                 placeholder="Esquisse"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Catégorie</Label>
+              <Select 
+                value={formData.category} 
+                onValueChange={(value: PhaseCategory) => setFormData({ ...formData, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="base">
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-4 w-4" />
+                      {PHASE_CATEGORY_LABELS.base}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="complementary">
+                    <div className="flex items-center gap-2">
+                      <Puzzle className="h-4 w-4" />
+                      {PHASE_CATEGORY_LABELS.complementary}
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -461,7 +555,7 @@ export function PhaseTemplatesSettings() {
             <AlertDialogTitle>Réinitialiser les phases ?</AlertDialogTitle>
             <AlertDialogDescription>
               Cette action supprimera toutes les phases personnalisées et les
-              remplacera par les phases par défaut. Cette action est irréversible.
+              remplacera par les phases par défaut (missions de base et complémentaires). Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
