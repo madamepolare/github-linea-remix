@@ -14,6 +14,324 @@ export type Database = {
   }
   public: {
     Tables: {
+      commercial_document_items: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          description: string
+          document_id: string
+          id: string
+          is_optional: boolean | null
+          item_type: string
+          phase_id: string | null
+          quantity: number | null
+          sort_order: number | null
+          unit: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          description: string
+          document_id: string
+          id?: string
+          is_optional?: boolean | null
+          item_type?: string
+          phase_id?: string | null
+          quantity?: number | null
+          sort_order?: number | null
+          unit?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          description?: string
+          document_id?: string
+          id?: string
+          is_optional?: boolean | null
+          item_type?: string
+          phase_id?: string | null
+          quantity?: number | null
+          sort_order?: number | null
+          unit?: string | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_document_items_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_document_items_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_document_phases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_document_phases: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          deliverables: Json | null
+          document_id: string
+          end_date: string | null
+          id: string
+          is_included: boolean | null
+          percentage_fee: number | null
+          phase_code: string
+          phase_description: string | null
+          phase_name: string
+          sort_order: number | null
+          start_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          deliverables?: Json | null
+          document_id: string
+          end_date?: string | null
+          id?: string
+          is_included?: boolean | null
+          percentage_fee?: number | null
+          phase_code: string
+          phase_description?: string | null
+          phase_name: string
+          sort_order?: number | null
+          start_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          deliverables?: Json | null
+          document_id?: string
+          end_date?: string | null
+          id?: string
+          is_included?: boolean | null
+          percentage_fee?: number | null
+          phase_code?: string
+          phase_description?: string | null
+          phase_name?: string
+          sort_order?: number | null
+          start_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_document_phases_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_documents: {
+        Row: {
+          accepted_at: string | null
+          client_company_id: string | null
+          client_contact_id: string | null
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          description: string | null
+          document_number: string
+          document_type: string
+          fee_mode: string
+          fee_percentage: number | null
+          footer_text: string | null
+          general_conditions: string | null
+          header_text: string | null
+          hourly_rate: number | null
+          id: string
+          payment_terms: string | null
+          pdf_url: string | null
+          project_address: string | null
+          project_budget: number | null
+          project_city: string | null
+          project_id: string | null
+          project_surface: number | null
+          project_type: string
+          sent_at: string | null
+          signed_at: string | null
+          special_conditions: string | null
+          status: string
+          title: string
+          total_amount: number | null
+          updated_at: string | null
+          valid_until: string | null
+          validity_days: number | null
+          workspace_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          client_company_id?: string | null
+          client_contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          document_number: string
+          document_type?: string
+          fee_mode?: string
+          fee_percentage?: number | null
+          footer_text?: string | null
+          general_conditions?: string | null
+          header_text?: string | null
+          hourly_rate?: number | null
+          id?: string
+          payment_terms?: string | null
+          pdf_url?: string | null
+          project_address?: string | null
+          project_budget?: number | null
+          project_city?: string | null
+          project_id?: string | null
+          project_surface?: number | null
+          project_type?: string
+          sent_at?: string | null
+          signed_at?: string | null
+          special_conditions?: string | null
+          status?: string
+          title: string
+          total_amount?: number | null
+          updated_at?: string | null
+          valid_until?: string | null
+          validity_days?: number | null
+          workspace_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          client_company_id?: string | null
+          client_contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          document_number?: string
+          document_type?: string
+          fee_mode?: string
+          fee_percentage?: number | null
+          footer_text?: string | null
+          general_conditions?: string | null
+          header_text?: string | null
+          hourly_rate?: number | null
+          id?: string
+          payment_terms?: string | null
+          pdf_url?: string | null
+          project_address?: string | null
+          project_budget?: number | null
+          project_city?: string | null
+          project_id?: string | null
+          project_surface?: number | null
+          project_type?: string
+          sent_at?: string | null
+          signed_at?: string | null
+          special_conditions?: string | null
+          status?: string
+          title?: string
+          total_amount?: number | null
+          updated_at?: string | null
+          valid_until?: string | null
+          validity_days?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_documents_client_company_id_fkey"
+            columns: ["client_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_documents_client_contact_id_fkey"
+            columns: ["client_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_documents_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          default_clauses: Json | null
+          default_phases: Json | null
+          document_type: string
+          footer_text: string | null
+          header_text: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          project_type: string
+          terms_conditions: string | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          default_clauses?: Json | null
+          default_phases?: Json | null
+          document_type?: string
+          footer_text?: string | null
+          header_text?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          project_type?: string
+          terms_conditions?: string | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          default_clauses?: Json | null
+          default_phases?: Json | null
+          document_type?: string
+          footer_text?: string | null
+          header_text?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          project_type?: string
+          terms_conditions?: string | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           avatar_url: string | null
@@ -2000,6 +2318,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_document_number: {
+        Args: { doc_type: string; ws_id: string }
+        Returns: string
+      }
       get_user_workspace_ids: { Args: { _user_id: string }; Returns: string[] }
       has_workspace_role: {
         Args: {
