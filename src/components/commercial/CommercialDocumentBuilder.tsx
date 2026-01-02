@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,15 +15,15 @@ import { ClientSelector } from './ClientSelector';
 import { QuoteGridEditor } from './QuoteGridEditor';
 import { FeeCalculator } from './FeeCalculator';
 import { TermsEditor } from './TermsEditor';
+import { ConstructionBudgetField } from './ConstructionBudgetField';
+import { DocumentVersionHistory } from './DocumentVersionHistory';
 import {
   CommercialDocument,
   CommercialDocumentPhase,
   DocumentType,
   ProjectType,
-  FeeMode,
   DOCUMENT_TYPE_LABELS,
   PROJECT_TYPE_LABELS,
-  FEE_MODE_LABELS,
   PHASES_BY_PROJECT_TYPE
 } from '@/lib/commercialTypes';
 import { QuoteLineItem } from '@/lib/quoteTemplates';
@@ -176,14 +176,33 @@ export function CommercialDocumentBuilder({
     onPhasesChange(newPhases);
   };
 
+  const handleRestoreVersion = (doc: Partial<CommercialDocument>, restoredPhases: CommercialDocumentPhase[]) => {
+    onDocumentChange(doc);
+    onPhasesChange(restoredPhases);
+    setQuoteItems(phasesToItems(restoredPhases));
+  };
+
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="general">Général</TabsTrigger>
-        <TabsTrigger value="devis">Devis</TabsTrigger>
-        <TabsTrigger value="fees">Honoraires</TabsTrigger>
-        <TabsTrigger value="terms">Conditions</TabsTrigger>
-      </TabsList>
+    <div className="space-y-4">
+      {/* Version History */}
+      {documentId && documentId !== 'new' && (
+        <div className="flex justify-end">
+          <DocumentVersionHistory
+            documentId={documentId}
+            currentDocument={document}
+            currentPhases={phases}
+            onRestoreVersion={handleRestoreVersion}
+          />
+        </div>
+      )}
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="general">Général</TabsTrigger>
+          <TabsTrigger value="devis">Devis</TabsTrigger>
+          <TabsTrigger value="fees">Honoraires</TabsTrigger>
+          <TabsTrigger value="terms">Conditions</TabsTrigger>
+        </TabsList>
 
       {/* General Tab */}
       <TabsContent value="general" className="space-y-6">
@@ -300,17 +319,28 @@ export function CommercialDocumentBuilder({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Budget travaux (€)</Label>
+                <Label>Budget honoraires (€)</Label>
                 <Input
                   type="number"
                   value={document.project_budget || ''}
                   onChange={(e) => onDocumentChange({ ...document, project_budget: parseFloat(e.target.value) || undefined })}
-                  placeholder="Budget prévisionnel"
+                  placeholder="Budget prévisionnel honoraires"
                 />
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Construction Budget */}
+        <ConstructionBudgetField
+          constructionBudget={document.construction_budget}
+          constructionBudgetDisclosed={document.construction_budget_disclosed ?? true}
+          onChange={(budget, disclosed) => onDocumentChange({
+            ...document,
+            construction_budget: budget ?? undefined,
+            construction_budget_disclosed: disclosed
+          })}
+        />
       </TabsContent>
 
       {/* Devis Tab - Quote Grid Editor */}
@@ -343,5 +373,6 @@ export function CommercialDocumentBuilder({
         />
       </TabsContent>
     </Tabs>
+    </div>
   );
 }
