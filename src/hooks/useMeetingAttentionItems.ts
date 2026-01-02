@@ -9,6 +9,7 @@ export interface MeetingAttentionItem {
   workspace_id: string;
   assignee_type: "all" | "specific" | "custom";
   assignee_company_ids: string[];
+  assignee_lot_ids: string[];
   assignee_names: string[];
   stakeholder_type: "bet" | "entreprise" | "moa" | "other";
   description: string;

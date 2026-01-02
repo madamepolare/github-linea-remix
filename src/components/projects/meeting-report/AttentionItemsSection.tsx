@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Plus, AlertTriangle, Trash2, Calendar, Users, Building2 } from "lucide-react";
+import { Plus, AlertTriangle, Trash2, Calendar, Users, Building2, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MeetingAttentionItem, CreateAttentionItemInput } from "@/hooks/useMeetingAttentionItems";
 
@@ -60,6 +60,7 @@ export function AttentionItemsSection({
   const [newItem, setNewItem] = useState<{
     assignee_type: "all" | "specific" | "custom";
     assignee_company_ids: string[];
+    assignee_lot_ids: string[];
     assignee_names: string[];
     stakeholder_type: "bet" | "entreprise" | "moa" | "other";
     description: string;
@@ -68,6 +69,7 @@ export function AttentionItemsSection({
   }>({
     assignee_type: "all",
     assignee_company_ids: [],
+    assignee_lot_ids: [],
     assignee_names: [],
     stakeholder_type: "entreprise",
     description: "",
@@ -116,6 +118,7 @@ export function AttentionItemsSection({
       meeting_id: meetingId,
       assignee_type: newItem.assignee_type,
       assignee_company_ids: newItem.assignee_company_ids,
+      assignee_lot_ids: newItem.assignee_lot_ids,
       assignee_names: newItem.assignee_names,
       stakeholder_type: newItem.stakeholder_type,
       description: newItem.description,
@@ -128,6 +131,7 @@ export function AttentionItemsSection({
     setNewItem({
       assignee_type: "all",
       assignee_company_ids: [],
+      assignee_lot_ids: [],
       assignee_names: [],
       stakeholder_type: "entreprise",
       description: "",
@@ -137,11 +141,20 @@ export function AttentionItemsSection({
     setIsAddDialogOpen(false);
   };
 
+  const toggleLotSelection = (lotId: string) => {
+    const ids = newItem.assignee_lot_ids.includes(lotId)
+      ? newItem.assignee_lot_ids.filter(id => id !== lotId)
+      : [...newItem.assignee_lot_ids, lotId];
+    const hasSelection = ids.length > 0 || newItem.assignee_company_ids.length > 0;
+    setNewItem({ ...newItem, assignee_lot_ids: ids, assignee_type: hasSelection ? "specific" : "all" });
+  };
+
   const toggleCompanySelection = (companyId: string) => {
     const ids = newItem.assignee_company_ids.includes(companyId)
       ? newItem.assignee_company_ids.filter(id => id !== companyId)
       : [...newItem.assignee_company_ids, companyId];
-    setNewItem({ ...newItem, assignee_company_ids: ids, assignee_type: ids.length > 0 ? "specific" : "all" });
+    const hasSelection = ids.length > 0 || newItem.assignee_lot_ids.length > 0;
+    setNewItem({ ...newItem, assignee_company_ids: ids, assignee_type: hasSelection ? "specific" : "all" });
   };
 
   const addCustomName = () => {
@@ -158,16 +171,30 @@ export function AttentionItemsSection({
     if (item.assignee_type === "all") {
       return "Tous";
     }
-    if (item.assignee_type === "specific" && item.assignee_company_ids.length > 0) {
-      const names = item.assignee_company_ids
-        .map(id => companies.find(c => c.id === id)?.name || "?")
-        .join(", ");
-      return names;
+    const parts: string[] = [];
+    
+    // Add lot names
+    if (item.assignee_lot_ids && item.assignee_lot_ids.length > 0) {
+      const lotNames = item.assignee_lot_ids
+        .map(id => lots.find(l => l.id === id)?.name)
+        .filter(Boolean);
+      if (lotNames.length > 0) parts.push(...lotNames as string[]);
     }
-    if (item.assignee_names.length > 0) {
-      return item.assignee_names.join(", ");
+    
+    // Add company names
+    if (item.assignee_company_ids && item.assignee_company_ids.length > 0) {
+      const companyNames = item.assignee_company_ids
+        .map(id => companies.find(c => c.id === id)?.name)
+        .filter(Boolean);
+      if (companyNames.length > 0) parts.push(...companyNames as string[]);
     }
-    return "Non défini";
+    
+    // Add custom names
+    if (item.assignee_names && item.assignee_names.length > 0) {
+      parts.push(...item.assignee_names);
+    }
+    
+    return parts.length > 0 ? parts.join(", ") : "Non défini";
   };
 
   const progressSteps = [0, 25, 50, 75, 100];
@@ -293,6 +320,7 @@ export function AttentionItemsSection({
                       ...newItem, 
                       stakeholder_type: type,
                       assignee_company_ids: [],
+                      assignee_lot_ids: [],
                       assignee_names: [],
                       assignee_type: "all",
                     })}
@@ -348,22 +376,42 @@ export function AttentionItemsSection({
                 </div>
               ) : (
                 // Mode entreprise/BET/MOA: liste préchargée
-                <div className="space-y-2 border rounded-lg p-3 max-h-40 overflow-y-auto">
+                <div className="space-y-2 border rounded-lg p-3 max-h-48 overflow-y-auto">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <Checkbox
-                      checked={newItem.assignee_type === "all" && newItem.assignee_company_ids.length === 0}
+                      checked={newItem.assignee_type === "all" && newItem.assignee_company_ids.length === 0 && newItem.assignee_lot_ids.length === 0}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setNewItem({ ...newItem, assignee_type: "all", assignee_company_ids: [] });
+                          setNewItem({ ...newItem, assignee_type: "all", assignee_company_ids: [], assignee_lot_ids: [] });
                         }
                       }}
                     />
                     <span className="text-sm font-medium">Tous</span>
                   </label>
                   
-                  {assigneeOptions.length > 0 ? (
+                  {/* Lots section - only for entreprise type */}
+                  {newItem.stakeholder_type === "entreprise" && lots.length > 0 && (
                     <>
                       <div className="border-t my-2" />
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Lots</p>
+                      {lots.map((lot) => (
+                        <label key={lot.id} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={newItem.assignee_lot_ids.includes(lot.id)}
+                            onCheckedChange={() => toggleLotSelection(lot.id)}
+                          />
+                          <Package className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-sm">{lot.name}</span>
+                        </label>
+                      ))}
+                    </>
+                  )}
+                  
+                  {/* Companies section */}
+                  {assigneeOptions.length > 0 && (
+                    <>
+                      <div className="border-t my-2" />
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Entreprises</p>
                       {assigneeOptions.map((option) => (
                         <label key={option.id} className="flex items-center gap-2 cursor-pointer">
                           <Checkbox
@@ -376,10 +424,12 @@ export function AttentionItemsSection({
                         </label>
                       ))}
                     </>
-                  ) : (
+                  )}
+                  
+                  {assigneeOptions.length === 0 && (newItem.stakeholder_type !== "entreprise" || lots.length === 0) && (
                     <p className="text-xs text-muted-foreground mt-2">
                       {newItem.stakeholder_type === "entreprise" 
-                        ? "Aucune entreprise dans les lots du projet" 
+                        ? "Aucun lot ni entreprise dans le projet" 
                         : "Aucune entreprise dans l'équipe MOE"}
                     </p>
                   )}
