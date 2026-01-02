@@ -43,7 +43,10 @@ const CommercialDocument = () => {
     getDocumentPhases,
     createDocument, 
     updateDocument,
-    acceptAndCreateProject
+    acceptAndCreateProject,
+    createPhase,
+    updatePhase,
+    deletePhase
   } = useCommercialDocuments();
 
   const documentQuery = isNew ? { data: null, isLoading: false } : getDocument(id!);
@@ -85,6 +88,51 @@ const CommercialDocument = () => {
     }
   }, [phasesQuery.data]);
 
+  const savePhases = async (documentId: string, existingPhases: CommercialDocumentPhase[]) => {
+    // Get existing phase IDs
+    const existingIds = new Set(existingPhases.map(p => p.id));
+    const currentIds = new Set(phases.filter(p => p.id && !p.id.startsWith('temp-')).map(p => p.id));
+    
+    // Delete removed phases
+    for (const existingPhase of existingPhases) {
+      if (!currentIds.has(existingPhase.id)) {
+        await deletePhase.mutateAsync({ id: existingPhase.id, documentId });
+      }
+    }
+    
+    // Create or update phases
+    for (let i = 0; i < phases.length; i++) {
+      const phase = phases[i];
+      if (!phase.id || phase.id.startsWith('temp-') || !existingIds.has(phase.id)) {
+        // Create new phase
+        await createPhase.mutateAsync({
+          document_id: documentId,
+          phase_code: phase.phase_code,
+          phase_name: phase.phase_name,
+          phase_description: phase.phase_description,
+          percentage_fee: phase.percentage_fee,
+          amount: phase.amount,
+          is_included: phase.is_included,
+          deliverables: phase.deliverables || [],
+          sort_order: i
+        });
+      } else {
+        // Update existing phase
+        await updatePhase.mutateAsync({
+          id: phase.id,
+          phase_code: phase.phase_code,
+          phase_name: phase.phase_name,
+          phase_description: phase.phase_description,
+          percentage_fee: phase.percentage_fee,
+          amount: phase.amount,
+          is_included: phase.is_included,
+          deliverables: phase.deliverables || [],
+          sort_order: i
+        });
+      }
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -108,6 +156,12 @@ const CommercialDocument = () => {
           special_conditions: documentData.special_conditions,
           general_conditions: documentData.general_conditions
         });
+        
+        // Save phases for new document
+        if (phases.length > 0) {
+          await savePhases(result.id, []);
+        }
+        
         navigate(`/commercial/${result.id}`, { replace: true });
       } else {
         await updateDocument.mutateAsync({
@@ -115,6 +169,10 @@ const CommercialDocument = () => {
           ...documentData,
           total_amount: calculateTotal()
         });
+        
+        // Save phases for existing document
+        const existingPhases = phasesQuery.data || [];
+        await savePhases(id!, existingPhases);
       }
     } finally {
       setIsSaving(false);
