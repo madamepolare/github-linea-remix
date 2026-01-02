@@ -351,6 +351,50 @@ export type Database = {
           },
         ]
       }
+      google_calendar_tokens: {
+        Row: {
+          access_token: string
+          calendar_id: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          refresh_token: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          access_token: string
+          calendar_id?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          refresh_token: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          access_token?: string
+          calendar_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          refresh_token?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_calendar_tokens_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_activities: {
         Row: {
           activity_type: string
@@ -782,6 +826,81 @@ export type Database = {
           {
             foreignKeyName: "profiles_active_workspace_id_fkey"
             columns: ["active_workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_calendar_events: {
+        Row: {
+          attendees: Json | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_datetime: string | null
+          event_type: string
+          google_calendar_id: string | null
+          google_event_id: string | null
+          google_meet_link: string | null
+          id: string
+          is_all_day: boolean | null
+          location: string | null
+          project_id: string
+          start_datetime: string
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          attendees?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_datetime?: string | null
+          event_type?: string
+          google_calendar_id?: string | null
+          google_event_id?: string | null
+          google_meet_link?: string | null
+          id?: string
+          is_all_day?: boolean | null
+          location?: string | null
+          project_id: string
+          start_datetime: string
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          attendees?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_datetime?: string | null
+          event_type?: string
+          google_calendar_id?: string | null
+          google_event_id?: string | null
+          google_meet_link?: string | null
+          id?: string
+          is_all_day?: boolean | null
+          location?: string | null
+          project_id?: string
+          start_datetime?: string
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_calendar_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_calendar_events_workspace_id_fkey"
+            columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]

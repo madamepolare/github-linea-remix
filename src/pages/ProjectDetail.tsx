@@ -34,7 +34,7 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PROJECT_TYPES, PHASE_STATUS_CONFIG } from "@/lib/projectTypes";
 import { ProjectChantierTab } from "@/components/projects/ProjectChantierTab";
-import { ProjectEventsTab } from "@/components/projects/ProjectEventsTab";
+import { ProjectPlanningTab } from "@/components/projects/ProjectPlanningTab";
 import { ProjectMOESection } from "@/components/projects/ProjectMOESection";
 import { PhaseGanttTimeline } from "@/components/projects/PhaseGanttTimeline";
 import { PhaseQuickEditDialog } from "@/components/projects/PhaseQuickEditDialog";
@@ -181,11 +181,11 @@ export default function ProjectDetail() {
                 Vue d'ensemble
               </TabsTrigger>
               <TabsTrigger
-                value="events"
+                value="planning"
                 className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4"
               >
                 <Calendar className="h-4 w-4 mr-2" />
-                Événements
+                Planning
               </TabsTrigger>
               <TabsTrigger
                 value="tasks"
@@ -218,7 +218,7 @@ export default function ProjectDetail() {
               isUpdatingProject={updateProject.isPending}
             />
           )}
-          {activeTab === "events" && <ProjectEventsTab projectId={project.id} />}
+          {activeTab === "planning" && <ProjectPlanningTab projectId={project.id} />}
           {activeTab === "tasks" && (
             <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
           )}
