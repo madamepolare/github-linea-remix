@@ -27,6 +27,7 @@ import {
 } from '@/lib/commercialTypes';
 import { QuoteLineItem } from '@/lib/quoteTemplates';
 import { DEFAULT_CLAUSES_BY_PROJECT_TYPE } from '@/lib/defaultContractClauses';
+import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
 
 interface CommercialDocumentBuilderProps {
   document: Partial<CommercialDocument>;
@@ -47,6 +48,9 @@ export function CommercialDocumentBuilder({
 }: CommercialDocumentBuilderProps) {
   const [activeTab, setActiveTab] = useState('general');
   const [quoteItems, setQuoteItems] = useState<QuoteLineItem[]>([]);
+  
+  // Fetch phase templates from database
+  const { templates: phaseTemplates, initializeDefaultsIfEmpty } = usePhaseTemplates(document.project_type);
 
   // Convert phases to quote items
   const phasesToItems = (phases: CommercialDocumentPhase[]): QuoteLineItem[] => {
@@ -112,20 +116,32 @@ export function CommercialDocumentBuilder({
     onDocumentChange({ ...document, total_amount: total - discount });
   };
 
+  // Initialize defaults for current project type
+  useEffect(() => {
+    if (document.project_type) {
+      initializeDefaultsIfEmpty.mutate(document.project_type);
+    }
+  }, [document.project_type]);
+
   // Initialize phases when project type changes (for new documents)
   useEffect(() => {
     if (isNew && phases.length === 0 && document.project_type) {
-      const templatePhases = PHASES_BY_PROJECT_TYPE[document.project_type];
+      // Use templates from database if available, fallback to hardcoded
+      const activeTemplates = phaseTemplates.filter(t => t.is_active);
+      const templatePhases = activeTemplates.length > 0 
+        ? activeTemplates 
+        : PHASES_BY_PROJECT_TYPE[document.project_type];
+      
       const initialPhases: CommercialDocumentPhase[] = templatePhases.map((p, index) => ({
         id: `temp-${index}`,
         document_id: documentId || '',
-        phase_code: p.code,
-        phase_name: p.name,
-        phase_description: p.description,
-        percentage_fee: p.defaultPercentage,
+        phase_code: 'code' in p ? p.code : p.code,
+        phase_name: 'name' in p ? p.name : p.name,
+        phase_description: 'description' in p ? p.description : p.description,
+        percentage_fee: 'default_percentage' in p ? p.default_percentage : ('defaultPercentage' in p ? p.defaultPercentage : 0),
         amount: 0,
         is_included: true,
-        deliverables: p.deliverables,
+        deliverables: 'deliverables' in p ? (Array.isArray(p.deliverables) ? p.deliverables : []) : [],
         sort_order: index,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -133,7 +149,7 @@ export function CommercialDocumentBuilder({
       onPhasesChange(initialPhases);
       setQuoteItems(phasesToItems(initialPhases));
     }
-  }, [document.project_type, isNew]);
+  }, [document.project_type, isNew, phaseTemplates]);
 
   // Load default clauses when project type changes
   useEffect(() => {
@@ -147,8 +163,12 @@ export function CommercialDocumentBuilder({
     }
   }, [document.project_type, isNew]);
 
-  const handleProjectTypeChange = (projectType: ProjectType) => {
-    // Reset phases when project type changes
+  const handleProjectTypeChange = async (projectType: ProjectType) => {
+    // Initialize defaults for the new project type
+    await initializeDefaultsIfEmpty.mutateAsync(projectType);
+    
+    // Get templates - will be refetched when project type changes
+    // Use fallback for now since templates will load async
     const templatePhases = PHASES_BY_PROJECT_TYPE[projectType];
     const newPhases: CommercialDocumentPhase[] = templatePhases.map((p, index) => ({
       id: `temp-${index}`,

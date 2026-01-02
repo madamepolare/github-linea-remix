@@ -441,6 +441,7 @@ export const useCommercialDocuments = () => {
       if (includedPhases.length > 0) {
         const projectPhases = includedPhases.map((phase, index) => {
           const planned = plannedPhases.find(p => p.name === phase.phase_name);
+          const deliverables = Array.isArray(phase.deliverables) ? phase.deliverables : [];
           return {
             workspace_id: activeWorkspace.id,
             project_id: project.id,
@@ -450,7 +451,11 @@ export const useCommercialDocuments = () => {
             status: 'pending' as const,
             start_date: planned?.start_date || phase.start_date,
             end_date: planned?.end_date || phase.end_date,
-            color: null
+            color: null,
+            // Include new fields for full data transfer
+            phase_code: phase.phase_code,
+            percentage_fee: phase.percentage_fee,
+            deliverables: deliverables
           };
         });
 
