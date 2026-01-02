@@ -46,6 +46,8 @@ interface UseTasksOptions {
   projectId?: string;
   assignedTo?: string;
   includeArchived?: boolean;
+  relatedType?: string;
+  relatedId?: string;
 }
 
 export function useTasks(options?: UseTasksOptions) {
@@ -110,6 +112,14 @@ export function useTasks(options?: UseTasksOptions) {
           estimated_hours: newTask.estimated_hours,
           workspace_id: activeWorkspace!.id,
           created_by: user?.id,
+          // Entity linking fields
+          project_id: newTask.project_id,
+          lead_id: newTask.lead_id,
+          crm_company_id: newTask.crm_company_id,
+          contact_id: newTask.contact_id,
+          related_type: newTask.related_type,
+          related_id: newTask.related_id,
+          module: newTask.module,
         } as any)
         .select()
         .single();
@@ -118,10 +128,10 @@ export function useTasks(options?: UseTasksOptions) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      toast.success("Task created");
+      toast.success("Tâche créée");
     },
     onError: (error) => {
-      toast.error("Failed to create task: " + error.message);
+      toast.error("Erreur: " + error.message);
     },
   });
 

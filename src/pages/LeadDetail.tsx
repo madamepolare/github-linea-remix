@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { useLeads, Lead, usePipelines } from "@/hooks/useLeads";
 import { useLeadActivities, LeadActivity } from "@/hooks/useLeadActivities";
+import { EntityTasksList } from "@/components/tasks/EntityTasksList";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
 import { format, formatDistanceToNow } from "date-fns";
@@ -273,6 +274,7 @@ export default function LeadDetail() {
               <TabsList>
                 <TabsTrigger value="overview">Aperçu</TabsTrigger>
                 <TabsTrigger value="activities">Activités ({activities.length})</TabsTrigger>
+                <TabsTrigger value="tasks">Tâches</TabsTrigger>
                 <TabsTrigger value="details">Détails</TabsTrigger>
               </TabsList>
 

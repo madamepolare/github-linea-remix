@@ -16,6 +16,8 @@ interface PhaseGanttTimelineProps {
 
 export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: PhaseGanttTimelineProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const todayRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
 
   useEffect(() => {
@@ -30,6 +32,15 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: Phase
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Auto-scroll to today indicator
+  useEffect(() => {
+    if (todayRef.current && chartContainerRef.current) {
+      const todayLeft = todayRef.current.offsetLeft;
+      const containerWidth = chartContainerRef.current.offsetWidth;
+      chartContainerRef.current.scrollLeft = Math.max(0, todayLeft - containerWidth / 2);
+    }
+  }, [containerWidth, phases]);
 
   // Calculate timeline bounds based on phase deadlines
   const { timelineStart, timelineEnd, totalDays } = useMemo(() => {
@@ -119,6 +130,14 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: Phase
     }).filter(Boolean);
   }, [dependencies, phasePositions, phases]);
 
+  // Calculate today position
+  const todayPosition = useMemo(() => {
+    const today = new Date();
+    const daysFromStart = differenceInDays(today, timelineStart);
+    if (daysFromStart < 0 || daysFromStart > totalDays) return null;
+    return daysFromStart * dayWidth;
+  }, [timelineStart, totalDays, dayWidth]);
+
   if (phases.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -195,7 +214,7 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: Phase
           </div>
 
           {/* Chart area */}
-          <div className="flex-1 overflow-x-auto">
+          <div className="flex-1 overflow-x-auto" ref={chartContainerRef}>
             <div style={{ width: chartWidth, minWidth: "100%" }} className="relative">
               {/* Grid lines */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none">
@@ -213,6 +232,19 @@ export function PhaseGanttTimeline({ phases, dependencies, onPhaseClick }: Phase
                     />
                   );
                 })}
+
+                {/* Today indicator */}
+                {todayPosition !== null && (
+                  <div
+                    ref={todayRef}
+                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
+                    style={{ left: todayPosition }}
+                  >
+                    <div className="absolute -top-0 left-1/2 -translate-x-1/2 bg-red-500 text-white text-2xs px-1.5 py-0.5 rounded-b font-medium whitespace-nowrap">
+                      Aujourd'hui
+                    </div>
+                  </div>
+                )}
               </svg>
 
               {/* Dependency lines */}
