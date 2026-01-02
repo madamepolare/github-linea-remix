@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useProjectDeliverables, DeliverableStatus } from "@/hooks/useProjectDeliverables";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
+import { useProject } from "@/hooks/useProjects";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +29,8 @@ import { format, parseISO, isPast } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { DELIVERABLE_STATUS } from "@/lib/projectTypes";
+import { getDefaultDeliverablesForPhase } from "@/lib/defaultDeliverables";
+import { toast } from "sonner";
 import {
   AlertCircle,
   CheckCircle2,
@@ -35,9 +39,13 @@ import {
   File,
   FileText,
   Filter,
+  Mail,
+  MailCheck,
   MoreHorizontal,
   Pencil,
   Plus,
+  Send,
+  Sparkles,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -45,6 +53,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -63,10 +72,16 @@ interface ProjectDeliverablesTabProps {
 export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProps) {
   const { deliverables, isLoading, createDeliverable, updateDeliverable, deleteDeliverable } = useProjectDeliverables(projectId);
   const { phases } = useProjectPhases(projectId);
+  const { data: project } = useProject(projectId);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingDeliverable, setEditingDeliverable] = useState<any | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPhase, setFilterPhase] = useState<string>("all");
+  const [isSendEmailOpen, setIsSendEmailOpen] = useState(false);
+  const [emailDeliverable, setEmailDeliverable] = useState<any | null>(null);
+  const [emailTo, setEmailTo] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -139,6 +154,86 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
       status: newStatus,
       delivered_at: newStatus === "delivered" || newStatus === "validated" ? new Date().toISOString() : null
     });
+  };
+
+  const handleGenerateDeliverables = async () => {
+    if (phases.length === 0) {
+      toast.error("Aucune phase définie pour ce projet");
+      return;
+    }
+
+    let createdCount = 0;
+    for (const phase of phases) {
+      const defaultDeliverables = getDefaultDeliverablesForPhase(phase.name);
+      for (const deliverable of defaultDeliverables) {
+        // Check if already exists
+        const exists = deliverables.some(
+          d => d.name === deliverable.name && d.phase_id === phase.id
+        );
+        if (!exists) {
+          await createDeliverable.mutateAsync({
+            name: deliverable.name,
+            description: deliverable.description,
+            phase_id: phase.id,
+            status: "pending",
+          });
+          createdCount++;
+        }
+      }
+    }
+
+    if (createdCount > 0) {
+      toast.success(`${createdCount} livrables créés automatiquement`);
+    } else {
+      toast.info("Tous les livrables par défaut existent déjà");
+    }
+  };
+
+  const openSendEmailDialog = (deliverable: any) => {
+    const phase = phases.find(p => p.id === deliverable.phase_id);
+    setEmailDeliverable(deliverable);
+    setEmailTo("");
+    setEmailSubject(`Livrable: ${deliverable.name} - ${project?.name || "Projet"}`);
+    setIsSendEmailOpen(true);
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailTo || !emailDeliverable) return;
+
+    setIsSendingEmail(true);
+    try {
+      const phase = phases.find(p => p.id === emailDeliverable.phase_id);
+      
+      const { data, error } = await supabase.functions.invoke("send-deliverable-email", {
+        body: {
+          to: emailTo,
+          subject: emailSubject,
+          deliverableName: emailDeliverable.name,
+          projectName: project?.name || "Projet",
+          phaseName: phase?.name,
+          description: emailDeliverable.description,
+          fileUrl: emailDeliverable.file_url,
+        },
+      });
+
+      if (error) throw error;
+
+      // Mark as sent
+      await updateDeliverable.mutateAsync({
+        id: emailDeliverable.id,
+        status: "delivered",
+        delivered_at: new Date().toISOString(),
+      });
+
+      toast.success("Email envoyé et livrable marqué comme livré");
+      setIsSendEmailOpen(false);
+      setEmailDeliverable(null);
+    } catch (error: any) {
+      console.error("Error sending email:", error);
+      toast.error("Erreur lors de l'envoi: " + error.message);
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   if (isLoading) {
@@ -288,10 +383,16 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
             </SelectContent>
           </Select>
         </div>
-        <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
-          <Plus className="h-4 w-4 mr-1" />
-          Ajouter un livrable
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={handleGenerateDeliverables}>
+            <Sparkles className="h-4 w-4 mr-1" />
+            Générer par défaut
+          </Button>
+          <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1" />
+            Ajouter
+          </Button>
+        </div>
       </div>
 
       {/* Deliverables List */}
@@ -335,6 +436,7 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
                       onEdit={() => openEditDialog(deliverable)}
                       onDelete={() => handleDelete(deliverable.id)}
                       onStatusChange={handleStatusChange}
+                      onSendEmail={() => openSendEmailDialog(deliverable)}
                     />
                   ))}
                 </div>
@@ -356,6 +458,7 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
                   onEdit={() => openEditDialog(deliverable)}
                   onDelete={() => handleDelete(deliverable.id)}
                   onStatusChange={handleStatusChange}
+                  onSendEmail={() => openSendEmailDialog(deliverable)}
                 />
               );
             })}
@@ -383,6 +486,51 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
         onSubmit={editingDeliverable ? handleUpdate : handleCreate}
         isEditing={!!editingDeliverable}
       />
+
+      {/* Send Email Dialog */}
+      <Dialog open={isSendEmailOpen} onOpenChange={(open) => { if (!open) setIsSendEmailOpen(false); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              Envoyer par email
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-sm font-medium">{emailDeliverable?.name}</p>
+              {emailDeliverable?.description && (
+                <p className="text-xs text-muted-foreground mt-1">{emailDeliverable.description}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Destinataire *</Label>
+              <Input
+                type="email"
+                value={emailTo}
+                onChange={(e) => setEmailTo(e.target.value)}
+                placeholder="email@exemple.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Objet</Label>
+              <Input
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSendEmailOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleSendEmail} disabled={!emailTo || isSendingEmail}>
+              {isSendingEmail ? "Envoi..." : "Envoyer"}
+              <Mail className="h-4 w-4 ml-2" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -395,6 +543,7 @@ function DeliverableCard({
   onEdit,
   onDelete,
   onStatusChange,
+  onSendEmail,
 }: {
   deliverable: any;
   phase?: any;
@@ -402,6 +551,7 @@ function DeliverableCard({
   onEdit: () => void;
   onDelete: () => void;
   onStatusChange: (id: string, status: DeliverableStatus) => void;
+  onSendEmail: () => void;
 }) {
   const statusConfig = DELIVERABLE_STATUS.find(s => s.value === deliverable.status) || DELIVERABLE_STATUS[0];
   const isOverdue = deliverable.due_date && 
@@ -502,6 +652,11 @@ function DeliverableCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onSendEmail}>
+                  <Send className="h-4 w-4 mr-2" />
+                  Envoyer par email
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onEdit}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Modifier
@@ -524,6 +679,7 @@ function DeliverableCard({
                     Valider
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={onDelete}
                   className="text-destructive"
