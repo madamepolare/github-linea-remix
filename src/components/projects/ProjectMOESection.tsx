@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useProjectMOE } from "@/hooks/useProjectMOE";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -57,6 +58,9 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
   const { moeTeam, isLoading, addMember, removeMember } = useProjectMOE(projectId);
   const { companies } = useCRMCompanies();
   const { contacts } = useContacts();
+  const { activeWorkspace } = useAuth();
+  
+  const workspaceName = activeWorkspace?.name || "Notre agence";
   
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [companySearch, setCompanySearch] = useState("");
@@ -195,13 +199,19 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
                           className="text-[10px]"
                           style={{ backgroundColor: `${category.color}15`, color: category.color }}
                         >
-                          {member.crm_company?.name?.[0] || member.contact?.name?.[0] || "?"}
+                          {member.is_lead 
+                            ? workspaceName[0] 
+                            : member.crm_company?.name?.[0] || member.contact?.name?.[0] || "?"
+                          }
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
                           <span className="text-xs font-medium truncate">
-                            {member.crm_company?.name || member.contact?.name || "Non défini"}
+                            {member.is_lead 
+                              ? workspaceName 
+                              : member.crm_company?.name || member.contact?.name || "Non défini"
+                            }
                           </span>
                           {member.is_lead && (
                             <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4">Nous</Badge>
@@ -216,7 +226,7 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
                             ))}
                           </div>
                         )}
-                        {member.contact && member.crm_company && !betSpecialties.length && (
+                        {member.contact && member.crm_company && !betSpecialties.length && !member.is_lead && (
                           <span className="text-[11px] text-muted-foreground truncate block">
                             {member.contact.name}
                           </span>
@@ -313,7 +323,7 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
               <div className="flex items-center justify-between p-2.5 bg-primary/5 border border-primary/20 rounded-lg">
                 <div>
                   <Label className="font-medium text-sm">C'est nous</Label>
-                  <p className="text-[11px] text-muted-foreground">Notre agence</p>
+                  <p className="text-[11px] text-muted-foreground">{workspaceName}</p>
                 </div>
                 <Switch checked={isUs} onCheckedChange={setIsUs} />
               </div>
