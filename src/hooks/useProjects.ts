@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { ProjectType, generateDefaultPhases } from "@/lib/projectTypes";
+import { ProjectType, generateDefaultPhases, PhaseStatus } from "@/lib/projectTypes";
 
 export interface Project {
   id: string;
@@ -45,7 +45,7 @@ export interface ProjectPhase {
   sort_order: number;
   start_date: string | null;
   end_date: string | null;
-  status: string;
+  status: PhaseStatus;
   color: string | null;
   created_at: string;
   updated_at: string;

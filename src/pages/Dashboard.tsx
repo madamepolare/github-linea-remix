@@ -2,7 +2,7 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { WelcomeHeader } from "@/components/dashboard/WelcomeHeader";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { QuickActions } from "@/components/dashboard/QuickActions";
-import { ProjectPipeline } from "@/components/dashboard/ProjectPipeline";
+import { ProjectPipelineManager } from "@/components/dashboard/ProjectPipelineManager";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { UpcomingTasks } from "@/components/dashboard/UpcomingTasks";
 import { ActiveProjects } from "@/components/dashboard/ActiveProjects";
@@ -64,8 +64,8 @@ const Dashboard = () => {
         {/* Quick Actions */}
         <QuickActions />
 
-        {/* Pipeline */}
-        <ProjectPipeline />
+        {/* Phase Manager - Replaces simple pipeline */}
+        <ProjectPipelineManager />
 
         {/* Two Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
