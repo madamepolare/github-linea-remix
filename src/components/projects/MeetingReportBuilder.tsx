@@ -27,6 +27,8 @@ import { SendEmailDialog } from "./meeting-report/SendEmailDialog";
 import { VersionHistorySheet } from "./meeting-report/VersionHistorySheet";
 import { AttendeeWithType, ExternalTask, EmailRecipient } from "./meeting-report/types";
 import { PDFPreviewDialog } from "./meeting-report/PDFPreviewDialog";
+import { LoadTemplateDialog } from "./meeting-report/LoadTemplateDialog";
+import { MeetingReportTemplate } from "@/lib/meetingReportTemplates";
 
 // Import new tab components
 import { GeneralTab } from "./meeting-report/tabs/GeneralTab";
@@ -64,6 +66,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
     removeFromArray,
     updateInArray,
     copyFromPreviousMeeting,
+    applyTemplate,
   } = useMeetingReportData(meeting);
 
   const [localMeeting, setLocalMeeting] = useState(meeting);
@@ -251,8 +254,13 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
     }
   };
 
-  const handleSendEmail = async (recipients: string[], subject: string, message: string) => {
-    toast.success(`Email envoyé à ${recipients.length} destinataire(s)`);
+  const handleSendEmail = async (_recipients: string[], _subject: string, _message: string) => {
+    toast.success(`Email envoyé`);
+  };
+
+  const handleApplyTemplate = (template: MeetingReportTemplate) => {
+    applyTemplate(template.data);
+    toast.success(`Template "${template.name}" appliqué`);
   };
 
   const emailRecipients: EmailRecipient[] = attendeesWithType
@@ -325,6 +333,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
           <Button variant="outline" size="sm" onClick={() => setIsEmailDialogOpen(true)}>
             <Mail className="h-4 w-4 mr-1" />Envoyer
           </Button>
+          <LoadTemplateDialog onSelectTemplate={handleApplyTemplate} />
         </div>
       </div>
 

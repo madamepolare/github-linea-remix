@@ -319,6 +319,35 @@ export function useMeetingReportData(meeting: ProjectMeeting) {
     return reportData.legal_mention.replace("{DELAY}", reportData.legal_delay_days.toString());
   }, [reportData.legal_mention, reportData.legal_delay_days]);
 
+  // Apply template
+  const applyTemplate = useCallback((templateData: Partial<ReportData>) => {
+    setReportData(prev => ({
+      ...prev,
+      ...templateData,
+      // Merge nested objects properly
+      general_progress: {
+        ...prev.general_progress,
+        ...(templateData.general_progress || {}),
+      },
+      planning: {
+        ...prev.planning,
+        ...(templateData.planning || {}),
+      },
+      financial: {
+        ...prev.financial,
+        ...(templateData.financial || {}),
+      },
+      sqe: {
+        ...prev.sqe,
+        ...(templateData.sqe || {}),
+      },
+      next_meeting: {
+        ...prev.next_meeting,
+        ...(templateData.next_meeting || {}),
+      },
+    }));
+  }, []);
+
   return {
     reportData,
     setReportData,
@@ -332,6 +361,7 @@ export function useMeetingReportData(meeting: ProjectMeeting) {
     updateInArray,
     copyFromPreviousMeeting,
     getFormattedLegalMention,
+    applyTemplate,
     DEFAULT_LEGAL_MENTION,
   };
 }
