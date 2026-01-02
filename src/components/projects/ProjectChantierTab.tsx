@@ -33,6 +33,7 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { LOT_STATUS, OBSERVATION_STATUS, OBSERVATION_PRIORITY } from "@/lib/projectTypes";
 import { generateMeetingPDF } from "@/lib/generateMeetingPDF";
+import { ChantierGantt } from "./ChantierGantt";
 import {
   AlertCircle,
   Building2,
@@ -43,7 +44,9 @@ import {
   Download,
   Eye,
   FileText,
+  GanttChart,
   Hammer,
+  List,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -111,6 +114,7 @@ function LotsSection({ projectId }: { projectId: string }) {
   const { companies } = useCRMCompanies();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingLot, setEditingLot] = useState<ProjectLot | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "gantt">("list");
 
   const [formName, setFormName] = useState("");
   const [formCompanyId, setFormCompanyId] = useState<string | null>(null);
@@ -178,6 +182,10 @@ function LotsSection({ projectId }: { projectId: string }) {
     }
   };
 
+  const handleGanttUpdate = (id: string, updates: { start_date?: string | null; end_date?: string | null }) => {
+    updateLot.mutate({ id, ...updates });
+  };
+
   // Filter entreprises
   const entreprises = companies.filter(c => c.industry?.startsWith("entreprise_") || c.industry === "artisan");
 
@@ -221,88 +229,117 @@ function LotsSection({ projectId }: { projectId: string }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-medium">Lots du chantier ({lots.length})</h3>
-        <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
-          <Plus className="h-4 w-4 mr-1" />
-          Ajouter
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* View Toggle */}
+          <div className="flex items-center border rounded-lg p-1 bg-muted/30">
+            <Button
+              variant={viewMode === "list" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setViewMode("list")}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "gantt" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setViewMode("gantt")}
+            >
+              <GanttChart className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1" />
+            Ajouter
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-3">
-        {lots.map((lot) => {
-          const statusConfig = LOT_STATUS.find(s => s.value === lot.status) || LOT_STATUS[0];
-          const company = companies.find(c => c.id === lot.crm_company_id);
+      {viewMode === "gantt" ? (
+        <ChantierGantt
+          lots={lots}
+          onUpdateLot={handleGanttUpdate}
+          companies={companies}
+        />
+      ) : (
+        <div className="grid gap-3">
+          {lots.map((lot) => {
+            const statusConfig = LOT_STATUS.find(s => s.value === lot.status) || LOT_STATUS[0];
+            const company = companies.find(c => c.id === lot.crm_company_id);
 
-          return (
-            <Card key={lot.id}>
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div 
-                    className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted"
-                    style={{ backgroundColor: lot.color || undefined }}
-                  >
-                    <Hammer className="h-5 w-5 text-muted-foreground" />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{lot.name}</span>
-                      <Badge 
-                        variant="secondary" 
-                        className="text-xs"
-                        style={{ 
-                          backgroundColor: statusConfig.color + "20",
-                          color: statusConfig.color 
-                        }}
-                      >
-                        {statusConfig.label}
-                      </Badge>
+            return (
+              <Card key={lot.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div 
+                      className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted"
+                      style={{ backgroundColor: lot.color || undefined }}
+                    >
+                      <Hammer className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    {company && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                        <Building2 className="h-3 w-3" />
-                        {company.name}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                      {lot.budget && (
-                        <span className="flex items-center gap-1">
-                          <Wallet className="h-3 w-3" />
-                          {lot.budget.toLocaleString("fr-FR")} €
-                        </span>
-                      )}
-                      {lot.start_date && lot.end_date && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {format(parseISO(lot.start_date), "d MMM", { locale: fr })} - {format(parseISO(lot.end_date), "d MMM yyyy", { locale: fr })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => openEditDialog(lot)}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Modifier
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDelete(lot.id)} className="text-destructive">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Supprimer
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{lot.name}</span>
+                        <Badge 
+                          variant="secondary" 
+                          className="text-xs"
+                          style={{ 
+                            backgroundColor: statusConfig.color + "20",
+                            color: statusConfig.color 
+                          }}
+                        >
+                          {statusConfig.label}
+                        </Badge>
+                      </div>
+                      {company && (
+                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                          <Building2 className="h-3 w-3" />
+                          {company.name}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                        {lot.budget && (
+                          <span className="flex items-center gap-1">
+                            <Wallet className="h-3 w-3" />
+                            {lot.budget.toLocaleString("fr-FR")} €
+                          </span>
+                        )}
+                        {lot.start_date && lot.end_date && (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {format(parseISO(lot.start_date), "d MMM", { locale: fr })} - {format(parseISO(lot.end_date), "d MMM yyyy", { locale: fr })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEditDialog(lot)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Modifier
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleDelete(lot.id)} className="text-destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       <LotDialog
         isOpen={isCreateOpen || !!editingLot}
