@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { DebouncedInput, DebouncedTextarea } from "@/components/ui/debounced-input";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Plus, AlertTriangle, Trash2, Calendar, Users, Building2, Package } from "lucide-react";
+import { Plus, AlertTriangle, Trash2, Calendar, Users, Building2, Package, Search, ArrowUpDown, Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MeetingAttentionItem, CreateAttentionItemInput } from "@/hooks/useMeetingAttentionItems";
 
@@ -76,6 +76,82 @@ export function AttentionItemsSection({
     due_date: null,
   });
   const [customName, setCustomName] = useState("");
+
+  // Filter & Sort state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterUrgency, setFilterUrgency] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterProgress, setFilterProgress] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"created" | "urgency" | "due_date" | "progress">("created");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const urgencyOrder = { critical: 4, high: 3, normal: 2, low: 1 };
+
+  const filteredAndSortedItems = useMemo(() => {
+    let result = [...items];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(item => 
+        item.description.toLowerCase().includes(query) ||
+        (item.comment && item.comment.toLowerCase().includes(query))
+      );
+    }
+
+    // Urgency filter
+    if (filterUrgency !== "all") {
+      result = result.filter(item => item.urgency === filterUrgency);
+    }
+
+    // Type filter
+    if (filterType !== "all") {
+      result = result.filter(item => item.stakeholder_type === filterType);
+    }
+
+    // Progress filter
+    if (filterProgress !== "all") {
+      if (filterProgress === "incomplete") {
+        result = result.filter(item => item.progress < 100);
+      } else if (filterProgress === "complete") {
+        result = result.filter(item => item.progress === 100);
+      }
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case "urgency":
+          comparison = urgencyOrder[b.urgency] - urgencyOrder[a.urgency];
+          break;
+        case "due_date":
+          if (!a.due_date && !b.due_date) comparison = 0;
+          else if (!a.due_date) comparison = 1;
+          else if (!b.due_date) comparison = -1;
+          else comparison = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+          break;
+        case "progress":
+          comparison = a.progress - b.progress;
+          break;
+        case "created":
+        default:
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+    return result;
+  }, [items, searchQuery, filterUrgency, filterType, filterProgress, sortBy, sortOrder]);
+
+  const hasActiveFilters = searchQuery || filterUrgency !== "all" || filterType !== "all" || filterProgress !== "all";
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setFilterUrgency("all");
+    setFilterType("all");
+    setFilterProgress("all");
+  };
 
   // Get MOE companies (BET, architects, etc.) - deduplicated
   const moeCompanies = moeTeam
@@ -212,14 +288,133 @@ export function AttentionItemsSection({
 
   return (
     <div className="space-y-3">
+      {/* Filters & Sort Bar */}
+      {items.length > 0 && (
+        <div className="space-y-2">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher..."
+              className="pl-8 h-8 text-sm"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                onClick={() => setSearchQuery("")}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+
+          {/* Filter & Sort row */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Filter className="h-3 w-3" />
+              <span>Filtrer:</span>
+            </div>
+
+            <Select value={filterUrgency} onValueChange={setFilterUrgency}>
+              <SelectTrigger className="h-7 w-[100px] text-xs">
+                <SelectValue placeholder="Urgence" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes</SelectItem>
+                <SelectItem value="critical">Critique</SelectItem>
+                <SelectItem value="high">Urgent</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="low">Faible</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="h-7 w-[100px] text-xs">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="bet">BET</SelectItem>
+                <SelectItem value="entreprise">Entreprise</SelectItem>
+                <SelectItem value="moa">MOA</SelectItem>
+                <SelectItem value="other">Autre</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filterProgress} onValueChange={setFilterProgress}>
+              <SelectTrigger className="h-7 w-[100px] text-xs">
+                <SelectValue placeholder="Avancement" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="incomplete">En cours</SelectItem>
+                <SelectItem value="complete">Terminé</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="h-4 w-px bg-border mx-1" />
+
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <ArrowUpDown className="h-3 w-3" />
+              <span>Trier:</span>
+            </div>
+
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="h-7 w-[110px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created">Date création</SelectItem>
+                <SelectItem value="urgency">Urgence</SelectItem>
+                <SelectItem value="due_date">Échéance</SelectItem>
+                <SelectItem value="progress">Avancement</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            >
+              <ArrowUpDown className={cn("h-3 w-3", sortOrder === "asc" && "rotate-180")} />
+            </Button>
+
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={clearFilters}>
+                <X className="h-3 w-3 mr-1" />
+                Effacer
+              </Button>
+            )}
+          </div>
+
+          {/* Results count */}
+          {hasActiveFilters && (
+            <p className="text-xs text-muted-foreground">
+              {filteredAndSortedItems.length} résultat{filteredAndSortedItems.length > 1 ? "s" : ""} sur {items.length}
+            </p>
+          )}
+        </div>
+      )}
+
       {items.length === 0 ? (
         <div className="text-center py-6 text-muted-foreground">
           <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">Aucun point abordé</p>
         </div>
+      ) : filteredAndSortedItems.length === 0 ? (
+        <div className="text-center py-6 text-muted-foreground">
+          <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">Aucun résultat</p>
+          <Button variant="link" size="sm" onClick={clearFilters}>Effacer les filtres</Button>
+        </div>
       ) : (
         <div className="space-y-3">
-          {items.map((item) => (
+          {filteredAndSortedItems.map((item) => (
             <div key={item.id} className="border rounded-lg p-3 space-y-3 bg-card">
               {/* Header */}
               <div className="flex items-start justify-between gap-2">
