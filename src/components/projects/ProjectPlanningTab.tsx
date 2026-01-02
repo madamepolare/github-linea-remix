@@ -1,12 +1,13 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { useCalendarEvents, CalendarEvent } from "@/hooks/useCalendarEvents";
-import { useProjectPhases } from "@/hooks/useProjectPhases";
+import { useProjectPhases, ProjectPhase } from "@/hooks/useProjectPhases";
 import { useProjectDeliverables } from "@/hooks/useProjectDeliverables";
 import { useTasks } from "@/hooks/useTasks";
+import { useQuickTasksDB, QuickTask } from "@/hooks/useQuickTasksDB";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -40,11 +41,13 @@ import {
   FileText,
   Milestone,
   Trash2,
+  Zap,
 } from "lucide-react";
-import { format, parseISO, addHours } from "date-fns";
+import { format, parseISO, addHours, addDays, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import frLocale from "@fullcalendar/core/locales/fr";
+import { toast } from "sonner";
 
 interface ProjectPlanningTabProps {
   projectId: string;
@@ -60,8 +63,9 @@ interface FCEvent {
   backgroundColor?: string;
   borderColor?: string;
   textColor?: string;
+  display?: string;
   extendedProps: {
-    type: "phase" | "event" | "task" | "deliverable";
+    type: "phase" | "event" | "task" | "deliverable" | "quicktask";
     originalData: any;
   };
 }
@@ -69,16 +73,18 @@ interface FCEvent {
 export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const { events, isLoading: eventsLoading, createEvent, updateEvent, deleteEvent } = useCalendarEvents(projectId);
-  const { phases } = useProjectPhases(projectId);
+  const { phases, updatePhase } = useProjectPhases(projectId);
   const { deliverables } = useProjectDeliverables(projectId);
   const { tasks } = useTasks();
+  const { quickTasks, pendingTasks } = useQuickTasksDB();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [editingPhase, setEditingPhase] = useState<ProjectPhase | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentView, setCurrentView] = useState<string>("dayGridMonth");
 
-  // Form state
+  // Form state for events
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formType, setFormType] = useState<"meeting" | "milestone" | "reminder">("meeting");
@@ -90,27 +96,52 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const [formIsAllDay, setFormIsAllDay] = useState(false);
   const [formCreateMeet, setFormCreateMeet] = useState(false);
 
+  // Phase edit form state
+  const [phaseStartDate, setPhaseStartDate] = useState("");
+  const [phaseEndDate, setPhaseEndDate] = useState("");
+
   // Project-specific tasks
   const projectTasks = useMemo(() => {
     return tasks.filter(t => t.project_id === projectId && t.due_date);
   }, [tasks, projectId]);
 
+  // Quick tasks with due dates
+  const quickTasksWithDates = useMemo(() => {
+    return pendingTasks.filter(t => t.due_date);
+  }, [pendingTasks]);
+
   // Convert all items to FullCalendar events
   const calendarEvents = useMemo<FCEvent[]>(() => {
     const fcEvents: FCEvent[] = [];
 
-    // Phases as background events
+    // Phases as background events (editable)
     phases.forEach(phase => {
       if (phase.start_date && phase.end_date) {
         fcEvents.push({
           id: `phase-${phase.id}`,
           title: phase.name,
           start: phase.start_date,
-          end: phase.end_date,
+          end: addDays(parseISO(phase.end_date), 1).toISOString().split("T")[0], // FullCalendar end is exclusive
           allDay: true,
-          backgroundColor: `${phase.color || "#3B82F6"}20`,
+          backgroundColor: `${phase.color || "#3B82F6"}30`,
           borderColor: phase.color || "#3B82F6",
           textColor: phase.color || "#3B82F6",
+          display: "background",
+          extendedProps: {
+            type: "phase",
+            originalData: phase,
+          },
+        });
+        // Also add a regular event for the phase label (clickable)
+        fcEvents.push({
+          id: `phase-label-${phase.id}`,
+          title: `📋 ${phase.name}`,
+          start: phase.start_date,
+          end: addDays(parseISO(phase.end_date), 1).toISOString().split("T")[0],
+          allDay: true,
+          backgroundColor: `${phase.color || "#3B82F6"}`,
+          borderColor: phase.color || "#3B82F6",
+          textColor: "#FFFFFF",
           extendedProps: {
             type: "phase",
             originalData: phase,
@@ -177,8 +208,25 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       }
     });
 
+    // Quick tasks
+    quickTasksWithDates.forEach(qt => {
+      fcEvents.push({
+        id: `quicktask-${qt.id}`,
+        title: `⚡ ${qt.title}`,
+        start: qt.due_date!,
+        allDay: true,
+        backgroundColor: "#F97316",
+        borderColor: "transparent",
+        textColor: "#FFFFFF",
+        extendedProps: {
+          type: "quicktask",
+          originalData: qt,
+        },
+      });
+    });
+
     return fcEvents;
-  }, [phases, events, deliverables, projectTasks]);
+  }, [phases, events, deliverables, projectTasks, quickTasksWithDates]);
 
   const resetForm = () => {
     setFormTitle("");
@@ -289,9 +337,13 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
     
     if (type === "event") {
       openEditDialog(originalData);
+    } else if (type === "phase") {
+      // Open phase edit dialog
+      setEditingPhase(originalData);
+      setPhaseStartDate(originalData.start_date || "");
+      setPhaseEndDate(originalData.end_date || "");
     }
-    // For phases, tasks, deliverables - just show info for now
-    // Could open their respective edit dialogs
+    // For tasks and deliverables - could open their respective dialogs in the future
   };
 
   const handleDateClick = (info: any) => {
@@ -310,10 +362,73 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
         start_datetime: newStart.toISOString(),
         end_datetime: newEnd?.toISOString() || null,
       });
+    } else if (type === "phase" && !info.event.id.startsWith("phase-label-")) {
+      // Skip - background events shouldn't be dragged
+      info.revert();
+    } else if (type === "phase" && info.event.id.startsWith("phase-label-")) {
+      // Phase label dragged - update phase dates
+      const newStart = info.event.start;
+      const newEnd = info.event.end;
+      
+      // Calculate duration to maintain it
+      const originalDuration = differenceInDays(
+        parseISO(originalData.end_date),
+        parseISO(originalData.start_date)
+      );
+      
+      const newStartDate = format(newStart, "yyyy-MM-dd");
+      const newEndDate = newEnd 
+        ? format(addDays(newEnd, -1), "yyyy-MM-dd") // FullCalendar end is exclusive
+        : format(addDays(newStart, originalDuration), "yyyy-MM-dd");
+      
+      updatePhase.mutate({
+        id: originalData.id,
+        start_date: newStartDate,
+        end_date: newEndDate,
+      });
+      toast.success("Phase déplacée");
     } else {
-      // Revert for non-event types
+      // Revert for other types
       info.revert();
     }
+  };
+
+  const handleEventResize = (info: any) => {
+    const { type, originalData } = info.event.extendedProps;
+    
+    if (type === "event") {
+      const newEnd = info.event.end;
+      updateEvent.mutate({
+        id: originalData.id,
+        end_datetime: newEnd?.toISOString() || null,
+      });
+    } else if (type === "phase" && info.event.id.startsWith("phase-label-")) {
+      // Phase resized
+      const newStart = info.event.start;
+      const newEnd = info.event.end;
+      
+      updatePhase.mutate({
+        id: originalData.id,
+        start_date: format(newStart, "yyyy-MM-dd"),
+        end_date: format(addDays(newEnd, -1), "yyyy-MM-dd"),
+      });
+      toast.success("Phase redimensionnée");
+    } else {
+      info.revert();
+    }
+  };
+
+  const handleUpdatePhase = () => {
+    if (!editingPhase || !phaseStartDate || !phaseEndDate) return;
+    
+    updatePhase.mutate({
+      id: editingPhase.id,
+      start_date: phaseStartDate,
+      end_date: phaseEndDate,
+    });
+    
+    setEditingPhase(null);
+    toast.success("Phase mise à jour");
   };
 
   if (eventsLoading) {
@@ -330,7 +445,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs flex-wrap">
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-violet-500" />
               <span>Réunions</span>
@@ -342,6 +457,10 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-blue-500" />
               <span>Tâches</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded bg-orange-500" />
+              <span>Tâches rapides</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-red-500" />
@@ -381,7 +500,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
           dateClick={handleDateClick}
           eventClick={handleEventClick}
           eventDrop={handleEventDrop}
-          eventResize={handleEventDrop}
+          eventResize={handleEventResize}
           height="auto"
           aspectRatio={1.8}
           buttonText={{
@@ -604,6 +723,61 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
                 {editingEvent ? "Enregistrer" : "Créer"}
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Phase Edit Dialog */}
+      <Dialog 
+        open={!!editingPhase} 
+        onOpenChange={(open) => {
+          if (!open) setEditingPhase(null);
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarIcon className="h-4 w-4" />
+              Modifier la phase
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="p-3 bg-muted rounded-lg">
+              <div 
+                className="w-3 h-3 rounded inline-block mr-2" 
+                style={{ backgroundColor: editingPhase?.color || "#3B82F6" }}
+              />
+              <span className="font-medium">{editingPhase?.name}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Date début</Label>
+                <Input
+                  type="date"
+                  value={phaseStartDate}
+                  onChange={(e) => setPhaseStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Date fin</Label>
+                <Input
+                  type="date"
+                  value={phaseEndDate}
+                  onChange={(e) => setPhaseEndDate(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingPhase(null)}>
+              Annuler
+            </Button>
+            <Button onClick={handleUpdatePhase}>
+              Enregistrer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
