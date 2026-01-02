@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { Json } from "@/integrations/supabase/types";
 
 // ==================== LOTS ====================
 export interface ProjectLot {
@@ -234,19 +235,57 @@ export function useChantier(projectId: string | null) {
   });
 
   const createMeeting = useMutation({
-    mutationFn: async (meeting: Omit<CreateMeetingInput, "project_id" | "workspace_id">) => {
+    mutationFn: async (meeting: Omit<CreateMeetingInput, "project_id" | "workspace_id"> & { preloadFromPrevious?: boolean }) => {
       if (!projectId || !activeWorkspace?.id) {
         throw new Error("Missing project or workspace");
       }
-      // Get next meeting number
-      const { data: existing } = await supabase
+      // Get next meeting number and previous meeting data
+      const { data: existingMeetings } = await supabase
         .from("project_meetings")
-        .select("meeting_number")
+        .select("meeting_number, report_data, attendees")
         .eq("project_id", projectId)
         .order("meeting_number", { ascending: false })
         .limit(1);
 
-      const nextNumber = (existing?.[0]?.meeting_number || 0) + 1;
+      const nextNumber = (existingMeetings?.[0]?.meeting_number || 0) + 1;
+      const previousMeeting = existingMeetings?.[0];
+
+      // Preload report_data from previous meeting if requested (default: true)
+      let preloadedReportData: Record<string, unknown> | null = null;
+      if (meeting.preloadFromPrevious !== false && previousMeeting?.report_data) {
+        const prevData = previousMeeting.report_data as Record<string, unknown>;
+        preloadedReportData = {
+          // Keep progress data from previous meeting
+          lot_progress: prevData.lot_progress || [],
+          general_progress: prevData.general_progress || { status: "on_track", comment: "" },
+          // Keep unresolved blocking points
+          blocking_points: Array.isArray(prevData.blocking_points) 
+            ? (prevData.blocking_points as Array<{ status?: string }>).filter((bp) => bp.status !== "resolved")
+            : [],
+          // Keep pending documents
+          documents: Array.isArray(prevData.documents) 
+            ? (prevData.documents as Array<{ type?: string }>).filter((doc) => doc.type === "expected")
+            : [],
+          // Copy distribution list
+          distribution_list: prevData.distribution_list || [],
+          // Default values for other sections
+          context: "",
+          technical_decisions: [],
+          planning: prevData.planning || { contractual_reminder: "", delays_noted: "", corrective_actions: "", delivery_impact: false },
+          financial: prevData.financial || { enabled: false, supplementary_works: "", pending_quotes: "", service_orders: "" },
+          sqe: { safety_ok: true, sps_observations: "", cleanliness_ok: true, nuisances_comment: "" },
+          next_meeting: { date: null, time: "09:00", location_type: "site" },
+          legal_mention: "Le présent compte rendu vaut constat contradictoire des décisions prises en réunion. À défaut de remarques écrites dans un délai de 7 jours, il sera réputé accepté.",
+          legal_delay_days: 7,
+        };
+      }
+
+      // Also get unresolved observations from previous meetings
+      const { data: unresolvedObs } = await supabase
+        .from("project_observations")
+        .select("id")
+        .eq("project_id", projectId)
+        .neq("status", "resolved");
 
       const insertData = {
         project_id: projectId,
@@ -255,8 +294,11 @@ export function useChantier(projectId: string | null) {
         meeting_date: meeting.meeting_date,
         meeting_number: nextNumber,
         location: meeting.location || null,
-        attendees: meeting.attendees ? JSON.parse(JSON.stringify(meeting.attendees)) : [],
+        attendees: meeting.attendees 
+          ? JSON.parse(JSON.stringify(meeting.attendees)) 
+          : (previousMeeting?.attendees ? JSON.parse(JSON.stringify(previousMeeting.attendees)) : []),
         notes: meeting.notes || null,
+        report_data: preloadedReportData as Json | null,
       };
 
       const { data, error } = await supabase
@@ -266,11 +308,15 @@ export function useChantier(projectId: string | null) {
         .single();
 
       if (error) throw error;
-      return data;
+      return { meeting: data, unresolvedCount: unresolvedObs?.length || 0 };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["project-meetings", projectId] });
-      toast.success("Réunion créée");
+      if (result.unresolvedCount > 0) {
+        toast.success(`Réunion créée avec ${result.unresolvedCount} observation(s) non résolue(s) à traiter`);
+      } else {
+        toast.success("Réunion créée");
+      }
     },
     onError: (error) => {
       toast.error("Erreur lors de la création de la réunion");

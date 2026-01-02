@@ -165,11 +165,48 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
 
 // Reports Section - Liste des comptes rendus
 function ReportsSection({ projectId, onOpenReport }: { projectId: string; onOpenReport: (meeting: ProjectMeeting) => void }) {
-  const { meetings, meetingsLoading, duplicateMeeting }  = useChantier(projectId);
+  const { meetings, meetingsLoading, duplicateMeeting, updateMeeting, deleteMeeting }  = useChantier(projectId);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkingMeeting, setLinkingMeeting] = useState<ProjectMeeting | null>(null);
 
   const handleDuplicate = (e: React.MouseEvent, meeting: ProjectMeeting) => {
     e.stopPropagation();
     duplicateMeeting.mutate(meeting);
+  };
+
+  const handleClearReport = (e: React.MouseEvent, meeting: ProjectMeeting) => {
+    e.stopPropagation();
+    if (confirm("Effacer le contenu de ce compte rendu ? Cette action ne supprime pas la réunion.")) {
+      updateMeeting.mutate({ id: meeting.id, report_data: null as unknown as Record<string, unknown> });
+      toast.success("Compte rendu effacé");
+    }
+  };
+
+  const handleDeleteMeeting = (e: React.MouseEvent, meetingId: string) => {
+    e.stopPropagation();
+    if (confirm("Supprimer cette réunion et son compte rendu ? Cette action est irréversible.")) {
+      deleteMeeting.mutate(meetingId);
+    }
+  };
+
+  const handleOpenLinkDialog = (e: React.MouseEvent, meeting: ProjectMeeting) => {
+    e.stopPropagation();
+    setLinkingMeeting(meeting);
+    setLinkDialogOpen(true);
+  };
+
+  const handleLinkMeetings = (sourceMeetingId: string) => {
+    if (!linkingMeeting) return;
+    const sourceMeeting = meetings.find(m => m.id === sourceMeetingId);
+    if (sourceMeeting?.report_data) {
+      updateMeeting.mutate({ 
+        id: linkingMeeting.id, 
+        report_data: JSON.parse(JSON.stringify(sourceMeeting.report_data)) 
+      });
+      toast.success("Données du CR liées");
+    }
+    setLinkDialogOpen(false);
+    setLinkingMeeting(null);
   };
 
   if (meetingsLoading) {
@@ -186,6 +223,19 @@ function ReportsSection({ projectId, onOpenReport }: { projectId: string; onOpen
     );
   }
 
+  // Check if a meeting has report content
+  const hasReportContent = (meeting: ProjectMeeting) => {
+    if (!meeting.report_data) return false;
+    const data = meeting.report_data as Record<string, unknown>;
+    return Boolean(
+      data.context || 
+      (data.lot_progress && (data.lot_progress as unknown[]).length > 0) ||
+      (data.technical_decisions && (data.technical_decisions as unknown[]).length > 0) ||
+      (data.blocking_points && (data.blocking_points as unknown[]).length > 0) ||
+      data.general_progress
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -196,6 +246,7 @@ function ReportsSection({ projectId, onOpenReport }: { projectId: string; onOpen
         {meetings.map((meeting) => {
           const attendees = meeting.attendees || [];
           const presentCount = attendees.filter(a => a.present).length;
+          const hasContent = hasReportContent(meeting);
           
           return (
             <Card key={meeting.id} className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => onOpenReport(meeting)}>
@@ -209,22 +260,56 @@ function ReportsSection({ projectId, onOpenReport }: { projectId: string; onOpen
                       <span className="font-medium">CR n°{meeting.meeting_number || "?"}</span>
                       <span className="text-muted-foreground">-</span>
                       <span>{meeting.title}</span>
+                      {!hasContent && (
+                        <Badge variant="outline" className="text-xs">Vide</Badge>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {format(parseISO(meeting.meeting_date), "d MMMM yyyy", { locale: fr })}
                       {attendees.length > 0 && ` • ${presentCount}/${attendees.length} présents`}
                     </p>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={(e) => handleDuplicate(e, meeting)}
-                    disabled={duplicateMeeting.isPending}
-                    title="Dupliquer ce compte rendu"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm">
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onOpenReport(meeting); }}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Éditer
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => handleDuplicate(e, meeting)} disabled={duplicateMeeting.isPending}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Dupliquer
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={(e) => handleOpenLinkDialog(e, meeting)}>
+                        <ClipboardList className="h-4 w-4 mr-2" />
+                        Lier à un autre CR
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {hasContent && (
+                        <DropdownMenuItem 
+                          onClick={(e) => handleClearReport(e, meeting)}
+                          className="text-amber-600 focus:text-amber-600"
+                        >
+                          <AlertCircle className="h-4 w-4 mr-2" />
+                          Effacer le contenu
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem 
+                        onClick={(e) => handleDeleteMeeting(e, meeting.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Supprimer la réunion
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onOpenReport(meeting); }}>
                     <Pencil className="h-4 w-4 mr-1" />
                     Éditer
                   </Button>
@@ -234,6 +319,50 @@ function ReportsSection({ projectId, onOpenReport }: { projectId: string; onOpen
           );
         })}
       </div>
+
+      {/* Link CR Dialog */}
+      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Lier à un compte rendu existant</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Sélectionnez un compte rendu pour copier son contenu dans le CR actuel.
+            </p>
+            <ScrollArea className="h-[300px]">
+              <div className="space-y-2">
+                {meetings
+                  .filter(m => m.id !== linkingMeeting?.id && hasReportContent(m))
+                  .map((meeting) => (
+                    <Card 
+                      key={meeting.id} 
+                      className="cursor-pointer hover:border-primary/50"
+                      onClick={() => handleLinkMeetings(meeting.id)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-primary" />
+                          <span className="font-medium">CR n°{meeting.meeting_number}</span>
+                          <span className="text-muted-foreground">-</span>
+                          <span className="text-sm">{meeting.title}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(parseISO(meeting.meeting_date), "d MMMM yyyy", { locale: fr })}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                {meetings.filter(m => m.id !== linkingMeeting?.id && hasReportContent(m)).length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Aucun autre compte rendu avec du contenu disponible
+                  </p>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
