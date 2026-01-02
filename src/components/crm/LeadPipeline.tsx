@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { KanbanBoard, KanbanColumn, KanbanCard } from "@/components/shared/KanbanBoard";
-import { Plus, Building2, DollarSign, Pencil } from "lucide-react";
+import { Plus, Building2, User } from "lucide-react";
 import { useLeads, Lead, Pipeline } from "@/hooks/useLeads";
 import { LeadDetailSheet } from "./LeadDetailSheet";
 import { EditLeadDialog } from "./EditLeadDialog";
@@ -13,9 +13,10 @@ interface LeadPipelineProps {
 }
 
 export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
-  const { leads, isLoading, updateLeadStage } = useLeads({ pipelineId: pipeline.id });
+  const { leads, stats, isLoading, updateLeadStage } = useLeads({ pipelineId: pipeline.id });
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [showClosed, setShowClosed] = useState(false);
 
   const stages = pipeline.stages || [];
 
@@ -24,11 +25,13 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-      maximumFractionDigits: 0,
-    }).format(value);
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(0)}M€`;
+    }
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(0)}k€`;
+    }
+    return `${value}€`;
   };
 
   const getTotalValue = (stageLeads: Lead[]) => {
@@ -44,45 +47,63 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
       label: stage.name,
       color: stage.color || "#6366f1",
       items: stageLeads,
-      metadata: totalValue > 0 ? (
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <DollarSign className="h-3.5 w-3.5" />
-          <span className="font-medium">{formatCurrency(totalValue)}</span>
-        </div>
-      ) : undefined,
+      metadata:
+        totalValue > 0 ? (
+          <span className="text-sm text-muted-foreground">€ {formatCurrency(totalValue)}</span>
+        ) : undefined,
     };
   });
 
   return (
     <>
-      <div className="flex gap-4 overflow-x-auto pb-4 px-6 h-full pt-4">
-        <KanbanBoard<Lead>
-          columns={kanbanColumns}
-          isLoading={isLoading}
-          onDrop={handleDrop}
-          getItemId={(lead) => lead.id}
-          renderCard={(lead, isDragging) => (
-            <LeadKanbanCard
-              lead={lead}
-              stageColor={stages.find(s => s.id === lead.stage_id)?.color}
-              onClick={() => setSelectedLead(lead)}
-              isDragging={isDragging}
-            />
-          )}
-          emptyColumnContent="Aucune opportunité"
-          className="px-0"
-        />
-
-        {/* Add lead button */}
-        <div className="flex-shrink-0 w-72">
-          <Button
-            variant="outline"
-            className="w-full h-full min-h-[300px] border-dashed hover:border-primary/50 hover:bg-primary/5 transition-colors"
-            onClick={onCreateLead}
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Nouvelle opportunité
+      <div className="p-4 space-y-4">
+        {/* Stats bar */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Badge variant="outline" className="gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-primary" />
+              {stats.total} opportunités
+            </Badge>
+            <Badge variant="outline" className="gap-1.5">
+              <span className="text-muted-foreground">€</span>
+              {formatCurrency(stats.weightedValue)} pondéré
+            </Badge>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setShowClosed(!showClosed)}>
+            {showClosed ? "Masquer clôturés" : "Afficher clôturés"}
           </Button>
+        </div>
+
+        {/* Kanban */}
+        <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-280px)]">
+          <KanbanBoard<Lead>
+            columns={kanbanColumns}
+            isLoading={isLoading}
+            onDrop={handleDrop}
+            getItemId={(lead) => lead.id}
+            renderCard={(lead, isDragging) => (
+              <LeadKanbanCard
+                lead={lead}
+                stageColor={stages.find((s) => s.id === lead.stage_id)?.color}
+                onClick={() => setSelectedLead(lead)}
+                isDragging={isDragging}
+              />
+            )}
+            emptyColumnContent="Aucune opportunité"
+            className="px-0"
+          />
+
+          {/* Add lead button */}
+          <div className="flex-shrink-0 w-72">
+            <Button
+              variant="outline"
+              className="w-full h-full min-h-[200px] border-dashed hover:border-primary/50 hover:bg-primary/5 transition-colors"
+              onClick={onCreateLead}
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Nouvelle opportunité
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -114,17 +135,11 @@ interface LeadKanbanCardProps {
 
 function LeadKanbanCard({ lead, stageColor, onClick, isDragging }: LeadKanbanCardProps) {
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-      maximumFractionDigits: 0,
-    }).format(value);
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(0)}k€`;
+    }
+    return `${value}€`;
   };
-
-  // Calculate weighted value
-  const weightedValue = lead.estimated_value && lead.probability
-    ? lead.estimated_value * (lead.probability / 100)
-    : null;
 
   return (
     <KanbanCard onClick={onClick} accentColor={stageColor || undefined}>
@@ -140,30 +155,19 @@ function LeadKanbanCard({ lead, stageColor, onClick, isDragging }: LeadKanbanCar
           </div>
         )}
 
-        {/* Value and probability */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {lead.estimated_value && (
-            <Badge variant="secondary" className="text-2xs font-medium">
-              {formatCurrency(lead.estimated_value)}
-            </Badge>
-          )}
-          {lead.probability && (
-            <span className="text-xs text-muted-foreground">
-              {lead.probability}%
-            </span>
-          )}
-          {weightedValue && (
-            <span className="text-2xs text-muted-foreground">
-              (~{formatCurrency(weightedValue)})
-            </span>
-          )}
-        </div>
+        {/* Value */}
+        {lead.estimated_value && (
+          <p className="text-sm font-semibold">{formatCurrency(lead.estimated_value)}</p>
+        )}
 
-        {/* Next action */}
-        {lead.next_action && (
-          <p className="text-xs text-muted-foreground line-clamp-1 pt-1 border-t border-border/30">
-            → {lead.next_action}
-          </p>
+        {/* Assigned user */}
+        {lead.assigned_to && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1 border-t border-border/30">
+            <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium">
+              {lead.assigned_to.slice(0, 2).toUpperCase()}
+            </div>
+            <span className="truncate">{lead.assigned_to}</span>
+          </div>
         )}
       </div>
     </KanbanCard>

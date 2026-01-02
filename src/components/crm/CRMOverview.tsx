@@ -1,7 +1,22 @@
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Users, Target, TrendingUp, DollarSign, ArrowRight, PieChart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Building2, Users, Target, Euro, ArrowRight, Search, Mail, Phone } from "lucide-react";
 import { motion } from "framer-motion";
+import { CRMCompanyEnriched, getCompanyTypeConfig, Contact } from "@/lib/crmTypes";
+import { cn } from "@/lib/utils";
 
 interface CRMOverviewProps {
   onNavigate: (view: string) => void;
@@ -14,76 +29,96 @@ interface CRMOverviewProps {
     wonValue: number;
     lostCount: number;
   };
+  companies: CRMCompanyEnriched[];
+  contacts: Contact[];
 }
 
-export function CRMOverview({ onNavigate, companiesCount, contactsCount, leadStats }: CRMOverviewProps) {
+export function CRMOverview({
+  onNavigate,
+  companiesCount,
+  contactsCount,
+  leadStats,
+  companies,
+  contacts,
+}: CRMOverviewProps) {
+  const navigate = useNavigate();
+
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-      maximumFractionDigits: 0,
-    }).format(value);
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(0)}M€`;
+    }
+    if (value >= 1000) {
+      return `${(value / 1000).toFixed(0)}k€`;
+    }
+    return `${value}€`;
   };
+
+  const recentCompanies = useMemo(() => {
+    return [...companies]
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 5);
+  }, [companies]);
+
+  const recentContacts = useMemo(() => {
+    return [...contacts]
+      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+      .slice(0, 5);
+  }, [contacts]);
 
   const stats = [
     {
       title: "Entreprises",
       value: companiesCount,
       icon: Building2,
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
+      bgColor: "bg-muted/50",
       action: () => onNavigate("companies"),
     },
     {
       title: "Contacts",
       value: contactsCount,
       icon: Users,
-      color: "text-purple-500",
-      bgColor: "bg-purple-500/10",
+      bgColor: "bg-muted/50",
       action: () => onNavigate("contacts"),
     },
     {
       title: "Opportunités",
       value: leadStats.total,
       icon: Target,
-      color: "text-orange-500",
-      bgColor: "bg-orange-500/10",
+      bgColor: "bg-muted/50",
       action: () => onNavigate("leads"),
     },
     {
-      title: "Pipeline pondéré",
+      title: "Pipeline",
       value: formatCurrency(leadStats.weightedValue),
-      icon: TrendingUp,
-      color: "text-emerald-500",
-      bgColor: "bg-emerald-500/10",
+      icon: Euro,
+      bgColor: "bg-muted/50",
       action: () => onNavigate("leads"),
     },
   ];
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 },
+  const contactTypeLabels: Record<string, string> = {
+    client: "Client",
+    bet: "BET",
+    entreprise: "Entreprise",
+    fournisseur: "Fournisseur",
+    partenaire: "Partenaire",
   };
 
   return (
     <div className="p-6 space-y-6">
-      {/* Stats grid */}
+      {/* Stats cards */}
       <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="grid grid-cols-2 lg:grid-cols-4 gap-4"
       >
-        {stats.map((stat) => (
-          <motion.div key={stat.title} variants={itemVariants}>
+        {stats.map((stat, index) => (
+          <motion.div
+            key={stat.title}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+          >
             <Card
               className="cursor-pointer hover:border-primary/30 transition-colors"
               onClick={stat.action}
@@ -92,10 +127,10 @@ export function CRMOverview({ onNavigate, companiesCount, contactsCount, leadSta
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">{stat.title}</p>
-                    <p className="text-2xl font-semibold">{stat.value}</p>
+                    <p className="text-2xl font-bold">{stat.value}</p>
                   </div>
-                  <div className={`p-2.5 rounded-lg ${stat.bgColor}`}>
-                    <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                  <div className={cn("p-2.5 rounded-lg", stat.bgColor)}>
+                    <stat.icon className="h-5 w-5 text-muted-foreground" />
                   </div>
                 </div>
               </CardContent>
@@ -104,95 +139,180 @@ export function CRMOverview({ onNavigate, companiesCount, contactsCount, leadSta
         ))}
       </motion.div>
 
-      {/* Pipeline summary */}
+      {/* Recent companies */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.2 }}
       >
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-base font-medium">Pipeline Commercial</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => onNavigate("leads")}>
+            <CardTitle className="text-base font-semibold">Entreprises récentes</CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => onNavigate("companies")}>
+              Voir tout
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[80px]">Type</TableHead>
+                  <TableHead>Société</TableHead>
+                  <TableHead>Interlocuteur</TableHead>
+                  <TableHead>Ville</TableHead>
+                  <TableHead className="w-[60px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentCompanies.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      Aucune entreprise
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  recentCompanies.map((company) => {
+                    const typeConfig = getCompanyTypeConfig(company.industry);
+                    return (
+                      <TableRow
+                        key={company.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => navigate(`/crm/companies/${company.id}`)}
+                      >
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={cn("text-white text-xs", typeConfig.color)}
+                          >
+                            {typeConfig.shortLabel}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded bg-muted text-xs font-medium">
+                              {company.name.slice(0, 2).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-medium">{company.name}</p>
+                              {company.email && (
+                                <p className="text-xs text-muted-foreground">{company.email}</p>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground italic">
+                          {company.primary_contact?.name || "Aucun contact"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {company.city || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            •••
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Recent contacts */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-base font-semibold">Contacts récents</CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => onNavigate("contacts")}>
               Voir tout
               <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Valeur totale</p>
-                <p className="text-xl font-semibold">{formatCurrency(leadStats.totalValue)}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Pondéré</p>
-                <p className="text-xl font-semibold text-primary">{formatCurrency(leadStats.weightedValue)}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Gagné</p>
-                <p className="text-xl font-semibold text-emerald-500">{formatCurrency(leadStats.wonValue)}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Perdu</p>
-                <p className="text-xl font-semibold text-destructive">{leadStats.lostCount} opportunités</p>
-              </div>
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Rechercher un contact..." className="pl-9" />
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Quick actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="grid grid-cols-1 md:grid-cols-3 gap-4"
-      >
-        <Card
-          className="cursor-pointer hover:border-primary/30 transition-colors group"
-          onClick={() => onNavigate("companies")}
-        >
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
-              <Building2 className="h-6 w-6 text-blue-500" />
-            </div>
-            <div>
-              <p className="font-medium">Entreprises</p>
-              <p className="text-sm text-muted-foreground">Gérer les clients, BET, partenaires...</p>
-            </div>
-            <ArrowRight className="h-5 w-5 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-          </CardContent>
-        </Card>
-
-        <Card
-          className="cursor-pointer hover:border-primary/30 transition-colors group"
-          onClick={() => onNavigate("contacts")}
-        >
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors">
-              <Users className="h-6 w-6 text-purple-500" />
-            </div>
-            <div>
-              <p className="font-medium">Contacts</p>
-              <p className="text-sm text-muted-foreground">Annuaire de vos interlocuteurs</p>
-            </div>
-            <ArrowRight className="h-5 w-5 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-          </CardContent>
-        </Card>
-
-        <Card
-          className="cursor-pointer hover:border-primary/30 transition-colors group"
-          onClick={() => onNavigate("leads")}
-        >
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-orange-500/10 group-hover:bg-orange-500/20 transition-colors">
-              <Target className="h-6 w-6 text-orange-500" />
-            </div>
-            <div>
-              <p className="font-medium">Opportunités</p>
-              <p className="text-sm text-muted-foreground">Pipeline de prospection</p>
-            </div>
-            <ArrowRight className="h-5 w-5 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nom</TableHead>
+                  <TableHead>Entreprise</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Type</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentContacts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                      Aucun contact
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  recentContacts.map((contact) => (
+                    <TableRow
+                      key={contact.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/crm/contacts/${contact.id}`)}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={contact.avatar_url || undefined} />
+                            <AvatarFallback className="text-xs">
+                              {contact.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .slice(0, 2)
+                                .toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{contact.name}</p>
+                            {contact.role && (
+                              <p className="text-xs text-muted-foreground">{contact.role}</p>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {contact.company ? (
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <span>{contact.company.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          {contact.email && <Mail className="h-4 w-4" />}
+                          {contact.phone && <Phone className="h-4 w-4" />}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {contact.contact_type && (
+                          <Badge variant="outline">
+                            {contactTypeLabels[contact.contact_type] || contact.contact_type}
+                          </Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </motion.div>
