@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { useProject } from "@/hooks/useProjects";
+import { useProject, useProjects } from "@/hooks/useProjects";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
 import { usePhaseDependencies } from "@/hooks/usePhaseDependencies";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,10 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   Building2,
   Calendar,
+  Check,
   CheckCircle2,
   Clock,
   FileText,
@@ -26,7 +28,9 @@ import {
   Pencil,
   RefreshCw,
   Sparkles,
+  StickyNote,
   Wallet,
+  X,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -47,6 +51,7 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: project, isLoading } = useProject(id || null);
+  const { updateProject } = useProjects();
   const [activeTab, setActiveTab] = useState("overview");
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
@@ -206,6 +211,8 @@ export default function ProjectDetail() {
               progressPercent={progressPercent}
               onRefreshSummary={handleGenerateSummary}
               isGeneratingSummary={isGeneratingSummary}
+              onUpdateProject={(updates) => updateProject.mutate({ id: project.id, ...updates })}
+              isUpdatingProject={updateProject.isPending}
             />
           )}
           {activeTab === "deliverables" && <ProjectDeliverablesTab projectId={project.id} />}
@@ -225,15 +232,18 @@ interface OverviewTabProps {
   progressPercent: number;
   onRefreshSummary: () => void;
   isGeneratingSummary: boolean;
+  onUpdateProject: (updates: { description?: string }) => void;
+  isUpdatingProject: boolean;
 }
 
-function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary }: OverviewTabProps) {
+function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary, onUpdateProject, isUpdatingProject }: OverviewTabProps) {
   const completedPhases = phases.filter((p) => p.status === "completed").length;
   const inProgressPhase = phases.find((p) => p.status === "in_progress");
   const { dependencies } = usePhaseDependencies(project.id);
   const { updatePhase, createPhase, deletePhase, reorderPhases } = useProjectPhases(project.id);
   const [phaseEditOpen, setPhaseEditOpen] = useState(false);
-
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState(project.description || "");
   return (
     <div className="space-y-6">
       {/* Top row - Info cards */}
@@ -453,17 +463,72 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
             </CardContent>
           </Card>
 
-          {/* Description */}
-          {project.description && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Description</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground leading-relaxed">{project.description}</p>
-              </CardContent>
-            </Card>
-          )}
+          {/* Notes du projet */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-1.5">
+                  <StickyNote className="h-3.5 w-3.5" />
+                  Notes
+                </CardTitle>
+                {!isEditingNotes ? (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 px-2"
+                    onClick={() => {
+                      setNotesValue(project.description || "");
+                      setIsEditingNotes(true);
+                    }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 px-2"
+                      onClick={() => setIsEditingNotes(false)}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 px-2 text-primary"
+                      onClick={() => {
+                        onUpdateProject({ description: notesValue });
+                        setIsEditingNotes(false);
+                      }}
+                      disabled={isUpdatingProject}
+                    >
+                      {isUpdatingProject ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Check className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {isEditingNotes ? (
+                <Textarea
+                  value={notesValue}
+                  onChange={(e) => setNotesValue(e.target.value)}
+                  placeholder="Ajoutez des notes sur le projet..."
+                  className="min-h-[100px] text-xs resize-none"
+                  autoFocus
+                />
+              ) : project.description ? (
+                <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{project.description}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground/50 italic">Aucune note</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
