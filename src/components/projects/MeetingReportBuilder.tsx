@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import { useChantier, ProjectMeeting, MeetingAttendee, ObservationStatus } from "@/hooks/useChantier";
 import { useContacts } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
@@ -73,43 +73,24 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
 
-  const autoSaveTimeout = useRef<NodeJS.Timeout | null>(null);
-  const lastSavedData = useRef<string>("");
+  // Track if there are unsaved changes
+  const savedDataRef = useRef<string>(JSON.stringify({
+    title: meeting.title,
+    meeting_date: meeting.meeting_date,
+    location: meeting.location,
+    notes: meeting.notes,
+    attendees: meeting.attendees,
+  }));
 
-  // Auto-save functionality
-  const autoSave = useCallback(async () => {
-    const currentData = JSON.stringify({
-      title: localMeeting.title,
-      meeting_date: localMeeting.meeting_date,
-      location: localMeeting.location,
-      notes: localMeeting.notes,
-      attendees: localMeeting.attendees,
-    });
+  const currentData = JSON.stringify({
+    title: localMeeting.title,
+    meeting_date: localMeeting.meeting_date,
+    location: localMeeting.location,
+    notes: localMeeting.notes,
+    attendees: localMeeting.attendees,
+  });
 
-    if (currentData === lastSavedData.current) return;
-
-    try {
-      await updateMeeting.mutateAsync({
-        id: localMeeting.id,
-        title: localMeeting.title,
-        meeting_date: localMeeting.meeting_date,
-        location: localMeeting.location,
-        notes: localMeeting.notes,
-        attendees: localMeeting.attendees,
-      });
-      lastSavedData.current = currentData;
-    } catch (error) {
-      console.error("Auto-save failed:", error);
-    }
-  }, [localMeeting, updateMeeting]);
-
-  useEffect(() => {
-    if (autoSaveTimeout.current) clearTimeout(autoSaveTimeout.current);
-    autoSaveTimeout.current = setTimeout(autoSave, 2000);
-    return () => {
-      if (autoSaveTimeout.current) clearTimeout(autoSaveTimeout.current);
-    };
-  }, [localMeeting, autoSave]);
+  const hasUnsavedChanges = currentData !== savedDataRef.current;
 
   const toggleSection = (sectionId: string) => {
     setReportSections(prev => prev.map(s => 
@@ -198,7 +179,7 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
         notes: localMeeting.notes,
         attendees: localMeeting.attendees,
       });
-      lastSavedData.current = JSON.stringify(localMeeting);
+      savedDataRef.current = currentData;
       toast.success("Compte rendu sauvegardé");
     } catch (error) {
       toast.error("Erreur lors de la sauvegarde");
@@ -299,6 +280,15 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant={hasUnsavedChanges ? "default" : "outline"} 
+            size="sm" 
+            onClick={handleSave} 
+            disabled={isSaving || !hasUnsavedChanges}
+          >
+            {isSaving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+            {hasUnsavedChanges ? "Enregistrer" : "Enregistré"}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setIsVersionHistoryOpen(true)}>
             <History className="h-4 w-4 mr-1" />
             Historique
