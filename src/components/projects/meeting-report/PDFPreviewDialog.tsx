@@ -57,11 +57,20 @@ export function PDFPreviewDialog({
 
         <div className="flex-1 min-h-0 px-6">
           {pdfUrl ? (
-            <iframe
-              src={pdfUrl}
+            <object
+              data={`${pdfUrl}#toolbar=1`}
+              type="application/pdf"
               className="w-full h-full rounded-md border"
-              title="Aperçu PDF"
-            />
+            >
+              <div className="flex flex-col items-center justify-center h-full gap-4 p-6 text-center">
+                <p className="text-muted-foreground">
+                  Votre navigateur ne peut pas afficher le PDF directement.
+                </p>
+                <Button onClick={() => window.open(pdfUrl, '_blank')}>
+                  Ouvrir dans un nouvel onglet
+                </Button>
+              </div>
+            </object>
           ) : (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
