@@ -1050,12 +1050,12 @@ function AttendeesDialog({
     </Dialog>
   );
 }
-}
 
 // Observations Section
 function ObservationsSection({ projectId }: { projectId: string }) {
   const { observations, lots, observationsLoading, createObservation, updateObservation, deleteObservation } = useChantier(projectId);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingObservation, setEditingObservation] = useState<any | null>(null);
 
   const [formDescription, setFormDescription] = useState("");
   const [formLotId, setFormLotId] = useState<string | null>(null);
@@ -1069,6 +1069,14 @@ function ObservationsSection({ projectId }: { projectId: string }) {
     setFormDueDate(null);
   };
 
+  const openEditDialog = (obs: any) => {
+    setEditingObservation(obs);
+    setFormDescription(obs.description);
+    setFormLotId(obs.lot_id);
+    setFormPriority(obs.priority || "normal");
+    setFormDueDate(obs.due_date ? parseISO(obs.due_date) : null);
+  };
+
   const handleCreate = () => {
     if (!formDescription.trim()) return;
 
@@ -1080,6 +1088,21 @@ function ObservationsSection({ projectId }: { projectId: string }) {
     });
 
     setIsCreateOpen(false);
+    resetForm();
+  };
+
+  const handleUpdate = () => {
+    if (!editingObservation || !formDescription.trim()) return;
+
+    updateObservation.mutate({
+      id: editingObservation.id,
+      description: formDescription.trim(),
+      lot_id: formLotId,
+      priority: formPriority as any,
+      due_date: formDueDate ? format(formDueDate, "yyyy-MM-dd") : null,
+    });
+
+    setEditingObservation(null);
     resetForm();
   };
 
@@ -1101,6 +1124,11 @@ function ObservationsSection({ projectId }: { projectId: string }) {
     return <Skeleton className="h-48 w-full" />;
   }
 
+  // Stats
+  const openCount = observations.filter(o => o.status === "open").length;
+  const inProgressCount = observations.filter(o => o.status === "in_progress").length;
+  const resolvedCount = observations.filter(o => o.status === "resolved").length;
+
   if (observations.length === 0) {
     return (
       <>
@@ -1110,7 +1138,7 @@ function ObservationsSection({ projectId }: { projectId: string }) {
           description="Ajoutez des observations de chantier."
           action={{ label: "Ajouter une observation", onClick: () => setIsCreateOpen(true) }}
         />
-        <ObservationCreateDialog
+        <ObservationDialog
           isOpen={isCreateOpen}
           onClose={() => { setIsCreateOpen(false); resetForm(); }}
           formDescription={formDescription}
@@ -1122,7 +1150,8 @@ function ObservationsSection({ projectId }: { projectId: string }) {
           formDueDate={formDueDate}
           setFormDueDate={setFormDueDate}
           lots={lots}
-          handleCreate={handleCreate}
+          onSubmit={handleCreate}
+          isEditing={false}
         />
       </>
     );
@@ -1131,7 +1160,20 @@ function ObservationsSection({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium">Observations</h3>
+        <div className="flex items-center gap-4">
+          <h3 className="font-medium">Observations</h3>
+          <div className="flex items-center gap-2 text-xs">
+            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+              {openCount} ouvertes
+            </Badge>
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              {inProgressCount} en cours
+            </Badge>
+            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              {resolvedCount} résolues
+            </Badge>
+          </div>
+        </div>
         <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" />
           Ajouter
@@ -1146,51 +1188,77 @@ function ObservationsSection({ projectId }: { projectId: string }) {
 
           return (
             <Card key={obs.id} className={cn(
-              obs.priority === "critical" && "border-red-500",
-              obs.priority === "high" && "border-orange-500"
+              "transition-colors",
+              obs.priority === "critical" && "border-destructive/50 bg-destructive/5",
+              obs.priority === "high" && "border-orange-500/50 bg-orange-50/50"
             )}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <div className={cn(
-                    "w-10 h-10 rounded-lg flex items-center justify-center",
-                    obs.status === "resolved" ? "bg-green-100" : "bg-muted"
+                    "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                    obs.status === "resolved" ? "bg-green-100" : 
+                    obs.status === "in_progress" ? "bg-blue-100" : "bg-muted"
                   )}>
                     {obs.status === "resolved" ? (
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    ) : obs.status === "in_progress" ? (
+                      <Clock className="h-5 w-5 text-blue-600" />
                     ) : (
                       <Eye className="h-5 w-5 text-muted-foreground" />
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className={cn(
-                        "text-sm",
-                        obs.status === "resolved" && "line-through text-muted-foreground"
-                      )}>
-                        {obs.description}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3 mt-2">
-                      <Badge variant="secondary" className="text-xs">
+                    <p className={cn(
+                      "text-sm",
+                      obs.status === "resolved" && "line-through text-muted-foreground"
+                    )}>
+                      {obs.description}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <Badge 
+                        variant="secondary" 
+                        className="text-xs"
+                        style={{
+                          backgroundColor: statusConfig.value === "open" ? "#fef3c7" :
+                                           statusConfig.value === "in_progress" ? "#dbeafe" : "#dcfce7",
+                          color: statusConfig.value === "open" ? "#92400e" :
+                                 statusConfig.value === "in_progress" ? "#1e40af" : "#166534"
+                        }}
+                      >
                         {statusConfig.label}
                       </Badge>
                       <Badge 
                         variant="outline" 
-                        className="text-xs"
-                        style={{ borderColor: priorityConfig.color.replace("bg-", ""), color: priorityConfig.color.replace("bg-", "") }}
+                        className={cn(
+                          "text-xs",
+                          obs.priority === "critical" && "bg-red-100 text-red-700 border-red-200",
+                          obs.priority === "high" && "bg-orange-100 text-orange-700 border-orange-200",
+                          obs.priority === "normal" && "bg-gray-100 text-gray-700 border-gray-200",
+                          obs.priority === "low" && "bg-slate-100 text-slate-600 border-slate-200"
+                        )}
                       >
                         {priorityConfig.label}
                       </Badge>
                       {lot && (
-                        <span className="text-xs text-muted-foreground">
-                          Lot: {lot.name}
-                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {lot.name}
+                        </Badge>
                       )}
                       {obs.due_date && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span className={cn(
+                          "text-xs flex items-center gap-1",
+                          new Date(obs.due_date) < new Date() && obs.status !== "resolved" 
+                            ? "text-destructive font-medium" 
+                            : "text-muted-foreground"
+                        )}>
                           <Clock className="h-3 w-3" />
-                          {format(parseISO(obs.due_date), "d MMM", { locale: fr })}
+                          {format(parseISO(obs.due_date), "d MMM yyyy", { locale: fr })}
+                        </span>
+                      )}
+                      {obs.created_at && (
+                        <span className="text-xs text-muted-foreground">
+                          Créé le {format(parseISO(obs.created_at), "d MMM", { locale: fr })}
                         </span>
                       )}
                     </div>
@@ -1198,12 +1266,16 @@ function ObservationsSection({ projectId }: { projectId: string }) {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      {obs.status !== "in_progress" && obs.status !== "resolved" && (
+                      <DropdownMenuItem onClick={() => openEditDialog(obs)}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Modifier
+                      </DropdownMenuItem>
+                      {obs.status === "open" && (
                         <DropdownMenuItem onClick={() => handleStatusChange(obs.id, "in_progress")}>
                           <Clock className="h-4 w-4 mr-2" />
                           En cours
@@ -1213,6 +1285,12 @@ function ObservationsSection({ projectId }: { projectId: string }) {
                         <DropdownMenuItem onClick={() => handleStatusChange(obs.id, "resolved")}>
                           <CheckCircle2 className="h-4 w-4 mr-2" />
                           Résolu
+                        </DropdownMenuItem>
+                      )}
+                      {obs.status === "resolved" && (
+                        <DropdownMenuItem onClick={() => handleStatusChange(obs.id, "open")}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Réouvrir
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem onClick={() => handleDelete(obs.id)} className="text-destructive">
@@ -1228,9 +1306,9 @@ function ObservationsSection({ projectId }: { projectId: string }) {
         })}
       </div>
 
-      <ObservationCreateDialog
-        isOpen={isCreateOpen}
-        onClose={() => { setIsCreateOpen(false); resetForm(); }}
+      <ObservationDialog
+        isOpen={isCreateOpen || !!editingObservation}
+        onClose={() => { setIsCreateOpen(false); setEditingObservation(null); resetForm(); }}
         formDescription={formDescription}
         setFormDescription={setFormDescription}
         formLotId={formLotId}
@@ -1240,14 +1318,15 @@ function ObservationsSection({ projectId }: { projectId: string }) {
         formDueDate={formDueDate}
         setFormDueDate={setFormDueDate}
         lots={lots}
-        handleCreate={handleCreate}
+        onSubmit={editingObservation ? handleUpdate : handleCreate}
+        isEditing={!!editingObservation}
       />
     </div>
   );
 }
 
-// Observation Create Dialog Component
-function ObservationCreateDialog({
+// Observation Dialog Component (Create/Edit)
+function ObservationDialog({
   isOpen,
   onClose,
   formDescription,
@@ -1259,7 +1338,8 @@ function ObservationCreateDialog({
   formDueDate,
   setFormDueDate,
   lots,
-  handleCreate,
+  onSubmit,
+  isEditing,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -1272,13 +1352,14 @@ function ObservationCreateDialog({
   formDueDate: Date | null;
   setFormDueDate: (v: Date | null) => void;
   lots: any[];
-  handleCreate: () => void;
+  onSubmit: () => void;
+  isEditing: boolean;
 }) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nouvelle observation</DialogTitle>
+          <DialogTitle>{isEditing ? "Modifier l'observation" : "Nouvelle observation"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
@@ -1342,8 +1423,8 @@ function ObservationCreateDialog({
           <Button variant="outline" onClick={onClose}>
             Annuler
           </Button>
-          <Button onClick={handleCreate} disabled={!formDescription.trim()}>
-            Créer
+          <Button onClick={onSubmit} disabled={!formDescription.trim()}>
+            {isEditing ? "Enregistrer" : "Créer"}
           </Button>
         </DialogFooter>
       </DialogContent>
