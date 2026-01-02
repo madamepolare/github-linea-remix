@@ -55,14 +55,14 @@ export function CommercialDocumentBuilder({
       type: 'phase' as const,
       code: phase.phase_code,
       designation: phase.phase_name,
-      description: phase.phase_description,
+      description: phase.phase_description || undefined,
       quantity: 1,
       unit: 'forfait',
       unitPrice: phase.amount || 0,
       amount: phase.amount || 0,
       isOptional: !phase.is_included,
-      deliverables: phase.deliverables || [],
-      sortOrder: phase.sort_order,
+      deliverables: Array.isArray(phase.deliverables) ? phase.deliverables : [],
+      sortOrder: phase.sort_order || 0,
       percentageFee: phase.percentage_fee || 15
     }));
   };
