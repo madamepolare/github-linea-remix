@@ -272,7 +272,7 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Phase Progress - Main focus */}
       {phases.length > 0 && (
         <Card className="overflow-hidden">
