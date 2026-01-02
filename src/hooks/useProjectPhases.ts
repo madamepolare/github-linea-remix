@@ -72,6 +72,8 @@ export function useProjectPhases(projectId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-phases", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
     onError: (error) => {
       toast.error("Erreur lors de la création de la phase");
@@ -91,6 +93,8 @@ export function useProjectPhases(projectId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-phases", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
     onError: (error) => {
       toast.error("Erreur lors de la création des phases");
@@ -112,6 +116,9 @@ export function useProjectPhases(projectId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-phases", projectId] });
+      // Also invalidate the project query since it embeds phases
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
     onError: (error) => {
       toast.error("Erreur lors de la mise à jour de la phase");
@@ -130,6 +137,8 @@ export function useProjectPhases(projectId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-phases", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Phase supprimée");
     },
     onError: (error) => {
@@ -156,6 +165,8 @@ export function useProjectPhases(projectId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-phases", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
   });
 
