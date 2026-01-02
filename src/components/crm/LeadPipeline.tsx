@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { KanbanBoard, KanbanColumn, KanbanCard } from "@/components/shared/KanbanBoard";
-import { Plus, Building2, DollarSign } from "lucide-react";
+import { Plus, Building2, DollarSign, Pencil } from "lucide-react";
 import { useLeads, Lead, Pipeline } from "@/hooks/useLeads";
 import { LeadDetailSheet } from "./LeadDetailSheet";
+import { EditLeadDialog } from "./EditLeadDialog";
 
 interface LeadPipelineProps {
   pipeline: Pipeline;
@@ -14,6 +15,7 @@ interface LeadPipelineProps {
 export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
   const { leads, isLoading, updateLeadStage } = useLeads({ pipelineId: pipeline.id });
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
   const stages = pipeline.stages || [];
 
@@ -88,6 +90,16 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
         lead={selectedLead}
         open={!!selectedLead}
         onOpenChange={(open) => !open && setSelectedLead(null)}
+        onEdit={(lead) => {
+          setSelectedLead(null);
+          setEditingLead(lead);
+        }}
+      />
+
+      <EditLeadDialog
+        lead={editingLead}
+        open={!!editingLead}
+        onOpenChange={(open) => !open && setEditingLead(null)}
       />
     </>
   );

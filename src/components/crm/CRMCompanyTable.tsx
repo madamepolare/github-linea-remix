@@ -37,6 +37,7 @@ import {
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { CompanyCategory, getCompanyTypeConfig } from "@/lib/crmTypes";
 import { InlineEditCell } from "./InlineEditCell";
+import { EditCompanyDialog } from "./EditCompanyDialog";
 import { cn } from "@/lib/utils";
 
 export interface CRMCompanyTableProps {
@@ -49,6 +50,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
   const navigate = useNavigate();
   const { companies, isLoading, deleteCompany, updateCompany } = useCRMCompanies({ category, search });
   const [letterFilter, setLetterFilter] = useState<string | null>(null);
+  const [editingCompany, setEditingCompany] = useState<CRMCompanyEnriched | null>(null);
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -251,6 +253,13 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                                 <ExternalLink className="h-4 w-4 mr-2" />
                                 Voir détails
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingCompany(company);
+                              }}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Modifier
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive"
                                 onClick={(e) => {
@@ -272,6 +281,12 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
             </div>
           </CardContent>
         </Card>
+
+        <EditCompanyDialog
+          company={editingCompany}
+          open={!!editingCompany}
+          onOpenChange={(open) => !open && setEditingCompany(null)}
+        />
       </div>
     </>
   );

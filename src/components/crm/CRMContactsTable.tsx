@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Table,
@@ -29,9 +30,11 @@ import {
   Trash2,
   Eye,
   Users,
+  ExternalLink,
 } from "lucide-react";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { ContactDetailSheet } from "./ContactDetailSheet";
+import { EditContactDialog } from "./EditContactDialog";
 
 const contactTypeLabels: Record<string, string> = {
   client: "Client",
@@ -61,8 +64,10 @@ export interface CRMContactsTableProps {
 }
 
 export function CRMContactsTable({ search = "", onCreateContact }: CRMContactsTableProps) {
+  const navigate = useNavigate();
   const { contacts, isLoading, deleteContact } = useContacts();
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
 
   const filteredContacts = useMemo(() => {
     if (!search) return contacts;
@@ -141,7 +146,7 @@ export function CRMContactsTable({ search = "", onCreateContact }: CRMContactsTa
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.02 }}
                         className="group cursor-pointer hover:bg-muted/50"
-                        onClick={() => setSelectedContact(contact)}
+                        onClick={() => navigate(`/crm/contacts/${contact.id}`)}
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -207,11 +212,24 @@ export function CRMContactsTable({ search = "", onCreateContact }: CRMContactsTa
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setSelectedContact(contact)}>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedContact(contact);
+                              }}>
                                 <Eye className="h-4 w-4 mr-2" />
-                                Voir détails
+                                Aperçu rapide
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/crm/contacts/${contact.id}`);
+                              }}>
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                Voir page détail
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingContact(contact);
+                              }}>
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Modifier
                               </DropdownMenuItem>
@@ -242,6 +260,12 @@ export function CRMContactsTable({ search = "", onCreateContact }: CRMContactsTa
         contact={selectedContact}
         open={!!selectedContact}
         onOpenChange={(open) => !open && setSelectedContact(null)}
+      />
+
+      <EditContactDialog
+        contact={editingContact}
+        open={!!editingContact}
+        onOpenChange={(open) => !open && setEditingContact(null)}
       />
     </>
   );
