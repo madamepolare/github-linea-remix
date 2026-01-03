@@ -541,7 +541,7 @@ const Welcome = () => {
             <Link to="/auth">
               <Button
                 size="lg"
-                className="text-lg px-10 py-6 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 transition-opacity animate-pulse"
+                className="text-lg px-10 py-6 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 hover:shadow-xl hover:shadow-primary/25 transition-all duration-300 hover:scale-105"
               >
                 Démarrer maintenant — C'est gratuit
                 <ArrowRight className="ml-2" size={20} />
