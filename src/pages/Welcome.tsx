@@ -101,36 +101,42 @@ const features = [
     description:
       "Suivez vos projets de A à Z avec une vue complète sur les phases, livrables et délais.",
     icon: <FolderKanban size={28} />,
+    slug: "projets",
   },
   {
     title: "CRM intégré",
     description:
       "Gérez vos clients, contacts et opportunités commerciales en un seul endroit.",
     icon: <Users size={28} />,
+    slug: "crm",
   },
   {
     title: "Devis & Facturation",
     description:
       "Créez des propositions commerciales professionnelles et suivez vos paiements.",
     icon: <FileText size={28} />,
+    slug: "commercial",
   },
   {
     title: "Appels d'offres",
     description:
       "Centralisez vos réponses aux appels d'offres avec l'aide de l'intelligence artificielle.",
     icon: <Trophy size={28} />,
+    slug: "appels-offres",
   },
   {
     title: "Planning chantier",
     description:
       "Planifiez les interventions des entreprises et générez des comptes-rendus automatiques.",
     icon: <CalendarDays size={28} />,
+    slug: "planning",
   },
   {
     title: "Collaboration",
     description:
       "Travaillez en équipe avec des espaces de travail partagés et des notifications en temps réel.",
     icon: <UsersRound size={28} />,
+    slug: "collaboration",
   },
 ];
 
@@ -445,6 +451,7 @@ const Welcome = () => {
                 description={feature.description}
                 icon={feature.icon}
                 index={index}
+                slug={feature.slug}
               />
             ))}
           </div>
