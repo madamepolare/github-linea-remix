@@ -3268,6 +3268,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_emails: {
+        Args: { _created_by: string; _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       can_view_sensitive_contacts: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
