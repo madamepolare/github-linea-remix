@@ -181,52 +181,71 @@ export function PhaseSelector({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle>Phases de la mission</CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const newPhase: CommercialDocumentPhase = {
+                  id: crypto.randomUUID(),
+                  document_id: documentId || '',
+                  phase_code: `P${phases.length + 1}`,
+                  phase_name: 'Nouvelle phase',
+                  phase_description: '',
+                  percentage_fee: 0,
+                  amount: 0,
+                  is_included: true,
+                  deliverables: [],
+                  sort_order: phases.length,
+                  created_at: null,
+                  updated_at: null,
+                };
+                onPhasesChange([...phases, newPhase]);
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter phase
+            </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
                   <FolderOpen className="h-4 w-4 mr-2" />
-                  Charger template
+                  Ajouter template
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuContent align="end" className="w-80 max-h-[400px] overflow-y-auto">
                 {savedTemplates && savedTemplates.length > 0 && (
                   <>
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>Mes templates</DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent>
-                        {savedTemplates.map((template) => (
-                          <DropdownMenuItem
-                            key={template.id}
-                            onClick={() => loadTemplatePhases(template)}
-                          >
-                            {template.name}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Mes templates</div>
+                    {savedTemplates.map((template) => (
+                      <DropdownMenuItem
+                        key={template.id}
+                        onClick={() => loadTemplatePhases(template)}
+                      >
+                        {template.name}
+                      </DropdownMenuItem>
+                    ))}
                     <DropdownMenuSeparator />
                   </>
                 )}
-                {missionCategories.map((cat) => (
-                  <DropdownMenuSub key={cat.type}>
-                    <DropdownMenuSubTrigger>{cat.label}</DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent>
-                      {cat.templates.map((template) => (
-                          <DropdownMenuItem
-                            key={template.id}
-                            onClick={() => loadMissionTemplate(template)}
-                          >
-                            <div>
-                              <div className="font-medium">{template.name}</div>
-                              <div className="text-xs text-muted-foreground">{template.description}</div>
-                            </div>
-                          </DropdownMenuItem>
-                        ))}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
+                {missionCategories.map((cat, catIndex) => (
+                  <div key={cat.type}>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{cat.label}</div>
+                    {cat.templates.map((template) => (
+                      <DropdownMenuItem
+                        key={template.id}
+                        onClick={() => loadMissionTemplate(template)}
+                        className="flex flex-col items-start py-2"
+                      >
+                        <div className="font-medium">{template.name}</div>
+                        <div className="text-xs text-muted-foreground">{template.description}</div>
+                      </DropdownMenuItem>
+                    ))}
+                    {catIndex < missionCategories.length - 1 && <DropdownMenuSeparator />}
+                  </div>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -361,73 +380,6 @@ export function PhaseSelector({
             </div>
           </Collapsible>
         ))}
-
-        <div className="flex items-center gap-2 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const newPhase: CommercialDocumentPhase = {
-                id: crypto.randomUUID(),
-                document_id: documentId || '',
-                phase_code: `P${phases.length + 1}`,
-                phase_name: 'Nouvelle phase',
-                phase_description: '',
-                percentage_fee: 0,
-                amount: 0,
-                is_included: true,
-                deliverables: [],
-                sort_order: phases.length,
-                created_at: null,
-                updated_at: null,
-              };
-              onPhasesChange([...phases, newPhase]);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Ajouter phase
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <FolderOpen className="h-4 w-4 mr-2" />
-                Ajouter template
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-80 max-h-96 overflow-y-auto">
-              {savedTemplates && savedTemplates.length > 0 && (
-                <>
-                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Mes templates</div>
-                  {savedTemplates.map((template) => (
-                    <DropdownMenuItem
-                      key={template.id}
-                      onClick={() => loadTemplatePhases(template)}
-                    >
-                      {template.name}
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              {missionCategories.map((cat) => (
-                <div key={cat.type}>
-                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{cat.label}</div>
-                  {cat.templates.map((template) => (
-                    <DropdownMenuItem
-                      key={template.id}
-                      onClick={() => loadMissionTemplate(template)}
-                      className="flex flex-col items-start"
-                    >
-                      <div className="font-medium">{template.name}</div>
-                      <div className="text-xs text-muted-foreground">{template.description}</div>
-                    </DropdownMenuItem>
-                  ))}
-                </div>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
 
         {totalPercentage !== 100 && (
           <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-sm text-amber-600">
