@@ -8,16 +8,13 @@ import {
   FEE_MODE_LABELS
 } from './commercialTypes';
 
-interface PDFOptions {
-  includeConditions?: boolean;
-  includeSignature?: boolean;
-}
-
-export async function generateCommercialPDF(
+/**
+ * Génère un contrat complet (A4 portrait, multi-pages)
+ */
+export async function generateContractPDF(
   document: Partial<CommercialDocument>,
   phases: CommercialDocumentPhase[],
-  total: number,
-  options: PDFOptions = { includeConditions: true, includeSignature: true }
+  total: number
 ): Promise<Blob> {
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -90,7 +87,7 @@ export async function generateCommercialPDF(
   pdf.setFontSize(28);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(0);
-  pdf.text(DOCUMENT_TYPE_LABELS[document.document_type || 'quote'].toUpperCase(), margin, y + 15);
+  pdf.text('CONTRAT DE MAÎTRISE D\'ŒUVRE', margin, y + 15);
   
   y += 25;
   pdf.setFontSize(11);
@@ -103,7 +100,7 @@ export async function generateCommercialPDF(
   // Project info box
   pdf.setDrawColor(200);
   pdf.setFillColor(250, 250, 250);
-  pdf.roundedRect(margin, y, contentWidth, 50, 3, 3, 'FD');
+  pdf.roundedRect(margin, y, contentWidth, 55, 3, 3, 'FD');
   
   y += 10;
   pdf.setFontSize(12);
@@ -111,30 +108,29 @@ export async function generateCommercialPDF(
   pdf.setTextColor(0);
   pdf.text('PROJET', margin + 5, y);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(document.title || 'Sans titre', margin + 30, y);
+  pdf.text(document.title || 'Sans titre', margin + 35, y);
   
   y += 10;
   pdf.setFont('helvetica', 'bold');
   pdf.text('LIEU', margin + 5, y);
   pdf.setFont('helvetica', 'normal');
   const location = [document.project_address, document.project_city].filter(Boolean).join(', ') || 'Non défini';
-  pdf.text(location, margin + 30, y);
+  pdf.text(location, margin + 35, y);
   
   y += 10;
   pdf.setFont('helvetica', 'bold');
   pdf.text('TYPE', margin + 5, y);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(PROJECT_TYPE_LABELS[document.project_type || 'interior'], margin + 30, y);
+  pdf.text(PROJECT_TYPE_LABELS[document.project_type || 'interior'], margin + 35, y);
   
   if (document.project_surface) {
     y += 10;
     pdf.setFont('helvetica', 'bold');
     pdf.text('SURFACE', margin + 5, y);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`${document.project_surface} m²`, margin + 30, y);
+    pdf.text(`${document.project_surface} m²`, margin + 35, y);
   }
   
-  // Construction budget
   y += 10;
   pdf.setFont('helvetica', 'bold');
   pdf.text('BUDGET TRAVAUX', margin + 5, y);
@@ -144,7 +140,7 @@ export async function generateCommercialPDF(
     : document.construction_budget 
       ? formatCurrency(document.construction_budget)
       : 'Non défini';
-  pdf.text(budgetText, margin + 45, y);
+  pdf.text(budgetText, margin + 50, y);
   
   y += 25;
   
@@ -152,7 +148,7 @@ export async function generateCommercialPDF(
   pdf.setFont('helvetica', 'bold');
   pdf.text('MOA', margin + 5, y);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(document.client_company?.name || 'Client non défini', margin + 30, y);
+  pdf.text(document.client_company?.name || 'Client non défini', margin + 35, y);
   
   // ==========================================
   // PAGE 2 - CONTRACTANTS
@@ -160,9 +156,10 @@ export async function generateCommercialPDF(
   pdf.addPage();
   y = margin;
   
-  addSectionTitle('1.1 CONTRACTANTS');
+  addSectionTitle('ARTICLE 1 - LES PARTIES');
   
-  addSectionTitle('Le maître d\'ouvrage', 2);
+  addSectionTitle('1.1 Le maître d\'ouvrage', 2);
+  addParagraph(`Ci-après dénommé "le Client" ou "MOA"`);
   addParagraph(`Représenté par : ${document.client_company?.name || 'À définir'}`);
   if (document.client_contact?.name) {
     addParagraph(`Contact : ${document.client_contact.name}`);
@@ -172,49 +169,55 @@ export async function generateCommercialPDF(
   }
   
   y += 5;
-  addSectionTitle('L\'architecte / Maître d\'œuvre', 2);
-  addParagraph('La société représentée assure la mission de maîtrise d\'œuvre selon les termes du présent document.');
+  addSectionTitle('1.2 L\'architecte / Maître d\'œuvre', 2);
+  addParagraph('Ci-après dénommé "l\'Architecte" ou "MOE"');
+  addParagraph('La société représentée assure la mission de maîtrise d\'œuvre selon les termes du présent contrat.');
   
   // ==========================================
-  // 1.2 OBJET DE LA MISSION
+  // ARTICLE 2 - OBJET DU CONTRAT
   // ==========================================
   y += 5;
-  addSectionTitle('1.2 OBJET DE LA MISSION');
+  addSectionTitle('ARTICLE 2 - OBJET DU CONTRAT');
   
-  addSectionTitle('PROJET', 2);
+  addParagraph('Le présent contrat a pour objet de définir les conditions dans lesquelles le Maître d\'œuvre s\'engage à réaliser la mission de maîtrise d\'œuvre pour le compte du Maître d\'ouvrage.');
+  
+  addSectionTitle('2.1 Description du projet', 2);
   addParagraph(document.title || 'Mission de maîtrise d\'œuvre');
   
   if (document.description) {
     addParagraph(document.description);
   }
   
-  addSectionTitle('ADRESSE', 2);
+  addSectionTitle('2.2 Localisation', 2);
   addParagraph(location);
   
   if (document.project_surface) {
-    addSectionTitle('SURFACE', 2);
-    addParagraph(`${document.project_surface} m²`);
+    addSectionTitle('2.3 Surface', 2);
+    addParagraph(`Surface approximative : ${document.project_surface} m²`);
   }
   
   // ==========================================
-  // 1.3 PROGRAMME (si description)
+  // ARTICLE 3 - PROGRAMME
   // ==========================================
   if (document.special_conditions) {
     y += 5;
-    addSectionTitle('1.3 PROGRAMME');
+    addSectionTitle('ARTICLE 3 - PROGRAMME');
     addParagraph(document.special_conditions);
   }
   
   // ==========================================
-  // PAGE - HONORAIRES
+  // ARTICLE 4 - HONORAIRES
   // ==========================================
   addPageIfNeeded(80);
-  addSectionTitle('1.4 HONORAIRES');
+  addSectionTitle('ARTICLE 4 - HONORAIRES');
   
-  // Fee table
+  addSectionTitle('4.1 Montant des honoraires', 2);
+  
   const includedPhases = phases.filter(p => p.is_included);
+  const totalPercentage = includedPhases.reduce((sum, p) => sum + p.percentage_fee, 0);
+  
   const tableData = includedPhases.map(phase => {
-    const phaseAmount = total * (phase.percentage_fee / 100);
+    const phaseAmount = totalPercentage > 0 ? total * (phase.percentage_fee / totalPercentage) : 0;
     const phaseTVA = phaseAmount * 0.2;
     return [
       `${phase.phase_code} - ${phase.phase_name}`,
@@ -225,10 +228,9 @@ export async function generateCommercialPDF(
     ];
   });
   
-  // Add totals row
   tableData.push([
-    'Total',
-    '100%',
+    'TOTAL',
+    `${totalPercentage}%`,
     formatCurrency(total),
     formatCurrency(total * 0.2),
     formatCurrency(total * 1.2)
@@ -249,11 +251,6 @@ export async function generateCommercialPDF(
       fontSize: 9,
       textColor: 50
     },
-    footStyles: {
-      fillColor: [240, 240, 240],
-      textColor: 0,
-      fontStyle: 'bold'
-    },
     columnStyles: {
       0: { cellWidth: 70 },
       1: { cellWidth: 20, halign: 'center' },
@@ -272,47 +269,49 @@ export async function generateCommercialPDF(
   
   y = (pdf as any).lastAutoTable.finalY + 10;
   
-  // Method of calculation
-  addSectionTitle('MÉTHODE DE CALCUL DES HONORAIRES', 2);
+  addSectionTitle('4.2 Mode de calcul', 2);
   addParagraph(`Mode de rémunération : ${FEE_MODE_LABELS[document.fee_mode || 'fixed']}`);
   
-  if (document.fee_mode === 'percentage' && document.project_budget) {
-    addParagraph(`Base de calcul : ${document.fee_percentage}% du budget travaux estimé à ${formatCurrency(document.project_budget)}`);
+  if (document.fee_mode === 'percentage' && document.construction_budget) {
+    addParagraph(`Base de calcul : ${document.fee_percentage}% du budget travaux estimé à ${formatCurrency(document.construction_budget)}`);
   }
   
   // ==========================================
-  // PAGE - DÉROULEMENT DE LA MISSION
+  // ARTICLE 5 - CONTENU DE LA MISSION
   // ==========================================
   addPageIfNeeded(100);
-  addSectionTitle('1.5 DÉROULEMENT DE LA MISSION');
+  addSectionTitle('ARTICLE 5 - CONTENU DE LA MISSION');
   
-  addParagraph('Les phases suivantes peuvent être adaptées en fonction du projet et de sa complexité.');
+  addParagraph('La mission du Maître d\'œuvre comprend les phases suivantes :');
   y += 3;
   
   includedPhases.forEach((phase, index) => {
     addPageIfNeeded(40);
     
-    // Phase header
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(0);
-    pdf.text(`${phase.phase_code} - ${phase.phase_name}`, margin, y);
+    pdf.text(`5.${index + 1} ${phase.phase_code} - ${phase.phase_name}`, margin, y);
     y += 6;
     
-    // Phase description
     if (phase.phase_description) {
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'italic');
       pdf.setTextColor(80);
-      pdf.text(phase.phase_description, margin, y);
-      y += 5;
+      const descLines = pdf.splitTextToSize(phase.phase_description, contentWidth);
+      descLines.forEach((line: string) => {
+        pdf.text(line, margin, y);
+        y += 4;
+      });
+      y += 2;
     }
     
-    // Deliverables
     if (phase.deliverables && phase.deliverables.length > 0) {
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(60);
+      pdf.text('Livrables :', margin, y);
+      y += 4;
       phase.deliverables.forEach(deliverable => {
         addPageIfNeeded(6);
         pdf.text(`• ${deliverable}`, margin + 5, y);
@@ -324,15 +323,14 @@ export async function generateCommercialPDF(
   });
   
   // ==========================================
-  // PAGE - ÉCHELONNEMENT
+  // ARTICLE 6 - ECHELONNEMENT DES PAIEMENTS
   // ==========================================
   addPageIfNeeded(80);
-  addSectionTitle('1.6 ÉCHELONNEMENT DES PAIEMENTS');
+  addSectionTitle('ARTICLE 6 - ÉCHELONNEMENT DES PAIEMENTS');
   
-  addParagraph('Dans le déroulement normal de la mission, le règlement des honoraires s\'effectuera de façon échelonnée, sur situation d\'avancement.');
+  addParagraph('Le règlement des honoraires s\'effectuera de façon échelonnée, selon le calendrier suivant :');
   y += 3;
   
-  // Payment schedule table
   const paymentData = [
     ['Acompte à la signature', '30%', formatCurrency(total * 0.3)],
     ['Validation phase conception', '20%', formatCurrency(total * 0.2)],
@@ -361,11 +359,11 @@ export async function generateCommercialPDF(
   y = (pdf as any).lastAutoTable.finalY + 10;
   
   // ==========================================
-  // CONDITIONS GÉNÉRALES
+  // ARTICLE 7 - CONDITIONS GÉNÉRALES
   // ==========================================
-  if (options.includeConditions && document.general_conditions) {
+  if (document.general_conditions) {
     addPageIfNeeded(50);
-    addSectionTitle('1.7 CONDITIONS GÉNÉRALES');
+    addSectionTitle('ARTICLE 7 - CONDITIONS GÉNÉRALES');
     
     const conditions = document.general_conditions.split('\n');
     conditions.forEach(condition => {
@@ -375,58 +373,56 @@ export async function generateCommercialPDF(
     });
   }
   
-  // Payment terms
   if (document.payment_terms) {
     addPageIfNeeded(30);
-    addSectionTitle('CONDITIONS DE PAIEMENT', 2);
+    addSectionTitle('7.1 Conditions de paiement', 2);
     addParagraph(document.payment_terms);
   }
   
   // ==========================================
-  // PAGE - SIGNATURES
+  // ARTICLE 8 - SIGNATURES
   // ==========================================
-  if (options.includeSignature) {
-    addPageIfNeeded(100);
-    addSectionTitle('1.8 SIGNATURE DES PARTIES');
-    
-    y += 5;
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(60);
-    pdf.text(`Fait en deux exemplaires, le ${new Date().toLocaleDateString('fr-FR')}`, margin, y);
-    
-    y += 15;
-    
-    // Two column signature boxes
-    const boxWidth = (contentWidth - 10) / 2;
-    const boxHeight = 60;
-    
-    // Left box - Client
-    pdf.setDrawColor(180);
-    pdf.rect(margin, y, boxWidth, boxHeight);
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0);
-    pdf.text('Le Maître de l\'ouvrage', margin + 5, y + 8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(60);
-    pdf.text(document.client_company?.name || 'Client', margin + 5, y + 16);
-    pdf.setFontSize(8);
-    pdf.text('Signature précédée de la mention "lu et approuvé" :', margin + 5, y + 30);
-    
-    // Right box - Architect
-    pdf.rect(margin + boxWidth + 10, y, boxWidth, boxHeight);
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(0);
-    pdf.text('L\'architecte / Maître d\'œuvre', margin + boxWidth + 15, y + 8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(60);
-    pdf.setFontSize(8);
-    pdf.text('Signature précédée de la mention "lu et approuvé" :', margin + boxWidth + 15, y + 30);
-    
-    y += boxHeight + 10;
-  }
+  addPageIfNeeded(120);
+  addSectionTitle('ARTICLE 8 - SIGNATURE DES PARTIES');
+  
+  y += 5;
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(60);
+  pdf.text(`Fait en deux exemplaires originaux, le ${new Date().toLocaleDateString('fr-FR')}`, margin, y);
+  
+  y += 15;
+  
+  const boxWidth = (contentWidth - 10) / 2;
+  const boxHeight = 70;
+  
+  // Left box - Client
+  pdf.setDrawColor(180);
+  pdf.rect(margin, y, boxWidth, boxHeight);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(0);
+  pdf.text('Le Maître de l\'ouvrage', margin + 5, y + 10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(60);
+  pdf.text(document.client_company?.name || 'Client', margin + 5, y + 18);
+  pdf.setFontSize(8);
+  pdf.text('Signature précédée de la mention', margin + 5, y + 35);
+  pdf.text('"Lu et approuvé, bon pour accord" :', margin + 5, y + 40);
+  
+  // Right box - Architect
+  pdf.rect(margin + boxWidth + 10, y, boxWidth, boxHeight);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(0);
+  pdf.text('L\'architecte / Maître d\'œuvre', margin + boxWidth + 15, y + 10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(60);
+  pdf.setFontSize(8);
+  pdf.text('Signature précédée de la mention', margin + boxWidth + 15, y + 35);
+  pdf.text('"Lu et approuvé, bon pour accord" :', margin + boxWidth + 15, y + 40);
+  
+  y += boxHeight + 10;
   
   // Validity notice
   y += 10;
