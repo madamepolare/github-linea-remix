@@ -1,19 +1,22 @@
 import { useState } from 'react';
-import { GripVertical, Check, ChevronDown, ChevronUp, Trash2, Plus } from 'lucide-react';
+import { GripVertical, Check, ChevronDown, ChevronUp, Trash2, Plus, FolderOpen } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AIPhaseSuggestion } from './AIPhaseSuggestion';
+import { useQuoteTemplates } from '@/hooks/useQuoteTemplates';
+import { ALL_MISSION_TEMPLATES, getMissionCategories, MissionTemplate } from '@/lib/defaultMissionTemplates';
+import { toast } from 'sonner';
 import {
   CommercialDocument,
   CommercialDocumentPhase,
   ProjectType,
   PHASES_BY_PROJECT_TYPE
 } from '@/lib/commercialTypes';
-
 interface PhaseSelectorProps {
   phases: CommercialDocumentPhase[];
   projectType: ProjectType;
@@ -39,11 +42,52 @@ export function PhaseSelector({
 }: PhaseSelectorProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const { templates: savedTemplates, isLoadingTemplates } = useQuoteTemplates(projectType);
 
   // Use totalAmount if available (forfait mode), otherwise calculate from percentage
   const baseFee = totalAmount || (projectBudget && feePercentage 
     ? projectBudget * (feePercentage / 100) 
     : 0);
+
+  const loadTemplatePhases = (template: { phases: Array<{ code: string; name: string; description?: string; defaultPercentage: number; deliverables: string[] }> }) => {
+    const newPhases: CommercialDocumentPhase[] = template.phases.map((phase, index) => ({
+      id: crypto.randomUUID(),
+      document_id: documentId || '',
+      phase_code: phase.code,
+      phase_name: phase.name,
+      phase_description: phase.description || '',
+      percentage_fee: phase.defaultPercentage,
+      amount: baseFee * phase.defaultPercentage / 100,
+      is_included: true,
+      deliverables: phase.deliverables,
+      sort_order: index,
+      created_at: null,
+      updated_at: null,
+    }));
+    onPhasesChange(newPhases);
+    toast.success('Template chargé');
+  };
+
+  const loadMissionTemplate = (template: MissionTemplate) => {
+    const newPhases: CommercialDocumentPhase[] = template.phases.map((phase, index) => ({
+      id: crypto.randomUUID(),
+      document_id: documentId || '',
+      phase_code: phase.code,
+      phase_name: phase.name,
+      phase_description: phase.description || '',
+      percentage_fee: phase.defaultPercentage,
+      amount: baseFee * phase.defaultPercentage / 100,
+      is_included: true,
+      deliverables: phase.deliverables,
+      sort_order: index,
+      created_at: null,
+      updated_at: null,
+    }));
+    onPhasesChange(newPhases);
+    toast.success(`Template "${template.name}" chargé`);
+  };
+
+  const missionCategories = getMissionCategories();
 
   const toggleExpanded = (id: string) => {
     const newExpanded = new Set(expandedPhases);
@@ -140,6 +184,53 @@ export function PhaseSelector({
         <div className="flex items-center justify-between">
           <CardTitle>Phases de la mission</CardTitle>
           <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                  Charger template
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                {savedTemplates && savedTemplates.length > 0 && (
+                  <>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Mes templates</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {savedTemplates.map((template) => (
+                          <DropdownMenuItem
+                            key={template.id}
+                            onClick={() => loadTemplatePhases(template)}
+                          >
+                            {template.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                {missionCategories.map((cat) => (
+                  <DropdownMenuSub key={cat.type}>
+                    <DropdownMenuSubTrigger>{cat.label}</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {cat.templates.map((template) => (
+                          <DropdownMenuItem
+                            key={template.id}
+                            onClick={() => loadMissionTemplate(template)}
+                          >
+                            <div>
+                              <div className="font-medium">{template.name}</div>
+                              <div className="text-xs text-muted-foreground">{template.description}</div>
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {document && onDocumentChange && (
               <AIPhaseSuggestion
                 document={document}
