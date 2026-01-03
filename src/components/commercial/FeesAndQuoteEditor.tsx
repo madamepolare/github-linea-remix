@@ -614,9 +614,9 @@ export function FeesAndQuoteEditor({
               />
             </div>
             
-            {/* Quantity, Unit Price and Amount */}
-            <div className="grid grid-cols-3 gap-2 px-3 pb-3">
-              <div>
+            {/* Quantity, Unit Price and Amount - weighted columns */}
+            <div className="flex gap-2 px-3 pb-3">
+              <div className="w-16 shrink-0">
                 <Label className="text-xs text-muted-foreground mb-1 block">Qté</Label>
                 <Input
                   type="number"
@@ -627,7 +627,7 @@ export function FeesAndQuoteEditor({
                   step={1}
                 />
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <Label className="text-xs text-muted-foreground mb-1 block">P.U. €</Label>
                 <Input
                   type="number"
@@ -637,9 +637,9 @@ export function FeesAndQuoteEditor({
                   min={0}
                 />
               </div>
-              <div className="text-right">
+              <div className="shrink-0 text-right min-w-[90px]">
                 <Label className="text-xs text-muted-foreground mb-1 block">Total</Label>
-                <div className={`h-9 flex items-center justify-end font-semibold ${item.type === 'discount' ? 'text-red-600' : ''}`}>
+                <div className={`h-9 flex items-center justify-end font-semibold text-sm ${item.type === 'discount' ? 'text-red-600' : ''}`}>
                   {item.type === 'discount' ? '-' : ''}{formatCurrency(Math.abs(item.amount))}
                 </div>
               </div>
