@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Loader2, Plus, Target, Users, Building2, TrendingUp } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Plus, Target, Users, Building2, TrendingUp, ChevronDown } from "lucide-react";
 import { CRMContactsTable } from "@/components/crm/CRMContactsTable";
 import { CRMCompanyTable } from "@/components/crm/CRMCompanyTable";
 import { LeadPipeline } from "@/components/crm/LeadPipeline";
@@ -21,6 +22,7 @@ type CRMView = "overview" | "leads" | "contacts" | "companies";
 export default function CRM() {
   const [view, setView] = useState<CRMView>("overview");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
 
   const [createContactOpen, setCreateContactOpen] = useState(false);
   const [createCompanyOpen, setCreateCompanyOpen] = useState(false);
@@ -31,20 +33,31 @@ export default function CRM() {
   const { allCompanies } = useCRMCompanies();
   const { allContacts } = useContacts();
 
+  // Create default pipeline if none exist
   useEffect(() => {
     if (!pipelinesLoading && pipelines.length === 0) {
       createDefaultPipeline.mutate();
     }
   }, [pipelinesLoading, pipelines.length]);
 
+  // Select first pipeline by default
+  useEffect(() => {
+    if (pipelines.length > 0 && !selectedPipelineId) {
+      const defaultPipeline = pipelines.find(p => p.is_default) || pipelines[0];
+      setSelectedPipelineId(defaultPipeline.id);
+    }
+  }, [pipelines, selectedPipelineId]);
+
+  const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId) || pipelines[0];
+
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(0)}M€`;
+      return `${(value / 1000000).toFixed(1)}M€`;
     }
     if (value >= 1000) {
       return `${(value / 1000).toFixed(0)}k€`;
     }
-    return `${value}€`;
+    return `${value.toLocaleString()}€`;
   };
 
   const totalEntities = allCompanies.length + allContacts.length + leadStats.total;
@@ -95,48 +108,81 @@ export default function CRM() {
               </div>
             </div>
 
-            {/* Tabs */}
-            <Tabs value={view} onValueChange={(v) => setView(v as CRMView)} className="px-4 sm:px-6 overflow-x-auto">
-              <TabsList className="h-10 bg-transparent p-0 gap-0.5 sm:gap-1 w-max min-w-full sm:w-auto">
-                <TabsTrigger
-                  value="overview"
-                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
-                >
-                  <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Vue d'ensemble</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="leads"
-                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
-                >
-                  <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Opportunités</span>
-                  <Badge variant="secondary" className="ml-1 sm:ml-2 text-[10px] sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5">
-                    {leadStats.total}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="contacts"
-                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
-                >
-                  <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Contacts</span>
-                  <Badge variant="secondary" className="ml-1 sm:ml-2 text-[10px] sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5">
-                    {allContacts.length}
-                  </Badge>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="companies"
-                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
-                >
-                  <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Entreprises</span>
-                  <Badge variant="secondary" className="ml-1 sm:ml-2 text-[10px] sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5">
-                    {allCompanies.length}
-                  </Badge>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            {/* Main navigation tabs */}
+            <div className="px-4 sm:px-6 overflow-x-auto">
+              <Tabs value={view} onValueChange={(v) => setView(v as CRMView)}>
+                <TabsList className="h-10 bg-transparent p-0 gap-0.5 sm:gap-1 w-max min-w-full sm:w-auto">
+                  <TabsTrigger
+                    value="overview"
+                    className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
+                  >
+                    <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Vue d'ensemble</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="leads"
+                    className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
+                  >
+                    <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Opportunités</span>
+                    <Badge variant="secondary" className="ml-1 sm:ml-2 text-[10px] sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5">
+                      {leadStats.total}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="contacts"
+                    className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
+                  >
+                    <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Contacts</span>
+                    <Badge variant="secondary" className="ml-1 sm:ml-2 text-[10px] sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5">
+                      {allContacts.length}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="companies"
+                    className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
+                  >
+                    <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Entreprises</span>
+                    <Badge variant="secondary" className="ml-1 sm:ml-2 text-[10px] sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5">
+                      {allCompanies.length}
+                    </Badge>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {/* Pipeline selector - only shown in leads view */}
+            {view === "leads" && pipelines.length > 1 && (
+              <div className="px-4 sm:px-6 py-2 border-t border-border/50 bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">Pipeline :</span>
+                  <div className="flex gap-1 overflow-x-auto">
+                    {pipelines.map((pipeline) => (
+                      <Button
+                        key={pipeline.id}
+                        variant={selectedPipelineId === pipeline.id ? "secondary" : "ghost"}
+                        size="sm"
+                        className="h-7 text-xs gap-1.5 shrink-0"
+                        onClick={() => setSelectedPipelineId(pipeline.id)}
+                      >
+                        <div
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: pipeline.color || "#6366f1" }}
+                        />
+                        {pipeline.name}
+                        {pipeline.is_default && (
+                          <Badge variant="outline" className="text-[9px] h-4 px-1">
+                            défaut
+                          </Badge>
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Content */}
@@ -171,8 +217,8 @@ export default function CRM() {
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ) : pipelines.length > 0 ? (
-                <LeadPipeline pipeline={pipelines[0]} onCreateLead={() => setCreateLeadOpen(true)} />
+              ) : selectedPipeline ? (
+                <LeadPipeline pipeline={selectedPipeline} onCreateLead={() => setCreateLeadOpen(true)} />
               ) : null
             )}
           </div>
@@ -184,7 +230,7 @@ export default function CRM() {
       <CreateLeadDialog
         open={createLeadOpen}
         onOpenChange={setCreateLeadOpen}
-        pipeline={pipelines[0]}
+        pipeline={selectedPipeline}
       />
     </>
   );
