@@ -43,6 +43,10 @@ interface NavItem {
   children?: { title: string; href: string }[];
 }
 
+interface AppSidebarProps {
+  onNavigate?: () => void;
+}
+
 const navigation: NavItem[] = [
   { title: "Dashboard", icon: LayoutDashboard, href: "/" },
   { title: "Projects", icon: FolderKanban, href: "/projects" },
@@ -55,7 +59,7 @@ const bottomNavigation: NavItem[] = [
   { title: "Settings", icon: Settings, href: "/settings" },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { collapsed, toggle } = useSidebarStore();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const location = useLocation();
@@ -93,7 +97,7 @@ export function AppSidebar() {
         .slice(0, 2)
     : user?.email?.slice(0, 2).toUpperCase() || "??";
 
-  const NavItemComponent = ({ item }: { item: NavItem }) => {
+  const NavItemComponent = ({ item, onClick }: { item: NavItem; onClick?: () => void }) => {
     const active = isActive(item.href);
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems.includes(item.title);
@@ -138,7 +142,7 @@ export function AppSidebar() {
       return (
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
-            <NavLink to={item.href}>{content}</NavLink>
+            <NavLink to={item.href} onClick={onClick}>{content}</NavLink>
           </TooltipTrigger>
           <TooltipContent side="right" className="flex items-center gap-2">
             {item.title}
@@ -175,6 +179,7 @@ export function AppSidebar() {
                     <NavLink
                       key={child.href}
                       to={child.href}
+                      onClick={onClick}
                       className={cn(
                         "block rounded-md px-3 py-1.5 text-sm transition-colors",
                         location.pathname === child.href
@@ -193,7 +198,7 @@ export function AppSidebar() {
       );
     }
 
-    return <NavLink to={item.href}>{content}</NavLink>;
+    return <NavLink to={item.href} onClick={onClick}>{content}</NavLink>;
   };
 
   return (
@@ -291,7 +296,7 @@ export function AppSidebar() {
       <nav className="flex-1 overflow-y-auto px-3 py-3 scrollbar-thin">
         <div className="space-y-1">
           {navigation.map((item) => (
-            <NavItemComponent key={item.title} item={item} />
+            <NavItemComponent key={item.title} item={item} onClick={onNavigate} />
           ))}
         </div>
       </nav>
@@ -301,7 +306,7 @@ export function AppSidebar() {
         <ThemeToggle collapsed={collapsed} />
         
         {bottomNavigation.map((item) => (
-          <NavItemComponent key={item.title} item={item} />
+          <NavItemComponent key={item.title} item={item} onClick={onNavigate} />
         ))}
         
         {!collapsed && (

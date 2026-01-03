@@ -95,11 +95,11 @@ export function ActivityFeed() {
       transition={{ duration: 0.4, delay: 0.4 }}
       className="rounded-xl border border-border bg-card"
     >
-      <div className="flex items-center justify-between border-b border-border px-6 py-4">
-        <h3 className="font-display text-lg font-semibold text-foreground">
+      <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-3 sm:py-4">
+        <h3 className="font-display text-base sm:text-lg font-semibold text-foreground">
           Recent Activity
         </h3>
-        <button className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+        <button className="text-xs sm:text-sm font-medium text-primary hover:text-primary/80 transition-colors">
           View all
         </button>
       </div>
@@ -112,28 +112,28 @@ export function ActivityFeed() {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.5 + index * 0.05 }}
-              className="flex items-start gap-4 px-6 py-4 hover:bg-muted/30 transition-colors"
+              className="flex items-start gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 hover:bg-muted/30 transition-colors"
             >
               <div
                 className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                  "flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg",
                   iconColorMap[activity.type]
                 )}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground">
+                <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                  <span className="font-medium text-foreground text-sm sm:text-base">
                     {activity.user.name}
                   </span>
-                  <span className="text-muted-foreground">·</span>
-                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                  <span className="text-muted-foreground hidden sm:inline">·</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     {activity.timestamp}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-0.5">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 truncate">
                   {activity.description}{" "}
                   {activity.project && (
                     <span className="font-medium text-foreground">

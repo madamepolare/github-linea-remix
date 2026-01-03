@@ -129,19 +129,19 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Timeline Header */}
       <div className="flex-shrink-0 border-b border-border bg-surface">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => navigateMonth(-1)} className="h-8 w-8">
-              <ChevronLeft className="h-4 w-4" />
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Button variant="outline" size="icon" onClick={() => navigateMonth(-1)} className="h-7 w-7 sm:h-8 sm:w-8">
+              <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
-            <Button variant="outline" size="icon" onClick={() => navigateMonth(1)} className="h-8 w-8">
-              <ChevronRight className="h-4 w-4" />
+            <Button variant="outline" size="icon" onClick={() => navigateMonth(1)} className="h-7 w-7 sm:h-8 sm:w-8">
+              <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
-            <span className="text-sm font-medium ml-2 capitalize">
+            <span className="text-xs sm:text-sm font-medium ml-1 sm:ml-2 capitalize">
               {format(viewDate, "MMMM yyyy", { locale: fr })}
             </span>
           </div>
-          <Button variant="outline" size="sm" onClick={goToToday}>
+          <Button variant="outline" size="sm" onClick={goToToday} className="h-7 sm:h-8 text-xs sm:text-sm">
             Aujourd'hui
           </Button>
         </div>
@@ -151,9 +151,9 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
       <div className="flex-1 overflow-auto">
         <div className="flex min-w-max">
           {/* Project Names Column */}
-          <div className="w-72 flex-shrink-0 border-r border-border bg-background sticky left-0 z-20">
-            <div className="h-14 border-b border-border bg-surface flex items-center px-4">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <div className="w-48 sm:w-72 flex-shrink-0 border-r border-border bg-background sticky left-0 z-20">
+            <div className="h-12 sm:h-14 border-b border-border bg-surface flex items-center px-3 sm:px-4">
+              <span className="text-2xs sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Projets
               </span>
             </div>
@@ -166,22 +166,22 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
                 <div
                   key={project.id}
                   onClick={() => navigate(`/projects/${project.id}`)}
-                  className="h-14 px-4 flex items-center border-b border-border hover:bg-muted/50 transition-colors cursor-pointer group"
+                  className="h-12 sm:h-14 px-3 sm:px-4 flex items-center border-b border-border hover:bg-muted/50 transition-colors cursor-pointer group"
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                     <div
-                      className="w-1.5 h-8 rounded-full flex-shrink-0"
+                      className="w-1 sm:w-1.5 h-6 sm:h-8 rounded-full flex-shrink-0"
                       style={{ backgroundColor: project.color || "#3B82F6" }}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                      <p className="text-xs sm:text-sm font-medium truncate group-hover:text-primary transition-colors">
                         {project.name}
                       </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {projectType && <span>{projectType.label}</span>}
+                      <div className="flex items-center gap-1 sm:gap-2 text-2xs sm:text-xs text-muted-foreground">
+                        {projectType && <span className="hidden sm:inline">{projectType.label}</span>}
                         {currentPhase && (
                           <>
-                            <span>•</span>
+                            <span className="hidden sm:inline">•</span>
                             <span className="truncate">{currentPhase.name}</span>
                           </>
                         )}
@@ -273,7 +273,7 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
                 return (
                   <div
                     key={project.id}
-                    className="h-14 relative border-b border-border"
+                    className="h-12 sm:h-14 relative border-b border-border"
                     style={{ minHeight: ROW_HEIGHT }}
                   >
                     {/* Phase bars */}

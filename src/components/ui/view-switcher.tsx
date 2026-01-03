@@ -14,13 +14,13 @@ interface ViewSwitcherProps {
 
 export function ViewSwitcher({ value, onChange, options, className }: ViewSwitcherProps) {
   return (
-    <div className={cn("inline-flex items-center p-1 rounded-lg bg-muted/50 border border-border/50", className)}>
+    <div className={cn("inline-flex items-center p-0.5 sm:p-1 rounded-lg bg-muted/50 border border-border/50 overflow-x-auto scrollbar-none", className)}>
       {options.map((option) => (
         <motion.button
           key={option.value}
           onClick={() => onChange(option.value)}
           className={cn(
-            "relative inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-150",
+            "relative inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-2xs sm:text-xs font-medium rounded-md transition-colors duration-150 whitespace-nowrap",
             value === option.value
               ? "text-foreground"
               : "text-muted-foreground hover:text-foreground"
@@ -35,9 +35,9 @@ export function ViewSwitcher({ value, onChange, options, className }: ViewSwitch
               transition={{ type: "spring", duration: 0.3, bounce: 0.15 }}
             />
           )}
-          <span className="relative z-10 flex items-center gap-1.5">
+          <span className="relative z-10 flex items-center gap-1 sm:gap-1.5">
             {option.icon}
-            {option.label}
+            <span className="hidden xs:inline sm:inline">{option.label}</span>
           </span>
         </motion.button>
       ))}

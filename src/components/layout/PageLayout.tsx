@@ -54,7 +54,7 @@ export function PageLayout({
           primaryAction={primaryAction}
         />
         <div
-          className={`flex-1 ${contentOverflow === "auto" ? "overflow-auto" : "overflow-hidden"} ${contentPadding ? "p-6" : ""}`}
+          className={`flex-1 ${contentOverflow === "auto" ? "overflow-auto" : "overflow-hidden"} ${contentPadding ? "p-3 sm:p-4 md:p-6" : ""}`}
         >
           {children}
         </div>

@@ -74,21 +74,21 @@ export function UpcomingTasks() {
       transition={{ duration: 0.4, delay: 0.5 }}
       className="rounded-xl border border-border bg-card"
     >
-      <div className="flex items-center justify-between border-b border-border px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Calendar className="h-5 w-5 text-primary" />
+      <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-3 sm:py-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10">
+            <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           </div>
           <div>
-            <h3 className="font-display text-lg font-semibold text-foreground">
+            <h3 className="font-display text-base sm:text-lg font-semibold text-foreground">
               Upcoming Tasks
             </h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
               5 tasks due this week
             </p>
           </div>
         </div>
-        <button className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+        <button className="text-xs sm:text-sm font-medium text-primary hover:text-primary/80 transition-colors">
           View all
         </button>
       </div>
@@ -103,25 +103,25 @@ export function UpcomingTasks() {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.6 + index * 0.05 }}
-              className="flex items-center gap-4 px-6 py-4 hover:bg-muted/30 transition-colors cursor-pointer group"
+              className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 hover:bg-muted/30 transition-colors cursor-pointer group"
             >
               <button
                 className={cn(
-                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+                  "flex h-5 w-5 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all",
                   task.status === "completed"
                     ? "border-success bg-success text-success-foreground"
                     : "border-border hover:border-primary group-hover:border-primary"
                 )}
               >
                 {task.status === "completed" && (
-                  <CheckCircle2 className="h-4 w-4" />
+                  <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
                 )}
               </button>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <span
                     className={cn(
-                      "font-medium",
+                      "font-medium text-sm sm:text-base truncate",
                       task.status === "completed"
                         ? "text-muted-foreground line-through"
                         : "text-foreground"
@@ -130,17 +130,17 @@ export function UpcomingTasks() {
                     {task.title}
                   </span>
                   {isOverdue && (
-                    <AlertCircle className="h-4 w-4 text-destructive" />
+                    <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive shrink-0" />
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground truncate">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">
                   {task.project}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                 <span
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-xs font-medium capitalize",
+                    "rounded-full px-1.5 sm:px-2 py-0.5 text-2xs sm:text-xs font-medium capitalize hidden sm:inline-block",
                     priorityClasses[task.priority]
                   )}
                 >
@@ -148,7 +148,7 @@ export function UpcomingTasks() {
                 </span>
                 <span
                   className={cn(
-                    "text-sm",
+                    "text-xs sm:text-sm whitespace-nowrap",
                     isOverdue ? "text-destructive font-medium" : "text-muted-foreground"
                   )}
                 >

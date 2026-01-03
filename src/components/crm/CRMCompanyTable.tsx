@@ -135,7 +135,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
 
   return (
     <>
-      <div className="p-6 space-y-4">
+      <div className="p-3 sm:p-6 space-y-3 sm:space-y-4">
         {/* Category filter chips */}
         <div className="flex items-center gap-2 flex-wrap">
           {categoryChips.map((chip) => (
@@ -143,13 +143,13 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
               key={chip.id}
               variant={selectedCategory === chip.id ? "default" : "outline"}
               size="sm"
-              className="h-8"
+              className="h-7 sm:h-8 text-xs sm:text-sm"
               onClick={() => setSelectedCategory(chip.id)}
             >
               {chip.label}
               <Badge
                 variant={selectedCategory === chip.id ? "secondary" : "outline"}
-                className="ml-2 text-xs h-5 px-1.5"
+                className="ml-1.5 sm:ml-2 text-2xs sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5"
               >
                 {chip.count}
               </Badge>
@@ -159,7 +159,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
 
         {/* Alphabet filter + view toggle */}
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-1 flex-wrap">
+          <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap overflow-x-auto scrollbar-none">
             {alphabet.map((letter) => {
               const hasCompanies = filteredCompanies.some((c) =>
                 c.name.toUpperCase().startsWith(letter)
@@ -170,7 +170,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                   variant={letterFilter === letter ? "default" : "ghost"}
                   size="sm"
                   className={cn(
-                    "h-7 w-7 p-0 text-xs font-medium",
+                    "h-6 w-6 sm:h-7 sm:w-7 p-0 text-2xs sm:text-xs font-medium",
                     !hasCompanies && "text-muted-foreground/30"
                   )}
                   onClick={() => setLetterFilter(letterFilter === letter ? null : letter)}
@@ -182,22 +182,22 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
             })}
           </div>
 
-          <div className="flex items-center gap-1 border rounded-md p-0.5">
+          <div className="flex items-center gap-1 border rounded-md p-0.5 shrink-0">
             <Button
               variant={viewMode === "list" ? "secondary" : "ghost"}
               size="sm"
-              className="h-7 w-7 p-0"
+              className="h-6 w-6 sm:h-7 sm:w-7 p-0"
               onClick={() => setViewMode("list")}
             >
-              <List className="h-4 w-4" />
+              <List className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
             <Button
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               size="sm"
-              className="h-7 w-7 p-0"
+              className="h-6 w-6 sm:h-7 sm:w-7 p-0"
               onClick={() => setViewMode("grid")}
             >
-              <LayoutGrid className="h-4 w-4" />
+              <LayoutGrid className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
           </div>
         </div>
@@ -206,22 +206,22 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
         <Card>
           <CardContent className="p-0">
             {filteredCompanies.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">Aucune entreprise trouvée</p>
+              <div className="text-center py-8 sm:py-12">
+                <p className="text-muted-foreground text-sm sm:text-base">Aucune entreprise trouvée</p>
               </div>
             ) : (
-              <div className="rounded-md border">
-                <Table>
+              <div className="rounded-md border overflow-x-auto">
+                <Table className="min-w-[600px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[100px]">Type</TableHead>
+                      <TableHead className="w-[80px] sm:w-[100px]">Type</TableHead>
                       <TableHead>Société</TableHead>
-                      <TableHead>Interlocuteur</TableHead>
-                      <TableHead>Ville</TableHead>
-                      <TableHead className="w-[60px] text-center">
+                      <TableHead className="hidden md:table-cell">Interlocuteur</TableHead>
+                      <TableHead className="hidden sm:table-cell">Ville</TableHead>
+                      <TableHead className="w-[50px] sm:w-[60px] text-center hidden lg:table-cell">
                         <Globe className="h-4 w-4 mx-auto" />
                       </TableHead>
-                      <TableHead>Facturé</TableHead>
+                      <TableHead className="hidden lg:table-cell">Facturé</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -237,44 +237,44 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                           className="group cursor-pointer hover:bg-muted/50"
                           onClick={() => navigate(`/crm/companies/${company.id}`)}
                         >
-                          <TableCell>
+                          <TableCell className="py-2 sm:py-4">
                             <Badge
                               variant="secondary"
-                              className={cn("text-white text-xs", typeConfig.color)}
+                              className={cn("text-white text-2xs sm:text-xs", typeConfig.color)}
                             >
                               {typeConfig.shortLabel}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 items-center justify-center rounded bg-muted text-xs font-medium">
+                          <TableCell className="py-2 sm:py-4">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded bg-muted text-2xs sm:text-xs font-medium shrink-0">
                                 {company.name.slice(0, 2).toUpperCase()}
                               </div>
-                              <div>
-                                <p className="font-medium">{company.name}</p>
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm sm:text-base truncate">{company.name}</p>
                                 {company.email && (
-                                  <p className="text-xs text-muted-foreground">{company.email}</p>
+                                  <p className="text-2xs sm:text-xs text-muted-foreground truncate">{company.email}</p>
                                 )}
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-muted-foreground italic">
+                          <TableCell className="text-muted-foreground italic text-sm hidden md:table-cell">
                             {company.primary_contact?.name || "Aucun contact"}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
+                          <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
                             {company.city || "—"}
                           </TableCell>
-                          <TableCell className="text-center text-muted-foreground">
+                          <TableCell className="text-center text-muted-foreground hidden lg:table-cell">
                             {company.website ? "✓" : "—"}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">—</TableCell>
-                          <TableCell>
+                          <TableCell className="text-muted-foreground hidden lg:table-cell">—</TableCell>
+                          <TableCell className="py-2 sm:py-4">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="opacity-0 group-hover:opacity-100"
+                                  className="h-7 w-7 sm:h-8 sm:w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                                 >
                                   <MoreVertical className="h-4 w-4" />
                                 </Button>
