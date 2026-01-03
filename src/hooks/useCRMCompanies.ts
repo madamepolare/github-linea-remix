@@ -216,10 +216,13 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
   });
 
   const updateCompany = useMutation({
-    mutationFn: async ({ id, ...input }: Partial<CRMCompany> & { id: string }) => {
+    mutationFn: async ({ id, ...input }: Partial<CRMCompanyEnriched> & { id: string }) => {
+      // Remove enriched fields that don't exist in the database
+      const { contacts_count, leads_count, leads_value, primary_contact, ...dbFields } = input as any;
+      
       const { data, error } = await supabase
         .from("crm_companies")
-        .update(input)
+        .update(dbFields)
         .eq("id", id)
         .select()
         .single();
