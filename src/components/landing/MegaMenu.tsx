@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, FolderKanban, Users, FileText, Trophy, CalendarDays, UsersRound } from "lucide-react";
+import { ChevronDown, FolderKanban, Users, FileText, Trophy, CalendarDays, UsersRound, Building2, Palette, Theater } from "lucide-react";
 import gsap from "gsap";
 
 const modules = [
@@ -39,6 +39,27 @@ const modules = [
     title: "Collaboration",
     description: "Équipe et notifications",
     icon: UsersRound,
+  },
+];
+
+const solutions = [
+  {
+    slug: "architectes",
+    title: "Architectes",
+    icon: Building2,
+    color: "from-blue-500 to-indigo-600",
+  },
+  {
+    slug: "architectes-interieur",
+    title: "Architectes d'intérieur",
+    icon: Palette,
+    color: "from-pink-500 to-rose-600",
+  },
+  {
+    slug: "scenographes",
+    title: "Scénographes",
+    icon: Theater,
+    color: "from-purple-500 to-violet-600",
   },
 ];
 
@@ -97,7 +118,7 @@ export const MegaMenu = ({ onClose }: MegaMenuProps) => {
       {isOpen && (
         <div
           ref={contentRef}
-          className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-[600px] bg-background border border-border rounded-xl shadow-xl p-6"
+          className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-[640px] bg-background border border-border rounded-xl shadow-xl p-6"
         >
           <div className="grid grid-cols-2 gap-3">
             {modules.map((module) => {
@@ -122,6 +143,34 @@ export const MegaMenu = ({ onClose }: MegaMenuProps) => {
               );
             })}
           </div>
+
+          {/* Solutions par métier */}
+          <div className="mt-5 pt-5 border-t border-border">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+              Par métier
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {solutions.map((solution) => {
+                const Icon = solution.icon;
+                return (
+                  <Link
+                    key={solution.slug}
+                    to={`/solutions/${solution.slug}`}
+                    onClick={handleItemClick}
+                    className="megamenu-item flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted transition-colors group"
+                  >
+                    <div className={`w-6 h-6 rounded bg-gradient-to-br ${solution.color} flex items-center justify-center`}>
+                      <Icon className="text-white" size={14} />
+                    </div>
+                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">
+                      {solution.title}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="mt-4 pt-4 border-t border-border">
             <Link
               to="/welcome#features"

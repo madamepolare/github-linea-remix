@@ -40,18 +40,26 @@ export const ModuleUseCases = ({ useCases, color }: ModuleUseCasesProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!containerRef.current) return;
+    
     const ctx = gsap.context(() => {
-      gsap.from(".use-case-card", {
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "top 80%",
-        },
-        opacity: 0,
-        y: 40,
-        stagger: 0.1,
-        duration: 0.6,
-        ease: "power3.out",
-      });
+      gsap.set(".use-case-card", { opacity: 1, y: 0 });
+      
+      gsap.fromTo(".use-case-card",
+        { opacity: 0, y: 40 },
+        {
+          opacity: 1,
+          y: 0,
+          stagger: 0.1,
+          duration: 0.6,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: containerRef.current,
+            start: "top 80%",
+            once: true,
+          },
+        }
+      );
     }, containerRef);
 
     return () => ctx.revert();

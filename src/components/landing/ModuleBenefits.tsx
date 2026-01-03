@@ -14,29 +14,26 @@ export const ModuleBenefits = ({ benefits, color }: ModuleBenefitsProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!containerRef.current) return;
+    
     const ctx = gsap.context(() => {
-      gsap.from(".benefit-card", {
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "top 80%",
-        },
-        opacity: 0,
-        scale: 0.9,
-        stagger: 0.15,
-        duration: 0.5,
-        ease: "back.out(1.7)",
-      });
-
-      gsap.from(".benefit-value", {
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "top 80%",
-        },
-        textContent: 0,
-        duration: 1.5,
-        ease: "power2.out",
-        snap: { textContent: 1 },
-      });
+      gsap.set(".benefit-card", { opacity: 1, scale: 1 });
+      
+      gsap.fromTo(".benefit-card",
+        { opacity: 0, scale: 0.9 },
+        {
+          opacity: 1,
+          scale: 1,
+          stagger: 0.15,
+          duration: 0.5,
+          ease: "back.out(1.7)",
+          scrollTrigger: {
+            trigger: containerRef.current,
+            start: "top 80%",
+            once: true,
+          },
+        }
+      );
     }, containerRef);
 
     return () => ctx.revert();

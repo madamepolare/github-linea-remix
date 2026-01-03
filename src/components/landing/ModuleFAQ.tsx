@@ -19,18 +19,26 @@ export const ModuleFAQ = ({ faq }: ModuleFAQProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!containerRef.current) return;
+    
     const ctx = gsap.context(() => {
-      gsap.from(".faq-item", {
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "top 80%",
-        },
-        opacity: 0,
-        y: 20,
-        stagger: 0.1,
-        duration: 0.5,
-        ease: "power3.out",
-      });
+      gsap.set(".faq-item", { opacity: 1, y: 0 });
+      
+      gsap.fromTo(".faq-item",
+        { opacity: 0, y: 20 },
+        {
+          opacity: 1,
+          y: 0,
+          stagger: 0.1,
+          duration: 0.5,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: containerRef.current,
+            start: "top 80%",
+            once: true,
+          },
+        }
+      );
     }, containerRef);
 
     return () => ctx.revert();
