@@ -15,7 +15,6 @@ import { ClientSelector } from './ClientSelector';
 import { FeesAndQuoteEditor } from './FeesAndQuoteEditor';
 import { TermsEditor } from './TermsEditor';
 import { ConstructionBudgetField } from './ConstructionBudgetField';
-import { DocumentVersionHistory } from './DocumentVersionHistory';
 import {
   CommercialDocument,
   CommercialDocumentPhase,
@@ -204,18 +203,6 @@ export function CommercialDocumentBuilder({
 
   return (
     <div className="space-y-4">
-      {/* Version History */}
-      {documentId && documentId !== 'new' && (
-        <div className="flex justify-end">
-          <DocumentVersionHistory
-            documentId={documentId}
-            currentDocument={document}
-            currentPhases={phases}
-            onRestoreVersion={handleRestoreVersion}
-          />
-        </div>
-      )}
-
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
         <TabsList className="grid w-full grid-cols-3 h-auto">
           <TabsTrigger value="general" className="text-xs sm:text-sm py-2">Général</TabsTrigger>

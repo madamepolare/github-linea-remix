@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Send, FileDown, Eye, FileText, CheckCircle, FolderPlus, ExternalLink, Sparkles, Calendar } from 'lucide-react';
+import { ArrowLeft, Save, Send, FileDown, Eye, FileText, CheckCircle, FolderPlus, ExternalLink, Sparkles, Calendar, History } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { CommercialDocumentBuilder } from '@/components/commercial/CommercialDocumentBuilder';
 import { DocumentPreviewPanel } from '@/components/commercial/DocumentPreviewPanel';
 import { PDFPreviewDialog } from '@/components/commercial/PDFPreviewDialog';
+import { DocumentVersionHistory } from '@/components/commercial/DocumentVersionHistory';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -371,20 +372,31 @@ const CommercialDocument = () => {
 
         {/* Status Badge */}
         {!isNew && documentData.status && (
-          <div className="px-6 py-2 border-b border-border bg-muted/30">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Statut:</span>
-              <Badge className={STATUS_COLORS[documentData.status as keyof typeof STATUS_COLORS]}>
-                {STATUS_LABELS[documentData.status as keyof typeof STATUS_LABELS]}
-              </Badge>
-              {documentData.project_id && (
-                <>
-                  <span className="text-sm text-muted-foreground ml-4">Projet lié:</span>
-                  <Badge variant="outline" className="cursor-pointer" onClick={() => navigate(`/projects/${documentData.project_id}`)}>
-                    {documentData.title}
-                  </Badge>
-                </>
-              )}
+          <div className="px-4 sm:px-6 py-2 border-b border-border bg-muted/30">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-muted-foreground">Statut:</span>
+                <Badge className={STATUS_COLORS[documentData.status as keyof typeof STATUS_COLORS]}>
+                  {STATUS_LABELS[documentData.status as keyof typeof STATUS_LABELS]}
+                </Badge>
+                <DocumentVersionHistory
+                  documentId={id || ''}
+                  currentDocument={documentData}
+                  currentPhases={phases}
+                  onRestoreVersion={(doc, restoredPhases) => {
+                    setDocumentData(doc);
+                    setPhases(restoredPhases);
+                  }}
+                />
+                {documentData.project_id && (
+                  <>
+                    <span className="text-sm text-muted-foreground ml-2 sm:ml-4">Projet lié:</span>
+                    <Badge variant="outline" className="cursor-pointer" onClick={() => navigate(`/projects/${documentData.project_id}`)}>
+                      {documentData.title}
+                    </Badge>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}
