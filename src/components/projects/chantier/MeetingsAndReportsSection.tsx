@@ -62,12 +62,14 @@ interface MeetingsAndReportsSectionProps {
   projectId: string;
   onOpenReport: (meeting: ProjectMeeting) => void;
   onSendConvocation?: (meeting: ProjectMeeting) => void;
+  showOnlyReports?: boolean;
 }
 
 export function MeetingsAndReportsSection({ 
   projectId, 
   onOpenReport,
-  onSendConvocation 
+  onSendConvocation,
+  showOnlyReports = false
 }: MeetingsAndReportsSectionProps) {
   const { 
     meetings, 
@@ -251,6 +253,11 @@ export function MeetingsAndReportsSection({
     const meetingDate = parseISO(meeting.meeting_date);
     const isUpcoming = isFuture(meetingDate) || isToday(meetingDate);
     const hasReport = hasReportContent(meeting);
+
+    // If showOnlyReports mode, only show meetings with reports
+    if (showOnlyReports && !hasReport) {
+      return false;
+    }
 
     switch (filter) {
       case "upcoming":

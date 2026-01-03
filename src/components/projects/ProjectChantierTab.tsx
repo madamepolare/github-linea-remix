@@ -12,6 +12,7 @@ import { MeetingReportBuilder } from "./MeetingReportBuilder";
 import {
   AlertTriangle,
   Calendar,
+  FileText,
   LayoutDashboard,
   Users,
 } from "lucide-react";
@@ -56,6 +57,10 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
             <Users className="h-4 w-4 mr-2" />
             Réunions
           </TabsTrigger>
+          <TabsTrigger value="cr">
+            <FileText className="h-4 w-4 mr-2" />
+            CR
+          </TabsTrigger>
           <TabsTrigger value="observations">
             <AlertTriangle className="h-4 w-4 mr-2" />
             Observations
@@ -90,6 +95,15 @@ export function ProjectChantierTab({ projectId }: ProjectChantierTabProps) {
             projectId={projectId} 
             onOpenReport={setSelectedMeetingForReport}
             onSendConvocation={setConvocationMeeting}
+          />
+        </TabsContent>
+
+        <TabsContent value="cr" className="mt-4">
+          <MeetingsAndReportsSection 
+            projectId={projectId} 
+            onOpenReport={setSelectedMeetingForReport}
+            onSendConvocation={setConvocationMeeting}
+            showOnlyReports
           />
         </TabsContent>
 
