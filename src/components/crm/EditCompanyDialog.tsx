@@ -36,6 +36,14 @@ const schema = z.object({
   billing_email: z.string().email("Email invalide").optional().or(z.literal("")),
   logo_url: z.string().optional(),
   notes: z.string().optional(),
+  // Financial fields
+  siren: z.string().max(9).optional(),
+  siret: z.string().max(14).optional(),
+  vat_number: z.string().max(20).optional(),
+  capital_social: z.string().optional(),
+  forme_juridique: z.string().optional(),
+  code_naf: z.string().max(10).optional(),
+  rcs_city: z.string().max(100).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -79,6 +87,13 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
       billing_email: "",
       logo_url: "",
       notes: "",
+      siren: "",
+      siret: "",
+      vat_number: "",
+      capital_social: "",
+      forme_juridique: "",
+      code_naf: "",
+      rcs_city: "",
     },
   });
 
@@ -90,6 +105,7 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
       setSelectedSpecialties(company.bet_specialties || []);
       setSameAsBilling(company.email === company.billing_email && !!company.email);
       
+      const companyAny = company as any;
       form.reset({
         name: company.name || "",
         category: category,
@@ -104,6 +120,13 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
         billing_email: company.billing_email || "",
         logo_url: company.logo_url || "",
         notes: company.notes || "",
+        siren: companyAny.siren || "",
+        siret: companyAny.siret || "",
+        vat_number: companyAny.vat_number || "",
+        capital_social: companyAny.capital_social?.toString() || "",
+        forme_juridique: companyAny.forme_juridique || "",
+        code_naf: companyAny.code_naf || "",
+        rcs_city: companyAny.rcs_city || "",
       });
     }
   }, [company, form]);
@@ -143,7 +166,14 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
       logo_url: data.logo_url || null,
       notes: data.notes || null,
       bet_specialties: isBET && selectedSpecialties.length > 0 ? selectedSpecialties : null,
-    });
+      siren: data.siren || null,
+      siret: data.siret || null,
+      vat_number: data.vat_number || null,
+      capital_social: data.capital_social ? parseFloat(data.capital_social) : null,
+      forme_juridique: data.forme_juridique || null,
+      code_naf: data.code_naf || null,
+      rcs_city: data.rcs_city || null,
+    } as any);
     onOpenChange(false);
   };
 
@@ -341,6 +371,49 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
             <div className="space-y-2">
               <Label>URL du logo</Label>
               <Input {...form.register("logo_url")} placeholder="https://..." />
+            </div>
+
+            {/* Financial Section */}
+            <div className="space-y-4 pt-4 border-t">
+              <h4 className="text-sm font-medium text-muted-foreground">Informations financières</h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>SIREN</Label>
+                  <Input {...form.register("siren")} placeholder="123456789" maxLength={9} />
+                </div>
+                <div className="space-y-2">
+                  <Label>SIRET</Label>
+                  <Input {...form.register("siret")} placeholder="12345678900012" maxLength={14} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>N° TVA Intra.</Label>
+                  <Input {...form.register("vat_number")} placeholder="FR12345678901" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Code NAF</Label>
+                  <Input {...form.register("code_naf")} placeholder="7111Z" maxLength={10} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Forme juridique</Label>
+                  <Input {...form.register("forme_juridique")} placeholder="SARL, SAS, EURL..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Capital social (€)</Label>
+                  <Input {...form.register("capital_social")} type="number" placeholder="10000" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Ville du RCS</Label>
+                <Input {...form.register("rcs_city")} placeholder="Paris" />
+              </div>
             </div>
 
             {/* Notes */}

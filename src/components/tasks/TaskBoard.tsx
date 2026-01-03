@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useTasks, Task } from "@/hooks/useTasks";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
+import { useProjects } from "@/hooks/useProjects";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
 import { EmptyState } from "@/components/ui/empty-state";
 import { KanbanBoard, KanbanColumn, KanbanCard } from "@/components/shared/KanbanBoard";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CheckSquare, Calendar, MessageSquare, Plus, Building2 } from "lucide-react";
+import { CheckSquare, Calendar, FolderKanban, Building2, FileText, Target } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -20,13 +21,13 @@ const COLUMNS: { id: Task["status"]; label: string; color: string }[] = TASK_STA
 interface TaskBoardProps {
   statusFilter?: string | null;
   priorityFilter?: string | null;
-  entityFilter?: string;
   onCreateTask?: () => void;
 }
 
-export function TaskBoard({ statusFilter, priorityFilter, entityFilter = "all", onCreateTask }: TaskBoardProps) {
+export function TaskBoard({ statusFilter, priorityFilter, onCreateTask }: TaskBoardProps) {
   const { tasks, isLoading, updateTaskStatus } = useTasks();
   const { companies } = useCRMCompanies();
+  const { projects } = useProjects();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const handleDrop = (taskId: string, _fromColumn: string, toColumn: string) => {
@@ -37,9 +38,6 @@ export function TaskBoard({ statusFilter, priorityFilter, entityFilter = "all", 
     let filtered = tasks || [];
     if (priorityFilter) {
       filtered = filtered.filter((task) => task.priority === priorityFilter);
-    }
-    if (entityFilter && entityFilter !== "all") {
-      filtered = filtered.filter((task) => task.related_type === entityFilter);
     }
     return filtered;
   };
@@ -63,9 +61,15 @@ export function TaskBoard({ statusFilter, priorityFilter, entityFilter = "all", 
     return companies?.find(c => c.id === companyId)?.name || null;
   };
 
+  // Get project name by ID
+  const getProjectName = (projectId: string | null) => {
+    if (!projectId) return null;
+    return projects?.find(p => p.id === projectId)?.name || null;
+  };
+
   // Check if all tasks are empty
   const totalTasks = tasks?.length || 0;
-  if (!isLoading && totalTasks === 0 && !statusFilter && !priorityFilter && entityFilter === "all") {
+  if (!isLoading && totalTasks === 0 && !statusFilter && !priorityFilter) {
     return (
       <EmptyState
         icon={CheckSquare}
@@ -87,6 +91,7 @@ export function TaskBoard({ statusFilter, priorityFilter, entityFilter = "all", 
           <TaskKanbanCard
             task={task}
             companyName={getCompanyName(task.crm_company_id)}
+            projectName={getProjectName(task.project_id)}
             onClick={() => setSelectedTask(task)}
             isDragging={isDragging}
           />
@@ -109,11 +114,12 @@ export function TaskBoard({ statusFilter, priorityFilter, entityFilter = "all", 
 interface TaskKanbanCardProps {
   task: Task;
   companyName: string | null;
+  projectName: string | null;
   onClick: () => void;
   isDragging: boolean;
 }
 
-function TaskKanbanCard({ task, companyName, onClick, isDragging }: TaskKanbanCardProps) {
+function TaskKanbanCard({ task, companyName, projectName, onClick, isDragging }: TaskKanbanCardProps) {
   const completedSubtasks = task.subtasks?.filter((s) => s.status === "done").length || 0;
   const totalSubtasks = task.subtasks?.length || 0;
   const progress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
@@ -125,7 +131,25 @@ function TaskKanbanCard({ task, companyName, onClick, isDragging }: TaskKanbanCa
   };
 
   const isOverdue = task.due_date && isPast(new Date(task.due_date)) && task.status !== "done";
-  const priorityConfig = TASK_PRIORITIES.find(p => p.id === task.priority);
+
+  // Get relation info
+  const getRelationInfo = () => {
+    if (task.related_type === "project" && projectName) {
+      return { icon: FolderKanban, label: projectName, color: "bg-blue-500/10 text-blue-600 border-blue-200" };
+    }
+    if (task.related_type === "company" && companyName) {
+      return { icon: Building2, label: companyName, color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" };
+    }
+    if (task.related_type === "tender") {
+      return { icon: FileText, label: "Appel d'offre", color: "bg-amber-500/10 text-amber-600 border-amber-200" };
+    }
+    if (task.related_type === "lead") {
+      return { icon: Target, label: "Opportunité", color: "bg-purple-500/10 text-purple-600 border-purple-200" };
+    }
+    return null;
+  };
+
+  const relationInfo = getRelationInfo();
 
   // Get progress bar color based on status
   const getProgressColor = () => {
@@ -135,15 +159,13 @@ function TaskKanbanCard({ task, companyName, onClick, isDragging }: TaskKanbanCa
 
   return (
     <KanbanCard onClick={onClick}>
-      <div className="space-y-2.5">
-        {/* Company badge */}
-        {companyName && (
-          <div className="flex items-center gap-1.5">
-            <Badge variant="outline" className="text-2xs px-1.5 py-0 gap-1 font-normal bg-muted/50">
-              <Building2 className="h-2.5 w-2.5" />
-              {companyName}
-            </Badge>
-          </div>
+      <div className="space-y-2">
+        {/* Relation badge */}
+        {relationInfo && (
+          <Badge variant="outline" className={cn("text-2xs px-1.5 py-0.5 gap-1 font-normal", relationInfo.color)}>
+            <relationInfo.icon className="h-2.5 w-2.5" />
+            <span className="truncate max-w-[120px]">{relationInfo.label}</span>
+          </Badge>
         )}
 
         {/* Title */}
@@ -179,7 +201,7 @@ function TaskKanbanCard({ task, companyName, onClick, isDragging }: TaskKanbanCa
           </div>
         )}
 
-        {/* Footer: Assignees, Due Date, Comments */}
+        {/* Footer: Assignees, Due Date */}
         <div className="flex items-center justify-between gap-2 pt-1">
           <div className="flex items-center gap-2">
             {/* Assignees */}
@@ -201,28 +223,16 @@ function TaskKanbanCard({ task, companyName, onClick, isDragging }: TaskKanbanCa
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Due date button */}
-            {task.due_date ? (
-              <div className={cn(
-                "flex items-center gap-1 text-xs",
-                isOverdue ? "text-destructive" : "text-muted-foreground"
-              )}>
-                <Calendar className="h-3 w-3" />
-                <span>{formatDueDate(task.due_date)}</span>
-              </div>
-            ) : (
-              <button className="flex items-center gap-1 text-xs text-muted-foreground/60 hover:text-muted-foreground">
-                <Plus className="h-3 w-3" />
-                <span>Date</span>
-              </button>
-            )}
-
-            {/* Comments indicator */}
-            <div className="flex items-center gap-0.5 text-xs text-muted-foreground">
-              <MessageSquare className="h-3 w-3" />
+          {/* Due date */}
+          {task.due_date && (
+            <div className={cn(
+              "flex items-center gap-1 text-xs",
+              isOverdue ? "text-destructive" : "text-muted-foreground"
+            )}>
+              <Calendar className="h-3 w-3" />
+              <span>{formatDueDate(task.due_date)}</span>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </KanbanCard>

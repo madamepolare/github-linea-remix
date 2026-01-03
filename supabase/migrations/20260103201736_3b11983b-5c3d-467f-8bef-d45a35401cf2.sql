@@ -1,0 +1,15 @@
+-- Add financial fields to crm_companies
+ALTER TABLE public.crm_companies 
+ADD COLUMN IF NOT EXISTS siren VARCHAR(9),
+ADD COLUMN IF NOT EXISTS siret VARCHAR(14),
+ADD COLUMN IF NOT EXISTS vat_number VARCHAR(20),
+ADD COLUMN IF NOT EXISTS capital_social NUMERIC,
+ADD COLUMN IF NOT EXISTS forme_juridique VARCHAR(50),
+ADD COLUMN IF NOT EXISTS code_naf VARCHAR(10),
+ADD COLUMN IF NOT EXISTS rcs_city VARCHAR(100);
+
+-- Add additional profile fields
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS company VARCHAR(255),
+ADD COLUMN IF NOT EXISTS linkedin_url VARCHAR(500),
+ADD COLUMN IF NOT EXISTS bio TEXT;
