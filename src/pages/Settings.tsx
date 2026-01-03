@@ -44,7 +44,7 @@ export default function Settings() {
             </TabsTrigger>
             <TabsTrigger value="commercial" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
               <FileText className="h-3.5 w-3.5" strokeWidth={1.5} />
-              <span className="hidden sm:inline">Commercial</span>
+              <span className="hidden sm:inline">Finance</span>
             </TabsTrigger>
             <TabsTrigger value="crm" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
               <Target className="h-3.5 w-3.5" strokeWidth={1.5} />

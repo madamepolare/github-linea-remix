@@ -14,7 +14,9 @@ import {
   MinusCircle,
   Copy,
   Calculator,
-  Info
+  Info,
+  Layers,
+  Grid3X3
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,6 +32,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import {
   Select,
@@ -62,6 +67,7 @@ import {
   PhaseTemplate
 } from '@/lib/commercialTypes';
 import { AIPhaseSuggestion } from './AIPhaseSuggestion';
+import { useQuoteTemplates, QuoteTemplate, PricingGridItem } from '@/hooks/useQuoteTemplates';
 
 interface FeesAndQuoteEditorProps {
   items: QuoteLineItem[];
@@ -104,8 +110,11 @@ export function FeesAndQuoteEditor({
 }: FeesAndQuoteEditorProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  
+  // Load templates and pricing grids
+  const { templates, pricingGrids } = useQuoteTemplates(projectType);
 
-  const formatCurrency = (value: number) => 
+  const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
 
   // === FEE CALCULATION LOGIC ===
@@ -238,6 +247,51 @@ export function FeesAndQuoteEditor({
     setExpandedItems(new Set([...expandedItems, newItem.id]));
   };
 
+  // Add multiple phases from a template bundle
+  const addPhasesFromTemplate = (template: QuoteTemplate) => {
+    const existingCodes = phaseItems.map(p => p.code).filter(Boolean);
+    const newPhases: QuoteLineItem[] = template.phases
+      .filter(phase => !existingCodes.includes(phase.code))
+      .map((phase, index) => ({
+        id: generateId(),
+        type: 'phase' as LineItemType,
+        code: phase.code,
+        designation: phase.name,
+        description: phase.description,
+        quantity: 1,
+        unit: 'forfait',
+        unitPrice: 0,
+        amount: 0,
+        isOptional: false,
+        deliverables: phase.deliverables || [],
+        sortOrder: items.length + index,
+        percentageFee: phase.defaultPercentage || 10
+      }));
+    
+    if (newPhases.length > 0) {
+      onItemsChange([...items, ...newPhases]);
+    }
+  };
+
+  // Add item from pricing grid
+  const addItemFromPricingGrid = (item: PricingGridItem, gridType: string) => {
+    const newItem: QuoteLineItem = {
+      id: generateId(),
+      type: 'prestation',
+      designation: item.name,
+      description: item.description,
+      quantity: 1,
+      unit: item.unit,
+      unitPrice: item.unit_price,
+      amount: item.unit_price,
+      isOptional: false,
+      deliverables: [],
+      sortOrder: items.length
+    };
+    onItemsChange([...items, newItem]);
+    setExpandedItems(new Set([...expandedItems, newItem.id]));
+  };
+
   // Get available phase templates based on project type
   const availablePhaseTemplates = PHASES_BY_PROJECT_TYPE[projectType] || PHASES_BY_PROJECT_TYPE.architecture;
   
@@ -246,6 +300,12 @@ export function FeesAndQuoteEditor({
   const remainingPhaseTemplates = availablePhaseTemplates.filter(
     t => !existingPhaseCodes.includes(t.code)
   );
+
+  // Filter templates for current project type
+  const availableQuoteTemplates = templates.filter(t => t.project_type === projectType);
+  
+  // Filter active pricing grids
+  const activePricingGrids = pricingGrids.filter(g => g.is_active && g.items.length > 0);
 
   const addCommonItem = (itemTemplate: typeof COMMON_ADDITIONAL_ITEMS[0]) => {
     const newItem: QuoteLineItem = {
@@ -330,7 +390,7 @@ export function FeesAndQuoteEditor({
     }
   };
 
-  const templates = getTemplatesForProjectType(projectType);
+  const quoteTemplatesForType = getTemplatesForProjectType(projectType);
 
   // === RENDER PHASE ROW ===
   const renderPhaseRow = (item: QuoteLineItem, index: number) => {
@@ -929,6 +989,37 @@ export function FeesAndQuoteEditor({
                     <Plus className="h-4 w-4 mr-2" />
                     Phase personnalisée
                   </DropdownMenuItem>
+                  
+                  {/* Templates (bundles) */}
+                  {availableQuoteTemplates.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                        <Layers className="h-3 w-3" />
+                        Charger un template
+                      </div>
+                      {availableQuoteTemplates.map((template) => (
+                        <DropdownMenuItem 
+                          key={template.id} 
+                          onClick={() => addPhasesFromTemplate(template)}
+                          className="flex flex-col items-start py-2"
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            <span className="font-medium">{template.name}</span>
+                            <Badge variant="secondary" className="ml-auto text-xs">
+                              {template.phases.length} phases
+                            </Badge>
+                          </div>
+                          {template.description && (
+                            <span className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                              {template.description}
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
+                  
                   {remainingPhaseTemplates.length > 0 && (
                     <>
                       <DropdownMenuSeparator />
@@ -1023,10 +1114,10 @@ export function FeesAndQuoteEditor({
                     <ChevronDown className="h-4 w-4 sm:ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-64">
                   <DropdownMenuItem onClick={() => addItem('prestation')}>
                     {TYPE_ICONS.prestation}
-                    <span className="ml-2">Prestation</span>
+                    <span className="ml-2">Prestation personnalisée</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => addItem('option')}>
                     {TYPE_ICONS.option}
@@ -1041,6 +1132,42 @@ export function FeesAndQuoteEditor({
                     {TYPE_ICONS.discount}
                     <span className="ml-2">Remise</span>
                   </DropdownMenuItem>
+                  
+                  {/* Pricing Grids */}
+                  {activePricingGrids.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                        <Grid3X3 className="h-3 w-3" />
+                        Grilles tarifaires
+                      </div>
+                      {activePricingGrids.map((grid) => (
+                        <DropdownMenuSub key={grid.id}>
+                          <DropdownMenuSubTrigger className="gap-2">
+                            <span>{grid.name}</span>
+                            <Badge variant="outline" className="ml-auto text-xs">
+                              {grid.items.length}
+                            </Badge>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-64 max-h-60 overflow-y-auto">
+                            {grid.items.map((item) => (
+                              <DropdownMenuItem 
+                                key={item.id}
+                                onClick={() => addItemFromPricingGrid(item, grid.grid_type)}
+                                className="flex justify-between"
+                              >
+                                <span className="truncate mr-2">{item.name}</span>
+                                <span className="text-xs text-muted-foreground shrink-0">
+                                  {item.unit_price}€/{item.unit}
+                                </span>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      ))}
+                    </>
+                  )}
+                  
                   <DropdownMenuSeparator />
                   <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
                     Prestations courantes
