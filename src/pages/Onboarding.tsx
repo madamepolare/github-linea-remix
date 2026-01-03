@@ -37,9 +37,9 @@ type WorkspaceFormData = z.infer<typeof workspaceSchema>;
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 const steps = [
-  { id: 1, title: "Create Workspace", description: "Set up your company workspace" },
-  { id: 2, title: "Your Profile", description: "Complete your profile details" },
-  { id: 3, title: "You're Ready!", description: "Start managing your projects" },
+  { id: 1, title: "Espace de travail", description: "Configurez votre entreprise" },
+  { id: 2, title: "Votre profil", description: "Complétez vos informations" },
+  { id: 3, title: "Prêt !", description: "Commencez à gérer vos projets" },
 ];
 
 export default function Onboarding() {
@@ -100,18 +100,18 @@ export default function Onboarding() {
         .select()
         .single();
 
-      if (workspaceError) {
-        if (workspaceError.message.includes("duplicate")) {
-          toast({
-            variant: "destructive",
-            title: "Slug already taken",
-            description: "Please choose a different workspace URL.",
-          });
-          setIsLoading(false);
-          return;
+        if (workspaceError) {
+          if (workspaceError.message.includes("duplicate")) {
+            toast({
+              variant: "destructive",
+              title: "URL déjà utilisée",
+              description: "Veuillez choisir une autre URL pour votre espace.",
+            });
+            setIsLoading(false);
+            return;
+          }
+          throw workspaceError;
         }
-        throw workspaceError;
-      }
 
       // Add user as owner
       const { error: memberError } = await supabase
@@ -135,13 +135,13 @@ export default function Onboarding() {
       setCreatedWorkspaceId(workspace.id);
       setCurrentStep(2);
       toast({
-        title: "Workspace created!",
-        description: `Welcome to ${data.companyName}`,
+        title: "Espace créé !",
+        description: `Bienvenue dans ${data.companyName}`,
       });
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error creating workspace",
+        title: "Erreur lors de la création",
         description: error.message,
       });
     } finally {
@@ -170,7 +170,7 @@ export default function Onboarding() {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error updating profile",
+        title: "Erreur lors de la mise à jour",
         description: error.message,
       });
     } finally {
@@ -261,22 +261,22 @@ export default function Onboarding() {
                   </div>
                   <div>
                     <h2 className="font-display text-2xl font-bold text-foreground">
-                      Create Your Workspace
+                      Créer votre espace de travail
                     </h2>
                     <p className="text-muted-foreground">
-                      Set up your company's central hub
+                      Configurez le hub central de votre entreprise
                     </p>
                   </div>
                 </div>
 
                 <form onSubmit={workspaceForm.handleSubmit(handleCreateWorkspace)} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="companyName">Company Name</Label>
+                    <Label htmlFor="companyName">Nom de l'entreprise</Label>
                     <div className="relative">
                       <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="companyName"
-                        placeholder="Studio Architecture"
+                        placeholder="Nom de votre agence"
                         className="pl-10"
                         {...workspaceForm.register("companyName")}
                       />
@@ -289,7 +289,7 @@ export default function Onboarding() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="companySlug">Workspace URL</Label>
+                    <Label htmlFor="companySlug">URL de l'espace</Label>
                     <div className="flex items-center">
                       <span className="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-input bg-muted text-sm text-muted-foreground">
                         archimind.app/
@@ -314,7 +314,7 @@ export default function Onboarding() {
                     ) : (
                       <ArrowRight className="h-4 w-4 mr-2" />
                     )}
-                    Create Workspace
+                    Créer l'espace de travail
                   </Button>
                 </form>
               </motion.div>
@@ -334,22 +334,22 @@ export default function Onboarding() {
                   </div>
                   <div>
                     <h2 className="font-display text-2xl font-bold text-foreground">
-                      Complete Your Profile
+                      Complétez votre profil
                     </h2>
                     <p className="text-muted-foreground">
-                      Tell us a bit more about yourself
+                      Parlez-nous un peu de vous
                     </p>
                   </div>
                 </div>
 
                 <form onSubmit={profileForm.handleSubmit(handleUpdateProfile)} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="jobTitle">Job Title (Optional)</Label>
+                    <Label htmlFor="jobTitle">Fonction (Optionnel)</Label>
                     <div className="relative">
                       <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="jobTitle"
-                        placeholder="Principal Architect"
+                        placeholder="Architecte principal"
                         className="pl-10"
                         {...profileForm.register("jobTitle")}
                       />
@@ -357,7 +357,7 @@ export default function Onboarding() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number (Optional)</Label>
+                    <Label htmlFor="phone">Téléphone (Optionnel)</Label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -377,7 +377,7 @@ export default function Onboarding() {
                       className="flex-1"
                     >
                       <ArrowLeft className="h-4 w-4 mr-2" />
-                      Back
+                      Retour
                     </Button>
                     <Button type="submit" className="flex-1" disabled={isLoading}>
                       {isLoading ? (
@@ -385,7 +385,7 @@ export default function Onboarding() {
                       ) : (
                         <ArrowRight className="h-4 w-4 mr-2" />
                       )}
-                      Continue
+                      Continuer
                     </Button>
                   </div>
                 </form>
@@ -406,20 +406,20 @@ export default function Onboarding() {
                 </div>
 
                 <h2 className="font-display text-3xl font-bold text-foreground mb-2">
-                  You're All Set!
+                  Vous êtes prêt !
                 </h2>
                 <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-                  Your workspace is ready. Start by creating your first project, adding team members, or exploring the dashboard.
+                  Votre espace de travail est configuré. Créez votre premier projet, invitez votre équipe ou explorez le tableau de bord.
                 </p>
 
                 <div className="grid grid-cols-3 gap-4 mb-8">
                   <div className="p-4 rounded-lg bg-muted/50">
                     <Building2 className="h-6 w-6 text-primary mx-auto mb-2" />
-                    <span className="text-sm font-medium">Projects</span>
+                    <span className="text-sm font-medium">Projets</span>
                   </div>
                   <div className="p-4 rounded-lg bg-muted/50">
                     <Users className="h-6 w-6 text-accent mx-auto mb-2" />
-                    <span className="text-sm font-medium">Team</span>
+                    <span className="text-sm font-medium">Équipe</span>
                   </div>
                   <div className="p-4 rounded-lg bg-muted/50">
                     <Briefcase className="h-6 w-6 text-success mx-auto mb-2" />
@@ -428,7 +428,7 @@ export default function Onboarding() {
                 </div>
 
                 <Button onClick={handleComplete} size="lg" className="px-8">
-                  Go to Dashboard
+                  Accéder au tableau de bord
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </motion.div>

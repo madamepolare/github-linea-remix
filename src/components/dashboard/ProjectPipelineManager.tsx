@@ -329,8 +329,10 @@ function ProjectPhaseRow({
             </button>
             {project.isPhaseOverdue && (
               <Tooltip>
-                <TooltipTrigger>
-                  <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+                <TooltipTrigger asChild>
+                  <span className="inline-flex shrink-0">
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent>Phase en retard</TooltipContent>
               </Tooltip>
