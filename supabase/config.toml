@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.send-partner-invitation]
 verify_jwt = false
+
+[functions.analyze-dce-before-creation]
+verify_jwt = false
