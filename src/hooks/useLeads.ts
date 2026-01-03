@@ -282,103 +282,42 @@ export function usePipelines() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const queryKey = ["pipelines-from-settings", activeWorkspace?.id];
-
-  // Fetch pipelines from workspace_settings
-  const { data: pipelineSettings, isLoading: loadingPipelines } = useQuery({
-    queryKey: ["workspace-settings", activeWorkspace?.id, "pipelines"],
+  // Fetch pipelines from crm_pipelines table (where the FK points to)
+  const { data: pipelines, isLoading, error } = useQuery({
+    queryKey: ["crm-pipelines", activeWorkspace?.id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("workspace_settings")
-        .select("*")
+        .from("crm_pipelines")
+        .select(`
+          *,
+          stages:crm_pipeline_stages(*)
+        `)
         .eq("workspace_id", activeWorkspace!.id)
-        .eq("setting_type", "pipelines")
         .order("sort_order");
 
       if (error) throw error;
-      return data;
+      
+      // Sort stages within each pipeline
+      return (data || []).map(p => ({
+        ...p,
+        stages: (p.stages || []).sort((a: PipelineStage, b: PipelineStage) => 
+          (a.sort_order || 0) - (b.sort_order || 0)
+        ),
+      })) as Pipeline[];
     },
     enabled: !!activeWorkspace?.id,
   });
-
-  // Fetch stages from workspace_settings
-  const { data: stageSettings, isLoading: loadingStages } = useQuery({
-    queryKey: ["workspace-settings", activeWorkspace?.id, "pipeline_stages"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("workspace_settings")
-        .select("*")
-        .eq("workspace_id", activeWorkspace!.id)
-        .eq("setting_type", "pipeline_stages")
-        .order("sort_order");
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!activeWorkspace?.id,
-  });
-
-  // Helper to safely get setting value properties
-  const getSettingValue = (setting: { setting_value: unknown }) => {
-    const val = setting.setting_value;
-    if (typeof val === 'object' && val !== null) {
-      return val as Record<string, unknown>;
-    }
-    return {};
-  };
-
-  // Transform workspace_settings into Pipeline format
-  const pipelines: Pipeline[] = useMemo(() => {
-    if (!pipelineSettings) return [];
-
-    return pipelineSettings.map((p, index) => {
-      const pVal = getSettingValue(p);
-      return {
-        id: p.id,
-        workspace_id: p.workspace_id,
-        name: (pVal.label as string) || p.setting_key,
-        description: (pVal.description as string) || null,
-        color: (pVal.color as string) || null,
-        is_default: index === 0,
-        sort_order: p.sort_order,
-        created_at: p.created_at || new Date().toISOString(),
-        updated_at: p.updated_at || new Date().toISOString(),
-        stages: (stageSettings || [])
-          .filter((s) => {
-            const sVal = getSettingValue(s);
-            return sVal.pipeline_id === p.id;
-          })
-          .map((s) => {
-            const sVal = getSettingValue(s);
-            return {
-              id: s.id,
-              pipeline_id: p.id,
-              name: (sVal.label as string) || s.setting_key,
-              color: (sVal.color as string) || null,
-              probability: (sVal.probability as number) || 0,
-              sort_order: s.sort_order,
-              created_at: s.created_at || new Date().toISOString(),
-            };
-          })
-          .sort((a, b) => a.sort_order - b.sort_order),
-      };
-    });
-  }, [pipelineSettings, stageSettings]);
 
   const createPipeline = useMutation({
     mutationFn: async (input: { name: string; description?: string; color?: string }) => {
       const { data, error } = await supabase
-        .from("workspace_settings")
+        .from("crm_pipelines")
         .insert({
           workspace_id: activeWorkspace!.id,
-          setting_type: "pipelines",
-          setting_key: input.name.toLowerCase().replace(/\s+/g, "_"),
-          setting_value: {
-            label: input.name,
-            description: input.description,
-            color: input.color,
-          },
-          sort_order: pipelineSettings?.length || 0,
+          name: input.name,
+          description: input.description,
+          color: input.color,
+          sort_order: pipelines?.length || 0,
         })
         .select()
         .single();
@@ -387,7 +326,7 @@ export function usePipelines() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workspace-settings", activeWorkspace?.id] });
+      queryClient.invalidateQueries({ queryKey: ["crm-pipelines"] });
       toast({ title: "Pipeline créé" });
     },
     onError: (error: Error) => {
@@ -399,15 +338,12 @@ export function usePipelines() {
     mutationFn: async () => {
       // Create pipeline
       const { data: pipeline, error: pipelineError } = await supabase
-        .from("workspace_settings")
+        .from("crm_pipelines")
         .insert({
           workspace_id: activeWorkspace!.id,
-          setting_type: "pipelines",
-          setting_key: "default",
-          setting_value: {
-            label: "Pipeline Commercial",
-            color: "#3B82F6",
-          },
+          name: "Pipeline Commercial",
+          color: "#3B82F6",
+          is_default: true,
           sort_order: 0,
         })
         .select()
@@ -417,26 +353,21 @@ export function usePipelines() {
 
       // Create stages
       const stages = [
-        { key: "new", label: "Nouveau", color: "#6b7280", probability: 10 },
-        { key: "contacted", label: "Contacté", color: "#3b82f6", probability: 20 },
-        { key: "meeting", label: "RDV planifié", color: "#8b5cf6", probability: 40 },
-        { key: "proposal", label: "Proposition", color: "#ec4899", probability: 60 },
-        { key: "negotiation", label: "Négociation", color: "#f97316", probability: 80 },
-        { key: "won", label: "Gagné", color: "#22c55e", probability: 100 },
-        { key: "lost", label: "Perdu", color: "#ef4444", probability: 0 },
+        { name: "Nouveau", color: "#6b7280", probability: 10 },
+        { name: "Contacté", color: "#3b82f6", probability: 20 },
+        { name: "RDV planifié", color: "#8b5cf6", probability: 40 },
+        { name: "Proposition", color: "#ec4899", probability: 60 },
+        { name: "Négociation", color: "#f97316", probability: 80 },
+        { name: "Gagné", color: "#22c55e", probability: 100 },
+        { name: "Perdu", color: "#ef4444", probability: 0 },
       ];
 
-      const { error: stagesError } = await supabase.from("workspace_settings").insert(
+      const { error: stagesError } = await supabase.from("crm_pipeline_stages").insert(
         stages.map((s, i) => ({
-          workspace_id: activeWorkspace!.id,
-          setting_type: "pipeline_stages",
-          setting_key: s.key,
-          setting_value: {
-            label: s.label,
-            color: s.color,
-            probability: s.probability,
-            pipeline_id: pipeline.id,
-          },
+          pipeline_id: pipeline.id,
+          name: s.name,
+          color: s.color,
+          probability: s.probability,
           sort_order: i,
         }))
       );
@@ -446,7 +377,7 @@ export function usePipelines() {
       return pipeline;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workspace-settings", activeWorkspace?.id] });
+      queryClient.invalidateQueries({ queryKey: ["crm-pipelines"] });
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Erreur", description: error.message });
@@ -454,9 +385,9 @@ export function usePipelines() {
   });
 
   return {
-    pipelines,
-    isLoading: loadingPipelines || loadingStages,
-    error: null,
+    pipelines: pipelines || [],
+    isLoading,
+    error,
     createPipeline,
     createDefaultPipeline,
   };
