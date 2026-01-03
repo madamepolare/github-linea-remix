@@ -770,6 +770,56 @@ export type Database = {
           },
         ]
       }
+      knowledge_base_entries: {
+        Row: {
+          category: string | null
+          content: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          project_types: string[] | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          usage_count: number | null
+          workspace_id: string
+        }
+        Insert: {
+          category?: string | null
+          content?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          project_types?: string[] | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          usage_count?: number | null
+          workspace_id: string
+        }
+        Update: {
+          category?: string | null
+          content?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          project_types?: string[] | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          usage_count?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_activities: {
         Row: {
           activity_type: string
@@ -2429,6 +2479,483 @@ export type Database = {
           },
         ]
       }
+      tender_criteria: {
+        Row: {
+          created_at: string | null
+          criterion_name: string
+          id: string
+          notes: string | null
+          sub_criteria: Json | null
+          tender_id: string
+          weight: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          criterion_name: string
+          id?: string
+          notes?: string | null
+          sub_criteria?: Json | null
+          tender_id: string
+          weight?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          criterion_name?: string
+          id?: string
+          notes?: string | null
+          sub_criteria?: Json | null
+          tender_id?: string
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_criteria_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tender_deliverables: {
+        Row: {
+          created_at: string | null
+          deliverable_type: string | null
+          description: string | null
+          due_date: string | null
+          file_urls: string[] | null
+          id: string
+          is_completed: boolean | null
+          name: string
+          responsible_company_ids: string[] | null
+          responsible_type: string | null
+          sort_order: number | null
+          tender_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deliverable_type?: string | null
+          description?: string | null
+          due_date?: string | null
+          file_urls?: string[] | null
+          id?: string
+          is_completed?: boolean | null
+          name: string
+          responsible_company_ids?: string[] | null
+          responsible_type?: string | null
+          sort_order?: number | null
+          tender_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deliverable_type?: string | null
+          description?: string | null
+          due_date?: string | null
+          file_urls?: string[] | null
+          id?: string
+          is_completed?: boolean | null
+          name?: string
+          responsible_company_ids?: string[] | null
+          responsible_type?: string | null
+          sort_order?: number | null
+          tender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_deliverables_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tender_documents: {
+        Row: {
+          analyzed_at: string | null
+          document_type: string | null
+          extracted_data: Json | null
+          file_name: string
+          file_size: number | null
+          file_url: string
+          id: string
+          is_analyzed: boolean | null
+          tender_id: string
+          uploaded_at: string | null
+        }
+        Insert: {
+          analyzed_at?: string | null
+          document_type?: string | null
+          extracted_data?: Json | null
+          file_name: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          is_analyzed?: boolean | null
+          tender_id: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          analyzed_at?: string | null
+          document_type?: string | null
+          extracted_data?: Json | null
+          file_name?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          is_analyzed?: boolean | null
+          tender_id?: string
+          uploaded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_documents_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tender_partner_invitations: {
+        Row: {
+          company_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          email_body: string | null
+          email_subject: string | null
+          id: string
+          opened_at: string | null
+          response: Database["public"]["Enums"]["invitation_response"] | null
+          response_date: string | null
+          response_notes: string | null
+          role_needed: Database["public"]["Enums"]["tender_team_role"] | null
+          sent_at: string | null
+          specialty_needed: string | null
+          tender_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          email_body?: string | null
+          email_subject?: string | null
+          id?: string
+          opened_at?: string | null
+          response?: Database["public"]["Enums"]["invitation_response"] | null
+          response_date?: string | null
+          response_notes?: string | null
+          role_needed?: Database["public"]["Enums"]["tender_team_role"] | null
+          sent_at?: string | null
+          specialty_needed?: string | null
+          tender_id: string
+        }
+        Update: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          email_body?: string | null
+          email_subject?: string | null
+          id?: string
+          opened_at?: string | null
+          response?: Database["public"]["Enums"]["invitation_response"] | null
+          response_date?: string | null
+          response_notes?: string | null
+          role_needed?: Database["public"]["Enums"]["tender_team_role"] | null
+          sent_at?: string | null
+          specialty_needed?: string | null
+          tender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_partner_invitations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_partner_invitations_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_partner_invitations_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tender_requirements: {
+        Row: {
+          ai_confidence: number | null
+          created_at: string | null
+          description: string
+          id: string
+          is_mandatory: boolean | null
+          requirement_type: string | null
+          source_document_id: string | null
+          specialty: string | null
+          tender_id: string
+        }
+        Insert: {
+          ai_confidence?: number | null
+          created_at?: string | null
+          description: string
+          id?: string
+          is_mandatory?: boolean | null
+          requirement_type?: string | null
+          source_document_id?: string | null
+          specialty?: string | null
+          tender_id: string
+        }
+        Update: {
+          ai_confidence?: number | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_mandatory?: boolean | null
+          requirement_type?: string | null
+          source_document_id?: string | null
+          specialty?: string | null
+          tender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_requirements_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "tender_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_requirements_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tender_team_members: {
+        Row: {
+          company_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          id: string
+          invited_at: string | null
+          notes: string | null
+          responded_at: string | null
+          role: Database["public"]["Enums"]["tender_team_role"] | null
+          specialty: string | null
+          status: Database["public"]["Enums"]["invitation_response"] | null
+          tender_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          invited_at?: string | null
+          notes?: string | null
+          responded_at?: string | null
+          role?: Database["public"]["Enums"]["tender_team_role"] | null
+          specialty?: string | null
+          status?: Database["public"]["Enums"]["invitation_response"] | null
+          tender_id: string
+        }
+        Update: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          id?: string
+          invited_at?: string | null
+          notes?: string | null
+          responded_at?: string | null
+          role?: Database["public"]["Enums"]["tender_team_role"] | null
+          specialty?: string | null
+          status?: Database["public"]["Enums"]["invitation_response"] | null
+          tender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_team_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_team_members_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_team_members_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tender_technical_sections: {
+        Row: {
+          ai_generated: boolean | null
+          ai_source_documents: string[] | null
+          content: string | null
+          created_at: string | null
+          id: string
+          last_edited_at: string | null
+          last_edited_by: string | null
+          section_type: string | null
+          sort_order: number | null
+          tender_id: string
+          title: string
+        }
+        Insert: {
+          ai_generated?: boolean | null
+          ai_source_documents?: string[] | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          last_edited_at?: string | null
+          last_edited_by?: string | null
+          section_type?: string | null
+          sort_order?: number | null
+          tender_id: string
+          title: string
+        }
+        Update: {
+          ai_generated?: boolean | null
+          ai_source_documents?: string[] | null
+          content?: string | null
+          created_at?: string | null
+          id?: string
+          last_edited_at?: string | null
+          last_edited_by?: string | null
+          section_type?: string | null
+          sort_order?: number | null
+          tender_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_technical_sections_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenders: {
+        Row: {
+          budget_disclosed: boolean | null
+          client_name: string | null
+          client_type: string | null
+          contracting_authority: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          estimated_budget: number | null
+          go_decision_by: string | null
+          go_decision_date: string | null
+          go_decision_notes: string | null
+          id: string
+          jury_date: string | null
+          location: string | null
+          procedure_type: Database["public"]["Enums"]["procedure_type"] | null
+          reference: string
+          region: string | null
+          results_date: string | null
+          site_visit_date: string | null
+          site_visit_required: boolean | null
+          source_platform: string | null
+          source_url: string | null
+          status: Database["public"]["Enums"]["tender_status"] | null
+          submission_deadline: string | null
+          surface_area: number | null
+          title: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          budget_disclosed?: boolean | null
+          client_name?: string | null
+          client_type?: string | null
+          contracting_authority?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_budget?: number | null
+          go_decision_by?: string | null
+          go_decision_date?: string | null
+          go_decision_notes?: string | null
+          id?: string
+          jury_date?: string | null
+          location?: string | null
+          procedure_type?: Database["public"]["Enums"]["procedure_type"] | null
+          reference: string
+          region?: string | null
+          results_date?: string | null
+          site_visit_date?: string | null
+          site_visit_required?: boolean | null
+          source_platform?: string | null
+          source_url?: string | null
+          status?: Database["public"]["Enums"]["tender_status"] | null
+          submission_deadline?: string | null
+          surface_area?: number | null
+          title: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          budget_disclosed?: boolean | null
+          client_name?: string | null
+          client_type?: string | null
+          contracting_authority?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_budget?: number | null
+          go_decision_by?: string | null
+          go_decision_date?: string | null
+          go_decision_notes?: string | null
+          id?: string
+          jury_date?: string | null
+          location?: string | null
+          procedure_type?: Database["public"]["Enums"]["procedure_type"] | null
+          reference?: string
+          region?: string | null
+          results_date?: string | null
+          site_visit_date?: string | null
+          site_visit_required?: boolean | null
+          source_platform?: string | null
+          source_url?: string | null
+          status?: Database["public"]["Enums"]["tender_status"] | null
+          submission_deadline?: string | null
+          surface_area?: number | null
+          title?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenders_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_invites: {
         Row: {
           created_at: string
@@ -2607,6 +3134,24 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "admin" | "member" | "viewer"
+      invitation_response: "pending" | "accepted" | "declined"
+      procedure_type:
+        | "ouvert"
+        | "restreint"
+        | "adapte"
+        | "concours"
+        | "dialogue"
+        | "partenariat"
+      tender_status:
+        | "repere"
+        | "en_analyse"
+        | "go"
+        | "no_go"
+        | "en_montage"
+        | "depose"
+        | "gagne"
+        | "perdu"
+      tender_team_role: "mandataire" | "cotraitant" | "sous_traitant"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2735,6 +3280,26 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "admin", "member", "viewer"],
+      invitation_response: ["pending", "accepted", "declined"],
+      procedure_type: [
+        "ouvert",
+        "restreint",
+        "adapte",
+        "concours",
+        "dialogue",
+        "partenariat",
+      ],
+      tender_status: [
+        "repere",
+        "en_analyse",
+        "go",
+        "no_go",
+        "en_montage",
+        "depose",
+        "gagne",
+        "perdu",
+      ],
+      tender_team_role: ["mandataire", "cotraitant", "sous_traitant"],
     },
   },
 } as const
