@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -39,10 +39,30 @@ import { TenderEditDialog } from "@/components/tenders/TenderEditDialog";
 export default function TenderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: tender, isLoading } = useTender(id);
   const { updateTender, updateStatus } = useTenders();
   const [activeTab, setActiveTab] = useState("analysis");
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<Array<{ name: string; type: string; data: string }> | null>(null);
+
+  // Check for auto-upload mode (from creation dialog)
+  useEffect(() => {
+    if (id && searchParams.get('autoUpload') === 'true') {
+      const storedFiles = sessionStorage.getItem(`tender-files-${id}`);
+      if (storedFiles) {
+        try {
+          const files = JSON.parse(storedFiles);
+          setPendingFiles(files);
+          sessionStorage.removeItem(`tender-files-${id}`);
+        } catch (e) {
+          console.error('Failed to parse stored files:', e);
+        }
+      }
+      // Remove the query param
+      setSearchParams({}, { replace: true });
+    }
+  }, [id, searchParams, setSearchParams]);
 
   if (isLoading) {
     return (
@@ -202,6 +222,8 @@ export default function TenderDetail() {
                 <TenderAIAnalysisTab 
                   tender={tender} 
                   onNavigateToTab={setActiveTab}
+                  pendingFiles={pendingFiles}
+                  onFilesPending={(files) => setPendingFiles(files)}
                 />
               </TabsContent>
               <TabsContent value="documents" className="m-0 p-6">

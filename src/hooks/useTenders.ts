@@ -46,6 +46,7 @@ export function useTenders() {
       results_date?: string | null;
       source_platform?: string | null;
       source_url?: string | null;
+      status?: string | null;
     }) => {
       if (!activeWorkspace?.id) throw new Error("No workspace");
       
@@ -73,6 +74,7 @@ export function useTenders() {
           results_date: tender.results_date ?? null,
           source_platform: tender.source_platform ?? null,
           source_url: tender.source_url ?? null,
+          status: tender.status ?? 'repere',
           workspace_id: activeWorkspace.id,
           created_by: user.user?.id ?? null,
         } as any)

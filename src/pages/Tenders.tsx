@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, formatDistanceToNow, isPast, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -15,6 +15,10 @@ import {
   MoreHorizontal,
   Trash2,
   Eye,
+  Upload,
+  FileText,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -34,27 +38,17 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogFooter 
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useTenders } from "@/hooks/useTenders";
 import { 
   TENDER_STATUS_LABELS, 
   TENDER_STATUS_COLORS, 
-  PROCEDURE_TYPE_LABELS,
   type Tender,
   type TenderStatus,
-  type ProcedureType,
 } from "@/lib/tenderTypes";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function Tenders() {
   const navigate = useNavigate();
@@ -62,15 +56,9 @@ export default function Tenders() {
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newTender, setNewTender] = useState({
-    reference: "",
-    title: "",
-    client_name: "",
-    procedure_type: "ouvert" as ProcedureType,
-    submission_deadline: "",
-    estimated_budget: "",
-    location: "",
-  });
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
 
   const filteredTenders = tenders.filter(
     (t) =>
@@ -79,29 +67,80 @@ export default function Tenders() {
       t.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleCreateTender = async () => {
-    if (!newTender.reference || !newTender.title) return;
-    
-    await createTender.mutateAsync({
-      reference: newTender.reference,
-      title: newTender.title,
-      client_name: newTender.client_name || null,
-      procedure_type: newTender.procedure_type,
-      submission_deadline: newTender.submission_deadline || null,
-      estimated_budget: newTender.estimated_budget ? parseFloat(newTender.estimated_budget) : null,
-      location: newTender.location || null,
-    });
-    
-    setShowCreateDialog(false);
-    setNewTender({
-      reference: "",
-      title: "",
-      client_name: "",
-      procedure_type: "ouvert",
-      submission_deadline: "",
-      estimated_budget: "",
-      location: "",
-    });
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    const validFiles = files.filter(f => 
+      f.type === 'application/pdf' || 
+      f.type.includes('word') || 
+      f.type.includes('excel') ||
+      f.type.includes('spreadsheet')
+    );
+    if (validFiles.length > 0) {
+      setUploadedFiles(prev => [...prev, ...validFiles]);
+    }
+  }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setUploadedFiles(prev => [...prev, ...files]);
+    }
+  }, []);
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCreateAndAnalyze = async () => {
+    if (uploadedFiles.length === 0) {
+      toast.error("Déposez au moins un fichier DCE");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      // Generate a temporary reference
+      const tempRef = `AO-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+      
+      const result = await createTender.mutateAsync({
+        reference: tempRef,
+        title: "Nouveau concours - En attente d'analyse IA",
+        status: 'repere',
+      });
+
+      // Navigate to the tender detail with files to upload
+      // Store files in sessionStorage temporarily
+      const fileData = await Promise.all(uploadedFiles.map(async (file) => ({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        data: await file.arrayBuffer().then(buf => 
+          btoa(String.fromCharCode(...new Uint8Array(buf)))
+        ),
+      })));
+      sessionStorage.setItem(`tender-files-${result.id}`, JSON.stringify(fileData));
+      
+      setShowCreateDialog(false);
+      setUploadedFiles([]);
+      navigate(`/tenders/${result.id}?autoUpload=true`);
+      toast.success("Concours créé, l'IA va analyser vos documents");
+    } catch (error) {
+      toast.error("Erreur lors de la création");
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const kanbanColumns: TenderStatus[] = ['repere', 'en_analyse', 'go', 'en_montage', 'depose'];
@@ -201,97 +240,134 @@ export default function Tenders() {
         </div>
       </div>
 
-      {/* Create Dialog */}
+      {/* Create Dialog - File First */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Nouveau concours</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Nouveau concours
+            </DialogTitle>
+            <DialogDescription>
+              Déposez vos documents DCE et l'IA analysera automatiquement toutes les informations
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Référence *</Label>
-                <Input
-                  placeholder="AO-2026-001"
-                  value={newTender.reference}
-                  onChange={(e) => setNewTender({ ...newTender, reference: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Type de procédure</Label>
-                <Select
-                  value={newTender.procedure_type}
-                  onValueChange={(v) => setNewTender({ ...newTender, procedure_type: v as ProcedureType })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PROCEDURE_TYPE_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Titre du marché *</Label>
-              <Textarea
-                placeholder="Construction d'un groupe scolaire..."
-                value={newTender.title}
-                onChange={(e) => setNewTender({ ...newTender, title: e.target.value })}
-                rows={2}
+          
+          <div className="py-4">
+            {/* Drop Zone */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={cn(
+                "border-2 border-dashed rounded-xl p-8 text-center transition-all",
+                isDragging 
+                  ? "border-primary bg-primary/5 scale-[1.02]" 
+                  : "border-muted-foreground/25 hover:border-primary/50"
+              )}
+            >
+              <input
+                type="file"
+                id="dce-upload"
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx"
+                onChange={handleFileSelect}
+                className="hidden"
               />
+              <label htmlFor="dce-upload" className="cursor-pointer">
+                <div className="flex flex-col items-center gap-3">
+                  <div className={cn(
+                    "p-4 rounded-full transition-colors",
+                    isDragging ? "bg-primary/10" : "bg-muted"
+                  )}>
+                    <Upload className={cn(
+                      "h-8 w-8 transition-colors",
+                      isDragging ? "text-primary" : "text-muted-foreground"
+                    )} />
+                  </div>
+                  <div>
+                    <p className="font-medium">
+                      Glissez vos fichiers DCE ici
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      ou cliquez pour sélectionner • PDF, Word, Excel
+                    </p>
+                  </div>
+                </div>
+              </label>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Maître d'ouvrage</Label>
-                <Input
-                  placeholder="Ville de Paris"
-                  value={newTender.client_name}
-                  onChange={(e) => setNewTender({ ...newTender, client_name: e.target.value })}
-                />
+
+            {/* Uploaded Files */}
+            {uploadedFiles.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {uploadedFiles.length} fichier(s) prêt(s) pour l'analyse
+                </p>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {uploadedFiles.map((file, index) => (
+                    <div 
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="h-4 w-4 text-primary shrink-0" />
+                        <span className="truncate">{file.name}</span>
+                        <span className="text-muted-foreground text-xs shrink-0">
+                          ({(file.size / 1024).toFixed(0)} Ko)
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                        className="h-6 w-6 p-0 shrink-0"
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Localisation</Label>
-                <Input
-                  placeholder="Paris 75"
-                  value={newTender.location}
-                  onChange={(e) => setNewTender({ ...newTender, location: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Date limite de dépôt</Label>
-                <Input
-                  type="datetime-local"
-                  value={newTender.submission_deadline}
-                  onChange={(e) => setNewTender({ ...newTender, submission_deadline: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Budget estimé (€)</Label>
-                <Input
-                  type="number"
-                  placeholder="1 500 000"
-                  value={newTender.estimated_budget}
-                  onChange={(e) => setNewTender({ ...newTender, estimated_budget: e.target.value })}
-                />
-              </div>
+            )}
+
+            {/* What AI will do */}
+            <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+              <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                L'IA va automatiquement extraire :
+              </p>
+              <ul className="text-sm text-muted-foreground space-y-1 ml-6">
+                <li>• Titre et référence du marché</li>
+                <li>• Maître d'ouvrage et contacts</li>
+                <li>• Budget, délais et dates clés</li>
+                <li>• Critères de jugement et pondérations</li>
+                <li>• Liste des pièces à fournir</li>
+              </ul>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => {
+              setShowCreateDialog(false);
+              setUploadedFiles([]);
+            }}>
               Annuler
             </Button>
             <Button 
-              onClick={handleCreateTender}
-              disabled={!newTender.reference || !newTender.title || createTender.isPending}
+              onClick={handleCreateAndAnalyze}
+              disabled={uploadedFiles.length === 0 || isCreating}
+              className="gap-2"
             >
-              Créer
+              {isCreating ? (
+                <>Création en cours...</>
+              ) : (
+                <>
+                  Analyser avec l'IA
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </MainLayout>
