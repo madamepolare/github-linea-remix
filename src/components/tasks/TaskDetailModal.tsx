@@ -29,7 +29,6 @@ import {
   CheckSquare, 
   Clock, 
   MessageSquare, 
-  Save, 
   Trash2, 
   Archive, 
   Calendar,
@@ -96,21 +95,23 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
     }
   }, [task]);
 
-  const handleSave = () => {
-    if (!task) return;
-    updateTask.mutate({
-      id: task.id,
-      title,
-      description,
-      status,
-      priority,
-      due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
-      start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
-      assigned_to: assignedTo.length > 0 ? assignedTo : null,
-      tags: tags.length > 0 ? tags : null,
-      estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
-    });
-    toast.success("Task updated");
+  const handleClose = (isOpen: boolean) => {
+    if (!isOpen && task) {
+      // Auto-save on close
+      updateTask.mutate({
+        id: task.id,
+        title,
+        description,
+        status,
+        priority,
+        due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
+        start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
+        assigned_to: assignedTo.length > 0 ? assignedTo : null,
+        tags: tags.length > 0 ? tags : null,
+        estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
+      });
+    }
+    onOpenChange(isOpen);
   };
 
   const handleArchive = () => {
@@ -139,7 +140,7 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
   const currentPriority = priorityOptions.find(p => p.value === priority);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
         <div className="flex h-full max-h-[90vh]">
           {/* Left Column - Main Content */}
@@ -254,11 +255,7 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
           {/* Right Column - Metadata */}
           <div className="w-72 bg-surface border-l border-border flex flex-col">
             <div className="p-4 border-b border-border">
-              <div className="flex items-center gap-2">
-                <Button onClick={handleSave} size="sm" className="flex-1">
-                  <Save className="h-4 w-4 mr-1.5" />
-                  Save
-                </Button>
+              <div className="flex items-center gap-2 justify-end">
                 <Button variant="outline" size="icon" onClick={handleArchive} title="Archive" className="h-8 w-8">
                   <Archive className="h-4 w-4" />
                 </Button>
