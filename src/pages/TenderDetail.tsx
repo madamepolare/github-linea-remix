@@ -16,6 +16,7 @@ import {
   Edit2,
   Brain,
   FolderOpen,
+  LayoutDashboard,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -29,11 +30,14 @@ import {
   PROCEDURE_TYPE_LABELS,
 } from "@/lib/tenderTypes";
 import { cn } from "@/lib/utils";
-import { TenderAIAnalysisTab } from "@/components/tenders/TenderAIAnalysisTab";
-import { TenderDocumentsTab } from "@/components/tenders/TenderDocumentsTab";
-import { TenderTeamTab } from "@/components/tenders/TenderTeamTab";
-import { TenderDeliverablesTab } from "@/components/tenders/TenderDeliverablesTab";
-import { TenderMemoireTab } from "@/components/tenders/TenderMemoireTab";
+
+// New tab components
+import { TenderSyntheseTab } from "@/components/tenders/tabs/TenderSyntheseTab";
+import { TenderAnalyseTab } from "@/components/tenders/tabs/TenderAnalyseTab";
+import { TenderDocumentsTab } from "@/components/tenders/tabs/TenderDocumentsTab";
+import { TenderLivrablesTab } from "@/components/tenders/tabs/TenderLivrablesTab";
+import { TenderEquipeTab } from "@/components/tenders/tabs/TenderEquipeTab";
+import { TenderMemoireTab } from "@/components/tenders/tabs/TenderMemoireTab";
 import { TenderEditDialog } from "@/components/tenders/TenderEditDialog";
 
 export default function TenderDetail() {
@@ -42,7 +46,7 @@ export default function TenderDetail() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: tender, isLoading } = useTender(id);
   const { updateTender, updateStatus } = useTenders();
-  const [activeTab, setActiveTab] = useState("analysis");
+  const [activeTab, setActiveTab] = useState("synthese"); // Default to synthese
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<Array<{ name: string; type: string; data: string }> | null>(null);
 
@@ -55,6 +59,8 @@ export default function TenderDetail() {
           const files = JSON.parse(storedFiles);
           setPendingFiles(files);
           sessionStorage.removeItem(`tender-files-${id}`);
+          // Switch to analyse tab for auto-upload
+          setActiveTab("analyse");
         } catch (e) {
           console.error('Failed to parse stored files:', e);
         }
@@ -175,41 +181,48 @@ export default function TenderDetail() {
             </div>
           </div>
 
-          {/* Tabs */}
+          {/* Tabs - 6 tabs max as requested */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="px-6 border-t">
               <TabsList className="h-12 bg-transparent w-full justify-start gap-1 -mb-px">
                 <TabsTrigger 
-                  value="analysis" 
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
+                  value="synthese" 
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
+                >
+                  <LayoutDashboard className="h-4 w-4 mr-2" />
+                  Synthèse
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="analyse" 
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                 >
                   <Brain className="h-4 w-4 mr-2" />
                   Analyse IA
                 </TabsTrigger>
                 <TabsTrigger 
                   value="documents"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                 >
                   <FolderOpen className="h-4 w-4 mr-2" />
                   Documents
                 </TabsTrigger>
                 <TabsTrigger 
-                  value="deliverables"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
+                  value="livrables"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                 >
                   <CheckSquare className="h-4 w-4 mr-2" />
-                  Pièces à fournir
+                  Livrables
                 </TabsTrigger>
                 <TabsTrigger 
-                  value="team"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
+                  value="equipe"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                 >
                   <Users className="h-4 w-4 mr-2" />
                   Équipe
                 </TabsTrigger>
                 <TabsTrigger 
                   value="memoire"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
                 >
                   <PenTool className="h-4 w-4 mr-2" />
                   Mémoire
@@ -218,8 +231,14 @@ export default function TenderDetail() {
             </div>
 
             <div className="flex-1 overflow-auto">
-              <TabsContent value="analysis" className="m-0 p-6">
-                <TenderAIAnalysisTab 
+              <TabsContent value="synthese" className="m-0 p-6">
+                <TenderSyntheseTab 
+                  tender={tender}
+                  onNavigateToTab={setActiveTab}
+                />
+              </TabsContent>
+              <TabsContent value="analyse" className="m-0 p-6">
+                <TenderAnalyseTab 
                   tender={tender} 
                   onNavigateToTab={setActiveTab}
                   pendingFiles={pendingFiles}
@@ -229,14 +248,14 @@ export default function TenderDetail() {
               <TabsContent value="documents" className="m-0 p-6">
                 <TenderDocumentsTab tenderId={tender.id} />
               </TabsContent>
-              <TabsContent value="deliverables" className="m-0 p-6">
-                <TenderDeliverablesTab tenderId={tender.id} />
+              <TabsContent value="livrables" className="m-0 p-6">
+                <TenderLivrablesTab tenderId={tender.id} />
               </TabsContent>
-              <TabsContent value="team" className="m-0 p-6">
-                <TenderTeamTab tenderId={tender.id} />
+              <TabsContent value="equipe" className="m-0 p-6">
+                <TenderEquipeTab tenderId={tender.id} />
               </TabsContent>
               <TabsContent value="memoire" className="m-0 p-6">
-                <TenderMemoireTab tenderId={tender.id} />
+                <TenderMemoireTab tenderId={tender.id} tender={tender} />
               </TabsContent>
             </div>
           </Tabs>
