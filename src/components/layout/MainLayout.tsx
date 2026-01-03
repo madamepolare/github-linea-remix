@@ -45,7 +45,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         >
           {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
-        <span className="font-semibold text-sm">Archigood</span>
+        <span className="font-semibold text-sm">DOMINI</span>
         <div className="w-9" /> {/* Spacer for centering */}
       </header>
 
