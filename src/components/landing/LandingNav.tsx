@@ -4,11 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { MegaMenu } from "./MegaMenu";
 import gsap from "gsap";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
 
 export const LandingNav = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mobileModulesOpen, setMobileModulesOpen] = useState(false);
+  const [mobileSolutionsOpen, setMobileSolutionsOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -65,22 +74,45 @@ export const LandingNav = () => {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-1">
+            {/* Solutions dropdown */}
+            <NavigationMenu className="nav-item">
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="bg-transparent hover:bg-transparent focus:bg-transparent data-[state=open]:bg-transparent text-muted-foreground hover:text-foreground font-medium">
+                    Solutions
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <div className="w-[280px] p-4">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Par métier</p>
+                      <div className="space-y-2">
+                        {mobileSolutions.map((solution) => (
+                          <Link
+                            key={solution.slug}
+                            to={`/solutions/${solution.slug}`}
+                            className="block p-2 rounded-lg hover:bg-muted transition-colors"
+                          >
+                            <span className="font-medium text-foreground">{solution.label}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+
+            {/* Modules MegaMenu */}
             <div className="nav-item">
               <MegaMenu />
             </div>
+
             <a
               href="/welcome#pricing"
-              className="nav-item text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium"
+              className="nav-item text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium px-4 py-2"
             >
               Tarifs
             </a>
-            <Link
-              to="/about"
-              className="nav-item text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium"
-            >
-              À propos
-            </Link>
           </div>
 
           {/* Desktop CTA */}
@@ -111,6 +143,34 @@ export const LandingNav = () => {
       {isMobileMenuOpen && (
         <div className="md:hidden bg-background/95 backdrop-blur-md border-t border-border">
           <div className="px-4 py-6 space-y-2">
+            {/* Solutions accordion */}
+            <div>
+              <button
+                onClick={() => setMobileSolutionsOpen(!mobileSolutionsOpen)}
+                className="flex items-center justify-between w-full text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"
+              >
+                Solutions
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform ${mobileSolutionsOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {mobileSolutionsOpen && (
+                <div className="pl-4 space-y-2 mt-2">
+                  {mobileSolutions.map((solution) => (
+                    <Link
+                      key={solution.slug}
+                      to={`/solutions/${solution.slug}`}
+                      className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {solution.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Modules accordion */}
             <div>
               <button
@@ -135,22 +195,10 @@ export const LandingNav = () => {
                       {module.label}
                     </Link>
                   ))}
-                  <div className="pt-2 mt-2 border-t border-border/50">
-                    <p className="text-xs text-muted-foreground/70 uppercase tracking-wider mb-2">Par métier</p>
-                    {mobileSolutions.map((solution) => (
-                      <Link
-                        key={solution.slug}
-                        to={`/solutions/${solution.slug}`}
-                        className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        {solution.label}
-                      </Link>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>
+
             <a
               href="/welcome#pricing"
               className="block text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"
@@ -158,13 +206,7 @@ export const LandingNav = () => {
             >
               Tarifs
             </a>
-            <Link
-              to="/about"
-              className="block text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              À propos
-            </Link>
+
             <div className="pt-4 space-y-3 border-t border-border">
               <Link to="/auth" className="block" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button variant="outline" className="w-full">

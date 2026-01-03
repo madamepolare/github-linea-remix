@@ -7,6 +7,11 @@ const footerLinks = {
     { label: "Tarifs", href: "/welcome#pricing" },
     { label: "Roadmap", href: "/roadmap" },
   ],
+  solutions: [
+    { label: "Architectes", href: "/solutions/architectes" },
+    { label: "Architectes d'intérieur", href: "/solutions/architectes-interieur" },
+    { label: "Scénographes", href: "/solutions/scenographes" },
+  ],
   entreprise: [
     { label: "À propos", href: "/about" },
     { label: "Blog", href: "/blog" },
@@ -23,7 +28,7 @@ export const Footer = () => {
   return (
     <footer className="border-t border-border py-12 px-4 bg-background">
       <div className="max-w-7xl mx-auto">
-        <div className="grid md:grid-cols-5 gap-8 mb-8">
+        <div className="grid md:grid-cols-6 gap-8 mb-8">
           {/* Logo and description */}
           <div className="md:col-span-2">
             <Link to="/welcome" className="flex items-center gap-2 mb-4">
@@ -69,6 +74,23 @@ export const Footer = () => {
             <h4 className="font-semibold text-foreground mb-4">Produit</h4>
             <ul className="space-y-3">
               {footerLinks.produit.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    to={link.href}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Solutions */}
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">Solutions</h4>
+            <ul className="space-y-3">
+              {footerLinks.solutions.map((link) => (
                 <li key={link.href}>
                   <Link
                     to={link.href}
