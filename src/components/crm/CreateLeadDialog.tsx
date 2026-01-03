@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Loader2 } from "lucide-react";
-import { useLeads, Pipeline } from "@/hooks/useLeads";
+import { useLeads } from "@/hooks/useLeads";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
 
@@ -29,10 +29,14 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
+type PipelineStageLike = { id: string; name: string; color: string | null; probability?: number | null };
+
+type PipelineLike = { id: string; name: string; stages?: PipelineStageLike[] };
+
 interface CreateLeadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  pipeline?: Pipeline;
+  pipeline?: PipelineLike | null;
   defaultStageId?: string;
 }
 
