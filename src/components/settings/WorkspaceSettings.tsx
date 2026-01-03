@@ -122,7 +122,7 @@ export function WorkspaceSettings() {
                 <Label htmlFor="slug">Workspace URL</Label>
                 <div className="flex items-center">
                   <span className="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-input bg-muted text-sm text-muted-foreground">
-                    archimind.app/
+                    lineasuite.app/
                   </span>
                   <Input
                     id="slug"

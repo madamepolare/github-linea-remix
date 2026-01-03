@@ -5,6 +5,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lottie from "lottie-react";
 import { Button } from "@/components/ui/button";
 import { LandingNav } from "@/components/landing/LandingNav";
+import { Footer } from "@/components/landing/Footer";
+import { SEOHead } from "@/components/seo/SEOHead";
 import { FeatureCard } from "@/components/landing/FeatureCard";
 import { PricingCard } from "@/components/landing/PricingCard";
 import { AnimatedCounter } from "@/components/landing/AnimatedCounter";
@@ -146,7 +148,7 @@ const pricingPlans = {
       name: "Starter",
       price: "Gratuit",
       period: "",
-      description: "Pour découvrir ARCHIMIND",
+      description: "Pour découvrir Linea Suite",
       features: [
         "1 utilisateur",
         "3 projets actifs",
@@ -196,7 +198,7 @@ const pricingPlans = {
       name: "Starter",
       price: "Gratuit",
       period: "",
-      description: "Pour découvrir ARCHIMIND",
+      description: "Pour découvrir Linea Suite",
       features: [
         "1 utilisateur",
         "3 projets actifs",
@@ -315,6 +317,12 @@ const Welcome = () => {
   }, [billingPeriod]);
 
   return (
+    <>
+      <SEOHead
+        title="Linea Suite | Logiciel de gestion pour architectes"
+        description="Linea Suite - La plateforme tout-en-un pour gérer vos projets d'architecture : CRM, devis, appels d'offres, planning chantier."
+        keywords="architecture, gestion projet, CRM architecte, devis architecture, logiciel architecte"
+      />
     <div className="min-h-screen bg-background overflow-x-hidden">
       <LandingNav />
 
@@ -512,7 +520,7 @@ const Welcome = () => {
               Ils nous font confiance
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Découvrez ce que nos clients disent d'ARCHIMIND.
+              Découvrez ce que nos clients disent de Linea Suite.
             </p>
           </div>
         </div>
@@ -528,7 +536,7 @@ const Welcome = () => {
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
               Rejoignez plus de 500 agences d'architecture qui utilisent
-              ARCHIMIND pour gérer leurs projets.
+              Linea Suite pour gérer leurs projets.
             </p>
             <Link to="/auth">
               <Button
@@ -543,73 +551,7 @@ const Welcome = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border py-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            {/* Logo and description */}
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-xl">A</span>
-                </div>
-                <span className="text-xl font-bold text-foreground">ARCHIMIND</span>
-              </div>
-              <p className="text-muted-foreground max-w-md">
-                La plateforme tout-en-un pour les agences d'architecture modernes.
-                Gérez vos projets, clients et documents en un seul endroit.
-              </p>
-            </div>
-
-            {/* Links */}
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Produit</h4>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Fonctionnalités
-                  </a>
-                </li>
-                <li>
-                  <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Tarifs
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Intégrations
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Légal</h4>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    CGV
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Confidentialité
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">
-                    Mentions légales
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-border pt-8 text-center text-muted-foreground text-sm">
-            © {new Date().getFullYear()} ARCHIMIND. Tous droits réservés.
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       {/* Custom animations */}
       <style>{`
@@ -619,6 +561,7 @@ const Welcome = () => {
         }
       `}</style>
     </div>
+    </>
   );
 };
 

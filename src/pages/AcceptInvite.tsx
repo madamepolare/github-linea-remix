@@ -177,7 +177,7 @@ export default function AcceptInvite() {
                 <Hexagon className="h-8 w-8 text-primary-foreground" />
               </div>
             </div>
-            <h1 className="font-display text-2xl font-bold">ARCHIMIND</h1>
+            <h1 className="font-display text-2xl font-bold">LINEA SUITE</h1>
           </div>
 
           <Card>
@@ -246,7 +246,7 @@ export default function AcceptInvite() {
               <Hexagon className="h-8 w-8 text-primary-foreground" />
             </div>
           </div>
-          <h1 className="font-display text-2xl font-bold">ARCHIMIND</h1>
+          <h1 className="font-display text-2xl font-bold">LINEA SUITE</h1>
         </div>
 
         <Card>
