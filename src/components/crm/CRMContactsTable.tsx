@@ -36,6 +36,7 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import { useContacts, Contact } from "@/hooks/useContacts";
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { ContactDetailSheet } from "./ContactDetailSheet";
 import { EditContactDialog } from "./EditContactDialog";
 
@@ -69,6 +70,7 @@ export interface CRMContactsTableProps {
 export function CRMContactsTable({ search: externalSearch = "", onCreateContact }: CRMContactsTableProps) {
   const navigate = useNavigate();
   const { contacts, isLoading, deleteContact } = useContacts();
+  const { canViewSensitiveData, canEditContacts, canDeleteContacts } = useWorkspaceRole();
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -215,23 +217,31 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact 
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3 text-muted-foreground">
-                            {contact.email && (
-                              <a
-                                href={`mailto:${contact.email}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="hover:text-foreground"
-                              >
-                                <Mail className="h-4 w-4" />
-                              </a>
-                            )}
-                            {contact.phone && (
-                              <a
-                                href={`tel:${contact.phone}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="hover:text-foreground"
-                              >
-                                <Phone className="h-4 w-4" />
-                              </a>
+                            {canViewSensitiveData ? (
+                              <>
+                                {contact.email && (
+                                  <a
+                                    href={`mailto:${contact.email}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="hover:text-foreground"
+                                    title={contact.email}
+                                  >
+                                    <Mail className="h-4 w-4" />
+                                  </a>
+                                )}
+                                {contact.phone && (
+                                  <a
+                                    href={`tel:${contact.phone}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="hover:text-foreground"
+                                    title={contact.phone}
+                                  >
+                                    <Phone className="h-4 w-4" />
+                                  </a>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-xs italic">Accès restreint</span>
                             )}
                           </div>
                         </TableCell>
@@ -277,25 +287,29 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact 
                                 <ExternalLink className="h-4 w-4 mr-2" />
                                 Voir page détail
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingContact(contact);
-                                }}
-                              >
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Modifier
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteContact.mutate(contact.id);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Supprimer
-                              </DropdownMenuItem>
+                              {canEditContacts && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingContact(contact);
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Modifier
+                                </DropdownMenuItem>
+                              )}
+                              {canDeleteContacts && (
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteContact.mutate(contact.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Supprimer
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
