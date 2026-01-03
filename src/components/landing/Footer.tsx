@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Link } from "react-router-dom";
 import { Linkedin, Twitter, Github } from "lucide-react";
 
@@ -24,7 +25,7 @@ const footerLinks = {
   ],
 };
 
-export const Footer = () => {
+export const Footer = memo(() => {
   return (
     <footer className="border-t border-border py-12 px-4 bg-background">
       <div className="max-w-7xl mx-auto">
@@ -149,4 +150,6 @@ export const Footer = () => {
       </div>
     </footer>
   );
-};
+});
+
+Footer.displayName = "Footer";

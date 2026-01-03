@@ -1,28 +1,26 @@
 import { useEffect, useRef, memo } from "react";
 import { Link } from "react-router-dom";
 import gsap from "gsap";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ModuleData } from "@/lib/modulesData";
+import { SolutionData } from "@/lib/solutionsData";
 
-interface ModuleHeroProps {
-  module: ModuleData;
+interface SolutionHeroProps {
+  solution: SolutionData;
 }
 
-export const ModuleHero = memo(({ module }: ModuleHeroProps) => {
+export const SolutionHero = memo(({ solution }: SolutionHeroProps) => {
   const heroRef = useRef<HTMLDivElement>(null);
-  const Icon = module.icon;
+  const Icon = solution.icon;
 
   useEffect(() => {
     if (!heroRef.current) return;
 
     const ctx = gsap.context(() => {
-      // Set initial visible state to prevent flash/overlap issues
       gsap.set([".hero-badge", ".hero-title", ".hero-description", ".hero-cta", ".hero-icon"], {
         opacity: 1,
         y: 0,
         scale: 1,
-        rotation: 0,
       });
 
       gsap.fromTo(".hero-badge", 
@@ -46,13 +44,13 @@ export const ModuleHero = memo(({ module }: ModuleHeroProps) => {
       );
 
       gsap.fromTo(".hero-icon", 
-        { opacity: 0, scale: 0.5, rotation: -15 },
-        { opacity: 1, scale: 1, rotation: 0, duration: 0.8, delay: 0.3, ease: "back.out(1.7)" }
+        { opacity: 0, scale: 0.5 },
+        { opacity: 1, scale: 1, duration: 0.8, delay: 0.3, ease: "back.out(1.7)" }
       );
     }, heroRef);
 
     return () => ctx.revert();
-  }, [module.slug]);
+  }, [solution.slug]);
 
   return (
     <section
@@ -60,7 +58,7 @@ export const ModuleHero = memo(({ module }: ModuleHeroProps) => {
       className="relative min-h-[60vh] flex items-center justify-center overflow-hidden pt-24 pb-16"
     >
       {/* Background gradient */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${module.color} opacity-5`} />
+      <div className={`absolute inset-0 bg-gradient-to-br ${solution.color} opacity-5`} />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
 
       {/* Floating shapes */}
@@ -81,30 +79,33 @@ export const ModuleHero = memo(({ module }: ModuleHeroProps) => {
           {/* Badge */}
           <div className="hero-badge inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">{module.subtitle}</span>
+            <span className="text-sm font-medium text-primary">{solution.subtitle}</span>
           </div>
 
           {/* Icon */}
           <div className="hero-icon flex justify-center mb-8">
-            <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${module.color} flex items-center justify-center shadow-2xl`}>
+            <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${solution.color} flex items-center justify-center shadow-2xl`}>
               <Icon className="w-12 h-12 text-white" />
             </div>
           </div>
 
           {/* Title */}
           <h1 className="hero-title text-4xl md:text-6xl font-bold text-foreground mb-6">
-            {module.title}
+            {solution.title}
           </h1>
 
           {/* Description */}
           <p className="hero-description text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-            {module.description}
+            {solution.description}
           </p>
 
           {/* CTA */}
           <div className="hero-cta flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="px-8" asChild>
-              <Link to="/auth">Essayer gratuitement</Link>
+              <Link to="/auth">
+                Démarrer gratuitement
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Link>
             </Button>
             <Button size="lg" variant="outline" className="px-8" asChild>
               <Link to="/welcome#pricing">Voir les tarifs</Link>
@@ -116,4 +117,4 @@ export const ModuleHero = memo(({ module }: ModuleHeroProps) => {
   );
 });
 
-ModuleHero.displayName = "ModuleHero";
+SolutionHero.displayName = "SolutionHero";
