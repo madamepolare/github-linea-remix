@@ -38,6 +38,8 @@ import { cn } from "@/lib/utils";
 interface TenderAIAnalysisTabProps {
   tender: Tender;
   onNavigateToTab: (tab: string) => void;
+  pendingFiles?: Array<{ name: string; type: string; data: string }> | null;
+  onFilesPending?: (files: null) => void;
 }
 
 // Auto-detect document type from filename
@@ -58,12 +60,42 @@ function detectDocumentType(filename: string): string {
   return 'autre';
 }
 
-export function TenderAIAnalysisTab({ tender, onNavigateToTab }: TenderAIAnalysisTabProps) {
+export function TenderAIAnalysisTab({ tender, onNavigateToTab, pendingFiles, onFilesPending }: TenderAIAnalysisTabProps) {
   const { documents, isLoading, uploadDocument, analyzeDocument } = useTenderDocuments(tender.id);
   const { updateTender } = useTenders();
   const [isDragging, setIsDragging] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
+  const [isAutoUploading, setIsAutoUploading] = useState(false);
+
+  // Handle pending files from creation dialog
+  useEffect(() => {
+    if (pendingFiles && pendingFiles.length > 0 && !isAutoUploading) {
+      setIsAutoUploading(true);
+      
+      const uploadPendingFiles = async () => {
+        for (const fileData of pendingFiles) {
+          // Convert base64 back to blob
+          const binaryString = atob(fileData.data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: fileData.type });
+          const file = new File([blob], fileData.name, { type: fileData.type });
+          
+          const docType = detectDocumentType(file.name);
+          await uploadDocument.mutateAsync({ file, documentType: docType });
+        }
+        
+        // Clear pending files
+        onFilesPending?.(null);
+        setIsAutoUploading(false);
+      };
+      
+      uploadPendingFiles();
+    }
+  }, [pendingFiles, isAutoUploading, uploadDocument, onFilesPending]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -132,9 +164,23 @@ export function TenderAIAnalysisTab({ tender, onNavigateToTab }: TenderAIAnalysi
     }
   };
 
-  // Apply extracted data to tender
+  // Apply extracted data to tender (including title and reference)
   const handleApplyExtractedData = async () => {
     const updates: Partial<Tender> = {};
+    
+    // Title and reference - AI can now modify these
+    if (mergedExtractedData.title || mergedExtractedData.market_title) {
+      const newTitle = (mergedExtractedData.title || mergedExtractedData.market_title) as string;
+      if (newTitle && tender.title === "Nouveau concours - En attente d'analyse IA") {
+        updates.title = newTitle;
+      }
+    }
+    if (mergedExtractedData.reference || mergedExtractedData.consultation_number) {
+      const newRef = (mergedExtractedData.reference || mergedExtractedData.consultation_number) as string;
+      if (newRef && tender.reference.startsWith('AO-')) {
+        updates.reference = newRef;
+      }
+    }
     
     // Map extracted fields to tender fields
     if (mergedExtractedData.client_name && !tender.client_name) {
@@ -157,6 +203,9 @@ export function TenderAIAnalysisTab({ tender, onNavigateToTab }: TenderAIAnalysi
     }
     if (mergedExtractedData.offer_validity_days && !tender.offer_validity_days) {
       updates.offer_validity_days = mergedExtractedData.offer_validity_days as number;
+    }
+    if (mergedExtractedData.procedure_type && !tender.procedure_type) {
+      (updates as any).procedure_type = mergedExtractedData.procedure_type as string;
     }
 
     if (Object.keys(updates).length > 0) {
