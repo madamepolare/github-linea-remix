@@ -169,38 +169,28 @@ export default function ProjectDetail() {
           </div>
 
           {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 sm:px-6 overflow-x-auto">
-            <TabsList className="h-10 bg-transparent p-0 gap-0.5 sm:gap-1 w-max min-w-full sm:w-auto">
-              <TabsTrigger
-                value="overview"
-                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
-              >
-                <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Vue d'ensemble</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="planning"
-                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
-              >
-                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Calendrier</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="tasks"
-                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
-              >
-                <ListTodo className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Tâches</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="chantier"
-                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
-              >
-                <HardHat className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Chantier</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="px-4 sm:px-6 pb-2 pt-2">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList>
+                <TabsTrigger value="overview">
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                  Vue d'ensemble
+                </TabsTrigger>
+                <TabsTrigger value="planning">
+                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                  Calendrier
+                </TabsTrigger>
+                <TabsTrigger value="tasks">
+                  <ListTodo className="h-3.5 w-3.5 mr-1.5" />
+                  Tâches
+                </TabsTrigger>
+                <TabsTrigger value="chantier">
+                  <HardHat className="h-3.5 w-3.5 mr-1.5" />
+                  Chantier
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
 
         {/* Content */}
