@@ -19,6 +19,8 @@ import {
   FileText,
   Sparkles,
   ArrowRight,
+  Loader2,
+  Check,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -49,6 +51,7 @@ import {
 } from "@/lib/tenderTypes";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Tenders() {
   const navigate = useNavigate();
@@ -58,7 +61,9 @@ export default function Tenders() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [extractedInfo, setExtractedInfo] = useState<any>(null);
 
   const filteredTenders = tenders.filter(
     (t) =>
@@ -103,25 +108,76 @@ export default function Tenders() {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleCreateAndAnalyze = async () => {
+  // Analyze files with AI before creation
+  const handleAnalyzeFiles = async () => {
     if (uploadedFiles.length === 0) {
       toast.error("Déposez au moins un fichier DCE");
       return;
     }
 
-    setIsCreating(true);
+    setIsAnalyzing(true);
+    setAnalysisComplete(false);
+    setExtractedInfo(null);
+
     try {
-      // Generate a temporary reference
-      const tempRef = `AO-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
-      
-      const result = await createTender.mutateAsync({
-        reference: tempRef,
-        title: "Nouveau concours - En attente d'analyse IA",
-        status: 'repere',
+      // Convert files to base64 for AI analysis
+      const filesData = await Promise.all(uploadedFiles.map(async (file) => ({
+        name: file.name,
+        type: file.type,
+        content: await file.arrayBuffer().then(buf => 
+          btoa(String.fromCharCode(...new Uint8Array(buf)))
+        ),
+      })));
+
+      // Call edge function to analyze before creation
+      const { data, error } = await supabase.functions.invoke('analyze-dce-before-creation', {
+        body: { files: filesData }
       });
 
-      // Navigate to the tender detail with files to upload
-      // Store files in sessionStorage temporarily
+      if (error) throw error;
+
+      if (data?.extractedData) {
+        setExtractedInfo(data.extractedData);
+        setAnalysisComplete(true);
+        toast.success("Analyse terminée !");
+      } else {
+        throw new Error("Aucune donnée extraite");
+      }
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast.error("Erreur lors de l'analyse IA");
+      // Still allow creation with default values
+      setExtractedInfo({ title: "Nouveau concours" });
+      setAnalysisComplete(true);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Create tender with extracted info
+  const handleCreateTender = async () => {
+    if (!extractedInfo) return;
+
+    try {
+      const reference = extractedInfo.reference || `AO-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+      
+      const result = await createTender.mutateAsync({
+        reference,
+        title: extractedInfo.title || "Nouveau concours",
+        status: 'en_analyse',
+        client_name: extractedInfo.client_name,
+        client_type: extractedInfo.client_type,
+        location: extractedInfo.location,
+        estimated_budget: extractedInfo.estimated_budget,
+        procedure_type: extractedInfo.procedure_type,
+        submission_deadline: extractedInfo.submission_deadline,
+        site_visit_date: extractedInfo.site_visit_date,
+        site_visit_required: extractedInfo.site_visit_required,
+        description: extractedInfo.project_description,
+        surface_area: extractedInfo.surface_area,
+      });
+
+      // Store files for upload on detail page
       const fileData = await Promise.all(uploadedFiles.map(async (file) => ({
         name: file.name,
         type: file.type,
@@ -132,15 +188,25 @@ export default function Tenders() {
       })));
       sessionStorage.setItem(`tender-files-${result.id}`, JSON.stringify(fileData));
       
+      // Reset and navigate
       setShowCreateDialog(false);
       setUploadedFiles([]);
+      setExtractedInfo(null);
+      setAnalysisComplete(false);
       navigate(`/tenders/${result.id}?autoUpload=true`);
-      toast.success("Concours créé, l'IA va analyser vos documents");
+      toast.success("Concours créé avec les informations extraites");
     } catch (error) {
       toast.error("Erreur lors de la création");
-    } finally {
-      setIsCreating(false);
     }
+  };
+
+  // Reset dialog state
+  const handleCloseDialog = () => {
+    setShowCreateDialog(false);
+    setUploadedFiles([]);
+    setExtractedInfo(null);
+    setAnalysisComplete(false);
+    setIsAnalyzing(false);
   };
 
   const kanbanColumns: TenderStatus[] = ['repere', 'en_analyse', 'go', 'en_montage', 'depose'];
@@ -240,8 +306,8 @@ export default function Tenders() {
         </div>
       </div>
 
-      {/* Create Dialog - File First */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+      {/* Create Dialog - Analyze before creation */}
+      <Dialog open={showCreateDialog} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -249,124 +315,236 @@ export default function Tenders() {
               Nouveau concours
             </DialogTitle>
             <DialogDescription>
-              Déposez vos documents DCE et l'IA analysera automatiquement toutes les informations
+              {!analysisComplete 
+                ? "Déposez vos documents DCE et l'IA analysera automatiquement toutes les informations"
+                : "Vérifiez les informations extraites avant de créer le concours"
+              }
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4">
-            {/* Drop Zone */}
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={cn(
-                "border-2 border-dashed rounded-xl p-8 text-center transition-all",
-                isDragging 
-                  ? "border-primary bg-primary/5 scale-[1.02]" 
-                  : "border-muted-foreground/25 hover:border-primary/50"
-              )}
-            >
-              <input
-                type="file"
-                id="dce-upload"
-                multiple
-                accept=".pdf,.doc,.docx,.xls,.xlsx"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              <label htmlFor="dce-upload" className="cursor-pointer">
-                <div className="flex flex-col items-center gap-3">
-                  <div className={cn(
-                    "p-4 rounded-full transition-colors",
-                    isDragging ? "bg-primary/10" : "bg-muted"
-                  )}>
-                    <Upload className={cn(
-                      "h-8 w-8 transition-colors",
-                      isDragging ? "text-primary" : "text-muted-foreground"
-                    )} />
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      Glissez vos fichiers DCE ici
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      ou cliquez pour sélectionner • PDF, Word, Excel
-                    </p>
-                  </div>
-                </div>
-              </label>
-            </div>
-
-            {/* Uploaded Files */}
-            {uploadedFiles.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {uploadedFiles.length} fichier(s) prêt(s) pour l'analyse
-                </p>
-                <div className="space-y-1 max-h-40 overflow-y-auto">
-                  {uploadedFiles.map((file, index) => (
-                    <div 
-                      key={index}
-                      className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="h-4 w-4 text-primary shrink-0" />
-                        <span className="truncate">{file.name}</span>
-                        <span className="text-muted-foreground text-xs shrink-0">
-                          ({(file.size / 1024).toFixed(0)} Ko)
-                        </span>
+            {!analysisComplete ? (
+              <>
+                {/* Drop Zone */}
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={cn(
+                    "border-2 border-dashed rounded-xl p-8 text-center transition-all",
+                    isDragging 
+                      ? "border-primary bg-primary/5 scale-[1.02]" 
+                      : "border-muted-foreground/25 hover:border-primary/50",
+                    isAnalyzing && "opacity-50 pointer-events-none"
+                  )}
+                >
+                  <input
+                    type="file"
+                    id="dce-upload"
+                    multiple
+                    accept=".pdf,.doc,.docx,.xls,.xlsx"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    disabled={isAnalyzing}
+                  />
+                  <label htmlFor="dce-upload" className="cursor-pointer">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className={cn(
+                        "p-4 rounded-full transition-colors",
+                        isDragging ? "bg-primary/10" : "bg-muted"
+                      )}>
+                        {isAnalyzing ? (
+                          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                        ) : (
+                          <Upload className={cn(
+                            "h-8 w-8 transition-colors",
+                            isDragging ? "text-primary" : "text-muted-foreground"
+                          )} />
+                        )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                        className="h-6 w-6 p-0 shrink-0"
-                      >
-                        ×
-                      </Button>
+                      <div>
+                        {isAnalyzing ? (
+                          <>
+                            <p className="font-medium text-primary">Analyse IA en cours...</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Extraction des informations du DCE
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-medium">
+                              Glissez vos fichiers DCE ici
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              ou cliquez pour sélectionner • PDF, Word, Excel
+                            </p>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                  </label>
                 </div>
+
+                {/* Uploaded Files */}
+                {uploadedFiles.length > 0 && !isAnalyzing && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {uploadedFiles.length} fichier(s) prêt(s) pour l'analyse
+                    </p>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {uploadedFiles.map((file, index) => (
+                        <div 
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="h-4 w-4 text-primary shrink-0" />
+                            <span className="truncate">{file.name}</span>
+                            <span className="text-muted-foreground text-xs shrink-0">
+                              ({(file.size / 1024).toFixed(0)} Ko)
+                            </span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                            className="h-6 w-6 p-0 shrink-0"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* What AI will do */}
+                {!isAnalyzing && (
+                  <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+                    <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      L'IA va automatiquement extraire :
+                    </p>
+                    <ul className="text-sm text-muted-foreground space-y-1 ml-6">
+                      <li>• Titre et référence du marché</li>
+                      <li>• Maître d'ouvrage et contacts</li>
+                      <li>• Budget, délais et dates clés</li>
+                      <li>• Critères de jugement et pondérations</li>
+                      <li>• Liste des pièces à fournir</li>
+                    </ul>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Extracted Info Preview */
+              <div className="space-y-4">
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center gap-3">
+                  <Check className="h-5 w-5 text-emerald-600" />
+                  <p className="text-sm font-medium text-emerald-700">
+                    Analyse terminée - Informations extraites
+                  </p>
+                </div>
+
+                <div className="grid gap-3">
+                  {extractedInfo?.title && (
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground">Titre</p>
+                      <p className="font-medium">{extractedInfo.title}</p>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    {extractedInfo?.reference && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground">Référence</p>
+                        <p className="font-medium">{extractedInfo.reference}</p>
+                      </div>
+                    )}
+                    {extractedInfo?.client_name && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground">Maître d'ouvrage</p>
+                        <p className="font-medium">{extractedInfo.client_name}</p>
+                      </div>
+                    )}
+                    {extractedInfo?.location && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground">Lieu</p>
+                        <p className="font-medium">{extractedInfo.location}</p>
+                      </div>
+                    )}
+                    {extractedInfo?.estimated_budget && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground">Budget estimé</p>
+                        <p className="font-medium">
+                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(extractedInfo.estimated_budget)}
+                        </p>
+                      </div>
+                    )}
+                    {extractedInfo?.submission_deadline && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground">Date limite</p>
+                        <p className="font-medium">
+                          {format(new Date(extractedInfo.submission_deadline), "d MMMM yyyy", { locale: fr })}
+                        </p>
+                      </div>
+                    )}
+                    {extractedInfo?.procedure_type && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground">Procédure</p>
+                        <p className="font-medium capitalize">{extractedInfo.procedure_type}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted-foreground text-center">
+                  Vous pourrez compléter ces informations après la création
+                </p>
               </div>
             )}
-
-            {/* What AI will do */}
-            <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-              <p className="text-sm font-medium mb-2 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                L'IA va automatiquement extraire :
-              </p>
-              <ul className="text-sm text-muted-foreground space-y-1 ml-6">
-                <li>• Titre et référence du marché</li>
-                <li>• Maître d'ouvrage et contacts</li>
-                <li>• Budget, délais et dates clés</li>
-                <li>• Critères de jugement et pondérations</li>
-                <li>• Liste des pièces à fournir</li>
-              </ul>
-            </div>
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => {
-              setShowCreateDialog(false);
-              setUploadedFiles([]);
-            }}>
+            <Button variant="outline" onClick={handleCloseDialog}>
               Annuler
             </Button>
-            <Button 
-              onClick={handleCreateAndAnalyze}
-              disabled={uploadedFiles.length === 0 || isCreating}
-              className="gap-2"
-            >
-              {isCreating ? (
-                <>Création en cours...</>
-              ) : (
-                <>
-                  Analyser avec l'IA
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
+            {!analysisComplete ? (
+              <Button 
+                onClick={handleAnalyzeFiles}
+                disabled={uploadedFiles.length === 0 || isAnalyzing}
+                className="gap-2"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Analyse en cours...
+                  </>
+                ) : (
+                  <>
+                    Analyser avec l'IA
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleCreateTender}
+                disabled={createTender.isPending}
+                className="gap-2"
+              >
+                {createTender.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    Créer le concours
+                    <Check className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
