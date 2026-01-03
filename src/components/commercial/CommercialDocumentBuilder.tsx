@@ -216,33 +216,33 @@ export function CommercialDocumentBuilder({
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="general">Général</TabsTrigger>
-          <TabsTrigger value="fees">Honoraires</TabsTrigger>
-          <TabsTrigger value="terms">Conditions</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsTrigger value="general" className="text-xs sm:text-sm py-2">Général</TabsTrigger>
+          <TabsTrigger value="fees" className="text-xs sm:text-sm py-2">Honoraires</TabsTrigger>
+          <TabsTrigger value="terms" className="text-xs sm:text-sm py-2">Conditions</TabsTrigger>
         </TabsList>
 
       {/* General Tab */}
-      <TabsContent value="general" className="space-y-6">
+      <TabsContent value="general" className="space-y-4 sm:space-y-6">
         {/* Document Type */}
         <Card>
-          <CardHeader>
-            <CardTitle>Type de document</CardTitle>
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-base sm:text-lg">Type de document</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
               {(['quote', 'contract', 'proposal'] as DocumentType[]).map((type) => (
                 <button
                   key={type}
                   onClick={() => onDocumentChange({ ...document, document_type: type })}
-                  className={`p-4 rounded-lg border-2 text-center transition-colors ${
+                  className={`p-3 sm:p-4 rounded-lg border-2 text-center transition-colors ${
                     document.document_type === type 
                       ? 'border-primary bg-primary/5' 
                       : 'border-border hover:border-primary/50'
                   }`}
                 >
-                  <div className="font-medium">{DOCUMENT_TYPE_LABELS[type]}</div>
+                  <div className="font-medium text-sm sm:text-base">{DOCUMENT_TYPE_LABELS[type]}</div>
                 </button>
               ))}
             </div>
@@ -270,8 +270,8 @@ export function CommercialDocumentBuilder({
 
         {/* Client Selection */}
         <Card>
-          <CardHeader>
-            <CardTitle>Client</CardTitle>
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-base sm:text-lg">Client</CardTitle>
           </CardHeader>
           <CardContent>
             <ClientSelector
@@ -285,8 +285,8 @@ export function CommercialDocumentBuilder({
 
         {/* Project Info */}
         <Card>
-          <CardHeader>
-            <CardTitle>Projet</CardTitle>
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-base sm:text-lg">Projet</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -308,7 +308,7 @@ export function CommercialDocumentBuilder({
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Adresse</Label>
                 <Input
@@ -327,7 +327,7 @@ export function CommercialDocumentBuilder({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Surface (m²)</Label>
                 <Input
@@ -363,7 +363,7 @@ export function CommercialDocumentBuilder({
       </TabsContent>
 
       {/* Fees Tab - Combined Fees + Quote */}
-      <TabsContent value="fees" className="space-y-6">
+      <TabsContent value="fees" className="space-y-4 sm:space-y-6">
         <FeesAndQuoteEditor
           items={quoteItems}
           projectType={document.project_type || 'interior'}
@@ -375,7 +375,7 @@ export function CommercialDocumentBuilder({
       </TabsContent>
 
       {/* Terms Tab */}
-      <TabsContent value="terms" className="space-y-6">
+      <TabsContent value="terms" className="space-y-4 sm:space-y-6">
         <TermsEditor
           document={document}
           onDocumentChange={onDocumentChange}

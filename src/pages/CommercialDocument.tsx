@@ -225,49 +225,49 @@ const CommercialDocument = () => {
     <MainLayout>
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border bg-card">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/commercial')}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 border-b border-border bg-card gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/commercial')} className="shrink-0">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="h-9 w-9 rounded-full bg-muted/80 flex items-center justify-center">
+            <div className="h-9 w-9 rounded-full bg-muted/80 flex items-center justify-center shrink-0">
               <FileText className="h-[18px] w-[18px] text-foreground/70" />
             </div>
-            <div>
-              <h1 className="text-xl font-semibold">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-semibold truncate">
                 {isNew ? `Nouveau ${DOCUMENT_TYPE_LABELS[documentData.document_type!]}` : documentData.document_number}
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground truncate">
                 {documentData.title || 'Sans titre'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setShowPreview(!showPreview)}>
-              <Eye className="h-4 w-4 mr-2" />
-              {showPreview ? 'Masquer' : 'Aperçu'}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end">
+            <Button variant="outline" size="sm" className="hidden sm:flex" onClick={() => setShowPreview(!showPreview)}>
+              <Eye className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{showPreview ? 'Masquer' : 'Aperçu'}</span>
             </Button>
-            <Button variant="outline" onClick={() => setShowPDFPreview(true)}>
-              <FileDown className="h-4 w-4 mr-2" />
-              PDF
+            <Button variant="outline" size="sm" onClick={() => setShowPDFPreview(true)}>
+              <FileDown className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">PDF</span>
             </Button>
-            <Button onClick={handleSave} disabled={isSaving}>
-              <Save className="h-4 w-4 mr-2" />
-              {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+              <Save className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{isSaving ? 'Enregistrement...' : 'Enregistrer'}</span>
             </Button>
             {!isNew && documentData.status === 'draft' && (
-              <Button variant="outline">
-                <Send className="h-4 w-4 mr-2" />
-                Envoyer
+              <Button variant="outline" size="sm" className="hidden md:flex">
+                <Send className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Envoyer</span>
               </Button>
             )}
             {!isNew && documentData.status !== 'accepted' && documentData.status !== 'signed' && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="default" className="bg-green-600 hover:bg-green-700">
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Accepter & Créer projet
+                  <Button variant="default" size="sm" className="bg-green-600 hover:bg-green-700">
+                    <CheckCircle className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Accepter & Créer projet</span>
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent className="max-w-lg">
@@ -358,11 +358,12 @@ const CommercialDocument = () => {
             )}
             {documentData.project_id && (
               <Button 
-                variant="outline" 
+                variant="outline"
+                size="sm"
                 onClick={() => navigate(`/projects/${documentData.project_id}`)}
               >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Voir le projet
+                <ExternalLink className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Voir le projet</span>
               </Button>
             )}
           </div>
@@ -389,9 +390,9 @@ const CommercialDocument = () => {
         )}
 
         {/* Main Content */}
-        <div className={`flex-1 overflow-auto p-6`}>
-          <div className={`grid gap-6 ${showPreview ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
-            <div className="space-y-6">
+        <div className={`flex-1 overflow-auto p-4 sm:p-6`}>
+          <div className={`grid gap-4 sm:gap-6 ${showPreview ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+            <div className="space-y-4 sm:space-y-6">
               <CommercialDocumentBuilder
                 document={documentData}
                 phases={phases}
