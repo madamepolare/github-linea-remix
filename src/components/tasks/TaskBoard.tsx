@@ -2,17 +2,19 @@ import { useState } from "react";
 import { useTasks, Task } from "@/hooks/useTasks";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjects } from "@/hooks/useProjects";
+import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
 import { EmptyState } from "@/components/ui/empty-state";
 import { KanbanBoard, KanbanColumn, KanbanCard } from "@/components/shared/KanbanBoard";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CheckSquare, Calendar, FolderKanban, Building2, FileText, Target } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/taskTypes";
+import { WorkspaceProfile } from "@/hooks/useWorkspaceProfiles";
 
 const COLUMNS: { id: Task["status"]; label: string; color: string }[] = TASK_STATUSES
   .filter(s => s.id !== 'archived')
@@ -28,6 +30,7 @@ export function TaskBoard({ statusFilter, priorityFilter, onCreateTask }: TaskBo
   const { tasks, isLoading, updateTaskStatus } = useTasks();
   const { companies } = useCRMCompanies();
   const { projects } = useProjects();
+  const { data: profiles } = useWorkspaceProfiles();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const handleDrop = (taskId: string, _fromColumn: string, toColumn: string) => {
@@ -92,6 +95,7 @@ export function TaskBoard({ statusFilter, priorityFilter, onCreateTask }: TaskBo
             task={task}
             companyName={getCompanyName(task.crm_company_id)}
             projectName={getProjectName(task.project_id)}
+            profiles={profiles || []}
             onClick={() => setSelectedTask(task)}
             isDragging={isDragging}
           />
@@ -115,11 +119,12 @@ interface TaskKanbanCardProps {
   task: Task;
   companyName: string | null;
   projectName: string | null;
+  profiles: WorkspaceProfile[];
   onClick: () => void;
   isDragging: boolean;
 }
 
-function TaskKanbanCard({ task, companyName, projectName, onClick, isDragging }: TaskKanbanCardProps) {
+function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, isDragging }: TaskKanbanCardProps) {
   const completedSubtasks = task.subtasks?.filter((s) => s.status === "done").length || 0;
   const totalSubtasks = task.subtasks?.length || 0;
   const progress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
@@ -131,6 +136,9 @@ function TaskKanbanCard({ task, companyName, projectName, onClick, isDragging }:
   };
 
   const isOverdue = task.due_date && isPast(new Date(task.due_date)) && task.status !== "done";
+
+  // Get profile by user ID
+  const getProfile = (userId: string) => profiles.find((p) => p.user_id === userId);
 
   // Get relation info
   const getRelationInfo = () => {
@@ -204,16 +212,23 @@ function TaskKanbanCard({ task, companyName, projectName, onClick, isDragging }:
         {/* Footer: Assignees, Due Date */}
         <div className="flex items-center justify-between gap-2 pt-1">
           <div className="flex items-center gap-2">
-            {/* Assignees */}
+            {/* Assignees with profile pictures */}
             {task.assigned_to && task.assigned_to.length > 0 && (
               <div className="flex -space-x-1.5">
-                {task.assigned_to.slice(0, 2).map((userId, i) => (
-                  <Avatar key={userId} className="h-5 w-5 border-2 border-card">
-                    <AvatarFallback className="text-2xs bg-primary/10">
-                      {userId.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
+                {task.assigned_to.slice(0, 2).map((userId) => {
+                  const profile = getProfile(userId);
+                  const initials = profile?.full_name
+                    ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+                    : userId.slice(0, 2).toUpperCase();
+                  return (
+                    <Avatar key={userId} className="h-5 w-5 border-2 border-card">
+                      {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name || ""} className="object-cover" />}
+                      <AvatarFallback className="text-2xs bg-primary/10">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  );
+                })}
                 {task.assigned_to.length > 2 && (
                   <div className="h-5 w-5 rounded-full bg-muted border-2 border-card flex items-center justify-center">
                     <span className="text-2xs text-muted-foreground">+{task.assigned_to.length - 2}</span>
