@@ -25,7 +25,7 @@ import { LOT_STATUS } from "@/lib/projectTypes";
 interface ChantierOverviewProps {
   projectId: string;
   onNavigate: (tab: string) => void;
-  onOpenReport: (meeting: ProjectMeeting) => void;
+  onOpenReport: () => void;
   onOpenPlanning?: () => void;
 }
 
@@ -195,7 +195,7 @@ export function ChantierOverview({ projectId, onNavigate, onOpenReport, onOpenPl
               <div 
                 key={meeting.id} 
                 className="flex items-center gap-3 p-2 rounded-lg bg-blue-100/50 dark:bg-blue-950/30 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
-                onClick={() => onOpenReport(meeting)}
+                onClick={() => onOpenReport()}
               >
                 <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
                 <span className="text-sm flex-1 truncate">

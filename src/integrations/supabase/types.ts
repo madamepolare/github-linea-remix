@@ -1127,6 +1127,76 @@ export type Database = {
           },
         ]
       }
+      meeting_reports: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          meeting_id: string | null
+          pdf_url: string | null
+          project_id: string
+          report_data: Json | null
+          report_date: string
+          report_number: number | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          meeting_id?: string | null
+          pdf_url?: string | null
+          project_id: string
+          report_data?: Json | null
+          report_date?: string
+          report_number?: number | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          meeting_id?: string | null
+          pdf_url?: string | null
+          project_id?: string
+          report_data?: Json | null
+          report_date?: string
+          report_number?: number | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_reports_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "project_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_reports_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_url: string | null
