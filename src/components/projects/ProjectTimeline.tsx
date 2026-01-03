@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   format,
@@ -25,7 +25,7 @@ import { PROJECT_TYPES, PHASE_STATUS_CONFIG } from "@/lib/projectTypes";
 
 const CELL_WIDTH = 28;
 const ROW_HEIGHT = 56;
-const TODAY_POSITION_PERCENT = 0.25; // Today at 25% from left
+const PROJECT_COLUMN_WIDTH = 288; // w-72 = 18rem = 288px
 
 interface ProjectTimelineProps {
   onCreateProject?: () => void;
@@ -36,14 +36,11 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
   const { projects, isLoading } = useProjects();
   const [viewDate, setViewDate] = useState(new Date());
 
-  // Calculate visible range with today at 25% from left
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Calculate visible range - show 2 months before and 2 months after current view date
   const { visibleStart, visibleEnd, visibleDays, visibleMonths, todayOffset } = useMemo(() => {
     const today = startOfDay(new Date());
-    
-    // Calculate how many days to show before and after today
-    const totalVisibleDays = 90; // ~3 months
-    const daysBeforeToday = Math.floor(totalVisibleDays * TODAY_POSITION_PERCENT);
-    const daysAfterToday = totalVisibleDays - daysBeforeToday;
     
     const start = subMonths(startOfMonth(viewDate), 1);
     const end = endOfMonth(addMonths(viewDate, 2));
@@ -60,6 +57,18 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
       todayOffset: offset,
     };
   }, [viewDate]);
+
+  // Auto-scroll to center "today" on mount
+  useEffect(() => {
+    if (scrollContainerRef.current && todayOffset >= 0) {
+      const container = scrollContainerRef.current;
+      const todayPosition = todayOffset * CELL_WIDTH;
+      const containerWidth = container.clientWidth - PROJECT_COLUMN_WIDTH;
+      const scrollPosition = todayPosition - containerWidth / 2;
+      
+      container.scrollLeft = Math.max(0, scrollPosition);
+    }
+  }, [todayOffset]);
 
   const today = startOfDay(new Date());
 
@@ -148,7 +157,7 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
       </div>
 
       {/* Timeline Grid */}
-      <div className="flex-1 overflow-auto">
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto">
         <div className="flex min-w-max">
           {/* Project Names Column */}
           <div className="w-48 sm:w-72 flex-shrink-0 border-r border-border bg-background sticky left-0 z-20">
