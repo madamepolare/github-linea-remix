@@ -146,11 +146,11 @@
     @apply tracking-tight;
   }
 
-  /* Typography scale - Qonto style */
-  h1 { @apply text-2xl font-semibold leading-tight; }
-  h2 { @apply text-xl font-semibold leading-tight; }
-  h3 { @apply text-lg font-medium leading-snug; }
-  h4 { @apply text-base font-medium leading-snug; }
+  /* Typography scale - Responsive */
+  h1 { @apply text-xl sm:text-2xl font-semibold leading-tight; }
+  h2 { @apply text-lg sm:text-xl font-semibold leading-tight; }
+  h3 { @apply text-base sm:text-lg font-medium leading-snug; }
+  h4 { @apply text-sm sm:text-base font-medium leading-snug; }
 }
 
 @layer components {
@@ -285,6 +285,25 @@
 
   .main-content.sidebar-collapsed {
     padding-left: var(--sidebar-width-collapsed);
+  }
+
+  /* Responsive page padding */
+  .page-content {
+    @apply p-3 sm:p-4 md:p-6;
+  }
+
+  /* Responsive container */
+  .responsive-container {
+    @apply px-3 sm:px-4 md:px-6;
+  }
+
+  /* Mobile-friendly table wrapper */
+  .table-responsive {
+    @apply -mx-3 sm:mx-0 overflow-x-auto;
+  }
+
+  .table-responsive table {
+    @apply min-w-[600px] sm:min-w-0;
   }
 }
 

@@ -75,33 +75,33 @@ export function QuickActions() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.2 }}
-      className="rounded-xl border border-border bg-card p-6"
+      className="rounded-xl border border-border bg-card p-4 sm:p-6"
     >
-      <h3 className="font-display text-lg font-semibold text-foreground mb-4">
+      <h3 className="font-display text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">
         Quick Actions
       </h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         {actions.map((action, index) => (
           <motion.button
             key={action.id}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, delay: 0.3 + index * 0.05 }}
-            className="group flex flex-col items-center gap-2 rounded-xl border border-border p-4 transition-all duration-200 hover:border-primary/30 hover:shadow-sm"
+            className="group flex flex-col items-center gap-1.5 sm:gap-2 rounded-xl border border-border p-2 sm:p-4 transition-all duration-200 hover:border-primary/30 hover:shadow-sm"
           >
             <div
               className={cn(
-                "flex h-12 w-12 items-center justify-center rounded-xl transition-colors",
+                "flex h-9 w-9 sm:h-12 sm:w-12 items-center justify-center rounded-xl transition-colors",
                 action.bgColor
               )}
             >
-              <action.icon className={cn("h-6 w-6", action.color)} />
+              <action.icon className={cn("h-4 w-4 sm:h-6 sm:w-6", action.color)} />
             </div>
             <div className="text-center">
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-xs sm:text-sm font-medium text-foreground leading-tight">
                 {action.title}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-2xs sm:text-xs text-muted-foreground mt-0.5 hidden sm:block">
                 {action.description}
               </p>
             </div>
