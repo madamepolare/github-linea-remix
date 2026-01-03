@@ -315,60 +315,32 @@ export function FeesAndQuoteEditor({
           onDragEnd={handleDragEnd}
           className={`border rounded-lg transition-all ${
             draggedIndex === globalIndex ? 'opacity-50' : ''
-          } ${item.isOptional ? 'border-dashed border-muted-foreground/30' : 'border-border'}`}
+          } ${item.isOptional ? 'border-dashed border-muted-foreground/30 bg-muted/20' : 'border-border'}`}
         >
-          {/* Mobile Layout */}
-          <div className="flex flex-col sm:hidden p-3 gap-2">
-            <div className="flex items-center gap-2">
-              <div className="cursor-grab shrink-0">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className={`p-1.5 rounded shrink-0 ${TYPE_COLORS[item.type]}`}>
-                {TYPE_ICONS[item.type]}
-              </div>
-              {item.code && (
-                <Badge variant="outline" className="shrink-0 text-xs">
-                  {item.code}
-                </Badge>
-              )}
-              <div className="flex-1 min-w-0">
-                <Input
-                  value={item.designation}
-                  onChange={(e) => updateItem(item.id, { designation: e.target.value })}
-                  className="h-8 font-medium text-sm"
-                  placeholder="Nom de la phase..."
-                />
-              </div>
-            </div>
-            <div className="flex items-center justify-between gap-2 pl-8">
+          {/* Mobile Layout - Card Style */}
+          <div className="flex flex-col sm:hidden">
+            {/* Header with drag, type icon and actions */}
+            <div className="flex items-center justify-between p-3 pb-2">
               <div className="flex items-center gap-2">
-                <div className="relative w-20">
-                  <Input
-                    type="number"
-                    value={item.percentageFee || 0}
-                    onChange={(e) => {
-                      const newPercentage = parseFloat(e.target.value) || 0;
-                      const newAmount = calculatePhaseAmount(newPercentage);
-                      updateItem(item.id, { 
-                        percentageFee: newPercentage,
-                        unitPrice: newAmount,
-                        amount: newAmount
-                      });
-                    }}
-                    className="h-7 text-right pr-5 text-sm"
-                    min={0}
-                    step={1}
-                  />
-                  <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                <div className="cursor-grab touch-none shrink-0 p-1">
+                  <GripVertical className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <span className="text-sm font-medium">
-                  {formatCurrency(calculatedAmount)}
-                </span>
+                <div className={`p-1.5 rounded shrink-0 ${TYPE_COLORS[item.type]}`}>
+                  {TYPE_ICONS[item.type]}
+                </div>
+                {item.code && (
+                  <Badge variant="outline" className="shrink-0 text-xs font-medium">
+                    {item.code}
+                  </Badge>
+                )}
+                {item.isOptional && (
+                  <Badge variant="secondary" className="text-xs">Exclu</Badge>
+                )}
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -388,10 +360,52 @@ export function FeesAndQuoteEditor({
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleExpanded(item.id)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleExpanded(item.id)}>
                     {expandedItems.has(item.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                   </Button>
                 </CollapsibleTrigger>
+              </div>
+            </div>
+            
+            {/* Name input - full width */}
+            <div className="px-3 pb-2">
+              <Input
+                value={item.designation}
+                onChange={(e) => updateItem(item.id, { designation: e.target.value })}
+                className="h-10 font-medium"
+                placeholder="Nom de la phase..."
+              />
+            </div>
+            
+            {/* Percentage and Amount - bottom row */}
+            <div className="flex items-center justify-between px-3 pb-3 gap-3">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground shrink-0">Part</Label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={item.percentageFee || 0}
+                    onChange={(e) => {
+                      const newPercentage = parseFloat(e.target.value) || 0;
+                      const newAmount = calculatePhaseAmount(newPercentage);
+                      updateItem(item.id, { 
+                        percentageFee: newPercentage,
+                        unitPrice: newAmount,
+                        amount: newAmount
+                      });
+                    }}
+                    className="h-9 w-20 text-right pr-6"
+                    min={0}
+                    step={1}
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground">Montant</div>
+                <div className="font-semibold text-base">
+                  {formatCurrency(calculatedAmount)}
+                </div>
               </div>
             </div>
           </div>
@@ -550,70 +564,84 @@ export function FeesAndQuoteEditor({
           onDragEnd={handleDragEnd}
           className={`border rounded-lg transition-all ${
             draggedIndex === globalIndex ? 'opacity-50' : ''
-          } ${item.isOptional ? 'border-dashed border-muted-foreground/30' : 'border-border'}`}
+          } ${item.isOptional ? 'border-dashed border-muted-foreground/30 bg-muted/20' : 'border-border'}`}
         >
-          {/* Mobile Layout */}
-          <div className="flex flex-col sm:hidden p-3 gap-2">
-            <div className="flex items-center gap-2">
-              <div className="cursor-grab shrink-0">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className={`p-1.5 rounded shrink-0 ${TYPE_COLORS[item.type]}`}>
-                {TYPE_ICONS[item.type]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <Input
-                  value={item.designation}
-                  onChange={(e) => updateItem(item.id, { designation: e.target.value })}
-                  className="h-8 text-sm"
-                  placeholder="Désignation..."
-                />
-              </div>
-            </div>
-            <div className="flex items-center justify-between gap-2 pl-8">
+          {/* Mobile Layout - Card Style */}
+          <div className="flex flex-col sm:hidden">
+            {/* Header with drag, type icon and actions */}
+            <div className="flex items-center justify-between p-3 pb-2">
               <div className="flex items-center gap-2">
+                <div className="cursor-grab touch-none shrink-0 p-1">
+                  <GripVertical className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <div className={`p-1.5 rounded shrink-0 ${TYPE_COLORS[item.type]}`}>
+                  {TYPE_ICONS[item.type]}
+                </div>
+                {item.isOptional && (
+                  <Badge variant="secondary" className="text-xs">Option</Badge>
+                )}
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => duplicateItem(item)}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Dupliquer
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => updateItem(item.id, { isOptional: !item.isOptional })}>
+                    {item.isOptional ? 'Inclure' : 'Rendre optionnel'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => deleteItem(item.id)} className="text-destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Supprimer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            
+            {/* Designation input - full width */}
+            <div className="px-3 pb-2">
+              <Input
+                value={item.designation}
+                onChange={(e) => updateItem(item.id, { designation: e.target.value })}
+                className="h-10"
+                placeholder="Désignation..."
+              />
+            </div>
+            
+            {/* Quantity, Unit Price and Amount */}
+            <div className="grid grid-cols-3 gap-2 px-3 pb-3">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Qté</Label>
                 <Input
                   type="number"
                   value={item.quantity}
                   onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
-                  className="h-7 w-16 text-center text-sm"
+                  className="h-9 text-center"
                   min={0}
                   step={1}
                 />
-                <span className="text-sm text-muted-foreground">×</span>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">P.U. €</Label>
                 <Input
                   type="number"
                   value={item.unitPrice}
                   onChange={(e) => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
-                  className="h-7 w-20 text-right text-sm"
+                  className="h-9 text-right"
                   min={0}
                 />
               </div>
-              <div className="flex items-center gap-1">
-                <span className={`text-sm font-medium ${item.type === 'discount' ? 'text-red-600' : ''}`}>
+              <div className="text-right">
+                <Label className="text-xs text-muted-foreground mb-1 block">Total</Label>
+                <div className={`h-9 flex items-center justify-end font-semibold ${item.type === 'discount' ? 'text-red-600' : ''}`}>
                   {item.type === 'discount' ? '-' : ''}{formatCurrency(Math.abs(item.amount))}
-                </span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => duplicateItem(item)}>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Dupliquer
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => updateItem(item.id, { isOptional: !item.isOptional })}>
-                      {item.isOptional ? 'Inclure' : 'Rendre optionnel'}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => deleteItem(item.id)} className="text-destructive">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Supprimer
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                </div>
               </div>
             </div>
           </div>
