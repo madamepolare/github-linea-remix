@@ -34,10 +34,23 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Edit, Copy, GripVertical, FileText, Euro } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from '@/components/ui/dropdown-menu';
+import { Plus, Trash2, Edit, Copy, GripVertical, FileText, Euro, Download, Sparkles, ChevronDown } from 'lucide-react';
 import { useQuoteTemplates, QuoteTemplate, QuoteTemplatePhase, PricingGrid, PricingGridItem } from '@/hooks/useQuoteTemplates';
 import { ProjectType, PROJECT_TYPE_LABELS, PHASES_BY_PROJECT_TYPE } from '@/lib/commercialTypes';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ALL_MISSION_TEMPLATES, getMissionCategories, MissionTemplate } from '@/lib/defaultMissionTemplates';
+import { toast } from 'sonner';
 
 const GRID_TYPE_LABELS = {
   hourly: 'Horaire',
@@ -86,6 +99,7 @@ function QuoteTemplatesSection() {
   const { templates, isLoadingTemplates, createTemplate, updateTemplate, deleteTemplate, initializeDefaults } = useQuoteTemplates();
   const [editingTemplate, setEditingTemplate] = useState<QuoteTemplate | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isLoadingDefaults, setIsLoadingDefaults] = useState(false);
   const [newTemplate, setNewTemplate] = useState<Partial<QuoteTemplate>>({
     name: '',
     description: '',
@@ -105,6 +119,45 @@ function QuoteTemplatesSection() {
       sort_order: templates.length
     });
   };
+
+  const handleLoadMissionTemplate = async (missionTemplate: MissionTemplate) => {
+    await createTemplate.mutateAsync({
+      name: missionTemplate.name,
+      description: missionTemplate.description,
+      project_type: missionTemplate.projectType,
+      phases: missionTemplate.phases,
+      is_default: false,
+      sort_order: templates.length
+    });
+    toast.success(`Template "${missionTemplate.name}" ajouté`);
+  };
+
+  const handleLoadAllTemplates = async () => {
+    setIsLoadingDefaults(true);
+    try {
+      for (const template of ALL_MISSION_TEMPLATES) {
+        // Check if already exists
+        const exists = templates.some(t => t.name === template.name);
+        if (!exists) {
+          await createTemplate.mutateAsync({
+            name: template.name,
+            description: template.description,
+            project_type: template.projectType,
+            phases: template.phases,
+            is_default: false,
+            sort_order: templates.length
+          });
+        }
+      }
+      toast.success(`${ALL_MISSION_TEMPLATES.length} templates chargés`);
+    } catch (error) {
+      toast.error('Erreur lors du chargement');
+    } finally {
+      setIsLoadingDefaults(false);
+    }
+  };
+
+  const missionCategories = getMissionCategories();
 
   const handleSaveNew = async () => {
     if (!newTemplate.name) return;
@@ -151,19 +204,63 @@ function QuoteTemplatesSection() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
           Créez des templates de phases réutilisables pour vos devis
         </p>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Nouveau template
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={isLoadingDefaults}>
+                <Download className="h-4 w-4 mr-2" />
+                Charger templates
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuLabel className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                Templates prédéfinis
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLoadAllTemplates} disabled={isLoadingDefaults}>
+                <Download className="h-4 w-4 mr-2" />
+                Charger tous les templates ({ALL_MISSION_TEMPLATES.length})
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {missionCategories.map((category) => (
+                <DropdownMenuSub key={category.type}>
+                  <DropdownMenuSubTrigger>
+                    {category.label} ({category.templates.length})
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-64">
+                    {category.templates.map((template) => (
+                      <DropdownMenuItem
+                        key={template.id}
+                        onClick={() => handleLoadMissionTemplate(template)}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium">{template.name}</span>
+                          <span className="text-xs text-muted-foreground truncate">
+                            {template.phases.length} phases
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Nouveau template
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
               <DialogTitle>Nouveau template de devis</DialogTitle>
               <DialogDescription>
                 Créez un template avec des phases prédéfinies
@@ -210,16 +307,17 @@ function QuoteTemplatesSection() {
                 </Select>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-                Annuler
-              </Button>
-              <Button onClick={handleSaveNew} disabled={!newTemplate.name || createTemplate.isPending}>
-                Créer
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+                  Annuler
+                </Button>
+                <Button onClick={handleSaveNew} disabled={!newTemplate.name || createTemplate.isPending}>
+                  Créer
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {templates.length === 0 ? (
