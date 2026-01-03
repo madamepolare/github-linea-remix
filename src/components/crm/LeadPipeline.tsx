@@ -56,37 +56,46 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
 
   return (
     <>
-      <div className="p-4 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         {/* Stats bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <Badge variant="outline" className="gap-1.5 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/50">
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50 text-sm">
               <span className="h-2 w-2 rounded-full bg-primary" />
-              {stats.total} opportunités
-            </Badge>
-            <Badge variant="outline" className="gap-1.5 text-sm">
+              <span className="font-medium">{stats.total}</span>
+              <span className="text-muted-foreground hidden sm:inline">opportunités</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50 text-sm">
               <span className="text-muted-foreground">€</span>
-              {formatCurrency(stats.weightedValue)} pondéré
-            </Badge>
+              <span className="font-medium">{formatCurrency(stats.weightedValue)}</span>
+              <span className="text-muted-foreground hidden sm:inline">pondéré</span>
+            </div>
             {stats.wonValue > 0 && (
-              <Badge variant="outline" className="gap-1.5 text-sm text-emerald-600 border-emerald-200">
-                ✓ {formatCurrency(stats.wonValue)} gagné
-              </Badge>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-sm text-emerald-600">
+                <span>✓</span>
+                <span className="font-medium">{formatCurrency(stats.wonValue)}</span>
+                <span className="hidden sm:inline">gagné</span>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowClosed(!showClosed)}>
-              {showClosed ? "Masquer clôturés" : "Afficher clôturés"}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-xs h-8"
+              onClick={() => setShowClosed(!showClosed)}
+            >
+              {showClosed ? "Masquer clôturés" : "Voir clôturés"}
             </Button>
-            <Button size="sm" onClick={onCreateLead}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Nouvelle opportunité
+            <Button size="sm" className="h-8" onClick={onCreateLead}>
+              <Plus className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Nouvelle opportunité</span>
             </Button>
           </div>
         </div>
 
         {/* Kanban */}
-        <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-300px)]">
+        <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-320px)]">
           <KanbanBoard<Lead>
             columns={kanbanColumns}
             isLoading={isLoading}

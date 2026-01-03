@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Target, Users, Building2, TrendingUp, ChevronDown } from "lucide-react";
+import { Loader2, Plus, Target, Users, Building2, TrendingUp } from "lucide-react";
 import { CRMContactsTable } from "@/components/crm/CRMContactsTable";
 import { CRMCompanyTable } from "@/components/crm/CRMCompanyTable";
 import { LeadPipeline } from "@/components/crm/LeadPipeline";
@@ -16,6 +15,7 @@ import { CRMOverview } from "@/components/crm/CRMOverview";
 import { usePipelines, useLeads } from "@/hooks/useLeads";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
+import { cn } from "@/lib/utils";
 
 type CRMView = "overview" | "leads" | "contacts" | "companies";
 
@@ -153,27 +153,30 @@ export default function CRM() {
               </Tabs>
             </div>
 
-            {/* Pipeline selector - only shown in leads view */}
-            {view === "leads" && pipelines.length > 1 && (
-              <div className="px-4 sm:px-6 py-2 border-t border-border/50 bg-muted/30">
+            {/* Pipeline selector - always shown in leads view */}
+            {view === "leads" && pipelines.length > 0 && (
+              <div className="px-4 sm:px-6 py-2.5 border-t border-border/50 bg-muted/20">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">Pipeline :</span>
-                  <div className="flex gap-1 overflow-x-auto">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pipeline</span>
+                  <div className="flex gap-1.5 overflow-x-auto">
                     {pipelines.map((pipeline) => (
                       <Button
                         key={pipeline.id}
-                        variant={selectedPipelineId === pipeline.id ? "secondary" : "ghost"}
+                        variant={selectedPipelineId === pipeline.id ? "default" : "outline"}
                         size="sm"
-                        className="h-7 text-xs gap-1.5 shrink-0"
+                        className={cn(
+                          "h-7 text-xs gap-1.5 shrink-0 transition-all",
+                          selectedPipelineId === pipeline.id && "shadow-sm"
+                        )}
                         onClick={() => setSelectedPipelineId(pipeline.id)}
                       >
                         <div
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: pipeline.color || "#6366f1" }}
+                          className="h-2.5 w-2.5 rounded-full ring-1 ring-inset ring-white/20"
+                          style={{ backgroundColor: pipeline.color || "hsl(var(--primary))" }}
                         />
                         {pipeline.name}
                         {pipeline.is_default && (
-                          <Badge variant="outline" className="text-[9px] h-4 px-1">
+                          <Badge variant="secondary" className="text-[9px] h-4 px-1 ml-0.5">
                             défaut
                           </Badge>
                         )}
