@@ -2483,8 +2483,10 @@ export type Database = {
         Row: {
           created_at: string | null
           criterion_name: string
+          criterion_type: string | null
           id: string
           notes: string | null
+          parent_criterion_id: string | null
           sub_criteria: Json | null
           tender_id: string
           weight: number | null
@@ -2492,8 +2494,10 @@ export type Database = {
         Insert: {
           created_at?: string | null
           criterion_name: string
+          criterion_type?: string | null
           id?: string
           notes?: string | null
+          parent_criterion_id?: string | null
           sub_criteria?: Json | null
           tender_id: string
           weight?: number | null
@@ -2501,13 +2505,22 @@ export type Database = {
         Update: {
           created_at?: string | null
           criterion_name?: string
+          criterion_type?: string | null
           id?: string
           notes?: string | null
+          parent_criterion_id?: string | null
           sub_criteria?: Json | null
           tender_id?: string
           weight?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tender_criteria_parent_criterion_id_fkey"
+            columns: ["parent_criterion_id"]
+            isOneToOne: false
+            referencedRelation: "tender_criteria"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tender_criteria_tender_id_fkey"
             columns: ["tender_id"]
@@ -2690,6 +2703,72 @@ export type Database = {
           },
         ]
       }
+      tender_required_documents: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          document_category: string
+          document_type: string
+          file_url: string | null
+          id: string
+          is_completed: boolean | null
+          is_mandatory: boolean | null
+          name: string
+          sort_order: number | null
+          template_url: string | null
+          tender_id: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          document_category?: string
+          document_type: string
+          file_url?: string | null
+          id?: string
+          is_completed?: boolean | null
+          is_mandatory?: boolean | null
+          name: string
+          sort_order?: number | null
+          template_url?: string | null
+          tender_id: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          document_category?: string
+          document_type?: string
+          file_url?: string | null
+          id?: string
+          is_completed?: boolean | null
+          is_mandatory?: boolean | null
+          name?: string
+          sort_order?: number | null
+          template_url?: string | null
+          tender_id?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_required_documents_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_required_documents_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tender_requirements: {
         Row: {
           ai_confidence: number | null
@@ -2857,26 +2936,50 @@ export type Database = {
       }
       tenders: {
         Row: {
+          allows_joint_venture: boolean | null
+          allows_negotiation: boolean | null
+          allows_variants: boolean | null
           budget_disclosed: boolean | null
+          client_address: string | null
+          client_contact_email: string | null
+          client_contact_name: string | null
+          client_contact_phone: string | null
+          client_direction: string | null
           client_name: string | null
           client_type: string | null
+          consultation_number: string | null
           contracting_authority: string | null
           created_at: string | null
           created_by: string | null
+          dce_delivery_deadline: string | null
+          dce_delivery_duration_months: number | null
           description: string | null
           estimated_budget: number | null
           go_decision_by: string | null
           go_decision_date: string | null
           go_decision_notes: string | null
+          group_code: string | null
           id: string
+          joint_venture_type: string | null
           jury_date: string | null
           location: string | null
+          mandataire_must_be_solidary: boolean | null
+          market_object: string | null
+          negotiation_candidates_count: number | null
+          negotiation_method: string | null
+          offer_validity_days: number | null
           procedure_type: Database["public"]["Enums"]["procedure_type"] | null
+          questions_deadline_days: number | null
           reference: string
           region: string | null
           results_date: string | null
+          site_visit_contact_email: string | null
+          site_visit_contact_name: string | null
+          site_visit_contact_phone: string | null
           site_visit_date: string | null
           site_visit_required: boolean | null
+          site_visit_secondary_contact: Json | null
+          source_contact_email: string | null
           source_platform: string | null
           source_url: string | null
           status: Database["public"]["Enums"]["tender_status"] | null
@@ -2884,29 +2987,54 @@ export type Database = {
           surface_area: number | null
           title: string
           updated_at: string | null
+          work_nature_tags: string[] | null
           workspace_id: string
         }
         Insert: {
+          allows_joint_venture?: boolean | null
+          allows_negotiation?: boolean | null
+          allows_variants?: boolean | null
           budget_disclosed?: boolean | null
+          client_address?: string | null
+          client_contact_email?: string | null
+          client_contact_name?: string | null
+          client_contact_phone?: string | null
+          client_direction?: string | null
           client_name?: string | null
           client_type?: string | null
+          consultation_number?: string | null
           contracting_authority?: string | null
           created_at?: string | null
           created_by?: string | null
+          dce_delivery_deadline?: string | null
+          dce_delivery_duration_months?: number | null
           description?: string | null
           estimated_budget?: number | null
           go_decision_by?: string | null
           go_decision_date?: string | null
           go_decision_notes?: string | null
+          group_code?: string | null
           id?: string
+          joint_venture_type?: string | null
           jury_date?: string | null
           location?: string | null
+          mandataire_must_be_solidary?: boolean | null
+          market_object?: string | null
+          negotiation_candidates_count?: number | null
+          negotiation_method?: string | null
+          offer_validity_days?: number | null
           procedure_type?: Database["public"]["Enums"]["procedure_type"] | null
+          questions_deadline_days?: number | null
           reference: string
           region?: string | null
           results_date?: string | null
+          site_visit_contact_email?: string | null
+          site_visit_contact_name?: string | null
+          site_visit_contact_phone?: string | null
           site_visit_date?: string | null
           site_visit_required?: boolean | null
+          site_visit_secondary_contact?: Json | null
+          source_contact_email?: string | null
           source_platform?: string | null
           source_url?: string | null
           status?: Database["public"]["Enums"]["tender_status"] | null
@@ -2914,29 +3042,54 @@ export type Database = {
           surface_area?: number | null
           title: string
           updated_at?: string | null
+          work_nature_tags?: string[] | null
           workspace_id: string
         }
         Update: {
+          allows_joint_venture?: boolean | null
+          allows_negotiation?: boolean | null
+          allows_variants?: boolean | null
           budget_disclosed?: boolean | null
+          client_address?: string | null
+          client_contact_email?: string | null
+          client_contact_name?: string | null
+          client_contact_phone?: string | null
+          client_direction?: string | null
           client_name?: string | null
           client_type?: string | null
+          consultation_number?: string | null
           contracting_authority?: string | null
           created_at?: string | null
           created_by?: string | null
+          dce_delivery_deadline?: string | null
+          dce_delivery_duration_months?: number | null
           description?: string | null
           estimated_budget?: number | null
           go_decision_by?: string | null
           go_decision_date?: string | null
           go_decision_notes?: string | null
+          group_code?: string | null
           id?: string
+          joint_venture_type?: string | null
           jury_date?: string | null
           location?: string | null
+          mandataire_must_be_solidary?: boolean | null
+          market_object?: string | null
+          negotiation_candidates_count?: number | null
+          negotiation_method?: string | null
+          offer_validity_days?: number | null
           procedure_type?: Database["public"]["Enums"]["procedure_type"] | null
+          questions_deadline_days?: number | null
           reference?: string
           region?: string | null
           results_date?: string | null
+          site_visit_contact_email?: string | null
+          site_visit_contact_name?: string | null
+          site_visit_contact_phone?: string | null
           site_visit_date?: string | null
           site_visit_required?: boolean | null
+          site_visit_secondary_contact?: Json | null
+          source_contact_email?: string | null
           source_platform?: string | null
           source_url?: string | null
           status?: Database["public"]["Enums"]["tender_status"] | null
@@ -2944,6 +3097,7 @@ export type Database = {
           surface_area?: number | null
           title?: string
           updated_at?: string | null
+          work_nature_tags?: string[] | null
           workspace_id?: string
         }
         Relationships: [
