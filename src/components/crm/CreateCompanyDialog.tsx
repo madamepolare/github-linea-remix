@@ -34,6 +34,14 @@ const schema = z.object({
   postal_code: z.string().optional(),
   billing_email: z.string().email("Email invalide").optional().or(z.literal("")),
   notes: z.string().optional(),
+  // Financial fields
+  siren: z.string().max(9).optional(),
+  siret: z.string().max(14).optional(),
+  vat_number: z.string().max(20).optional(),
+  capital_social: z.string().optional(),
+  forme_juridique: z.string().optional(),
+  code_naf: z.string().max(10).optional(),
+  rcs_city: z.string().max(100).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -65,6 +73,13 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
       postal_code: "",
       billing_email: "",
       notes: "",
+      siren: "",
+      siret: "",
+      vat_number: "",
+      capital_social: "",
+      forme_juridique: "",
+      code_naf: "",
+      rcs_city: "",
     },
   });
 
@@ -98,7 +113,14 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
       billing_email: sameAsBilling ? data.email || undefined : data.billing_email || undefined,
       notes: data.notes || undefined,
       bet_specialties: isBET && selectedSpecialties.length > 0 ? selectedSpecialties : undefined,
-    });
+      siren: data.siren || undefined,
+      siret: data.siret || undefined,
+      vat_number: data.vat_number || undefined,
+      capital_social: data.capital_social ? parseFloat(data.capital_social) : undefined,
+      forme_juridique: data.forme_juridique || undefined,
+      code_naf: data.code_naf || undefined,
+      rcs_city: data.rcs_city || undefined,
+    } as any);
     form.reset();
     setSelectedSpecialties([]);
     setSelectedCategory("");
@@ -297,6 +319,49 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
               <div className="space-y-2">
                 <Label>Ville</Label>
                 <Input {...form.register("city")} placeholder="Paris" />
+              </div>
+            </div>
+
+            {/* Financial Section */}
+            <div className="space-y-4 pt-4 border-t">
+              <h4 className="text-sm font-medium text-muted-foreground">Informations financières</h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>SIREN</Label>
+                  <Input {...form.register("siren")} placeholder="123456789" maxLength={9} />
+                </div>
+                <div className="space-y-2">
+                  <Label>SIRET</Label>
+                  <Input {...form.register("siret")} placeholder="12345678900012" maxLength={14} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>N° TVA Intra.</Label>
+                  <Input {...form.register("vat_number")} placeholder="FR12345678901" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Code NAF</Label>
+                  <Input {...form.register("code_naf")} placeholder="7111Z" maxLength={10} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Forme juridique</Label>
+                  <Input {...form.register("forme_juridique")} placeholder="SARL, SAS, EURL..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Capital social (€)</Label>
+                  <Input {...form.register("capital_social")} type="number" placeholder="10000" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Ville du RCS</Label>
+                <Input {...form.register("rcs_city")} placeholder="Paris" />
               </div>
             </div>
 

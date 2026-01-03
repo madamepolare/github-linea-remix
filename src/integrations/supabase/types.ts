@@ -460,11 +460,14 @@ export type Database = {
           address: string | null
           bet_specialties: string[] | null
           billing_email: string | null
+          capital_social: number | null
           city: string | null
+          code_naf: string | null
           country: string | null
           created_at: string | null
           created_by: string | null
           email: string | null
+          forme_juridique: string | null
           id: string
           industry: string | null
           logo_url: string | null
@@ -472,7 +475,11 @@ export type Database = {
           notes: string | null
           phone: string | null
           postal_code: string | null
+          rcs_city: string | null
+          siren: string | null
+          siret: string | null
           updated_at: string | null
+          vat_number: string | null
           website: string | null
           workspace_id: string
         }
@@ -480,11 +487,14 @@ export type Database = {
           address?: string | null
           bet_specialties?: string[] | null
           billing_email?: string | null
+          capital_social?: number | null
           city?: string | null
+          code_naf?: string | null
           country?: string | null
           created_at?: string | null
           created_by?: string | null
           email?: string | null
+          forme_juridique?: string | null
           id?: string
           industry?: string | null
           logo_url?: string | null
@@ -492,7 +502,11 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           postal_code?: string | null
+          rcs_city?: string | null
+          siren?: string | null
+          siret?: string | null
           updated_at?: string | null
+          vat_number?: string | null
           website?: string | null
           workspace_id: string
         }
@@ -500,11 +514,14 @@ export type Database = {
           address?: string | null
           bet_specialties?: string[] | null
           billing_email?: string | null
+          capital_social?: number | null
           city?: string | null
+          code_naf?: string | null
           country?: string | null
           created_at?: string | null
           created_by?: string | null
           email?: string | null
+          forme_juridique?: string | null
           id?: string
           industry?: string | null
           logo_url?: string | null
@@ -512,7 +529,11 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           postal_code?: string | null
+          rcs_city?: string | null
+          siren?: string | null
+          siret?: string | null
           updated_at?: string | null
+          vat_number?: string | null
           website?: string | null
           workspace_id?: string
         }
@@ -1393,10 +1414,13 @@ export type Database = {
         Row: {
           active_workspace_id: string | null
           avatar_url: string | null
+          bio: string | null
+          company: string | null
           created_at: string
           full_name: string | null
           id: string
           job_title: string | null
+          linkedin_url: string | null
           onboarding_completed: boolean
           phone: string | null
           updated_at: string
@@ -1405,10 +1429,13 @@ export type Database = {
         Insert: {
           active_workspace_id?: string | null
           avatar_url?: string | null
+          bio?: string | null
+          company?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
           job_title?: string | null
+          linkedin_url?: string | null
           onboarding_completed?: boolean
           phone?: string | null
           updated_at?: string
@@ -1417,10 +1444,13 @@ export type Database = {
         Update: {
           active_workspace_id?: string | null
           avatar_url?: string | null
+          bio?: string | null
+          company?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
           job_title?: string | null
+          linkedin_url?: string | null
           onboarding_completed?: boolean
           phone?: string | null
           updated_at?: string
