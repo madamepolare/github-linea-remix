@@ -1,12 +1,13 @@
 import { Task } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CheckSquare, Circle, Clock, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { LinkedEntityBadge } from "./EntitySelector";
 import { RelatedEntityType } from "@/lib/taskTypes";
+import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 
 const statusConfig = {
   todo: {
@@ -32,11 +33,15 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
+  const { data: profiles } = useWorkspaceProfiles();
   const subtaskCount = task.subtasks?.length || 0;
   const completedSubtasks = task.subtasks?.filter((s) => s.status === "done").length || 0;
   const status = (task.status || "todo") as keyof typeof statusConfig;
   const config = statusConfig[status] || statusConfig.todo;
   const StatusIcon = config.icon;
+
+  // Get profile by user ID
+  const getProfile = (userId: string) => profiles?.find((p) => p.user_id === userId);
 
   return (
     <div
@@ -102,16 +107,23 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           )}
         </div>
 
-        {/* Assignees */}
+        {/* Assignees with profile pictures */}
         {task.assigned_to && task.assigned_to.length > 0 && (
           <div className="flex -space-x-1.5">
-            {task.assigned_to.slice(0, 3).map((userId, i) => (
-              <Avatar key={userId} className="h-6 w-6 border-2 border-card">
-                <AvatarFallback className="text-2xs bg-muted text-muted-foreground">
-                  {String.fromCharCode(65 + i)}
-                </AvatarFallback>
-              </Avatar>
-            ))}
+            {task.assigned_to.slice(0, 3).map((userId) => {
+              const profile = getProfile(userId);
+              const initials = profile?.full_name
+                ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+                : userId.slice(0, 2).toUpperCase();
+              return (
+                <Avatar key={userId} className="h-6 w-6 border-2 border-card">
+                  {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name || ""} className="object-cover" />}
+                  <AvatarFallback className="text-2xs bg-muted text-muted-foreground">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              );
+            })}
           </div>
         )}
       </div>

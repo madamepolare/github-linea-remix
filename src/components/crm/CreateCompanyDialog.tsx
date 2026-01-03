@@ -140,13 +140,13 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden flex flex-col min-h-0">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Nouvelle entreprise</DialogTitle>
           <DialogDescription>Ajoutez une nouvelle entreprise à votre CRM</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-1 min-h-0 -mx-6 px-6">
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
+        <ScrollArea className="flex-1 -mx-6 px-6">
+          <form id="create-company-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
             {/* Name */}
             <div className="space-y-2">
               <Label>Nom de l'entreprise *</Label>
@@ -370,18 +370,17 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
               <Label>Notes</Label>
               <Textarea {...form.register("notes")} placeholder="Notes sur l'entreprise..." rows={2} />
             </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Annuler
-              </Button>
-              <Button type="submit" disabled={createCompany.isPending}>
-                {createCompany.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Créer
-              </Button>
-            </div>
           </form>
         </ScrollArea>
+        <div className="flex justify-end gap-3 pt-4 border-t shrink-0">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Annuler
+          </Button>
+          <Button type="submit" form="create-company-form" disabled={createCompany.isPending}>
+            {createCompany.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            Créer
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -329,9 +329,17 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 collapsed && "justify-center px-0"
               )}
             >
-              <div className="h-8 w-8 rounded-full bg-foreground flex items-center justify-center text-xs font-medium text-background">
-                {userInitials}
-              </div>
+              {profile?.avatar_url ? (
+                <img 
+                  src={profile.avatar_url} 
+                  alt={profile.full_name || "User"} 
+                  className="h-8 w-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-foreground flex items-center justify-center text-xs font-medium text-background">
+                  {userInitials}
+                </div>
+              )}
               {!collapsed && (
                 <div className="flex-1 min-w-0 text-left">
                   <p className="text-sm font-medium text-foreground truncate">
@@ -346,9 +354,22 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align={collapsed ? "center" : "end"} side={collapsed ? "right" : "top"} className="w-52">
             <DropdownMenuLabel>
-              <div>
-                <p className="font-medium text-sm">{profile?.full_name || "User"}</p>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
+              <div className="flex items-center gap-2">
+                {profile?.avatar_url ? (
+                  <img 
+                    src={profile.avatar_url} 
+                    alt={profile.full_name || "User"} 
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-foreground flex items-center justify-center text-xs font-medium text-background">
+                    {userInitials}
+                  </div>
+                )}
+                <div>
+                  <p className="font-medium text-sm">{profile?.full_name || "User"}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
