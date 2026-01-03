@@ -16,7 +16,8 @@ import {
   Calculator,
   Info,
   Layers,
-  Grid3X3
+  Grid3X3,
+  FolderOpen
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -68,6 +69,7 @@ import {
 } from '@/lib/commercialTypes';
 import { AIPhaseSuggestion } from './AIPhaseSuggestion';
 import { useQuoteTemplates, QuoteTemplate, PricingGridItem } from '@/hooks/useQuoteTemplates';
+import { ALL_MISSION_TEMPLATES, getMissionCategories, MissionTemplate } from '@/lib/defaultMissionTemplates';
 
 interface FeesAndQuoteEditorProps {
   items: QuoteLineItem[];
@@ -343,6 +345,46 @@ export function FeesAndQuoteEditor({
       onItemsChange(newItems);
     }
   };
+
+  const loadMissionTemplate = (template: MissionTemplate) => {
+    const newItems: QuoteLineItem[] = template.phases.map((phase, index) => ({
+      id: generateId(),
+      type: 'phase' as LineItemType,
+      designation: phase.name,
+      description: phase.description || '',
+      code: phase.code,
+      percentageFee: phase.defaultPercentage,
+      quantity: 1,
+      unit: 'forfait',
+      unitPrice: 0,
+      amount: 0,
+      isOptional: false,
+      deliverables: phase.deliverables,
+      sortOrder: index
+    }));
+    onItemsChange(newItems);
+  };
+
+  const loadSavedTemplate = (template: QuoteTemplate) => {
+    const newItems: QuoteLineItem[] = template.phases.map((phase: any, index: number) => ({
+      id: generateId(),
+      type: 'phase' as LineItemType,
+      designation: phase.name,
+      description: phase.description || '',
+      code: phase.code,
+      percentageFee: phase.defaultPercentage,
+      quantity: 1,
+      unit: 'forfait',
+      unitPrice: 0,
+      amount: 0,
+      isOptional: false,
+      deliverables: phase.deliverables || [],
+      sortOrder: index
+    }));
+    onItemsChange(newItems);
+  };
+
+  const missionCategories = getMissionCategories();
 
   // === DRAG & DROP ===
   const handleDragStart = (index: number) => {
@@ -1074,15 +1116,56 @@ export function FeesAndQuoteEditor({
                 <FileText className="h-6 w-6 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Aucune phase ajoutée</p>
                 <p className="text-xs mt-1">Utilisez "Suggérer avec l'IA" ou ajoutez manuellement</p>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="mt-3"
-                  onClick={() => addItem('phase')}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Ajouter une phase
-                </Button>
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => addItem('phase')}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Ajouter une phase
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline">
+                        <FolderOpen className="h-4 w-4 mr-1" />
+                        Charger template
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-80 max-h-[400px] overflow-y-auto">
+                      {templates && templates.length > 0 && (
+                        <>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Mes templates</div>
+                          {templates.map((template) => (
+                            <DropdownMenuItem
+                              key={template.id}
+                              onClick={() => loadSavedTemplate(template)}
+                            >
+                              {template.name}
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
+                      {missionCategories.map((cat, catIndex) => (
+                        <div key={cat.type}>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{cat.label}</div>
+                          {cat.templates.map((template) => (
+                            <DropdownMenuItem
+                              key={template.id}
+                              onClick={() => loadMissionTemplate(template)}
+                              className="flex flex-col items-start py-2"
+                            >
+                              <div className="font-medium">{template.name}</div>
+                              <div className="text-xs text-muted-foreground">{template.description}</div>
+                            </DropdownMenuItem>
+                          ))}
+                          {catIndex < missionCategories.length - 1 && <DropdownMenuSeparator />}
+                        </div>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             )}
           </div>
