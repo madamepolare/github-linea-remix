@@ -12,7 +12,7 @@ interface Testimonial {
 const testimonials: Testimonial[] = [
   {
     quote:
-      "ARCHIMIND a transformé notre façon de gérer les projets. La vue d'ensemble sur les phases et les livrables nous fait gagner un temps précieux.",
+      "Linea Suite a transformé notre façon de gérer les projets. La vue d'ensemble sur les phases et les livrables nous fait gagner un temps précieux.",
     author: "Marie Dupont",
     role: "Architecte associée",
     company: "Studio MD Architecture",

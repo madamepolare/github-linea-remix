@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
+import { MegaMenu } from "./MegaMenu";
 import gsap from "gsap";
 
 export const LandingNav = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mobileModulesOpen, setMobileModulesOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,10 +29,13 @@ export const LandingNav = () => {
     });
   }, []);
 
-  const navLinks = [
-    { href: "#features", label: "Fonctionnalités" },
-    { href: "#pricing", label: "Tarifs" },
-    { href: "#testimonials", label: "Témoignages" },
+  const mobileModules = [
+    { slug: "projets", label: "Gestion de projets" },
+    { slug: "crm", label: "CRM intégré" },
+    { slug: "commercial", label: "Devis & Facturation" },
+    { slug: "appels-offres", label: "Appels d'offres" },
+    { slug: "planning", label: "Planning chantier" },
+    { slug: "collaboration", label: "Collaboration" },
   ];
 
   return (
@@ -46,24 +51,36 @@ export const LandingNav = () => {
           {/* Logo */}
           <Link to="/welcome" className="nav-item flex items-center gap-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">A</span>
+              <span className="text-primary-foreground font-bold text-xl">L</span>
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              ARCHIMIND
+              LINEA SUITE
             </span>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="nav-item text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium"
-              >
-                {link.label}
-              </a>
-            ))}
+            <div className="nav-item">
+              <MegaMenu />
+            </div>
+            <a
+              href="/welcome#pricing"
+              className="nav-item text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium"
+            >
+              Tarifs
+            </a>
+            <Link
+              to="/roadmap"
+              className="nav-item text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium"
+            >
+              Roadmap
+            </Link>
+            <Link
+              to="/about"
+              className="nav-item text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium"
+            >
+              À propos
+            </Link>
           </div>
 
           {/* Desktop CTA */}
@@ -93,24 +110,62 @@ export const LandingNav = () => {
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden bg-background/95 backdrop-blur-md border-t border-border">
-          <div className="px-4 py-6 space-y-4">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="block text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"
-                onClick={() => setIsMobileMenuOpen(false)}
+          <div className="px-4 py-6 space-y-2">
+            {/* Modules accordion */}
+            <div>
+              <button
+                onClick={() => setMobileModulesOpen(!mobileModulesOpen)}
+                className="flex items-center justify-between w-full text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"
               >
-                {link.label}
-              </a>
-            ))}
+                Modules
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform ${mobileModulesOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {mobileModulesOpen && (
+                <div className="pl-4 space-y-2 mt-2">
+                  {mobileModules.map((module) => (
+                    <Link
+                      key={module.slug}
+                      to={`/modules/${module.slug}`}
+                      className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      {module.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+            <a
+              href="/welcome#pricing"
+              className="block text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Tarifs
+            </a>
+            <Link
+              to="/roadmap"
+              className="block text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Roadmap
+            </Link>
+            <Link
+              to="/about"
+              className="block text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              À propos
+            </Link>
             <div className="pt-4 space-y-3 border-t border-border">
-              <Link to="/auth" className="block">
+              <Link to="/auth" className="block" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button variant="outline" className="w-full">
                   Se connecter
                 </Button>
               </Link>
-              <Link to="/auth" className="block">
+              <Link to="/auth" className="block" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button className="w-full">Commencer gratuitement</Button>
               </Link>
             </div>

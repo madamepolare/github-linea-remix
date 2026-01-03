@@ -92,7 +92,7 @@ export default function Auth() {
     } else {
       toast({
         title: "Account created!",
-        description: "Welcome to ARCHIMIND. Let's set up your workspace.",
+        description: "Welcome to Linea Suite. Let's set up your workspace.",
       });
     }
   };
@@ -128,7 +128,7 @@ export default function Auth() {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent">
               <Hexagon className="h-7 w-7 text-accent-foreground" />
             </div>
-            <span className="font-display text-2xl font-bold">ARCHIMIND</span>
+            <span className="font-display text-2xl font-bold">LINEA SUITE</span>
           </div>
 
           <div className="space-y-6">
@@ -173,12 +173,11 @@ export default function Auth() {
       {/* Right Panel - Auth Form */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
-          {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
               <Hexagon className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="font-display text-xl font-bold text-foreground">ARCHIMIND</span>
+            <span className="font-display text-xl font-bold text-foreground">LINEA SUITE</span>
           </div>
 
           <motion.div

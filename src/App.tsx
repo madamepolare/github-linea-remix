@@ -24,6 +24,13 @@ import Tenders from "./pages/Tenders";
 import TenderDetail from "./pages/TenderDetail";
 import Welcome from "./pages/Welcome";
 import ModuleDetail from "./pages/ModuleDetail";
+import Roadmap from "./pages/Roadmap";
+import About from "./pages/About";
+import Blog from "./pages/Blog";
+import Contact from "./pages/Contact";
+import CGV from "./pages/legal/CGV";
+import Privacy from "./pages/legal/Privacy";
+import Legal from "./pages/legal/Legal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +46,13 @@ const App = () => (
           <Routes>
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/modules/:slug" element={<ModuleDetail />} />
+            <Route path="/roadmap" element={<Roadmap />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/legal/cgv" element={<CGV />} />
+            <Route path="/legal/privacy" element={<Privacy />} />
+            <Route path="/legal/mentions" element={<Legal />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/invite" element={<AcceptInvite />} />

@@ -192,14 +192,13 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
               <Hexagon className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="font-display text-xl font-bold text-foreground">ARCHIMIND</span>
+            <span className="font-display text-xl font-bold text-foreground">LINEA SUITE</span>
           </div>
         </div>
       </header>
@@ -292,7 +291,7 @@ export default function Onboarding() {
                     <Label htmlFor="companySlug">URL de l'espace</Label>
                     <div className="flex items-center">
                       <span className="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-input bg-muted text-sm text-muted-foreground">
-                        archimind.app/
+                        lineasuite.app/
                       </span>
                       <Input
                         id="companySlug"
