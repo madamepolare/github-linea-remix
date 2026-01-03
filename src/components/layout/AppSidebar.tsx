@@ -12,6 +12,7 @@ import {
   LogOut,
   ChevronsUpDown,
   HelpCircle,
+  Trophy,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
@@ -52,6 +53,7 @@ const navigation: NavItem[] = [
   { title: "Projects", icon: FolderKanban, href: "/projects" },
   { title: "Tasks", icon: CheckSquare, href: "/tasks" },
   { title: "CRM", icon: Users, href: "/crm" },
+  { title: "Concours", icon: Trophy, href: "/tenders" },
   { title: "Commercial", icon: FileText, href: "/commercial" },
 ];
 

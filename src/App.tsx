@@ -20,6 +20,7 @@ import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import Commercial from "./pages/Commercial";
 import CommercialDocument from "./pages/CommercialDocument";
+import Tenders from "./pages/Tenders";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -121,6 +122,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CommercialDocument />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tenders"
+              element={
+                <ProtectedRoute>
+                  <Tenders />
                 </ProtectedRoute>
               }
             />
