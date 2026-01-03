@@ -22,6 +22,7 @@ import Commercial from "./pages/Commercial";
 import CommercialDocument from "./pages/CommercialDocument";
 import Tenders from "./pages/Tenders";
 import TenderDetail from "./pages/TenderDetail";
+import Welcome from "./pages/Welcome";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
         <AuthProvider>
           <CommandPalette />
           <Routes>
+            <Route path="/welcome" element={<Welcome />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/invite" element={<AcceptInvite />} />
