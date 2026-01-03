@@ -288,6 +288,17 @@ export function MeetingsAndReportsSection({
     return <Skeleton className="h-48 w-full" />;
   }
 
+  // Empty state for CR mode when no reports exist
+  if (showOnlyReports && sortedMeetings.length === 0) {
+    return (
+      <EmptyState
+        icon={FileText}
+        title="Aucun compte rendu"
+        description="Les comptes rendus rédigés apparaîtront ici."
+      />
+    );
+  }
+
   if (meetings.length === 0 && !isDialogOpen) {
     return (
       <>
@@ -321,23 +332,35 @@ export function MeetingsAndReportsSection({
     );
   }
 
+  // Define filters based on mode
+  const filterOptions = showOnlyReports
+    ? [
+        { value: "all", label: "Tous" },
+        { value: "past", label: "Récents" },
+      ]
+    : [
+        { value: "all", label: "Tous" },
+        { value: "upcoming", label: "À venir" },
+        { value: "past", label: "Passées" },
+        { value: "no-report", label: "Sans CR" },
+      ];
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h3 className="font-medium">Réunions & Comptes Rendus</h3>
-          <Badge variant="secondary">{meetings.length}</Badge>
+          <h3 className="font-medium">
+            {showOnlyReports ? "Comptes Rendus" : "Réunions"}
+          </h3>
+          <Badge variant="secondary">
+            {showOnlyReports ? sortedMeetings.length : meetings.length}
+          </Badge>
         </div>
         <div className="flex items-center gap-2">
           {/* Filters */}
           <div className="flex items-center border rounded-lg p-1 bg-muted/30">
-            {[
-              { value: "all", label: "Tous" },
-              { value: "upcoming", label: "À venir" },
-              { value: "past", label: "Passées" },
-              { value: "no-report", label: "Sans CR" },
-            ].map((f) => (
+            {filterOptions.map((f) => (
               <Button
                 key={f.value}
                 variant={filter === f.value ? "secondary" : "ghost"}
@@ -349,10 +372,12 @@ export function MeetingsAndReportsSection({
               </Button>
             ))}
           </div>
-          <Button size="sm" onClick={() => { resetForm(); setIsDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-1" />
-            Nouvelle réunion
-          </Button>
+          {!showOnlyReports && (
+            <Button size="sm" onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-1" />
+              Nouvelle réunion
+            </Button>
+          )}
         </div>
       </div>
 

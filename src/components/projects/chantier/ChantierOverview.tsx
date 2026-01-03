@@ -106,7 +106,7 @@ export function ChantierOverview({ projectId, onNavigate, onOpenReport, onOpenPl
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => onNavigate("lots")}>
+        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => onNavigate("planning")}>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-xl bg-primary/10">
