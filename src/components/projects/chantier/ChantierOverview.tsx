@@ -49,7 +49,6 @@ export function ChantierOverview({ projectId, onNavigate, onOpenReport, onOpenPl
   const lotsInProgress = lots.filter(l => l.status === "in_progress").length;
   const lotsCompleted = lots.filter(l => l.status === "completed").length;
   const lotsProgress = lots.length > 0 ? Math.round((lotsCompleted / lots.length) * 100) : 0;
-  const totalBudget = lots.reduce((acc, l) => acc + (l.budget || 0), 0);
 
   const openObservations = observations.filter(o => o.status === "open").length;
   const criticalObservations = observations.filter(o => o.priority === "critical" && o.status !== "resolved");
@@ -61,9 +60,21 @@ export function ChantierOverview({ projectId, onNavigate, onOpenReport, onOpenPl
     ? upcomingMeetings.sort((a, b) => parseISO(a.meeting_date).getTime() - parseISO(b.meeting_date).getTime())[0]
     : null;
   
-  // Last meeting (for report)
-  const pastMeetings = meetings.filter(m => isPast(parseISO(m.meeting_date)) && !isToday(parseISO(m.meeting_date)));
-  const lastMeeting = pastMeetings.length > 0 ? pastMeetings[0] : null;
+  // Past meetings without report content
+  const hasReportContent = (meeting: ProjectMeeting) => {
+    if (!meeting.report_data) return false;
+    const data = meeting.report_data as Record<string, unknown>;
+    return Boolean(
+      data.context || 
+      (data.lot_progress && (data.lot_progress as unknown[]).length > 0) ||
+      (data.technical_decisions && (data.technical_decisions as unknown[]).length > 0)
+    );
+  };
+  
+  const meetingsWithoutReport = meetings.filter(m => {
+    const isPastMeeting = isPast(parseISO(m.meeting_date)) && !isToday(parseISO(m.meeting_date));
+    return isPastMeeting && !hasReportContent(m);
+  });
 
   // Lots with delayed end date
   const delayedLots = lots.filter(l => {
@@ -167,38 +178,37 @@ export function ChantierOverview({ projectId, onNavigate, onOpenReport, onOpenPl
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => onNavigate("reports")}>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-green-500/10">
-                <FileText className="h-6 w-6 text-green-500" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground">Comptes Rendus</p>
-                <p className="text-2xl font-bold">{meetings.length}</p>
-              </div>
-            </div>
-            {lastMeeting && (
-              <div className="mt-4 flex items-center gap-2 text-xs">
-                <span className="text-muted-foreground">Dernier:</span>
-                <span className="font-medium">CR n°{lastMeeting.meeting_number}</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Alerts Section */}
-      {(criticalObservations.length > 0 || highPriorityObservations.length > 0 || delayedLots.length > 0) && (
-        <Card className="border-destructive/30 bg-destructive/5">
+      {/* Actions Required Section */}
+      {(meetingsWithoutReport.length > 0 || criticalObservations.length > 0 || highPriorityObservations.length > 0 || delayedLots.length > 0) && (
+        <Card className="border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-4 w-4" />
-              Points d'attention
+            <CardTitle className="text-base flex items-center gap-2 text-amber-700 dark:text-amber-400">
+              <Clock className="h-4 w-4" />
+              Actions requises
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {criticalObservations.map(obs => (
+            {/* Meetings without reports */}
+            {meetingsWithoutReport.slice(0, 2).map(meeting => (
+              <div 
+                key={meeting.id} 
+                className="flex items-center gap-3 p-2 rounded-lg bg-blue-100/50 dark:bg-blue-950/30 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
+                onClick={() => onOpenReport(meeting)}
+              >
+                <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                <span className="text-sm flex-1 truncate">
+                  Rédiger le CR de la réunion n°{meeting.meeting_number} ({format(parseISO(meeting.meeting_date), "d MMM", { locale: fr })})
+                </span>
+                <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400">
+                  CR à rédiger
+                </Badge>
+              </div>
+            ))}
+            
+            {/* Critical observations */}
+            {criticalObservations.slice(0, 2).map(obs => (
               <div 
                 key={obs.id} 
                 className="flex items-center gap-3 p-2 rounded-lg bg-destructive/10 cursor-pointer hover:bg-destructive/20 transition-colors"
@@ -209,28 +219,32 @@ export function ChantierOverview({ projectId, onNavigate, onOpenReport, onOpenPl
                 <Badge variant="destructive" className="text-[10px]">Critique</Badge>
               </div>
             ))}
-            {highPriorityObservations.slice(0, 3).map(obs => (
+            
+            {/* High priority observations */}
+            {highPriorityObservations.slice(0, 2).map(obs => (
               <div 
                 key={obs.id} 
-                className="flex items-center gap-3 p-2 rounded-lg bg-orange-500/10 cursor-pointer hover:bg-orange-500/20 transition-colors"
+                className="flex items-center gap-3 p-2 rounded-lg bg-orange-100/50 dark:bg-orange-950/30 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/50 transition-colors"
                 onClick={() => onNavigate("observations")}
               >
-                <AlertCircle className="h-4 w-4 text-orange-500 shrink-0" />
+                <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400 shrink-0" />
                 <span className="text-sm flex-1 truncate">{obs.description}</span>
-                <Badge className="text-[10px] bg-orange-500">Haute</Badge>
+                <Badge className="text-[10px] bg-orange-500 hover:bg-orange-600">Haute priorité</Badge>
               </div>
             ))}
-            {delayedLots.map(lot => (
+            
+            {/* Delayed lots */}
+            {delayedLots.slice(0, 2).map(lot => (
               <div 
                 key={lot.id} 
-                className="flex items-center gap-3 p-2 rounded-lg bg-amber-500/10 cursor-pointer hover:bg-amber-500/20 transition-colors"
-                onClick={() => onNavigate("lots")}
+                className="flex items-center gap-3 p-2 rounded-lg bg-amber-100/50 dark:bg-amber-950/30 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors"
+                onClick={() => onNavigate("planning")}
               >
-                <Clock className="h-4 w-4 text-amber-600 shrink-0" />
+                <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
                 <span className="text-sm flex-1 truncate">
                   Lot "{lot.name}" en retard ({differenceInDays(new Date(), parseISO(lot.end_date!))} jours)
                 </span>
-                <Badge className="text-[10px] bg-amber-500">Retard</Badge>
+                <Badge className="text-[10px] bg-amber-500 hover:bg-amber-600">Retard</Badge>
               </div>
             ))}
           </CardContent>
@@ -342,16 +356,10 @@ export function ChantierOverview({ projectId, onNavigate, onOpenReport, onOpenPl
                     variant="link" 
                     size="sm" 
                     className="w-full"
-                    onClick={() => onNavigate("lots")}
+                    onClick={() => onNavigate("planning")}
                   >
                     Voir tous les lots (+{lots.length - 5})
                   </Button>
-                )}
-                {totalBudget > 0 && (
-                  <div className="pt-3 border-t border-border flex justify-between text-sm">
-                    <span className="text-muted-foreground">Budget total</span>
-                    <span className="font-medium">{totalBudget.toLocaleString("fr-FR")} €</span>
-                  </div>
                 )}
               </div>
             ) : (
@@ -361,7 +369,7 @@ export function ChantierOverview({ projectId, onNavigate, onOpenReport, onOpenPl
                 <Button 
                   variant="link" 
                   size="sm"
-                  onClick={() => onNavigate("lots")}
+                  onClick={() => onNavigate("planning")}
                 >
                   Créer des lots
                 </Button>
