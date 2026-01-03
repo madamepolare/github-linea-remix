@@ -67,35 +67,69 @@ export function TenderAIAnalysisTab({ tender, onNavigateToTab, pendingFiles, onF
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
   const [isAutoUploading, setIsAutoUploading] = useState(false);
+  const [shouldAutoAnalyze, setShouldAutoAnalyze] = useState(false);
 
+  // Computed values - declare before useEffects
+  const analyzedDocs = documents.filter(d => d.is_analyzed);
+  const notAnalyzedDocs = documents.filter(d => !d.is_analyzed);
+  
   // Handle pending files from creation dialog
   useEffect(() => {
     if (pendingFiles && pendingFiles.length > 0 && !isAutoUploading) {
       setIsAutoUploading(true);
       
       const uploadPendingFiles = async () => {
-        for (const fileData of pendingFiles) {
-          // Convert base64 back to blob
-          const binaryString = atob(fileData.data);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
+        try {
+          for (const fileData of pendingFiles) {
+            // Convert base64 back to blob
+            const binaryString = atob(fileData.data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: fileData.type });
+            const file = new File([blob], fileData.name, { type: fileData.type });
+            
+            const docType = detectDocumentType(file.name);
+            await uploadDocument.mutateAsync({ file, documentType: docType });
           }
-          const blob = new Blob([bytes], { type: fileData.type });
-          const file = new File([blob], fileData.name, { type: fileData.type });
           
-          const docType = detectDocumentType(file.name);
-          await uploadDocument.mutateAsync({ file, documentType: docType });
+          // Clear pending files and trigger auto-analyze
+          onFilesPending?.(null);
+          setShouldAutoAnalyze(true);
+        } catch (error) {
+          console.error('Error uploading pending files:', error);
+        } finally {
+          setIsAutoUploading(false);
         }
-        
-        // Clear pending files
-        onFilesPending?.(null);
-        setIsAutoUploading(false);
       };
       
       uploadPendingFiles();
     }
   }, [pendingFiles, isAutoUploading, uploadDocument, onFilesPending]);
+
+  // Analyze all documents function
+  const runAnalysis = async (docsToAnalyze: typeof notAnalyzedDocs) => {
+    setIsAnalyzing(true);
+    setAnalysisStep(0);
+    
+    try {
+      for (let i = 0; i < docsToAnalyze.length; i++) {
+        setAnalysisStep(i + 1);
+        await analyzeDocument.mutateAsync(docsToAnalyze[i].id);
+      }
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Auto-analyze after files are uploaded
+  useEffect(() => {
+    if (shouldAutoAnalyze && documents.length > 0 && notAnalyzedDocs.length > 0 && !isAnalyzing) {
+      setShouldAutoAnalyze(false);
+      runAnalysis(notAnalyzedDocs);
+    }
+  }, [shouldAutoAnalyze, documents.length, notAnalyzedDocs.length, isAnalyzing]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -118,9 +152,6 @@ export function TenderAIAnalysisTab({ tender, onNavigateToTab, pendingFiles, onF
     }
     e.target.value = '';
   };
-
-  const analyzedDocs = documents.filter(d => d.is_analyzed);
-  const notAnalyzedDocs = documents.filter(d => !d.is_analyzed);
   
   // Merge all extracted data
   const mergedExtractedData = analyzedDocs.reduce((acc, doc) => {
@@ -149,19 +180,9 @@ export function TenderAIAnalysisTab({ tender, onNavigateToTab, pendingFiles, onF
   const extractedCount = Object.values(extractedFields).filter(Boolean).length;
   const extractionProgress = hasAnalyzedDocs ? Math.round((extractedCount / 8) * 100) : 0;
 
-  // Analyze all documents
+  // Manual analyze all documents
   const handleAnalyzeAll = async () => {
-    setIsAnalyzing(true);
-    setAnalysisStep(0);
-    
-    try {
-      for (let i = 0; i < notAnalyzedDocs.length; i++) {
-        setAnalysisStep(i + 1);
-        await analyzeDocument.mutateAsync(notAnalyzedDocs[i].id);
-      }
-    } finally {
-      setIsAnalyzing(false);
-    }
+    await runAnalysis(notAnalyzedDocs);
   };
 
   // Apply extracted data to tender (including title and reference)
