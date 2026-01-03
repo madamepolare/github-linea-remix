@@ -27,6 +27,7 @@ export default function CRM() {
   const [createContactOpen, setCreateContactOpen] = useState(false);
   const [createCompanyOpen, setCreateCompanyOpen] = useState(false);
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
+  const [preselectedStageId, setPreselectedStageId] = useState<string | undefined>();
 
   const { pipelines, isLoading: pipelinesLoading, createDefaultPipeline } = usePipelines();
   const { stats: leadStats } = useLeads();
@@ -221,7 +222,13 @@ export default function CRM() {
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : selectedPipeline ? (
-                <LeadPipeline pipeline={selectedPipeline} onCreateLead={() => setCreateLeadOpen(true)} />
+                <LeadPipeline 
+                  pipeline={selectedPipeline} 
+                  onCreateLead={(stageId) => {
+                    setPreselectedStageId(stageId);
+                    setCreateLeadOpen(true);
+                  }} 
+                />
               ) : null
             )}
           </div>
@@ -232,8 +239,12 @@ export default function CRM() {
       <CreateCompanyDialog open={createCompanyOpen} onOpenChange={setCreateCompanyOpen} />
       <CreateLeadDialog
         open={createLeadOpen}
-        onOpenChange={setCreateLeadOpen}
+        onOpenChange={(open) => {
+          setCreateLeadOpen(open);
+          if (!open) setPreselectedStageId(undefined);
+        }}
         pipeline={selectedPipeline}
+        defaultStageId={preselectedStageId}
       />
     </>
   );

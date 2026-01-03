@@ -16,6 +16,7 @@ export interface KanbanBoardProps<T> {
   columns: KanbanColumn<T>[];
   isLoading?: boolean;
   onDrop?: (itemId: string, fromColumnId: string, toColumnId: string) => void;
+  onColumnAdd?: (columnId: string) => void;
   renderCard: (item: T, isDragging: boolean) => ReactNode;
   renderQuickAdd?: (columnId: string) => ReactNode;
   getItemId: (item: T) => string;
@@ -27,6 +28,7 @@ export function KanbanBoard<T>({
   columns,
   isLoading,
   onDrop,
+  onColumnAdd,
   renderCard,
   renderQuickAdd,
   getItemId,
@@ -114,9 +116,14 @@ export function KanbanBoard<T>({
               </span>
             </div>
             <div className="flex items-center gap-0.5">
-              <button className="p-1 sm:p-1.5 rounded-md hover:bg-background text-muted-foreground hover:text-foreground transition-colors">
-                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
+              {onColumnAdd && (
+                <button 
+                  onClick={() => onColumnAdd(column.id)}
+                  className="p-1 sm:p-1.5 rounded-md hover:bg-background text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                </button>
+              )}
               <button className="p-1 sm:p-1.5 rounded-md hover:bg-background text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
                 <MoreHorizontal className="h-4 w-4" />
               </button>
@@ -186,7 +193,7 @@ export interface KanbanCardProps {
 export function KanbanCard({ children, onClick, accentColor, className }: KanbanCardProps) {
   return (
     <motion.div
-      whileHover={{ y: -2, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+      whileHover={{ boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
       onClick={onClick}
       className={cn(
         "p-2.5 sm:p-3 rounded-lg border bg-card cursor-pointer transition-colors",

@@ -41,7 +41,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
   return (
     <div
       onClick={onClick}
-      className="task-card bg-card rounded-xl p-4 cursor-pointer border border-border transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-muted-foreground/20 relative overflow-hidden"
+      className="task-card bg-card rounded-xl p-4 cursor-pointer border border-border transition-all duration-200 hover:shadow-lg hover:border-muted-foreground/20 relative overflow-hidden"
     >
       {/* Status indicator bar */}
       <div className={cn("absolute top-0 left-0 w-1 h-full", config.color)} />

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -32,6 +33,7 @@ interface CreateLeadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   pipeline?: Pipeline;
+  defaultStageId?: string;
 }
 
 const SOURCES = [
@@ -45,7 +47,7 @@ const SOURCES = [
   { value: "cold", label: "Prospection" },
 ];
 
-export function CreateLeadDialog({ open, onOpenChange, pipeline }: CreateLeadDialogProps) {
+export function CreateLeadDialog({ open, onOpenChange, pipeline, defaultStageId }: CreateLeadDialogProps) {
   const { createLead } = useLeads();
   const { companies } = useCRMCompanies();
   const { contacts } = useContacts();
@@ -57,7 +59,7 @@ export function CreateLeadDialog({ open, onOpenChange, pipeline }: CreateLeadDia
       title: "", 
       crm_company_id: "", 
       contact_id: "",
-      stage_id: stages[0]?.id || "", 
+      stage_id: defaultStageId || stages[0]?.id || "", 
       estimated_value: "", 
       probability: 50,
       source: "",
@@ -66,6 +68,13 @@ export function CreateLeadDialog({ open, onOpenChange, pipeline }: CreateLeadDia
       description: "" 
     },
   });
+
+  // Update stage_id when defaultStageId changes
+  useEffect(() => {
+    if (defaultStageId) {
+      form.setValue("stage_id", defaultStageId);
+    }
+  }, [defaultStageId, form]);
 
   const selectedCompanyId = form.watch("crm_company_id");
   const probability = form.watch("probability") || 50;
