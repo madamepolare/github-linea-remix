@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, memo } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Check } from "lucide-react";
@@ -11,7 +11,7 @@ interface ModuleFeaturesProps {
   color: string;
 }
 
-export const ModuleFeatures = ({ features, color }: ModuleFeaturesProps) => {
+export const ModuleFeatures = memo(({ features, color }: ModuleFeaturesProps) => {
   const sectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -78,4 +78,6 @@ export const ModuleFeatures = ({ features, color }: ModuleFeaturesProps) => {
       </div>
     </section>
   );
-};
+});
+
+ModuleFeatures.displayName = "ModuleFeatures";
