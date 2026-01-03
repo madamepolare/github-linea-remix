@@ -58,13 +58,13 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
     };
   }, [viewDate]);
 
-  // Auto-scroll to center "today" on mount
+  // Auto-scroll to position "today" at 25% from left on mount
   useEffect(() => {
     if (scrollContainerRef.current && todayOffset >= 0) {
       const container = scrollContainerRef.current;
       const todayPosition = todayOffset * CELL_WIDTH;
       const containerWidth = container.clientWidth - PROJECT_COLUMN_WIDTH;
-      const scrollPosition = todayPosition - containerWidth / 2;
+      const scrollPosition = todayPosition - containerWidth * 0.25;
       
       container.scrollLeft = Math.max(0, scrollPosition);
     }
