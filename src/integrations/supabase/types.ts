@@ -3268,6 +3268,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_sensitive_contacts: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       generate_document_number: {
         Args: { doc_type: string; ws_id: string }
         Returns: string
