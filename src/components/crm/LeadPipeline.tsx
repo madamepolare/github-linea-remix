@@ -1,18 +1,33 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { KanbanBoard, KanbanColumn, KanbanCard } from "@/components/shared/KanbanBoard";
-import { Plus, Building2, User } from "lucide-react";
-import { useLeads, Lead, Pipeline } from "@/hooks/useLeads";
+import { Plus, Building2 } from "lucide-react";
+import { useLeads, Lead } from "@/hooks/useLeads";
+import { cn } from "@/lib/utils";
 import { LeadDetailSheet } from "./LeadDetailSheet";
 import { EditLeadDialog } from "./EditLeadDialog";
 
+type PipelineStageLike = {
+  id: string;
+  name: string;
+  color: string | null;
+};
+
+type PipelineLike = {
+  id: string;
+  name: string;
+  color: string | null;
+  is_default: boolean | null;
+  stages?: PipelineStageLike[];
+};
+
 interface LeadPipelineProps {
-  pipeline: Pipeline;
+  pipeline: PipelineLike;
   onCreateLead: (stageId?: string) => void;
+  kanbanHeightClass?: string;
 }
 
-export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
+export function LeadPipeline({ pipeline, onCreateLead, kanbanHeightClass }: LeadPipelineProps) {
   const { leads, stats, isLoading, updateLeadStage } = useLeads({ pipelineId: pipeline.id });
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -79,9 +94,9 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="text-xs h-8"
               onClick={() => setShowClosed(!showClosed)}
             >
@@ -95,7 +110,7 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
         </div>
 
         {/* Kanban */}
-        <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-320px)]">
+        <div className={cn("flex gap-4 overflow-x-auto pb-4", kanbanHeightClass || "h-[calc(100vh-320px)]")}>
           <KanbanBoard<Lead>
             columns={kanbanColumns}
             isLoading={isLoading}
@@ -126,11 +141,7 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
         }}
       />
 
-      <EditLeadDialog
-        lead={editingLead}
-        open={!!editingLead}
-        onOpenChange={(open) => !open && setEditingLead(null)}
-      />
+      <EditLeadDialog lead={editingLead} open={!!editingLead} onOpenChange={(open) => !open && setEditingLead(null)} />
     </>
   );
 }
