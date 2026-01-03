@@ -96,7 +96,7 @@ export function useTenders() {
     mutationFn: async ({ id, ...updates }: Partial<Tender> & { id: string }) => {
       const { data, error } = await supabase
         .from("tenders")
-        .update(updates)
+        .update(updates as any)
         .eq("id", id)
         .select()
         .single();
@@ -128,7 +128,7 @@ export function useTenders() {
       
       const { data, error } = await supabase
         .from("tenders")
-        .update(updates)
+        .update(updates as any)
         .eq("id", id)
         .select()
         .single();

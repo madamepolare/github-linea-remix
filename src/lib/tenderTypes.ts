@@ -1,7 +1,10 @@
 export type TenderStatus = 'repere' | 'en_analyse' | 'go' | 'no_go' | 'en_montage' | 'depose' | 'gagne' | 'perdu';
-export type ProcedureType = 'ouvert' | 'restreint' | 'adapte' | 'concours' | 'dialogue' | 'partenariat';
+export type ProcedureType = 'ouvert' | 'restreint' | 'adapte' | 'mapa' | 'concours' | 'dialogue' | 'partenariat' | 'ppp' | 'conception_realisation';
 export type TenderTeamRole = 'mandataire' | 'cotraitant' | 'sous_traitant';
 export type InvitationResponse = 'pending' | 'accepted' | 'declined';
+export type JointVentureType = 'conjoint' | 'solidaire';
+export type CriterionType = 'price' | 'technical' | 'delay' | 'environmental' | 'social';
+export type DocumentCategory = 'candidature' | 'offre';
 
 export const TENDER_STATUS_LABELS: Record<TenderStatus, string> = {
   repere: 'Repéré',
@@ -28,16 +31,32 @@ export const TENDER_STATUS_COLORS: Record<TenderStatus, string> = {
 export const PROCEDURE_TYPE_LABELS: Record<ProcedureType, string> = {
   ouvert: 'Appel d\'offres ouvert',
   restreint: 'Appel d\'offres restreint',
-  adapte: 'Procédure adaptée (MAPA)',
+  adapte: 'Procédure adaptée',
+  mapa: 'MAPA',
   concours: 'Concours',
   dialogue: 'Dialogue compétitif',
   partenariat: 'Partenariat d\'innovation',
+  ppp: 'Partenariat Public-Privé',
+  conception_realisation: 'Conception-Réalisation',
 };
 
 export const TEAM_ROLE_LABELS: Record<TenderTeamRole, string> = {
   mandataire: 'Mandataire',
   cotraitant: 'Cotraitant',
   sous_traitant: 'Sous-traitant',
+};
+
+export const JOINT_VENTURE_TYPE_LABELS: Record<JointVentureType, string> = {
+  conjoint: 'Conjoint',
+  solidaire: 'Solidaire',
+};
+
+export const CRITERION_TYPE_LABELS: Record<CriterionType, string> = {
+  price: 'Prix',
+  technical: 'Valeur technique',
+  delay: 'Délais',
+  environmental: 'Environnement',
+  social: 'Social',
 };
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
@@ -49,7 +68,40 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   dc2: 'DC2',
   dc4: 'DC4',
   annexe: 'Annexe',
+  lettre_consultation: 'Lettre de consultation',
+  note_programme: 'Note / Programme',
+  attestation_visite: 'Attestation de visite',
+  audit_technique: 'Audit / Diagnostic technique',
+  dpgf: 'DPGF / BPU',
+  plan: 'Plans / Documents graphiques',
+  contrat: 'Contrat',
+  bpu: 'BPU / DQE',
   autre: 'Autre',
+};
+
+export const REQUIRED_DOCUMENT_TYPES = {
+  candidature: [
+    { value: 'dc1', label: 'DC1 - Lettre de candidature', mandatory: true },
+    { value: 'dc2', label: 'DC2 - Déclaration du candidat', mandatory: true },
+    { value: 'attestation_assurance', label: 'Attestation d\'assurance', mandatory: true },
+    { value: 'attestation_urssaf', label: 'Attestation URSSAF', mandatory: true },
+    { value: 'attestation_fiscale', label: 'Attestation fiscale', mandatory: true },
+    { value: 'kbis', label: 'Extrait Kbis', mandatory: true },
+    { value: 'references', label: 'Références', mandatory: true },
+    { value: 'moyens_humains', label: 'Moyens humains', mandatory: false },
+    { value: 'moyens_techniques', label: 'Moyens techniques', mandatory: false },
+    { value: 'cv_equipe', label: 'CV de l\'équipe', mandatory: false },
+  ],
+  offre: [
+    { value: 'ae', label: 'Acte d\'Engagement', mandatory: true },
+    { value: 'memoire_technique', label: 'Mémoire technique', mandatory: true },
+    { value: 'dpgf', label: 'DPGF / BPU', mandatory: true },
+    { value: 'planning', label: 'Planning prévisionnel', mandatory: false },
+    { value: 'note_methodologique', label: 'Note méthodologique', mandatory: false },
+    { value: 'dc4', label: 'DC4 - Sous-traitance', mandatory: false },
+    { value: 'attestation_visite', label: 'Attestation de visite', mandatory: false },
+    { value: 'pieces_graphiques', label: 'Pièces graphiques', mandatory: false },
+  ],
 };
 
 export const DELIVERABLE_TYPES = [
@@ -78,7 +130,34 @@ export const SPECIALTIES = [
   { value: 'opc', label: 'OPC' },
   { value: 'ssi', label: 'SSI' },
   { value: 'cuisiniste', label: 'Cuisiniste' },
+  { value: 'bet_facade', label: 'BET Façade' },
+  { value: 'geometre', label: 'Géomètre' },
+  { value: 'geotechnicien', label: 'Géotechnicien' },
   { value: 'autre', label: 'Autre' },
+];
+
+export const CLIENT_TYPES = [
+  { value: 'bailleur_social', label: 'Bailleur social' },
+  { value: 'collectivite', label: 'Collectivité territoriale' },
+  { value: 'etat', label: 'État / Ministère' },
+  { value: 'hopital', label: 'Établissement de santé' },
+  { value: 'universite', label: 'Université / Enseignement' },
+  { value: 'etablissement_public', label: 'Établissement public' },
+  { value: 'prive', label: 'Client privé' },
+  { value: 'autre', label: 'Autre' },
+];
+
+export const WORK_NATURE_TAGS = [
+  'Construction neuve',
+  'Réhabilitation',
+  'Extension',
+  'Rénovation énergétique',
+  'Mise aux normes',
+  'Restructuration',
+  'Déconstruction',
+  'Aménagement intérieur',
+  'Façades',
+  'Toiture',
 ];
 
 export interface Tender {
@@ -88,26 +167,61 @@ export interface Tender {
   reference: string;
   title: string;
   description: string | null;
+  // Market identification
+  consultation_number: string | null;
+  group_code: string | null;
+  market_object: string | null;
+  // Client info
   client_name: string | null;
   client_type: string | null;
+  client_direction: string | null;
+  client_address: string | null;
+  client_contact_name: string | null;
+  client_contact_phone: string | null;
+  client_contact_email: string | null;
   contracting_authority: string | null;
+  // Project info
   estimated_budget: number | null;
   budget_disclosed: boolean | null;
   location: string | null;
   region: string | null;
   surface_area: number | null;
+  work_nature_tags: string[] | null;
+  // Procedure
   procedure_type: ProcedureType | null;
+  allows_negotiation: boolean | null;
+  negotiation_candidates_count: number | null;
+  negotiation_method: string | null;
+  allows_joint_venture: boolean | null;
+  joint_venture_type: string | null;
+  mandataire_must_be_solidary: boolean | null;
+  allows_variants: boolean | null;
+  // Deadlines
+  submission_deadline: string | null;
+  offer_validity_days: number | null;
+  dce_delivery_deadline: string | null;
+  dce_delivery_duration_months: number | null;
+  questions_deadline_days: number | null;
+  // Site visit
+  site_visit_required: boolean | null;
+  site_visit_date: string | null;
+  site_visit_contact_name: string | null;
+  site_visit_contact_phone: string | null;
+  site_visit_contact_email: string | null;
+  site_visit_secondary_contact: Record<string, string> | null;
+  // Key dates
+  jury_date: string | null;
+  results_date: string | null;
+  // Decision
   status: TenderStatus;
   go_decision_date: string | null;
   go_decision_by: string | null;
   go_decision_notes: string | null;
-  submission_deadline: string | null;
-  site_visit_required: boolean | null;
-  site_visit_date: string | null;
-  jury_date: string | null;
-  results_date: string | null;
+  // Source
   source_platform: string | null;
   source_url: string | null;
+  source_contact_email: string | null;
+  // Timestamps
   created_at: string;
   updated_at: string;
 }
@@ -162,4 +276,113 @@ export interface TenderDeliverable {
   file_urls: string[];
   sort_order: number;
   created_at: string;
+}
+
+export interface TenderRequiredDocument {
+  id: string;
+  tender_id: string;
+  workspace_id: string;
+  document_category: DocumentCategory;
+  document_type: string;
+  name: string;
+  description: string | null;
+  is_mandatory: boolean;
+  template_url: string | null;
+  is_completed: boolean;
+  file_url: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenderCriterion {
+  id: string;
+  tender_id: string;
+  name: string;
+  weight: number;
+  criterion_type: CriterionType;
+  parent_criterion_id: string | null;
+  sub_criteria?: TenderCriterion[];
+}
+
+export interface ExtractedTenderData {
+  budget?: {
+    amount?: number;
+    disclosed?: boolean;
+    notes?: string;
+  };
+  deadlines?: {
+    submission?: string;
+    questions?: string;
+    site_visit?: string;
+    jury?: string;
+    results?: string;
+  };
+  site_visit?: {
+    required?: boolean;
+    date?: string;
+    location?: string;
+    contact_name?: string;
+    contact_phone?: string;
+    contact_email?: string;
+  };
+  selection_criteria?: Array<{
+    name: string;
+    weight: number;
+    type?: CriterionType;
+    sub_criteria?: Array<{
+      name: string;
+      weight: number;
+    }>;
+  }>;
+  required_competencies?: Array<{
+    specialty: string;
+    mandatory: boolean;
+    requirements?: string;
+  }>;
+  required_documents?: Array<{
+    type: string;
+    name: string;
+    mandatory: boolean;
+    category?: DocumentCategory;
+  }>;
+  project_info?: {
+    type?: string;
+    surface?: number;
+    location?: string;
+    description?: string;
+    work_nature?: string[];
+  };
+  procedure?: {
+    type?: string;
+    lots?: boolean;
+    lots_count?: number;
+    allows_variants?: boolean;
+    allows_joint_venture?: boolean;
+    joint_venture_type?: string;
+  };
+  client?: {
+    name?: string;
+    type?: string;
+    direction?: string;
+    address?: string;
+    contact_name?: string;
+    contact_phone?: string;
+    contact_email?: string;
+  };
+  consultation?: {
+    number?: string;
+    object?: string;
+    reference?: string;
+  };
+  insurance_requirements?: Array<{
+    type: string;
+    minimum_amount?: number;
+  }>;
+  reference_requirements?: {
+    count?: number;
+    min_budget?: number;
+    max_age_years?: number;
+    specific_types?: string[];
+  };
 }
