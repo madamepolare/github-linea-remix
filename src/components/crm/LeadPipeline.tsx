@@ -58,24 +58,35 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
     <>
       <div className="p-4 space-y-4">
         {/* Stats bar */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Badge variant="outline" className="gap-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <Badge variant="outline" className="gap-1.5 text-sm">
               <span className="h-2 w-2 rounded-full bg-primary" />
               {stats.total} opportunités
             </Badge>
-            <Badge variant="outline" className="gap-1.5">
+            <Badge variant="outline" className="gap-1.5 text-sm">
               <span className="text-muted-foreground">€</span>
               {formatCurrency(stats.weightedValue)} pondéré
             </Badge>
+            {stats.wonValue > 0 && (
+              <Badge variant="outline" className="gap-1.5 text-sm text-emerald-600 border-emerald-200">
+                ✓ {formatCurrency(stats.wonValue)} gagné
+              </Badge>
+            )}
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowClosed(!showClosed)}>
-            {showClosed ? "Masquer clôturés" : "Afficher clôturés"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowClosed(!showClosed)}>
+              {showClosed ? "Masquer clôturés" : "Afficher clôturés"}
+            </Button>
+            <Button size="sm" onClick={onCreateLead}>
+              <Plus className="h-4 w-4 mr-1.5" />
+              Nouvelle opportunité
+            </Button>
+          </div>
         </div>
 
         {/* Kanban */}
-        <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-280px)]">
+        <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-300px)]">
           <KanbanBoard<Lead>
             columns={kanbanColumns}
             isLoading={isLoading}
@@ -92,18 +103,6 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
             emptyColumnContent="Aucune opportunité"
             className="px-0"
           />
-
-          {/* Add lead button */}
-          <div className="flex-shrink-0 w-72">
-            <Button
-              variant="outline"
-              className="w-full h-full min-h-[200px] border-dashed hover:border-primary/50 hover:bg-primary/5 transition-colors"
-              onClick={onCreateLead}
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Nouvelle opportunité
-            </Button>
-          </div>
         </div>
       </div>
 
