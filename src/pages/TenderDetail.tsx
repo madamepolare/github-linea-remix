@@ -12,9 +12,10 @@ import {
   Users,
   CheckSquare,
   PenTool,
-  Clock,
   ExternalLink,
   Edit2,
+  Brain,
+  FolderOpen,
 } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ import {
   PROCEDURE_TYPE_LABELS,
 } from "@/lib/tenderTypes";
 import { cn } from "@/lib/utils";
-import { TenderGeneralTab } from "@/components/tenders/TenderGeneralTab";
+import { TenderAIAnalysisTab } from "@/components/tenders/TenderAIAnalysisTab";
 import { TenderDocumentsTab } from "@/components/tenders/TenderDocumentsTab";
 import { TenderTeamTab } from "@/components/tenders/TenderTeamTab";
 import { TenderDeliverablesTab } from "@/components/tenders/TenderDeliverablesTab";
@@ -40,7 +41,7 @@ export default function TenderDetail() {
   const navigate = useNavigate();
   const { data: tender, isLoading } = useTender(id);
   const { updateTender, updateStatus } = useTenders();
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState("analysis");
   const [showEditDialog, setShowEditDialog] = useState(false);
 
   if (isLoading) {
@@ -159,18 +160,25 @@ export default function TenderDetail() {
             <div className="px-6 border-t">
               <TabsList className="h-12 bg-transparent w-full justify-start gap-1 -mb-px">
                 <TabsTrigger 
-                  value="general" 
+                  value="analysis" 
                   className="data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
                 >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Général
+                  <Brain className="h-4 w-4 mr-2" />
+                  Analyse IA
                 </TabsTrigger>
                 <TabsTrigger 
                   value="documents"
                   className="data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
                 >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Documents DCE
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                  Documents
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="deliverables"
+                  className="data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
+                >
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  Pièces à fournir
                 </TabsTrigger>
                 <TabsTrigger 
                   value="team"
@@ -180,39 +188,30 @@ export default function TenderDetail() {
                   Équipe
                 </TabsTrigger>
                 <TabsTrigger 
-                  value="deliverables"
-                  className="data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
-                >
-                  <CheckSquare className="h-4 w-4 mr-2" />
-                  Livrables
-                </TabsTrigger>
-                <TabsTrigger 
                   value="memoire"
                   className="data-[state=active]:border-b-2 data-[state=active]:border-foreground rounded-none"
                 >
                   <PenTool className="h-4 w-4 mr-2" />
-                  Mémoire technique
+                  Mémoire
                 </TabsTrigger>
               </TabsList>
             </div>
 
             <div className="flex-1 overflow-auto">
-              <TabsContent value="general" className="m-0 p-6">
-                <TenderGeneralTab 
+              <TabsContent value="analysis" className="m-0 p-6">
+                <TenderAIAnalysisTab 
                   tender={tender} 
-                  onUpdateStatus={(status, notes) => 
-                    updateStatus.mutate({ id: tender.id, status, notes })
-                  }
+                  onNavigateToTab={setActiveTab}
                 />
               </TabsContent>
               <TabsContent value="documents" className="m-0 p-6">
                 <TenderDocumentsTab tenderId={tender.id} />
               </TabsContent>
-              <TabsContent value="team" className="m-0 p-6">
-                <TenderTeamTab tenderId={tender.id} />
-              </TabsContent>
               <TabsContent value="deliverables" className="m-0 p-6">
                 <TenderDeliverablesTab tenderId={tender.id} />
+              </TabsContent>
+              <TabsContent value="team" className="m-0 p-6">
+                <TenderTeamTab tenderId={tender.id} />
               </TabsContent>
               <TabsContent value="memoire" className="m-0 p-6">
                 <TenderMemoireTab tenderId={tender.id} />
