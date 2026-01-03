@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckSquare, Clock, MessageSquare, Save, Trash2, Archive, Link2 } from "lucide-react";
+import { CheckSquare, Clock, MessageSquare, Trash2, Archive, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -90,50 +90,50 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
     }
   }, [task]);
 
-  const handleSave = () => {
-    if (!task) return;
+  const handleClose = (isOpen: boolean) => {
+    if (!isOpen && task) {
+      // Auto-save on close
+      const entityFields: Partial<Task> = {
+        related_type: relatedType,
+        related_id: relatedId,
+        project_id: null,
+        lead_id: null,
+        crm_company_id: null,
+        contact_id: null,
+      };
 
-    // Map related type to specific field
-    const entityFields: Partial<Task> = {
-      related_type: relatedType,
-      related_id: relatedId,
-      project_id: null,
-      lead_id: null,
-      crm_company_id: null,
-      contact_id: null,
-    };
-
-    if (relatedType && relatedId) {
-      switch (relatedType) {
-        case "project":
-          entityFields.project_id = relatedId;
-          break;
-        case "lead":
-          entityFields.lead_id = relatedId;
-          break;
-        case "company":
-          entityFields.crm_company_id = relatedId;
-          break;
-        case "contact":
-          entityFields.contact_id = relatedId;
-          break;
+      if (relatedType && relatedId) {
+        switch (relatedType) {
+          case "project":
+            entityFields.project_id = relatedId;
+            break;
+          case "lead":
+            entityFields.lead_id = relatedId;
+            break;
+          case "company":
+            entityFields.crm_company_id = relatedId;
+            break;
+          case "contact":
+            entityFields.contact_id = relatedId;
+            break;
+        }
       }
-    }
 
-    updateTask.mutate({
-      id: task.id,
-      title,
-      description,
-      status,
-      priority,
-      due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
-      start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
-      assigned_to: assignedTo.length > 0 ? assignedTo : null,
-      tags: tags.length > 0 ? tags : null,
-      estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
-      ...entityFields,
-    });
-    toast.success("Tâche mise à jour");
+      updateTask.mutate({
+        id: task.id,
+        title,
+        description,
+        status,
+        priority,
+        due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
+        start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
+        assigned_to: assignedTo.length > 0 ? assignedTo : null,
+        tags: tags.length > 0 ? tags : null,
+        estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
+        ...entityFields,
+      });
+    }
+    onOpenChange(isOpen);
   };
 
   const handleArchive = () => {
@@ -184,7 +184,7 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
   if (!task) return null;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader className="mb-6">
           <SheetTitle>Détails de la tâche</SheetTitle>
@@ -316,10 +316,7 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
               <TagInput value={tags} onChange={setTags} />
             </div>
 
-            <div className="flex gap-2 pt-4 border-t">
-              <Button onClick={handleSave} className="flex-1">
-                <Save className="h-4 w-4 mr-2" />Enregistrer
-              </Button>
+            <div className="flex gap-2 pt-4 border-t justify-end">
               <Button variant="outline" size="icon" onClick={handleArchive} title="Archiver">
                 <Archive className="h-4 w-4" />
               </Button>
