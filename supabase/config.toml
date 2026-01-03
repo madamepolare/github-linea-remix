@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.suggest-commercial-phases]
 verify_jwt = false
+
+[functions.analyze-tender-documents]
+verify_jwt = false
+
+[functions.generate-tender-section]
+verify_jwt = false
+
+[functions.send-partner-invitation]
+verify_jwt = false
