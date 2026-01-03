@@ -18,17 +18,24 @@ export const ModuleFeatures = ({ features, color }: ModuleFeaturesProps) => {
     if (!sectionRef.current) return;
 
     const ctx = gsap.context(() => {
-      gsap.from(".feature-item", {
-        opacity: 0,
-        y: 40,
-        stagger: 0.15,
-        duration: 0.6,
-        ease: "power3.out",
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top 70%",
-        },
-      });
+      // Set initial state explicitly to prevent flash
+      gsap.set(".feature-item", { opacity: 1, y: 0 });
+      
+      gsap.fromTo(".feature-item", 
+        { opacity: 0, y: 40 },
+        {
+          opacity: 1,
+          y: 0,
+          stagger: 0.15,
+          duration: 0.6,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top 80%",
+            once: true,
+          },
+        }
+      );
     }, sectionRef);
 
     return () => ctx.revert();
