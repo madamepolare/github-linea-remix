@@ -57,7 +57,9 @@ import {
   CommercialDocument,
   CommercialDocumentPhase,
   FeeMode,
-  FEE_MODE_LABELS
+  FEE_MODE_LABELS,
+  PHASES_BY_PROJECT_TYPE,
+  PhaseTemplate
 } from '@/lib/commercialTypes';
 import { AIPhaseSuggestion } from './AIPhaseSuggestion';
 
@@ -215,6 +217,35 @@ export function FeesAndQuoteEditor({
     onItemsChange([...items, newItem]);
     setExpandedItems(new Set([...expandedItems, newItem.id]));
   };
+
+  const addPhaseFromTemplate = (template: PhaseTemplate) => {
+    const newItem: QuoteLineItem = {
+      id: generateId(),
+      type: 'phase',
+      code: template.code,
+      designation: template.name,
+      description: template.description,
+      quantity: 1,
+      unit: 'forfait',
+      unitPrice: 0,
+      amount: 0,
+      isOptional: false,
+      deliverables: template.deliverables || [],
+      sortOrder: items.length,
+      percentageFee: template.defaultPercentage || 10
+    };
+    onItemsChange([...items, newItem]);
+    setExpandedItems(new Set([...expandedItems, newItem.id]));
+  };
+
+  // Get available phase templates based on project type
+  const availablePhaseTemplates = PHASES_BY_PROJECT_TYPE[projectType] || PHASES_BY_PROJECT_TYPE.architecture;
+  
+  // Filter out phases that are already added
+  const existingPhaseCodes = phaseItems.map(p => p.code).filter(Boolean);
+  const remainingPhaseTemplates = availablePhaseTemplates.filter(
+    t => !existingPhaseCodes.includes(t.code)
+  );
 
   const addCommonItem = (itemTemplate: typeof COMMON_ADDITIONAL_ITEMS[0]) => {
     const newItem: QuoteLineItem = {
@@ -885,10 +916,51 @@ export function FeesAndQuoteEditor({
                 onQuoteItemsChange={onItemsChange}
                 documentId={documentId}
               />
-              <Button size="sm" variant="outline" onClick={() => addItem('phase')}>
-                <Plus className="h-4 w-4 sm:mr-1" />
-                <span className="hidden sm:inline">Phase</span>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    <Plus className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Phase</span>
+                    <ChevronDown className="h-4 w-4 sm:ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-72 max-h-80 overflow-y-auto">
+                  <DropdownMenuItem onClick={() => addItem('phase')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Phase personnalisée
+                  </DropdownMenuItem>
+                  {remainingPhaseTemplates.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                        Phases standards
+                      </div>
+                      {remainingPhaseTemplates.map((template) => (
+                        <DropdownMenuItem 
+                          key={template.code} 
+                          onClick={() => addPhaseFromTemplate(template)}
+                          className="flex flex-col items-start py-2"
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            <Badge variant="outline" className="text-xs font-mono">
+                              {template.code}
+                            </Badge>
+                            <span className="font-medium">{template.name}</span>
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {template.defaultPercentage}%
+                            </span>
+                          </div>
+                          {template.description && (
+                            <span className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                              {template.description}
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardHeader>
@@ -911,6 +983,15 @@ export function FeesAndQuoteEditor({
                 <FileText className="h-6 w-6 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Aucune phase ajoutée</p>
                 <p className="text-xs mt-1">Utilisez "Suggérer avec l'IA" ou ajoutez manuellement</p>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="mt-3"
+                  onClick={() => addItem('phase')}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Ajouter une phase
+                </Button>
               </div>
             )}
           </div>
