@@ -101,37 +101,37 @@ const Commercial = () => {
       }
     >
       {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-muted-foreground">Brouillons</div>
-            <div className="text-2xl font-bold">{totalDraft}</div>
+          <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+            <div className="text-xs sm:text-sm text-muted-foreground">Brouillons</div>
+            <div className="text-xl sm:text-2xl font-bold">{totalDraft}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-muted-foreground">En attente</div>
-            <div className="text-2xl font-bold">{totalSent}</div>
+          <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+            <div className="text-xs sm:text-sm text-muted-foreground">En attente</div>
+            <div className="text-xl sm:text-2xl font-bold">{totalSent}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-muted-foreground">Acceptés</div>
-            <div className="text-2xl font-bold text-green-600">{totalAccepted}</div>
+          <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+            <div className="text-xs sm:text-sm text-muted-foreground">Acceptés</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-600">{totalAccepted}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-muted-foreground">CA potentiel</div>
-            <div className="text-2xl font-bold">
-              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(potentialRevenue)}
+          <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+            <div className="text-xs sm:text-sm text-muted-foreground">CA potentiel</div>
+            <div className="text-lg sm:text-2xl font-bold truncate">
+              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(potentialRevenue)}
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -141,30 +141,32 @@ const Commercial = () => {
             className="pl-10"
           />
         </div>
-        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as DocumentType | 'all')}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les types</SelectItem>
-            <SelectItem value="quote">Devis</SelectItem>
-            <SelectItem value="contract">Contrats</SelectItem>
-            <SelectItem value="proposal">Propositions</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as DocumentStatus | 'all')}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="draft">Brouillon</SelectItem>
-            <SelectItem value="sent">Envoyé</SelectItem>
-            <SelectItem value="accepted">Accepté</SelectItem>
-            <SelectItem value="rejected">Refusé</SelectItem>
-            <SelectItem value="signed">Signé</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2 sm:gap-4">
+          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as DocumentType | 'all')}>
+            <SelectTrigger className="w-full sm:w-[140px]">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les types</SelectItem>
+              <SelectItem value="quote">Devis</SelectItem>
+              <SelectItem value="contract">Contrats</SelectItem>
+              <SelectItem value="proposal">Propositions</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as DocumentStatus | 'all')}>
+            <SelectTrigger className="w-full sm:w-[140px]">
+              <SelectValue placeholder="Statut" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous</SelectItem>
+              <SelectItem value="draft">Brouillon</SelectItem>
+              <SelectItem value="sent">Envoyé</SelectItem>
+              <SelectItem value="accepted">Accepté</SelectItem>
+              <SelectItem value="rejected">Refusé</SelectItem>
+              <SelectItem value="signed">Signé</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Documents List */}
@@ -191,27 +193,34 @@ const Commercial = () => {
                 className="hover:border-primary/50 transition-colors cursor-pointer"
                 onClick={() => navigate(`/commercial/${doc.id}`)}
               >
-                <CardContent className="py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Icon className="h-5 w-5 text-primary" />
+                <CardContent className="py-3 sm:py-4 px-3 sm:px-6">
+                  <div className="flex items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                      <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{doc.document_number}</span>
-                          <Badge variant="outline" className={STATUS_COLORS[doc.status]}>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm sm:text-base">{doc.document_number}</span>
+                          <Badge variant="outline" className={`text-xs ${STATUS_COLORS[doc.status]}`}>
                             {STATUS_LABELS[doc.status]}
                           </Badge>
                         </div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs sm:text-sm text-muted-foreground truncate">
                           {doc.title}
+                        </div>
+                        {/* Mobile: Show client and amount */}
+                        <div className="flex items-center gap-2 mt-1 sm:hidden text-xs">
+                          <span className="text-muted-foreground truncate">{doc.client_company?.name || 'Aucun client'}</span>
+                          <span className="font-medium">
+                            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(doc.total_amount || 0)}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                      <div className="text-right hidden md:block">
+                    <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+                      <div className="text-right hidden sm:block">
                         <div className="text-sm font-medium">
                           {doc.client_company?.name || 'Aucun client'}
                         </div>
@@ -220,7 +229,7 @@ const Commercial = () => {
                         </div>
                       </div>
 
-                      <div className="text-right hidden lg:block">
+                      <div className="text-right hidden md:block">
                         <div className="font-semibold">
                           {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(doc.total_amount || 0)}
                         </div>
@@ -231,7 +240,7 @@ const Commercial = () => {
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>

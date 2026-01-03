@@ -317,7 +317,87 @@ export function FeesAndQuoteEditor({
             draggedIndex === globalIndex ? 'opacity-50' : ''
           } ${item.isOptional ? 'border-dashed border-muted-foreground/30' : 'border-border'}`}
         >
-          <div className="grid grid-cols-12 gap-2 p-3 items-center">
+          {/* Mobile Layout */}
+          <div className="flex flex-col sm:hidden p-3 gap-2">
+            <div className="flex items-center gap-2">
+              <div className="cursor-grab shrink-0">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className={`p-1.5 rounded shrink-0 ${TYPE_COLORS[item.type]}`}>
+                {TYPE_ICONS[item.type]}
+              </div>
+              {item.code && (
+                <Badge variant="outline" className="shrink-0 text-xs">
+                  {item.code}
+                </Badge>
+              )}
+              <div className="flex-1 min-w-0">
+                <Input
+                  value={item.designation}
+                  onChange={(e) => updateItem(item.id, { designation: e.target.value })}
+                  className="h-8 font-medium text-sm"
+                  placeholder="Nom de la phase..."
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-2 pl-8">
+              <div className="flex items-center gap-2">
+                <div className="relative w-20">
+                  <Input
+                    type="number"
+                    value={item.percentageFee || 0}
+                    onChange={(e) => {
+                      const newPercentage = parseFloat(e.target.value) || 0;
+                      const newAmount = calculatePhaseAmount(newPercentage);
+                      updateItem(item.id, { 
+                        percentageFee: newPercentage,
+                        unitPrice: newAmount,
+                        amount: newAmount
+                      });
+                    }}
+                    className="h-7 text-right pr-5 text-sm"
+                    min={0}
+                    step={1}
+                  />
+                  <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                </div>
+                <span className="text-sm font-medium">
+                  {formatCurrency(calculatedAmount)}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => duplicateItem(item)}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Dupliquer
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateItem(item.id, { isOptional: !item.isOptional })}>
+                      {item.isOptional ? 'Inclure' : 'Exclure'}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => deleteItem(item.id)} className="text-destructive">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Supprimer
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleExpanded(item.id)}>
+                    {expandedItems.has(item.id) ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden sm:grid grid-cols-12 gap-2 p-3 items-center">
             <div className="col-span-1 flex items-center gap-1">
               <div className="cursor-grab">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -403,7 +483,7 @@ export function FeesAndQuoteEditor({
           </div>
 
           <CollapsibleContent>
-            <div className="px-4 pb-4 pt-2 border-t border-border/50 space-y-4">
+            <div className="px-3 sm:px-4 pb-4 pt-2 border-t border-border/50 space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Description</label>
                 <Textarea
@@ -472,7 +552,74 @@ export function FeesAndQuoteEditor({
             draggedIndex === globalIndex ? 'opacity-50' : ''
           } ${item.isOptional ? 'border-dashed border-muted-foreground/30' : 'border-border'}`}
         >
-          <div className="grid grid-cols-12 gap-2 p-3 items-center">
+          {/* Mobile Layout */}
+          <div className="flex flex-col sm:hidden p-3 gap-2">
+            <div className="flex items-center gap-2">
+              <div className="cursor-grab shrink-0">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className={`p-1.5 rounded shrink-0 ${TYPE_COLORS[item.type]}`}>
+                {TYPE_ICONS[item.type]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <Input
+                  value={item.designation}
+                  onChange={(e) => updateItem(item.id, { designation: e.target.value })}
+                  className="h-8 text-sm"
+                  placeholder="Désignation..."
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-2 pl-8">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  value={item.quantity}
+                  onChange={(e) => updateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
+                  className="h-7 w-16 text-center text-sm"
+                  min={0}
+                  step={1}
+                />
+                <span className="text-sm text-muted-foreground">×</span>
+                <Input
+                  type="number"
+                  value={item.unitPrice}
+                  onChange={(e) => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                  className="h-7 w-20 text-right text-sm"
+                  min={0}
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <span className={`text-sm font-medium ${item.type === 'discount' ? 'text-red-600' : ''}`}>
+                  {item.type === 'discount' ? '-' : ''}{formatCurrency(Math.abs(item.amount))}
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => duplicateItem(item)}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Dupliquer
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => updateItem(item.id, { isOptional: !item.isOptional })}>
+                      {item.isOptional ? 'Inclure' : 'Rendre optionnel'}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => deleteItem(item.id)} className="text-destructive">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Supprimer
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Layout */}
+          <div className="hidden sm:grid grid-cols-12 gap-2 p-3 items-center">
             <div className="col-span-1 flex items-center gap-1">
               <div className="cursor-grab">
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -557,17 +704,18 @@ export function FeesAndQuoteEditor({
     );
   };
 
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* === SECTION 1: CALCUL DES HONORAIRES === */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3 sm:pb-6">
           <div className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-primary" />
-            <CardTitle>Calcul des honoraires</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Calcul des honoraires</CardTitle>
           </div>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 sm:space-y-6">
           {/* Mode de rémunération */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Mode de rémunération</Label>
@@ -689,18 +837,18 @@ export function FeesAndQuoteEditor({
       {/* === SECTION 2: PHASES DE MISSION === */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className={`p-1.5 rounded ${TYPE_COLORS.phase}`}>
                 {TYPE_ICONS.phase}
               </div>
               <div>
-                <CardTitle className="text-base">Phases de mission</CardTitle>
-                <p className="text-xs text-muted-foreground">Répartition des honoraires par phase</p>
+                <CardTitle className="text-sm sm:text-base">Phases de mission</CardTitle>
+                <p className="text-xs text-muted-foreground hidden sm:block">Répartition des honoraires par phase</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className={totalPercentage !== 100 ? 'border-amber-500 text-amber-600' : ''}>
+            <div className="flex items-center gap-2 justify-end">
+              <Badge variant="outline" className={`text-xs ${totalPercentage !== 100 ? 'border-amber-500 text-amber-600' : ''}`}>
                 {totalPercentage}%
               </Badge>
               <AIPhaseSuggestion
@@ -710,15 +858,15 @@ export function FeesAndQuoteEditor({
                 documentId={documentId}
               />
               <Button size="sm" variant="outline" onClick={() => addItem('phase')}>
-                <Plus className="h-4 w-4 mr-1" />
-                Phase
+                <Plus className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Phase</span>
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
           {phaseItems.length > 0 && (
-            <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b mb-2">
+            <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b mb-2">
               <div className="col-span-1"></div>
               <div className="col-span-5">Phase</div>
               <div className="col-span-2 text-right">%</div>
@@ -744,26 +892,26 @@ export function FeesAndQuoteEditor({
       {/* === SECTION 3: PRESTATIONS COMPLÉMENTAIRES === */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className={`p-1.5 rounded ${TYPE_COLORS.prestation}`}>
                 {TYPE_ICONS.prestation}
               </div>
               <div>
-                <CardTitle className="text-base">Prestations complémentaires</CardTitle>
-                <p className="text-xs text-muted-foreground">Services additionnels, frais, remises</p>
+                <CardTitle className="text-sm sm:text-base">Prestations complémentaires</CardTitle>
+                <p className="text-xs text-muted-foreground hidden sm:block">Services additionnels, frais, remises</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 justify-end">
               {subtotalOther > 0 && (
-                <Badge variant="secondary">{formatCurrency(subtotalOther)}</Badge>
+                <Badge variant="secondary" className="text-xs">{formatCurrency(subtotalOther)}</Badge>
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button size="sm" variant="outline">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Ajouter
-                    <ChevronDown className="h-4 w-4 ml-1" />
+                    <Plus className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Ajouter</span>
+                    <ChevronDown className="h-4 w-4 sm:ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -800,7 +948,7 @@ export function FeesAndQuoteEditor({
         </CardHeader>
         <CardContent className="pt-0">
           {otherItems.length > 0 && (
-            <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b mb-2">
+            <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b mb-2">
               <div className="col-span-1"></div>
               <div className="col-span-4">Désignation</div>
               <div className="col-span-1 text-center">Qté</div>
@@ -880,20 +1028,22 @@ export function FeesAndQuoteEditor({
 
             {/* Validité */}
             <Separator />
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
               <Label className="text-sm shrink-0">Validité</Label>
-              <Input
-                type="number"
-                value={document.validity_days || 30}
-                onChange={(e) => onDocumentChange({ 
-                  ...document, 
-                  validity_days: parseInt(e.target.value) || 30 
-                })}
-                className="w-20 h-8"
-              />
-              <span className="text-xs text-muted-foreground">
-                jours (jusqu'au {new Date(Date.now() + (document.validity_days || 30) * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')})
-              </span>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  value={document.validity_days || 30}
+                  onChange={(e) => onDocumentChange({ 
+                    ...document, 
+                    validity_days: parseInt(e.target.value) || 30 
+                  })}
+                  className="w-20 h-8"
+                />
+                <span className="text-xs text-muted-foreground">
+                  jours ({new Date(Date.now() + (document.validity_days || 30) * 24 * 60 * 60 * 1000).toLocaleDateString('fr-FR')})
+                </span>
+              </div>
             </div>
           </div>
         </CardContent>
