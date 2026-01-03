@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { format } from "date-fns";
+import { useState, useMemo } from "react";
+import { format, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Calendar,
@@ -21,14 +21,24 @@ import {
   ChevronUp,
   Plus,
   Trash2,
+  Sparkles,
+  CircleDot,
+  CheckCircle,
+  Circle,
+  ArrowRight,
+  Eye,
+  AlertCircle,
+  Lightbulb,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -60,19 +70,31 @@ import {
 import { cn } from "@/lib/utils";
 import { useTenderCriteria } from "@/hooks/useTenderCriteria";
 import { useTenderRequiredDocuments } from "@/hooks/useTenderRequiredDocuments";
+import { useTenderDocuments } from "@/hooks/useTenderDocuments";
+import { useTenderTeam } from "@/hooks/useTenderTeam";
 
 interface TenderGeneralTabProps {
   tender: Tender;
   onUpdateStatus: (status: TenderStatus, notes?: string) => void;
 }
 
+interface ActionItem {
+  id: string;
+  label: string;
+  description?: string;
+  isComplete: boolean;
+  priority: 'high' | 'medium' | 'low';
+  category: 'preparation' | 'documents' | 'team' | 'submission';
+  action?: () => void;
+}
+
 export function TenderGeneralTab({ tender, onUpdateStatus }: TenderGeneralTabProps) {
   const [showDecisionDialog, setShowDecisionDialog] = useState(false);
   const [decisionType, setDecisionType] = useState<"go" | "no_go" | null>(null);
   const [decisionNotes, setDecisionNotes] = useState("");
-  const [expandedSections, setExpandedSections] = useState<string[]>(['dates', 'project', 'client', 'procedure', 'criteria']);
+  const [showInfoPanel, setShowInfoPanel] = useState(false);
 
-  const { criteria, addCriterion, deleteCriterion, totalWeight, priceWeight, technicalWeight } = useTenderCriteria(tender.id);
+  const { criteria, totalWeight, priceWeight, technicalWeight } = useTenderCriteria(tender.id);
   const { 
     candidatureDocuments, 
     offreDocuments, 
@@ -82,8 +104,8 @@ export function TenderGeneralTab({ tender, onUpdateStatus }: TenderGeneralTabPro
     toggleComplete,
     loadDefaultDocuments,
   } = useTenderRequiredDocuments(tender.id);
-
-  const [newCriterion, setNewCriterion] = useState({ name: '', weight: 0, type: 'technical' as CriterionType });
+  const { documents } = useTenderDocuments(tender.id);
+  const { teamMembers } = useTenderTeam(tender.id);
 
   const handleDecision = () => {
     if (decisionType) {
@@ -93,53 +115,197 @@ export function TenderGeneralTab({ tender, onUpdateStatus }: TenderGeneralTabPro
     }
   };
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => 
-      prev.includes(section) 
-        ? prev.filter(s => s !== section)
-        : [...prev, section]
-    );
-  };
-
-  const statuses: TenderStatus[] = ['repere', 'en_analyse', 'go', 'en_montage', 'depose', 'gagne'];
-  const currentIndex = statuses.indexOf(tender.status);
-
+  // Calculate key dates
+  const submissionDeadline = tender.submission_deadline ? new Date(tender.submission_deadline) : null;
+  const offerValidityEndDate = submissionDeadline && tender.offer_validity_days
+    ? addDays(submissionDeadline, tender.offer_validity_days)
+    : null;
+  
   const getDaysUntilDeadline = () => {
-    if (!tender.submission_deadline) return null;
-    const deadline = new Date(tender.submission_deadline);
+    if (!submissionDeadline) return null;
     const now = new Date();
-    const diff = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const diff = Math.ceil((submissionDeadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     return diff;
   };
 
   const daysRemaining = getDaysUntilDeadline();
 
+  // Generate AI-powered action checklist
+  const actionItems = useMemo<ActionItem[]>(() => {
+    const items: ActionItem[] = [];
+
+    // 1. Go/No-Go decision
+    const hasGoDecision = tender.status === 'go' || tender.status === 'no_go';
+    items.push({
+      id: 'go_decision',
+      label: 'Prendre la décision Go/No-Go',
+      description: hasGoDecision 
+        ? `Décision: ${tender.status === 'go' ? 'Go' : 'No-Go'}` 
+        : 'Évaluer l\'opportunité et décider si on répond',
+      isComplete: hasGoDecision,
+      priority: 'high',
+      category: 'preparation',
+    });
+
+    // 2. Upload DCE documents
+    const hasDocuments = documents && documents.length > 0;
+    items.push({
+      id: 'upload_dce',
+      label: 'Télécharger les documents DCE',
+      description: hasDocuments 
+        ? `${documents.length} document(s) uploadé(s)` 
+        : 'RC, CCAP, CCTP, Note programme...',
+      isComplete: hasDocuments,
+      priority: 'high',
+      category: 'documents',
+    });
+
+    // 3. Analyze DCE with AI
+    const hasAnalyzedDocs = documents?.some(d => d.extracted_data);
+    items.push({
+      id: 'analyze_dce',
+      label: 'Analyser le DCE avec l\'IA',
+      description: hasAnalyzedDocs 
+        ? 'Données extraites automatiquement' 
+        : 'Extraire dates, critères, exigences...',
+      isComplete: !!hasAnalyzedDocs,
+      priority: 'high',
+      category: 'documents',
+    });
+
+    // 4. Site visit (if applicable)
+    if (tender.site_visit_required !== false) {
+      const hasSiteVisitDate = !!tender.site_visit_date;
+      items.push({
+        id: 'site_visit',
+        label: tender.site_visit_required ? 'Effectuer la visite de site (obligatoire)' : 'Visite de site (facultative)',
+        description: hasSiteVisitDate 
+          ? `Prévue le ${format(new Date(tender.site_visit_date!), "dd MMM yyyy", { locale: fr })}` 
+          : 'Date à définir',
+        isComplete: false, // Would need a dedicated field for this
+        priority: tender.site_visit_required ? 'high' : 'medium',
+        category: 'preparation',
+      });
+    }
+
+    // 5. Team composition
+    const hasTeam = teamMembers && teamMembers.length > 0;
+    const hasMandataire = teamMembers?.some(m => m.role === 'mandataire');
+    items.push({
+      id: 'compose_team',
+      label: 'Constituer l\'équipe projet',
+      description: hasTeam 
+        ? `${teamMembers.length} membre(s) - ${hasMandataire ? 'Mandataire défini' : 'Mandataire à définir'}` 
+        : 'Mandataire, cotraitants, sous-traitants...',
+      isComplete: hasTeam && hasMandataire,
+      priority: 'high',
+      category: 'team',
+    });
+
+    // 6. Fill judgment criteria
+    const hasCriteria = criteria && criteria.length > 0 && totalWeight === 100;
+    items.push({
+      id: 'fill_criteria',
+      label: 'Renseigner les critères de jugement',
+      description: criteria && criteria.length > 0 
+        ? `${criteria.length} critère(s) - ${totalWeight}% total` 
+        : 'Prix, valeur technique, délais...',
+      isComplete: hasCriteria,
+      priority: 'medium',
+      category: 'preparation',
+    });
+
+    // 7. Prepare candidature documents
+    const candidatureComplete = candidatureProgress === 100;
+    items.push({
+      id: 'candidature_docs',
+      label: 'Préparer les pièces de candidature',
+      description: candidatureDocuments.length > 0 
+        ? `${candidatureProgress}% complété (${candidatureDocuments.filter(d => d.is_completed).length}/${candidatureDocuments.length})` 
+        : 'DC1, DC2, attestations...',
+      isComplete: candidatureComplete,
+      priority: 'medium',
+      category: 'submission',
+    });
+
+    // 8. Prepare offer documents
+    const offerComplete = offreProgress === 100;
+    items.push({
+      id: 'offer_docs',
+      label: 'Préparer les pièces de l\'offre',
+      description: offreDocuments.length > 0 
+        ? `${offreProgress}% complété (${offreDocuments.filter(d => d.is_completed).length}/${offreDocuments.length})` 
+        : 'Mémoire technique, planning, DPGF...',
+      isComplete: offerComplete,
+      priority: 'medium',
+      category: 'submission',
+    });
+
+    // 9. Submit
+    const isSubmitted = tender.status === 'depose' || tender.status === 'gagne' || tender.status === 'perdu';
+    items.push({
+      id: 'submit',
+      label: 'Déposer l\'offre',
+      description: isSubmitted 
+        ? 'Offre déposée' 
+        : submissionDeadline 
+          ? `Avant le ${format(submissionDeadline, "dd MMM yyyy à HH:mm", { locale: fr })}` 
+          : 'Date limite à définir',
+      isComplete: isSubmitted,
+      priority: 'high',
+      category: 'submission',
+    });
+
+    return items;
+  }, [tender, documents, teamMembers, criteria, totalWeight, candidatureDocuments, offreDocuments, candidatureProgress, offreProgress]);
+
+  const completedCount = actionItems.filter(i => i.isComplete).length;
+  const overallProgress = Math.round((completedCount / actionItems.length) * 100);
+
+  const highPriorityIncomplete = actionItems.filter(i => !i.isComplete && i.priority === 'high');
+
+  const statuses: TenderStatus[] = ['repere', 'en_analyse', 'go', 'en_montage', 'depose', 'gagne'];
+  const currentIndex = statuses.indexOf(tender.status);
+
   return (
     <div className="space-y-6">
-      {/* Status Timeline */}
-      <Card>
+      {/* AI Assistant Header */}
+      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center justify-between">
-            <span>Progression</span>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Assistant de réponse</CardTitle>
+                <CardDescription>
+                  {overallProgress}% de préparation complétée
+                </CardDescription>
+              </div>
+            </div>
             {daysRemaining !== null && (
               <Badge 
                 variant={daysRemaining < 7 ? "destructive" : daysRemaining < 14 ? "secondary" : "outline"}
-                className="font-normal"
+                className="font-medium text-sm"
               >
-                <Clock className="h-3 w-3 mr-1" />
-                {daysRemaining > 0 ? `J-${daysRemaining}` : daysRemaining === 0 ? "Aujourd'hui" : "Dépassé"}
+                <Clock className="h-3.5 w-3.5 mr-1.5" />
+                {daysRemaining > 0 ? `J-${daysRemaining}` : daysRemaining === 0 ? "Aujourd'hui" : `Dépassé (J+${Math.abs(daysRemaining)})`}
               </Badge>
             )}
-          </CardTitle>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        <CardContent className="space-y-4">
+          <Progress value={overallProgress} className="h-2" />
+          
+          {/* Quick status timeline */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
             {statuses.map((status, index) => {
               const isActive = status === tender.status;
               const isPast = index < currentIndex;
               
               return (
-                <div key={status} className="flex items-center gap-2">
+                <div key={status} className="flex items-center gap-1.5">
                   <button
                     onClick={() => {
                       if (status === 'go' || status === 'no_go') {
@@ -150,18 +316,18 @@ export function TenderGeneralTab({ tender, onUpdateStatus }: TenderGeneralTabPro
                       }
                     }}
                     className={cn(
-                      "px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap",
+                      "px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap",
                       isActive && TENDER_STATUS_COLORS[status],
                       isPast && "bg-muted text-muted-foreground",
-                      !isActive && !isPast && "bg-muted/50 text-muted-foreground hover:bg-muted"
+                      !isActive && !isPast && "bg-muted/50 text-muted-foreground/70 hover:bg-muted hover:text-muted-foreground"
                     )}
                   >
                     {TENDER_STATUS_LABELS[status]}
                   </button>
                   {index < statuses.length - 1 && (
-                    <div className={cn(
-                      "w-8 h-0.5",
-                      isPast ? "bg-foreground/20" : "bg-border"
+                    <ArrowRight className={cn(
+                      "h-3 w-3 shrink-0",
+                      isPast ? "text-muted-foreground/50" : "text-border"
                     )} />
                   )}
                 </div>
@@ -169,18 +335,35 @@ export function TenderGeneralTab({ tender, onUpdateStatus }: TenderGeneralTabPro
             })}
           </div>
 
+          {/* Alert for high priority items */}
+          {highPriorityIncomplete.length > 0 && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                  {highPriorityIncomplete.length} action(s) prioritaire(s) à effectuer
+                </p>
+                <p className="text-xs text-amber-600/80 dark:text-amber-400/80">
+                  {highPriorityIncomplete.slice(0, 2).map(i => i.label).join(', ')}
+                  {highPriorityIncomplete.length > 2 && '...'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* No-Go button */}
           {tender.status !== 'no_go' && tender.status !== 'perdu' && (
-            <div className="mt-4 pt-4 border-t">
+            <div className="flex justify-end">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={() => {
                   setDecisionType('no_go');
                   setShowDecisionDialog(true);
                 }}
               >
-                <XCircle className="h-4 w-4 mr-2" />
+                <XCircle className="h-4 w-4 mr-1.5" />
                 Marquer No-Go
               </Button>
             </div>
@@ -188,468 +371,305 @@ export function TenderGeneralTab({ tender, onUpdateStatus }: TenderGeneralTabPro
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Market Identification */}
-        <Card>
-          <Collapsible open={expandedSections.includes('market')} onOpenChange={() => toggleSection('market')}>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                <CardTitle className="text-base flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Identification du marché
-                  </span>
-                  {expandedSections.includes('market') ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </CardTitle>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="space-y-3 pt-0">
-                <InfoRow label="Référence" value={tender.reference} />
-                <InfoRow label="N° consultation" value={tender.consultation_number} />
-                <InfoRow label="Code groupe" value={tender.group_code} />
-                {tender.market_object && (
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground mb-1">Objet du marché</p>
-                    <p className="text-sm">{tender.market_object}</p>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main: Action Checklist */}
+        <div className="lg:col-span-2 space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                Checklist de préparation
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              {actionItems.map((item) => (
+                <div 
+                  key={item.id}
+                  className={cn(
+                    "flex items-start gap-3 p-3 rounded-lg transition-colors",
+                    item.isComplete ? "bg-muted/30" : "hover:bg-muted/50"
+                  )}
+                >
+                  <div className="mt-0.5">
+                    {item.isComplete ? (
+                      <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    ) : item.priority === 'high' ? (
+                      <CircleDot className="h-5 w-5 text-amber-500" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-muted-foreground/50" />
+                    )}
                   </div>
-                )}
-              </CardContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </Card>
-
-        {/* Client Info */}
-        <Card>
-          <Collapsible open={expandedSections.includes('client')} onOpenChange={() => toggleSection('client')}>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                <CardTitle className="text-base flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    Maître d'ouvrage
-                  </span>
-                  {expandedSections.includes('client') ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </CardTitle>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="space-y-3 pt-0">
-                <InfoRow label="Nom" value={tender.client_name} />
-                <InfoRow 
-                  label="Type" 
-                  value={tender.client_type ? CLIENT_TYPES.find(t => t.value === tender.client_type)?.label : null} 
-                />
-                <InfoRow label="Direction" value={tender.client_direction} />
-                <InfoRow label="Pouvoir adjudicateur" value={tender.contracting_authority} />
-                {(tender.client_contact_name || tender.client_contact_phone || tender.client_contact_email) && (
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground mb-2">Contact</p>
-                    {tender.client_contact_name && (
-                      <p className="text-sm">{tender.client_contact_name}</p>
-                    )}
-                    {tender.client_contact_phone && (
-                      <p className="text-sm flex items-center gap-1 text-muted-foreground">
-                        <Phone className="h-3 w-3" /> {tender.client_contact_phone}
-                      </p>
-                    )}
-                    {tender.client_contact_email && (
-                      <p className="text-sm flex items-center gap-1 text-muted-foreground">
-                        <Mail className="h-3 w-3" /> {tender.client_contact_email}
+                  <div className="flex-1 min-w-0">
+                    <p className={cn(
+                      "text-sm font-medium",
+                      item.isComplete && "text-muted-foreground line-through"
+                    )}>
+                      {item.label}
+                    </p>
+                    {item.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {item.description}
                       </p>
                     )}
                   </div>
-                )}
-              </CardContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </Card>
+                  {!item.isComplete && item.priority === 'high' && (
+                    <Badge variant="outline" className="text-xs shrink-0 text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-600">
+                      Prioritaire
+                    </Badge>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
 
-        {/* Project Info */}
-        <Card>
-          <Collapsible open={expandedSections.includes('project')} onOpenChange={() => toggleSection('project')}>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                <CardTitle className="text-base flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    Projet
-                  </span>
-                  {expandedSections.includes('project') ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          {/* Required Documents Quick View */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Pièces à remettre
                 </CardTitle>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="space-y-3 pt-0">
-                <InfoRow label="Localisation" value={tender.location} />
-                <InfoRow label="Région" value={tender.region} />
-                <InfoRow 
-                  label="Surface" 
-                  value={tender.surface_area ? `${tender.surface_area.toLocaleString()} m²` : null}
-                  icon={<Ruler className="h-3 w-3" />}
-                />
-                <InfoRow 
-                  label="Budget estimé" 
-                  value={tender.estimated_budget ? `${(tender.estimated_budget / 1000000).toFixed(2)} M€` : null}
-                  icon={<Euro className="h-3 w-3" />}
-                  badge={tender.budget_disclosed ? 'Affiché' : 'Non affiché'}
-                />
-                {tender.work_nature_tags && tender.work_nature_tags.length > 0 && (
-                  <div className="pt-2 border-t">
-                    <p className="text-xs text-muted-foreground mb-2">Nature des travaux</p>
-                    <div className="flex flex-wrap gap-1">
-                      {tender.work_nature_tags.map(tag => (
-                        <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                <Badge variant={totalProgress === 100 ? "default" : "secondary"}>
+                  {totalProgress}%
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {candidatureDocuments.length === 0 && offreDocuments.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground mb-3">Aucun document requis défini</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => loadDefaultDocuments.mutate()}
+                    disabled={loadDefaultDocuments.isPending}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Charger la liste par défaut
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {/* Candidature */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Candidature</p>
+                      <span className="text-xs text-muted-foreground">{candidatureProgress}%</span>
+                    </div>
+                    <Progress value={candidatureProgress} className="h-1.5" />
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {candidatureDocuments.map(doc => (
+                        <div key={doc.id} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={doc.is_completed}
+                            onCheckedChange={(checked) => toggleComplete.mutate({ id: doc.id, is_completed: !!checked })}
+                            className="h-3.5 w-3.5"
+                          />
+                          <span className={cn("text-xs truncate", doc.is_completed && "line-through text-muted-foreground")}>
+                            {doc.name}
+                          </span>
+                        </div>
                       ))}
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </Card>
-
-        {/* Procedure */}
-        <Card>
-          <Collapsible open={expandedSections.includes('procedure')} onOpenChange={() => toggleSection('procedure')}>
-            <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                <CardTitle className="text-base flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Scale className="h-4 w-4" />
-                    Procédure
-                  </span>
-                  {expandedSections.includes('procedure') ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </CardTitle>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="space-y-3 pt-0">
-                <InfoRow 
-                  label="Type" 
-                  value={tender.procedure_type ? PROCEDURE_TYPE_LABELS[tender.procedure_type] : null} 
-                />
-                <InfoRow 
-                  label="Groupement" 
-                  value={tender.allows_joint_venture ? 'Autorisé' : 'Non autorisé'}
-                  badge={tender.joint_venture_type ? JOINT_VENTURE_TYPE_LABELS[tender.joint_venture_type as keyof typeof JOINT_VENTURE_TYPE_LABELS] : undefined}
-                />
-                <InfoRow 
-                  label="Variantes" 
-                  value={tender.allows_variants ? 'Autorisées' : 'Non autorisées'}
-                />
-                <InfoRow 
-                  label="Négociation" 
-                  value={tender.allows_negotiation ? 'Prévue' : 'Non prévue'}
-                  badge={tender.negotiation_candidates_count ? `${tender.negotiation_candidates_count} candidats` : undefined}
-                />
-                <InfoRow 
-                  label="Validité offres" 
-                  value={tender.offer_validity_days ? `${tender.offer_validity_days} jours` : null}
-                />
-              </CardContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </Card>
-      </div>
-
-      {/* Key Dates */}
-      <Card>
-        <Collapsible open={expandedSections.includes('dates')} onOpenChange={() => toggleSection('dates')}>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-              <CardTitle className="text-base flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Dates clés
-                </span>
-                {expandedSections.includes('dates') ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </CardTitle>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="pt-0">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-3">
-                  <DateRow 
-                    label="Date limite de dépôt" 
-                    date={tender.submission_deadline}
-                    highlight
-                  />
-                  <DateRow 
-                    label="Visite de site" 
-                    date={tender.site_visit_date}
-                    required={tender.site_visit_required}
-                  />
-                  <DateRow label="Jury / Commission" date={tender.jury_date} />
-                  <DateRow label="Résultats attendus" date={tender.results_date} />
-                </div>
-                <div className="space-y-3">
-                  {tender.go_decision_date && (
-                    <DateRow 
-                      label="Décision Go/No-Go" 
-                      date={tender.go_decision_date}
-                      badge={tender.status === 'go' ? 'Go' : tender.status === 'no_go' ? 'No-Go' : undefined}
-                      badgeVariant={tender.status === 'go' ? 'success' : 'destructive'}
-                    />
-                  )}
-                  {tender.site_visit_required && (tender.site_visit_contact_name || tender.site_visit_contact_phone) && (
-                    <div className="p-3 bg-muted/50 rounded-lg">
-                      <p className="text-xs font-medium mb-1">Contact visite</p>
-                      {tender.site_visit_contact_name && (
-                        <p className="text-sm">{tender.site_visit_contact_name}</p>
-                      )}
-                      {tender.site_visit_contact_phone && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Phone className="h-3 w-3" /> {tender.site_visit_contact_phone}
-                        </p>
-                      )}
-                      {tender.site_visit_contact_email && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Mail className="h-3 w-3" /> {tender.site_visit_contact_email}
-                        </p>
-                      )}
+                  
+                  {/* Offre */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Offre</p>
+                      <span className="text-xs text-muted-foreground">{offreProgress}%</span>
                     </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
-
-      {/* Judgment Criteria */}
-      <Card>
-        <Collapsible open={expandedSections.includes('criteria')} onOpenChange={() => toggleSection('criteria')}>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-              <CardTitle className="text-base flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Percent className="h-4 w-4" />
-                  Critères de jugement
-                  {criteria.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      Prix {priceWeight}% / Technique {technicalWeight}%
-                    </Badge>
-                  )}
-                </span>
-                {expandedSections.includes('criteria') ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </CardTitle>
-            </CardHeader>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <CardContent className="pt-0 space-y-4">
-              {criteria.length > 0 ? (
-                <div className="space-y-3">
-                  {criteria.map(criterion => (
-                    <div key={criterion.id} className="flex items-center gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium">{criterion.name}</span>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {CRITERION_TYPE_LABELS[criterion.criterion_type]}
-                            </Badge>
-                            <span className="text-sm font-medium">{criterion.weight}%</span>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6"
-                              onClick={() => deleteCriterion.mutate(criterion.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
+                    <Progress value={offreProgress} className="h-1.5" />
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {offreDocuments.map(doc => (
+                        <div key={doc.id} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={doc.is_completed}
+                            onCheckedChange={(checked) => toggleComplete.mutate({ id: doc.id, is_completed: !!checked })}
+                            className="h-3.5 w-3.5"
+                          />
+                          <span className={cn("text-xs truncate", doc.is_completed && "line-through text-muted-foreground")}>
+                            {doc.name}
+                          </span>
                         </div>
-                        <Progress value={criterion.weight} className="h-2" />
-                        {criterion.sub_criteria && criterion.sub_criteria.length > 0 && (
-                          <div className="mt-2 pl-4 space-y-1">
-                            {criterion.sub_criteria.map(sub => (
-                              <div key={sub.id} className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>• {sub.name}</span>
-                                <span>{sub.weight}%</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                  {totalWeight !== 100 && (
-                    <p className="text-xs text-amber-600 flex items-center gap-1">
-                      <AlertTriangle className="h-3 w-3" />
-                      Total: {totalWeight}% (doit être 100%)
-                    </p>
-                  )}
+                  </div>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Aucun critère défini</p>
               )}
-              
-              {/* Add criterion form */}
-              <div className="flex items-end gap-2 pt-2 border-t">
-                <div className="flex-1">
-                  <Input
-                    placeholder="Nom du critère"
-                    value={newCriterion.name}
-                    onChange={(e) => setNewCriterion(prev => ({ ...prev, name: e.target.value }))}
-                    className="h-8 text-sm"
-                  />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar: Key Info */}
+        <div className="space-y-4">
+          {/* Key Dates */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Dates clés
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Deadline */}
+              <div className="p-3 rounded-lg bg-destructive/5 border border-destructive/20">
+                <p className="text-xs text-muted-foreground">Date limite de dépôt</p>
+                <p className="font-semibold text-destructive">
+                  {submissionDeadline 
+                    ? format(submissionDeadline, "EEEE dd MMMM yyyy 'à' HH:mm", { locale: fr })
+                    : '-'
+                  }
+                </p>
+              </div>
+
+              {/* Offer validity end */}
+              {offerValidityEndDate && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Fin validité offres</span>
+                  <span className="font-medium">
+                    {format(offerValidityEndDate, "dd/MM/yyyy", { locale: fr })}
+                  </span>
                 </div>
-                <div className="w-20">
-                  <Input
-                    type="number"
-                    placeholder="%"
-                    value={newCriterion.weight || ''}
-                    onChange={(e) => setNewCriterion(prev => ({ ...prev, weight: parseInt(e.target.value) || 0 }))}
-                    className="h-8 text-sm"
-                  />
+              )}
+              {tender.offer_validity_days && (
+                <p className="text-xs text-muted-foreground -mt-2">
+                  ({tender.offer_validity_days} jours après dépôt)
+                </p>
+              )}
+
+              {/* Site Visit */}
+              <div className="flex items-center justify-between py-2 border-t">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Visite de site</span>
                 </div>
-                <Select
-                  value={newCriterion.type}
-                  onValueChange={(v) => setNewCriterion(prev => ({ ...prev, type: v as CriterionType }))}
-                >
-                  <SelectTrigger className="w-32 h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(CRITERION_TYPE_LABELS).map(([v, l]) => (
-                      <SelectItem key={v} value={v}>{l}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
+                <Badge variant={
+                  tender.site_visit_required === true 
+                    ? "destructive" 
+                    : tender.site_visit_required === false 
+                      ? "secondary" 
+                      : "outline"
+                }>
+                  {tender.site_visit_required === true 
+                    ? "Obligatoire" 
+                    : tender.site_visit_required === false 
+                      ? "Non requise"
+                      : "Non défini"
+                  }
+                </Badge>
+              </div>
+              {tender.site_visit_date && (
+                <div className="flex items-center justify-between text-sm -mt-2">
+                  <span className="text-muted-foreground">Date visite</span>
+                  <span>{format(new Date(tender.site_visit_date), "dd/MM/yyyy", { locale: fr })}</span>
+                </div>
+              )}
+              {tender.site_visit_contact_name && (
+                <div className="text-xs text-muted-foreground -mt-1">
+                  Contact: {tender.site_visit_contact_name}
+                  {tender.site_visit_contact_phone && ` - ${tender.site_visit_contact_phone}`}
+                </div>
+              )}
+
+              {/* Other dates */}
+              {tender.jury_date && (
+                <div className="flex items-center justify-between text-sm pt-2 border-t">
+                  <span className="text-muted-foreground">Jury / Commission</span>
+                  <span>{format(new Date(tender.jury_date), "dd/MM/yyyy", { locale: fr })}</span>
+                </div>
+              )}
+              {tender.results_date && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Résultats</span>
+                  <span>{format(new Date(tender.results_date), "dd/MM/yyyy", { locale: fr })}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Quick Info */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Informations</CardTitle>
+                <Button 
+                  variant="ghost" 
                   size="sm"
-                  className="h-8"
-                  disabled={!newCriterion.name || !newCriterion.weight}
-                  onClick={() => {
-                    addCriterion.mutate({
-                      name: newCriterion.name,
-                      weight: newCriterion.weight,
-                      criterion_type: newCriterion.type,
-                    });
-                    setNewCriterion({ name: '', weight: 0, type: 'technical' });
-                  }}
+                  onClick={() => setShowInfoPanel(!showInfoPanel)}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Eye className="h-4 w-4" />
                 </Button>
               </div>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <InfoRow label="Client" value={tender.client_name} />
+              <InfoRow label="Lieu" value={tender.location} />
+              <InfoRow 
+                label="Budget" 
+                value={tender.estimated_budget ? `${(tender.estimated_budget / 1000000).toFixed(2)} M€` : null}
+              />
+              <InfoRow 
+                label="Surface" 
+                value={tender.surface_area ? `${tender.surface_area.toLocaleString()} m²` : null}
+              />
+              <InfoRow 
+                label="Procédure" 
+                value={tender.procedure_type ? PROCEDURE_TYPE_LABELS[tender.procedure_type] : null}
+              />
+              
+              {/* Criteria summary */}
+              {criteria && criteria.length > 0 && (
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground mb-1">Critères</p>
+                  <div className="flex gap-2">
+                    <Badge variant="outline" className="text-xs">Prix {priceWeight}%</Badge>
+                    <Badge variant="outline" className="text-xs">Technique {technicalWeight}%</Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Procedure details */}
+              <div className="pt-2 border-t space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Groupement</span>
+                  <span>{tender.allows_joint_venture ? 'Oui' : 'Non'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Variantes</span>
+                  <span>{tender.allows_variants ? 'Oui' : 'Non'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Négociation</span>
+                  <span>{tender.allows_negotiation ? 'Oui' : 'Non'}</span>
+                </div>
+              </div>
             </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
+          </Card>
 
-      {/* Required Documents Progress */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Pièces à remettre
-            </span>
-            <Badge variant={totalProgress === 100 ? "default" : "secondary"}>
-              {totalProgress}% complété
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {candidatureDocuments.length === 0 && offreDocuments.length === 0 ? (
-            <div className="text-center py-4">
-              <p className="text-sm text-muted-foreground mb-3">Aucun document requis défini</p>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => loadDefaultDocuments.mutate()}
-                disabled={loadDefaultDocuments.isPending}
-              >
-                Charger les documents par défaut
-              </Button>
-            </div>
-          ) : (
-            <>
-              {/* Candidature */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium">Candidature</p>
-                  <span className="text-xs text-muted-foreground">{candidatureProgress}%</span>
-                </div>
-                <Progress value={candidatureProgress} className="h-2 mb-2" />
+          {/* Tips */}
+          <Card className="border-primary/20">
+            <CardContent className="pt-4">
+              <div className="flex gap-3">
+                <Lightbulb className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <div className="space-y-1">
-                  {candidatureDocuments.slice(0, 4).map(doc => (
-                    <div key={doc.id} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={doc.is_completed}
-                        onCheckedChange={(checked) => toggleComplete.mutate({ id: doc.id, is_completed: !!checked })}
-                      />
-                      <span className={cn("text-xs", doc.is_completed && "line-through text-muted-foreground")}>
-                        {doc.name}
-                      </span>
-                      {doc.is_mandatory && <Badge variant="outline" className="text-[10px] px-1">Requis</Badge>}
-                    </div>
-                  ))}
-                  {candidatureDocuments.length > 4 && (
-                    <p className="text-xs text-muted-foreground pl-6">+{candidatureDocuments.length - 4} autres</p>
-                  )}
+                  <p className="text-xs font-medium">Conseil IA</p>
+                  <p className="text-xs text-muted-foreground">
+                    {!documents || documents.length === 0 
+                      ? "Commencez par uploader les documents DCE pour que l'IA puisse analyser les exigences."
+                      : !criteria || criteria.length === 0
+                        ? "Renseignez les critères de jugement pour adapter votre stratégie de réponse."
+                        : daysRemaining && daysRemaining < 7
+                          ? "Échéance proche ! Concentrez-vous sur les éléments prioritaires."
+                          : "Tout est en bonne voie. Continuez à préparer vos pièces."
+                    }
+                  </p>
                 </div>
               </div>
-
-              {/* Offre */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium">Offre</p>
-                  <span className="text-xs text-muted-foreground">{offreProgress}%</span>
-                </div>
-                <Progress value={offreProgress} className="h-2 mb-2" />
-                <div className="space-y-1">
-                  {offreDocuments.slice(0, 4).map(doc => (
-                    <div key={doc.id} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={doc.is_completed}
-                        onCheckedChange={(checked) => toggleComplete.mutate({ id: doc.id, is_completed: !!checked })}
-                      />
-                      <span className={cn("text-xs", doc.is_completed && "line-through text-muted-foreground")}>
-                        {doc.name}
-                      </span>
-                      {doc.is_mandatory && <Badge variant="outline" className="text-[10px] px-1">Requis</Badge>}
-                    </div>
-                  ))}
-                  {offreDocuments.length > 4 && (
-                    <p className="text-xs text-muted-foreground pl-6">+{offreDocuments.length - 4} autres</p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Description */}
-      {tender.description && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Description</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {tender.description}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Go Decision Notes */}
-      {tender.go_decision_notes && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Notes de décision</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-              {tender.go_decision_notes}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Decision Dialog */}
       <Dialog open={showDecisionDialog} onOpenChange={setShowDecisionDialog}>
@@ -700,79 +720,18 @@ export function TenderGeneralTab({ tender, onUpdateStatus }: TenderGeneralTabPro
   );
 }
 
-function DateRow({ 
-  label, 
-  date, 
-  highlight,
-  required,
-  badge,
-  badgeVariant,
-}: { 
-  label: string; 
-  date: string | null;
-  highlight?: boolean;
-  required?: boolean | null;
-  badge?: string;
-  badgeVariant?: 'success' | 'destructive';
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-muted-foreground flex items-center gap-2">
-        {label}
-        {required && (
-          <Badge variant="secondary" className="text-xs">Obligatoire</Badge>
-        )}
-      </span>
-      <span className={cn(
-        "text-sm",
-        highlight && date && "font-medium"
-      )}>
-        {date ? (
-          <span className="flex items-center gap-2">
-            {format(new Date(date), "dd MMM yyyy", { locale: fr })}
-            {badge && (
-              <Badge 
-                variant="outline" 
-                className={cn(
-                  "text-xs",
-                  badgeVariant === 'success' && "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-                  badgeVariant === 'destructive' && "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                )}
-              >
-                {badge}
-              </Badge>
-            )}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        )}
-      </span>
-    </div>
-  );
-}
-
 function InfoRow({ 
   label, 
   value,
-  badge,
-  icon,
 }: { 
   label: string; 
   value: string | null | undefined;
-  badge?: string;
-  icon?: React.ReactNode;
 }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-sm text-muted-foreground flex items-center gap-1">
-        {icon}
-        {label}
-      </span>
-      <span className="text-sm flex items-center gap-2">
-        {value || <span className="text-muted-foreground">-</span>}
-        {badge && value && (
-          <Badge variant="secondary" className="text-xs">{badge}</Badge>
-        )}
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium text-right truncate max-w-[60%]">
+        {value || <span className="text-muted-foreground font-normal">-</span>}
       </span>
     </div>
   );
