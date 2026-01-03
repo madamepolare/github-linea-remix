@@ -38,6 +38,12 @@ export const LandingNav = () => {
     { slug: "collaboration", label: "Collaboration" },
   ];
 
+  const mobileSolutions = [
+    { slug: "architectes", label: "Architectes" },
+    { slug: "architectes-interieur", label: "Architectes d'intérieur" },
+    { slug: "scenographes", label: "Scénographes" },
+  ];
+
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -69,12 +75,6 @@ export const LandingNav = () => {
             >
               Tarifs
             </a>
-            <Link
-              to="/roadmap"
-              className="nav-item text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium"
-            >
-              Roadmap
-            </Link>
             <Link
               to="/about"
               className="nav-item text-muted-foreground hover:text-foreground transition-colors duration-200 font-medium"
@@ -135,6 +135,19 @@ export const LandingNav = () => {
                       {module.label}
                     </Link>
                   ))}
+                  <div className="pt-2 mt-2 border-t border-border/50">
+                    <p className="text-xs text-muted-foreground/70 uppercase tracking-wider mb-2">Par métier</p>
+                    {mobileSolutions.map((solution) => (
+                      <Link
+                        key={solution.slug}
+                        to={`/solutions/${solution.slug}`}
+                        className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        {solution.label}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -145,13 +158,6 @@ export const LandingNav = () => {
             >
               Tarifs
             </a>
-            <Link
-              to="/roadmap"
-              className="block text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Roadmap
-            </Link>
             <Link
               to="/about"
               className="block text-muted-foreground hover:text-foreground transition-colors py-2 font-medium"

@@ -25,6 +25,7 @@ import Tenders from "./pages/Tenders";
 import TenderDetail from "./pages/TenderDetail";
 import Welcome from "./pages/Welcome";
 import ModuleDetail from "./pages/ModuleDetail";
+import SolutionDetail from "./pages/SolutionDetail";
 import Roadmap from "./pages/Roadmap";
 import About from "./pages/About";
 import Blog from "./pages/Blog";
@@ -48,6 +49,7 @@ const App = () => (
           <Routes>
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/modules/:slug" element={<ModuleDetail />} />
+            <Route path="/solutions/:slug" element={<SolutionDetail />} />
             <Route path="/roadmap" element={<Roadmap />} />
             <Route path="/about" element={<About />} />
             <Route path="/blog" element={<Blog />} />

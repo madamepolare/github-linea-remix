@@ -17,18 +17,26 @@ export const ModuleIntegrations = ({ integrations, currentSlug }: ModuleIntegrat
   const allModules = getAllModules();
 
   useEffect(() => {
+    if (!containerRef.current) return;
+    
     const ctx = gsap.context(() => {
-      gsap.from(".integration-card", {
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "top 80%",
-        },
-        opacity: 0,
-        x: -30,
-        stagger: 0.1,
-        duration: 0.5,
-        ease: "power3.out",
-      });
+      gsap.set(".integration-card", { opacity: 1, x: 0 });
+      
+      gsap.fromTo(".integration-card",
+        { opacity: 0, x: -30 },
+        {
+          opacity: 1,
+          x: 0,
+          stagger: 0.1,
+          duration: 0.5,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: containerRef.current,
+            start: "top 80%",
+            once: true,
+          },
+        }
+      );
     }, containerRef);
 
     return () => ctx.revert();
