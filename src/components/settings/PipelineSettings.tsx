@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useWorkspaceSettings, WorkspaceSetting } from "@/hooks/useWorkspaceSettings";
+import { useCRMPipelines, Pipeline, PipelineStage } from "@/hooks/useCRMPipelines";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,64 +29,39 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, Target, Layers } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const STAGE_COLORS = [
   "#6B7280", "#3B82F6", "#8B5CF6", "#EC4899", "#F97316", "#22C55E", "#EF4444"
 ];
 
-const DEFAULT_PIPELINE = {
-  name: "Pipeline Principal",
-  stages: [
-    { key: "new", label: "Nouveau", color: "#6B7280", probability: 10 },
-    { key: "contacted", label: "Contacté", color: "#3B82F6", probability: 20 },
-    { key: "meeting", label: "RDV planifié", color: "#8B5CF6", probability: 40 },
-    { key: "proposal", label: "Proposition", color: "#EC4899", probability: 60 },
-    { key: "negotiation", label: "Négociation", color: "#F97316", probability: 80 },
-    { key: "won", label: "Gagné", color: "#22C55E", probability: 100 },
-    { key: "lost", label: "Perdu", color: "#EF4444", probability: 0 },
-  ],
-};
-
 export function PipelineSettings() {
-  const { settings: pipelines, isLoading, createSetting, updateSetting, deleteSetting } = useWorkspaceSettings("pipelines");
-  const { settings: stages, createSetting: createStage, updateSetting: updateStage, deleteSetting: deleteStage, reorderSettings: reorderStages } = useWorkspaceSettings("pipeline_stages");
+  const {
+    pipelines,
+    isLoading,
+    createPipeline,
+    updatePipeline,
+    deletePipeline,
+    createDefaultPipeline,
+    createStage,
+    updateStage,
+    deleteStage,
+    reorderStages,
+  } = useCRMPipelines();
 
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null);
   const [isPipelineDialogOpen, setIsPipelineDialogOpen] = useState(false);
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
-  const [editingPipeline, setEditingPipeline] = useState<WorkspaceSetting | null>(null);
-  const [editingStage, setEditingStage] = useState<WorkspaceSetting | null>(null);
+  const [editingPipeline, setEditingPipeline] = useState<Pipeline | null>(null);
+  const [editingStage, setEditingStage] = useState<PipelineStage | null>(null);
   const [currentPipelineId, setCurrentPipelineId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<"pipeline" | "stage">("pipeline");
 
   const [pipelineForm, setPipelineForm] = useState({ name: "", color: "#3B82F6" });
-  const [stageForm, setStageForm] = useState({ key: "", label: "", color: STAGE_COLORS[0], probability: 0 });
+  const [stageForm, setStageForm] = useState({ name: "", color: STAGE_COLORS[0], probability: 0 });
 
   const handleCreateDefaultPipeline = async () => {
-    const result = await createSetting.mutateAsync({
-      setting_type: "pipelines",
-      setting_key: "default",
-      setting_value: { label: DEFAULT_PIPELINE.name, color: "#3B82F6" },
-      sort_order: 0,
-    });
-
-    // Create default stages
-    for (let i = 0; i < DEFAULT_PIPELINE.stages.length; i++) {
-      const stage = DEFAULT_PIPELINE.stages[i];
-      await createStage.mutateAsync({
-        setting_type: "pipeline_stages",
-        setting_key: stage.key,
-        setting_value: {
-          label: stage.label,
-          color: stage.color,
-          probability: stage.probability,
-          pipeline_id: result.id,
-        },
-        sort_order: i,
-      });
-    }
+    await createDefaultPipeline.mutateAsync();
   };
 
   const handleOpenCreatePipeline = () => {
@@ -95,27 +70,26 @@ export function PipelineSettings() {
     setIsPipelineDialogOpen(true);
   };
 
-  const handleOpenEditPipeline = (pipeline: WorkspaceSetting) => {
+  const handleOpenEditPipeline = (pipeline: Pipeline) => {
     setEditingPipeline(pipeline);
     setPipelineForm({
-      name: pipeline.setting_value.label,
-      color: pipeline.setting_value.color || "#3B82F6",
+      name: pipeline.name,
+      color: pipeline.color || "#3B82F6",
     });
     setIsPipelineDialogOpen(true);
   };
 
   const handleSavePipeline = async () => {
     if (editingPipeline) {
-      await updateSetting.mutateAsync({
+      await updatePipeline.mutateAsync({
         id: editingPipeline.id,
-        setting_value: { label: pipelineForm.name, color: pipelineForm.color },
+        name: pipelineForm.name,
+        color: pipelineForm.color,
       });
     } else {
-      await createSetting.mutateAsync({
-        setting_type: "pipelines",
-        setting_key: pipelineForm.name.toLowerCase().replace(/\s+/g, "_"),
-        setting_value: { label: pipelineForm.name, color: pipelineForm.color },
-        sort_order: pipelines.length,
+      await createPipeline.mutateAsync({
+        name: pipelineForm.name,
+        color: pipelineForm.color,
       });
     }
     setIsPipelineDialogOpen(false);
@@ -124,17 +98,16 @@ export function PipelineSettings() {
   const handleOpenCreateStage = (pipelineId: string) => {
     setCurrentPipelineId(pipelineId);
     setEditingStage(null);
-    setStageForm({ key: "", label: "", color: STAGE_COLORS[0], probability: 0 });
+    setStageForm({ name: "", color: STAGE_COLORS[0], probability: 0 });
     setIsStageDialogOpen(true);
   };
 
-  const handleOpenEditStage = (stage: WorkspaceSetting) => {
+  const handleOpenEditStage = (stage: PipelineStage) => {
     setEditingStage(stage);
     setStageForm({
-      key: stage.setting_key,
-      label: stage.setting_value.label,
-      color: stage.setting_value.color || STAGE_COLORS[0],
-      probability: stage.setting_value.probability || 0,
+      name: stage.name,
+      color: stage.color || STAGE_COLORS[0],
+      probability: stage.probability || 0,
     });
     setIsStageDialogOpen(true);
   };
@@ -143,26 +116,16 @@ export function PipelineSettings() {
     if (editingStage) {
       await updateStage.mutateAsync({
         id: editingStage.id,
-        setting_key: stageForm.key,
-        setting_value: {
-          label: stageForm.label,
-          color: stageForm.color,
-          probability: stageForm.probability,
-          pipeline_id: editingStage.setting_value.pipeline_id,
-        },
+        name: stageForm.name,
+        color: stageForm.color,
+        probability: stageForm.probability,
       });
     } else if (currentPipelineId) {
-      const pipelineStages = stages.filter(s => s.setting_value.pipeline_id === currentPipelineId);
       await createStage.mutateAsync({
-        setting_type: "pipeline_stages",
-        setting_key: stageForm.key || stageForm.label.toLowerCase().replace(/\s+/g, "_"),
-        setting_value: {
-          label: stageForm.label,
-          color: stageForm.color,
-          probability: stageForm.probability,
-          pipeline_id: currentPipelineId,
-        },
-        sort_order: pipelineStages.length,
+        pipeline_id: currentPipelineId,
+        name: stageForm.name,
+        color: stageForm.color,
+        probability: stageForm.probability,
       });
     }
     setIsStageDialogOpen(false);
@@ -170,14 +133,9 @@ export function PipelineSettings() {
 
   const handleDelete = async () => {
     if (!deleteConfirmId) return;
-    
+
     if (deleteType === "pipeline") {
-      // Delete all stages first
-      const pipelineStages = stages.filter(s => s.setting_value.pipeline_id === deleteConfirmId);
-      for (const stage of pipelineStages) {
-        await deleteStage.mutateAsync(stage.id);
-      }
-      await deleteSetting.mutateAsync(deleteConfirmId);
+      await deletePipeline.mutateAsync(deleteConfirmId);
     } else {
       await deleteStage.mutateAsync(deleteConfirmId);
     }
@@ -185,17 +143,19 @@ export function PipelineSettings() {
   };
 
   const handleMoveStage = async (pipelineId: string, stageId: string, direction: "up" | "down") => {
-    const pipelineStages = stages.filter(s => s.setting_value.pipeline_id === pipelineId);
-    const index = pipelineStages.findIndex(s => s.id === stageId);
-    const newIndex = direction === "up" ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= pipelineStages.length) return;
+    const pipeline = pipelines.find((p) => p.id === pipelineId);
+    if (!pipeline?.stages) return;
 
-    const reordered = [...pipelineStages];
-    const [moved] = reordered.splice(index, 1);
-    reordered.splice(newIndex, 0, moved);
+    const stages = [...pipeline.stages];
+    const index = stages.findIndex((s) => s.id === stageId);
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= stages.length) return;
+
+    const [moved] = stages.splice(index, 1);
+    stages.splice(newIndex, 0, moved);
 
     await reorderStages.mutateAsync(
-      reordered.map((s, i) => ({ id: s.id, sort_order: i }))
+      stages.map((s, i) => ({ id: s.id, sort_order: i }))
     );
   };
 
@@ -247,9 +207,7 @@ export function PipelineSettings() {
           ) : (
             <div className="space-y-3">
               {pipelines.map((pipeline) => {
-                const pipelineStages = stages.filter(
-                  (s) => s.setting_value.pipeline_id === pipeline.id
-                ).sort((a, b) => a.sort_order - b.sort_order);
+                const pipelineStages = pipeline.stages || [];
 
                 return (
                   <Collapsible
@@ -264,11 +222,9 @@ export function PipelineSettings() {
                             <div className="flex items-center gap-3">
                               <div
                                 className="h-3 w-3 rounded-full"
-                                style={{ backgroundColor: pipeline.setting_value.color }}
+                                style={{ backgroundColor: pipeline.color || "#3B82F6" }}
                               />
-                              <span className="font-medium">
-                                {pipeline.setting_value.label}
-                              </span>
+                              <span className="font-medium">{pipeline.name}</span>
                               <Badge variant="secondary" className="text-xs">
                                 {pipelineStages.length} étapes
                               </Badge>
@@ -359,13 +315,11 @@ export function PipelineSettings() {
                                     </div>
                                     <div
                                       className="h-3 w-3 rounded-full"
-                                      style={{ backgroundColor: stage.setting_value.color }}
+                                      style={{ backgroundColor: stage.color || "#6B7280" }}
                                     />
-                                    <span className="flex-1 text-sm">
-                                      {stage.setting_value.label}
-                                    </span>
+                                    <span className="flex-1 text-sm">{stage.name}</span>
                                     <Badge variant="outline" className="text-xs">
-                                      {stage.setting_value.probability}%
+                                      {stage.probability || 0}%
                                     </Badge>
                                     <Button
                                       variant="ghost"
@@ -425,10 +379,12 @@ export function PipelineSettings() {
                 {STAGE_COLORS.map((color) => (
                   <button
                     key={color}
-                    className={cn(
-                      "h-8 w-8 rounded-full transition-all",
-                      pipelineForm.color === color && "ring-2 ring-offset-2 ring-primary"
-                    )}
+                    type="button"
+                    className={`h-8 w-8 rounded-full border-2 transition-all ${
+                      pipelineForm.color === color
+                        ? "border-foreground scale-110"
+                        : "border-transparent"
+                    }`}
                     style={{ backgroundColor: color }}
                     onClick={() => setPipelineForm({ ...pipelineForm, color })}
                   />
@@ -441,7 +397,7 @@ export function PipelineSettings() {
               Annuler
             </Button>
             <Button onClick={handleSavePipeline} disabled={!pipelineForm.name}>
-              {editingPipeline ? "Mettre à jour" : "Créer"}
+              {editingPipeline ? "Enregistrer" : "Créer"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -459,27 +415,21 @@ export function PipelineSettings() {
             <div className="space-y-2">
               <Label>Nom de l'étape</Label>
               <Input
-                value={stageForm.label}
-                onChange={(e) => setStageForm({ ...stageForm, label: e.target.value })}
-                placeholder="Ex: Proposition envoyée"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Clé (identifiant)</Label>
-              <Input
-                value={stageForm.key}
-                onChange={(e) => setStageForm({ ...stageForm, key: e.target.value.toLowerCase().replace(/\s+/g, "_") })}
-                placeholder="Généré automatiquement"
+                value={stageForm.name}
+                onChange={(e) => setStageForm({ ...stageForm, name: e.target.value })}
+                placeholder="Ex: Qualification"
               />
             </div>
             <div className="space-y-2">
               <Label>Probabilité de conversion (%)</Label>
               <Input
                 type="number"
-                min="0"
-                max="100"
+                min={0}
+                max={100}
                 value={stageForm.probability}
-                onChange={(e) => setStageForm({ ...stageForm, probability: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setStageForm({ ...stageForm, probability: parseInt(e.target.value) || 0 })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -488,10 +438,12 @@ export function PipelineSettings() {
                 {STAGE_COLORS.map((color) => (
                   <button
                     key={color}
-                    className={cn(
-                      "h-8 w-8 rounded-full transition-all",
-                      stageForm.color === color && "ring-2 ring-offset-2 ring-primary"
-                    )}
+                    type="button"
+                    className={`h-8 w-8 rounded-full border-2 transition-all ${
+                      stageForm.color === color
+                        ? "border-foreground scale-110"
+                        : "border-transparent"
+                    }`}
                     style={{ backgroundColor: color }}
                     onClick={() => setStageForm({ ...stageForm, color })}
                   />
@@ -503,8 +455,8 @@ export function PipelineSettings() {
             <Button variant="outline" onClick={() => setIsStageDialogOpen(false)}>
               Annuler
             </Button>
-            <Button onClick={handleSaveStage} disabled={!stageForm.label}>
-              {editingStage ? "Mettre à jour" : "Créer"}
+            <Button onClick={handleSaveStage} disabled={!stageForm.name}>
+              {editingStage ? "Enregistrer" : "Créer"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -517,16 +469,13 @@ export function PipelineSettings() {
             <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteType === "pipeline"
-                ? "Supprimer ce pipeline supprimera également toutes ses étapes. Cette action est irréversible."
-                : "Voulez-vous vraiment supprimer cette étape ?"}
+                ? "Voulez-vous vraiment supprimer ce pipeline et toutes ses étapes ? Cette action est irréversible."
+                : "Voulez-vous vraiment supprimer cette étape ? Cette action est irréversible."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
