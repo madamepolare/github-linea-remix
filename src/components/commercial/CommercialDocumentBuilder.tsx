@@ -48,6 +48,13 @@ export function CommercialDocumentBuilder({
   const [activeTab, setActiveTab] = useState('general');
   const [quoteItems, setQuoteItems] = useState<QuoteLineItem[]>([]);
   
+  // Generate document title from document number, project name and client
+  const generateDocumentTitle = (docNumber: string, projectName: string, clientName?: string) => {
+    const parts = [docNumber, projectName];
+    if (clientName) parts.push(clientName);
+    return parts.filter(Boolean).join('_');
+  };
+  
   // Fetch phase templates from database
   const { templates: phaseTemplates, initializeDefaultsIfEmpty } = usePhaseTemplates(document.project_type);
 
@@ -233,51 +240,62 @@ export function CommercialDocumentBuilder({
                 </button>
               ))}
             </div>
+            </CardContent>
+          </Card>
 
-            <div className="space-y-2">
-              <Label>Titre du document</Label>
-              <Input
-                value={document.title || ''}
-                onChange={(e) => onDocumentChange({ ...document, title: e.target.value })}
-                placeholder={`Titre du ${DOCUMENT_TYPE_LABELS[document.document_type || 'quote'].toLowerCase()}`}
+          {/* Client Selection */}
+          <Card>
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="text-base sm:text-lg">Client</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ClientSelector
+                selectedCompanyId={document.client_company_id}
+                selectedContactId={document.client_contact_id}
+                onCompanyChange={(id, companyName) => {
+                  const newDoc = { ...document, client_company_id: id };
+                  // Auto-generate title if we have a project name
+                  if (document.title && companyName) {
+                    const projectName = document.description?.split('\n')[0] || document.title;
+                    newDoc.title = generateDocumentTitle(document.document_number || '', projectName, companyName);
+                  }
+                  onDocumentChange(newDoc);
+                }}
+                onContactChange={(id) => onDocumentChange({ ...document, client_contact_id: id })}
               />
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={document.description || ''}
-                onChange={(e) => onDocumentChange({ ...document, description: e.target.value })}
-                placeholder="Description du projet et de la mission..."
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
+          {/* Project Info */}
+          <Card>
+            <CardHeader className="pb-3 sm:pb-6">
+              <CardTitle className="text-base sm:text-lg">Projet</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nom du projet / Titre du devis</Label>
+                <Input
+                  value={document.title || ''}
+                  onChange={(e) => onDocumentChange({ ...document, title: e.target.value })}
+                  placeholder="Ex: Rénovation appartement Haussmann"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ce nom sera utilisé comme titre du document et du futur projet
+                </p>
+              </div>
 
-        {/* Client Selection */}
-        <Card>
-          <CardHeader className="pb-3 sm:pb-6">
-            <CardTitle className="text-base sm:text-lg">Client</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ClientSelector
-              selectedCompanyId={document.client_company_id}
-              selectedContactId={document.client_contact_id}
-              onCompanyChange={(id) => onDocumentChange({ ...document, client_company_id: id })}
-              onContactChange={(id) => onDocumentChange({ ...document, client_contact_id: id })}
-            />
-          </CardContent>
-        </Card>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={document.description || ''}
+                  onChange={(e) => onDocumentChange({ ...document, description: e.target.value })}
+                  placeholder="Description du projet et de la mission..."
+                  rows={3}
+                />
+              </div>
 
-        {/* Project Info */}
-        <Card>
-          <CardHeader className="pb-3 sm:pb-6">
-            <CardTitle className="text-base sm:text-lg">Projet</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Type de projet</Label>
+              <div className="space-y-2">
+                <Label>Type de projet</Label>
               <Select 
                 value={document.project_type} 
                 onValueChange={(v) => handleProjectTypeChange(v as ProjectType)}

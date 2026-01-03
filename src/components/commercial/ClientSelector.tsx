@@ -8,7 +8,7 @@ import { useContacts } from '@/hooks/useContacts';
 interface ClientSelectorProps {
   selectedCompanyId?: string;
   selectedContactId?: string;
-  onCompanyChange: (id: string | undefined) => void;
+  onCompanyChange: (id: string | undefined, companyName?: string) => void;
   onContactChange: (id: string | undefined) => void;
 }
 
@@ -52,7 +52,7 @@ export function ClientSelector({
                 setSearchCompany(e.target.value);
                 setShowCompanyDropdown(true);
                 if (!e.target.value) {
-                  onCompanyChange(undefined);
+                  onCompanyChange(undefined, undefined);
                 }
               }}
               onFocus={() => setShowCompanyDropdown(true)}
@@ -68,7 +68,7 @@ export function ClientSelector({
                 <button
                   key={company.id}
                   onClick={() => {
-                    onCompanyChange(company.id);
+                    onCompanyChange(company.id, company.name);
                     setSearchCompany('');
                     setShowCompanyDropdown(false);
                   }}
@@ -109,7 +109,7 @@ export function ClientSelector({
               )}
             </div>
             <button 
-              onClick={() => onCompanyChange(undefined)}
+              onClick={() => onCompanyChange(undefined, undefined)}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
               Changer
