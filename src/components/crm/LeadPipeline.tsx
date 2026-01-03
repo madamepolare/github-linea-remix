@@ -9,7 +9,7 @@ import { EditLeadDialog } from "./EditLeadDialog";
 
 interface LeadPipelineProps {
   pipeline: Pipeline;
-  onCreateLead: () => void;
+  onCreateLead: (stageId?: string) => void;
 }
 
 export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
@@ -87,7 +87,7 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
             >
               {showClosed ? "Masquer clôturés" : "Voir clôturés"}
             </Button>
-            <Button size="sm" className="h-8" onClick={onCreateLead}>
+            <Button size="sm" className="h-8" onClick={() => onCreateLead()}>
               <Plus className="h-4 w-4 sm:mr-1.5" />
               <span className="hidden sm:inline">Nouvelle opportunité</span>
             </Button>
@@ -100,6 +100,7 @@ export function LeadPipeline({ pipeline, onCreateLead }: LeadPipelineProps) {
             columns={kanbanColumns}
             isLoading={isLoading}
             onDrop={handleDrop}
+            onColumnAdd={(stageId) => onCreateLead(stageId)}
             getItemId={(lead) => lead.id}
             renderCard={(lead, isDragging) => (
               <LeadKanbanCard
