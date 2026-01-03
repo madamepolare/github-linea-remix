@@ -55,15 +55,15 @@ export default function CRM() {
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex-shrink-0 border-b border-border bg-card">
-            <div className="px-6 py-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-9 w-9 rounded-full bg-muted/80 flex items-center justify-center">
-                    <Target className="h-[18px] w-[18px] text-foreground/70" />
+            <div className="px-4 sm:px-6 py-4 sm:py-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-muted/80 flex items-center justify-center shrink-0">
+                    <Target className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-foreground/70" />
                   </div>
-                  <div>
-                    <h1 className="text-xl font-semibold tracking-tight">CRM</h1>
-                    <p className="text-sm text-muted-foreground">
+                  <div className="min-w-0">
+                    <h1 className="text-lg sm:text-xl font-semibold tracking-tight truncate">CRM</h1>
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">
                       {totalEntities} entités · {formatCurrency(leadStats.weightedValue)} en pipeline
                     </p>
                   </div>
@@ -72,7 +72,7 @@ export default function CRM() {
                 {/* Add dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="h-9 gap-1.5 px-4">
+                    <Button size="sm" className="h-8 sm:h-9 gap-1.5 px-3 sm:px-4">
                       <Plus className="h-4 w-4" />
                       <span className="hidden sm:inline">Ajouter</span>
                     </Button>
@@ -96,42 +96,42 @@ export default function CRM() {
             </div>
 
             {/* Tabs */}
-            <Tabs value={view} onValueChange={(v) => setView(v as CRMView)} className="px-6">
-              <TabsList className="h-10 bg-transparent p-0 gap-1">
+            <Tabs value={view} onValueChange={(v) => setView(v as CRMView)} className="px-4 sm:px-6 overflow-x-auto">
+              <TabsList className="h-10 bg-transparent p-0 gap-0.5 sm:gap-1 w-max min-w-full sm:w-auto">
                 <TabsTrigger
                   value="overview"
-                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
+                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
                 >
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Vue d'ensemble
+                  <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Vue d'ensemble</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="leads"
-                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
+                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
                 >
-                  <Target className="h-4 w-4 mr-2" />
-                  Opportunités
-                  <Badge variant="secondary" className="ml-2 text-xs h-5 px-1.5">
+                  <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Opportunités</span>
+                  <Badge variant="secondary" className="ml-1 sm:ml-2 text-[10px] sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5">
                     {leadStats.total}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="contacts"
-                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
+                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
                 >
-                  <Users className="h-4 w-4 mr-2" />
-                  Contacts
-                  <Badge variant="secondary" className="ml-2 text-xs h-5 px-1.5">
+                  <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Contacts</span>
+                  <Badge variant="secondary" className="ml-1 sm:ml-2 text-[10px] sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5">
                     {allContacts.length}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="companies"
-                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
+                  className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
                 >
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Entreprises
-                  <Badge variant="secondary" className="ml-2 text-xs h-5 px-1.5">
+                  <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Entreprises</span>
+                  <Badge variant="secondary" className="ml-1 sm:ml-2 text-[10px] sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5">
                     {allCompanies.length}
                   </Badge>
                 </TabsTrigger>

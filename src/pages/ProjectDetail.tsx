@@ -110,101 +110,101 @@ export default function ProjectDetail() {
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
         <div className="flex-shrink-0 border-b border-border bg-card">
-          <div className="px-6 py-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+          <div className="px-4 sm:px-6 py-4 sm:py-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => navigate("/projects")}
-                  className="h-9 w-9 rounded-full hover:bg-muted"
+                  className="h-8 w-8 sm:h-9 sm:w-9 rounded-full hover:bg-muted shrink-0"
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div
-                  className="w-1.5 h-10 rounded-full"
+                  className="w-1 sm:w-1.5 h-8 sm:h-10 rounded-full shrink-0"
                   style={{ backgroundColor: project.color || "#3B82F6" }}
                 />
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-xl font-semibold tracking-tight">{project.name}</h1>
+                <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
+                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                    <h1 className="text-lg sm:text-xl font-semibold tracking-tight truncate">{project.name}</h1>
                     {projectType && (
-                      <Badge variant="outline" className="text-xs font-normal text-muted-foreground border-border">
+                      <Badge variant="outline" className="text-[10px] sm:text-xs font-normal text-muted-foreground border-border hidden sm:inline-flex">
                         {projectType.label}
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground flex-wrap">
                     {project.crm_company && (
-                      <span className="flex items-center gap-1.5">
-                        <Building2 className="h-3.5 w-3.5" />
-                        {project.crm_company.name}
+                      <span className="flex items-center gap-1 sm:gap-1.5">
+                        <Building2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                        <span className="truncate max-w-[100px] sm:max-w-none">{project.crm_company.name}</span>
                       </span>
                     )}
                     {project.city && (
-                      <span className="flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5" />
+                      <span className="flex items-center gap-1 sm:gap-1.5 hidden sm:flex">
+                        <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         {project.city}
                       </span>
                     )}
                     {currentPhase && (
                       <>
-                        <span className="text-border">•</span>
+                        <span className="text-border hidden sm:inline">•</span>
                         <Badge 
                           variant="secondary" 
-                          className="bg-primary/10 text-primary border-0 font-normal"
+                          className="bg-primary/10 text-primary border-0 font-normal text-[10px] sm:text-xs"
                         >
-                          <Clock className="h-3 w-3 mr-1" />
-                          {currentPhase.name}
+                          <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                          <span className="truncate max-w-[80px] sm:max-w-none">{currentPhase.name}</span>
                         </Badge>
                       </>
                     )}
                   </div>
                 </div>
               </div>
-              <Button variant="outline" size="icon" className="h-9 w-9 rounded-full">
+              <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full shrink-0 self-end sm:self-auto">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
           {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="px-6">
-            <TabsList className="h-10 bg-transparent p-0 gap-1">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 sm:px-6 overflow-x-auto">
+            <TabsList className="h-10 bg-transparent p-0 gap-0.5 sm:gap-1 w-max min-w-full sm:w-auto">
               <TabsTrigger
                 value="overview"
-                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
+                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
               >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Vue d'ensemble
+                <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Vue d'ensemble</span>
               </TabsTrigger>
               <TabsTrigger
                 value="planning"
-                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
+                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
               >
-                <Calendar className="h-4 w-4 mr-2" />
-                Calendrier
+                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Calendrier</span>
               </TabsTrigger>
               <TabsTrigger
                 value="tasks"
-                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
+                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
               >
-                <ListTodo className="h-4 w-4 mr-2" />
-                Tâches
+                <ListTodo className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Tâches</span>
               </TabsTrigger>
               <TabsTrigger
                 value="chantier"
-                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-4"
+                className="data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-t-lg border-b-2 border-transparent data-[state=active]:border-primary px-2 sm:px-4 text-xs sm:text-sm"
               >
-                <HardHat className="h-4 w-4 mr-2" />
-                Chantier
+                <HardHat className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Chantier</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-4 sm:p-6">
           {activeTab === "overview" && (
             <OverviewTab 
               project={project} 
