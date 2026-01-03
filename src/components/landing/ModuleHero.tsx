@@ -17,49 +17,42 @@ export const ModuleHero = ({ module }: ModuleHeroProps) => {
     if (!heroRef.current) return;
 
     const ctx = gsap.context(() => {
-      gsap.from(".hero-badge", {
-        opacity: 0,
-        y: -20,
-        duration: 0.6,
-        ease: "power3.out",
+      // Set initial visible state to prevent flash/overlap issues
+      gsap.set([".hero-badge", ".hero-title", ".hero-description", ".hero-cta", ".hero-icon"], {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        rotation: 0,
       });
 
-      gsap.from(".hero-title", {
-        opacity: 0,
-        y: 30,
-        duration: 0.8,
-        delay: 0.2,
-        ease: "power3.out",
-      });
+      gsap.fromTo(".hero-badge", 
+        { opacity: 0, y: -20 },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }
+      );
 
-      gsap.from(".hero-description", {
-        opacity: 0,
-        y: 20,
-        duration: 0.6,
-        delay: 0.4,
-        ease: "power3.out",
-      });
+      gsap.fromTo(".hero-title", 
+        { opacity: 0, y: 30 },
+        { opacity: 1, y: 0, duration: 0.8, delay: 0.2, ease: "power3.out" }
+      );
 
-      gsap.from(".hero-cta", {
-        opacity: 0,
-        y: 20,
-        duration: 0.6,
-        delay: 0.6,
-        ease: "power3.out",
-      });
+      gsap.fromTo(".hero-description", 
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, delay: 0.4, ease: "power3.out" }
+      );
 
-      gsap.from(".hero-icon", {
-        opacity: 0,
-        scale: 0.5,
-        rotation: -15,
-        duration: 0.8,
-        delay: 0.3,
-        ease: "back.out(1.7)",
-      });
+      gsap.fromTo(".hero-cta", 
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, delay: 0.6, ease: "power3.out" }
+      );
+
+      gsap.fromTo(".hero-icon", 
+        { opacity: 0, scale: 0.5, rotation: -15 },
+        { opacity: 1, scale: 1, rotation: 0, duration: 0.8, delay: 0.3, ease: "back.out(1.7)" }
+      );
     }, heroRef);
 
     return () => ctx.revert();
-  }, []);
+  }, [module.slug]);
 
   return (
     <section
