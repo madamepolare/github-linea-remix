@@ -20,7 +20,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { InterventionDialog } from "./planning/InterventionDialog";
-import { AISuggestionPanel } from "./planning/AISuggestionPanel";
+import { InlineInterventionCreator } from "./planning/InlineInterventionCreator";
+import { AIFullPlanningPanel } from "./planning/AIFullPlanningPanel";
 import {
   ChevronLeft,
   ChevronRight,
@@ -48,6 +49,7 @@ import {
   Sparkles,
   RefreshCw,
   Maximize2,
+  Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -113,6 +115,14 @@ export function ChantierPlanningTab({
   const [preselectedDates, setPreselectedDates] = useState<{ start: Date; end: Date } | undefined>();
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [collapsedLots, setCollapsedLots] = useState<Set<string>>(new Set());
+  const [inlineCreation, setInlineCreation] = useState<{
+    lotId: string;
+    startDate: Date;
+    endDate: Date;
+    left: number;
+    width: number;
+    color: string;
+  } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<HTMLDivElement>(null);
 
@@ -281,18 +291,33 @@ export function ChantierPlanningTab({
     }
   }, [dragState]);
 
-  // Click on timeline to add intervention
-  const handleTimelineClick = useCallback((e: React.MouseEvent, lotId: string) => {
-    if (dragState) return;
+  // Click on timeline to add intervention - inline creation
+  const handleTimelineClick = useCallback((e: React.MouseEvent, lotId: string, lotColor: string) => {
+    if (dragState || inlineCreation) return;
     
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const clickedDate = getDateForPosition(x);
+    const endDate = addDays(clickedDate, 4); // Default 5 days
     
-    setPreselectedLotId(lotId);
-    setPreselectedDates({ start: clickedDate, end: addDays(clickedDate, 2) });
-    setShowAddDialog(true);
-  }, [dragState, getDateForPosition]);
+    const left = getPositionForDate(clickedDate);
+    const width = (differenceInDays(endDate, clickedDate) + 1) * dayWidth;
+    
+    setInlineCreation({
+      lotId,
+      startDate: clickedDate,
+      endDate,
+      left,
+      width,
+      color: lotColor || "#3b82f6",
+    });
+  }, [dragState, inlineCreation, getDateForPosition, getPositionForDate, dayWidth]);
+
+  // Handle inline creation save
+  const handleInlineSave = useCallback((intervention: CreateInterventionInput) => {
+    createMultipleInterventions.mutate([intervention]);
+    setInlineCreation(null);
+  }, [createMultipleInterventions]);
 
   // Handle saving interventions
   const handleSaveInterventions = useCallback((newInterventions: CreateInterventionInput[]) => {
@@ -509,9 +534,14 @@ export function ChantierPlanningTab({
             </PopoverContent>
           </Popover>
 
-          <Button variant="outline" size="sm" onClick={() => setShowAIPanel(!showAIPanel)}>
-            <Sparkles className="w-4 h-4 mr-1" />
-            IA
+          <Button 
+            variant={showAIPanel ? "secondary" : "outline"} 
+            size="sm" 
+            onClick={() => setShowAIPanel(!showAIPanel)}
+            className="gap-1"
+          >
+            <Wand2 className="w-4 h-4" />
+            Planifier avec IA
           </Button>
 
           <Button size="sm" onClick={() => { setPreselectedLotId(undefined); setPreselectedDates(undefined); setShowAddDialog(true); }}>
@@ -725,7 +755,7 @@ export function ChantierPlanningTab({
                               "flex-1 relative border-b cursor-pointer",
                               lotIndex % 2 === 0 ? "bg-background" : "bg-muted/20"
                             )}
-                            onClick={(e) => handleTimelineClick(e, lot.id)}
+                            onClick={(e) => handleTimelineClick(e, lot.id, lot.color || statusConfig.color)}
                           >
                             {/* Today line */}
                             {(() => {
@@ -783,6 +813,20 @@ export function ChantierPlanningTab({
                                   {differenceInDays(lotEndDate, lotStartDate) + 1}j
                                 </span>
                               </div>
+                            )}
+
+                            {/* Inline creation */}
+                            {inlineCreation && inlineCreation.lotId === lot.id && (
+                              <InlineInterventionCreator
+                                lotId={inlineCreation.lotId}
+                                startDate={inlineCreation.startDate}
+                                endDate={inlineCreation.endDate}
+                                left={inlineCreation.left}
+                                width={inlineCreation.width}
+                                color={inlineCreation.color}
+                                onSave={handleInlineSave}
+                                onCancel={() => setInlineCreation(null)}
+                              />
                             )}
                           </div>
                         </div>
@@ -862,13 +906,14 @@ export function ChantierPlanningTab({
 
         {/* AI Panel */}
         {showAIPanel && (
-          <div className="w-80 border-l bg-background p-4 overflow-y-auto">
-            <AISuggestionPanel
+          <div className="w-96 border-l bg-background p-4 overflow-y-auto">
+            <AIFullPlanningPanel
               projectId={projectId}
               projectName={projectName || "Projet"}
               lots={lots}
               interventions={interventions}
-              onAcceptSuggestion={handleSaveInterventions}
+              onAcceptPlanning={handleSaveInterventions}
+              onClose={() => setShowAIPanel(false)}
             />
           </div>
         )}
