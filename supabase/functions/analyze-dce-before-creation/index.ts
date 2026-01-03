@@ -73,41 +73,61 @@ serve(async (req) => {
             role: "system",
             content: `Tu es un expert en marchés publics français, spécialisé dans l'analyse des DCE (Dossiers de Consultation des Entreprises) pour les concours d'architecture.
 
-RÈGLES IMPORTANTES:
-1. Analyse UNIQUEMENT les noms de fichiers fournis - ce sont ta seule source d'information
-2. Les noms de fichiers contiennent souvent:
-   - La RÉFÉRENCE du marché (ex: "AWS-MPI-1678323", "MAPA-2024-015", "2024-AOO-123")
-   - Le TYPE de document (RC = Règlement de Consultation, CCAP, CCTP, etc.)
-   - Des indices sur le PROJET (école, hôpital, logements, etc.)
-   - Parfois le NOM du maître d'ouvrage
+MISSION: À partir des NOMS DE FICHIERS uniquement, tu dois REMPLIR TOUS LES CHAMPS du formulaire de création de concours. NE LAISSE AUCUN CHAMP VIDE.
 
-3. Pour le TITRE: Déduis l'objet du marché à partir des mots-clés dans les noms de fichiers. 
-   - Exemple: "RC_Construction_Ecole_Primaire.pdf" → "Construction d'une école primaire"
-   - Si tu ne peux pas déterminer l'objet précis, utilise un titre générique basé sur le type de projet
+RÈGLES STRICTES:
+1. TITRE: Déduis l'objet du marché (ex: "Construction d'un groupe scolaire", "Réhabilitation de logements")
+   - Si présence de mots comme "ecole", "scolaire" → projet scolaire
+   - Si présence de "logement", "residence", "hlm" → logements
+   - Si présence de "hopital", "ehpad", "sante" → établissement de santé
+   - JAMAIS utiliser le nom de fichier brut comme titre
 
-4. Pour la RÉFÉRENCE: Extrais le code/numéro de consultation visible dans les noms de fichiers
-   - Cherche des patterns comme: XXX-XXX-XXXXXX, MAPA-XXXX-XX, 20XX-XXX-XX, etc.
+2. RÉFÉRENCE: Extrais le code consultation (AWS-MPI-XXXXXX, MAPA-2024-XX, etc.)
 
-5. Pour le CLIENT (maître d'ouvrage): Cherche des noms d'organisations dans les fichiers
-   - Collectivités: Ville de..., Commune de..., Département, Région, Métropole
-   - Bailleurs: OPH, OPAC, offices HLM
-   - État: Ministère, Préfecture
-   
-6. Ne laisse AUCUN champ vide si tu peux raisonnablement le déduire
-7. Utilise les formats exacts demandés pour les dates (YYYY-MM-DD) et les types énumérés`
+3. MAÎTRE D'OUVRAGE (client_name): 
+   - Cherche: Ville, Commune, Mairie, Département, Région, Métropole, OPH, OPAC
+   - Si non trouvé, propose "Collectivité territoriale" ou "Maître d'ouvrage public"
+
+4. TYPE DE CLIENT (client_type): OBLIGATOIRE
+   - École/Mairie/Commune → collectivite
+   - HLM/OPH/OPAC/résidence → bailleur_social
+   - Ministère/Préfecture → etat
+   - CHU/Hôpital/EHPAD → hopital
+   - Par défaut → collectivite
+
+5. PROCÉDURE (procedure_type): OBLIGATOIRE
+   - MAPA dans le nom → mapa
+   - Concours d'archi → concours
+   - AOO → ouvert
+   - Par défaut pour architecture → concours
+
+6. LIEU (location): Cherche noms de villes, codes départements
+
+7. BUDGET: Estime si non trouvé (école ~5M€, logements ~8M€)
+
+8. SURFACE: Estime si non trouvée (école ~2000m², collège ~5000m²)
+
+9. DESCRIPTION (project_description): 2-3 phrases décrivant le projet
+
+10. SOMMAIRE IA (ai_summary): 1 phrase résumant la mission MOE
+
+11. VISITE: Si "visite" ou "attestation" dans les fichiers → site_visit_required = true`
           },
           {
             role: "user",
-            content: `Analyse ces ${files.length} documents DCE et extrais toutes les informations pour créer la fiche du concours.
+            content: `Analyse ces ${files.length} documents DCE et REMPLIS TOUS LES CHAMPS du formulaire.
 
 ANALYSE DES FICHIERS:
 ${fileAnalysisText}
 
-${uniqueReferences.length > 0 ? `\n📌 RÉFÉRENCES DÉTECTÉES: ${uniqueReferences.join(', ')}` : ''}
-${allKeywords.length > 0 ? `\n🔑 MOTS-CLÉS GLOBAUX: ${[...new Set(allKeywords)].join(', ')}` : ''}
+${uniqueReferences.length > 0 ? `📌 RÉFÉRENCES DÉTECTÉES: ${uniqueReferences.join(', ')}` : ''}
+${allKeywords.length > 0 ? `🔑 MOTS-CLÉS: ${[...new Set(allKeywords)].join(', ')}` : ''}
 
-À partir de ces informations, remplis au maximum les champs du concours.
-IMPORTANT: Utilise la référence "${uniqueReferences[0] || ''}" si elle a été détectée.`
+INSTRUCTIONS:
+1. Utilise la référence "${uniqueReferences[0] || 'à déduire'}"
+2. REMPLIS ABSOLUMENT TOUS les champs obligatoires
+3. Pour les champs optionnels, propose une valeur réaliste basée sur le contexte
+4. Ne laisse AUCUN champ vide - déduis les valeurs du contexte`
           }
         ],
         tools: [
@@ -121,7 +141,7 @@ IMPORTANT: Utilise la référence "${uniqueReferences[0] || ''}" si elle a été
                 properties: {
                   title: { 
                     type: "string", 
-                    description: "Titre/Objet du marché déduit des noms de fichiers. Doit être descriptif (ex: 'Construction d'un groupe scolaire', 'Réhabilitation de logements sociaux'). NE PAS utiliser le nom de fichier brut." 
+                    description: "Titre/Objet du marché. Doit être descriptif et professionnel (ex: 'Construction d'un groupe scolaire', 'Réhabilitation de logements sociaux'). NE JAMAIS utiliser le nom de fichier brut. Si tu ne peux pas déduire l'objet exact, propose un titre générique cohérent avec les mots-clés détectés." 
                   },
                   reference: { 
                     type: "string", 
@@ -129,45 +149,57 @@ IMPORTANT: Utilise la référence "${uniqueReferences[0] || ''}" si elle a été
                   },
                   client_name: { 
                     type: "string", 
-                    description: "Nom du maître d'ouvrage si identifiable (Ville de..., Département de..., etc.)" 
+                    description: "Nom du maître d'ouvrage. Cherche dans les noms de fichiers des indices comme: Ville, Commune, Mairie, Département, Région, Métropole, OPH, OPAC, Ministère. TOUJOURS proposer un nom même générique (ex: 'Collectivité territoriale')." 
                   },
                   client_type: { 
                     type: "string", 
                     enum: ["collectivite", "bailleur_social", "etat", "hopital", "universite", "etablissement_public", "prive"],
-                    description: "Type de client déduit du contexte" 
+                    description: "Type de client. DÉDUIS-LE des mots-clés: école/mairie→collectivite, HLM/OPH→bailleur_social, ministère→etat, CHU/EHPAD→hopital. Par défaut: collectivite" 
                   },
                   location: { 
                     type: "string", 
-                    description: "Lieu/Ville du projet si identifiable" 
+                    description: "Lieu/Ville du projet. Cherche des noms de villes, départements (75, 69, etc.), régions dans les noms de fichiers. Propose toujours une valeur même approximative." 
                   },
                   estimated_budget: { 
                     type: "number", 
-                    description: "Budget estimé en euros HT si mentionné" 
+                    description: "Budget estimé en euros HT. Cherche des montants dans les noms de fichiers. Si aucun montant, propose une estimation cohérente avec le type de projet (école ~5M€, logements ~10M€, etc.)" 
                   },
                   procedure_type: { 
                     type: "string", 
                     enum: ["ouvert", "restreint", "adapte", "mapa", "concours", "dialogue", "partenariat"],
-                    description: "Type de procédure déduit (MAPA si adapté, concours si architecture, etc.)" 
+                    description: "Type de procédure. DÉDUIS-LE: MAPA→mapa, AOO→ouvert, concours d'archi→concours. Par défaut pour architecture: concours" 
                   },
                   submission_deadline: { 
                     type: "string", 
                     description: "Date limite de dépôt format YYYY-MM-DD" 
                   },
+                  submission_time: {
+                    type: "string",
+                    description: "Heure limite de dépôt format HH:MM (ex: 12:00, 17:00). Par défaut: 12:00"
+                  },
                   site_visit_date: { 
                     type: "string", 
                     description: "Date de visite de site format YYYY-MM-DD" 
                   },
+                  site_visit_time: {
+                    type: "string",
+                    description: "Heure de visite de site format HH:MM. Par défaut: 10:00"
+                  },
                   site_visit_required: { 
                     type: "boolean", 
-                    description: "Visite de site obligatoire (true si attestation_visite détectée)" 
+                    description: "Visite de site obligatoire (true si attestation_visite ou visite dans les noms de fichiers)" 
                   },
                   project_description: { 
                     type: "string", 
-                    description: "Description du projet basée sur l'analyse des noms de fichiers" 
+                    description: "Description détaillée du projet. Décris le projet en 2-3 phrases basées sur les informations déduites: type de bâtiment, nature des travaux (construction neuve, réhabilitation, extension), destination." 
+                  },
+                  ai_summary: {
+                    type: "string",
+                    description: "Résumé synthétique de la mission en 1-2 phrases. Ex: 'Mission de maîtrise d'œuvre complète pour la construction d'un groupe scolaire de 12 classes avec restaurant scolaire.'"
                   },
                   surface_area: { 
                     type: "number", 
-                    description: "Surface en m² si mentionnée" 
+                    description: "Surface en m². Cherche dans les noms de fichiers. Si non trouvé, propose une estimation cohérente (école primaire ~2000m², collège ~5000m², logements ~variable)." 
                   },
                   detected_documents: {
                     type: "array",
@@ -185,7 +217,7 @@ IMPORTANT: Utilise la référence "${uniqueReferences[0] || ''}" si elle a été
                     }
                   }
                 },
-                required: ["title", "reference"]
+                required: ["title", "reference", "client_name", "client_type", "procedure_type", "project_description", "ai_summary"]
               }
             }
           }

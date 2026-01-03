@@ -50,9 +50,12 @@ interface ExtractedInfo {
   estimated_budget?: number;
   procedure_type?: string;
   submission_deadline?: string;
+  submission_time?: string;
   site_visit_date?: string;
+  site_visit_time?: string;
   site_visit_required?: boolean;
   project_description?: string;
+  ai_summary?: string;
   surface_area?: number;
   detected_documents?: { filename: string; type: string }[];
 }
@@ -518,51 +521,93 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                   <Calendar className="h-4 w-4" />
                   Dates clés
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="submission_deadline">Date limite de dépôt</Label>
+                
+                {/* Submission deadline with time */}
+                <div>
+                  <Label htmlFor="submission_deadline">Date et heure limite de dépôt</Label>
+                  <div className="grid grid-cols-2 gap-2 mt-1">
                     <Input
                       id="submission_deadline"
                       type="date"
                       value={formData.submission_deadline || ''}
                       onChange={(e) => updateFormField('submission_deadline', e.target.value)}
-                      className="mt-1"
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor="site_visit_date">Date de visite</Label>
                     <Input
-                      id="site_visit_date"
-                      type="date"
-                      value={formData.site_visit_date || ''}
-                      onChange={(e) => updateFormField('site_visit_date', e.target.value)}
-                      className="mt-1"
+                      id="submission_time"
+                      type="time"
+                      value={formData.submission_time || '12:00'}
+                      onChange={(e) => updateFormField('submission_time', e.target.value)}
                     />
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="site_visit_required"
-                    checked={formData.site_visit_required || false}
-                    onCheckedChange={(checked) => updateFormField('site_visit_required', checked)}
-                  />
-                  <Label htmlFor="site_visit_required" className="text-sm cursor-pointer">
-                    Visite de site obligatoire
-                  </Label>
+
+                {/* Site visit */}
+                <div className="p-4 border rounded-lg space-y-3 bg-muted/30">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="site_visit_required"
+                      checked={formData.site_visit_required || false}
+                      onCheckedChange={(checked) => updateFormField('site_visit_required', checked)}
+                    />
+                    <Label htmlFor="site_visit_required" className="text-sm font-medium cursor-pointer">
+                      Visite de site obligatoire
+                    </Label>
+                  </div>
+                  
+                  {formData.site_visit_required && (
+                    <div className="space-y-3 pt-2">
+                      <div>
+                        <Label htmlFor="site_visit_date">Date et heure de la visite</Label>
+                        <div className="grid grid-cols-2 gap-2 mt-1">
+                          <Input
+                            id="site_visit_date"
+                            type="date"
+                            value={formData.site_visit_date || ''}
+                            onChange={(e) => updateFormField('site_visit_date', e.target.value)}
+                          />
+                          <Input
+                            id="site_visit_time"
+                            type="time"
+                            value={formData.site_visit_time || '10:00'}
+                            onChange={(e) => updateFormField('site_visit_time', e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Vous pourrez planifier la visite depuis la fiche du concours
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Description */}
-              <div>
-                <Label htmlFor="project_description">Description du projet</Label>
-                <Textarea
-                  id="project_description"
-                  value={formData.project_description || ''}
-                  onChange={(e) => updateFormField('project_description', e.target.value)}
-                  placeholder="Décrivez brièvement le projet..."
-                  rows={3}
-                  className="mt-1"
-                />
+              {/* Description & AI Summary */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="project_description">Description du projet</Label>
+                  <Textarea
+                    id="project_description"
+                    value={formData.project_description || ''}
+                    onChange={(e) => updateFormField('project_description', e.target.value)}
+                    placeholder="Décrivez brièvement le projet..."
+                    rows={3}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="ai_summary" className="flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    Sommaire IA de la mission
+                  </Label>
+                  <Textarea
+                    id="ai_summary"
+                    value={formData.ai_summary || ''}
+                    onChange={(e) => updateFormField('ai_summary', e.target.value)}
+                    placeholder="Résumé généré par l'IA..."
+                    rows={2}
+                    className="mt-1 bg-muted/30"
+                  />
+                </div>
               </div>
             </div>
           )}
