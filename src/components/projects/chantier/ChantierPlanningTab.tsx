@@ -413,23 +413,7 @@ export function ChantierPlanningTab({
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-4 p-4 border-b bg-background/95 backdrop-blur sticky top-0 z-20">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-            <Button variant={viewMode === "lots" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("lots")}>
-              <Layers className="w-4 h-4 mr-1" />
-              Lots
-            </Button>
-            <Button variant={viewMode === "interventions" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("interventions")}>
-              <GanttChart className="w-4 h-4 mr-1" />
-              Interventions
-            </Button>
-            <Button variant={viewMode === "combined" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("combined")}>
-              <Maximize2 className="w-4 h-4 mr-1" />
-              Combiné
-            </Button>
-          </div>
-
-          <div className="h-6 w-px bg-border" />
-
+          {/* Zoom controls */}
           <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
             <Button variant={zoomLevel === "day" ? "secondary" : "ghost"} size="sm" onClick={() => setZoomLevel("day")}>
               Jour
