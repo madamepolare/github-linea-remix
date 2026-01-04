@@ -23,6 +23,14 @@ import {
   Phone,
   ExternalLink,
   Eye,
+  StickyNote,
+  Copy,
+  Download,
+  GripVertical,
+  Star,
+  RefreshCw,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -61,6 +70,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import {
   Popover,
@@ -117,6 +129,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   const [companySearch, setCompanySearch] = useState("");
   const [pipelineSearch, setPipelineSearch] = useState("");
   const [pipelineStatusFilter, setPipelineStatusFilter] = useState<string>("all");
+  const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(new Set());
   
   const [newCandidate, setNewCandidate] = useState({
     specialty: "",
@@ -383,10 +396,24 @@ Cordialement`);
           statusFilter={pipelineStatusFilter}
           onStatusFilterChange={setPipelineStatusFilter}
           estimatedBudget={tender?.estimated_budget}
+          selectedCandidates={selectedCandidates}
+          onSelectionChange={setSelectedCandidates}
           onAddCandidate={() => setShowAddCandidateDialog(true)}
           onAddWithSpecialty={openAddDialogWithSpecialty}
           onEditCandidate={setEditingCandidate}
           onUpdateCandidate={(id, updates) => updateCandidate.mutate({ id, ...updates })}
+          onBulkUpdateStatus={(ids, status) => {
+            ids.forEach(id => updateCandidate.mutate({ id, status: status as any }));
+            setSelectedCandidates(new Set());
+          }}
+          onBulkRemove={(ids) => {
+            ids.forEach(id => removeCandidate.mutate(id));
+            setSelectedCandidates(new Set());
+          }}
+          onBulkConfirm={(ids) => {
+            ids.forEach(id => confirmToTeam.mutate(id));
+            setSelectedCandidates(new Set());
+          }}
           onRemoveCandidate={(id, name) => setDeleteConfirm({ type: 'candidate', id, name })}
           onConfirmToTeam={(id) => confirmToTeam.mutate(id)}
           onSendInvite={(candidate) => {
@@ -396,6 +423,7 @@ Cordialement`);
               toast.error("Pas d'email pour ce contact");
             }
           }}
+          onBulkInvite={() => setShowBulkInviteDialog(true)}
           isLoading={isLoading}
         />
       ) : (
@@ -1023,13 +1051,19 @@ function PipelineView({
   statusFilter,
   onStatusFilterChange,
   estimatedBudget,
+  selectedCandidates,
+  onSelectionChange,
   onAddCandidate,
   onAddWithSpecialty,
   onEditCandidate,
   onUpdateCandidate,
+  onBulkUpdateStatus,
+  onBulkRemove,
+  onBulkConfirm,
   onRemoveCandidate,
   onConfirmToTeam,
   onSendInvite,
+  onBulkInvite,
   isLoading,
 }: {
   candidates: PartnerCandidate[];
@@ -1040,15 +1074,50 @@ function PipelineView({
   statusFilter: string;
   onStatusFilterChange: (v: string) => void;
   estimatedBudget?: number | null;
+  selectedCandidates: Set<string>;
+  onSelectionChange: (selected: Set<string>) => void;
   onAddCandidate: () => void;
   onAddWithSpecialty: (specialty: string) => void;
   onEditCandidate: (candidate: PartnerCandidate) => void;
   onUpdateCandidate: (id: string, updates: Partial<PartnerCandidate>) => void;
+  onBulkUpdateStatus: (ids: string[], status: string) => void;
+  onBulkRemove: (ids: string[]) => void;
+  onBulkConfirm: (ids: string[]) => void;
   onRemoveCandidate: (id: string, name: string) => void;
   onConfirmToTeam: (id: string) => void;
   onSendInvite: (candidate: PartnerCandidate) => void;
+  onBulkInvite: () => void;
   isLoading: boolean;
 }) {
+  const toggleCandidate = (id: string) => {
+    const newSet = new Set(selectedCandidates);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    onSelectionChange(newSet);
+  };
+
+  const toggleAll = () => {
+    if (selectedCandidates.size === candidates.length) {
+      onSelectionChange(new Set());
+    } else {
+      onSelectionChange(new Set(candidates.map(c => c.id)));
+    }
+  };
+
+  const selectedArray = Array.from(selectedCandidates);
+  const hasSelection = selectedCandidates.size > 0;
+  const canBulkConfirm = selectedArray.some(id => {
+    const c = candidates.find(cand => cand.id === id);
+    return c && (c.status === 'interested' || c.status === 'contacted');
+  });
+  const canBulkInvite = selectedArray.some(id => {
+    const c = candidates.find(cand => cand.id === id);
+    return c?.contact?.email && c.status === 'suggested';
+  });
+
   if (stats.total === 0) {
     return (
       <Card className="border-dashed">
@@ -1095,7 +1164,67 @@ function PipelineView({
             <SelectItem value="declined">Déclinés</SelectItem>
           </SelectContent>
         </Select>
+        <Button variant="outline" size="icon" onClick={toggleAll} title={selectedCandidates.size === candidates.length ? "Tout désélectionner" : "Tout sélectionner"}>
+          {selectedCandidates.size === candidates.length ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+        </Button>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {hasSelection && (
+        <Card className="bg-primary/5 border-primary/20">
+          <CardContent className="py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">{selectedCandidates.size} sélectionné(s)</Badge>
+              <Button variant="ghost" size="sm" onClick={() => onSelectionChange(new Set())}>
+                Annuler
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              {canBulkInvite && (
+                <Button size="sm" variant="outline" onClick={onBulkInvite}>
+                  <Send className="h-4 w-4 mr-1" />
+                  Inviter
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Changer statut
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => onBulkUpdateStatus(selectedArray, 'suggested')}>
+                    Suggéré
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onBulkUpdateStatus(selectedArray, 'contacted')}>
+                    Contacté
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onBulkUpdateStatus(selectedArray, 'interested')}>
+                    Intéressé
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onBulkUpdateStatus(selectedArray, 'confirmed')}>
+                    Confirmé
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onBulkUpdateStatus(selectedArray, 'declined')}>
+                    Décliné
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {canBulkConfirm && (
+                <Button size="sm" variant="outline" className="text-green-600" onClick={() => onBulkConfirm(selectedArray)}>
+                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                  Confirmer équipe
+                </Button>
+              )}
+              <Button size="sm" variant="outline" className="text-destructive" onClick={() => onBulkRemove(selectedArray)}>
+                <Trash2 className="h-4 w-4 mr-1" />
+                Supprimer
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-5 gap-3">
@@ -1138,6 +1267,8 @@ function PipelineView({
                     key={candidate.id}
                     candidate={candidate}
                     estimatedBudget={estimatedBudget}
+                    isSelected={selectedCandidates.has(candidate.id)}
+                    onToggleSelect={() => toggleCandidate(candidate.id)}
                     onEdit={() => onEditCandidate(candidate)}
                     onUpdateStatus={(status) => onUpdateCandidate(candidate.id, { status: status as any })}
                     onRemove={() => onRemoveCandidate(candidate.id, candidate.company?.name || candidate.contact?.name || 'ce partenaire')}
@@ -1173,6 +1304,8 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 function CandidateRow({
   candidate,
   estimatedBudget,
+  isSelected,
+  onToggleSelect,
   onEdit,
   onUpdateStatus,
   onRemove,
@@ -1181,6 +1314,8 @@ function CandidateRow({
 }: {
   candidate: PartnerCandidate;
   estimatedBudget?: number | null;
+  isSelected: boolean;
+  onToggleSelect: () => void;
   onEdit: () => void;
   onUpdateStatus: (status: string) => void;
   onRemove: () => void;
@@ -1192,8 +1327,16 @@ function CandidateRow({
     : null;
 
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border">
-      <Avatar className="h-10 w-10">
+    <div className={cn(
+      "flex items-center gap-3 p-3 rounded-lg border transition-colors",
+      isSelected ? "bg-primary/10 border-primary/30" : "bg-muted/30"
+    )}>
+      <Checkbox 
+        checked={isSelected} 
+        onCheckedChange={onToggleSelect}
+        className="shrink-0"
+      />
+      <Avatar className="h-10 w-10 shrink-0">
         <AvatarImage src={candidate.company?.logo_url || undefined} />
         <AvatarFallback>
           {candidate.company?.name?.substring(0, 2) || candidate.contact?.name?.substring(0, 2) || '?'}
@@ -1203,7 +1346,7 @@ function CandidateRow({
         <p className="font-medium text-sm truncate">
           {candidate.company?.name || candidate.contact?.name || 'Non défini'}
         </p>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
           {candidate.contact?.email && (
             <span className="truncate max-w-[150px]">{candidate.contact.email}</span>
           )}
@@ -1229,6 +1372,22 @@ function CandidateRow({
               </TooltipTrigger>
               <TooltipContent>
                 Invitation envoyée le {new Date(candidate.invitation_sent_at).toLocaleDateString('fr-FR')}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {/* Notes indicator */}
+          {candidate.response_notes && (
+            <Tooltip>
+              <TooltipTrigger>
+                <Badge variant="outline" className="text-[10px] gap-1 bg-amber-50 dark:bg-amber-900/20 border-amber-200">
+                  <StickyNote className="h-3 w-3 text-amber-600" />
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[300px]">
+                <div className="space-y-1">
+                  <p className="font-medium text-xs">Notes de réponse</p>
+                  <p className="text-xs whitespace-pre-wrap">{candidate.response_notes}</p>
+                </div>
               </TooltipContent>
             </Tooltip>
           )}
@@ -1260,21 +1419,29 @@ function CandidateRow({
             Modifier
           </DropdownMenuItem>
           {candidate.contact?.email && (
-            <DropdownMenuItem onClick={onSendInvite}>
-              <Mail className="h-4 w-4 mr-2" />
-              Envoyer une invitation
-            </DropdownMenuItem>
+            <>
+              <DropdownMenuItem onClick={onSendInvite}>
+                <Mail className="h-4 w-4 mr-2" />
+                Envoyer une invitation
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a href={`mailto:${candidate.contact.email}`}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Ouvrir dans client mail
+                </a>
+              </DropdownMenuItem>
+            </>
           )}
           {candidate.contact?.phone && (
             <DropdownMenuItem asChild>
               <a href={`tel:${candidate.contact.phone}`}>
                 <Phone className="h-4 w-4 mr-2" />
-                Appeler
+                Appeler ({candidate.contact.phone})
               </a>
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-          {(candidate.status === 'interested' || candidate.status === 'contacted') && (
+          {(candidate.status === 'interested' || candidate.status === 'contacted' || candidate.status === 'suggested') && (
             <DropdownMenuItem onClick={onConfirmToTeam} className="text-green-600">
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Confirmer dans l'équipe
@@ -1345,14 +1512,39 @@ function TeamView({
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {member.company?.name || member.contact?.name || 'Non défini'}
-                  </p>
-                  {member.specialty && (
-                    <p className="text-xs text-muted-foreground">
-                      {SPECIALTIES.find(s => s.value === member.specialty)?.label || member.specialty}
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium truncate">
+                      {member.company?.name || member.contact?.name || 'Non défini'}
                     </p>
-                  )}
+                    {/* Notes indicator for team members */}
+                    {member.notes && (
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge variant="outline" className="text-[10px] gap-1 bg-amber-50 dark:bg-amber-900/20 border-amber-200">
+                            <StickyNote className="h-3 w-3 text-amber-600" />
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[300px]">
+                          <div className="space-y-1">
+                            <p className="font-medium text-xs">Notes</p>
+                            <p className="text-xs whitespace-pre-wrap">{member.notes}</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {member.specialty && (
+                      <p className="text-xs text-muted-foreground">
+                        {SPECIALTIES.find(s => s.value === member.specialty)?.label || member.specialty}
+                      </p>
+                    )}
+                    {member.contact?.email && (
+                      <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                        • {member.contact.email}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <StatusBadge status={member.status} />
                 
@@ -1372,9 +1564,25 @@ function TeamView({
                       Modifier
                     </DropdownMenuItem>
                     {member.contact?.email && (
-                      <DropdownMenuItem onClick={() => onSendInvite(member)}>
-                        <Mail className="h-4 w-4 mr-2" />
-                        Envoyer une invitation
+                      <>
+                        <DropdownMenuItem onClick={() => onSendInvite(member)}>
+                          <Mail className="h-4 w-4 mr-2" />
+                          Envoyer une invitation
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <a href={`mailto:${member.contact.email}`}>
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Ouvrir dans client mail
+                          </a>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    {member.contact?.phone && (
+                      <DropdownMenuItem asChild>
+                        <a href={`tel:${member.contact.phone}`}>
+                          <Phone className="h-4 w-4 mr-2" />
+                          Appeler ({member.contact.phone})
+                        </a>
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuSeparator />
