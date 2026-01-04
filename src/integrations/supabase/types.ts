@@ -2730,6 +2730,98 @@ export type Database = {
           },
         ]
       }
+      tender_partner_candidates: {
+        Row: {
+          company_id: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          fee_amount: number | null
+          fee_percentage: number | null
+          id: string
+          invitation_body: string | null
+          invitation_sent_at: string | null
+          invitation_subject: string | null
+          priority: number | null
+          response_notes: string | null
+          role: string
+          specialty: string
+          status: string
+          tender_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          fee_amount?: number | null
+          fee_percentage?: number | null
+          id?: string
+          invitation_body?: string | null
+          invitation_sent_at?: string | null
+          invitation_subject?: string | null
+          priority?: number | null
+          response_notes?: string | null
+          role?: string
+          specialty: string
+          status?: string
+          tender_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          fee_amount?: number | null
+          fee_percentage?: number | null
+          id?: string
+          invitation_body?: string | null
+          invitation_sent_at?: string | null
+          invitation_subject?: string | null
+          priority?: number | null
+          response_notes?: string | null
+          role?: string
+          specialty?: string
+          status?: string
+          tender_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_partner_candidates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_partner_candidates_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_partner_candidates_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_partner_candidates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tender_partner_invitations: {
         Row: {
           company_id: string | null
