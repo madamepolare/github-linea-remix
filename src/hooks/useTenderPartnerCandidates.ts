@@ -172,19 +172,39 @@ export function useTenderPartnerCandidates(tenderId: string | undefined) {
 
       // Add to team members - cast role to expected type
       const teamRole = candidate.role as "mandataire" | "cotraitant" | "sous_traitant";
-      const { error: teamError } = await supabase
+      
+      const insertPayload: {
+        tender_id: string;
+        role: "mandataire" | "cotraitant" | "sous_traitant";
+        specialty: string;
+        company_id: string | null;
+        contact_id: string | null;
+        status: "pending" | "accepted" | "declined";
+        notes: string | null;
+      } = {
+        tender_id: tenderId!,
+        role: teamRole,
+        specialty: candidate.specialty,
+        company_id: candidate.company_id,
+        contact_id: candidate.contact_id,
+        status: "accepted",
+        notes: candidate.fee_percentage ? `Honoraires: ${candidate.fee_percentage}%` : null,
+      };
+      
+      console.log("Inserting team member:", insertPayload);
+      
+      const { data: teamData, error: teamError } = await supabase
         .from("tender_team_members")
-        .insert({
-          tender_id: tenderId!,
-          role: teamRole,
-          specialty: candidate.specialty,
-          company_id: candidate.company_id,
-          contact_id: candidate.contact_id,
-          status: "accepted" as const,
-          notes: candidate.fee_percentage ? `Honoraires: ${candidate.fee_percentage}%` : null,
-        });
+        .insert(insertPayload)
+        .select()
+        .single();
 
-      if (teamError) throw teamError;
+      if (teamError) {
+        console.error("Team insert error:", teamError);
+        throw teamError;
+      }
+      
+      console.log("Team member created:", teamData);
 
       // Update candidate status
       const { error: updateError } = await supabase
@@ -193,15 +213,17 @@ export function useTenderPartnerCandidates(tenderId: string | undefined) {
         .eq("id", candidateId);
 
       if (updateError) throw updateError;
+      
+      return teamData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tender-partner-candidates", tenderId] });
       queryClient.invalidateQueries({ queryKey: ["tender-team", tenderId] });
       toast.success("Partenaire ajouté à l'équipe");
     },
-    onError: (error) => {
-      toast.error("Erreur lors de la confirmation");
-      console.error(error);
+    onError: (error: any) => {
+      toast.error(`Erreur: ${error.message || "Confirmation impossible"}`);
+      console.error("confirmToTeam error:", error);
     },
   });
 
