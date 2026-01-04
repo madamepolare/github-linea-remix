@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Users,
   Plus,
@@ -18,6 +18,11 @@ import {
   Filter,
   MoreHorizontal,
   UserPlus,
+  Edit2,
+  MessageSquare,
+  Phone,
+  ExternalLink,
+  Eye,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +39,16 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -47,10 +62,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTenderTeam } from "@/hooks/useTenderTeam";
 import { useTenderPartnerCandidates, CANDIDATE_STATUS_LABELS, CANDIDATE_STATUS_COLORS, type PartnerCandidate } from "@/hooks/useTenderPartnerCandidates";
 import { useTender } from "@/hooks/useTenders";
@@ -59,6 +80,7 @@ import { useContacts } from "@/hooks/useContacts";
 import { TEAM_ROLE_LABELS, SPECIALTIES, type TenderTeamRole } from "@/lib/tenderTypes";
 import { BulkInvitationDialog } from "@/components/tenders/BulkInvitationDialog";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface TenderEquipeTabProps {
   tenderId: string;
@@ -67,7 +89,7 @@ interface TenderEquipeTabProps {
 
 export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderEquipeTabProps) {
   // Team (confirmed members)
-  const { teamMembers, teamByRole, isLoading: teamLoading, addTeamMember, removeTeamMember, sendInvitation } = useTenderTeam(tenderId);
+  const { teamMembers, teamByRole, isLoading: teamLoading, addTeamMember, updateTeamMember, removeTeamMember, sendInvitation } = useTenderTeam(tenderId);
   
   // Candidates (pipeline)
   const { 
@@ -89,9 +111,13 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   // UI State
   const [activeView, setActiveView] = useState<"pipeline" | "team">("pipeline");
   const [showAddCandidateDialog, setShowAddCandidateDialog] = useState(false);
+  const [showAddTeamMemberDialog, setShowAddTeamMemberDialog] = useState(false);
   const [showBulkInviteDialog, setShowBulkInviteDialog] = useState(false);
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>("");
   const [companySearch, setCompanySearch] = useState("");
+  const [pipelineSearch, setPipelineSearch] = useState("");
+  const [pipelineStatusFilter, setPipelineStatusFilter] = useState<string>("all");
+  
   const [newCandidate, setNewCandidate] = useState({
     specialty: "",
     role: "cotraitant" as TenderTeamRole,
@@ -99,6 +125,30 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
     contact_id: "",
     fee_percentage: "",
   });
+
+  const [newTeamMember, setNewTeamMember] = useState({
+    specialty: "",
+    role: "cotraitant" as TenderTeamRole,
+    company_id: "",
+    contact_id: "",
+    notes: "",
+  });
+
+  // Editing candidate
+  const [editingCandidate, setEditingCandidate] = useState<PartnerCandidate | null>(null);
+  const [editingTeamMember, setEditingTeamMember] = useState<any>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'candidate' | 'team'; id: string; name: string } | null>(null);
+
+  // Single invitation dialog
+  const [singleInviteTarget, setSingleInviteTarget] = useState<{ 
+    type: 'candidate' | 'team'; 
+    id: string; 
+    email: string; 
+    name: string;
+    specialty: string;
+  } | null>(null);
+  const [singleInviteSubject, setSingleInviteSubject] = useState("");
+  const [singleInviteBody, setSingleInviteBody] = useState("");
 
   // Missing specialties
   const defaultRequired = ['architecte', 'bet_structure', 'bet_fluides', 'thermicien'];
@@ -112,13 +162,37 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   const filteredCompanies = companies.filter(c => {
     const matchesSearch = !companySearch || 
       c.name.toLowerCase().includes(companySearch.toLowerCase());
-    const matchesSpecialty = !newCandidate.specialty || 
-      c.bet_specialties?.includes(newCandidate.specialty);
-    return matchesSearch && (matchesSpecialty || !newCandidate.specialty);
+    const targetSpecialty = showAddCandidateDialog ? newCandidate.specialty : newTeamMember.specialty;
+    const matchesSpecialty = !targetSpecialty || 
+      c.bet_specialties?.includes(targetSpecialty) ||
+      c.industry?.toLowerCase().includes(targetSpecialty.replace('_', ' '));
+    return matchesSearch && (matchesSpecialty || !targetSpecialty);
   });
 
   // Get contacts for selected company
-  const companyContacts = contacts.filter(c => c.crm_company_id === newCandidate.company_id);
+  const getCompanyContacts = (companyId: string) => contacts.filter(c => c.crm_company_id === companyId);
+  const candidateCompanyContacts = getCompanyContacts(newCandidate.company_id);
+  const teamMemberCompanyContacts = getCompanyContacts(newTeamMember.company_id);
+
+  // Filtered pipeline candidates
+  const filteredCandidates = useMemo(() => {
+    return candidates.filter(c => {
+      const matchesSearch = !pipelineSearch || 
+        c.company?.name?.toLowerCase().includes(pipelineSearch.toLowerCase()) ||
+        c.contact?.name?.toLowerCase().includes(pipelineSearch.toLowerCase()) ||
+        c.contact?.email?.toLowerCase().includes(pipelineSearch.toLowerCase());
+      const matchesStatus = pipelineStatusFilter === 'all' || c.status === pipelineStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [candidates, pipelineSearch, pipelineStatusFilter]);
+
+  const filteredCandidatesBySpecialty = useMemo(() => {
+    return filteredCandidates.reduce((acc, c) => {
+      if (!acc[c.specialty]) acc[c.specialty] = [];
+      acc[c.specialty].push(c);
+      return acc;
+    }, {} as Record<string, PartnerCandidate[]>);
+  }, [filteredCandidates]);
 
   const handleAddCandidate = () => {
     addCandidate.mutate({
@@ -132,6 +206,18 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
     resetNewCandidate();
   };
 
+  const handleAddTeamMember = () => {
+    addTeamMember.mutate({
+      specialty: newTeamMember.specialty,
+      role: newTeamMember.role,
+      company_id: newTeamMember.company_id || undefined,
+      contact_id: newTeamMember.contact_id || undefined,
+      notes: newTeamMember.notes || undefined,
+    });
+    setShowAddTeamMemberDialog(false);
+    resetNewTeamMember();
+  };
+
   const resetNewCandidate = () => {
     setNewCandidate({
       specialty: "",
@@ -143,9 +229,65 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
     setCompanySearch("");
   };
 
+  const resetNewTeamMember = () => {
+    setNewTeamMember({
+      specialty: "",
+      role: "cotraitant",
+      company_id: "",
+      contact_id: "",
+      notes: "",
+    });
+    setCompanySearch("");
+  };
+
   const openAddDialogWithSpecialty = (specialty: string) => {
     setNewCandidate(prev => ({ ...prev, specialty }));
     setShowAddCandidateDialog(true);
+  };
+
+  const openSingleInvite = (type: 'candidate' | 'team', id: string, email: string, name: string, specialty: string) => {
+    setSingleInviteTarget({ type, id, email, name, specialty });
+    setSingleInviteSubject(`Appel à partenariat - ${tender?.title?.substring(0, 50) || 'Projet'}`);
+    setSingleInviteBody(`Bonjour,
+
+Nous constituons actuellement une équipe de maîtrise d'œuvre pour répondre à un appel d'offres et souhaiterions vous associer à ce projet en tant que ${SPECIALTIES.find(s => s.value === specialty)?.label || specialty}.
+
+Projet: ${tender?.title || ''}
+${tender?.location ? `Localisation: ${tender.location}` : ''}
+
+Merci de nous faire part de votre intérêt.
+
+Cordialement`);
+  };
+
+  const handleSendSingleInvite = async () => {
+    if (!singleInviteTarget) return;
+    
+    if (singleInviteTarget.type === 'team') {
+      await sendInvitation.mutateAsync({
+        memberId: singleInviteTarget.id,
+        subject: singleInviteSubject,
+        body: singleInviteBody,
+      });
+    } else {
+      await sendBulkInvitations.mutateAsync({
+        candidateIds: [singleInviteTarget.id],
+        subject: singleInviteSubject,
+        body: singleInviteBody,
+        includeFeesProposal: true,
+      });
+    }
+    setSingleInviteTarget(null);
+  };
+
+  const handleDelete = () => {
+    if (!deleteConfirm) return;
+    if (deleteConfirm.type === 'candidate') {
+      removeCandidate.mutate(deleteConfirm.id);
+    } else {
+      removeTeamMember.mutate(deleteConfirm.id);
+    }
+    setDeleteConfirm(null);
   };
 
   // Get candidates ready for bulk invitation
@@ -178,12 +320,20 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
           </TabsList>
         </Tabs>
 
-        {activeView === "pipeline" && candidatesToInvite.length > 0 && (
-          <Button onClick={() => setShowBulkInviteDialog(true)}>
-            <Send className="h-4 w-4 mr-2" />
-            Inviter ({candidatesToInvite.length})
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {activeView === "pipeline" && candidatesToInvite.length > 0 && (
+            <Button onClick={() => setShowBulkInviteDialog(true)}>
+              <Send className="h-4 w-4 mr-2" />
+              Inviter ({candidatesToInvite.length})
+            </Button>
+          )}
+          {activeView === "team" && (
+            <Button onClick={() => setShowAddTeamMemberDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter un membre
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Missing Specialties Warning */}
@@ -225,21 +375,42 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
 
       {activeView === "pipeline" ? (
         <PipelineView
-          candidates={candidates}
-          candidatesBySpecialty={candidatesBySpecialty}
+          candidates={filteredCandidates}
+          candidatesBySpecialty={filteredCandidatesBySpecialty}
           stats={stats}
+          search={pipelineSearch}
+          onSearchChange={setPipelineSearch}
+          statusFilter={pipelineStatusFilter}
+          onStatusFilterChange={setPipelineStatusFilter}
+          estimatedBudget={tender?.estimated_budget}
           onAddCandidate={() => setShowAddCandidateDialog(true)}
           onAddWithSpecialty={openAddDialogWithSpecialty}
+          onEditCandidate={setEditingCandidate}
           onUpdateCandidate={(id, updates) => updateCandidate.mutate({ id, ...updates })}
-          onRemoveCandidate={(id) => removeCandidate.mutate(id)}
+          onRemoveCandidate={(id, name) => setDeleteConfirm({ type: 'candidate', id, name })}
           onConfirmToTeam={(id) => confirmToTeam.mutate(id)}
+          onSendInvite={(candidate) => {
+            if (candidate.contact?.email) {
+              openSingleInvite('candidate', candidate.id, candidate.contact.email, candidate.company?.name || candidate.contact.name, candidate.specialty);
+            } else {
+              toast.error("Pas d'email pour ce contact");
+            }
+          }}
           isLoading={isLoading}
         />
       ) : (
         <TeamView
           teamMembers={teamMembers}
           teamByRole={teamByRole}
-          onRemoveMember={(id) => removeTeamMember.mutate(id)}
+          onEditMember={setEditingTeamMember}
+          onRemoveMember={(id, name) => setDeleteConfirm({ type: 'team', id, name })}
+          onSendInvite={(member) => {
+            if (member.contact?.email) {
+              openSingleInvite('team', member.id, member.contact.email, member.company?.name || member.contact.name, member.specialty);
+            } else {
+              toast.error("Pas d'email pour ce contact");
+            }
+          }}
           isLoading={isLoading}
         />
       )}
@@ -353,7 +524,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
               </ScrollArea>
             </div>
 
-            {newCandidate.company_id && companyContacts.length > 0 && (
+            {newCandidate.company_id && candidateCompanyContacts.length > 0 && (
               <div className="space-y-2">
                 <Label>Contact</Label>
                 <Select
@@ -364,7 +535,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
                     <SelectValue placeholder="Sélectionner un contact" />
                   </SelectTrigger>
                   <SelectContent>
-                    {companyContacts.map((c) => (
+                    {candidateCompanyContacts.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         {c.name} {c.email ? `(${c.email})` : ''}
                       </SelectItem>
@@ -410,6 +581,421 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
         </DialogContent>
       </Dialog>
 
+      {/* Add Team Member Dialog */}
+      <Dialog open={showAddTeamMemberDialog} onOpenChange={setShowAddTeamMemberDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Ajouter un membre à l'équipe</DialogTitle>
+            <DialogDescription>
+              Ajoutez directement un membre confirmé à l'équipe.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Spécialité *</Label>
+                <Select
+                  value={newTeamMember.specialty}
+                  onValueChange={(v) => setNewTeamMember({ ...newTeamMember, specialty: v, company_id: "", contact_id: "" })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SPECIALTIES.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Rôle</Label>
+                <Select
+                  value={newTeamMember.role}
+                  onValueChange={(v) => setNewTeamMember({ ...newTeamMember, role: v as TenderTeamRole })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Entreprise (CRM)</Label>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher une entreprise..."
+                  value={companySearch}
+                  onChange={(e) => setCompanySearch(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              <ScrollArea className="h-[200px] border rounded-md">
+                <div className="p-2 space-y-1">
+                  {filteredCompanies.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Aucune entreprise trouvée
+                    </p>
+                  ) : (
+                    filteredCompanies.map((company) => (
+                      <div
+                        key={company.id}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors",
+                          newTeamMember.company_id === company.id
+                            ? "bg-primary/10 border border-primary"
+                            : "hover:bg-muted"
+                        )}
+                        onClick={() => {
+                          setNewTeamMember({ 
+                            ...newTeamMember, 
+                            company_id: company.id,
+                            contact_id: "",
+                          });
+                        }}
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={company.logo_url || undefined} />
+                          <AvatarFallback>{company.name.substring(0, 2)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{company.name}</p>
+                        </div>
+                        {newTeamMember.company_id === company.id && (
+                          <CheckCircle2 className="h-4 w-4 text-primary" />
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+
+            {newTeamMember.company_id && teamMemberCompanyContacts.length > 0 && (
+              <div className="space-y-2">
+                <Label>Contact</Label>
+                <Select
+                  value={newTeamMember.contact_id}
+                  onValueChange={(v) => setNewTeamMember({ ...newTeamMember, contact_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un contact" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMemberCompanyContacts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} {c.email ? `(${c.email})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea
+                placeholder="Notes sur ce membre..."
+                value={newTeamMember.notes}
+                onChange={(e) => setNewTeamMember({ ...newTeamMember, notes: e.target.value })}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowAddTeamMemberDialog(false);
+              resetNewTeamMember();
+            }}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleAddTeamMember} 
+              disabled={!newTeamMember.specialty || addTeamMember.isPending}
+            >
+              Ajouter à l'équipe
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Candidate Dialog */}
+      <Dialog open={!!editingCandidate} onOpenChange={() => setEditingCandidate(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier le partenaire</DialogTitle>
+          </DialogHeader>
+          {editingCandidate && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                <Avatar>
+                  <AvatarImage src={editingCandidate.company?.logo_url || undefined} />
+                  <AvatarFallback>
+                    {editingCandidate.company?.name?.substring(0, 2) || '?'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{editingCandidate.company?.name || editingCandidate.contact?.name}</p>
+                  <p className="text-sm text-muted-foreground">{editingCandidate.contact?.email}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Spécialité</Label>
+                  <Select
+                    value={editingCandidate.specialty}
+                    onValueChange={(v) => setEditingCandidate({ ...editingCandidate, specialty: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SPECIALTIES.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Rôle</Label>
+                  <Select
+                    value={editingCandidate.role}
+                    onValueChange={(v) => setEditingCandidate({ ...editingCandidate, role: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Honoraires (%)</Label>
+                <Input
+                  type="number"
+                  value={editingCandidate.fee_percentage || ''}
+                  onChange={(e) => setEditingCandidate({ 
+                    ...editingCandidate, 
+                    fee_percentage: e.target.value ? parseFloat(e.target.value) : null 
+                  })}
+                  step="0.5"
+                  min="0"
+                  max="100"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notes de réponse</Label>
+                <Textarea
+                  placeholder="Notes sur la réponse du partenaire..."
+                  value={editingCandidate.response_notes || ''}
+                  onChange={(e) => setEditingCandidate({ ...editingCandidate, response_notes: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingCandidate(null)}>
+              Annuler
+            </Button>
+            <Button onClick={() => {
+              if (editingCandidate) {
+                updateCandidate.mutate({
+                  id: editingCandidate.id,
+                  specialty: editingCandidate.specialty,
+                  role: editingCandidate.role,
+                  fee_percentage: editingCandidate.fee_percentage,
+                  response_notes: editingCandidate.response_notes,
+                });
+                setEditingCandidate(null);
+                toast.success("Partenaire modifié");
+              }
+            }}>
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Team Member Dialog */}
+      <Dialog open={!!editingTeamMember} onOpenChange={() => setEditingTeamMember(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier le membre</DialogTitle>
+          </DialogHeader>
+          {editingTeamMember && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                <Avatar>
+                  <AvatarImage src={editingTeamMember.company?.logo_url || undefined} />
+                  <AvatarFallback>
+                    {editingTeamMember.company?.name?.substring(0, 2) || '?'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{editingTeamMember.company?.name || editingTeamMember.contact?.name}</p>
+                  <p className="text-sm text-muted-foreground">{editingTeamMember.contact?.email}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Spécialité</Label>
+                  <Select
+                    value={editingTeamMember.specialty || ''}
+                    onValueChange={(v) => setEditingTeamMember({ ...editingTeamMember, specialty: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SPECIALTIES.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Rôle</Label>
+                  <Select
+                    value={editingTeamMember.role}
+                    onValueChange={(v) => setEditingTeamMember({ ...editingTeamMember, role: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Textarea
+                  placeholder="Notes sur ce membre..."
+                  value={editingTeamMember.notes || ''}
+                  onChange={(e) => setEditingTeamMember({ ...editingTeamMember, notes: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingTeamMember(null)}>
+              Annuler
+            </Button>
+            <Button onClick={() => {
+              if (editingTeamMember) {
+                updateTeamMember.mutate({
+                  id: editingTeamMember.id,
+                  specialty: editingTeamMember.specialty,
+                  role: editingTeamMember.role,
+                  notes: editingTeamMember.notes,
+                });
+                setEditingTeamMember(null);
+              }
+            }}>
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Single Invitation Dialog */}
+      <Dialog open={!!singleInviteTarget} onOpenChange={() => setSingleInviteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Envoyer une invitation
+            </DialogTitle>
+          </DialogHeader>
+          {singleInviteTarget && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                <Avatar>
+                  <AvatarFallback>{singleInviteTarget.name?.substring(0, 2)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{singleInviteTarget.name}</p>
+                  <p className="text-sm text-muted-foreground">{singleInviteTarget.email}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Objet</Label>
+                <Input
+                  value={singleInviteSubject}
+                  onChange={(e) => setSingleInviteSubject(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Message</Label>
+                <Textarea
+                  value={singleInviteBody}
+                  onChange={(e) => setSingleInviteBody(e.target.value)}
+                  rows={8}
+                  className="font-mono text-sm"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSingleInviteTarget(null)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleSendSingleInvite}
+              disabled={sendInvitation.isPending || sendBulkInvitations.isPending}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Envoyer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir retirer <strong>{deleteConfirm?.name}</strong> {deleteConfirm?.type === 'candidate' ? 'du pipeline' : 'de l\'équipe'} ?
+              Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Bulk Invitation Dialog */}
       {tender && (
         <BulkInvitationDialog
@@ -432,24 +1018,38 @@ function PipelineView({
   candidates,
   candidatesBySpecialty,
   stats,
+  search,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
+  estimatedBudget,
   onAddCandidate,
   onAddWithSpecialty,
+  onEditCandidate,
   onUpdateCandidate,
   onRemoveCandidate,
   onConfirmToTeam,
+  onSendInvite,
   isLoading,
 }: {
   candidates: PartnerCandidate[];
   candidatesBySpecialty: Record<string, PartnerCandidate[]>;
   stats: { total: number; suggested: number; contacted: number; interested: number; confirmed: number; declined: number };
+  search: string;
+  onSearchChange: (v: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (v: string) => void;
+  estimatedBudget?: number | null;
   onAddCandidate: () => void;
   onAddWithSpecialty: (specialty: string) => void;
+  onEditCandidate: (candidate: PartnerCandidate) => void;
   onUpdateCandidate: (id: string, updates: Partial<PartnerCandidate>) => void;
-  onRemoveCandidate: (id: string) => void;
+  onRemoveCandidate: (id: string, name: string) => void;
   onConfirmToTeam: (id: string) => void;
+  onSendInvite: (candidate: PartnerCandidate) => void;
   isLoading: boolean;
 }) {
-  if (candidates.length === 0) {
+  if (stats.total === 0) {
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center justify-center py-12">
@@ -470,6 +1070,33 @@ function PipelineView({
 
   return (
     <div className="space-y-6">
+      {/* Search and Filter Bar */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher un partenaire..."
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+          <SelectTrigger className="w-[160px]">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les statuts</SelectItem>
+            <SelectItem value="suggested">Suggérés</SelectItem>
+            <SelectItem value="contacted">Contactés</SelectItem>
+            <SelectItem value="interested">Intéressés</SelectItem>
+            <SelectItem value="confirmed">Confirmés</SelectItem>
+            <SelectItem value="declined">Déclinés</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-5 gap-3">
         <StatCard label="Suggérés" value={stats.suggested} color="bg-muted" />
@@ -481,37 +1108,47 @@ function PipelineView({
 
       {/* By Specialty */}
       <div className="space-y-4">
-        {Object.entries(candidatesBySpecialty).map(([specialty, specCandidates]) => (
-          <Card key={specialty}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  {SPECIALTIES.find(s => s.value === specialty)?.label || specialty}
-                  <Badge variant="secondary">{specCandidates.length}</Badge>
-                </CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => onAddWithSpecialty(specialty)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {specCandidates.map((candidate) => (
-                <CandidateRow
-                  key={candidate.id}
-                  candidate={candidate}
-                  onUpdateStatus={(status) => onUpdateCandidate(candidate.id, { status: status as any })}
-                  onUpdateFees={(fee_percentage) => onUpdateCandidate(candidate.id, { fee_percentage })}
-                  onRemove={() => onRemoveCandidate(candidate.id)}
-                  onConfirmToTeam={() => onConfirmToTeam(candidate.id)}
-                />
-              ))}
+        {Object.keys(candidatesBySpecialty).length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="py-8 text-center text-muted-foreground">
+              <p>Aucun résultat pour cette recherche</p>
             </CardContent>
           </Card>
-        ))}
+        ) : (
+          Object.entries(candidatesBySpecialty).map(([specialty, specCandidates]) => (
+            <Card key={specialty}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    {SPECIALTIES.find(s => s.value === specialty)?.label || specialty}
+                    <Badge variant="secondary">{specCandidates.length}</Badge>
+                  </CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => onAddWithSpecialty(specialty)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {specCandidates.map((candidate) => (
+                  <CandidateRow
+                    key={candidate.id}
+                    candidate={candidate}
+                    estimatedBudget={estimatedBudget}
+                    onEdit={() => onEditCandidate(candidate)}
+                    onUpdateStatus={(status) => onUpdateCandidate(candidate.id, { status: status as any })}
+                    onRemove={() => onRemoveCandidate(candidate.id, candidate.company?.name || candidate.contact?.name || 'ce partenaire')}
+                    onConfirmToTeam={() => onConfirmToTeam(candidate.id)}
+                    onSendInvite={() => onSendInvite(candidate)}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       <Button variant="outline" className="w-full" onClick={onAddCandidate}>
@@ -535,17 +1172,25 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 // Candidate Row
 function CandidateRow({
   candidate,
+  estimatedBudget,
+  onEdit,
   onUpdateStatus,
-  onUpdateFees,
   onRemove,
   onConfirmToTeam,
+  onSendInvite,
 }: {
   candidate: PartnerCandidate;
+  estimatedBudget?: number | null;
+  onEdit: () => void;
   onUpdateStatus: (status: string) => void;
-  onUpdateFees: (fee: number) => void;
   onRemove: () => void;
   onConfirmToTeam: () => void;
+  onSendInvite: () => void;
 }) {
+  const feeAmount = estimatedBudget && candidate.fee_percentage
+    ? (estimatedBudget * candidate.fee_percentage / 100)
+    : null;
+
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border">
       <Avatar className="h-10 w-10">
@@ -560,13 +1205,32 @@ function CandidateRow({
         </p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           {candidate.contact?.email && (
-            <span className="truncate">{candidate.contact.email}</span>
+            <span className="truncate max-w-[150px]">{candidate.contact.email}</span>
           )}
           {candidate.fee_percentage && (
-            <Badge variant="outline" className="text-[10px]">
-              <Euro className="h-3 w-3 mr-0.5" />
-              {candidate.fee_percentage}%
-            </Badge>
+            <Tooltip>
+              <TooltipTrigger>
+                <Badge variant="outline" className="text-[10px]">
+                  <Euro className="h-3 w-3 mr-0.5" />
+                  {candidate.fee_percentage}%
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                {feeAmount ? `≈ ${feeAmount.toLocaleString('fr-FR')}€ HT` : 'Montant non calculable'}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          {candidate.invitation_sent_at && (
+            <Tooltip>
+              <TooltipTrigger>
+                <Badge variant="outline" className="text-[10px] gap-1">
+                  <Mail className="h-3 w-3" />
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                Invitation envoyée le {new Date(candidate.invitation_sent_at).toLocaleDateString('fr-FR')}
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
       </div>
@@ -591,7 +1255,26 @@ function CandidateRow({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {candidate.status === 'interested' && (
+          <DropdownMenuItem onClick={onEdit}>
+            <Edit2 className="h-4 w-4 mr-2" />
+            Modifier
+          </DropdownMenuItem>
+          {candidate.contact?.email && (
+            <DropdownMenuItem onClick={onSendInvite}>
+              <Mail className="h-4 w-4 mr-2" />
+              Envoyer une invitation
+            </DropdownMenuItem>
+          )}
+          {candidate.contact?.phone && (
+            <DropdownMenuItem asChild>
+              <a href={`tel:${candidate.contact.phone}`}>
+                <Phone className="h-4 w-4 mr-2" />
+                Appeler
+              </a>
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+          {(candidate.status === 'interested' || candidate.status === 'contacted') && (
             <DropdownMenuItem onClick={onConfirmToTeam} className="text-green-600">
               <CheckCircle2 className="h-4 w-4 mr-2" />
               Confirmer dans l'équipe
@@ -611,12 +1294,16 @@ function CandidateRow({
 function TeamView({
   teamMembers,
   teamByRole,
+  onEditMember,
   onRemoveMember,
+  onSendInvite,
   isLoading,
 }: {
   teamMembers: any[];
   teamByRole: Record<string, any[]>;
-  onRemoveMember: (id: string) => void;
+  onEditMember: (member: any) => void;
+  onRemoveMember: (id: string, name: string) => void;
+  onSendInvite: (member: any) => void;
   isLoading: boolean;
 }) {
   const roles: TenderTeamRole[] = ['mandataire', 'cotraitant', 'sous_traitant'];
@@ -628,7 +1315,7 @@ function TeamView({
           <CheckCircle2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
           <h3 className="text-lg font-medium mb-2">Aucun membre confirmé</h3>
           <p className="text-sm text-muted-foreground text-center max-w-md">
-            Les partenaires confirmés depuis le pipeline apparaîtront ici.
+            Les partenaires confirmés depuis le pipeline apparaîtront ici, ou ajoutez-en directement.
           </p>
         </CardContent>
       </Card>
@@ -649,7 +1336,7 @@ function TeamView({
             {teamByRole[role]?.map((member: any) => (
               <div 
                 key={member.id}
-                className="flex items-center gap-3 p-2 rounded-lg bg-muted/50"
+                className="flex items-center gap-3 p-2 rounded-lg bg-muted/50 group"
               >
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={member.company?.logo_url || undefined} />
@@ -668,14 +1355,38 @@ function TeamView({
                   )}
                 </div>
                 <StatusBadge status={member.status} />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive"
-                  onClick={() => onRemoveMember(member.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onEditMember(member)}>
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      Modifier
+                    </DropdownMenuItem>
+                    {member.contact?.email && (
+                      <DropdownMenuItem onClick={() => onSendInvite(member)}>
+                        <Mail className="h-4 w-4 mr-2" />
+                        Envoyer une invitation
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => onRemoveMember(member.id, member.company?.name || member.contact?.name || 'ce membre')} 
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Retirer de l'équipe
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ))}
             {(!teamByRole[role] || teamByRole[role].length === 0) && (
