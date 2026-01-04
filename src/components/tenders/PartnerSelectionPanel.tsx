@@ -44,12 +44,45 @@ export function PartnerSelectionPanel({
   const [search, setSearch] = useState("");
   const [filterSpecialty, setFilterSpecialty] = useState<string>(specialty);
 
+  // Mapping between SPECIALTIES values and possible industry values
+  const specialtyToIndustryMap: Record<string, string[]> = {
+    'architecte': ['architecte', 'architect'],
+    'bet_structure': ['bet_structure', 'structure', 'bet structure'],
+    'bet_fluides': ['bet_fluides', 'fluides', 'bet fluides', 'cvc', 'plomberie'],
+    'bet_electricite': ['bet_electricite', 'electricite', 'bet électricité', 'électricité'],
+    'thermicien': ['thermicien', 'bet_thermique', 'thermique', 're2020', 'bet thermique'],
+    'economiste': ['economiste', 'économiste', 'bet_economie'],
+    'acousticien': ['acousticien', 'bet_acoustique', 'acoustique'],
+    'paysagiste': ['paysagiste', 'paysage'],
+    'vrd': ['vrd', 'bet_vrd', 'voirie'],
+    'opc': ['opc', 'ordonnancement'],
+    'ssi': ['ssi', 'sécurité incendie'],
+    'cuisiniste': ['cuisiniste', 'cuisine'],
+    'bet_facade': ['bet_facade', 'facade', 'façade'],
+    'geometre': ['geometre', 'géomètre', 'topographe'],
+    'geotechnicien': ['geotechnicien', 'géotechnicien', 'geotechnique', 'géotechnique'],
+  };
+
   // Filter companies by specialty (BET companies)
   const filteredCompanies = useMemo(() => {
     return companies.filter((company) => {
-      // Check if company has the required specialty
-      const hasSpecialty = company.bet_specialties?.includes(filterSpecialty) ||
-        company.industry?.toLowerCase().includes(filterSpecialty.replace('_', ' '));
+      // If no filter, show all companies with any specialty-related industry or bet_specialties
+      const filterLower = filterSpecialty.toLowerCase();
+      const possibleMatches = specialtyToIndustryMap[filterSpecialty] || [filterSpecialty];
+      
+      // Check if company has the required specialty in bet_specialties array
+      const hasBetSpecialty = company.bet_specialties?.some(s => 
+        s.toLowerCase() === filterLower || possibleMatches.includes(s.toLowerCase())
+      );
+      
+      // Check if company industry matches (case-insensitive, flexible matching)
+      const industryLower = company.industry?.toLowerCase() || '';
+      const hasIndustryMatch = possibleMatches.some(match => 
+        industryLower.includes(match.toLowerCase()) || 
+        industryLower === match.toLowerCase()
+      );
+
+      const hasSpecialty = hasBetSpecialty || hasIndustryMatch;
 
       // Check search
       const matchesSearch = !search || 
