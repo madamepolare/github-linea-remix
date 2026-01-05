@@ -157,19 +157,22 @@ export function EditLeadDialog({ lead, open, onOpenChange }: EditLeadDialogProps
             {companies.length > 0 && (
               <div className="space-y-2">
                 <Label>Maître d'ouvrage</Label>
-                <Select 
-                  value={form.watch("crm_company_id") || ""} 
+                <Select
+                  value={form.watch("crm_company_id") || undefined}
                   onValueChange={(v) => {
-                    form.setValue("crm_company_id", v);
+                    const next = v === "_none" ? "" : v;
+                    form.setValue("crm_company_id", next);
                     form.setValue("contact_id", "");
                   }}
                 >
                   <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucune</SelectItem>
-                    {companies.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
+                    <SelectItem value="_none">Aucune</SelectItem>
+                    {companies
+                      .filter((c) => c.id)
+                      .map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -178,19 +181,21 @@ export function EditLeadDialog({ lead, open, onOpenChange }: EditLeadDialogProps
             {filteredContacts.length > 0 && (
               <div className="space-y-2">
                 <Label>Contact principal</Label>
-                <Select 
-                  value={form.watch("contact_id") || ""} 
-                  onValueChange={(v) => form.setValue("contact_id", v)}
+                <Select
+                  value={form.watch("contact_id") || undefined}
+                  onValueChange={(v) => form.setValue("contact_id", v === "_none" ? "" : v)}
                 >
                   <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucun</SelectItem>
-                    {filteredContacts.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                        {c.role && <span className="text-muted-foreground ml-1">- {c.role}</span>}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="_none">Aucun</SelectItem>
+                    {filteredContacts
+                      .filter((c) => c.id)
+                      .map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                          {c.role && <span className="text-muted-foreground ml-1">- {c.role}</span>}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

@@ -299,17 +299,26 @@ export default function ContactDetail() {
                           <div>
                             <label className="text-xs text-muted-foreground">Entreprise</label>
                             <Select
-                              value={editData.crm_company_id || ""}
-                              onValueChange={(v) => setEditData({ ...editData, crm_company_id: v || null })}
+                              value={editData.crm_company_id || undefined}
+                              onValueChange={(v) =>
+                                setEditData({
+                                  ...editData,
+                                  crm_company_id: v === "_none" ? null : v,
+                                })
+                              }
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Sélectionner..." />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">Aucune</SelectItem>
-                                {allCompanies.map((c) => (
-                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                ))}
+                                <SelectItem value="_none">Aucune</SelectItem>
+                                {allCompanies
+                                  .filter((c) => c.id)
+                                  .map((c) => (
+                                    <SelectItem key={c.id} value={c.id}>
+                                      {c.name}
+                                    </SelectItem>
+                                  ))}
                               </SelectContent>
                             </Select>
                           </div>

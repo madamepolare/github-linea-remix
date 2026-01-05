@@ -228,13 +228,16 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
                   <Briefcase className="h-4 w-4" />
                   Projet
                 </Label>
-                <Select value={projectId} onValueChange={setProjectId}>
+                <Select
+                  value={projectId || undefined}
+                  onValueChange={(v) => setProjectId(v === "_none" ? "" : v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Aucun projet" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucun</SelectItem>
-                    {projects?.map((project) => (
+                    <SelectItem value="_none">Aucun</SelectItem>
+                    {(projects || []).filter((p) => p.id).map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.name}
                       </SelectItem>
@@ -248,13 +251,16 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
                   <Building2 className="h-4 w-4" />
                   Entreprise
                 </Label>
-                <Select value={companyId} onValueChange={setCompanyId}>
+                <Select
+                  value={companyId || undefined}
+                  onValueChange={(v) => setCompanyId(v === "_none" ? "" : v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Aucune entreprise" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucune</SelectItem>
-                    {companies?.map((company) => (
+                    <SelectItem value="_none">Aucune</SelectItem>
+                    {(companies || []).filter((c) => c.id).map((company) => (
                       <SelectItem key={company.id} value={company.id}>
                         {company.name}
                       </SelectItem>
@@ -268,13 +274,16 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
                   <User className="h-4 w-4" />
                   Contact
                 </Label>
-                <Select value={contactId} onValueChange={setContactId}>
+                <Select
+                  value={contactId || undefined}
+                  onValueChange={(v) => setContactId(v === "_none" ? "" : v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Aucun contact" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucun</SelectItem>
-                    {contacts?.map((contact) => (
+                    <SelectItem value="_none">Aucun</SelectItem>
+                    {(contacts || []).filter((c) => c.id).map((contact) => (
                       <SelectItem key={contact.id} value={contact.id}>
                         {contact.name}
                       </SelectItem>

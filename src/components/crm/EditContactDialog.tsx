@@ -136,16 +136,18 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
           {companies.length > 0 && (
             <div className="space-y-2">
               <Label>Entreprise</Label>
-              <Select 
-                value={form.watch("crm_company_id") || ""} 
-                onValueChange={(v) => form.setValue("crm_company_id", v)}
+              <Select
+                value={form.watch("crm_company_id") || undefined}
+                onValueChange={(v) => form.setValue("crm_company_id", v === "_none" ? "" : v)}
               >
                 <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucune</SelectItem>
-                  {companies.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
+                  <SelectItem value="_none">Aucune</SelectItem>
+                  {companies
+                    .filter((c) => c.id)
+                    .map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
