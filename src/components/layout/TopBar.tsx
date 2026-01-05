@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTopBar } from "@/contexts/TopBarContext";
+import { THIN_STROKE } from "@/components/ui/icon";
 import { 
   getModuleFromPath, 
   getActiveSubNav,
@@ -73,7 +74,7 @@ function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) 
         <div className="flex items-center gap-6">
           {/* Module Title with Icon */}
           <div className="flex items-center gap-2.5">
-            <module.icon className="h-4 w-4 text-muted-foreground" />
+            <module.icon className="h-4 w-4 text-muted-foreground" strokeWidth={THIN_STROKE} />
             <span className="text-sm font-semibold text-foreground">
               {module.title}
             </span>
@@ -138,7 +139,7 @@ function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) 
               onClick={() => handleQuickAction(action.event)}
               className="gap-1.5 h-8"
             >
-              <Plus className="h-3.5 w-3.5" />
+              <Plus className="h-3.5 w-3.5" strokeWidth={THIN_STROKE} />
               <span className="hidden sm:inline">{action.label}</span>
             </Button>
           ))}
@@ -173,7 +174,7 @@ function EntityTopBar({ config, module }: EntityTopBarProps) {
             onClick={() => navigate(config.backTo)}
             className="h-8 w-8 rounded-full hover:bg-muted shrink-0"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" strokeWidth={THIN_STROKE} />
           </Button>
 
           {/* Color accent line */}
@@ -196,7 +197,7 @@ function EntityTopBar({ config, module }: EntityTopBarProps) {
                   variant={badge.variant || "outline"}
                   className="text-xs font-normal text-muted-foreground border-border shrink-0"
                 >
-                  {badge.icon && <badge.icon className="h-3 w-3 mr-1" />}
+                  {badge.icon && <badge.icon className="h-3 w-3 mr-1" strokeWidth={THIN_STROKE} />}
                   {badge.label}
                 </Badge>
               ))}
@@ -207,7 +208,7 @@ function EntityTopBar({ config, module }: EntityTopBarProps) {
               <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
                 {config.metadata.map((meta, idx) => (
                   <span key={idx} className="flex items-center gap-1">
-                    {meta.icon && <meta.icon className="h-3 w-3" />}
+                    {meta.icon && <meta.icon className="h-3 w-3" strokeWidth={THIN_STROKE} />}
                     {meta.label}
                   </span>
                 ))}
@@ -220,7 +221,7 @@ function EntityTopBar({ config, module }: EntityTopBarProps) {
         <div className="flex items-center gap-2 shrink-0">
           {config.actions}
           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-            <MoreHorizontal className="h-4 w-4" />
+            <MoreHorizontal className="h-4 w-4" strokeWidth={THIN_STROKE} />
           </Button>
         </div>
       </div>
@@ -243,7 +244,7 @@ function EntityTopBar({ config, module }: EntityTopBarProps) {
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
-                  {tab.icon && <tab.icon className="h-3.5 w-3.5" />}
+                  {tab.icon && <tab.icon className="h-3.5 w-3.5" strokeWidth={THIN_STROKE} />}
                   <span>{tab.label}</span>
                   {tab.badge !== undefined && tab.badge > 0 && (
                     <Badge 

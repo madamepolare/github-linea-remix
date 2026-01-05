@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { PageLayout } from "@/components/layout/PageLayout";
+import { useParams } from "react-router-dom";
 import { ProjectTimeline } from "@/components/projects/ProjectTimeline";
 import { ProjectBoard } from "@/components/projects/ProjectBoard";
 import { ProjectListView } from "@/components/projects/ProjectListView";
@@ -11,7 +10,6 @@ type ViewType = "timeline" | "board" | "list" | "grid";
 
 export default function Projects() {
   const { view: urlView } = useParams();
-  const navigate = useNavigate();
   const view = (urlView as ViewType) || "timeline";
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -24,17 +22,12 @@ export default function Projects() {
 
   return (
     <>
-      <PageLayout
-        title="Projets"
-        description="Gérez vos projets et suivez leur progression"
-        contentPadding={false}
-        contentOverflow="hidden"
-      >
+      <div className="flex flex-col h-full overflow-hidden">
         {view === "timeline" && <ProjectTimeline onCreateProject={() => setCreateOpen(true)} />}
         {view === "board" && <ProjectBoard onCreateProject={() => setCreateOpen(true)} />}
         {view === "list" && <ProjectListView onCreateProject={() => setCreateOpen(true)} />}
         {view === "grid" && <ProjectGridView onCreateProject={() => setCreateOpen(true)} />}
-      </PageLayout>
+      </div>
 
       <CreateProjectDialog open={createOpen} onOpenChange={setCreateOpen} />
     </>

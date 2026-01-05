@@ -8,12 +8,14 @@ import {
   HelpCircle,
   LockOpen,
   LayoutDashboard,
+  LucideIcon,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
 import { CommandTrigger } from "@/components/command-palette/CommandTrigger";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { THIN_STROKE } from "@/components/ui/icon";
 import {
   Tooltip,
   TooltipContent,
@@ -40,7 +42,7 @@ import {
 
 interface NavItem {
   title: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   href: string;
   isExtension?: boolean;
   moduleSlug?: string;
@@ -149,6 +151,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             "h-[18px] w-[18px] shrink-0 transition-colors",
             active ? "text-background" : "text-muted-foreground group-hover:text-foreground"
           )}
+          strokeWidth={THIN_STROKE}
         />
         {!collapsed && (
           <>
@@ -157,7 +160,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               <LockOpen className={cn(
                 "h-3.5 w-3.5 shrink-0",
                 active ? "text-background" : "text-muted-foreground"
-              )} />
+              )} strokeWidth={THIN_STROKE} />
             )}
           </>
         )}
@@ -173,7 +176,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           <TooltipContent side="right" className="flex items-center gap-2">
             {item.title}
             {item.isExtension && (
-              <LockOpen className="h-3 w-3 text-muted-foreground" />
+              <LockOpen className="h-3 w-3 text-muted-foreground" strokeWidth={THIN_STROKE} />
             )}
           </TooltipContent>
         </Tooltip>
@@ -206,7 +209,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                         {activeWorkspace.name}
                       </p>
                     </div>
-                    <ChevronsUpDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <ChevronsUpDown className="h-4 w-4 text-muted-foreground shrink-0" strokeWidth={THIN_STROKE} />
                   </>
                 )}
               </button>
@@ -248,7 +251,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             onClick={toggle}
             className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" strokeWidth={THIN_STROKE} />
           </Button>
         )}
       </div>
@@ -262,7 +265,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             onClick={toggle}
             className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
           >
-            <ChevronLeft className="h-4 w-4 rotate-180" />
+            <ChevronLeft className="h-4 w-4 rotate-180" strokeWidth={THIN_STROKE} />
           </Button>
         </div>
       )}
@@ -313,7 +316,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         
         {!collapsed && (
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-            <HelpCircle className="h-[18px] w-[18px]" strokeWidth={1.5} />
+            <HelpCircle className="h-[18px] w-[18px]" strokeWidth={THIN_STROKE} />
             <span>Help & Support</span>
           </button>
         )}
@@ -374,12 +377,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/settings")}>
-              <Settings className="h-4 w-4 mr-2" strokeWidth={1.5} />
+              <Settings className="h-4 w-4 mr-2" strokeWidth={THIN_STROKE} />
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-              <LogOut className="h-4 w-4 mr-2" strokeWidth={1.5} />
+              <LogOut className="h-4 w-4 mr-2" strokeWidth={THIN_STROKE} />
               Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>

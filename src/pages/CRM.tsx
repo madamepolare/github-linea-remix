@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { PageLayout } from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -250,47 +249,33 @@ export default function CRM() {
     }
   };
 
+  // Listen for command palette events
+  useEffect(() => {
+    const handleCreateLead = () => {
+      if (!selectedPipelineId && pipelines.length > 0) {
+        const defaultPipeline = pipelines.find((p) => p.is_default) || pipelines[0];
+        setSelectedPipelineId(defaultPipeline.id);
+      }
+      setCreateLeadOpen(true);
+    };
+    const handleCreateContact = () => setCreateContactOpen(true);
+    
+    window.addEventListener("open-create-lead", handleCreateLead);
+    window.addEventListener("open-create-contact", handleCreateContact);
+    return () => {
+      window.removeEventListener("open-create-lead", handleCreateLead);
+      window.removeEventListener("open-create-contact", handleCreateContact);
+    };
+  }, [selectedPipelineId, pipelines]);
+
   return (
     <>
-      <PageLayout
-        title="CRM"
-        description={`${totalEntities} entités · ${formatCurrency(leadStats.weightedValue)} en pipeline`}
-        actions={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" className="h-8 sm:h-9 gap-1.5 px-3 sm:px-4">
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Ajouter</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setCreateCompanyOpen(true)}>
-                <Building2 className="h-4 w-4 mr-2" />
-                Entreprise
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setCreateContactOpen(true)}>
-                <Users className="h-4 w-4 mr-2" />
-                Contact
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  if (!selectedPipelineId && pipelines.length > 0) {
-                    const defaultPipeline = pipelines.find((p) => p.is_default) || pipelines[0];
-                    setSelectedPipelineId(defaultPipeline.id);
-                  }
-                  setCreateLeadOpen(true);
-                }}
-              >
-                <Target className="h-4 w-4 mr-2" />
-                Opportunité
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
-      >
-        {renderPipelinesBar()}
-        {renderContent()}
-      </PageLayout>
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex-1 overflow-auto p-6">
+          {renderPipelinesBar()}
+          {renderContent()}
+        </div>
+      </div>
 
       <CreateContactDialog open={createContactOpen} onOpenChange={setCreateContactOpen} />
       <CreateCompanyDialog open={createCompanyOpen} onOpenChange={setCreateCompanyOpen} />
