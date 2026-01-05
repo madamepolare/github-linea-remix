@@ -31,7 +31,7 @@ import { format, parseISO, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PROJECT_TYPES } from "@/lib/projectTypes";
-import { ProjectChantierTab } from "@/components/projects/ProjectChantierTab";
+import { ChantierDashboard } from "@/components/projects/ChantierDashboard";
 import { ProjectPlanningTab } from "@/components/projects/ProjectPlanningTab";
 import { ProjectMOESection } from "@/components/projects/ProjectMOESection";
 import { PhaseQuickEditDialog } from "@/components/projects/PhaseQuickEditDialog";
@@ -187,7 +187,7 @@ export default function ProjectDetail() {
                 </TabsTrigger>
                 <TabsTrigger value="chantier">
                   <HardHat className="h-3.5 w-3.5 mr-1.5" />
-                  Réunions & CR
+                  Chantier
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -211,7 +211,7 @@ export default function ProjectDetail() {
           {activeTab === "tasks" && (
             <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
           )}
-          {activeTab === "chantier" && <ProjectChantierTab projectId={project.id} />}
+          {activeTab === "chantier" && <ChantierDashboard projectId={project.id} />}
         </div>
       </div>
     </MainLayout>
