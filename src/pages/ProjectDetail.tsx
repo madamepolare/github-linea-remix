@@ -23,7 +23,6 @@ import {
   HardHat,
   ListTodo,
   Loader2,
-  Lock,
   MapPin,
   MoreHorizontal,
   Pencil,
@@ -45,6 +44,9 @@ import { EntityTasksList } from "@/components/tasks/EntityTasksList";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { ProjectDocumentsTab } from "@/components/projects/ProjectDocumentsTab";
+import { ProjectInvoicingTab } from "@/components/projects/ProjectInvoicingTab";
+import { ProjectCommercialTab } from "@/components/projects/ProjectCommercialTab";
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -189,25 +191,21 @@ export default function ProjectDetail() {
                   <ListTodo className="h-3.5 w-3.5 mr-1.5" />
                   Tâches
                 </TabsTrigger>
-                <TabsTrigger value="chantier" className="gap-1">
-                  <HardHat className="h-3.5 w-3.5 mr-1" />
+                <TabsTrigger value="chantier">
+                  <HardHat className="h-3.5 w-3.5 mr-1.5" />
                   Chantier
-                  <Lock className="h-3 w-3 text-muted-foreground/60" />
                 </TabsTrigger>
-                <TabsTrigger value="documents" className="gap-1">
-                  <FileText className="h-3.5 w-3.5 mr-1" />
+                <TabsTrigger value="documents">
+                  <FileText className="h-3.5 w-3.5 mr-1.5" />
                   Documents
-                  <Lock className="h-3 w-3 text-muted-foreground/60" />
                 </TabsTrigger>
-                <TabsTrigger value="invoicing" className="gap-1">
-                  <Receipt className="h-3.5 w-3.5 mr-1" />
+                <TabsTrigger value="invoicing">
+                  <Receipt className="h-3.5 w-3.5 mr-1.5" />
                   Facturation
-                  <Lock className="h-3 w-3 text-muted-foreground/60" />
                 </TabsTrigger>
-                <TabsTrigger value="commercial" className="gap-1">
-                  <Briefcase className="h-3.5 w-3.5 mr-1" />
+                <TabsTrigger value="commercial">
+                  <Briefcase className="h-3.5 w-3.5 mr-1.5" />
                   Commercial
-                  <Lock className="h-3 w-3 text-muted-foreground/60" />
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -233,25 +231,13 @@ export default function ProjectDetail() {
           )}
           {activeTab === "chantier" && <ChantierDashboard projectId={project.id} />}
           {activeTab === "documents" && (
-            <ExtensionPlaceholder 
-              icon={FileText}
-              title="Documents"
-              description="Gérez les documents liés à ce projet : contrats, avenants, procurations, etc."
-            />
+            <ProjectDocumentsTab projectId={project.id} />
           )}
           {activeTab === "invoicing" && (
-            <ExtensionPlaceholder 
-              icon={Receipt}
-              title="Facturation"
-              description="Créez et gérez les factures liées à ce projet."
-            />
+            <ProjectInvoicingTab projectId={project.id} projectName={project.name} />
           )}
           {activeTab === "commercial" && (
-            <ExtensionPlaceholder 
-              icon={Briefcase}
-              title="Commercial"
-              description="Gérez les devis, contrats et propositions commerciales liés à ce projet."
-            />
+            <ProjectCommercialTab projectId={project.id} projectName={project.name} />
           )}
         </div>
       </div>
@@ -614,31 +600,6 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-  );
-}
-
-// Extension placeholder component for locked features
-function ExtensionPlaceholder({ 
-  icon: Icon, 
-  title, 
-  description 
-}: { 
-  icon: React.ComponentType<{ className?: string }>; 
-  title: string; 
-  description: string;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center h-[400px] text-center">
-      <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-        <Icon className="h-8 w-8 text-primary" />
-      </div>
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-muted-foreground max-w-md mb-4">{description}</p>
-      <Badge variant="secondary" className="gap-1.5">
-        <Lock className="h-3 w-3" />
-        Extension
-      </Badge>
     </div>
   );
 }
