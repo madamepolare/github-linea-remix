@@ -2170,6 +2170,169 @@ export type Database = {
           },
         ]
       }
+      material_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          sort_order: number | null
+          workspace_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          sort_order?: number | null
+          workspace_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          sort_order?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "material_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_categories_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      materials: {
+        Row: {
+          category_id: string | null
+          certifications: string[] | null
+          created_at: string | null
+          description: string | null
+          dimensions: Json | null
+          documents: string[] | null
+          id: string
+          images: string[] | null
+          is_archived: boolean | null
+          is_favorite: boolean | null
+          last_used_at: string | null
+          lead_time_days: number | null
+          manufacturer: string | null
+          min_order_quantity: number | null
+          name: string
+          price_currency: string | null
+          price_unit: number | null
+          reference: string | null
+          specifications: Json | null
+          supplier_id: string | null
+          supplier_name: string | null
+          sustainability_score: number | null
+          tags: string[] | null
+          unit: string | null
+          updated_at: string | null
+          weight: number | null
+          weight_unit: string | null
+          workspace_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          certifications?: string[] | null
+          created_at?: string | null
+          description?: string | null
+          dimensions?: Json | null
+          documents?: string[] | null
+          id?: string
+          images?: string[] | null
+          is_archived?: boolean | null
+          is_favorite?: boolean | null
+          last_used_at?: string | null
+          lead_time_days?: number | null
+          manufacturer?: string | null
+          min_order_quantity?: number | null
+          name: string
+          price_currency?: string | null
+          price_unit?: number | null
+          reference?: string | null
+          specifications?: Json | null
+          supplier_id?: string | null
+          supplier_name?: string | null
+          sustainability_score?: number | null
+          tags?: string[] | null
+          unit?: string | null
+          updated_at?: string | null
+          weight?: number | null
+          weight_unit?: string | null
+          workspace_id: string
+        }
+        Update: {
+          category_id?: string | null
+          certifications?: string[] | null
+          created_at?: string | null
+          description?: string | null
+          dimensions?: Json | null
+          documents?: string[] | null
+          id?: string
+          images?: string[] | null
+          is_archived?: boolean | null
+          is_favorite?: boolean | null
+          last_used_at?: string | null
+          lead_time_days?: number | null
+          manufacturer?: string | null
+          min_order_quantity?: number | null
+          name?: string
+          price_currency?: string | null
+          price_unit?: number | null
+          reference?: string | null
+          specifications?: Json | null
+          supplier_id?: string | null
+          supplier_name?: string | null
+          sustainability_score?: number | null
+          tags?: string[] | null
+          unit?: string | null
+          updated_at?: string | null
+          weight?: number | null
+          weight_unit?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materials_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "material_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "materials_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "materials_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_attention_items: {
         Row: {
           assignee_company_ids: string[] | null
@@ -2451,6 +2614,56 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permit_milestones: {
+        Row: {
+          completed_date: string | null
+          created_at: string | null
+          description: string | null
+          documents: string[] | null
+          id: string
+          notes: string | null
+          permit_id: string
+          sort_order: number | null
+          status: string | null
+          target_date: string | null
+          title: string
+        }
+        Insert: {
+          completed_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          documents?: string[] | null
+          id?: string
+          notes?: string | null
+          permit_id: string
+          sort_order?: number | null
+          status?: string | null
+          target_date?: string | null
+          title: string
+        }
+        Update: {
+          completed_date?: string | null
+          created_at?: string | null
+          description?: string | null
+          documents?: string[] | null
+          id?: string
+          notes?: string | null
+          permit_id?: string
+          sort_order?: number | null
+          status?: string | null
+          target_date?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permit_milestones_permit_id_fkey"
+            columns: ["permit_id"]
+            isOneToOne: false
+            referencedRelation: "project_permits"
             referencedColumns: ["id"]
           },
         ]
@@ -2891,6 +3104,102 @@ export type Database = {
           },
         ]
       }
+      project_insurances: {
+        Row: {
+          attestation_url: string | null
+          broker_contact: string | null
+          broker_name: string | null
+          coverage_amount: number | null
+          created_at: string | null
+          custom_type: string | null
+          deductible: number | null
+          documents: string[] | null
+          end_date: string | null
+          id: string
+          insurance_type: string
+          insurer_contact: string | null
+          insurer_email: string | null
+          insurer_name: string
+          insurer_phone: string | null
+          notes: string | null
+          policy_number: string | null
+          premium: number | null
+          premium_frequency: string | null
+          project_id: string
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          attestation_url?: string | null
+          broker_contact?: string | null
+          broker_name?: string | null
+          coverage_amount?: number | null
+          created_at?: string | null
+          custom_type?: string | null
+          deductible?: number | null
+          documents?: string[] | null
+          end_date?: string | null
+          id?: string
+          insurance_type: string
+          insurer_contact?: string | null
+          insurer_email?: string | null
+          insurer_name: string
+          insurer_phone?: string | null
+          notes?: string | null
+          policy_number?: string | null
+          premium?: number | null
+          premium_frequency?: string | null
+          project_id: string
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          attestation_url?: string | null
+          broker_contact?: string | null
+          broker_name?: string | null
+          coverage_amount?: number | null
+          created_at?: string | null
+          custom_type?: string | null
+          deductible?: number | null
+          documents?: string[] | null
+          end_date?: string | null
+          id?: string
+          insurance_type?: string
+          insurer_contact?: string | null
+          insurer_email?: string | null
+          insurer_name?: string
+          insurer_phone?: string | null
+          notes?: string | null
+          policy_number?: string | null
+          premium?: number | null
+          premium_frequency?: string | null
+          project_id?: string
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_insurances_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_insurances_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_lot_interventions: {
         Row: {
           color: string | null
@@ -3039,6 +3348,60 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_materials: {
+        Row: {
+          created_at: string | null
+          id: string
+          location_notes: string | null
+          material_id: string
+          notes: string | null
+          project_id: string
+          quantity: number | null
+          status: string | null
+          supplier_quote: number | null
+          unit: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          location_notes?: string | null
+          material_id: string
+          notes?: string | null
+          project_id: string
+          quantity?: number | null
+          status?: string | null
+          supplier_quote?: number | null
+          unit?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          location_notes?: string | null
+          material_id?: string
+          notes?: string | null
+          project_id?: string
+          quantity?: number | null
+          status?: string | null
+          supplier_quote?: number | null
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_materials_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_materials_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -3289,6 +3652,117 @@ export type Database = {
           },
         ]
       }
+      project_permits: {
+        Row: {
+          acknowledgment_date: string | null
+          actual_response_date: string | null
+          authority_address: string | null
+          authority_contact: string | null
+          authority_email: string | null
+          authority_name: string | null
+          authority_phone: string | null
+          conditions: string | null
+          construction_type: string | null
+          created_at: string | null
+          custom_type: string | null
+          documents: string[] | null
+          expected_response_date: string | null
+          granted_date: string | null
+          id: string
+          notes: string | null
+          permit_type: string
+          preparation_start_date: string | null
+          prescriptions: string[] | null
+          project_id: string
+          reference_number: string | null
+          reserves: string[] | null
+          status: string | null
+          submission_date: string | null
+          surface_plancher: number | null
+          updated_at: string | null
+          validity_end_date: string | null
+          work_start_deadline: string | null
+          workspace_id: string
+        }
+        Insert: {
+          acknowledgment_date?: string | null
+          actual_response_date?: string | null
+          authority_address?: string | null
+          authority_contact?: string | null
+          authority_email?: string | null
+          authority_name?: string | null
+          authority_phone?: string | null
+          conditions?: string | null
+          construction_type?: string | null
+          created_at?: string | null
+          custom_type?: string | null
+          documents?: string[] | null
+          expected_response_date?: string | null
+          granted_date?: string | null
+          id?: string
+          notes?: string | null
+          permit_type: string
+          preparation_start_date?: string | null
+          prescriptions?: string[] | null
+          project_id: string
+          reference_number?: string | null
+          reserves?: string[] | null
+          status?: string | null
+          submission_date?: string | null
+          surface_plancher?: number | null
+          updated_at?: string | null
+          validity_end_date?: string | null
+          work_start_deadline?: string | null
+          workspace_id: string
+        }
+        Update: {
+          acknowledgment_date?: string | null
+          actual_response_date?: string | null
+          authority_address?: string | null
+          authority_contact?: string | null
+          authority_email?: string | null
+          authority_name?: string | null
+          authority_phone?: string | null
+          conditions?: string | null
+          construction_type?: string | null
+          created_at?: string | null
+          custom_type?: string | null
+          documents?: string[] | null
+          expected_response_date?: string | null
+          granted_date?: string | null
+          id?: string
+          notes?: string | null
+          permit_type?: string
+          preparation_start_date?: string | null
+          prescriptions?: string[] | null
+          project_id?: string
+          reference_number?: string | null
+          reserves?: string[] | null
+          status?: string | null
+          submission_date?: string | null
+          surface_plancher?: number | null
+          updated_at?: string | null
+          validity_end_date?: string | null
+          work_start_deadline?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_permits_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_permits_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_phases: {
         Row: {
           color: string | null
@@ -3409,6 +3883,99 @@ export type Database = {
           },
         ]
       }
+      project_references: {
+        Row: {
+          awards: string[] | null
+          budget_range: string | null
+          building_type: string | null
+          client_name: string | null
+          client_type: string | null
+          collaborators: string[] | null
+          completion_date: string | null
+          country: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_featured: boolean | null
+          is_public: boolean | null
+          location: string | null
+          press_mentions: string[] | null
+          project_id: string | null
+          project_type: string | null
+          slug: string | null
+          sort_order: number | null
+          surface_m2: number | null
+          title: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          awards?: string[] | null
+          budget_range?: string | null
+          building_type?: string | null
+          client_name?: string | null
+          client_type?: string | null
+          collaborators?: string[] | null
+          completion_date?: string | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_featured?: boolean | null
+          is_public?: boolean | null
+          location?: string | null
+          press_mentions?: string[] | null
+          project_id?: string | null
+          project_type?: string | null
+          slug?: string | null
+          sort_order?: number | null
+          surface_m2?: number | null
+          title: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          awards?: string[] | null
+          budget_range?: string | null
+          building_type?: string | null
+          client_name?: string | null
+          client_type?: string | null
+          collaborators?: string[] | null
+          completion_date?: string | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_featured?: boolean | null
+          is_public?: boolean | null
+          location?: string | null
+          press_mentions?: string[] | null
+          project_id?: string | null
+          project_type?: string | null
+          slug?: string | null
+          sort_order?: number | null
+          surface_m2?: number | null
+          title?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_references_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_references_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           address: string | null
@@ -3423,6 +3990,7 @@ export type Database = {
           current_phase_id: string | null
           description: string | null
           end_date: string | null
+          fee_calculation: Json | null
           id: string
           name: string
           phase: string | null
@@ -3430,6 +3998,7 @@ export type Database = {
           start_date: string | null
           status: string | null
           surface_area: number | null
+          surfaces: Json | null
           updated_at: string | null
           workspace_id: string
         }
@@ -3446,6 +4015,7 @@ export type Database = {
           current_phase_id?: string | null
           description?: string | null
           end_date?: string | null
+          fee_calculation?: Json | null
           id?: string
           name: string
           phase?: string | null
@@ -3453,6 +4023,7 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           surface_area?: number | null
+          surfaces?: Json | null
           updated_at?: string | null
           workspace_id: string
         }
@@ -3469,6 +4040,7 @@ export type Database = {
           current_phase_id?: string | null
           description?: string | null
           end_date?: string | null
+          fee_calculation?: Json | null
           id?: string
           name?: string
           phase?: string | null
@@ -3476,6 +4048,7 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           surface_area?: number | null
+          surfaces?: Json | null
           updated_at?: string | null
           workspace_id?: string
         }
@@ -3590,6 +4163,98 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reference_images: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          credits: string | null
+          id: string
+          is_cover: boolean | null
+          reference_id: string
+          sort_order: number | null
+          storage_path: string | null
+          url: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          credits?: string | null
+          id?: string
+          is_cover?: boolean | null
+          reference_id: string
+          sort_order?: number | null
+          storage_path?: string | null
+          url?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          credits?: string | null
+          id?: string
+          is_cover?: boolean | null
+          reference_id?: string
+          sort_order?: number | null
+          storage_path?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reference_images_reference_id_fkey"
+            columns: ["reference_id"]
+            isOneToOne: false
+            referencedRelation: "project_references"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reference_team_members: {
+        Row: {
+          company_name: string | null
+          contact_name: string | null
+          created_at: string | null
+          crm_company_id: string | null
+          id: string
+          reference_id: string
+          role: string
+          sort_order: number | null
+        }
+        Insert: {
+          company_name?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          crm_company_id?: string | null
+          id?: string
+          reference_id: string
+          role: string
+          sort_order?: number | null
+        }
+        Update: {
+          company_name?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          crm_company_id?: string | null
+          id?: string
+          reference_id?: string
+          role?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reference_team_members_crm_company_id_fkey"
+            columns: ["crm_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reference_team_members_reference_id_fkey"
+            columns: ["reference_id"]
+            isOneToOne: false
+            referencedRelation: "project_references"
             referencedColumns: ["id"]
           },
         ]
