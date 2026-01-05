@@ -13,6 +13,7 @@ import {
   ChevronsUpDown,
   HelpCircle,
   Trophy,
+  FileStack,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
@@ -55,6 +56,7 @@ const navigation: NavItem[] = [
   { title: "CRM", icon: Users, href: "/crm" },
   { title: "Concours", icon: Trophy, href: "/tenders" },
   { title: "Commercial", icon: FileText, href: "/commercial" },
+  { title: "Documents", icon: FileStack, href: "/documents" },
 ];
 
 const bottomNavigation: NavItem[] = [
