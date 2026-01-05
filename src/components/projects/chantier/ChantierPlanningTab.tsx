@@ -1,12 +1,14 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import { ProjectLot } from "@/hooks/useChantier";
 import { useInterventions, Intervention, CreateInterventionInput } from "@/hooks/useInterventions";
+import { usePlanningVersions, PlanningVersion } from "@/hooks/usePlanningVersions";
 import { format, parseISO, differenceInDays, addDays, eachDayOfInterval, isToday, isSameMonth, startOfMonth, endOfMonth, addMonths, subMonths, eachWeekOfInterval, isPast, getISOWeek, isWeekend } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { LOT_STATUS } from "@/lib/projectTypes";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -16,6 +18,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { InterventionDialog } from "./planning/InterventionDialog";
 import { InlineInterventionCreator } from "./planning/InlineInterventionCreator";
 import { AIFullPlanningPanel } from "./planning/AIFullPlanningPanel";
+import { EditInterventionDialog } from "./planning/EditInterventionDialog";
+import { PlanningVersionsSheet } from "./planning/PlanningVersionsSheet";
+import { PlanningAgendaView } from "./planning/PlanningAgendaView";
+import { generatePlanningPDF } from "@/lib/generatePlanningPDF";
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,17 +35,18 @@ import {
   MoreVertical,
   Sparkles,
   RefreshCw,
-  ChevronsUpDown,
   Rows3,
+  History,
+  CalendarDays,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
 
 interface ChantierPlanningTabProps {
   projectId: string;
   lots: ProjectLot[];
   lotsLoading: boolean;
-  onUpdateLot: (id: string, updates: { start_date?: string | null; end_date?: string | null; status?: string }) => void;
+  onUpdateLot: (id: string, updates: { start_date?: string | null; end_date?: string | null; status?: string; sub_row_names?: Record<string, string> }) => void;
   onCreateLot?: (name: string, start_date: string, end_date: string) => void;
   onDeleteLot?: (id: string) => void;
   onEditLot?: (lot: ProjectLot) => void;
@@ -78,13 +85,16 @@ export function ChantierPlanningTab({
   projectName,
 }: ChantierPlanningTabProps) {
   const { interventions, isLoading: interventionsLoading, createMultipleInterventions, updateIntervention, deleteIntervention, deleteMultipleInterventions } = useInterventions(projectId);
+  const { versions: planningVersions, createVersion: createPlanningVersion } = usePlanningVersions(projectId);
   
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [zoomLevel, setZoomLevel] = useState<"day" | "week" | "month">("week");
+  const [viewMode, setViewMode] = useState<"gantt" | "agenda">("gantt");
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [tempDates, setTempDates] = useState<Record<string, { start: Date | null; end: Date | null }>>({});
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const [selectedIntervention, setSelectedIntervention] = useState<Intervention | null>(null);
+  const [editingIntervention, setEditingIntervention] = useState<Intervention | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [companyFilter, setCompanyFilter] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -92,6 +102,9 @@ export function ChantierPlanningTab({
   const [preselectedLotId, setPreselectedLotId] = useState<string | undefined>();
   const [preselectedDates, setPreselectedDates] = useState<{ start: Date; end: Date } | undefined>();
   const [showAIPanel, setShowAIPanel] = useState(false);
+  const [showVersionsSheet, setShowVersionsSheet] = useState(false);
+  const [collapsedLots, setCollapsedLots] = useState<Record<string, boolean>>({});
+  const [editingSubRowName, setEditingSubRowName] = useState<{ lotId: string; subRow: number } | null>(null);
   const [inlineCreation, setInlineCreation] = useState<{
     lotId: string;
     startDate: Date;
@@ -318,6 +331,90 @@ export function ChantierPlanningTab({
     createMultipleInterventions.mutate(newInterventions);
   }, [createMultipleInterventions]);
 
+  // Handle editing intervention
+  const handleEditIntervention = useCallback((updates: Partial<Intervention>) => {
+    if (updates.id) {
+      updateIntervention.mutate(updates as Partial<Intervention> & { id: string });
+    }
+  }, [updateIntervention]);
+
+  // Toggle lot collapse (show single summary line)
+  const toggleLotCollapsed = useCallback((lotId: string) => {
+    setCollapsedLots(prev => ({ ...prev, [lotId]: !prev[lotId] }));
+    // If collapsing, also collapse expanded state
+    if (!collapsedLots[lotId]) {
+      setExpandedLots(prev => ({ ...prev, [lotId]: false }));
+    }
+  }, [collapsedLots]);
+
+  // Update sub-row name
+  const handleSubRowNameChange = useCallback((lotId: string, subRow: number, name: string) => {
+    const lot = lots.find(l => l.id === lotId);
+    const currentNames = (lot as any)?.sub_row_names || {};
+    const newNames = { ...currentNames, [subRow.toString()]: name };
+    onUpdateLot(lotId, { sub_row_names: newNames });
+    setEditingSubRowName(null);
+  }, [lots, onUpdateLot]);
+
+  // Restore planning version
+  const handleRestoreVersion = useCallback((version: PlanningVersion) => {
+    // Delete all current interventions and recreate from snapshot
+    if (interventions.length > 0) {
+      deleteMultipleInterventions.mutate(interventions.map(i => i.id), {
+        onSuccess: () => {
+          // Recreate interventions from snapshot
+          const snapshotInterventions = version.snapshot.interventions || [];
+          if (snapshotInterventions.length > 0) {
+            const newInterventions: CreateInterventionInput[] = snapshotInterventions.map(i => ({
+              lot_id: i.lot_id,
+              title: i.title,
+              description: i.description || undefined,
+              start_date: i.start_date,
+              end_date: i.end_date,
+              color: i.color || undefined,
+              status: i.status,
+              team_size: i.team_size,
+              notes: i.notes || undefined,
+              sub_row: i.sub_row,
+            }));
+            createMultipleInterventions.mutate(newInterventions);
+          }
+        }
+      });
+    } else {
+      // No interventions to delete, just create from snapshot
+      const snapshotInterventions = version.snapshot.interventions || [];
+      if (snapshotInterventions.length > 0) {
+        const newInterventions: CreateInterventionInput[] = snapshotInterventions.map(i => ({
+          lot_id: i.lot_id,
+          title: i.title,
+          description: i.description || undefined,
+          start_date: i.start_date,
+          end_date: i.end_date,
+          color: i.color || undefined,
+          status: i.status,
+          team_size: i.team_size,
+          notes: i.notes || undefined,
+          sub_row: i.sub_row,
+        }));
+        createMultipleInterventions.mutate(newInterventions);
+      }
+    }
+  }, [interventions, deleteMultipleInterventions, createMultipleInterventions]);
+
+  // Get sub-row color (derived from lot color)
+  const getSubRowColor = useCallback((lotColor: string, subRow: number): string => {
+    if (subRow === 0) return lotColor;
+    // Lighten the color for sub-rows
+    const lightenAmount = 15 + subRow * 10;
+    // Simple hex to lighter hex
+    const hex = lotColor.replace('#', '');
+    const r = Math.min(255, parseInt(hex.slice(0, 2), 16) + lightenAmount);
+    const g = Math.min(255, parseInt(hex.slice(2, 4), 16) + lightenAmount);
+    const b = Math.min(255, parseInt(hex.slice(4, 6), 16) + lightenAmount);
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  }, []);
+
   // Month groups for header
   const monthGroups = useMemo(() => {
     const groups: { month: Date; startIndex: number; count: number }[] = [];
@@ -358,35 +455,27 @@ export function ChantierPlanningTab({
 
   const totalHeight = rowPositions.reduce((acc, p) => acc + p.height, 0) + 20;
 
-  // Export A1 PDF - keeping simplified version
-  const handleExportA1 = useCallback(async () => {
+  // Export PDF using new generator
+  const handleExportPDF = useCallback(async (pdfFormat: "A4" | "A3" | "A1" = "A4") => {
     setIsExporting(true);
     try {
-      const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: [841, 594] });
-      // Header
-      pdf.setFillColor(17, 24, 39);
-      pdf.rect(0, 0, 841, 45, "F");
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(24);
-      pdf.setFont("helvetica", "bold");
-      pdf.text(`Planning Chantier - ${projectName || "Projet"}`, 20, 28);
-      pdf.setFontSize(11);
-      pdf.text(`Généré le ${format(new Date(), "d MMMM yyyy à HH:mm", { locale: fr })}`, 20, 38);
-      
-      // Stats
-      pdf.setTextColor(100, 100, 100);
-      pdf.setFontSize(10);
-      pdf.text(`${stats.totalLots} lots | ${stats.totalInterventions} interventions | ${stats.completedInterventions} terminées${stats.delayedInterventions > 0 ? ` | ${stats.delayedInterventions} en retard` : ""}`, 20, 55);
-
-      pdf.save(`planning-chantier-${projectName?.toLowerCase().replace(/\s+/g, "-") || "projet"}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
-      toast.success("Planning exporté en A1");
+      const pdf = await generatePlanningPDF({
+        projectName: projectName || "Projet",
+        lots: sortedLots,
+        interventions,
+        companies,
+        format: pdfFormat,
+      });
+      const dateStr = new Date().toISOString().slice(0, 10);
+      pdf.save(`planning-chantier-${projectName?.toLowerCase().replace(/\s+/g, "-") || "projet"}-${pdfFormat.toLowerCase()}-${dateStr}.pdf`);
+      toast.success(`Planning exporté en ${pdfFormat}`);
     } catch (error) {
       console.error(error);
       toast.error("Erreur export");
     } finally {
       setIsExporting(false);
     }
-  }, [projectName, stats]);
+  }, [projectName, sortedLots, interventions, companies]);
 
   // Navigate to today
   const goToToday = () => setCurrentMonth(new Date());
@@ -431,6 +520,20 @@ export function ChantierPlanningTab({
               M
             </Button>
           </div>
+
+          <div className="h-5 w-px bg-border mx-1" />
+
+          {/* View mode toggle */}
+          <div className="flex items-center gap-0.5 bg-muted rounded-md p-0.5">
+            <Button variant={viewMode === "gantt" ? "secondary" : "ghost"} size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setViewMode("gantt")}>
+              <GanttChart className="w-3.5 h-3.5" />
+              Gantt
+            </Button>
+            <Button variant={viewMode === "agenda" ? "secondary" : "ghost"} size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setViewMode("agenda")}>
+              <CalendarDays className="w-3.5 h-3.5" />
+              Agenda
+            </Button>
+          </div>
         </div>
 
         {/* Center - Stats (minimal) */}
@@ -455,6 +558,17 @@ export function ChantierPlanningTab({
           >
             <Sparkles className="w-4 h-4" />
             <span className="hidden sm:inline">Planifier avec IA</span>
+          </Button>
+
+          {/* History button */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowVersionsSheet(true)}
+            className="gap-1.5"
+          >
+            <History className="w-4 h-4" />
+            <span className="hidden sm:inline">Historique</span>
           </Button>
 
           {/* Reset button - if interventions exist */}
@@ -495,9 +609,17 @@ export function ChantierPlanningTab({
                 Ajouter intervention
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleExportA1} disabled={isExporting}>
+              <DropdownMenuItem onClick={() => handleExportPDF("A4")} disabled={isExporting}>
+                <FileDown className="w-4 h-4 mr-2" />
+                Exporter A4
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportPDF("A3")} disabled={isExporting}>
+                <FileDown className="w-4 h-4 mr-2" />
+                Exporter A3
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportPDF("A1")} disabled={isExporting}>
                 <Download className="w-4 h-4 mr-2" />
-                Exporter PDF
+                Exporter A1 (Grand format)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -506,31 +628,44 @@ export function ChantierPlanningTab({
 
       {/* Main content wrapper */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Gantt chart */}
-        <div className="flex-1 overflow-hidden" ref={ganttRef}>
-          {sortedLots.length === 0 ? (
-            <EmptyState
-              icon={GanttChart}
-              title="Aucun lot"
-              description="Créez des lots dans l'onglet 'Lots & Intervenants' pour planifier les interventions."
+        {/* Agenda view */}
+        {viewMode === "agenda" && (
+          <div className="flex-1 border-r">
+            <PlanningAgendaView
+              interventions={interventions}
+              lots={lots}
+              companies={companies}
+              onSelectIntervention={(intervention) => setEditingIntervention(intervention)}
             />
-          ) : (
-            <div
-              className="h-full overflow-auto relative"
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseLeave}
-            >
-              {/* Fixed left sidebar */}
-              <div 
-                className="sticky left-0 top-0 z-20 bg-background border-r shadow-sm float-left"
-                style={{ width: sidebarWidth, height: headerHeight + totalHeight }}
+          </div>
+        )}
+
+        {/* Gantt chart */}
+        {viewMode === "gantt" && (
+          <div className="flex-1 overflow-hidden" ref={ganttRef}>
+            {sortedLots.length === 0 ? (
+              <EmptyState
+                icon={GanttChart}
+                title="Aucun lot"
+                description="Créez des lots dans l'onglet 'Lots & Intervenants' pour planifier les interventions."
+              />
+            ) : (
+              <div
+                className="h-full overflow-auto relative"
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseLeave}
               >
-                {/* Sidebar header */}
-                <div
-                  className="sticky top-0 z-30 bg-background border-b flex flex-col justify-end px-4 pb-3"
-                  style={{ height: headerHeight }}
+                {/* Fixed left sidebar */}
+                <div 
+                  className="sticky left-0 top-0 z-20 bg-background border-r shadow-sm float-left"
+                  style={{ width: sidebarWidth, height: headerHeight + totalHeight }}
                 >
+                  {/* Sidebar header */}
+                  <div
+                    className="sticky top-0 z-30 bg-background border-b flex flex-col justify-end px-4 pb-3"
+                    style={{ height: headerHeight }}
+                  >
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     Lots / Interventions
                   </span>
@@ -873,7 +1008,8 @@ export function ChantierPlanningTab({
               </div>
             </div>
           )}
-        </div>
+          </div>
+        )}
 
         {/* AI Panel */}
         {showAIPanel && (
@@ -975,6 +1111,24 @@ export function ChantierPlanningTab({
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Edit intervention dialog */}
+      <EditInterventionDialog
+        open={!!editingIntervention}
+        onOpenChange={(open) => !open && setEditingIntervention(null)}
+        intervention={editingIntervention}
+        onSave={handleEditIntervention}
+      />
+
+      {/* Planning versions sheet */}
+      <PlanningVersionsSheet
+        open={showVersionsSheet}
+        onOpenChange={setShowVersionsSheet}
+        projectId={projectId}
+        lots={lots}
+        interventions={interventions}
+        onRestoreVersion={handleRestoreVersion}
+      />
     </div>
   );
 }

@@ -2326,6 +2326,7 @@ export type Database = {
           sort_order: number | null
           start_date: string | null
           status: string | null
+          sub_row_names: Json | null
           updated_at: string | null
           workspace_id: string
         }
@@ -2341,6 +2342,7 @@ export type Database = {
           sort_order?: number | null
           start_date?: string | null
           status?: string | null
+          sub_row_names?: Json | null
           updated_at?: string | null
           workspace_id: string
         }
@@ -2356,6 +2358,7 @@ export type Database = {
           sort_order?: number | null
           start_date?: string | null
           status?: string | null
+          sub_row_names?: Json | null
           updated_at?: string | null
           workspace_id?: string
         }
@@ -2691,6 +2694,57 @@ export type Database = {
           },
           {
             foreignKeyName: "project_phases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_planning_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          project_id: string
+          snapshot: Json
+          version_number: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          project_id: string
+          snapshot: Json
+          version_number?: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+          snapshot?: Json
+          version_number?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_planning_versions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_planning_versions_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
