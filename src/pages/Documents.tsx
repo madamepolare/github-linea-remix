@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { 
   Plus, 
   Search, 
@@ -14,14 +14,13 @@ import {
   Briefcase, 
   Users,
   FileText,
-  TrendingUp,
-  Clock,
-  CheckCircle
+  LayoutDashboard
 } from 'lucide-react';
 import { useAgencyDocuments } from '@/hooks/useAgencyDocuments';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { DocumentList } from '@/components/documents/DocumentList';
 import { CreateDocumentDialog } from '@/components/documents/CreateDocumentDialog';
+import { DocumentsDashboard } from '@/components/documents/DocumentsDashboard';
 import { 
   DOCUMENT_CATEGORY_LABELS, 
   type DocumentCategory 
@@ -29,11 +28,11 @@ import {
 
 export default function Documents() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<DocumentCategory | 'all'>('all');
+  const [activeTab, setActiveTab] = useState<DocumentCategory | 'all' | 'dashboard'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   
-  const { documents, isLoading, stats } = useAgencyDocuments();
+  const { documents, isLoading } = useAgencyDocuments();
   const { documents: commercialDocs, isLoading: commercialLoading } = useCommercialDocuments();
 
   const filteredDocuments = documents.filter(doc => {
@@ -51,66 +50,33 @@ export default function Documents() {
       icon={FileStack}
       description="Gérez tous vos documents administratifs, projets et RH"
     >
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total documents</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.total || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ce mois</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.thisMonth || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">En attente</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.pending || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Factures en cours</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.invoicesInProgress || 0}</div>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher un document..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+      {/* Toolbar - only show for non-dashboard tabs */}
+      {activeTab !== 'dashboard' && (
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher un document..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nouveau document
+          </Button>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nouveau document
-        </Button>
-      </div>
+      )}
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DocumentCategory | 'all')}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DocumentCategory | 'all' | 'dashboard')}>
         <TabsList className="mb-6">
+          <TabsTrigger value="dashboard" className="gap-2">
+            <LayoutDashboard className="h-4 w-4" />
+            Tableau de bord
+          </TabsTrigger>
           <TabsTrigger value="all" className="gap-2">
             <FileStack className="h-4 w-4" />
             Tous
@@ -144,6 +110,9 @@ export default function Documents() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="dashboard">
+          <DocumentsDashboard />
+        </TabsContent>
         <TabsContent value="all">
           <DocumentList 
             documents={filteredDocuments} 

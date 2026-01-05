@@ -861,8 +861,314 @@ export type Database = {
           },
         ]
       }
+      document_approval_instances: {
+        Row: {
+          completed_at: string | null
+          current_step: number | null
+          document_id: string
+          id: string
+          started_at: string | null
+          started_by: string
+          status: string | null
+          workflow_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          current_step?: number | null
+          document_id: string
+          id?: string
+          started_at?: string | null
+          started_by: string
+          status?: string | null
+          workflow_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          current_step?: number | null
+          document_id?: string
+          id?: string
+          started_at?: string | null
+          started_by?: string
+          status?: string | null
+          workflow_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_approval_instances_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "agency_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_approval_instances_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "document_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_approvals: {
+        Row: {
+          approved_at: string | null
+          approver_id: string
+          comment: string | null
+          created_at: string | null
+          id: string
+          instance_id: string
+          status: string | null
+          step_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approver_id: string
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          instance_id: string
+          status?: string | null
+          step_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approver_id?: string
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          instance_id?: string
+          status?: string | null
+          step_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_approvals_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "document_approval_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_approvals_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "document_workflow_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_expiration_reminders: {
+        Row: {
+          created_at: string | null
+          document_id: string
+          id: string
+          is_read: boolean | null
+          is_sent: boolean | null
+          reminder_date: string
+          reminder_type: string
+          sent_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          document_id: string
+          id?: string
+          is_read?: boolean | null
+          is_sent?: boolean | null
+          reminder_date: string
+          reminder_type: string
+          sent_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          document_id?: string
+          id?: string
+          is_read?: boolean | null
+          is_sent?: boolean | null
+          reminder_date?: string
+          reminder_type?: string
+          sent_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_expiration_reminders_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "agency_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_expiration_reminders_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_signature_events: {
+        Row: {
+          created_at: string | null
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          signature_id: string
+          signer_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          signature_id: string
+          signer_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          signature_id?: string
+          signer_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_signature_events_signature_id_fkey"
+            columns: ["signature_id"]
+            isOneToOne: false
+            referencedRelation: "document_signatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_signature_events_signer_id_fkey"
+            columns: ["signer_id"]
+            isOneToOne: false
+            referencedRelation: "document_signers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_signatures: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          document_id: string
+          expires_at: string | null
+          id: string
+          message: string | null
+          requested_by: string
+          signature_type: string
+          status: string | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          document_id: string
+          expires_at?: string | null
+          id?: string
+          message?: string | null
+          requested_by: string
+          signature_type?: string
+          status?: string | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          document_id?: string
+          expires_at?: string | null
+          id?: string
+          message?: string | null
+          requested_by?: string
+          signature_type?: string
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_signatures_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "agency_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_signatures_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_signers: {
+        Row: {
+          created_at: string | null
+          id: string
+          sign_order: number | null
+          signature_data: Json | null
+          signature_id: string
+          signature_image: string | null
+          signed_at: string | null
+          signer_email: string
+          signer_name: string
+          signer_role: string | null
+          status: string | null
+          token: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          sign_order?: number | null
+          signature_data?: Json | null
+          signature_id: string
+          signature_image?: string | null
+          signed_at?: string | null
+          signer_email: string
+          signer_name: string
+          signer_role?: string | null
+          status?: string | null
+          token?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          sign_order?: number | null
+          signature_data?: Json | null
+          signature_id?: string
+          signature_image?: string | null
+          signed_at?: string | null
+          signer_email?: string
+          signer_name?: string
+          signer_role?: string | null
+          status?: string | null
+          token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_signers_signature_id_fkey"
+            columns: ["signature_id"]
+            isOneToOne: false
+            referencedRelation: "document_signatures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_templates: {
         Row: {
+          body_template: string | null
           category: string
           content_schema: Json
           created_at: string | null
@@ -870,15 +1176,21 @@ export type Database = {
           default_content: Json | null
           description: string | null
           document_type: string
+          footer_html: string | null
+          header_html: string | null
           id: string
           is_active: boolean | null
           is_system: boolean | null
           name: string
           pdf_template: Json | null
+          preview_image: string | null
+          styles: Json | null
           updated_at: string | null
+          variables: Json | null
           workspace_id: string
         }
         Insert: {
+          body_template?: string | null
           category: string
           content_schema?: Json
           created_at?: string | null
@@ -886,15 +1198,21 @@ export type Database = {
           default_content?: Json | null
           description?: string | null
           document_type: string
+          footer_html?: string | null
+          header_html?: string | null
           id?: string
           is_active?: boolean | null
           is_system?: boolean | null
           name: string
           pdf_template?: Json | null
+          preview_image?: string | null
+          styles?: Json | null
           updated_at?: string | null
+          variables?: Json | null
           workspace_id: string
         }
         Update: {
+          body_template?: string | null
           category?: string
           content_schema?: Json
           created_at?: string | null
@@ -902,17 +1220,110 @@ export type Database = {
           default_content?: Json | null
           description?: string | null
           document_type?: string
+          footer_html?: string | null
+          header_html?: string | null
           id?: string
           is_active?: boolean | null
           is_system?: boolean | null
           name?: string
           pdf_template?: Json | null
+          preview_image?: string | null
+          styles?: Json | null
           updated_at?: string | null
+          variables?: Json | null
           workspace_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "document_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_workflow_steps: {
+        Row: {
+          approver_role: string | null
+          approver_type: string
+          approver_user_id: string | null
+          auto_approve_after_days: number | null
+          created_at: string | null
+          id: string
+          is_required: boolean | null
+          name: string
+          step_order: number
+          workflow_id: string
+        }
+        Insert: {
+          approver_role?: string | null
+          approver_type: string
+          approver_user_id?: string | null
+          auto_approve_after_days?: number | null
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          name: string
+          step_order: number
+          workflow_id: string
+        }
+        Update: {
+          approver_role?: string | null
+          approver_type?: string
+          approver_user_id?: string | null
+          auto_approve_after_days?: number | null
+          created_at?: string | null
+          id?: string
+          is_required?: boolean | null
+          name?: string
+          step_order?: number
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_workflow_steps_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "document_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_workflows: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          document_types: string[]
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          document_types: string[]
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          document_types?: string[]
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_workflows_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
