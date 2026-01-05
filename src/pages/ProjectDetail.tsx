@@ -17,6 +17,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  FileCheck,
   FileText,
   FolderKanban,
   HardHat,
@@ -26,6 +27,7 @@ import {
   Pencil,
   Receipt,
   RefreshCw,
+  Shield,
   Sparkles,
 } from "lucide-react";
 import { format, parseISO, isPast, isToday } from "date-fns";
@@ -45,12 +47,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ProjectDocumentsTab } from "@/components/projects/ProjectDocumentsTab";
 import { ProjectInvoicingTab } from "@/components/projects/ProjectInvoicingTab";
 import { ProjectCommercialTab } from "@/components/projects/ProjectCommercialTab";
+import { PermitsTab } from "@/components/projects/permits/PermitsTab";
+import { InsurancesSection } from "@/components/projects/insurances/InsurancesSection";
 
 // Tab configuration for project detail
 const PROJECT_TABS = [
   { key: "overview", label: "Vue d'ensemble", icon: Sparkles },
   { key: "planning", label: "Calendrier", icon: Calendar },
   { key: "tasks", label: "Tâches", icon: ListTodo },
+  { key: "permits", label: "Autorisations", icon: FileCheck },
+  { key: "insurances", label: "Assurances", icon: Shield },
   { key: "chantier", label: "Chantier", icon: HardHat },
   { key: "documents", label: "Documents", icon: FileText },
   { key: "invoicing", label: "Facturation", icon: Receipt },
@@ -181,6 +187,8 @@ export default function ProjectDetail() {
           <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
         )}
         {activeTab === "chantier" && <ChantierDashboard projectId={project.id} />}
+        {activeTab === "permits" && <PermitsTab projectId={project.id} />}
+        {activeTab === "insurances" && <InsurancesSection projectId={project.id} />}
         {activeTab === "documents" && (
           <ProjectDocumentsTab projectId={project.id} />
         )}
