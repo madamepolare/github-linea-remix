@@ -520,7 +520,7 @@ export function ChantierPlanningTab({
         </div>
       </div>
 
-      {/* Main content */}
+      {/* Main content wrapper */}
       <div className="flex flex-1 overflow-hidden">
         {/* Gantt chart */}
         <div className="flex-1 overflow-hidden" ref={ganttRef}>
@@ -532,87 +532,216 @@ export function ChantierPlanningTab({
             />
           ) : (
             <div
-              className="h-full overflow-auto"
+              className="h-full overflow-auto relative"
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseLeave}
             >
-              <div style={{ minWidth: sidebarWidth + totalWidth }}>
-                {/* Header */}
-                <div className="sticky top-0 z-10 flex" style={{ height: headerHeight }}>
-                  {/* Sidebar header */}
-                  <div
-                    className="shrink-0 bg-background border-r border-b flex flex-col justify-end px-3 pb-2"
-                    style={{ width: sidebarWidth }}
-                  >
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Lots / Interventions
-                    </span>
-                  </div>
-
-                  {/* Timeline header */}
-                  <div className="flex-1 bg-muted/30 border-b">
-                    {/* Months row */}
-                    <div className="flex h-10 border-b">
-                      {monthGroups.map((group, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-center border-r text-sm font-medium"
-                          style={{ width: group.count * dayWidth }}
-                        >
-                          {format(group.month, "MMMM yyyy", { locale: fr })}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Weeks/Days row */}
-                    <div className="flex h-10">
-                      {zoomLevel === "day" ? (
-                        days.map((day, idx) => (
-                          <div
-                            key={idx}
-                            className={cn(
-                              "flex items-center justify-center border-r text-xs",
-                              isToday(day) && "bg-primary/10 font-bold text-primary",
-                              isWeekend(day) && "bg-muted/50"
-                            )}
-                            style={{ width: dayWidth }}
-                          >
-                            {format(day, "d")}
-                          </div>
-                        ))
-                      ) : zoomLevel === "week" ? (
-                        weeks.map((week, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-center border-r text-xs font-medium"
-                            style={{ width: 7 * dayWidth }}
-                          >
-                            S{getISOWeek(week)}
-                          </div>
-                        ))
-                      ) : (
-                        monthGroups.map((group, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-center border-r text-xs"
-                            style={{ width: group.count * dayWidth }}
-                          />
-                        ))
-                      )}
-                    </div>
-                  </div>
+              {/* Fixed left sidebar */}
+              <div 
+                className="sticky left-0 top-0 z-20 bg-background border-r shadow-sm float-left"
+                style={{ width: sidebarWidth, height: headerHeight + totalHeight }}
+              >
+                {/* Sidebar header */}
+                <div
+                  className="sticky top-0 z-30 bg-background border-b flex flex-col justify-end px-4 pb-3"
+                  style={{ height: headerHeight }}
+                >
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Lots / Interventions
+                  </span>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Cliquez sur la grille pour ajouter
+                  </p>
                 </div>
 
-                {/* Rows */}
-                <div style={{ height: totalHeight }}>
+                {/* Sidebar rows */}
+                <div>
                   {sortedLots.map((lot, lotIndex) => {
-                    const position = rowPositions[lotIndex];
                     const lotInterventions = interventionsByLot[lot.id] || [];
                     const isCollapsed = collapsedLots.has(lot.id);
                     const showInterventions = viewMode !== "lots" && lotInterventions.length > 0 && !isCollapsed;
                     const statusConfig = LOT_STATUS.find(s => s.value === lot.status) || LOT_STATUS[0];
                     const company = companies.find(c => c.id === lot.crm_company_id);
+
+                    return (
+                      <div key={lot.id}>
+                        {/* Lot sidebar row */}
+                        <div
+                          className={cn(
+                            "flex items-center gap-2 px-3 border-b transition-colors group",
+                            hoveredItemId === lot.id && "bg-primary/5",
+                            lotIndex > 0 && "border-t-2 border-t-muted"
+                          )}
+                          style={{ height: rowHeight }}
+                          onMouseEnter={() => setHoveredItemId(lot.id)}
+                          onMouseLeave={() => setHoveredItemId(null)}
+                        >
+                          {/* Collapse toggle */}
+                          {lotInterventions.length > 0 && viewMode !== "lots" ? (
+                            <Button
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => toggleLotCollapse(lot.id)}
+                              className="shrink-0"
+                            >
+                              <ChevronRight
+                                className={cn(
+                                  "w-4 h-4 transition-transform",
+                                  !isCollapsed && "rotate-90"
+                                )}
+                              />
+                            </Button>
+                          ) : (
+                            <div className="w-6 shrink-0" />
+                          )}
+
+                          {/* Color dot */}
+                          <div
+                            className="w-3 h-3 rounded-full shrink-0 ring-2 ring-background shadow-sm"
+                            style={{ backgroundColor: lot.color || statusConfig.color }}
+                          />
+
+                          {/* Name & company */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm truncate">{lot.name}</span>
+                              {lotInterventions.length > 0 && (
+                                <Badge variant="secondary" className="shrink-0 text-[10px] h-5">
+                                  {lotInterventions.length}
+                                </Badge>
+                              )}
+                            </div>
+                            {company && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Building2 className="w-3 h-3" />
+                                <span className="truncate">{company.name}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Quick add button */}
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => { setPreselectedLotId(lot.id); setShowAddDialog(true); }}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+
+                          {/* Actions dropdown */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon-xs" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-popover">
+                              <DropdownMenuItem onClick={() => { setPreselectedLotId(lot.id); setShowAddDialog(true); }}>
+                                <Plus className="w-4 h-4 mr-2" />
+                                Ajouter intervention
+                              </DropdownMenuItem>
+                              {onEditLot && (
+                                <DropdownMenuItem onClick={() => onEditLot(lot)}>
+                                  <Pencil className="w-4 h-4 mr-2" />
+                                  Modifier
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        {/* Intervention sidebar rows */}
+                        {showInterventions && lotInterventions.map((intervention) => (
+                          <div
+                            key={intervention.id}
+                            className={cn(
+                              "flex items-center gap-2 px-3 pl-10 border-b bg-muted/30 transition-colors",
+                              hoveredItemId === intervention.id && "bg-primary/5"
+                            )}
+                            style={{ height: interventionRowHeight }}
+                            onMouseEnter={() => setHoveredItemId(intervention.id)}
+                            onMouseLeave={() => setHoveredItemId(null)}
+                          >
+                            <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                            <span className="text-xs truncate flex-1">{intervention.title}</span>
+                            {intervention.team_size > 1 && (
+                              <Badge variant="outline" className="text-[10px] gap-1 shrink-0 h-5">
+                                <Users className="w-3 h-3" />
+                                {intervention.team_size}
+                              </Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Scrollable timeline area */}
+              <div style={{ marginLeft: sidebarWidth, minWidth: totalWidth }}>
+                {/* Timeline header */}
+                <div className="sticky top-0 z-10 bg-muted/30 border-b" style={{ height: headerHeight }}>
+                  {/* Months row */}
+                  <div className="flex h-10 border-b">
+                    {monthGroups.map((group, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-center border-r text-sm font-medium bg-muted/50"
+                        style={{ width: group.count * dayWidth }}
+                      >
+                        {format(group.month, "MMMM yyyy", { locale: fr })}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Weeks/Days row */}
+                  <div className="flex h-10">
+                    {zoomLevel === "day" ? (
+                      days.map((day, idx) => (
+                        <div
+                          key={idx}
+                          className={cn(
+                            "flex items-center justify-center border-r text-xs",
+                            isToday(day) && "bg-primary/10 font-bold text-primary",
+                            isWeekend(day) && "bg-muted/50"
+                          )}
+                          style={{ width: dayWidth }}
+                        >
+                          {format(day, "d")}
+                        </div>
+                      ))
+                    ) : zoomLevel === "week" ? (
+                      weeks.map((week, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-center border-r text-xs font-medium"
+                          style={{ width: 7 * dayWidth }}
+                        >
+                          S{getISOWeek(week)}
+                        </div>
+                      ))
+                    ) : (
+                      monthGroups.map((group, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-center border-r text-xs"
+                          style={{ width: group.count * dayWidth }}
+                        />
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Timeline rows */}
+                <div style={{ height: totalHeight }}>
+                  {sortedLots.map((lot, lotIndex) => {
+                    const lotInterventions = interventionsByLot[lot.id] || [];
+                    const isCollapsed = collapsedLots.has(lot.id);
+                    const showInterventions = viewMode !== "lots" && lotInterventions.length > 0 && !isCollapsed;
+                    const statusConfig = LOT_STATUS.find(s => s.value === lot.status) || LOT_STATUS[0];
                     const isDelayed = lot.end_date && lot.status !== "completed" && isPast(parseISO(lot.end_date));
 
                     const lotTempDates = tempDates[lot.id];
@@ -620,164 +749,101 @@ export function ChantierPlanningTab({
                     const lotEndDate = lotTempDates?.end || (lot.end_date ? parseISO(lot.end_date) : null);
 
                     return (
-                      <div key={lot.id} style={{ height: position.height }}>
-                        {/* Lot row */}
-                        <div className="flex" style={{ height: rowHeight }}>
-                          {/* Sidebar */}
-                          <div
-                            className={cn(
-                              "shrink-0 flex items-center gap-2 px-3 border-r border-b bg-background",
-                              hoveredItemId === lot.id && "bg-muted/50"
-                            )}
-                            style={{ width: sidebarWidth }}
-                            onMouseEnter={() => setHoveredItemId(lot.id)}
-                            onMouseLeave={() => setHoveredItemId(null)}
-                          >
-                            {/* Collapse toggle */}
-                            {lotInterventions.length > 0 && viewMode !== "lots" && (
-                              <Button
-                                variant="ghost"
-                                size="icon-xs"
-                                onClick={() => toggleLotCollapse(lot.id)}
-                              >
-                                <ChevronRight
-                                  className={cn(
-                                    "w-4 h-4 transition-transform",
-                                    !isCollapsed && "rotate-90"
-                                  )}
-                                />
-                              </Button>
-                            )}
-
-                            {/* Color dot */}
-                            <div
-                              className="w-3 h-3 rounded-full shrink-0"
-                              style={{ backgroundColor: lot.color || statusConfig.color }}
-                            />
-
-                            {/* Name & company */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm truncate">{lot.name}</span>
-                                {lotInterventions.length > 0 && (
-                                  <Badge variant="outline" className="shrink-0 text-xs">
-                                    {lotInterventions.length}
-                                  </Badge>
-                                )}
-                              </div>
-                              {company && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Building2 className="w-3 h-3" />
-                                  <span className="truncate">{company.name}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Actions */}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon-xs" className="opacity-0 group-hover:opacity-100">
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => { setPreselectedLotId(lot.id); setShowAddDialog(true); }}>
-                                  <Plus className="w-4 h-4 mr-2" />
-                                  Ajouter intervention
-                                </DropdownMenuItem>
-                                {onEditLot && (
-                                  <DropdownMenuItem onClick={() => onEditLot(lot)}>
-                                    <Pencil className="w-4 h-4 mr-2" />
-                                    Modifier
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-
-                          {/* Timeline */}
-                          <div
-                            className={cn(
-                              "flex-1 relative border-b cursor-pointer",
-                              lotIndex % 2 === 0 ? "bg-background" : "bg-muted/20"
-                            )}
-                            onClick={(e) => handleTimelineClick(e, lot.id, lot.color || statusConfig.color)}
-                          >
-                            {/* Today line */}
-                            {(() => {
-                              const todayPos = getPositionForDate(new Date());
-                              if (todayPos >= 0 && todayPos <= totalWidth) {
-                                return (
-                                  <div
-                                    className="absolute top-0 bottom-0 w-0.5 bg-primary/60 z-10"
-                                    style={{ left: todayPos }}
-                                  />
-                                );
-                              }
-                              return null;
-                            })()}
-
-                            {/* Weekend backgrounds */}
-                            {zoomLevel !== "month" && days.map((day, idx) => (
-                              isWeekend(day) && (
+                      <div key={lot.id}>
+                        {/* Lot timeline row */}
+                        <div
+                          className={cn(
+                            "relative border-b cursor-pointer transition-colors",
+                            lotIndex % 2 === 0 ? "bg-background" : "bg-muted/10",
+                            hoveredItemId === lot.id && "bg-primary/5",
+                            lotIndex > 0 && "border-t-2 border-t-muted"
+                          )}
+                          style={{ height: rowHeight }}
+                          onClick={(e) => handleTimelineClick(e, lot.id, lot.color || statusConfig.color)}
+                          onMouseEnter={() => setHoveredItemId(lot.id)}
+                          onMouseLeave={() => setHoveredItemId(null)}
+                        >
+                          {/* Today line */}
+                          {(() => {
+                            const todayPos = getPositionForDate(new Date());
+                            if (todayPos >= 0 && todayPos <= totalWidth) {
+                              return (
                                 <div
-                                  key={idx}
-                                  className="absolute top-0 bottom-0 bg-muted/30"
-                                  style={{ left: idx * dayWidth, width: dayWidth }}
+                                  className="absolute top-0 bottom-0 w-0.5 bg-primary/60 z-10 pointer-events-none"
+                                  style={{ left: todayPos }}
                                 />
-                              )
-                            ))}
+                              );
+                            }
+                            return null;
+                          })()}
 
-                            {/* Lot bar (only in lots or combined view) */}
-                            {viewMode !== "interventions" && lotStartDate && lotEndDate && (
+                          {/* Weekend backgrounds */}
+                          {zoomLevel !== "month" && days.map((day, idx) => (
+                            isWeekend(day) && (
                               <div
-                                className={cn(
-                                  "absolute top-2 h-7 rounded-md flex items-center px-2 cursor-grab active:cursor-grabbing group",
-                                  isDelayed && "ring-2 ring-destructive"
-                                )}
-                                style={{
-                                  left: getPositionForDate(lotStartDate),
-                                  width: Math.max((differenceInDays(lotEndDate, lotStartDate) + 1) * dayWidth, 24),
-                                  backgroundColor: lot.color || statusConfig.color,
-                                }}
-                                onMouseDown={(e) => handleMouseDown(e, lot.id, "lot", "move")}
-                                onMouseEnter={() => setHoveredItemId(lot.id)}
-                                onMouseLeave={() => setHoveredItemId(null)}
-                              >
-                                {/* Resize handles */}
-                                <div
-                                  className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/20"
-                                  onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, lot.id, "lot", "resize-start"); }}
-                                />
-                                <div
-                                  className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/20"
-                                  onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, lot.id, "lot", "resize-end"); }}
-                                />
-
-                                {/* Duration */}
-                                <span className="text-xs text-white font-medium truncate">
-                                  {differenceInDays(lotEndDate, lotStartDate) + 1}j
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Inline creation */}
-                            {inlineCreation && inlineCreation.lotId === lot.id && (
-                              <InlineInterventionCreator
-                                lotId={inlineCreation.lotId}
-                                startDate={inlineCreation.startDate}
-                                endDate={inlineCreation.endDate}
-                                left={inlineCreation.left}
-                                width={inlineCreation.width}
-                                color={inlineCreation.color}
-                                onSave={handleInlineSave}
-                                onCancel={() => setInlineCreation(null)}
+                                key={idx}
+                                className="absolute top-0 bottom-0 bg-muted/30 pointer-events-none"
+                                style={{ left: idx * dayWidth, width: dayWidth }}
                               />
-                            )}
-                          </div>
+                            )
+                          ))}
+
+                          {/* Click hint on hover */}
+                          {hoveredItemId === lot.id && !lotStartDate && !inlineCreation && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <span className="text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                                Cliquez pour ajouter une intervention
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Lot bar (only in lots or combined view) */}
+                          {viewMode !== "interventions" && lotStartDate && lotEndDate && (
+                            <div
+                              className={cn(
+                                "absolute top-2 h-7 rounded-md flex items-center px-2 cursor-grab active:cursor-grabbing group shadow-sm",
+                                isDelayed && "ring-2 ring-destructive"
+                              )}
+                              style={{
+                                left: getPositionForDate(lotStartDate),
+                                width: Math.max((differenceInDays(lotEndDate, lotStartDate) + 1) * dayWidth, 24),
+                                backgroundColor: lot.color || statusConfig.color,
+                              }}
+                              onMouseDown={(e) => handleMouseDown(e, lot.id, "lot", "move")}
+                            >
+                              {/* Resize handles */}
+                              <div
+                                className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/20 rounded-l-md"
+                                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, lot.id, "lot", "resize-start"); }}
+                              />
+                              <div
+                                className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/20 rounded-r-md"
+                                onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, lot.id, "lot", "resize-end"); }}
+                              />
+
+                              {/* Duration */}
+                              <span className="text-xs text-white font-medium truncate drop-shadow-sm">
+                                {differenceInDays(lotEndDate, lotStartDate) + 1}j
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Inline creation */}
+                          {inlineCreation && inlineCreation.lotId === lot.id && (
+                            <InlineInterventionCreator
+                              lotId={inlineCreation.lotId}
+                              startDate={inlineCreation.startDate}
+                              endDate={inlineCreation.endDate}
+                              left={inlineCreation.left}
+                              width={inlineCreation.width}
+                              color={inlineCreation.color}
+                              onSave={handleInlineSave}
+                              onCancel={() => setInlineCreation(null)}
+                            />
+                          )}
                         </div>
 
-                        {/* Intervention rows */}
+                        {/* Intervention timeline rows */}
                         {showInterventions && lotInterventions.map((intervention) => {
                           const intTempDates = tempDates[intervention.id];
                           const intStartDate = intTempDates?.start || parseISO(intervention.start_date);
@@ -785,59 +851,64 @@ export function ChantierPlanningTab({
                           const intStatus = INTERVENTION_STATUS.find(s => s.value === intervention.status) || INTERVENTION_STATUS[0];
 
                           return (
-                            <div key={intervention.id} className="flex" style={{ height: interventionRowHeight }}>
-                              {/* Sidebar */}
-                              <div
-                                className="shrink-0 flex items-center gap-2 px-3 pl-10 border-r bg-muted/10"
-                                style={{ width: sidebarWidth }}
-                              >
-                                <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                                <span className="text-xs truncate">{intervention.title}</span>
-                                {intervention.team_size > 1 && (
-                                  <Badge variant="outline" className="text-xs gap-1 shrink-0">
-                                    <Users className="w-3 h-3" />
-                                    {intervention.team_size}
-                                  </Badge>
-                                )}
-                              </div>
-
-                              {/* Timeline */}
-                              <div className="flex-1 relative bg-muted/5">
-                                {/* Intervention bar */}
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
+                            <div
+                              key={intervention.id}
+                              className={cn(
+                                "relative bg-muted/20 transition-colors",
+                                hoveredItemId === intervention.id && "bg-primary/5"
+                              )}
+                              style={{ height: interventionRowHeight }}
+                              onMouseEnter={() => setHoveredItemId(intervention.id)}
+                              onMouseLeave={() => setHoveredItemId(null)}
+                            >
+                              {/* Today line */}
+                              {(() => {
+                                const todayPos = getPositionForDate(new Date());
+                                if (todayPos >= 0 && todayPos <= totalWidth) {
+                                  return (
                                     <div
-                                      className="absolute top-1 h-6 rounded flex items-center px-1.5 cursor-grab active:cursor-grabbing text-white text-xs font-medium"
-                                      style={{
-                                        left: getPositionForDate(intStartDate),
-                                        width: Math.max((differenceInDays(intEndDate, intStartDate) + 1) * dayWidth, 20),
-                                        backgroundColor: intervention.color || intStatus.color,
-                                      }}
-                                      onMouseDown={(e) => handleMouseDown(e, intervention.id, "intervention", "move")}
-                                      onClick={(e) => { e.stopPropagation(); setSelectedIntervention(intervention); }}
-                                    >
-                                      {/* Resize handles */}
-                                      <div
-                                        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-white/20"
-                                        onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, intervention.id, "intervention", "resize-start"); }}
-                                      />
-                                      <div
-                                        className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-white/20"
-                                        onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, intervention.id, "intervention", "resize-end"); }}
-                                      />
-                                      <span className="truncate">{differenceInDays(intEndDate, intStartDate) + 1}j</span>
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <div className="text-sm">
-                                      <p className="font-medium">{intervention.title}</p>
-                                      <p className="text-muted-foreground">
-                                        {format(intStartDate, "d MMM", { locale: fr })} → {format(intEndDate, "d MMM", { locale: fr })}
-                                      </p>
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
+                                      className="absolute top-0 bottom-0 w-0.5 bg-primary/60 z-10 pointer-events-none"
+                                      style={{ left: todayPos }}
+                                    />
+                                  );
+                                }
+                                return null;
+                              })()}
+
+                              {/* Intervention bar */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className="absolute top-1 h-6 rounded flex items-center px-1.5 cursor-grab active:cursor-grabbing text-white text-xs font-medium shadow-sm"
+                                    style={{
+                                      left: getPositionForDate(intStartDate),
+                                      width: Math.max((differenceInDays(intEndDate, intStartDate) + 1) * dayWidth, 20),
+                                      backgroundColor: intervention.color || intStatus.color,
+                                    }}
+                                    onMouseDown={(e) => handleMouseDown(e, intervention.id, "intervention", "move")}
+                                    onClick={(e) => { e.stopPropagation(); setSelectedIntervention(intervention); }}
+                                  >
+                                    {/* Resize handles */}
+                                    <div
+                                      className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-white/20 rounded-l"
+                                      onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, intervention.id, "intervention", "resize-start"); }}
+                                    />
+                                    <div
+                                      className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-white/20 rounded-r"
+                                      onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, intervention.id, "intervention", "resize-end"); }}
+                                    />
+                                    <span className="truncate drop-shadow-sm">{differenceInDays(intEndDate, intStartDate) + 1}j</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="text-sm">
+                                    <p className="font-medium">{intervention.title}</p>
+                                    <p className="text-muted-foreground">
+                                      {format(intStartDate, "d MMM", { locale: fr })} → {format(intEndDate, "d MMM", { locale: fr })}
+                                    </p>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
                           );
                         })}
