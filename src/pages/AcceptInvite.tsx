@@ -44,37 +44,27 @@ export default function AcceptInvite() {
 
   const fetchInvite = async () => {
     try {
+      // Use RPC function to bypass RLS - allows unauthenticated users to view invite by token
       const { data, error } = await supabase
-        .from("workspace_invites")
-        .select(`
-          id,
-          email,
-          role,
-          expires_at,
-          workspace:workspaces(id, name, slug)
-        `)
-        .eq("token", token)
-        .single();
+        .rpc('get_invite_by_token', { invite_token: token });
 
-      if (error || !data) {
+      if (error || !data || data.length === 0) {
         setError("Invitation not found or has expired");
         setIsLoading(false);
         return;
       }
 
-      // Check if expired
-      if (new Date(data.expires_at) < new Date()) {
-        setError("This invitation has expired");
-        setIsLoading(false);
-        return;
-      }
-
+      const inviteData = data[0];
       setInvite({
-        id: data.id,
-        email: data.email,
-        role: data.role,
-        workspace: data.workspace as any,
-        expires_at: data.expires_at,
+        id: inviteData.id,
+        email: inviteData.email,
+        role: inviteData.role,
+        workspace: {
+          id: inviteData.workspace_id,
+          name: inviteData.workspace_name,
+          slug: inviteData.workspace_slug,
+        },
+        expires_at: inviteData.expires_at,
       });
       setIsLoading(false);
     } catch (err: any) {
