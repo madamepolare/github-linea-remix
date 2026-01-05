@@ -35,6 +35,7 @@ const Invoicing = lazy(() => import("./pages/Invoicing"));
 const References = lazy(() => import("./pages/References"));
 const ReferenceDetail = lazy(() => import("./pages/ReferenceDetail"));
 const Materials = lazy(() => import("./pages/Materials"));
+const Objects = lazy(() => import("./pages/Objects"));
 const Welcome = lazy(() => import("./pages/Welcome"));
 const ModuleDetail = lazy(() => import("./pages/ModuleDetail"));
 const SolutionDetail = lazy(() => import("./pages/SolutionDetail"));
@@ -128,6 +129,7 @@ const App = () => (
                 <Route path="/references" element={<References />} />
                 <Route path="/references/:id" element={<ReferenceDetail />} />
                 <Route path="/materials" element={<Materials />} />
+                <Route path="/objects" element={<Objects />} />
               </Route>
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

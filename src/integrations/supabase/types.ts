@@ -861,6 +861,99 @@ export type Database = {
           },
         ]
       }
+      design_objects: {
+        Row: {
+          brand: string | null
+          category_id: string | null
+          colors: string[] | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          description: string | null
+          designer: string | null
+          dimensions: string | null
+          id: string
+          image_url: string | null
+          images: string[] | null
+          is_favorite: boolean | null
+          materials: string | null
+          name: string
+          notes: string | null
+          price_max: number | null
+          price_min: number | null
+          source_name: string | null
+          source_url: string | null
+          tags: string[] | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          brand?: string | null
+          category_id?: string | null
+          colors?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          designer?: string | null
+          dimensions?: string | null
+          id?: string
+          image_url?: string | null
+          images?: string[] | null
+          is_favorite?: boolean | null
+          materials?: string | null
+          name: string
+          notes?: string | null
+          price_max?: number | null
+          price_min?: number | null
+          source_name?: string | null
+          source_url?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          brand?: string | null
+          category_id?: string | null
+          colors?: string[] | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          designer?: string | null
+          dimensions?: string | null
+          id?: string
+          image_url?: string | null
+          images?: string[] | null
+          is_favorite?: boolean | null
+          materials?: string | null
+          name?: string
+          notes?: string | null
+          price_max?: number | null
+          price_min?: number | null
+          source_name?: string | null
+          source_url?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_objects_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "object_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "design_objects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_approval_instances: {
         Row: {
           completed_at: string | null
@@ -2618,6 +2711,60 @@ export type Database = {
           },
         ]
       }
+      object_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          slug: string
+          sort_order: number | null
+          workspace_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          slug: string
+          sort_order?: number | null
+          workspace_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          slug?: string
+          sort_order?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "object_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "object_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "object_categories_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permit_milestones: {
         Row: {
           completed_date: string | null
@@ -3568,6 +3715,57 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_objects: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          object_id: string
+          project_id: string
+          quantity: number | null
+          room: string | null
+          status: string | null
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          object_id: string
+          project_id: string
+          quantity?: number | null
+          room?: string | null
+          status?: string | null
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          object_id?: string
+          project_id?: string
+          quantity?: number | null
+          room?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_objects_object_id_fkey"
+            columns: ["object_id"]
+            isOneToOne: false
+            referencedRelation: "design_objects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_objects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
