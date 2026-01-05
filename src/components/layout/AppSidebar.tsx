@@ -14,6 +14,7 @@ import {
   HelpCircle,
   Trophy,
   FileStack,
+  Sparkles,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
@@ -42,6 +43,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   href: string;
   badge?: number;
+  isExtension?: boolean;
   children?: { title: string; href: string }[];
 }
 
@@ -49,14 +51,19 @@ interface AppSidebarProps {
   onNavigate?: () => void;
 }
 
-const navigation: NavItem[] = [
+// Core navigation - always included
+const coreNavigation: NavItem[] = [
   { title: "Dashboard", icon: LayoutDashboard, href: "/" },
   { title: "Projects", icon: FolderKanban, href: "/projects" },
   { title: "Tasks", icon: CheckSquare, href: "/tasks" },
   { title: "CRM", icon: Users, href: "/crm" },
-  { title: "Concours", icon: Trophy, href: "/tenders" },
   { title: "Commercial", icon: FileText, href: "/commercial" },
-  { title: "Documents", icon: FileStack, href: "/documents" },
+];
+
+// Premium extensions - unlocked in this workspace
+const extensionNavigation: NavItem[] = [
+  { title: "Concours", icon: Trophy, href: "/tenders", isExtension: true },
+  { title: "Documents", icon: FileStack, href: "/documents", isExtension: true },
 ];
 
 const bottomNavigation: NavItem[] = [
@@ -112,18 +119,25 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150",
           active
             ? "bg-foreground text-background font-medium"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          item.isExtension && !active && "text-accent hover:text-accent"
         )}
       >
         <item.icon
           className={cn(
             "h-[18px] w-[18px] shrink-0 transition-colors",
-            active ? "text-background" : "text-muted-foreground group-hover:text-foreground"
+            active ? "text-background" : item.isExtension ? "text-accent" : "text-muted-foreground group-hover:text-foreground"
           )}
         />
         {!collapsed && (
           <>
             <span className="flex-1 truncate">{item.title}</span>
+            {item.isExtension && (
+              <Sparkles className={cn(
+                "h-3 w-3 shrink-0",
+                active ? "text-background" : "text-accent"
+              )} />
+            )}
             {item.badge && (
               <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium">
                 {item.badge}
@@ -150,6 +164,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           </TooltipTrigger>
           <TooltipContent side="right" className="flex items-center gap-2">
             {item.title}
+            {item.isExtension && (
+              <Sparkles className="h-3 w-3 text-accent" />
+            )}
             {item.badge && (
               <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium">
                 {item.badge}
@@ -298,11 +315,31 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-3 scrollbar-thin">
+        {/* Core navigation */}
         <div className="space-y-1">
-          {navigation.map((item) => (
+          {coreNavigation.map((item) => (
             <NavItemComponent key={item.title} item={item} onClick={onNavigate} />
           ))}
         </div>
+        
+        {/* Extensions section */}
+        {extensionNavigation.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-border">
+            {!collapsed && (
+              <div className="px-3 mb-2 flex items-center gap-1.5">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-accent">
+                  Extensions
+                </span>
+                <Sparkles className="h-3 w-3 text-accent" />
+              </div>
+            )}
+            <div className="space-y-1">
+              {extensionNavigation.map((item) => (
+                <NavItemComponent key={item.title} item={item} onClick={onNavigate} />
+              ))}
+            </div>
+          </div>
+        )}
       </nav>
 
       <div className="border-t border-border px-3 py-2 space-y-0.5">

@@ -17,6 +17,8 @@ const badgeVariants = cva(
         success: "bg-success/10 text-success",
         warning: "bg-warning/10 text-warning",
         info: "bg-info/10 text-info",
+        // Premium extension badge
+        premium: "bg-accent/15 text-accent border border-accent/20",
       },
     },
     defaultVariants: {
