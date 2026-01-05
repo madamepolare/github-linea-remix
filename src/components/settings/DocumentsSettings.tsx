@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Accordion,
@@ -21,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { 
   FileText, 
@@ -35,7 +33,6 @@ import {
   Loader2,
   Copy,
   Settings2,
-  Palette
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -45,7 +42,6 @@ import {
   type DocumentCategory,
   type DocumentType,
 } from '@/lib/documentTypes';
-import { AgencySettings } from './AgencySettings';
 
 interface DocumentTemplateConfig {
   id: string;
@@ -105,7 +101,7 @@ export function DocumentsSettings() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeCategory, setActiveCategory] = useState<DocumentCategory>('administrative');
-  const [activeSection, setActiveSection] = useState<'agency' | 'templates' | 'numbering'>('agency');
+  const [activeSection, setActiveSection] = useState<'templates' | 'numbering'>('templates');
 
   // Default settings
   const [defaultSettings, setDefaultSettings] = useState({
@@ -191,12 +187,8 @@ export function DocumentsSettings() {
   return (
     <div className="space-y-6">
       {/* Section Tabs */}
-      <Tabs value={activeSection} onValueChange={(v) => setActiveSection(v as 'agency' | 'templates' | 'numbering')}>
-        <TabsList className="grid w-full grid-cols-3 mb-6">
-          <TabsTrigger value="agency" className="gap-2">
-            <Building2 className="h-4 w-4" />
-            Agence
-          </TabsTrigger>
+      <Tabs value={activeSection} onValueChange={(v) => setActiveSection(v as 'templates' | 'numbering')}>
+        <TabsList className="grid w-full grid-cols-2 mb-6">
           <TabsTrigger value="templates" className="gap-2">
             <FileText className="h-4 w-4" />
             Templates
@@ -206,11 +198,6 @@ export function DocumentsSettings() {
             Numérotation
           </TabsTrigger>
         </TabsList>
-
-        {/* Agency Settings Tab */}
-        <TabsContent value="agency">
-          <AgencySettings />
-        </TabsContent>
 
         {/* Templates Tab */}
         <TabsContent value="templates">

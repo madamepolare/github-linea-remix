@@ -76,9 +76,6 @@ export function LiveDocumentPreview({
   const { agencyInfo, getFullAddress, getLegalInfo } = useAgencyInfo();
   const formattedDate = format(new Date(), 'dd MMMM yyyy', { locale: fr });
 
-  const primaryColor = agencyInfo?.primary_color || '#1a1a2e';
-  const accentColor = agencyInfo?.accent_color || '#0f3460';
-
   const renderValue = (key: string, value: unknown) => {
     if (value === null || value === undefined || value === '') {
       return <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Non renseigné</span>;
@@ -150,25 +147,22 @@ export function LiveDocumentPreview({
         minHeight: '297mm',
         transform: `scale(${scale})`,
         transformOrigin: 'top left',
-        fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+        fontFamily: 'var(--font-sans, ui-sans-serif, system-ui, sans-serif)',
         backgroundColor: '#ffffff',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        borderRadius: '2px',
+        boxShadow: '0 4px 24px -4px rgba(0, 0, 0, 0.1)',
         overflow: 'hidden',
-        color: '#1f2937',
+        color: '#18181b',
         position: 'relative',
       }}
     >
-      {/* En-tête avec design professionnel */}
+      {/* En-tête minimaliste noir et blanc */}
       <header 
         style={{
-          padding: '32px 40px',
-          background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)`,
-          color: '#ffffff',
+          padding: '40px 48px 32px',
+          borderBottom: '1px solid #e4e4e7',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start',
-          gap: '24px',
         }}
       >
         {/* Logo et nom de l'agence */}
@@ -176,11 +170,8 @@ export function LiveDocumentPreview({
           {agencyInfo?.logo_url ? (
             <div 
               style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                backgroundColor: 'rgba(255,255,255,0.1)',
+                width: '56px',
+                height: '56px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -192,29 +183,25 @@ export function LiveDocumentPreview({
                 style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
               />
             </div>
-          ) : (
-            <div 
-              style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(255,255,255,0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '24px',
-                fontWeight: 'bold',
-              }}
-            >
-              {(agencyInfo?.name || 'D').charAt(0)}
-            </div>
-          )}
+          ) : null}
           <div>
-            <h2 style={{ fontSize: '22px', fontWeight: '700', margin: 0, letterSpacing: '-0.5px' }}>
+            <h2 style={{ 
+              fontSize: '20px', 
+              fontWeight: '600', 
+              margin: 0, 
+              letterSpacing: '-0.025em',
+              color: '#18181b',
+            }}>
               {agencyInfo?.name || 'DOMINI'}
             </h2>
             {getFullAddress() && (
-              <p style={{ fontSize: '11px', margin: '4px 0 0', opacity: 0.9, whiteSpace: 'pre-line', lineHeight: 1.4 }}>
+              <p style={{ 
+                fontSize: '11px', 
+                margin: '4px 0 0', 
+                color: '#71717a', 
+                whiteSpace: 'pre-line', 
+                lineHeight: 1.5,
+              }}>
                 {getFullAddress()}
               </p>
             )}
@@ -222,40 +209,37 @@ export function LiveDocumentPreview({
         </div>
 
         {/* Infos de contact */}
-        <div style={{ textAlign: 'right', fontSize: '11px' }}>
+        <div style={{ textAlign: 'right', fontSize: '11px', color: '#71717a' }}>
           {agencyInfo?.phone && (
-            <p style={{ margin: '0 0 2px', opacity: 0.9 }}>Tél : {agencyInfo.phone}</p>
+            <p style={{ margin: '0 0 2px' }}>{agencyInfo.phone}</p>
           )}
           {agencyInfo?.email && (
-            <p style={{ margin: '0 0 2px', opacity: 0.9 }}>{agencyInfo.email}</p>
+            <p style={{ margin: '0 0 2px' }}>{agencyInfo.email}</p>
           )}
           {agencyInfo?.website && (
-            <p style={{ margin: 0, opacity: 0.9 }}>{agencyInfo.website}</p>
+            <p style={{ margin: 0 }}>{agencyInfo.website}</p>
           )}
         </div>
       </header>
 
-      {/* Bandeau du type de document et numéro */}
+      {/* Type de document et numéro */}
       <div 
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: '12px 40px',
-          backgroundColor: '#f8fafc',
-          borderBottom: '1px solid #e2e8f0',
+          padding: '16px 48px',
+          backgroundColor: '#fafafa',
+          borderBottom: '1px solid #e4e4e7',
         }}
       >
         <span 
           style={{
             fontSize: '10px',
-            fontWeight: '600',
+            fontWeight: '500',
             textTransform: 'uppercase',
-            letterSpacing: '1.5px',
-            color: primaryColor,
-            backgroundColor: `${primaryColor}15`,
-            padding: '6px 16px',
-            borderRadius: '100px',
+            letterSpacing: '0.1em',
+            color: '#52525b',
           }}
         >
           {DOCUMENT_TYPE_LABELS[documentType] || documentType}
@@ -263,36 +247,35 @@ export function LiveDocumentPreview({
         <div style={{ textAlign: 'right' }}>
           <span 
             style={{
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: '500',
-              fontFamily: "'SF Mono', 'Fira Code', monospace",
-              color: '#475569',
-              backgroundColor: '#e2e8f0',
-              padding: '4px 12px',
-              borderRadius: '4px',
+              fontFamily: 'var(--font-mono, ui-monospace, monospace)',
+              color: '#3f3f46',
             }}
           >
             {documentNumber || 'N° ---'}
           </span>
-          <p style={{ fontSize: '11px', color: '#64748b', margin: '6px 0 0' }}>
+          <span style={{ 
+            fontSize: '11px', 
+            color: '#a1a1aa', 
+            marginLeft: '16px',
+          }}>
             {formattedDate}
-          </p>
+          </span>
         </div>
       </div>
 
       {/* Corps du document */}
-      <div style={{ padding: '40px', minHeight: '600px' }}>
+      <div style={{ padding: '48px', minHeight: '540px' }}>
         {/* Titre du document */}
         <h1 
           style={{
-            fontSize: '26px',
-            fontWeight: '700',
-            color: '#0f172a',
-            margin: '0 0 32px',
+            fontSize: '24px',
+            fontWeight: '600',
+            color: '#18181b',
+            margin: '0 0 40px',
             lineHeight: 1.3,
-            letterSpacing: '-0.5px',
-            paddingBottom: '16px',
-            borderBottom: `3px solid ${primaryColor}`,
+            letterSpacing: '-0.025em',
           }}
         >
           {title || 'Sans titre'}
@@ -301,9 +284,9 @@ export function LiveDocumentPreview({
         {/* Contenu */}
         <div style={{ marginTop: '24px' }}>
           {!hasContent ? (
-            <div style={{ textAlign: 'center', padding: '64px 0', color: '#94a3b8' }}>
+            <div style={{ textAlign: 'center', padding: '64px 0', color: '#a1a1aa' }}>
               <svg 
-                style={{ width: '64px', height: '64px', margin: '0 auto 16px', opacity: 0.5 }}
+                style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }}
                 fill="none" 
                 viewBox="0 0 24 24" 
                 stroke="currentColor"
@@ -315,33 +298,33 @@ export function LiveDocumentPreview({
                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
                 />
               </svg>
-              <p style={{ fontSize: '16px', margin: 0 }}>Commencez à remplir le formulaire</p>
-              <p style={{ fontSize: '13px', margin: '8px 0 0', opacity: 0.7 }}>Le contenu apparaîtra ici en temps réel</p>
+              <p style={{ fontSize: '14px', margin: 0 }}>Commencez à remplir le formulaire</p>
+              <p style={{ fontSize: '12px', margin: '8px 0 0', opacity: 0.7 }}>Le contenu apparaîtra ici en temps réel</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {contentFields.map(({ key, label, value }) => (
                 <div key={key} style={{ pageBreakInside: 'avoid' }}>
                   <dt 
                     style={{
                       fontSize: '10px',
-                      fontWeight: '600',
+                      fontWeight: '500',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.5px',
-                      color: '#64748b',
-                      marginBottom: '6px',
+                      letterSpacing: '0.05em',
+                      color: '#71717a',
+                      marginBottom: '8px',
                     }}
                   >
                     {label}
                   </dt>
                   <dd 
                     style={{
-                      fontSize: '14px',
-                      color: '#1e293b',
-                      lineHeight: 1.6,
+                      fontSize: '13px',
+                      color: '#27272a',
+                      lineHeight: 1.7,
                       margin: 0,
-                      paddingLeft: '12px',
-                      borderLeft: `2px solid ${primaryColor}30`,
+                      paddingLeft: '16px',
+                      borderLeft: '2px solid #e4e4e7',
                     }}
                   >
                     {renderValue(key, value)}
@@ -353,16 +336,27 @@ export function LiveDocumentPreview({
         </div>
 
         {/* Zone de signature */}
-        <div style={{ marginTop: '64px', paddingTop: '24px' }}>
-          <p style={{ fontSize: '13px', color: '#475569', fontStyle: 'italic', marginBottom: '32px' }}>
+        <div style={{ marginTop: '64px', paddingTop: '32px' }}>
+          <p style={{ fontSize: '12px', color: '#52525b', fontStyle: 'italic', marginBottom: '32px' }}>
             Fait pour servir et valoir ce que de droit.
           </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '48px' }}>
+              <p style={{ fontSize: '11px', fontWeight: '500', color: '#52525b', marginBottom: '16px' }}>
                 Signature
               </p>
-              <div style={{ width: '180px', borderBottom: '2px solid #334155' }} />
+              {agencyInfo?.signature_url ? (
+                <div style={{ marginBottom: '8px' }}>
+                  <img 
+                    src={agencyInfo.signature_url} 
+                    alt="Signature" 
+                    style={{ maxHeight: '60px', maxWidth: '180px', objectFit: 'contain' }}
+                  />
+                </div>
+              ) : (
+                <div style={{ height: '48px', marginBottom: '8px' }} />
+              )}
+              <div style={{ width: '180px', borderBottom: '1px solid #d4d4d8' }} />
             </div>
           </div>
         </div>
@@ -375,25 +369,21 @@ export function LiveDocumentPreview({
           bottom: 0,
           left: 0,
           right: 0,
-          padding: '16px 40px',
-          backgroundColor: '#f8fafc',
-          borderTop: '1px solid #e2e8f0',
+          padding: '16px 48px',
+          borderTop: '1px solid #e4e4e7',
           textAlign: 'center',
         }}
       >
         {getLegalInfo() && (
-          <p style={{ fontSize: '8px', color: '#64748b', margin: '0 0 4px', letterSpacing: '0.3px' }}>
+          <p style={{ fontSize: '8px', color: '#71717a', margin: '0 0 4px', letterSpacing: '0.02em' }}>
             {getLegalInfo()}
           </p>
         )}
         {agencyInfo?.footer_text && (
-          <p style={{ fontSize: '8px', color: '#94a3b8', margin: 0 }}>
+          <p style={{ fontSize: '8px', color: '#a1a1aa', margin: 0 }}>
             {agencyInfo.footer_text}
           </p>
         )}
-        <p style={{ fontSize: '8px', color: '#94a3b8', margin: '4px 0 0' }}>
-          Document généré le {formattedDate}
-        </p>
       </footer>
     </div>
   );
