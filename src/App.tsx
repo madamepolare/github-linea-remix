@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { TopBarProvider } from "@/contexts/TopBarContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
@@ -82,7 +83,9 @@ const App = () => (
               <Route
                 element={
                   <ProtectedRoute>
-                    <MainLayout />
+                    <TopBarProvider>
+                      <MainLayout />
+                    </TopBarProvider>
                   </ProtectedRoute>
                 }
               >
