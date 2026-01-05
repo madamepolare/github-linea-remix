@@ -73,7 +73,7 @@ export function PowerOfAttorneyEditor({ content, onChange, contacts }: PowerOfAt
         <div className="space-y-2">
           <Label>Sélectionner un contact</Label>
           <Select
-            value={(content.delegate_contact_id as string) || ''}
+            value={(content.delegate_contact_id as string) || undefined}
             onValueChange={(value) => {
               const contact = contacts.find(c => c.id === value);
               updateField('delegate_contact_id', value);
@@ -83,15 +83,19 @@ export function PowerOfAttorneyEditor({ content, onChange, contacts }: PowerOfAt
               }
             }}
           >
-            <SelectTrigger>
+          <SelectTrigger>
               <SelectValue placeholder="Choisir un contact" />
             </SelectTrigger>
             <SelectContent>
-              {contacts.map((contact) => (
-                <SelectItem key={contact.id} value={contact.id}>
-                  {contact.name}
-                </SelectItem>
-              ))}
+              {contacts.filter(c => c.id).length === 0 ? (
+                <SelectItem value="_empty" disabled>Aucun contact disponible</SelectItem>
+              ) : (
+                contacts.filter(c => c.id).map((contact) => (
+                  <SelectItem key={contact.id} value={contact.id}>
+                    {contact.name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>

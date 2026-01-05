@@ -135,18 +135,22 @@ export function InvoiceEditor({ content, onChange, projects, companies }: Invoic
       <div className="space-y-2">
         <Label>Sélectionner une entreprise</Label>
         <Select
-          value={(content.company_id as string) || ''}
+          value={(content.company_id as string) || undefined}
           onValueChange={handleCompanyChange}
         >
           <SelectTrigger>
             <SelectValue placeholder="Choisir un client" />
           </SelectTrigger>
           <SelectContent>
-            {companies.map((company) => (
-              <SelectItem key={company.id} value={company.id}>
-                {company.name}
-              </SelectItem>
-            ))}
+            {companies.filter(c => c.id).length === 0 ? (
+              <SelectItem value="_empty" disabled>Aucune entreprise disponible</SelectItem>
+            ) : (
+              companies.filter(c => c.id).map((company) => (
+                <SelectItem key={company.id} value={company.id}>
+                  {company.name}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -175,18 +179,22 @@ export function InvoiceEditor({ content, onChange, projects, companies }: Invoic
       <div className="space-y-2">
         <Label>Projet concerné</Label>
         <Select
-          value={(content.project_id as string) || ''}
+          value={(content.project_id as string) || undefined}
           onValueChange={handleProjectChange}
         >
           <SelectTrigger>
             <SelectValue placeholder="Choisir un projet" />
           </SelectTrigger>
           <SelectContent>
-            {projects.map((project) => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
-              </SelectItem>
-            ))}
+            {projects.filter(p => p.id).length === 0 ? (
+              <SelectItem value="_empty" disabled>Aucun projet disponible</SelectItem>
+            ) : (
+              projects.filter(p => p.id).map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
       </div>

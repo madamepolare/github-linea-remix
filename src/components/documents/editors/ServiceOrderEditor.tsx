@@ -67,18 +67,22 @@ export function ServiceOrderEditor({ content, onChange, projects }: ServiceOrder
       <div className="space-y-2">
         <Label>Sélectionner un projet</Label>
         <Select
-          value={(content.project_id as string) || ''}
+          value={(content.project_id as string) || undefined}
           onValueChange={handleProjectChange}
         >
           <SelectTrigger>
             <SelectValue placeholder="Choisir un projet" />
           </SelectTrigger>
           <SelectContent>
-            {projects.map((project) => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
-              </SelectItem>
-            ))}
+            {projects.filter(p => p.id).length === 0 ? (
+              <SelectItem value="_empty" disabled>Aucun projet disponible</SelectItem>
+            ) : (
+              projects.filter(p => p.id).map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
       </div>
