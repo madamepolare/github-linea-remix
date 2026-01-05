@@ -12,6 +12,7 @@ import {
   Trophy,
   Award,
   Package,
+  Armchair,
   LucideIcon,
 } from "lucide-react";
 
@@ -219,11 +220,22 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
       { key: "create", label: "Nouveau matériau", event: "open-create-material" },
     ],
   },
+  objects: {
+    slug: "objects",
+    title: "Objets",
+    icon: Armchair,
+    href: "/objects",
+    isExtension: true,
+    subNav: [],
+    quickActions: [
+      { key: "create", label: "Nouvel objet", event: "open-create-object" },
+    ],
+  },
 };
 
 // Module display order
 export const CORE_MODULES = ["projects", "tasks", "crm", "commercial"];
-export const EXTENSION_MODULES = ["documents", "team", "chantier", "tenders", "invoicing", "references", "materials"];
+export const EXTENSION_MODULES = ["documents", "team", "chantier", "tenders", "invoicing", "references", "materials", "objects"];
 
 // Helper to get module config from current path
 export function getModuleFromPath(pathname: string): ModuleNavConfig | null {
