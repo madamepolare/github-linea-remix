@@ -5,6 +5,7 @@ import { TaskListView } from "@/components/tasks/TaskListView";
 import { TaskArchiveView } from "@/components/tasks/TaskArchiveView";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
+import { QuickTasksSection } from "@/components/tasks/QuickTasksSection";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutGrid, List, Archive, CheckSquare } from "lucide-react";
 
@@ -71,6 +72,13 @@ export default function Tasks() {
               onAssigneeChange={setAssigneeFilter}
               onClearAll={clearFilters}
             />
+          </div>
+        )}
+
+        {/* Quick Tasks Section */}
+        {view !== "archive" && (
+          <div className="mb-6">
+            <QuickTasksSection />
           </div>
         )}
 
