@@ -107,16 +107,9 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
     setPdfUrl(null); // Reset PDF when document changes
   }, [document]);
 
-  // Cleanup PDF URL on unmount
-  useEffect(() => {
-    return () => {
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
-      }
-    };
-  }, [pdfUrl]);
+  // No cleanup needed for data URLs (they don't need revoking like blob URLs)
 
-  const generatePDF = useCallback(async () => {
+  const generatePDF = useCallback(async (): Promise<Blob | null> => {
     setIsGeneratingPdf(true);
     try {
       let blob: Blob;
@@ -180,36 +173,47 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
           });
       }
       
-      // Revoke previous URL if exists
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
-      }
+      // Convert blob to base64 data URL for iframe (avoids Chrome blocking blob URLs)
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
       
-      const url = URL.createObjectURL(blob);
-      setPdfUrl(url);
+      setPdfUrl(dataUrl);
       toast.success('PDF généré avec succès');
+      return blob;
     } catch (error) {
       console.error('Erreur génération PDF:', error);
       toast.error('Erreur lors de la génération du PDF');
+      return null;
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [document, title, content, pdfUrl]);
+  }, [document, title, content]);
 
   const handleDownloadPDF = useCallback(async () => {
-    if (!pdfUrl) {
-      await generatePDF();
+    let urlToUse = pdfUrl;
+    
+    if (!urlToUse) {
+      const blob = await generatePDF();
+      if (!blob) return;
+      // Create a temporary blob URL just for download
+      urlToUse = URL.createObjectURL(blob);
     }
     
-    // Need to regenerate if no URL yet
-    if (!pdfUrl) return;
-    
     const link = window.document.createElement('a');
-    link.href = pdfUrl;
+    link.href = urlToUse;
     link.download = `${document.document_number || 'document'}.pdf`;
     window.document.body.appendChild(link);
     link.click();
     window.document.body.removeChild(link);
+    
+    // Revoke only if we created a new blob URL for download
+    if (!pdfUrl && urlToUse.startsWith('blob:')) {
+      URL.revokeObjectURL(urlToUse);
+    }
   }, [pdfUrl, generatePDF, document.document_number]);
 
   const handleSave = async () => {
