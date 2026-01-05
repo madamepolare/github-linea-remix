@@ -43,7 +43,9 @@ import {
   Milestone,
   Trash2,
   Zap,
+  Sparkles,
 } from "lucide-react";
+import { AIPhasePlannerDialog } from "./AIPhasePlannerDialog";
 import { format, parseISO, addHours, addDays, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -132,6 +134,9 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const [showTasks, setShowTasks] = useState(true);
   const [showQuickTasks, setShowQuickTasks] = useState(true);
   const [showDeliverables, setShowDeliverables] = useState(true);
+
+  // AI Planner
+  const [isAIPlannerOpen, setIsAIPlannerOpen] = useState(false);
 
   // Project-specific tasks
   const projectTasks = useMemo(() => {
@@ -666,10 +671,16 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
             </button>
           </div>
         </div>
-        <Button size="sm" onClick={() => openCreateDialog()}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          Nouvel événement
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setIsAIPlannerOpen(true)}>
+            <Sparkles className="h-4 w-4 mr-1.5" />
+            Planification IA
+          </Button>
+          <Button size="sm" onClick={() => openCreateDialog()}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Nouvel événement
+          </Button>
+        </div>
       </div>
 
       {/* Calendar */}
@@ -1288,6 +1299,13 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
           color: hsl(var(--primary));
         }
       `}</style>
+
+      {/* AI Planner Dialog */}
+      <AIPhasePlannerDialog
+        open={isAIPlannerOpen}
+        onOpenChange={setIsAIPlannerOpen}
+        projectId={projectId}
+      />
     </div>
   );
 }
