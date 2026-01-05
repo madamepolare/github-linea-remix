@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { MainLayout } from "@/components/layout/MainLayout";
+
 import { useProjectsWithModule, useProjectModules } from "@/hooks/useProjectModules";
 import { useProjects, useProject } from "@/hooks/useProjects";
 import { Card, CardContent } from "@/components/ui/card";
@@ -88,7 +88,7 @@ function ChantierList() {
   const isLoading = chantiersLoading || projectsLoading;
 
   return (
-    <MainLayout>
+    <>
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex-shrink-0 border-b border-border bg-card px-4 sm:px-6 py-4">
@@ -242,7 +242,7 @@ function ChantierList() {
           )}
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 }
 
@@ -353,30 +353,30 @@ function ChantierProject({ projectId, section = "overview" }: ChantierProjectPro
     };
     
     return (
-      <MainLayout>
+      <>
         <MeetingReportBuilder
           projectId={projectId}
           meeting={meetingForBuilder}
           onBack={() => setSelectedReportForEdit(null)}
         />
-      </MainLayout>
+      </>
     );
   }
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <>
         <div className="p-6 space-y-6">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-48 w-full" />
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   if (!project) {
     return (
-      <MainLayout>
+      <>
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <HardHat className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -386,12 +386,12 @@ function ChantierProject({ projectId, section = "overview" }: ChantierProjectPro
             </Button>
           </div>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
         <div className="flex-shrink-0 border-b border-border bg-card">
@@ -542,6 +542,6 @@ function ChantierProject({ projectId, section = "overview" }: ChantierProjectPro
         projectId={projectId}
         onClose={() => setConvocationMeeting(null)}
       />
-    </MainLayout>
+    </>
   );
 }

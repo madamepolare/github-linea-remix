@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import { LucideIcon } from "lucide-react";
-import { MainLayout } from "./MainLayout";
 import { PageHeader } from "./PageHeader";
 
 interface PageLayoutProps {
@@ -42,23 +41,21 @@ export function PageLayout({
   contentOverflow = "auto",
 }: PageLayoutProps) {
   return (
-    <MainLayout>
-      <div className="flex flex-col h-full">
-        <PageHeader
-          icon={icon}
-          title={title}
-          description={description}
-          actions={actions}
-          tabs={tabs}
-          filters={filters}
-          primaryAction={primaryAction}
-        />
-        <div
-          className={`flex-1 ${contentOverflow === "auto" ? "overflow-auto" : "overflow-hidden"} ${contentPadding ? "px-6 sm:px-8 py-6" : ""}`}
-        >
-          {children}
-        </div>
+    <div className="flex flex-col h-full">
+      <PageHeader
+        icon={icon}
+        title={title}
+        description={description}
+        actions={actions}
+        tabs={tabs}
+        filters={filters}
+        primaryAction={primaryAction}
+      />
+      <div
+        className={`flex-1 ${contentOverflow === "auto" ? "overflow-auto" : "overflow-hidden"} ${contentPadding ? "px-6 sm:px-8 py-6" : ""}`}
+      >
+        {children}
       </div>
-    </MainLayout>
+    </div>
   );
 }

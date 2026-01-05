@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save, Send, FileDown, Eye, FileText, CheckCircle, FolderPlus, ExternalLink, Sparkles, Calendar, History } from 'lucide-react';
-import { MainLayout } from '@/components/layout/MainLayout';
+
 import { Button } from '@/components/ui/button';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { CommercialDocumentBuilder } from '@/components/commercial/CommercialDocumentBuilder';
@@ -214,16 +214,16 @@ const CommercialDocument = () => {
 
   if (!isNew && documentQuery.isLoading) {
     return (
-      <MainLayout>
+      <>
         <div className="flex items-center justify-center h-64">
           <div className="text-muted-foreground">Chargement...</div>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 border-b border-border bg-card gap-4">
@@ -436,7 +436,7 @@ const CommercialDocument = () => {
         phases={phases}
         total={calculateTotal()}
       />
-    </MainLayout>
+    </>
   );
 };
 

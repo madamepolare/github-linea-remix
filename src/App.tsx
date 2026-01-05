@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
+import { MainLayout } from "@/components/layout/MainLayout";
 
 // Lazy load pages for better performance
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -62,6 +63,7 @@ const App = () => (
           <CommandPalette />
           <Suspense fallback={<PageLoader />}>
             <Routes>
+              {/* Public routes (no layout) */}
               <Route path="/welcome" element={<Welcome />} />
               <Route path="/modules/:slug" element={<ModuleDetail />} />
               <Route path="/solutions/:slug" element={<SolutionDetail />} />
@@ -75,270 +77,50 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/invite" element={<AcceptInvite />} />
+
+              {/* Protected routes with shared MainLayout */}
               <Route
-                path="/"
                 element={
                   <ProtectedRoute>
-                    <Dashboard />
+                    <MainLayout />
                   </ProtectedRoute>
                 }
-              />
-              <Route
-                path="/crm"
-                element={
-                  <ProtectedRoute>
-                    <CRM />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/crm/:section"
-                element={
-                  <ProtectedRoute>
-                    <CRM />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/crm/companies/:id"
-                element={
-                  <ProtectedRoute>
-                    <CompanyDetail />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/crm/contacts/:id"
-                element={
-                  <ProtectedRoute>
-                    <ContactDetail />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/crm/leads/:id"
-                element={
-                  <ProtectedRoute>
-                    <LeadDetail />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/tasks"
-                element={
-                  <ProtectedRoute>
-                    <Tasks />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/tasks/:view"
-                element={
-                  <ProtectedRoute>
-                    <Tasks />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/projects"
-                element={
-                  <ProtectedRoute>
-                    <Projects />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/projects/list"
-                element={
-                  <ProtectedRoute>
-                    <Projects />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/projects/grid"
-                element={
-                  <ProtectedRoute>
-                    <Projects />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/projects/board"
-                element={
-                  <ProtectedRoute>
-                    <Projects />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/projects/:id"
-                element={
-                  <ProtectedRoute>
-                    <ProjectDetail />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/commercial"
-                element={
-                  <ProtectedRoute>
-                    <Commercial />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/commercial/all"
-                element={
-                  <ProtectedRoute>
-                    <Commercial />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/commercial/quotes"
-                element={
-                  <ProtectedRoute>
-                    <Commercial />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/commercial/contracts"
-                element={
-                  <ProtectedRoute>
-                    <Commercial />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/commercial/proposals"
-                element={
-                  <ProtectedRoute>
-                    <Commercial />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/commercial/:id"
-                element={
-                  <ProtectedRoute>
-                    <CommercialDocument />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/invoicing"
-                element={
-                  <ProtectedRoute>
-                    <Invoicing />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/invoicing/:filter"
-                element={
-                  <ProtectedRoute>
-                    <Invoicing />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/tenders"
-                element={
-                  <ProtectedRoute>
-                    <Tenders />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/tenders/kanban"
-                element={
-                  <ProtectedRoute>
-                    <Tenders />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/tenders/list"
-                element={
-                  <ProtectedRoute>
-                    <Tenders />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/tenders/:id"
-                element={
-                  <ProtectedRoute>
-                    <TenderDetail />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/documents"
-                element={
-                  <ProtectedRoute>
-                    <Documents />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/documents/:section"
-                element={
-                  <ProtectedRoute>
-                    <Documents />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/team"
-                element={
-                  <ProtectedRoute>
-                    <Team />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/team/:section"
-                element={
-                  <ProtectedRoute>
-                    <Team />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/chantier"
-                element={
-                  <ProtectedRoute>
-                    <Chantier />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/chantier/:projectId"
-                element={
-                  <ProtectedRoute>
-                    <Chantier />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/chantier/:projectId/:section"
-                element={
-                  <ProtectedRoute>
-                    <Chantier />
-                  </ProtectedRoute>
-                }
-              />
+              >
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/crm" element={<CRM />} />
+                <Route path="/crm/:section" element={<CRM />} />
+                <Route path="/crm/companies/:id" element={<CompanyDetail />} />
+                <Route path="/crm/contacts/:id" element={<ContactDetail />} />
+                <Route path="/crm/leads/:id" element={<LeadDetail />} />
+                <Route path="/tasks" element={<Tasks />} />
+                <Route path="/tasks/:view" element={<Tasks />} />
+                <Route path="/projects" element={<Projects />} />
+                <Route path="/projects/list" element={<Projects />} />
+                <Route path="/projects/grid" element={<Projects />} />
+                <Route path="/projects/board" element={<Projects />} />
+                <Route path="/projects/:id" element={<ProjectDetail />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/commercial" element={<Commercial />} />
+                <Route path="/commercial/all" element={<Commercial />} />
+                <Route path="/commercial/quotes" element={<Commercial />} />
+                <Route path="/commercial/contracts" element={<Commercial />} />
+                <Route path="/commercial/proposals" element={<Commercial />} />
+                <Route path="/commercial/:id" element={<CommercialDocument />} />
+                <Route path="/invoicing" element={<Invoicing />} />
+                <Route path="/invoicing/:filter" element={<Invoicing />} />
+                <Route path="/tenders" element={<Tenders />} />
+                <Route path="/tenders/kanban" element={<Tenders />} />
+                <Route path="/tenders/list" element={<Tenders />} />
+                <Route path="/tenders/:id" element={<TenderDetail />} />
+                <Route path="/documents" element={<Documents />} />
+                <Route path="/documents/:section" element={<Documents />} />
+                <Route path="/team" element={<Team />} />
+                <Route path="/team/:section" element={<Team />} />
+                <Route path="/chantier" element={<Chantier />} />
+                <Route path="/chantier/:projectId" element={<Chantier />} />
+                <Route path="/chantier/:projectId/:section" element={<Chantier />} />
+              </Route>
+
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
