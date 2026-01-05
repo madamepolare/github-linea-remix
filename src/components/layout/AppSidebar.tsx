@@ -206,7 +206,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         />
         {!collapsed && (
           <>
-            <span className="flex-1 truncate">{item.title}</span>
+            <span className="flex-1 truncate text-left">{item.title}</span>
             {item.isExtension && (
               <LockOpen className={cn(
                 "h-3.5 w-3.5 shrink-0",
