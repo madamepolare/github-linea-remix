@@ -94,33 +94,26 @@ export default function CRM() {
   const totalEntities = allCompanies.length + allContacts.length + leadStats.total;
 
   const renderPipelinesBar = () => {
-    if (view !== "leads" || pipelines.length === 0) return null;
+    if (view !== "leads" || pipelines.length <= 1) return null;
 
     return (
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2 sm:gap-3 mb-4">
-        <div className="flex items-center justify-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          <span>Pipelines</span>
-          {pipelines.length > 1 && (
-            <Badge variant="outline" className="text-[10px] h-5">
-              {leadsMode === "all" ? "multi" : "1"}
-            </Badge>
-          )}
-        </div>
+      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-border/50">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide shrink-0">
+          Pipeline
+        </span>
 
-        <div className="flex items-center justify-center gap-1.5 overflow-x-auto">
-          {pipelines.length > 1 && (
-            <Button
-              variant={leadsMode === "all" ? "default" : "outline"}
-              size="sm"
-              className="h-7 text-xs shrink-0"
-              onClick={() => {
-                setLeadsMode("all");
-                setSelectedPipelineId(null);
-              }}
-            >
-              Tout
-            </Button>
-          )}
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          <Button
+            variant={leadsMode === "all" ? "default" : "outline"}
+            size="sm"
+            className="h-7 text-xs shrink-0"
+            onClick={() => {
+              setLeadsMode("all");
+              setSelectedPipelineId(null);
+            }}
+          >
+            Tous
+          </Button>
 
           {pipelines.map((pipeline) => (
             <Button
@@ -145,11 +138,6 @@ export default function CRM() {
                 style={{ backgroundColor: pipeline.color || "hsl(var(--primary))" }}
               />
               {pipeline.name}
-              {pipeline.is_default && (
-                <Badge variant="secondary" className="text-[9px] h-4 px-1 ml-0.5">
-                  défaut
-                </Badge>
-              )}
             </Button>
           ))}
         </div>
@@ -192,7 +180,7 @@ export default function CRM() {
 
         if (leadsMode === "all") {
           return (
-            <div className="space-y-10">
+            <div className="space-y-8">
               {pipelines.map((pipeline) => (
                 <section key={pipeline.id} className="space-y-3">
                   <header className="flex items-center justify-between gap-3">
@@ -222,10 +210,11 @@ export default function CRM() {
                     </Button>
                   </header>
 
-                  <div className="rounded-lg border border-border bg-card">
+                  <div className="rounded-lg border border-border bg-card overflow-hidden">
                     <LeadPipeline
                       pipeline={pipeline}
-                      kanbanHeightClass="h-[560px]"
+                      kanbanHeightClass="h-[480px]"
+                      hideHeader
                       onCreateLead={(stageId) => {
                         setSelectedPipelineId(pipeline.id);
                         setPreselectedStageId(stageId);
