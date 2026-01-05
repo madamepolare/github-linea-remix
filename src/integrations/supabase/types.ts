@@ -5270,6 +5270,18 @@ export type Database = {
         Args: { inv_type: string; ws_id: string }
         Returns: string
       }
+      get_invite_by_token: {
+        Args: { invite_token: string }
+        Returns: {
+          email: string
+          expires_at: string
+          id: string
+          role: string
+          workspace_id: string
+          workspace_name: string
+          workspace_slug: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
