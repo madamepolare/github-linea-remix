@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { ReportData, LotProgress } from "@/hooks/useMeetingReportData";
 import { ProjectLot } from "@/hooks/useChantier";
 import { cn } from "@/lib/utils";
-import { TrendingUp, Clock, AlertTriangle, Package, ChevronDown, ChevronUp, Plus, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { TrendingUp, Clock, AlertTriangle, Package, ChevronDown, ChevronUp, Plus, Loader2, Camera, X, FileText } from "lucide-react";
+import { useState, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -67,6 +69,8 @@ export function ProgressTab({
   const [newLotName, setNewLotName] = useState("");
   const [newLotCompanyId, setNewLotCompanyId] = useState<string | null>(null);
   const [newLotColor, setNewLotColor] = useState("#3b82f6");
+  const [uploadingLotId, setUploadingLotId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddLot = async () => {
     if (!newLotName.trim() || !onCreateLot) return;
@@ -112,11 +116,61 @@ export function ProgressTab({
         works_done: "",
         works_planned: "",
         observations: "",
+        photo_urls: [],
         ...updates,
       });
     }
     
     onUpdateReportData("lot_progress", newProgress);
+  };
+
+  const handleFileUpload = async (lotId: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    
+    setUploadingLotId(lotId);
+    const progress = getLotProgress(lotId);
+    const existingUrls = progress?.photo_urls || [];
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const file of Array.from(files)) {
+        const fileExt = file.name.split(".").pop();
+        const fileName = `lot-progress/${lotId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("observation-files")
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from("observation-files")
+          .getPublicUrl(fileName);
+
+        uploadedUrls.push(urlData.publicUrl);
+      }
+
+      updateLotProgress(lotId, { photo_urls: [...existingUrls, ...uploadedUrls] });
+      toast.success(`${uploadedUrls.length} fichier(s) ajouté(s)`);
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Erreur lors de l'upload");
+    } finally {
+      setUploadingLotId(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const removePhoto = (lotId: string, urlToRemove: string) => {
+    const progress = getLotProgress(lotId);
+    const currentUrls = progress?.photo_urls || [];
+    updateLotProgress(lotId, { photo_urls: currentUrls.filter(url => url !== urlToRemove) });
+  };
+
+  const isImage = (url: string) => {
+    return /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
   };
 
   const getProgressColor = (percent: number) => {
@@ -340,6 +394,87 @@ export function ProgressTab({
                           rows={2}
                           className="resize-none text-sm"
                         />
+                      </div>
+
+                      {/* Photos & Files */}
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">
+                          Photos & Fichiers justificatifs
+                        </Label>
+                        
+                        {/* Existing files */}
+                        {(progress?.photo_urls?.length || 0) > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {progress?.photo_urls?.map((url, idx) => (
+                              <div
+                                key={idx}
+                                className="relative group w-20 h-20 rounded-lg border overflow-hidden bg-muted hover:ring-2 hover:ring-primary/50 transition-all"
+                              >
+                                {isImage(url) ? (
+                                  <a href={url} target="_blank" rel="noopener noreferrer">
+                                    <img
+                                      src={url}
+                                      alt={`Photo ${idx + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </a>
+                                ) : (
+                                  <a 
+                                    href={url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="w-full h-full flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground"
+                                  >
+                                    <FileText className="h-6 w-6" />
+                                    <span className="text-[10px] truncate max-w-[70px]">
+                                      {url.split('/').pop()?.substring(0, 10)}...
+                                    </span>
+                                  </a>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => removePhoto(lot.id, url)}
+                                  className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Upload button */}
+                        <div>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*,application/pdf,.doc,.docx"
+                            multiple
+                            onChange={(e) => handleFileUpload(lot.id, e.target.files)}
+                            className="hidden"
+                            id={`file-upload-${lot.id}`}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1.5"
+                            onClick={() => document.getElementById(`file-upload-${lot.id}`)?.click()}
+                            disabled={uploadingLotId === lot.id}
+                          >
+                            {uploadingLotId === lot.id ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                Upload en cours...
+                              </>
+                            ) : (
+                              <>
+                                <Camera className="h-3.5 w-3.5" />
+                                Ajouter photo/fichier
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}

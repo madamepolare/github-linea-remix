@@ -12,6 +12,7 @@ export interface LotProgress {
   works_done: string;
   works_planned: string;
   observations: string;
+  photo_urls?: string[];
 }
 
 export interface TechnicalDecision {
