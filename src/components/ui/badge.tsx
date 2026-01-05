@@ -4,20 +4,18 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
+  "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground",
+        default: "bg-foreground text-background",
         secondary: "bg-muted text-muted-foreground",
         destructive: "bg-destructive/10 text-destructive",
         outline: "border border-border text-foreground bg-background",
-        // Programa-style phase badges
         phase: "bg-muted text-muted-foreground uppercase tracking-wide text-2xs font-medium",
         success: "bg-success/10 text-success",
         warning: "bg-warning/10 text-warning",
         info: "bg-info/10 text-info",
-        // Premium extension badge
         premium: "bg-accent/15 text-accent border border-accent/20",
       },
     },

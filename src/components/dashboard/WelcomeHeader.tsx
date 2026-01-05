@@ -6,36 +6,29 @@ export function WelcomeHeader() {
   const hour = now.getHours();
   
   const getGreeting = () => {
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
+    if (hour < 12) return "Bonjour";
+    if (hour < 18) return "Bonjour";
+    return "Bonsoir";
   };
 
   const formatDate = () => {
-    return now.toLocaleDateString("en-US", {
+    return now.toLocaleDateString("fr-FR", {
       weekday: "long",
-      year: "numeric",
-      month: "long",
       day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
 
-  const firstName = profile?.full_name?.split(" ")[0] || "there";
+  const firstName = profile?.full_name?.split(" ")[0] || "";
 
   return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
-          {getGreeting()}, {firstName}
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Here's what's happening with your projects today.
-        </p>
-      </div>
-      <div className="flex items-center gap-4 mt-4 sm:mt-0">
-        <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-4 py-2">
-          <span className="text-sm text-muted-foreground">{formatDate()}</span>
-        </div>
+        <p className="text-sm text-muted-foreground capitalize">{formatDate()}</p>
+        <h2 className="text-2xl font-semibold text-foreground mt-1">
+          {getGreeting()}{firstName && `, ${firstName}`}
+        </h2>
       </div>
     </div>
   );

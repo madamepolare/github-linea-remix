@@ -35,27 +35,24 @@ export function StatsCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: delay * 0.1, ease: "easeOut" }}
-      className="group relative overflow-hidden rounded-xl border border-border bg-card p-4 sm:p-6 shadow-sm transition-all duration-300 hover:shadow-elegant hover:border-border/80"
+      className="group relative overflow-hidden rounded-xl border border-border bg-card p-6 transition-all duration-200 hover:border-muted-foreground/20"
     >
-      {/* Subtle gradient overlay on hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-transparent to-muted/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-      
-      <div className="relative flex items-start justify-between gap-3">
-        <div className="space-y-1 sm:space-y-2 min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
-          <p className="font-display text-xl sm:text-3xl font-bold tracking-tight text-foreground">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2 min-w-0 flex-1">
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-3xl font-semibold tracking-tight text-foreground">
             {value}
           </p>
           {change && (
-            <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+            <div className="flex items-center gap-2">
               {change.type === "increase" ? (
-                <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-success shrink-0" />
+                <TrendingUp className="h-4 w-4 text-success shrink-0" />
               ) : (
-                <TrendingDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive shrink-0" />
+                <TrendingDown className="h-4 w-4 text-destructive shrink-0" />
               )}
               <span
                 className={cn(
-                  "text-xs sm:text-sm font-medium",
+                  "text-sm font-medium",
                   change.type === "increase"
                     ? "text-success"
                     : "text-destructive"
@@ -63,17 +60,9 @@ export function StatsCard({
               >
                 {change.value}%
               </span>
-              <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">vs last month</span>
+              <span className="text-sm text-muted-foreground">vs last month</span>
             </div>
           )}
-        </div>
-        <div
-          className={cn(
-            "flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110 shrink-0",
-            iconColorClasses[iconColor]
-          )}
-        >
-          <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
       </div>
     </motion.div>
