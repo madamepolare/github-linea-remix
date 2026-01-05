@@ -1471,6 +1471,59 @@ export type Database = {
           },
         ]
       }
+      entity_activities: {
+        Row: {
+          activity_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          metadata: Json | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          title: string
+          workspace_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title: string
+          workspace_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          title?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_activities_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_calendar_tokens: {
         Row: {
           access_token: string
@@ -2171,6 +2224,7 @@ export type Database = {
           next_action_date: string | null
           pipeline_id: string | null
           probability: number | null
+          project_id: string | null
           source: string | null
           stage_id: string | null
           status: string | null
@@ -2194,6 +2248,7 @@ export type Database = {
           next_action_date?: string | null
           pipeline_id?: string | null
           probability?: number | null
+          project_id?: string | null
           source?: string | null
           stage_id?: string | null
           status?: string | null
@@ -2217,6 +2272,7 @@ export type Database = {
           next_action_date?: string | null
           pipeline_id?: string | null
           probability?: number | null
+          project_id?: string | null
           source?: string | null
           stage_id?: string | null
           status?: string | null
@@ -2245,6 +2301,13 @@ export type Database = {
             columns: ["pipeline_id"]
             isOneToOne: false
             referencedRelation: "crm_pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -4247,6 +4310,7 @@ export type Database = {
           end_date: string | null
           fee_calculation: Json | null
           id: string
+          lead_id: string | null
           name: string
           phase: string | null
           project_type: string | null
@@ -4272,6 +4336,7 @@ export type Database = {
           end_date?: string | null
           fee_calculation?: Json | null
           id?: string
+          lead_id?: string | null
           name: string
           phase?: string | null
           project_type?: string | null
@@ -4297,6 +4362,7 @@ export type Database = {
           end_date?: string | null
           fee_calculation?: Json | null
           id?: string
+          lead_id?: string | null
           name?: string
           phase?: string | null
           project_type?: string | null
@@ -4320,6 +4386,13 @@ export type Database = {
             columns: ["current_phase_id"]
             isOneToOne: false
             referencedRelation: "project_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
           {
@@ -5670,6 +5743,7 @@ export type Database = {
           id: string
           joint_venture_type: string | null
           jury_date: string | null
+          lead_id: string | null
           location: string | null
           mandataire_must_be_solidary: boolean | null
           market_object: string | null
@@ -5677,6 +5751,7 @@ export type Database = {
           negotiation_method: string | null
           offer_validity_days: number | null
           procedure_type: Database["public"]["Enums"]["procedure_type"] | null
+          project_id: string | null
           questions_deadline_days: number | null
           reference: string
           region: string | null
@@ -5725,6 +5800,7 @@ export type Database = {
           id?: string
           joint_venture_type?: string | null
           jury_date?: string | null
+          lead_id?: string | null
           location?: string | null
           mandataire_must_be_solidary?: boolean | null
           market_object?: string | null
@@ -5732,6 +5808,7 @@ export type Database = {
           negotiation_method?: string | null
           offer_validity_days?: number | null
           procedure_type?: Database["public"]["Enums"]["procedure_type"] | null
+          project_id?: string | null
           questions_deadline_days?: number | null
           reference: string
           region?: string | null
@@ -5780,6 +5857,7 @@ export type Database = {
           id?: string
           joint_venture_type?: string | null
           jury_date?: string | null
+          lead_id?: string | null
           location?: string | null
           mandataire_must_be_solidary?: boolean | null
           market_object?: string | null
@@ -5787,6 +5865,7 @@ export type Database = {
           negotiation_method?: string | null
           offer_validity_days?: number | null
           procedure_type?: Database["public"]["Enums"]["procedure_type"] | null
+          project_id?: string | null
           questions_deadline_days?: number | null
           reference?: string
           region?: string | null
@@ -5809,6 +5888,20 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tenders_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tenders_workspace_id_fkey"
             columns: ["workspace_id"]

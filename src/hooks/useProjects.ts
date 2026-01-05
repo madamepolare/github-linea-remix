@@ -22,8 +22,11 @@ export interface Project {
   // New fields
   project_type: ProjectType | null;
   crm_company_id: string | null;
+  lead_id?: string | null;
   address: string | null;
   city: string | null;
+  postal_code?: string | null;
+  surface?: number | null;
   surface_area: number | null;
   ai_summary: string | null;
   current_phase_id: string | null;
@@ -32,6 +35,12 @@ export interface Project {
     id: string;
     name: string;
     logo_url: string | null;
+  } | null;
+  lead?: {
+    id: string;
+    title: string;
+    status: string;
+    estimated_value: number | null;
   } | null;
   phases?: ProjectPhase[];
 }

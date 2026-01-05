@@ -38,6 +38,8 @@ import {
   FileText,
   Clock,
   Receipt,
+  Rocket,
+  FolderKanban,
 } from "lucide-react";
 import { useLeads, Lead, usePipelines } from "@/hooks/useLeads";
 import { useLeadActivities, LeadActivity } from "@/hooks/useLeadActivities";
@@ -50,6 +52,10 @@ import { cn } from "@/lib/utils";
 import { EntityDocumentsList } from "@/components/crm/EntityDocumentsList";
 import { EntityInvoicesList } from "@/components/crm/EntityInvoicesList";
 import { EntityCommercialList } from "@/components/crm/EntityCommercialList";
+import { LinkedEntitiesPanel } from "@/components/shared/LinkedEntitiesPanel";
+import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
+import { ConvertLeadToProjectDialog } from "@/components/shared/ConvertLeadToProjectDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 const activityTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   call: Phone,
@@ -79,6 +85,7 @@ const sourceLabels: Record<string, string> = {
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { activeWorkspace } = useAuth();
   const { leads, isLoading, updateLead } = useLeads();
   const { pipelines } = usePipelines();
   const { activities, createActivity, isLoading: activitiesLoading } = useLeadActivities({ leadId: id });
@@ -88,6 +95,7 @@ export default function LeadDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<Lead>>({});
   const [newNote, setNewNote] = useState("");
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
 
   const lead = leads.find((l) => l.id === id);
   const company = lead?.crm_company_id ? allCompanies.find((c) => c.id === lead.crm_company_id) : null;
@@ -222,6 +230,28 @@ export default function LeadDetail() {
                 </div>
               </div>
               <div className="flex gap-2">
+                {/* Convert to Project Button - Only show for won leads without a project */}
+                {lead.status === "won" && !lead.project_id && (
+                  <Button 
+                    size="sm" 
+                    onClick={() => setConvertDialogOpen(true)}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    <Rocket className="h-4 w-4 mr-2" />
+                    Créer le projet
+                  </Button>
+                )}
+                {/* Link to existing project if converted */}
+                {lead.project_id && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigate(`/projects/${lead.project_id}`)}
+                  >
+                    <FolderKanban className="h-4 w-4 mr-2" />
+                    Voir le projet
+                  </Button>
+                )}
                 {isEditing ? (
                   <>
                     <Button variant="outline" size="sm" onClick={() => setIsEditing(false)}>
@@ -651,11 +681,41 @@ export default function LeadDetail() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Linked Entities Panel */}
+            <LinkedEntitiesPanel
+              entityType="lead"
+              entityId={id}
+              workspaceId={activeWorkspace?.id}
+            />
+
+            {/* Activity Timeline */}
+            <ActivityTimeline
+              entityType="lead"
+              entityId={id}
+              workspaceId={activeWorkspace?.id}
+              maxItems={10}
+            />
           </div>
         </div>
           </div>
         </div>
       </div>
+
+      {/* Convert to Project Dialog */}
+      <ConvertLeadToProjectDialog
+        lead={lead ? {
+          id: lead.id,
+          title: lead.title,
+          description: lead.description,
+          estimated_value: lead.estimated_value,
+          crm_company: lead.crm_company,
+          contact: lead.contact,
+        } : null}
+        open={convertDialogOpen}
+        onOpenChange={setConvertDialogOpen}
+        workspaceId={activeWorkspace?.id}
+      />
     </>
   );
 }
