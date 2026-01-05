@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Sparkles, Check, X, AlertTriangle, Calendar as CalendarIcon, Clock, RefreshCw, Wand2, Loader2, Building2 } from "lucide-react";
+import { Sparkles, Check, X, AlertTriangle, Calendar as CalendarIcon, Clock, RefreshCw, Wand2, Loader2, Building2, Zap, ArrowRight } from "lucide-react";
 import { ProjectLot } from "@/hooks/useChantier";
 import { Intervention, CreateInterventionInput } from "@/hooks/useInterventions";
 import { supabase } from "@/integrations/supabase/client";
@@ -173,185 +173,216 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format:
   const matchedInterventions = response?.planning.filter((p) => p.lot_id) || [];
 
   return (
-    <Card className="border-primary/30 bg-gradient-to-br from-primary/5 via-transparent to-primary/5">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Wand2 className="w-5 h-5 text-primary" />
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20">
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold">Planification IA</h3>
+            <p className="text-xs text-muted-foreground">Un architecte virtuel planifie vos lots</p>
+          </div>
+        </div>
+        <Button variant="ghost" size="icon-sm" onClick={onClose}>
+          <X className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {/* Initial form */}
+      {!response && !isLoading && (
+        <div className="space-y-4">
+          {/* Quick info */}
+          <div className="p-3 rounded-lg bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Prêt à planifier</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              L'IA analysera vos <strong>{lots.length} lots</strong> et créera un planning 
+              optimisé en respectant l'ordre logique des travaux BTP.
+            </p>
+          </div>
+
+          {/* Simple form */}
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Date de début</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-sm h-9">
+                    <CalendarIcon className="w-4 h-4 mr-2 text-muted-foreground" />
+                    {format(startDate, "d MMMM yyyy", { locale: fr })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(d) => d && setStartDate(d)}
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="space-y-1.5">
+              <Label className="text-xs">Durée estimée (semaines)</Label>
+              <div className="flex gap-2">
+                {["8", "12", "16", "24"].map((w) => (
+                  <Button
+                    key={w}
+                    variant={projectDuration === w ? "secondary" : "outline"}
+                    size="sm"
+                    className="flex-1 h-9"
+                    onClick={() => setProjectDuration(w)}
+                  >
+                    {w}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Generate button */}
+          <Button 
+            onClick={generateFullPlanning} 
+            className="w-full gap-2" 
+            size="lg"
+            disabled={lots.length === 0}
+          >
+            <Sparkles className="w-4 h-4" />
+            Générer le planning
+          </Button>
+
+          {lots.length === 0 && (
+            <p className="text-xs text-center text-muted-foreground">
+              Ajoutez des lots dans l'onglet "Lots" pour commencer
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Loading state */}
+      {isLoading && (
+        <div className="space-y-4 py-8">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+              <div className="relative w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                <Loader2 className="w-7 h-7 animate-spin text-primary-foreground" />
+              </div>
             </div>
             <div>
-              <CardTitle className="text-base">Planification IA complète</CardTitle>
-              <CardDescription>Génère un planning optimisé pour tous les lots</CardDescription>
+              <p className="font-medium">L'architecte planifie...</p>
+              <p className="text-xs text-muted-foreground mt-1">Analyse de {lots.length} lots en cours</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon-sm" onClick={onClose}>
-            <X className="w-4 h-4" />
-          </Button>
+          <div className="space-y-2">
+            <Skeleton className="h-14 w-full rounded-lg" />
+            <Skeleton className="h-14 w-full rounded-lg" />
+            <Skeleton className="h-14 w-full rounded-lg" />
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {!response && !isLoading && (
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Date de début</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      <CalendarIcon className="w-4 h-4 mr-2" />
-                      {format(startDate, "d MMMM yyyy", { locale: fr })}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={startDate}
-                      onSelect={(d) => d && setStartDate(d)}
-                      locale={fr}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-2">
-                <Label>Durée estimée (semaines)</Label>
-                <Input
-                  type="number"
-                  value={projectDuration}
-                  onChange={(e) => setProjectDuration(e.target.value)}
-                  min={4}
-                  max={104}
-                />
-              </div>
-            </div>
+      )}
 
-            <div className="p-3 rounded-lg bg-muted/50 text-sm">
-              <p className="text-muted-foreground">
-                L'IA analysera vos <strong>{lots.length} lots</strong> et créera un planning 
-                optimisé en respectant l'ordre logique des travaux BTP.
-              </p>
+      {/* Results */}
+      {response && (
+        <div className="space-y-3">
+          {/* Summary */}
+          <div className="p-3 rounded-lg bg-gradient-to-r from-green-500/10 to-transparent border border-green-500/20">
+            <div className="flex items-center gap-2 mb-2">
+              <Check className="w-4 h-4 text-green-600" />
+              <Badge variant="secondary" className="gap-1 text-xs">
+                <Clock className="w-3 h-3" />
+                {response.total_duration_weeks} sem.
+              </Badge>
+              <Badge variant="secondary" className="text-xs">
+                {matchedInterventions.length} interventions
+              </Badge>
             </div>
-
-            <Button onClick={generateFullPlanning} className="w-full gap-2" size="lg">
-              <Sparkles className="w-4 h-4" />
-              Générer le planning complet
-            </Button>
+            <p className="text-sm">{response.summary}</p>
           </div>
-        )}
 
-        {isLoading && (
-          <div className="space-y-4 py-6">
-            <div className="flex flex-col items-center gap-3 text-center">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          {/* Warnings */}
+          {response.warnings.length > 0 && (
+            <div className="space-y-1">
+              {response.warnings.slice(0, 2).map((warning, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-start gap-2 p-2 rounded bg-amber-500/10 text-amber-700 text-xs"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span className="line-clamp-2">{warning}</span>
                 </div>
-              </div>
-              <div>
-                <p className="font-medium">Génération du planning en cours...</p>
-                <p className="text-sm text-muted-foreground">Analyse des {lots.length} lots et optimisation</p>
-              </div>
+              ))}
             </div>
-            <div className="space-y-2">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-            </div>
-          </div>
-        )}
+          )}
 
-        {response && (
-          <div className="space-y-4">
-            {/* Summary */}
-            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary" className="gap-1">
-                  <Clock className="w-3 h-3" />
-                  {response.total_duration_weeks} semaines
-                </Badge>
-                <Badge variant="secondary">
-                  {matchedInterventions.length} interventions
-                </Badge>
-              </div>
-              <p className="text-sm">{response.summary}</p>
-            </div>
-
-            {/* Warnings */}
-            {response.warnings.length > 0 && (
-              <div className="space-y-2">
-                {response.warnings.map((warning, idx) => (
+          {/* Planning list */}
+          <ScrollArea className="h-[250px]">
+            <div className="space-y-1.5 pr-2">
+              {matchedInterventions
+                .sort((a, b) => a.order - b.order)
+                .map((item, idx) => (
+                <div
+                  key={idx}
+                  className="p-2.5 rounded-lg border bg-background hover:bg-muted/50 transition-colors flex items-center gap-3"
+                >
                   <div
-                    key={idx}
-                    className="flex items-start gap-2 p-2 rounded bg-amber-500/10 text-amber-700 text-sm"
-                  >
-                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                    {warning}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Unmatched lots warning */}
-            {unmatchedLots.length > 0 && (
-              <div className="p-2 rounded bg-destructive/10 text-destructive text-sm">
-                <strong>{unmatchedLots.length} intervention(s)</strong> non reconnues: {unmatchedLots.map(u => u.lot_name).join(", ")}
-              </div>
-            )}
-
-            {/* Planning list */}
-            <ScrollArea className="max-h-[300px]">
-              <div className="space-y-2">
-                {matchedInterventions
-                  .sort((a, b) => a.order - b.order)
-                  .map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-lg border bg-background flex items-start gap-3"
-                  >
-                    <div
-                      className="w-3 h-full min-h-[40px] rounded-full shrink-0"
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-muted-foreground">#{item.order}</span>
-                        <span className="font-medium text-sm truncate">{item.lot_name}</span>
-                      </div>
-                      <p className="text-sm">{item.title}</p>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <CalendarIcon className="w-3 h-3" />
-                          {format(parseISO(item.start_date), "d MMM", { locale: fr })} → {format(parseISO(item.end_date), "d MMM", { locale: fr })}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {item.duration_days}j
-                        </span>
-                      </div>
+                    className="w-1.5 h-10 rounded-full shrink-0"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1 rounded">
+                        {item.order}
+                      </span>
+                      <span className="font-medium text-sm truncate">{item.lot_name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                      <span>{format(parseISO(item.start_date), "d MMM", { locale: fr })}</span>
+                      <ArrowRight className="w-3 h-3" />
+                      <span>{format(parseISO(item.end_date), "d MMM", { locale: fr })}</span>
+                      <span className="text-muted-foreground/60">• {item.duration_days}j</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
-
-            {/* Actions */}
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1 gap-2" onClick={generateFullPlanning}>
-                <RefreshCw className="w-4 h-4" />
-                Régénérer
-              </Button>
-              <Button 
-                className="flex-1 gap-2" 
-                onClick={handleAcceptAll}
-                disabled={matchedInterventions.length === 0}
-              >
-                <Check className="w-4 h-4" />
-                Appliquer ({matchedInterventions.length})
-              </Button>
+                </div>
+              ))}
             </div>
+          </ScrollArea>
+
+          {/* Unmatched warning */}
+          {unmatchedLots.length > 0 && (
+            <div className="p-2 rounded bg-destructive/10 text-destructive text-xs">
+              {unmatchedLots.length} lot(s) non reconnu(s)
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-2 pt-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1 gap-1.5" 
+              onClick={() => setResponse(null)}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Modifier
+            </Button>
+            <Button 
+              size="sm"
+              className="flex-1 gap-1.5" 
+              onClick={handleAcceptAll}
+              disabled={matchedInterventions.length === 0}
+            >
+              <Check className="w-3.5 h-3.5" />
+              Appliquer ({matchedInterventions.length})
+            </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </div>
   );
 }
