@@ -85,6 +85,7 @@ export function useProjectModules(projectId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-modules", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["projects-with-module"] });
     },
   });
 
