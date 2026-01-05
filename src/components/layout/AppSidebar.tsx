@@ -55,22 +55,61 @@ interface AppSidebarProps {
 // Core navigation - always included
 const coreNavigation: NavItem[] = [
   { title: "Dashboard", icon: LayoutDashboard, href: "/" },
-  { title: "Projects", icon: FolderKanban, href: "/projects" },
-  { title: "Tasks", icon: CheckSquare, href: "/tasks" },
-  { title: "CRM", icon: Users, href: "/crm" },
-  { title: "Commercial", icon: FileText, href: "/commercial" },
+  { 
+    title: "Projets", 
+    icon: FolderKanban, 
+    href: "/projects",
+    children: [
+      { title: "Timeline", href: "/projects/timeline" },
+      { title: "Board", href: "/projects/board" },
+      { title: "Liste", href: "/projects/list" },
+      { title: "Grille", href: "/projects/grid" },
+    ]
+  },
+  { 
+    title: "Tâches", 
+    icon: CheckSquare, 
+    href: "/tasks",
+    children: [
+      { title: "Board", href: "/tasks/board" },
+      { title: "Liste", href: "/tasks/list" },
+      { title: "Archives", href: "/tasks/archive" },
+    ]
+  },
+  { 
+    title: "CRM", 
+    icon: Users, 
+    href: "/crm",
+    children: [
+      { title: "Vue d'ensemble", href: "/crm/overview" },
+      { title: "Pipelines", href: "/crm/leads" },
+      { title: "Contacts", href: "/crm/contacts" },
+      { title: "Entreprises", href: "/crm/companies" },
+    ]
+  },
+  { 
+    title: "Commercial", 
+    icon: FileText, 
+    href: "/commercial",
+    children: [
+      { title: "Tous les documents", href: "/commercial/all" },
+      { title: "Devis", href: "/commercial/quotes" },
+      { title: "Contrats", href: "/commercial/contracts" },
+      { title: "Propositions", href: "/commercial/proposals" },
+    ]
+  },
   { 
     title: "Équipe", 
     icon: UsersRound, 
     href: "/team",
     children: [
-      { title: "Gestion des utilisateurs", href: "/team/users" },
-      { title: "Suivi des temps", href: "/team/time-tracking" },
-      { title: "Validation des temps", href: "/team/time-validation" },
+      { title: "Utilisateurs", href: "/team/users" },
+      { title: "Suivi temps", href: "/team/time-tracking" },
+      { title: "Validation", href: "/team/time-validation" },
       { title: "Recrutement", href: "/team/recruitment" },
-      { title: "Absences & présences", href: "/team/absences" },
-      { title: "Demandes d'équipe", href: "/team/requests" },
-      { title: "Évaluations internes", href: "/team/evaluations" },
+      { title: "Absences", href: "/team/absences" },
+      { title: "Demandes", href: "/team/requests" },
+      { title: "Évaluations", href: "/team/evaluations" },
       { title: "Annuaire", href: "/team/directory" },
     ]
   },
@@ -78,8 +117,29 @@ const coreNavigation: NavItem[] = [
 
 // Premium extensions - unlocked in this workspace
 const extensionNavigation: NavItem[] = [
-  { title: "Concours", icon: Trophy, href: "/tenders", isExtension: true },
-  { title: "Documents", icon: FileStack, href: "/documents", isExtension: true },
+  { 
+    title: "Concours", 
+    icon: Trophy, 
+    href: "/tenders", 
+    isExtension: true,
+    children: [
+      { title: "Kanban", href: "/tenders/kanban" },
+      { title: "Liste", href: "/tenders/list" },
+    ]
+  },
+  { 
+    title: "Documents", 
+    icon: FileStack, 
+    href: "/documents", 
+    isExtension: true,
+    children: [
+      { title: "Tableau de bord", href: "/documents/dashboard" },
+      { title: "Tous", href: "/documents/all" },
+      { title: "Administratif", href: "/documents/administrative" },
+      { title: "Projets", href: "/documents/project" },
+      { title: "RH", href: "/documents/hr" },
+    ]
+  },
 ];
 
 const bottomNavigation: NavItem[] = [

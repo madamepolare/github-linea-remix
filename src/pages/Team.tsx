@@ -68,9 +68,9 @@ export default function Team() {
         />
 
         <Tabs value={activeSection} onValueChange={handleSectionChange}>
-          <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsList className="w-full justify-start overflow-x-auto flex-wrap h-auto gap-1 p-1">
             {sections.map((s) => (
-              <TabsTrigger key={s.id} value={s.id}>
+              <TabsTrigger key={s.id} value={s.id} className="shrink-0">
                 {s.label}
               </TabsTrigger>
             ))}

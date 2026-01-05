@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, FileText, FileSignature, FileCheck, Search, MoreVertical, Trash2, Copy, Send, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -34,10 +34,16 @@ import {
 
 const Commercial = () => {
   const navigate = useNavigate();
+  const { view } = useParams();
   const { documents, isLoading, deleteDocument } = useCommercialDocuments();
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<DocumentType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all');
+
+  // Derive type filter from URL
+  const typeFilter: DocumentType | 'all' = 
+    view === 'quotes' ? 'quote' : 
+    view === 'contracts' ? 'contract' : 
+    view === 'proposals' ? 'proposal' : 'all';
 
   const filteredDocuments = documents.filter(doc => {
     const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -142,7 +148,15 @@ const Commercial = () => {
           />
         </div>
         <div className="flex gap-2 sm:gap-4">
-          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as DocumentType | 'all')}>
+          <Select 
+            value={typeFilter} 
+            onValueChange={(v) => {
+              if (v === 'all') navigate('/commercial/all');
+              else if (v === 'quote') navigate('/commercial/quotes');
+              else if (v === 'contract') navigate('/commercial/contracts');
+              else if (v === 'proposal') navigate('/commercial/proposals');
+            }}
+          >
             <SelectTrigger className="w-full sm:w-[140px]">
               <SelectValue placeholder="Type" />
             </SelectTrigger>

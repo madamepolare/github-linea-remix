@@ -90,6 +90,14 @@ const App = () => (
                 }
               />
               <Route
+                path="/crm/:section"
+                element={
+                  <ProtectedRoute>
+                    <CRM />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/crm/companies/:id"
                 element={
                   <ProtectedRoute>
@@ -122,7 +130,23 @@ const App = () => (
                 }
               />
               <Route
+                path="/tasks/:view"
+                element={
+                  <ProtectedRoute>
+                    <Tasks />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/projects"
+                element={
+                  <ProtectedRoute>
+                    <Projects />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/projects/:view"
                 element={
                   <ProtectedRoute>
                     <Projects />
@@ -154,6 +178,38 @@ const App = () => (
                 }
               />
               <Route
+                path="/commercial/all"
+                element={
+                  <ProtectedRoute>
+                    <Commercial />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/commercial/quotes"
+                element={
+                  <ProtectedRoute>
+                    <Commercial />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/commercial/contracts"
+                element={
+                  <ProtectedRoute>
+                    <Commercial />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/commercial/proposals"
+                element={
+                  <ProtectedRoute>
+                    <Commercial />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/commercial/:id"
                 element={
                   <ProtectedRoute>
@@ -170,6 +226,22 @@ const App = () => (
                 }
               />
               <Route
+                path="/tenders/kanban"
+                element={
+                  <ProtectedRoute>
+                    <Tenders />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tenders/list"
+                element={
+                  <ProtectedRoute>
+                    <Tenders />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/tenders/:id"
                 element={
                   <ProtectedRoute>
@@ -179,6 +251,14 @@ const App = () => (
               />
               <Route
                 path="/documents"
+                element={
+                  <ProtectedRoute>
+                    <Documents />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/documents/:section"
                 element={
                   <ProtectedRoute>
                     <Documents />

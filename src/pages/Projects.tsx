@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { ProjectTimeline } from "@/components/projects/ProjectTimeline";
 import { ProjectBoard } from "@/components/projects/ProjectBoard";
 import { ProjectListView } from "@/components/projects/ProjectListView";
 import { ProjectGridView } from "@/components/projects/ProjectGridView";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
-import { ViewSwitcher } from "@/components/ui/view-switcher";
 import { FolderKanban } from "lucide-react";
 
 type ViewType = "timeline" | "board" | "list" | "grid";
 
 export default function Projects() {
-  const [view, setView] = useState<ViewType>("timeline");
+  const { view: urlView } = useParams();
+  const navigate = useNavigate();
+  const view = (urlView as ViewType) || "timeline";
   const [createOpen, setCreateOpen] = useState(false);
 
   // Listen for command palette event
@@ -31,18 +33,6 @@ export default function Projects() {
           label: "Nouveau",
           onClick: () => setCreateOpen(true),
         }}
-        actions={
-          <ViewSwitcher
-            options={[
-              { value: "timeline", label: "Timeline" },
-              { value: "board", label: "Board" },
-              { value: "list", label: "Liste" },
-              { value: "grid", label: "Grille" },
-            ]}
-            value={view}
-            onChange={(v) => setView(v as ViewType)}
-          />
-        }
         contentPadding={false}
         contentOverflow="hidden"
       >
