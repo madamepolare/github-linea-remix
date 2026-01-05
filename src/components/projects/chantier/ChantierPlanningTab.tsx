@@ -436,7 +436,7 @@ export function ChantierPlanningTab({
     return groups;
   }, [days]);
 
-  // Calculate row positions - with sub-rows support
+  // Calculate row positions - with sub-rows support (no empty sub-rows by default)
   const rowPositions = useMemo(() => {
     const positions: { lotId: string; y: number; height: number; subRowCount: number }[] = [];
     let currentY = 0;
@@ -444,8 +444,9 @@ export function ChantierPlanningTab({
     for (const lot of sortedLots) {
       const isExpanded = expandedLots[lot.id];
       const maxSubRow = maxSubRowByLot[lot.id] || 0;
-      const subRowCount = isExpanded ? maxSubRow + 2 : 1; // +2 for existing + one empty for adding
-      const height = isExpanded ? rowHeight + (subRowCount - 1) * subRowHeight : rowHeight;
+      // Only show existing sub-rows (no extra empty one)
+      const subRowCount = isExpanded ? Math.max(1, maxSubRow + 1) : 1;
+      const height = isExpanded ? rowHeight + Math.max(0, maxSubRow) * subRowHeight : rowHeight;
       positions.push({ lotId: lot.id, y: currentY, height, subRowCount: isExpanded ? subRowCount : 1 });
       currentY += height;
     }
@@ -753,6 +754,16 @@ export function ChantierPlanningTab({
                                 <Plus className="w-4 h-4 mr-2" />
                                 Ajouter intervention
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setExpandedLots(prev => ({ ...prev, [lot.id]: true }));
+                                // Create an intervention on a new sub-row
+                                const newSubRow = (maxSubRowByLot[lot.id] || 0) + 1;
+                                setPreselectedLotId(lot.id);
+                                setShowAddDialog(true);
+                              }}>
+                                <Rows3 className="w-4 h-4 mr-2" />
+                                Ajouter sous-ligne
+                              </DropdownMenuItem>
                               {onEditLot && (
                                 <DropdownMenuItem onClick={() => onEditLot(lot)}>
                                   <Pencil className="w-4 h-4 mr-2" />
@@ -763,8 +774,8 @@ export function ChantierPlanningTab({
                           </DropdownMenu>
                         </div>
 
-                        {/* Sub-rows when expanded */}
-                        {isExpanded && Array.from({ length: (position?.subRowCount || 1) - 1 }).map((_, subIdx) => {
+                        {/* Sub-rows when expanded - only show existing sub-rows with interventions */}
+                        {isExpanded && Array.from({ length: Math.max(0, maxSubRowByLot[lot.id] || 0) }).map((_, subIdx) => {
                           const subRowNum = subIdx + 1;
                           const interventionsOnSubRow = lotInterventions.filter(i => i.sub_row === subRowNum);
                           const subRowName = (lot as any)?.sub_row_names?.[subRowNum.toString()] || `Sous-ligne #${subRowNum}`;
@@ -824,29 +835,6 @@ export function ChantierPlanningTab({
                             </div>
                           );
                         })}
-                        
-                        {/* Add sub-row button when expanded */}
-                        {isExpanded && (
-                          <div
-                            className="flex items-center gap-2 pl-10 pr-3 border-b border-dashed"
-                            style={{ height: subRowHeight }}
-                          >
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 text-xs text-muted-foreground hover:text-foreground gap-1"
-                              onClick={() => {
-                                // Just click on timeline to add intervention on new sub-row
-                                const newSubRow = (maxSubRowByLot[lot.id] || 0) + 1;
-                                setPreselectedLotId(lot.id);
-                                setShowAddDialog(true);
-                              }}
-                            >
-                              <Plus className="w-3 h-3" />
-                              Ajouter une sous-ligne
-                            </Button>
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -1141,6 +1129,38 @@ export function ChantierPlanningTab({
                           </div>
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Sous-ligne</label>
+                  <Select
+                    value={selectedIntervention.sub_row.toString()}
+                    onValueChange={(v) => {
+                      const newSubRow = parseInt(v);
+                      updateIntervention.mutate({ id: selectedIntervention.id, sub_row: newSubRow });
+                      setSelectedIntervention({ ...selectedIntervention, sub_row: newSubRow });
+                      toast.success("Intervention déplacée");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Ligne principale</SelectItem>
+                      {Array.from({ length: Math.max(maxSubRowByLot[selectedIntervention.lot_id] || 0, selectedIntervention.sub_row) + 1 }).map((_, idx) => {
+                        if (idx === 0) return null;
+                        const lot = lots.find(l => l.id === selectedIntervention.lot_id);
+                        const subRowName = (lot as any)?.sub_row_names?.[idx.toString()] || `Sous-ligne #${idx}`;
+                        return (
+                          <SelectItem key={idx} value={idx.toString()}>
+                            {subRowName}
+                          </SelectItem>
+                        );
+                      })}
+                      <SelectItem value={(Math.max(maxSubRowByLot[selectedIntervention.lot_id] || 0, selectedIntervention.sub_row) + 1).toString()}>
+                        + Nouvelle sous-ligne
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
