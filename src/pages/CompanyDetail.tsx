@@ -28,7 +28,6 @@ import {
   Mail,
   Phone,
   Globe,
-  Lock,
   MapPin,
   Pencil,
   Plus,
@@ -58,6 +57,9 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { EntityDocumentsList } from "@/components/crm/EntityDocumentsList";
+import { EntityInvoicesList } from "@/components/crm/EntityInvoicesList";
+import { EntityCommercialList } from "@/components/crm/EntityCommercialList";
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
@@ -278,20 +280,17 @@ export default function CompanyDetail() {
             <TabsTrigger value="contacts">Contacts ({companyContacts.length})</TabsTrigger>
             <TabsTrigger value="leads">Opportunités ({companyLeads.length})</TabsTrigger>
             <TabsTrigger value="tasks">Tâches</TabsTrigger>
-            <TabsTrigger value="documents" className="gap-1">
-              <FileText className="h-3.5 w-3.5 mr-1" />
+            <TabsTrigger value="documents">
+              <FileText className="h-3.5 w-3.5 mr-1.5" />
               Documents
-              <Lock className="h-3 w-3 text-muted-foreground/60" />
             </TabsTrigger>
-            <TabsTrigger value="invoicing" className="gap-1">
-              <Receipt className="h-3.5 w-3.5 mr-1" />
+            <TabsTrigger value="invoicing">
+              <Receipt className="h-3.5 w-3.5 mr-1.5" />
               Facturation
-              <Lock className="h-3 w-3 text-muted-foreground/60" />
             </TabsTrigger>
-            <TabsTrigger value="commercial" className="gap-1">
-              <Briefcase className="h-3.5 w-3.5 mr-1" />
+            <TabsTrigger value="commercial">
+              <Briefcase className="h-3.5 w-3.5 mr-1.5" />
               Commercial
-              <Lock className="h-3 w-3 text-muted-foreground/60" />
             </TabsTrigger>
           </TabsList>
 
@@ -708,59 +707,20 @@ export default function CompanyDetail() {
           </TabsContent>
 
           <TabsContent value="documents" className="mt-4">
-            <ExtensionPlaceholder 
-              icon={FileText}
-              title="Documents"
-              description="Gérez les documents liés à cette entreprise : contrats, avenants, procurations, etc."
-            />
+            <EntityDocumentsList entityType="company" entityId={company.id} />
           </TabsContent>
 
           <TabsContent value="invoicing" className="mt-4">
-            <ExtensionPlaceholder 
-              icon={Receipt}
-              title="Facturation"
-              description="Consultez et gérez les factures liées à cette entreprise."
-            />
+            <EntityInvoicesList entityType="company" entityId={company.id} />
           </TabsContent>
 
           <TabsContent value="commercial" className="mt-4">
-            <ExtensionPlaceholder 
-              icon={Briefcase}
-              title="Commercial"
-              description="Gérez les devis, contrats et propositions commerciales liés à cette entreprise."
-            />
+            <EntityCommercialList entityType="company" entityId={company.id} />
           </TabsContent>
         </Tabs>
           </div>
         </div>
       </div>
     </MainLayout>
-  );
-}
-
-// Extension placeholder component for locked features
-function ExtensionPlaceholder({ 
-  icon: Icon, 
-  title, 
-  description 
-}: { 
-  icon: React.ComponentType<{ className?: string }>; 
-  title: string; 
-  description: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-          <Icon className="h-8 w-8 text-primary" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">{title}</h3>
-        <p className="text-muted-foreground max-w-md mb-4">{description}</p>
-        <Badge variant="secondary" className="gap-1.5">
-          <Lock className="h-3 w-3" />
-          Extension
-        </Badge>
-      </CardContent>
-    </Card>
   );
 }

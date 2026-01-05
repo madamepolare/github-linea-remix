@@ -37,7 +37,6 @@ import {
   Plus,
   FileText,
   Clock,
-  Lock,
   Receipt,
 } from "lucide-react";
 import { useLeads, Lead, usePipelines } from "@/hooks/useLeads";
@@ -48,6 +47,9 @@ import { useContacts } from "@/hooks/useContacts";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { EntityDocumentsList } from "@/components/crm/EntityDocumentsList";
+import { EntityInvoicesList } from "@/components/crm/EntityInvoicesList";
+import { EntityCommercialList } from "@/components/crm/EntityCommercialList";
 
 const activityTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   call: Phone,
@@ -308,20 +310,17 @@ export default function LeadDetail() {
                 <TabsTrigger value="activities">Activités ({activities.length})</TabsTrigger>
                 <TabsTrigger value="tasks">Tâches</TabsTrigger>
                 <TabsTrigger value="details">Détails</TabsTrigger>
-                <TabsTrigger value="documents" className="gap-1">
-                  <FileText className="h-3.5 w-3.5 mr-1" />
+                <TabsTrigger value="documents">
+                  <FileText className="h-3.5 w-3.5 mr-1.5" />
                   Documents
-                  <Lock className="h-3 w-3 text-muted-foreground/60" />
                 </TabsTrigger>
-                <TabsTrigger value="invoicing" className="gap-1">
-                  <Receipt className="h-3.5 w-3.5 mr-1" />
+                <TabsTrigger value="invoicing">
+                  <Receipt className="h-3.5 w-3.5 mr-1.5" />
                   Facturation
-                  <Lock className="h-3 w-3 text-muted-foreground/60" />
                 </TabsTrigger>
-                <TabsTrigger value="commercial" className="gap-1">
-                  <Briefcase className="h-3.5 w-3.5 mr-1" />
+                <TabsTrigger value="commercial">
+                  <Briefcase className="h-3.5 w-3.5 mr-1.5" />
                   Commercial
-                  <Lock className="h-3 w-3 text-muted-foreground/60" />
                 </TabsTrigger>
               </TabsList>
 
@@ -587,27 +586,15 @@ export default function LeadDetail() {
               </TabsContent>
 
               <TabsContent value="documents" className="mt-4">
-                <ExtensionPlaceholder 
-                  icon={FileText}
-                  title="Documents"
-                  description="Gérez les documents liés à cette opportunité : propositions, contrats, etc."
-                />
+                <EntityDocumentsList entityType="lead" entityId={lead.id} />
               </TabsContent>
 
               <TabsContent value="invoicing" className="mt-4">
-                <ExtensionPlaceholder 
-                  icon={Receipt}
-                  title="Facturation"
-                  description="Créez et gérez les factures liées à cette opportunité."
-                />
+                <EntityInvoicesList entityType="lead" entityId={lead.id} />
               </TabsContent>
 
               <TabsContent value="commercial" className="mt-4">
-                <ExtensionPlaceholder 
-                  icon={Briefcase}
-                  title="Commercial"
-                  description="Gérez les devis, contrats et propositions commerciales liés à cette opportunité."
-                />
+                <EntityCommercialList entityType="lead" entityId={lead.id} />
               </TabsContent>
             </Tabs>
           </div>
@@ -679,32 +666,5 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className="text-sm font-medium">{value}</span>
     </div>
-  );
-}
-
-// Extension placeholder component for locked features
-function ExtensionPlaceholder({ 
-  icon: Icon, 
-  title, 
-  description 
-}: { 
-  icon: React.ComponentType<{ className?: string }>; 
-  title: string; 
-  description: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-          <Icon className="h-8 w-8 text-primary" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">{title}</h3>
-        <p className="text-muted-foreground max-w-md mb-4">{description}</p>
-        <Badge variant="secondary" className="gap-1.5">
-          <Lock className="h-3 w-3" />
-          Extension
-        </Badge>
-      </CardContent>
-    </Card>
   );
 }
