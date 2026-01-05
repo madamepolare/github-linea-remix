@@ -767,27 +767,86 @@ export function ChantierPlanningTab({
                         {isExpanded && Array.from({ length: (position?.subRowCount || 1) - 1 }).map((_, subIdx) => {
                           const subRowNum = subIdx + 1;
                           const interventionsOnSubRow = lotInterventions.filter(i => i.sub_row === subRowNum);
+                          const subRowName = (lot as any)?.sub_row_names?.[subRowNum.toString()] || `Sous-ligne #${subRowNum}`;
+                          const isEditingThisSubRow = editingSubRowName?.lotId === lot.id && editingSubRowName?.subRow === subRowNum;
+                          
                           return (
                             <div
                               key={`${lot.id}-sub-${subRowNum}`}
                               className={cn(
-                                "flex items-center gap-2 pl-10 pr-3 border-b border-dashed transition-colors",
+                                "flex items-center gap-2 pl-10 pr-3 border-b border-dashed transition-colors group/subrow",
                                 hoveredItemId === `${lot.id}-${subRowNum}` && "bg-primary/5"
                               )}
                               style={{ height: subRowHeight }}
                               onMouseEnter={() => setHoveredItemId(`${lot.id}-${subRowNum}`)}
                               onMouseLeave={() => setHoveredItemId(null)}
                             >
-                              <span className="text-xs text-muted-foreground w-6">#{subRowNum}</span>
-                              <span className="text-xs text-muted-foreground flex-1 truncate">
-                                {interventionsOnSubRow.length > 0 
-                                  ? `${interventionsOnSubRow.length} intervention(s)`
-                                  : "Sous-ligne vide"
-                                }
-                              </span>
+                              <div 
+                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                style={{ backgroundColor: getSubRowColor(lot.color || "#3b82f6", subRowNum) }}
+                              />
+                              {isEditingThisSubRow ? (
+                                <Input
+                                  autoFocus
+                                  className="h-6 text-xs flex-1"
+                                  defaultValue={subRowName}
+                                  onBlur={(e) => handleSubRowNameChange(lot.id, subRowNum, e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      handleSubRowNameChange(lot.id, subRowNum, e.currentTarget.value);
+                                    } else if (e.key === "Escape") {
+                                      setEditingSubRowName(null);
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <span 
+                                  className="text-xs text-muted-foreground flex-1 truncate cursor-pointer hover:text-foreground"
+                                  onClick={() => setEditingSubRowName({ lotId: lot.id, subRow: subRowNum })}
+                                  title="Cliquez pour renommer"
+                                >
+                                  {subRowName}
+                                  {interventionsOnSubRow.length > 0 && (
+                                    <Badge variant="secondary" className="ml-2 text-[9px] h-4">
+                                      {interventionsOnSubRow.length}
+                                    </Badge>
+                                  )}
+                                </span>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon-xs"
+                                className="opacity-0 group-hover/subrow:opacity-100 transition-opacity"
+                                onClick={() => setEditingSubRowName({ lotId: lot.id, subRow: subRowNum })}
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </Button>
                             </div>
                           );
                         })}
+                        
+                        {/* Add sub-row button when expanded */}
+                        {isExpanded && (
+                          <div
+                            className="flex items-center gap-2 pl-10 pr-3 border-b border-dashed"
+                            style={{ height: subRowHeight }}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-xs text-muted-foreground hover:text-foreground gap-1"
+                              onClick={() => {
+                                // Just click on timeline to add intervention on new sub-row
+                                const newSubRow = (maxSubRowByLot[lot.id] || 0) + 1;
+                                setPreselectedLotId(lot.id);
+                                setShowAddDialog(true);
+                              }}
+                            >
+                              <Plus className="w-3 h-3" />
+                              Ajouter une sous-ligne
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -952,6 +1011,7 @@ export function ChantierPlanningTab({
                                         }}
                                         onMouseDown={(e) => handleMouseDown(e, intervention.id, "intervention", "move")}
                                         onClick={(e) => { e.stopPropagation(); setSelectedIntervention(intervention); }}
+                                        onDoubleClick={(e) => { e.stopPropagation(); setEditingIntervention(intervention); }}
                                       >
                                         {/* Resize handles */}
                                         <div
@@ -979,6 +1039,7 @@ export function ChantierPlanningTab({
                                         {isExpanded && intervention.sub_row > 0 && (
                                           <p className="text-muted-foreground text-xs">Sous-ligne #{intervention.sub_row}</p>
                                         )}
+                                        <p className="text-muted-foreground text-[10px] mt-1 italic">Double-clic pour modifier</p>
                                       </div>
                                     </TooltipContent>
                                   </Tooltip>
@@ -1094,7 +1155,18 @@ export function ChantierPlanningTab({
                   <p className="font-medium">{selectedIntervention.team_size} personne(s)</p>
                 </div>
               </div>
-              <SheetFooter>
+              <SheetFooter className="gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditingIntervention(selectedIntervention);
+                    setSelectedIntervention(null);
+                  }}
+                >
+                  <Pencil className="w-4 h-4 mr-1" />
+                  Modifier
+                </Button>
                 <Button
                   variant="destructive"
                   size="sm"
