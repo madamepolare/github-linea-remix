@@ -4028,6 +4028,7 @@ export type Database = {
           primary_color: string | null
           rcs_city: string | null
           secondary_color: string | null
+          signature_url: string | null
           siren: string | null
           siret: string | null
           slug: string
@@ -4056,6 +4057,7 @@ export type Database = {
           primary_color?: string | null
           rcs_city?: string | null
           secondary_color?: string | null
+          signature_url?: string | null
           siren?: string | null
           siret?: string | null
           slug: string
@@ -4084,6 +4086,7 @@ export type Database = {
           primary_color?: string | null
           rcs_city?: string | null
           secondary_color?: string | null
+          signature_url?: string | null
           siren?: string | null
           siret?: string | null
           slug?: string
