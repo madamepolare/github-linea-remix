@@ -14,6 +14,120 @@ export type Database = {
   }
   public: {
     Tables: {
+      agency_documents: {
+        Row: {
+          attachments: Json | null
+          category: string
+          company_id: string | null
+          contact_id: string | null
+          content: Json | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          document_number: string | null
+          document_type: string
+          id: string
+          pdf_url: string | null
+          project_id: string | null
+          related_document_id: string | null
+          sent_at: string | null
+          signed_at: string | null
+          status: string | null
+          template_id: string | null
+          title: string
+          updated_at: string | null
+          valid_from: string | null
+          valid_until: string | null
+          workspace_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          category: string
+          company_id?: string | null
+          contact_id?: string | null
+          content?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          document_number?: string | null
+          document_type: string
+          id?: string
+          pdf_url?: string | null
+          project_id?: string | null
+          related_document_id?: string | null
+          sent_at?: string | null
+          signed_at?: string | null
+          status?: string | null
+          template_id?: string | null
+          title: string
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+          workspace_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          category?: string
+          company_id?: string | null
+          contact_id?: string | null
+          content?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          document_number?: string | null
+          document_type?: string
+          id?: string
+          pdf_url?: string | null
+          project_id?: string | null
+          related_document_id?: string | null
+          sent_at?: string | null
+          signed_at?: string | null
+          status?: string | null
+          template_id?: string | null
+          title?: string
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_documents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_documents_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_documents_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "document_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agency_documents_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_document_items: {
         Row: {
           amount: number | null
@@ -740,6 +854,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "deliverable_email_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_templates: {
+        Row: {
+          category: string
+          content_schema: Json
+          created_at: string | null
+          created_by: string | null
+          default_content: Json | null
+          description: string | null
+          document_type: string
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          name: string
+          pdf_template: Json | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          category: string
+          content_schema?: Json
+          created_at?: string | null
+          created_by?: string | null
+          default_content?: Json | null
+          description?: string | null
+          document_type: string
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name: string
+          pdf_template?: Json | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          category?: string
+          content_schema?: Json
+          created_at?: string | null
+          created_by?: string | null
+          default_content?: Json | null
+          description?: string | null
+          document_type?: string
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          pdf_template?: Json | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_templates_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -3467,6 +3640,10 @@ export type Database = {
       can_view_sensitive_contacts: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
+      }
+      generate_agency_document_number: {
+        Args: { doc_type: string; ws_id: string }
+        Returns: string
       }
       generate_document_number: {
         Args: { doc_type: string; ws_id: string }
