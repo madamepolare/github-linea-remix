@@ -35,8 +35,11 @@ import {
   Briefcase,
   Loader2,
   RefreshCw,
-  Eye
+  Eye,
+  Lock,
+  AlertTriangle
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAgencyDocuments } from '@/hooks/useAgencyDocuments';
 import { useProjects } from '@/hooks/useProjects';
 import { useCRMCompanies } from '@/hooks/useCRMCompanies';
@@ -49,6 +52,8 @@ import {
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_STATUS_COLORS,
   type DocumentType,
+  isDocumentEditable,
+  ALLOWED_STATUS_TRANSITIONS,
 } from '@/lib/documentTypes';
 
 // Import specialized editors
@@ -93,6 +98,10 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
   // PDF Preview state
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  
+  // Check if document is editable based on status
+  const isEditable = isDocumentEditable(document.status);
+  const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[document.status] || [];
 
   useEffect(() => {
     setTitle(document.title);
@@ -302,6 +311,16 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
           </TabsList>
 
           <TabsContent value="general" className="space-y-4 mt-4">
+            {/* Read-only alert */}
+            {!isEditable && (
+              <Alert variant="default" className="bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+                <Lock className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  Ce document est verrouillé. Seuls les brouillons peuvent être modifiés.
+                </AlertDescription>
+              </Alert>
+            )}
+            
             {/* Title */}
             <div className="space-y-2">
               <Label htmlFor="title">Titre</Label>
@@ -309,6 +328,7 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
                 id="title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                disabled={!isEditable}
               />
             </div>
 
@@ -320,24 +340,39 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
+                disabled={!isEditable}
               />
             </div>
 
             {/* Status */}
             <div className="space-y-2">
               <Label>Statut</Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as DocumentStatus)}>
+              <Select 
+                value={status} 
+                onValueChange={(v) => setStatus(v as DocumentStatus)}
+                disabled={allowedTransitions.length === 0}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(DOCUMENT_STATUS_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
+                  {/* Current status always shown */}
+                  <SelectItem value={document.status}>
+                    {DOCUMENT_STATUS_LABELS[document.status]}
+                  </SelectItem>
+                  {/* Allowed transitions */}
+                  {allowedTransitions.map((statusKey) => (
+                    <SelectItem key={statusKey} value={statusKey}>
+                      {DOCUMENT_STATUS_LABELS[statusKey]}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {allowedTransitions.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Transitions possibles : {allowedTransitions.map(s => DOCUMENT_STATUS_LABELS[s]).join(', ')}
+                </p>
+              )}
             </div>
 
             <Separator />
@@ -354,6 +389,7 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
                 <Select
                   value={projectId || undefined}
                   onValueChange={(v) => setProjectId(v === "_none" ? "" : v)}
+                  disabled={!isEditable}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Aucun projet" />
@@ -377,6 +413,7 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
                 <Select
                   value={companyId || undefined}
                   onValueChange={(v) => setCompanyId(v === "_none" ? "" : v)}
+                  disabled={!isEditable}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Aucune entreprise" />
@@ -400,6 +437,7 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
                 <Select
                   value={contactId || undefined}
                   onValueChange={(v) => setContactId(v === "_none" ? "" : v)}
+                  disabled={!isEditable}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Aucun contact" />
@@ -475,7 +513,17 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
           </TabsContent>
 
           <TabsContent value="content" className="mt-4">
-            {renderEditor()}
+            {!isEditable && (
+              <Alert variant="default" className="mb-4 bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
+                <Lock className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-200">
+                  Ce document est en lecture seule.
+                </AlertDescription>
+              </Alert>
+            )}
+            <div className={!isEditable ? 'pointer-events-none opacity-60' : ''}>
+              {renderEditor()}
+            </div>
           </TabsContent>
 
           <TabsContent value="preview" className="mt-4">
@@ -565,13 +613,16 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
             <Send className="h-4 w-4 mr-2" />
             Envoyer
           </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button 
+            onClick={handleSave} 
+            disabled={isSaving || (!isEditable && status === document.status)}
+          >
             {isSaving ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Save className="h-4 w-4 mr-2" />
             )}
-            Sauvegarder
+            {isEditable ? 'Sauvegarder' : 'Mettre à jour le statut'}
           </Button>
         </div>
       </SheetContent>
