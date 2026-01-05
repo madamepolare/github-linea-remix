@@ -75,7 +75,7 @@ export function KanbanBoard<T>({
 
   if (isLoading) {
     return (
-      <div className={cn("flex gap-3 sm:gap-4 overflow-x-auto pb-4 px-3 sm:px-6", className)}>
+      <div className={cn("flex gap-3 sm:gap-4 overflow-x-auto pb-4", className)}>
         {[...Array(4)].map((_, i) => (
           <div key={i} className="flex-shrink-0 w-64 sm:w-72 space-y-3">
             <Skeleton className="h-10 sm:h-12 w-full rounded-lg" />
@@ -89,7 +89,7 @@ export function KanbanBoard<T>({
   }
 
   return (
-    <div className={cn("flex gap-3 sm:gap-4 overflow-x-auto pb-4 px-3 sm:px-6 h-full", className)}>
+    <div className={cn("flex gap-3 sm:gap-4 overflow-x-auto pb-4 h-full", className)}>
       {columns.map((column) => (
         <div
           key={column.id}
