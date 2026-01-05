@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useProject, useProjects } from "@/hooks/useProjects";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
 import { useTopBar } from "@/contexts/TopBarContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,6 +52,8 @@ import { ProjectCommercialTab } from "@/components/projects/ProjectCommercialTab
 import { PermitsTab } from "@/components/projects/permits/PermitsTab";
 import { InsurancesSection } from "@/components/projects/insurances/InsurancesSection";
 import { ProjectOrdersTab } from "@/components/projects/ProjectOrdersTab";
+import { LinkedEntitiesPanel } from "@/components/shared/LinkedEntitiesPanel";
+import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 // Tab configuration for project detail
 const PROJECT_TABS = [
   { key: "overview", label: "Vue d'ensemble", icon: Sparkles },
@@ -219,6 +222,7 @@ interface OverviewTabProps {
 function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary, onUpdateProject, isUpdatingProject }: OverviewTabProps) {
   const completedPhases = phases.filter((p) => p.status === "completed").length;
   const { updatePhase, createPhase, deletePhase, reorderPhases } = useProjectPhases(project.id);
+  const { activeWorkspace } = useAuth();
   const [phaseEditOpen, setPhaseEditOpen] = useState(false);
   const [projectEditOpen, setProjectEditOpen] = useState(false);
   const [confirmPhaseId, setConfirmPhaseId] = useState<string | null>(null);
@@ -446,7 +450,7 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
       </Card>
 
       {/* Project Info Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -532,10 +536,28 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
             )}
           </CardContent>
         </Card>
+
+        {/* Linked Entities Panel */}
+        <LinkedEntitiesPanel
+          entityType="project"
+          entityId={project.id}
+          workspaceId={activeWorkspace?.id}
+        />
       </div>
 
-      {/* MOE Section */}
-      <ProjectMOESection projectId={project.id} />
+      {/* Activity Timeline & MOE */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* MOE Section */}
+        <ProjectMOESection projectId={project.id} />
+
+        {/* Activity Timeline */}
+        <ActivityTimeline
+          entityType="project"
+          entityId={project.id}
+          workspaceId={activeWorkspace?.id}
+          maxItems={10}
+        />
+      </div>
 
       {/* Modules */}
       <Card>

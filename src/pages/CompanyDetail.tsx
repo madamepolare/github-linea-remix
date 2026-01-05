@@ -40,6 +40,7 @@ import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useTopBar } from "@/contexts/TopBarContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { EntityTasksList } from "@/components/tasks/EntityTasksList";
 import {
   getCompanyTypeConfig,
@@ -62,11 +63,14 @@ import { cn } from "@/lib/utils";
 import { EntityDocumentsList } from "@/components/crm/EntityDocumentsList";
 import { EntityInvoicesList } from "@/components/crm/EntityInvoicesList";
 import { EntityCommercialList } from "@/components/crm/EntityCommercialList";
+import { LinkedEntitiesPanel } from "@/components/shared/LinkedEntitiesPanel";
+import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { setEntityConfig } = useTopBar();
+  const { activeWorkspace } = useAuth();
   const { allCompanies, isLoading, updateCompany } = useCRMCompanies();
   const { contacts } = useContacts();
   const { leads } = useLeads();
@@ -786,6 +790,23 @@ export default function CompanyDetail() {
 
           {activeTab === "commercial" && (
             <EntityCommercialList entityType="company" entityId={company.id} />
+          )}
+
+          {/* Linked Entities Panel - shown in sidebar on overview */}
+          {activeTab === "overview" && (
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <LinkedEntitiesPanel
+                entityType="company"
+                entityId={id}
+                workspaceId={activeWorkspace?.id}
+              />
+              <ActivityTimeline
+                entityType="company"
+                entityId={id}
+                workspaceId={activeWorkspace?.id}
+                maxItems={10}
+              />
+            </div>
           )}
 
         </div>

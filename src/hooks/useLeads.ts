@@ -33,6 +33,7 @@ export interface Lead {
   title: string;
   crm_company_id: string | null;
   contact_id: string | null;
+  project_id: string | null;
   status: string;
   pipeline_id: string | null;
   stage_id: string | null;
@@ -60,6 +61,13 @@ export interface Lead {
     email: string | null;
   } | null;
   stage?: PipelineStage | null;
+  crm_company?: {
+    id: string;
+    name: string;
+    address?: string | null;
+    city?: string | null;
+    postal_code?: string | null;
+  } | null;
 }
 
 export interface CreateLeadInput {
@@ -92,6 +100,7 @@ export function useLeads(options?: { pipelineId?: string; stageId?: string; stat
         .select(`
           *,
           company:crm_companies(id, name, logo_url),
+          crm_company:crm_companies(id, name, address, city, postal_code),
           contact:contacts(id, name, email),
           stage:crm_pipeline_stages(*)
         `)
