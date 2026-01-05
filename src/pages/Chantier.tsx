@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { useProjectsWithModule } from "@/hooks/useProjectModules";
-import { useProject } from "@/hooks/useProjects";
+import { useProjectsWithModule, useProjectModules } from "@/hooks/useProjectModules";
+import { useProjects, useProject } from "@/hooks/useProjects";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChantierOverview } from "@/components/projects/chantier/ChantierOverview";
 import { ChantierPlanningTab } from "@/components/projects/chantier/ChantierPlanningTab";
 import { MeetingsSection } from "@/components/projects/chantier/MeetingsSection";
@@ -23,6 +23,7 @@ import {
   ArrowLeft,
   Building2,
   Calendar,
+  CheckCircle2,
   ClipboardList,
   Eye,
   FileText,
@@ -34,6 +35,7 @@ import {
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { toast } from "sonner";
 
 export default function Chantier() {
   const { projectId, section } = useParams<{ projectId?: string; section?: string }>();
@@ -49,11 +51,19 @@ export default function Chantier() {
 }
 
 function ChantierList() {
-  const { data: projectsWithChantier = [], isLoading } = useProjectsWithModule("chantier");
+  const { data: projectsWithChantier = [], isLoading: chantiersLoading } = useProjectsWithModule("chantier");
+  const { projects, isLoading: projectsLoading } = useProjects();
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"chantiers" | "projets">("chantiers");
   const navigate = useNavigate();
 
-  const filteredProjects = projectsWithChantier.filter((item) => {
+  // Get project IDs that already have chantier enabled
+  const projectsWithChantierIds = new Set(projectsWithChantier.map(p => p.project_id));
+
+  // Projects without chantier module
+  const projectsWithoutChantier = projects.filter(p => !projectsWithChantierIds.has(p.id));
+
+  const filteredChantiers = projectsWithChantier.filter((item) => {
     const project = item.project;
     if (!project) return false;
     const searchLower = search.toLowerCase();
@@ -63,6 +73,17 @@ function ChantierList() {
       project.city?.toLowerCase().includes(searchLower)
     );
   });
+
+  const filteredProjects = projectsWithoutChantier.filter((project) => {
+    const searchLower = search.toLowerCase();
+    return (
+      project.name?.toLowerCase().includes(searchLower) ||
+      project.crm_company?.name?.toLowerCase().includes(searchLower) ||
+      project.city?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const isLoading = chantiersLoading || projectsLoading;
 
   return (
     <MainLayout>
@@ -79,10 +100,22 @@ function ChantierList() {
                 <p className="text-sm text-muted-foreground">Gestion des chantiers, réunions et comptes-rendus</p>
               </div>
             </div>
-            <Button onClick={() => navigate("/projects")}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nouveau projet
-            </Button>
+          </div>
+          
+          {/* View toggle */}
+          <div className="mt-4">
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "chantiers" | "projets")}>
+              <TabsList>
+                <TabsTrigger value="chantiers">
+                  <HardHat className="h-3.5 w-3.5 mr-1.5" />
+                  Chantiers actifs ({projectsWithChantier.length})
+                </TabsTrigger>
+                <TabsTrigger value="projets">
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Activer sur un projet ({projectsWithoutChantier.length})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
 
@@ -92,7 +125,7 @@ function ChantierList() {
           <div className="relative mb-6">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Rechercher un chantier..."
+              placeholder={viewMode === "chantiers" ? "Rechercher un chantier..." : "Rechercher un projet..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 max-w-md"
@@ -105,86 +138,174 @@ function ChantierList() {
                 <Skeleton key={i} className="h-40" />
               ))}
             </div>
-          ) : filteredProjects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <HardHat className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Aucun chantier</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {search ? "Aucun chantier ne correspond à votre recherche" : "Activez le module Chantier sur vos projets pour les voir ici"}
-              </p>
-              <Button variant="outline" onClick={() => navigate("/projects")}>
-                Voir les projets
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredProjects.map((item) => {
-                const project = item.project;
-                if (!project) return null;
-                
-                const activePhase = Array.isArray(project.phases) 
-                  ? project.phases.find((p: any) => p.status === "in_progress")
-                  : null;
-                
-                return (
-                  <Card
-                    key={item.id}
-                    className="cursor-pointer hover:shadow-md transition-all border-border hover:border-primary/30"
-                    onClick={() => navigate(`/chantier/${project.id}`)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div
-                          className="w-2 h-12 rounded-full shrink-0"
-                          style={{ backgroundColor: project.color || "#3B82F6" }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-foreground truncate mb-1">
-                            {project.name}
-                          </h3>
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-3">
-                            {project.crm_company && (
-                              <span className="flex items-center gap-1">
-                                <Building2 className="h-3 w-3" />
-                                {project.crm_company.name}
-                              </span>
-                            )}
-                            {project.city && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {project.city}
-                              </span>
+          ) : viewMode === "chantiers" ? (
+            // Active Chantiers View
+            filteredChantiers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <HardHat className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">Aucun chantier actif</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {search ? "Aucun chantier ne correspond à votre recherche" : "Activez le module Chantier sur vos projets pour les voir ici"}
+                </p>
+                <Button variant="outline" onClick={() => setViewMode("projets")}>
+                  Activer sur un projet
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredChantiers.map((item) => {
+                  const project = item.project;
+                  if (!project) return null;
+                  
+                  const activePhase = Array.isArray(project.phases) 
+                    ? project.phases.find((p: any) => p.status === "in_progress")
+                    : null;
+                  
+                  return (
+                    <Card
+                      key={item.id}
+                      className="cursor-pointer hover:shadow-md transition-all border-border hover:border-orange-500/30"
+                      onClick={() => navigate(`/chantier/${project.id}`)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="w-2 h-12 rounded-full shrink-0"
+                            style={{ backgroundColor: project.color || "#3B82F6" }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-foreground truncate mb-1">
+                              {project.name}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-3">
+                              {project.crm_company && (
+                                <span className="flex items-center gap-1">
+                                  <Building2 className="h-3 w-3" />
+                                  {project.crm_company.name}
+                                </span>
+                              )}
+                              {project.city && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {project.city}
+                                </span>
+                              )}
+                            </div>
+                            {activePhase && (
+                              <Badge variant="secondary" className="text-xs font-normal">
+                                {activePhase.name}
+                              </Badge>
                             )}
                           </div>
-                          {activePhase && (
-                            <Badge variant="secondary" className="text-xs font-normal">
-                              {activePhase.name}
-                            </Badge>
-                          )}
                         </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {format(parseISO(item.enabled_at), "dd MMM yy", { locale: fr })}
-                          </span>
+                        
+                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {format(parseISO(item.enabled_at), "dd MMM yy", { locale: fr })}
+                            </span>
+                          </div>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs">
+                            <Eye className="h-3 w-3 mr-1" />
+                            Voir
+                          </Button>
                         </div>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs">
-                          <Eye className="h-3 w-3 mr-1" />
-                          Voir
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )
+          ) : (
+            // Projects to activate view
+            filteredProjects.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <CheckCircle2 className="h-12 w-12 text-success mb-4" />
+                <h3 className="text-lg font-medium mb-2">Tous les projets ont un chantier</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {search ? "Aucun projet ne correspond à votre recherche" : "Le module Chantier est activé sur tous vos projets"}
+                </p>
+                <Button variant="outline" onClick={() => setViewMode("chantiers")}>
+                  Voir les chantiers
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredProjects.map((project) => (
+                  <ProjectCardWithActivation key={project.id} project={project} />
+                ))}
+              </div>
+            )
           )}
         </div>
       </div>
     </MainLayout>
+  );
+}
+
+// Component for activating chantier on a project
+function ProjectCardWithActivation({ project }: { project: any }) {
+  const navigate = useNavigate();
+  const { enableModule } = useProjectModules(project.id);
+  const [isActivating, setIsActivating] = useState(false);
+
+  const handleActivate = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsActivating(true);
+    try {
+      await enableModule.mutateAsync("chantier");
+      toast.success("Module Chantier activé");
+      navigate(`/chantier/${project.id}`);
+    } catch (error) {
+      toast.error("Erreur lors de l'activation");
+    } finally {
+      setIsActivating(false);
+    }
+  };
+
+  return (
+    <Card className="hover:shadow-md transition-all border-border hover:border-primary/30">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div
+            className="w-2 h-12 rounded-full shrink-0"
+            style={{ backgroundColor: project.color || "#3B82F6" }}
+          />
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-foreground truncate mb-1">
+              {project.name}
+            </h3>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-3">
+              {project.crm_company && (
+                <span className="flex items-center gap-1">
+                  <Building2 className="h-3 w-3" />
+                  {project.crm_company.name}
+                </span>
+              )}
+              {project.city && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {project.city}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-end mt-4 pt-3 border-t border-border">
+          <Button 
+            size="sm" 
+            onClick={handleActivate}
+            disabled={isActivating}
+            className="gap-2 bg-orange-500 hover:bg-orange-600"
+          >
+            <HardHat className="h-3.5 w-3.5" />
+            {isActivating ? "Activation..." : "Activer Chantier"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
