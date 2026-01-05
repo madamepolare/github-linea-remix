@@ -75,6 +75,23 @@ export const DOCUMENT_STATUS_COLORS: Record<DocumentStatus, string> = {
   expired: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
 };
 
+// Statuts modifiables (seul le brouillon peut être édité)
+export const EDITABLE_STATUSES: DocumentStatus[] = ['draft'];
+
+// Vérifie si un document est modifiable
+export const isDocumentEditable = (status: DocumentStatus): boolean => {
+  return EDITABLE_STATUSES.includes(status);
+};
+
+// Transitions de statut autorisées
+export const ALLOWED_STATUS_TRANSITIONS: Record<DocumentStatus, DocumentStatus[]> = {
+  draft: ['generated'],
+  generated: ['sent', 'draft'],
+  sent: ['signed', 'expired'],
+  signed: ['expired'],
+  expired: [],
+};
+
 // Types par catégorie
 export const DOCUMENT_TYPES_BY_CATEGORY: Record<DocumentCategory, DocumentType[]> = {
   administrative: [
