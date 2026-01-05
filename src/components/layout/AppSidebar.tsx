@@ -14,7 +14,7 @@ import {
   HelpCircle,
   Trophy,
   FileStack,
-  Sparkles,
+  LockOpen,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
@@ -119,23 +119,22 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150",
           active
             ? "bg-foreground text-background font-medium"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground",
-          item.isExtension && !active && "text-accent hover:text-accent"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
       >
         <item.icon
           className={cn(
             "h-[18px] w-[18px] shrink-0 transition-colors",
-            active ? "text-background" : item.isExtension ? "text-accent" : "text-muted-foreground group-hover:text-foreground"
+            active ? "text-background" : "text-muted-foreground group-hover:text-foreground"
           )}
         />
         {!collapsed && (
           <>
             <span className="flex-1 truncate">{item.title}</span>
             {item.isExtension && (
-              <Sparkles className={cn(
-                "h-3 w-3 shrink-0",
-                active ? "text-background" : "text-accent"
+              <LockOpen className={cn(
+                "h-3.5 w-3.5 shrink-0",
+                active ? "text-background" : "text-muted-foreground"
               )} />
             )}
             {item.badge && (
@@ -165,7 +164,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           <TooltipContent side="right" className="flex items-center gap-2">
             {item.title}
             {item.isExtension && (
-              <Sparkles className="h-3 w-3 text-accent" />
+              <LockOpen className="h-3 w-3 text-muted-foreground" />
             )}
             {item.badge && (
               <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium">
@@ -326,11 +325,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         {extensionNavigation.length > 0 && (
           <div className="mt-4 pt-4 border-t border-border">
             {!collapsed && (
-              <div className="px-3 mb-2 flex items-center gap-1.5">
-                <span className="text-[10px] font-medium uppercase tracking-wider text-accent">
+              <div className="px-3 mb-2">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                   Extensions
                 </span>
-                <Sparkles className="h-3 w-3 text-accent" />
               </div>
             )}
             <div className="space-y-1">
