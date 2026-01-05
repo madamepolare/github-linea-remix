@@ -27,6 +27,7 @@ const CommercialDocument = lazy(() => import("./pages/CommercialDocument"));
 const Tenders = lazy(() => import("./pages/Tenders"));
 const TenderDetail = lazy(() => import("./pages/TenderDetail"));
 const Documents = lazy(() => import("./pages/Documents"));
+const Team = lazy(() => import("./pages/Team"));
 const Welcome = lazy(() => import("./pages/Welcome"));
 const ModuleDetail = lazy(() => import("./pages/ModuleDetail"));
 const SolutionDetail = lazy(() => import("./pages/SolutionDetail"));
@@ -181,6 +182,22 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Documents />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/team"
+                element={
+                  <ProtectedRoute>
+                    <Team />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/team/:section"
+                element={
+                  <ProtectedRoute>
+                    <Team />
                   </ProtectedRoute>
                 }
               />
