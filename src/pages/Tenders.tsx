@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { format, formatDistanceToNow, isPast, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
@@ -40,8 +40,9 @@ import { CreateTenderDialog } from "@/components/tenders/CreateTenderDialog";
 
 export default function Tenders() {
   const navigate = useNavigate();
+  const { view: urlView } = useParams();
   const { tenders, tendersByStatus, stats, isLoading, deleteTender } = useTenders();
-  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const viewMode = urlView === "list" ? "list" : "kanban";
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
@@ -75,7 +76,7 @@ export default function Tenders() {
                 <Button
                   variant={viewMode === "kanban" ? "secondary" : "ghost"}
                   size="sm"
-                  onClick={() => setViewMode("kanban")}
+                  onClick={() => navigate("/tenders/kanban")}
                   className="h-7 px-2"
                 >
                   <LayoutGrid className="h-4 w-4" />
@@ -83,7 +84,7 @@ export default function Tenders() {
                 <Button
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="sm"
-                  onClick={() => setViewMode("list")}
+                  onClick={() => navigate("/tenders/list")}
                   className="h-7 px-2"
                 >
                   <List className="h-4 w-4" />

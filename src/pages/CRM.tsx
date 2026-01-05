@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,9 @@ type CRMView = "overview" | "leads" | "contacts" | "companies";
 type LeadsMode = "all" | "single";
 
 export default function CRM() {
-  const [view, setView] = useState<CRMView>("overview");
+  const { section } = useParams();
+  const navigate = useNavigate();
+  const view = (section as CRMView) || "overview";
   const [searchQuery, setSearchQuery] = useState("");
 
   const [leadsMode, setLeadsMode] = useState<LeadsMode>("all");
@@ -141,7 +144,7 @@ export default function CRM() {
 
             {/* Main navigation tabs */}
             <div className="px-4 sm:px-6 overflow-x-auto">
-              <Tabs value={view} onValueChange={(v) => setView(v as CRMView)}>
+              <Tabs value={view} onValueChange={(v) => navigate(`/crm/${v}`)}>
                 <TabsList className="h-10 bg-transparent p-0 gap-0.5 sm:gap-1 w-max mx-auto">
                   <TabsTrigger
                     value="overview"
@@ -261,7 +264,7 @@ export default function CRM() {
           <div className="flex-1 overflow-auto">
             {view === "overview" && (
               <CRMOverview
-                onNavigate={(v) => setView(v as CRMView)}
+                onNavigate={(v) => navigate(`/crm/${v}`)}
                 companiesCount={allCompanies.length}
                 contactsCount={allContacts.length}
                 leadStats={leadStats}

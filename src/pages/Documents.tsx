@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,8 @@ import {
 
 export default function Documents() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<DocumentCategory | 'all' | 'dashboard'>('dashboard');
+  const { section } = useParams();
+  const activeTab = (section as DocumentCategory | 'all' | 'dashboard') || 'dashboard';
   const [searchQuery, setSearchQuery] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   
@@ -71,7 +72,7 @@ export default function Documents() {
       )}
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DocumentCategory | 'all' | 'dashboard')}>
+      <Tabs value={activeTab} onValueChange={(v) => navigate(`/documents/${v}`)}>
         <TabsList className="mb-6">
           <TabsTrigger value="dashboard" className="gap-2">
             <LayoutDashboard className="h-4 w-4" />

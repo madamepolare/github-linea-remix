@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { TaskListView } from "@/components/tasks/TaskListView";
@@ -6,13 +7,13 @@ import { TaskArchiveView } from "@/components/tasks/TaskArchiveView";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { QuickTasksSection } from "@/components/tasks/QuickTasksSection";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutGrid, List, Archive, CheckSquare } from "lucide-react";
+import { CheckSquare } from "lucide-react";
 
 type ViewType = "board" | "list" | "archive";
 
 export default function Tasks() {
-  const [view, setView] = useState<ViewType>("board");
+  const { view: urlView } = useParams();
+  const view = (urlView as ViewType) || "board";
   const [createOpen, setCreateOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
@@ -41,24 +42,6 @@ export default function Tasks() {
           label: "Tâche",
           onClick: () => setCreateOpen(true),
         }}
-        actions={
-          <Tabs value={view} onValueChange={(v) => setView(v as ViewType)}>
-            <TabsList className="h-9 p-1 bg-muted/50">
-              <TabsTrigger value="board" className="h-7 px-2.5 text-xs gap-1.5">
-                <LayoutGrid className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span className="hidden sm:inline">Board</span>
-              </TabsTrigger>
-              <TabsTrigger value="list" className="h-7 px-2.5 text-xs gap-1.5">
-                <List className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span className="hidden sm:inline">Liste</span>
-              </TabsTrigger>
-              <TabsTrigger value="archive" className="h-7 px-2.5 text-xs gap-1.5">
-                <Archive className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span className="hidden sm:inline">Archives</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        }
       >
         {/* Filters - only show for non-archive views */}
         {view !== "archive" && (
