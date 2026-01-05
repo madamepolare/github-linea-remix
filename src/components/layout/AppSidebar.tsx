@@ -18,6 +18,9 @@ import {
   UsersRound,
   HardHat,
   Receipt,
+  Gavel,
+  Sparkles,
+  UserCog,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
@@ -39,7 +42,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebarStore } from "@/hooks/useSidebarStore";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useModules, useWorkspaceModules } from "@/hooks/useModules";
 
 interface NavItem {
   title: string;
@@ -47,6 +51,7 @@ interface NavItem {
   href: string;
   badge?: number;
   isExtension?: boolean;
+  moduleSlug?: string;
   children?: { title: string; href: string }[];
 }
 
@@ -54,56 +59,68 @@ interface AppSidebarProps {
   onNavigate?: () => void;
 }
 
-// Core navigation - always included
-const coreNavigation: NavItem[] = [
-  { title: "Dashboard", icon: LayoutDashboard, href: "/" },
-  { 
-    title: "Projets", 
-    icon: FolderKanban, 
+// Map module slugs to their navigation config
+const MODULE_NAV_CONFIG: Record<string, Omit<NavItem, "moduleSlug">> = {
+  projects: {
+    title: "Projets",
+    icon: FolderKanban,
     href: "/projects",
     children: [
       { title: "Timeline", href: "/projects/timeline" },
       { title: "Board", href: "/projects/board" },
       { title: "Liste", href: "/projects/list" },
       { title: "Grille", href: "/projects/grid" },
-    ]
+    ],
   },
-  { 
-    title: "Tâches", 
-    icon: CheckSquare, 
+  tasks: {
+    title: "Tâches",
+    icon: CheckSquare,
     href: "/tasks",
     children: [
       { title: "Board", href: "/tasks/board" },
       { title: "Liste", href: "/tasks/list" },
       { title: "Archives", href: "/tasks/archive" },
-    ]
+    ],
   },
-  { 
-    title: "CRM", 
-    icon: Users, 
+  crm: {
+    title: "CRM",
+    icon: Users,
     href: "/crm",
     children: [
       { title: "Vue d'ensemble", href: "/crm/overview" },
       { title: "Pipelines", href: "/crm/leads" },
       { title: "Contacts", href: "/crm/contacts" },
       { title: "Entreprises", href: "/crm/companies" },
-    ]
+    ],
   },
-  { 
-    title: "Commercial", 
-    icon: FileText, 
+  commercial: {
+    title: "Commercial",
+    icon: FileText,
     href: "/commercial",
     children: [
       { title: "Tous les documents", href: "/commercial/all" },
       { title: "Devis", href: "/commercial/quotes" },
       { title: "Contrats", href: "/commercial/contracts" },
       { title: "Propositions", href: "/commercial/proposals" },
-    ]
+    ],
   },
-  { 
-    title: "Équipe", 
-    icon: UsersRound, 
+  documents: {
+    title: "Documents",
+    icon: FileStack,
+    href: "/documents",
+    children: [
+      { title: "Tableau de bord", href: "/documents/dashboard" },
+      { title: "Tous", href: "/documents/all" },
+      { title: "Administratif", href: "/documents/administrative" },
+      { title: "Projets", href: "/documents/project" },
+      { title: "RH", href: "/documents/hr" },
+    ],
+  },
+  team: {
+    title: "Équipe",
+    icon: UsersRound,
     href: "/team",
+    isExtension: true,
     children: [
       { title: "Utilisateurs", href: "/team/users" },
       { title: "Suivi temps", href: "/team/time-tracking" },
@@ -113,35 +130,29 @@ const coreNavigation: NavItem[] = [
       { title: "Demandes", href: "/team/requests" },
       { title: "Évaluations", href: "/team/evaluations" },
       { title: "Annuaire", href: "/team/directory" },
-    ]
+    ],
   },
-];
-
-// Premium extensions - unlocked in this workspace
-const extensionNavigation: NavItem[] = [
-  { 
-    title: "Chantier", 
-    icon: HardHat, 
-    href: "/chantier", 
+  chantier: {
+    title: "Chantier",
+    icon: HardHat,
+    href: "/chantier",
     isExtension: true,
-    children: [
-      { title: "Tous les chantiers", href: "/chantier" },
-    ]
+    children: [{ title: "Tous les chantiers", href: "/chantier" }],
   },
-  { 
-    title: "Concours", 
-    icon: Trophy, 
-    href: "/tenders", 
+  tenders: {
+    title: "Concours",
+    icon: Trophy,
+    href: "/tenders",
     isExtension: true,
     children: [
       { title: "Kanban", href: "/tenders/kanban" },
       { title: "Liste", href: "/tenders/list" },
-    ]
+    ],
   },
-  { 
-    title: "Facturation", 
-    icon: Receipt, 
-    href: "/invoicing", 
+  invoicing: {
+    title: "Facturation",
+    icon: Receipt,
+    href: "/invoicing",
     isExtension: true,
     children: [
       { title: "Tableau de bord", href: "/invoicing" },
@@ -149,22 +160,15 @@ const extensionNavigation: NavItem[] = [
       { title: "En attente", href: "/invoicing/pending" },
       { title: "Payées", href: "/invoicing/paid" },
       { title: "En retard", href: "/invoicing/overdue" },
-    ]
+    ],
   },
-  { 
-    title: "Documents", 
-    icon: FileStack, 
-    href: "/documents", 
-    isExtension: true,
-    children: [
-      { title: "Tableau de bord", href: "/documents/dashboard" },
-      { title: "Tous", href: "/documents/all" },
-      { title: "Administratif", href: "/documents/administrative" },
-      { title: "Projets", href: "/documents/project" },
-      { title: "RH", href: "/documents/hr" },
-    ]
-  },
-];
+};
+
+// Core modules order (always shown if enabled)
+const CORE_MODULE_ORDER = ["projects", "tasks", "crm", "commercial", "documents"];
+
+// Extension modules order
+const EXTENSION_MODULE_ORDER = ["team", "chantier", "tenders", "invoicing"];
 
 const bottomNavigation: NavItem[] = [
   { title: "Settings", icon: Settings, href: "/settings" },
@@ -176,6 +180,43 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, activeWorkspace, workspaces, signOut, setActiveWorkspace } = useAuth();
+  
+  // Get modules data
+  const { data: modules = [] } = useModules();
+  const { data: workspaceModules = [] } = useWorkspaceModules();
+
+  // Check if a module is enabled
+  const isModuleEnabled = (slug: string) => {
+    const module = modules.find((m) => m.slug === slug);
+    // Core modules are always enabled
+    if (module?.is_core) return true;
+    // Check if module is in workspace_modules
+    return workspaceModules.some((wm) => wm.module?.slug === slug);
+  };
+
+  // Build navigation based on enabled modules
+  const { coreNavigation, extensionNavigation } = useMemo(() => {
+    const core: NavItem[] = [
+      { title: "Dashboard", icon: LayoutDashboard, href: "/" },
+    ];
+    const extensions: NavItem[] = [];
+
+    // Add core modules
+    CORE_MODULE_ORDER.forEach((slug) => {
+      if (isModuleEnabled(slug) && MODULE_NAV_CONFIG[slug]) {
+        core.push({ ...MODULE_NAV_CONFIG[slug], moduleSlug: slug });
+      }
+    });
+
+    // Add extension modules
+    EXTENSION_MODULE_ORDER.forEach((slug) => {
+      if (isModuleEnabled(slug) && MODULE_NAV_CONFIG[slug]) {
+        extensions.push({ ...MODULE_NAV_CONFIG[slug], moduleSlug: slug, isExtension: true });
+      }
+    });
+
+    return { coreNavigation: core, extensionNavigation: extensions };
+  }, [modules, workspaceModules]);
 
   const toggleExpanded = (title: string) => {
     setExpandedItems((prev) =>
