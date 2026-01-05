@@ -33,6 +33,7 @@ const Team = lazy(() => import("./pages/Team"));
 const Chantier = lazy(() => import("./pages/Chantier"));
 const Invoicing = lazy(() => import("./pages/Invoicing"));
 const References = lazy(() => import("./pages/References"));
+const ReferenceDetail = lazy(() => import("./pages/ReferenceDetail"));
 const Materials = lazy(() => import("./pages/Materials"));
 const Welcome = lazy(() => import("./pages/Welcome"));
 const ModuleDetail = lazy(() => import("./pages/ModuleDetail"));
@@ -125,7 +126,7 @@ const App = () => (
                 <Route path="/chantier/:projectId" element={<Chantier />} />
                 <Route path="/chantier/:projectId/:section" element={<Chantier />} />
                 <Route path="/references" element={<References />} />
-                <Route path="/references/:id" element={<References />} />
+                <Route path="/references/:id" element={<ReferenceDetail />} />
                 <Route path="/materials" element={<Materials />} />
               </Route>
 
