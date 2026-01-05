@@ -14,6 +14,7 @@ import {
   Clock,
   Crown,
   User,
+  Copy,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ interface Invite {
   id: string;
   email: string;
   role: AppRole;
+  token: string;
   expires_at: string;
   created_at: string;
 }
@@ -165,6 +167,22 @@ export function MembersSettings() {
     setInvites(data || []);
   };
 
+  const buildInviteUrl = (inviteToken: string) =>
+    `${window.location.origin}/invite?token=${encodeURIComponent(inviteToken)}`;
+
+  const copyInviteLink = async (inviteToken: string) => {
+    const url = buildInviteUrl(inviteToken);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Lien d'invitation copié" });
+    } catch {
+      toast({
+        title: "Lien d'invitation",
+        description: url,
+      });
+    }
+  };
+
   const handleInvite = async (data: InviteFormData) => {
     if (!activeWorkspace || !user || !profile) return;
     setIsInviting(true);
@@ -209,15 +227,15 @@ export function MembersSettings() {
 
       if (emailError) {
         console.error("Email send error:", emailError);
-        // Still show success since invite was created
+        await copyInviteLink(invite.token);
         toast({
-          title: "Invite created",
-          description: "Invite created but email may not have been sent. Share the link manually.",
+          title: "Invitation créée",
+          description: "Email non envoyé — lien d'invitation copié pour partage manuel.",
         });
       } else {
         toast({
-          title: "Invitation sent",
-          description: `An invitation has been sent to ${data.email}`,
+          title: "Invitation envoyée",
+          description: `Une invitation a été envoyée à ${data.email}`,
         });
       }
 
@@ -505,11 +523,20 @@ export function MembersSettings() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <Badge className={roleColors[invite.role]}>
                         <RoleIcon className="h-3 w-3 mr-1" />
                         {invite.role}
                       </Badge>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => copyInviteLink(invite.token)}
+                        title="Copier le lien"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
                       {canManageMembers && (
                         <Button
                           variant="ghost"
