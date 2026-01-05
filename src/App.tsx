@@ -147,7 +147,23 @@ const App = () => (
                 }
               />
               <Route
-                path="/projects/:view"
+                path="/projects/list"
+                element={
+                  <ProtectedRoute>
+                    <Projects />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/projects/grid"
+                element={
+                  <ProtectedRoute>
+                    <Projects />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/projects/board"
                 element={
                   <ProtectedRoute>
                     <Projects />
