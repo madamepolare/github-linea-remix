@@ -240,7 +240,7 @@ function MemberCard({
 }: {
   member: TeamMember;
   canManage: boolean;
-  onUpdateRole: (role: string) => void;
+  onUpdateRole: (role: "admin" | "member" | "viewer") => void;
   onRemove: () => void;
 }) {
   const initials = member.profile?.full_name
