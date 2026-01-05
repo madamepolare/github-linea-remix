@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, Settings as SettingsIcon, User, Hammer, FolderKanban, Target, CheckSquare, FileText, FileStack, Shield, CreditCard, Puzzle } from "lucide-react";
+import { Building2, Users, Settings as SettingsIcon, User, Hammer, FolderKanban, Target, CheckSquare, FileText, FileStack, Shield, CreditCard, Puzzle, Mail } from "lucide-react";
 import { WorkspaceSettings } from "@/components/settings/WorkspaceSettings";
 import { MembersSettings } from "@/components/settings/MembersSettings";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
@@ -14,6 +14,7 @@ import { DocumentsSettings } from "@/components/settings/DocumentsSettings";
 import { PermissionsSettings } from "@/components/settings/PermissionsSettings";
 import { PlanSettings } from "@/components/settings/PlanSettings";
 import { ModulesSettings } from "@/components/settings/ModulesSettings";
+import { EmailTemplatesSettings } from "@/components/settings/EmailTemplatesSettings";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export default function Settings() {
@@ -75,6 +76,10 @@ export default function Settings() {
               <CheckSquare className="h-3.5 w-3.5" strokeWidth={1.5} />
               <span className="hidden sm:inline">Tâches</span>
             </TabsTrigger>
+            <TabsTrigger value="emails" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
+              <Mail className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <span className="hidden sm:inline">Emails</span>
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       }
@@ -91,6 +96,7 @@ export default function Settings() {
       {activeTab === "commercial" && <CommercialSettings />}
       {activeTab === "crm" && <CRMSettings />}
       {activeTab === "tasks" && <TasksSettings />}
+      {activeTab === "emails" && <EmailTemplatesSettings />}
     </PageLayout>
   );
 }
