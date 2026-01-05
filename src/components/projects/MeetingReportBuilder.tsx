@@ -46,7 +46,7 @@ interface MeetingReportBuilderProps {
 
 export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingReportBuilderProps) {
   const { data: project } = useProject(projectId);
-  const { lots, observations, meetings, updateMeeting, createObservation, updateObservation } = useChantier(projectId);
+  const { lots, observations, meetings, updateMeeting, createObservation, updateObservation, createLot } = useChantier(projectId);
   const { moeTeam } = useProjectMOE(projectId);
   const { allContacts } = useContacts();
   const { companies } = useCRMCompanies();
@@ -463,6 +463,10 @@ export function MeetingReportBuilder({ projectId, meeting, onBack }: MeetingRepo
               onUpdateField={updateField}
               lots={lots}
               companies={companies.map(c => ({ id: c.id, name: c.name }))}
+              onCreateLot={async (input) => {
+                await createLot.mutateAsync(input);
+              }}
+              isCreatingLot={createLot.isPending}
             />
           </TabsContent>
 

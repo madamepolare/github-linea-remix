@@ -4,11 +4,26 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import { ReportData, LotProgress } from "@/hooks/useMeetingReportData";
 import { ProjectLot } from "@/hooks/useChantier";
 import { cn } from "@/lib/utils";
-import { TrendingUp, Clock, AlertTriangle, Package, ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { TrendingUp, Clock, AlertTriangle, Package, ChevronDown, ChevronUp, Plus, Loader2 } from "lucide-react";
 import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ProgressTabProps {
   reportData: ReportData;
@@ -16,6 +31,8 @@ interface ProgressTabProps {
   onUpdateField: <K extends keyof ReportData>(section: K, field: keyof ReportData[K], value: unknown) => void;
   lots: ProjectLot[];
   companies: Array<{ id: string; name: string }>;
+  onCreateLot?: (input: { name: string; crm_company_id?: string; color?: string }) => Promise<void>;
+  isCreatingLot?: boolean;
 }
 
 const STATUS_CONFIG = {
@@ -42,8 +59,29 @@ export function ProgressTab({
   onUpdateField,
   lots,
   companies,
+  onCreateLot,
+  isCreatingLot,
 }: ProgressTabProps) {
   const [expandedLots, setExpandedLots] = useState<Set<string>>(new Set());
+  const [isAddLotDialogOpen, setIsAddLotDialogOpen] = useState(false);
+  const [newLotName, setNewLotName] = useState("");
+  const [newLotCompanyId, setNewLotCompanyId] = useState<string | null>(null);
+  const [newLotColor, setNewLotColor] = useState("#3b82f6");
+
+  const handleAddLot = async () => {
+    if (!newLotName.trim() || !onCreateLot) return;
+    
+    await onCreateLot({
+      name: newLotName.trim(),
+      crm_company_id: newLotCompanyId || undefined,
+      color: newLotColor,
+    });
+    
+    setNewLotName("");
+    setNewLotCompanyId(null);
+    setNewLotColor("#3b82f6");
+    setIsAddLotDialogOpen(false);
+  };
 
   const toggleLotExpanded = (lotId: string) => {
     setExpandedLots(prev => {
@@ -149,14 +187,27 @@ export function ProgressTab({
               Avancement par lots
               <Badge variant="secondary" className="text-xs">{lots.length} lots</Badge>
             </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setExpandedLots(new Set(lots.map(l => l.id)))}
-              className="h-7 text-xs"
-            >
-              Tout déplier
-            </Button>
+            <div className="flex items-center gap-2">
+              {onCreateLot && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAddLotDialogOpen(true)}
+                  className="h-7 text-xs"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Ajouter un lot
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setExpandedLots(new Set(lots.map(l => l.id)))}
+                className="h-7 text-xs"
+              >
+                Tout déplier
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -164,7 +215,19 @@ export function ProgressTab({
             <div className="text-center py-8 text-muted-foreground text-sm">
               <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p>Aucun lot configuré pour ce projet.</p>
-              <p className="text-xs mt-1">Ajoutez des lots dans l'onglet Chantier.</p>
+              {onCreateLot ? (
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={() => setIsAddLotDialogOpen(true)}
+                  className="mt-2"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Ajouter un lot
+                </Button>
+              ) : (
+                <p className="text-xs mt-1">Ajoutez des lots dans l'onglet Chantier.</p>
+              )}
             </div>
           ) : (
             lots.map((lot) => {
@@ -286,6 +349,73 @@ export function ProgressTab({
           )}
         </CardContent>
       </Card>
+
+      {/* Add Lot Dialog */}
+      <Dialog open={isAddLotDialogOpen} onOpenChange={setIsAddLotDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ajouter un lot</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nom du lot *</Label>
+              <Input
+                placeholder="Ex: Gros œuvre, Électricité..."
+                value={newLotName}
+                onChange={(e) => setNewLotName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Entreprise (optionnel)</Label>
+              <Select 
+                value={newLotCompanyId || "none"} 
+                onValueChange={(v) => setNewLotCompanyId(v === "none" ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner une entreprise" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucune entreprise</SelectItem>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Couleur</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={newLotColor}
+                  onChange={(e) => setNewLotColor(e.target.value)}
+                  className="w-10 h-10 rounded cursor-pointer border"
+                />
+                <span className="text-sm text-muted-foreground">{newLotColor}</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddLotDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleAddLot} disabled={!newLotName.trim() || isCreatingLot}>
+              {isCreatingLot ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Création...
+                </>
+              ) : (
+                "Créer le lot"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
