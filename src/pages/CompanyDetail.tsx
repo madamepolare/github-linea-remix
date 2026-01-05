@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import {
   ArrowLeft,
+  Briefcase,
   Building2,
   FileText,
   Users,
@@ -285,6 +286,11 @@ export default function CompanyDetail() {
             <TabsTrigger value="invoicing" className="gap-1">
               <Receipt className="h-3.5 w-3.5 mr-1" />
               Facturation
+              <Lock className="h-3 w-3 text-muted-foreground/60" />
+            </TabsTrigger>
+            <TabsTrigger value="commercial" className="gap-1">
+              <Briefcase className="h-3.5 w-3.5 mr-1" />
+              Commercial
               <Lock className="h-3 w-3 text-muted-foreground/60" />
             </TabsTrigger>
           </TabsList>
@@ -714,6 +720,14 @@ export default function CompanyDetail() {
               icon={Receipt}
               title="Facturation"
               description="Consultez et gérez les factures liées à cette entreprise."
+            />
+          </TabsContent>
+
+          <TabsContent value="commercial" className="mt-4">
+            <ExtensionPlaceholder 
+              icon={Briefcase}
+              title="Commercial"
+              description="Gérez les devis, contrats et propositions commerciales liés à cette entreprise."
             />
           </TabsContent>
         </Tabs>

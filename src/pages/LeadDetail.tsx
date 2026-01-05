@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import {
   ArrowLeft,
+  Briefcase,
   Building2,
   User,
   DollarSign,
@@ -317,6 +318,11 @@ export default function LeadDetail() {
                   Facturation
                   <Lock className="h-3 w-3 text-muted-foreground/60" />
                 </TabsTrigger>
+                <TabsTrigger value="commercial" className="gap-1">
+                  <Briefcase className="h-3.5 w-3.5 mr-1" />
+                  Commercial
+                  <Lock className="h-3 w-3 text-muted-foreground/60" />
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="mt-4 space-y-4">
@@ -593,6 +599,14 @@ export default function LeadDetail() {
                   icon={Receipt}
                   title="Facturation"
                   description="Créez et gérez les factures liées à cette opportunité."
+                />
+              </TabsContent>
+
+              <TabsContent value="commercial" className="mt-4">
+                <ExtensionPlaceholder 
+                  icon={Briefcase}
+                  title="Commercial"
+                  description="Gérez les devis, contrats et propositions commerciales liés à cette opportunité."
                 />
               </TabsContent>
             </Tabs>

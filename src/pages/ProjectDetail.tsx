@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   AlertTriangle,
   ArrowLeft,
+  Briefcase,
   Building2,
   Calendar,
   CheckCircle2,
@@ -203,6 +204,11 @@ export default function ProjectDetail() {
                   Facturation
                   <Lock className="h-3 w-3 text-muted-foreground/60" />
                 </TabsTrigger>
+                <TabsTrigger value="commercial" className="gap-1">
+                  <Briefcase className="h-3.5 w-3.5 mr-1" />
+                  Commercial
+                  <Lock className="h-3 w-3 text-muted-foreground/60" />
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -238,6 +244,13 @@ export default function ProjectDetail() {
               icon={Receipt}
               title="Facturation"
               description="Créez et gérez les factures liées à ce projet."
+            />
+          )}
+          {activeTab === "commercial" && (
+            <ExtensionPlaceholder 
+              icon={Briefcase}
+              title="Commercial"
+              description="Gérez les devis, contrats et propositions commerciales liés à ce projet."
             />
           )}
         </div>
