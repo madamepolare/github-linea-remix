@@ -369,7 +369,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
       {/* Collapsed toggle */}
       {collapsed && (
-        <div className="flex justify-center py-3 border-b border-border">
+        <div className="flex justify-start px-3 py-3 border-b border-border">
           <Button
             variant="ghost"
             size="icon"
