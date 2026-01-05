@@ -222,13 +222,13 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
   },
   objects: {
     slug: "objects",
-    title: "Objets",
+    title: "Commandes",
     icon: Armchair,
     href: "/objects",
     isExtension: true,
     subNav: [],
     quickActions: [
-      { key: "create", label: "Nouvel objet", event: "open-create-object" },
+      { key: "create", label: "Nouvelle commande", event: "open-create-object" },
     ],
   },
 };

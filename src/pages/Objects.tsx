@@ -67,22 +67,22 @@ export default function Objects() {
   const selectedObject = objects.find((o) => o.id === selectedObjectId);
 
   return (
-    <PageLayout title="Objets & Mobilier" hideHeader>
+    <PageLayout title="Catalogue Commandes" hideHeader>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Armchair className="h-6 w-6" />
-              Objets & Mobilier
+              Catalogue Produits
             </h1>
             <p className="text-muted-foreground">
-              Catalogue d'objets design pour vos prescriptions
+              Objets et mobilier à prescrire pour vos projets
             </p>
           </div>
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Ajouter un objet
+            Ajouter un produit
           </Button>
         </div>
 
