@@ -21,14 +21,17 @@ import {
 import {
   ArrowLeft,
   Building2,
+  FileText,
   Users,
   Target,
   Mail,
   Phone,
   Globe,
+  Lock,
   MapPin,
   Pencil,
   Plus,
+  Receipt,
   ExternalLink,
   Save,
   X,
@@ -274,6 +277,16 @@ export default function CompanyDetail() {
             <TabsTrigger value="contacts">Contacts ({companyContacts.length})</TabsTrigger>
             <TabsTrigger value="leads">Opportunités ({companyLeads.length})</TabsTrigger>
             <TabsTrigger value="tasks">Tâches</TabsTrigger>
+            <TabsTrigger value="documents" className="gap-1">
+              <FileText className="h-3.5 w-3.5 mr-1" />
+              Documents
+              <Lock className="h-3 w-3 text-muted-foreground/60" />
+            </TabsTrigger>
+            <TabsTrigger value="invoicing" className="gap-1">
+              <Receipt className="h-3.5 w-3.5 mr-1" />
+              Facturation
+              <Lock className="h-3 w-3 text-muted-foreground/60" />
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-4">
@@ -687,10 +700,53 @@ export default function CompanyDetail() {
               entityName={company.name}
             />
           </TabsContent>
+
+          <TabsContent value="documents" className="mt-4">
+            <ExtensionPlaceholder 
+              icon={FileText}
+              title="Documents"
+              description="Gérez les documents liés à cette entreprise : contrats, avenants, procurations, etc."
+            />
+          </TabsContent>
+
+          <TabsContent value="invoicing" className="mt-4">
+            <ExtensionPlaceholder 
+              icon={Receipt}
+              title="Facturation"
+              description="Consultez et gérez les factures liées à cette entreprise."
+            />
+          </TabsContent>
         </Tabs>
           </div>
         </div>
       </div>
     </MainLayout>
+  );
+}
+
+// Extension placeholder component for locked features
+function ExtensionPlaceholder({ 
+  icon: Icon, 
+  title, 
+  description 
+}: { 
+  icon: React.ComponentType<{ className?: string }>; 
+  title: string; 
+  description: string;
+}) {
+  return (
+    <Card>
+      <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+          <Icon className="h-8 w-8 text-primary" />
+        </div>
+        <h3 className="text-lg font-semibold mb-2">{title}</h3>
+        <p className="text-muted-foreground max-w-md mb-4">{description}</p>
+        <Badge variant="secondary" className="gap-1.5">
+          <Lock className="h-3 w-3" />
+          Extension
+        </Badge>
+      </CardContent>
+    </Card>
   );
 }

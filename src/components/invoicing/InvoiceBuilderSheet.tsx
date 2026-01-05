@@ -20,6 +20,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Info,
+  Import,
 } from 'lucide-react';
 import {
   Sheet,
@@ -54,17 +55,28 @@ import {
 } from '@/components/ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { useCRMCompanies } from '@/hooks/useCRMCompanies';
 import { useProjects } from '@/hooks/useProjects';
 import { useInvoice, useCreateInvoice, useUpdateInvoice, InvoiceItem } from '@/hooks/useInvoices';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
+import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { InvoiceLivePreview } from './InvoiceLivePreview';
 import { cn } from '@/lib/utils';
+import { DOCUMENT_TYPE_LABELS, STATUS_LABELS } from '@/lib/commercialTypes';
 
 interface InvoiceBuilderSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   invoiceId?: string;
+  preselectedCommercialDocumentId?: string;
 }
 
 const UNITS = [
@@ -85,11 +97,12 @@ const PAYMENT_METHODS = [
   { value: 'especes', label: 'Espèces' },
 ];
 
-export function InvoiceBuilderSheet({ open, onOpenChange, invoiceId }: InvoiceBuilderSheetProps) {
+export function InvoiceBuilderSheet({ open, onOpenChange, invoiceId, preselectedCommercialDocumentId }: InvoiceBuilderSheetProps) {
   const { data: existingInvoice, isLoading: loadingInvoice } = useInvoice(invoiceId);
   const { companies } = useCRMCompanies();
   const { projects } = useProjects();
   const { agencyInfo } = useAgencyInfo();
+  const { documents: commercialDocuments, getDocumentPhases } = useCommercialDocuments();
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
 
@@ -97,6 +110,13 @@ export function InvoiceBuilderSheet({ open, onOpenChange, invoiceId }: InvoiceBu
   const [showPreview, setShowPreview] = useState(true);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [chorusOpen, setChorusOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedCommercialDocId, setSelectedCommercialDocId] = useState<string | null>(preselectedCommercialDocumentId || null);
+
+  // Get accepted commercial documents (quotes/contracts that can be invoiced)
+  const acceptedDocuments = commercialDocuments.filter(d => 
+    d.status === 'accepted' || d.status === 'signed'
+  );
 
   // Form state
   const [formData, setFormData] = useState({
@@ -260,6 +280,89 @@ export function InvoiceBuilderSheet({ open, onOpenChange, invoiceId }: InvoiceBu
     }
   };
 
+  // Import from commercial document
+  const handleImportFromDocument = async (docId: string) => {
+    const doc = commercialDocuments.find(d => d.id === docId);
+    if (!doc) return;
+
+    // Set client info
+    if (doc.client_company_id) {
+      const company = companies?.find(c => c.id === doc.client_company_id);
+      if (company) {
+        setFormData(prev => ({
+          ...prev,
+          client_company_id: doc.client_company_id!,
+          client_name: company.name,
+          client_address: company.address || '',
+          client_city: company.city || '',
+          client_postal_code: company.postal_code || '',
+        }));
+      }
+    }
+
+    // Set project info if linked
+    if (doc.project_id) {
+      const project = projects?.find(p => p.id === doc.project_id);
+      if (project) {
+        setFormData(prev => ({
+          ...prev,
+          project_id: doc.project_id!,
+          project_name: project.name,
+        }));
+      }
+    }
+
+    // Fetch phases to create invoice items
+    try {
+      const { data: phases, error } = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/commercial_document_phases?document_id=eq.${docId}&order=sort_order`,
+        {
+          headers: {
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          }
+        }
+      ).then(r => r.json());
+
+      if (phases && phases.length > 0) {
+        const includedPhases = phases.filter((p: any) => p.is_included);
+        const newItems: Partial<InvoiceItem>[] = includedPhases.map((phase: any, index: number) => ({
+          item_type: 'phase',
+          code: phase.phase_code,
+          description: phase.phase_name,
+          detailed_description: phase.phase_description,
+          quantity: 1,
+          unit: 'forfait',
+          unit_price: phase.amount || 0,
+          discount_percentage: 0,
+          tva_rate: formData.tva_rate,
+          amount_ht: phase.amount || 0,
+          amount_tva: (phase.amount || 0) * (formData.tva_rate / 100),
+          amount_ttc: (phase.amount || 0) * (1 + formData.tva_rate / 100),
+          phase_id: phase.id,
+          phase_name: phase.phase_name,
+          percentage_completed: 100,
+          sort_order: index,
+        }));
+
+        if (newItems.length > 0) {
+          setItems(newItems);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching phases:', error);
+    }
+
+    // Update form with commercial document reference
+    setFormData(prev => ({
+      ...prev,
+      header_text: prev.header_text || `Référence devis : ${doc.document_number}`,
+    }));
+
+    setImportDialogOpen(false);
+    setSelectedCommercialDocId(docId);
+  };
+
   const addItem = () => {
     setItems(prev => [...prev, {
       item_type: 'service',
@@ -370,6 +473,57 @@ export function InvoiceBuilderSheet({ open, onOpenChange, invoiceId }: InvoiceBu
             )}
           </div>
           <div className="flex items-center gap-2">
+            {!invoiceId && acceptedDocuments.length > 0 && (
+              <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Import className="h-4 w-4 mr-2" />
+                    Importer devis
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Importer depuis un devis</DialogTitle>
+                    <DialogDescription>
+                      Sélectionnez un devis accepté pour pré-remplir la facture avec ses phases et informations client.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {acceptedDocuments.map((doc) => (
+                      <button
+                        key={doc.id}
+                        onClick={() => handleImportFromDocument(doc.id)}
+                        className={cn(
+                          "w-full p-4 rounded-lg border text-left hover:bg-muted/50 transition-colors",
+                          selectedCommercialDocId === doc.id && "border-primary bg-primary/5"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{doc.title}</p>
+                            <p className="text-sm text-muted-foreground">{doc.document_number}</p>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="secondary">
+                              {DOCUMENT_TYPE_LABELS[doc.document_type] || doc.document_type}
+                            </Badge>
+                            <p className="text-sm font-medium mt-1">
+                              {doc.total_amount?.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}
+                            </p>
+                          </div>
+                        </div>
+                        {doc.client_company && (
+                          <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {doc.client_company.name}
+                          </p>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
             <Button
               variant="outline"
               size="sm"

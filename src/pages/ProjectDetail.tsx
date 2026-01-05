@@ -17,13 +17,16 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  FileText,
   FolderKanban,
   HardHat,
   ListTodo,
   Loader2,
+  Lock,
   MapPin,
   MoreHorizontal,
   Pencil,
+  Receipt,
   RefreshCw,
   Sparkles,
 } from "lucide-react";
@@ -185,9 +188,20 @@ export default function ProjectDetail() {
                   <ListTodo className="h-3.5 w-3.5 mr-1.5" />
                   Tâches
                 </TabsTrigger>
-                <TabsTrigger value="chantier">
-                  <HardHat className="h-3.5 w-3.5 mr-1.5" />
+                <TabsTrigger value="chantier" className="gap-1">
+                  <HardHat className="h-3.5 w-3.5 mr-1" />
                   Chantier
+                  <Lock className="h-3 w-3 text-muted-foreground/60" />
+                </TabsTrigger>
+                <TabsTrigger value="documents" className="gap-1">
+                  <FileText className="h-3.5 w-3.5 mr-1" />
+                  Documents
+                  <Lock className="h-3 w-3 text-muted-foreground/60" />
+                </TabsTrigger>
+                <TabsTrigger value="invoicing" className="gap-1">
+                  <Receipt className="h-3.5 w-3.5 mr-1" />
+                  Facturation
+                  <Lock className="h-3 w-3 text-muted-foreground/60" />
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -212,6 +226,20 @@ export default function ProjectDetail() {
             <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
           )}
           {activeTab === "chantier" && <ChantierDashboard projectId={project.id} />}
+          {activeTab === "documents" && (
+            <ExtensionPlaceholder 
+              icon={FileText}
+              title="Documents"
+              description="Gérez les documents liés à ce projet : contrats, avenants, procurations, etc."
+            />
+          )}
+          {activeTab === "invoicing" && (
+            <ExtensionPlaceholder 
+              icon={Receipt}
+              title="Facturation"
+              description="Créez et gérez les factures liées à ce projet."
+            />
+          )}
         </div>
       </div>
     </MainLayout>
@@ -573,6 +601,31 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+// Extension placeholder component for locked features
+function ExtensionPlaceholder({ 
+  icon: Icon, 
+  title, 
+  description 
+}: { 
+  icon: React.ComponentType<{ className?: string }>; 
+  title: string; 
+  description: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center h-[400px] text-center">
+      <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+        <Icon className="h-8 w-8 text-primary" />
+      </div>
+      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+      <p className="text-muted-foreground max-w-md mb-4">{description}</p>
+      <Badge variant="secondary" className="gap-1.5">
+        <Lock className="h-3 w-3" />
+        Extension
+      </Badge>
     </div>
   );
 }
