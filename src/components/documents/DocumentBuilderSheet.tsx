@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { toast } from 'sonner';
 import {
   Sheet,
   SheetContent,
@@ -32,7 +33,9 @@ import {
   Building2,
   User,
   Briefcase,
-  Loader2
+  Loader2,
+  RefreshCw,
+  Eye
 } from 'lucide-react';
 import { useAgencyDocuments } from '@/hooks/useAgencyDocuments';
 import { useProjects } from '@/hooks/useProjects';
@@ -53,6 +56,12 @@ import { PowerOfAttorneyEditor } from './editors/PowerOfAttorneyEditor';
 import { ServiceOrderEditor } from './editors/ServiceOrderEditor';
 import { InvoiceEditor } from './editors/InvoiceEditor';
 import { GenericDocumentEditor } from './editors/GenericDocumentEditor';
+
+// Import PDF generators
+import { generatePowerOfAttorneyPDF } from '@/lib/generatePowerOfAttorneyPDF';
+import { generateServiceOrderPDF } from '@/lib/generateServiceOrderPDF';
+import { generateInvoicePDF } from '@/lib/generateInvoicePDF';
+import { generateGenericDocumentPDF } from '@/lib/generateGenericDocumentPDF';
 
 interface DocumentBuilderSheetProps {
   document: AgencyDocument;
@@ -80,6 +89,10 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
   );
   const [content, setContent] = useState<Record<string, unknown>>(document.content || {});
   const [isSaving, setIsSaving] = useState(false);
+  
+  // PDF Preview state
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
     setTitle(document.title);
@@ -91,7 +104,113 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
     setValidFrom(document.valid_from ? new Date(document.valid_from) : undefined);
     setValidUntil(document.valid_until ? new Date(document.valid_until) : undefined);
     setContent(document.content || {});
+    setPdfUrl(null); // Reset PDF when document changes
   }, [document]);
+
+  // Cleanup PDF URL on unmount
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
+
+  const generatePDF = useCallback(async () => {
+    setIsGeneratingPdf(true);
+    try {
+      let blob: Blob;
+      
+      switch (document.document_type) {
+        case 'power_of_attorney':
+          blob = await generatePowerOfAttorneyPDF({
+            document_number: document.document_number || '',
+            title: title,
+            delegator_name: (content.delegator_name as string) || '',
+            delegator_role: (content.delegator_role as string) || '',
+            delegate_name: (content.delegate_name as string) || '',
+            delegate_role: (content.delegate_role as string) || '',
+            scope: (content.scope as string) || '',
+            specific_powers: (content.specific_powers as string[]) || [],
+            start_date: (content.start_date as string) || '',
+            end_date: (content.end_date as string) || '',
+          });
+          break;
+          
+        case 'service_order':
+          blob = await generateServiceOrderPDF({
+            document_number: document.document_number || '',
+            order_type: (content.order_type as 'start' | 'suspend' | 'resume' | 'stop') || 'start',
+            project_name: (content.project_name as string) || '',
+            project_address: (content.project_address as string) || '',
+            client_name: (content.client_name as string) || '',
+            effective_date: (content.effective_date as string) || '',
+            phase_name: (content.phase_name as string) || '',
+            instructions: (content.instructions as string) || '',
+          });
+          break;
+          
+        case 'invoice':
+          blob = await generateInvoicePDF({
+            document_number: document.document_number || '',
+            invoice_date: (content.invoice_date as string) || '',
+            due_date: (content.due_date as string) || '',
+            client_name: (content.client_name as string) || '',
+            client_address: (content.client_address as string) || '',
+            project_name: (content.project_name as string) || '',
+            phases: (content.phases as Array<{code: string; name: string; amount: number; percentage_invoiced: number}>) || [],
+            subtotal: (content.subtotal as number) || 0,
+            tva_rate: (content.tva_rate as number) || 20,
+            tva_amount: (content.tva_amount as number) || 0,
+            total: (content.total as number) || 0,
+            payment_terms: (content.payment_terms as string) || '',
+            bank_iban: (content.bank_iban as string) || '',
+            bank_bic: (content.bank_bic as string) || '',
+            bank_name: (content.bank_name as string) || '',
+          });
+          break;
+          
+        default:
+          blob = await generateGenericDocumentPDF({
+            document_number: document.document_number || '',
+            document_type: document.document_type as DocumentType,
+            title: title,
+            content: content,
+            created_at: document.created_at,
+          });
+      }
+      
+      // Revoke previous URL if exists
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+      
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+      toast.success('PDF généré avec succès');
+    } catch (error) {
+      console.error('Erreur génération PDF:', error);
+      toast.error('Erreur lors de la génération du PDF');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  }, [document, title, content, pdfUrl]);
+
+  const handleDownloadPDF = useCallback(async () => {
+    if (!pdfUrl) {
+      await generatePDF();
+    }
+    
+    // Need to regenerate if no URL yet
+    if (!pdfUrl) return;
+    
+    const link = window.document.createElement('a');
+    link.href = pdfUrl;
+    link.download = `${document.document_number || 'document'}.pdf`;
+    window.document.body.appendChild(link);
+    link.click();
+    window.document.body.removeChild(link);
+  }, [pdfUrl, generatePDF, document.document_number]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -356,16 +475,67 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
           </TabsContent>
 
           <TabsContent value="preview" className="mt-4">
-            <div className="border rounded-lg p-8 bg-card min-h-[400px]">
-              <div className="text-center text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Aperçu PDF</p>
-                <p className="text-sm">Générez le document pour voir l'aperçu</p>
-                <Button className="mt-4" variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  Générer le PDF
-                </Button>
-              </div>
+            <div className="border rounded-lg bg-card min-h-[500px] flex flex-col">
+              {pdfUrl ? (
+                <>
+                  <div className="flex items-center justify-between p-3 border-b bg-muted/30">
+                    <span className="text-sm font-medium flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      Aperçu du document
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={generatePDF}
+                        disabled={isGeneratingPdf}
+                      >
+                        {isGeneratingPdf ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4" />
+                        )}
+                        <span className="ml-2">Actualiser</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={handleDownloadPDF}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Télécharger
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex-1 p-2">
+                    <iframe
+                      src={pdfUrl}
+                      className="w-full h-[450px] rounded border"
+                      title="Aperçu PDF"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="font-medium">Aperçu PDF</p>
+                    <p className="text-sm mb-4">Générez le document pour voir l'aperçu</p>
+                    <Button
+                      variant="outline"
+                      onClick={generatePDF}
+                      disabled={isGeneratingPdf}
+                    >
+                      {isGeneratingPdf ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Eye className="h-4 w-4 mr-2" />
+                      )}
+                      Générer l'aperçu
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
@@ -374,6 +544,18 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
         <div className="flex gap-3 mt-6 pt-4 border-t">
           <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
             Fermer
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleDownloadPDF}
+            disabled={isGeneratingPdf}
+          >
+            {isGeneratingPdf ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            PDF
           </Button>
           <Button variant="outline">
             <Send className="h-4 w-4 mr-2" />
