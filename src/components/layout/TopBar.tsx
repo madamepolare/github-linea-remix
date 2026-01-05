@@ -1,9 +1,10 @@
-import { useLocation, NavLink } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { useLocation, NavLink, useNavigate } from "react-router-dom";
+import { ArrowLeft, MoreHorizontal, Plus } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { 
   getModuleFromPath, 
   getActiveSubNav,
@@ -18,20 +19,16 @@ interface TopBarProps {
   actions?: React.ReactNode;
   /** Hide quick actions */
   hideQuickActions?: boolean;
-  /** Page-level sub-navigation (for nested tabs) */
-  pageSubNav?: SubNavItem[];
-  /** Page title override */
-  pageTitle?: string;
 }
 
 export function TopBar({ 
   moduleOverride, 
   actions, 
   hideQuickActions,
-  pageSubNav,
-  pageTitle 
 }: TopBarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { entityConfig } = useTopBar();
   const module = moduleOverride || getModuleFromPath(location.pathname);
   
   // Don't show topbar for dashboard or if no module found
@@ -39,16 +36,31 @@ export function TopBar({
     return null;
   }
 
+  // If entity config is set, render entity view
+  if (entityConfig) {
+    return <EntityTopBar config={entityConfig} module={module} />;
+  }
+
+  // Standard module view
+  return <ModuleTopBar module={module} actions={actions} hideQuickActions={hideQuickActions} />;
+}
+
+// Standard module TopBar
+interface ModuleTopBarProps {
+  module: ModuleNavConfig;
+  actions?: React.ReactNode;
+  hideQuickActions?: boolean;
+}
+
+function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) {
+  const location = useLocation();
   const hasModuleSubNav = module.subNav.length > 0;
-  const hasPageSubNav = pageSubNav && pageSubNav.length > 0;
   const hasQuickActions = !hideQuickActions && module.quickActions && module.quickActions.length > 0;
-  const activeSubNav = getActiveSubNav(location.pathname, module);
 
   const handleQuickAction = (event: string) => {
     window.dispatchEvent(new CustomEvent(event));
   };
 
-  // Check if a nav item is active
   const isNavActive = (item: SubNavItem) => {
     return location.pathname === item.href || 
       (item.href !== module.href && location.pathname.startsWith(item.href));
@@ -56,7 +68,6 @@ export function TopBar({
 
   return (
     <div className="sticky top-0 z-30 bg-background border-b border-border">
-      {/* Main TopBar Row */}
       <div className="flex items-center justify-between h-14 px-6">
         {/* Left: Module title + Sub-navigation */}
         <div className="flex items-center gap-6">
@@ -64,7 +75,7 @@ export function TopBar({
           <div className="flex items-center gap-2.5">
             <module.icon className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-semibold text-foreground">
-              {pageTitle || module.title}
+              {module.title}
             </span>
           </div>
 
@@ -133,41 +144,128 @@ export function TopBar({
           ))}
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Secondary Row: Page-level sub-navigation (nested tabs) */}
-      {hasPageSubNav && (
-        <div className="flex items-center h-10 px-6 border-t border-border/50 bg-muted/30">
+// Entity detail TopBar (project detail, lead detail, etc.)
+import { TopBarEntityConfig } from "@/contexts/TopBarContext";
+
+interface EntityTopBarProps {
+  config: TopBarEntityConfig;
+  module: ModuleNavConfig;
+}
+
+function EntityTopBar({ config, module }: EntityTopBarProps) {
+  const navigate = useNavigate();
+  const hasTabs = config.tabs && config.tabs.length > 0;
+
+  return (
+    <div className="sticky top-0 z-30 bg-background border-b border-border">
+      {/* Entity Header Row */}
+      <div className="flex items-center justify-between h-14 px-6">
+        {/* Left: Back + Entity info */}
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Back button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(config.backTo)}
+            className="h-8 w-8 rounded-full hover:bg-muted shrink-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+
+          {/* Color accent line */}
+          {config.color && (
+            <div
+              className="w-1 h-8 rounded-full shrink-0"
+              style={{ backgroundColor: config.color }}
+            />
+          )}
+
+          {/* Entity title + badges */}
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-base font-semibold tracking-tight truncate">
+                {config.title}
+              </h1>
+              {config.badges?.map((badge, idx) => (
+                <Badge
+                  key={idx}
+                  variant={badge.variant || "outline"}
+                  className="text-xs font-normal text-muted-foreground border-border shrink-0"
+                >
+                  {badge.icon && <badge.icon className="h-3 w-3 mr-1" />}
+                  {badge.label}
+                </Badge>
+              ))}
+            </div>
+
+            {/* Metadata row */}
+            {config.metadata && config.metadata.length > 0 && (
+              <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
+                {config.metadata.map((meta, idx) => (
+                  <span key={idx} className="flex items-center gap-1">
+                    {meta.icon && <meta.icon className="h-3 w-3" />}
+                    {meta.label}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          {config.actions}
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Entity Tabs Row */}
+      {hasTabs && (
+        <div className="flex items-center h-10 px-6 border-t border-border/30">
           <nav className="flex items-center gap-1">
-            {pageSubNav.map((item) => {
-              const isActive = location.pathname === item.href || 
-                location.pathname.startsWith(item.href + "/");
+            {config.tabs!.map((tab) => {
+              const isActive = config.activeTab === tab.key;
               
               return (
-                <NavLink
-                  key={item.key}
-                  to={item.href}
+                <button
+                  key={tab.key}
+                  onClick={() => config.onTabChange?.(tab.key)}
                   className={cn(
-                    "relative flex items-center gap-1.5 px-3 py-1 text-sm rounded transition-colors",
+                    "relative flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all duration-150",
                     isActive
-                      ? "text-foreground font-medium bg-background shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                      ? "text-foreground font-medium"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                   )}
                 >
-                  <span>{item.label}</span>
-                  {item.badge !== undefined && item.badge > 0 && (
+                  {tab.icon && <tab.icon className="h-3.5 w-3.5" />}
+                  <span>{tab.label}</span>
+                  {tab.badge !== undefined && tab.badge > 0 && (
                     <Badge 
-                      variant="outline" 
+                      variant="secondary" 
                       className={cn(
-                        "h-4 min-w-4 px-1 text-[10px] font-medium",
+                        "h-4 min-w-4 px-1 text-[10px] font-medium ml-1",
                         isActive 
-                          ? "border-foreground/20 text-foreground" 
-                          : "border-muted-foreground/20 text-muted-foreground"
+                          ? "bg-foreground text-background" 
+                          : "bg-muted-foreground/20 text-muted-foreground"
                       )}
                     >
-                      {item.badge > 99 ? "99+" : item.badge}
+                      {tab.badge > 99 ? "99+" : tab.badge}
                     </Badge>
                   )}
-                </NavLink>
+                  {isActive && (
+                    <motion.div
+                      layoutId="entity-tab-active"
+                      className="absolute inset-0 bg-muted rounded-md -z-10"
+                      transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
+                    />
+                  )}
+                </button>
               );
             })}
           </nav>

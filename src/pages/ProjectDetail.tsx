@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 import { useProject, useProjects } from "@/hooks/useProjects";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +12,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Progress } from "@/components/ui/progress";
 import {
   AlertTriangle,
-  ArrowLeft,
   Briefcase,
   Building2,
   Calendar,
@@ -24,7 +23,6 @@ import {
   ListTodo,
   Loader2,
   MapPin,
-  MoreHorizontal,
   Pencil,
   Receipt,
   RefreshCw,
@@ -48,14 +46,72 @@ import { ProjectDocumentsTab } from "@/components/projects/ProjectDocumentsTab";
 import { ProjectInvoicingTab } from "@/components/projects/ProjectInvoicingTab";
 import { ProjectCommercialTab } from "@/components/projects/ProjectCommercialTab";
 
+// Tab configuration for project detail
+const PROJECT_TABS = [
+  { key: "overview", label: "Vue d'ensemble", icon: Sparkles },
+  { key: "planning", label: "Calendrier", icon: Calendar },
+  { key: "tasks", label: "Tâches", icon: ListTodo },
+  { key: "chantier", label: "Chantier", icon: HardHat },
+  { key: "documents", label: "Documents", icon: FileText },
+  { key: "invoicing", label: "Facturation", icon: Receipt },
+  { key: "commercial", label: "Commercial", icon: Briefcase },
+];
+
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { setEntityConfig } = useTopBar();
   const { data: project, isLoading } = useProject(id || null);
   const { updateProject } = useProjects();
   const [activeTab, setActiveTab] = useState("overview");
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+
+  // Build entity config for TopBar
+  const projectType = project ? PROJECT_TYPES.find((t) => t.value === project.project_type) : null;
+  const phases = project?.phases || [];
+  const currentPhase = phases.find((p) => p.status === "in_progress");
+
+  // Set TopBar entity config when project data is available
+  useEffect(() => {
+    if (project) {
+      const metadata = [];
+      
+      if (project.crm_company) {
+        metadata.push({ icon: Building2, label: project.crm_company.name });
+      }
+      if (project.city) {
+        metadata.push({ icon: MapPin, label: project.city });
+      }
+
+      const badges = [];
+      if (projectType) {
+        badges.push({ label: projectType.label, variant: "outline" as const });
+      }
+      if (currentPhase) {
+        badges.push({ 
+          label: currentPhase.name, 
+          variant: "secondary" as const,
+          icon: Clock 
+        });
+      }
+
+      setEntityConfig({
+        backTo: "/projects",
+        color: project.color || "#3B82F6",
+        title: project.name,
+        badges,
+        metadata,
+        tabs: PROJECT_TABS,
+        activeTab,
+        onTabChange: setActiveTab,
+      });
+    }
+
+    return () => {
+      setEntityConfig(null);
+    };
+  }, [project, projectType, currentPhase, activeTab, setEntityConfig]);
 
   const handleGenerateSummary = async () => {
     if (!id) return;
@@ -81,167 +137,61 @@ export default function ProjectDetail() {
 
   if (isLoading) {
     return (
-      <>
-        <div className="p-6 space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-48 w-full" />
-        </div>
-      </>
+      <div className="p-6 space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-48 w-full" />
+      </div>
     );
   }
 
   if (!project) {
     return (
-      <>
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <FolderKanban className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-lg font-medium">Projet non trouvé</h2>
-            <Button variant="link" onClick={() => navigate("/projects")}>
-              Retour aux projets
-            </Button>
-          </div>
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <FolderKanban className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h2 className="text-lg font-medium">Projet non trouvé</h2>
+          <Button variant="link" onClick={() => navigate("/projects")}>
+            Retour aux projets
+          </Button>
         </div>
-      </>
+      </div>
     );
   }
 
-  const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
-  const phases = project.phases || [];
   const completedPhases = phases.filter((p) => p.status === "completed").length;
   const progressPercent = phases.length > 0 ? Math.round((completedPhases / phases.length) * 100) : 0;
-  const currentPhase = phases.find((p) => p.status === "in_progress");
 
   return (
-    <>
-      <div className="flex flex-col h-full overflow-hidden">
-        {/* Header */}
-        <div className="flex-shrink-0 border-b border-border bg-card">
-          <div className="px-4 sm:px-6 py-4 sm:py-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate("/projects")}
-                  className="h-8 w-8 sm:h-9 sm:w-9 rounded-full hover:bg-muted shrink-0"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div
-                  className="w-1 sm:w-1.5 h-8 sm:h-10 rounded-full shrink-0"
-                  style={{ backgroundColor: project.color || "#3B82F6" }}
-                />
-                <div className="flex flex-col gap-0.5 sm:gap-1 min-w-0">
-                  <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                    <h1 className="text-lg sm:text-xl font-semibold tracking-tight truncate">{project.name}</h1>
-                    {projectType && (
-                      <Badge variant="outline" className="text-[10px] sm:text-xs font-normal text-muted-foreground border-border hidden sm:inline-flex">
-                        {projectType.label}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground flex-wrap">
-                    {project.crm_company && (
-                      <span className="flex items-center gap-1 sm:gap-1.5">
-                        <Building2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                        <span className="truncate max-w-[100px] sm:max-w-none">{project.crm_company.name}</span>
-                      </span>
-                    )}
-                    {project.city && (
-                      <span className="flex items-center gap-1 sm:gap-1.5 hidden sm:flex">
-                        <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                        {project.city}
-                      </span>
-                    )}
-                    {currentPhase && (
-                      <>
-                        <span className="text-border hidden sm:inline">•</span>
-                        <Badge 
-                          variant="secondary" 
-                          className="bg-primary/10 text-primary border-0 font-normal text-[10px] sm:text-xs"
-                        >
-                          <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                          <span className="truncate max-w-[80px] sm:max-w-none">{currentPhase.name}</span>
-                        </Badge>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 rounded-full shrink-0 self-end sm:self-auto">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="px-4 sm:px-6 pb-2 pt-2">
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList>
-                <TabsTrigger value="overview">
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                  Vue d'ensemble
-                </TabsTrigger>
-                <TabsTrigger value="planning">
-                  <Calendar className="h-3.5 w-3.5 mr-1.5" />
-                  Calendrier
-                </TabsTrigger>
-                <TabsTrigger value="tasks">
-                  <ListTodo className="h-3.5 w-3.5 mr-1.5" />
-                  Tâches
-                </TabsTrigger>
-                <TabsTrigger value="chantier">
-                  <HardHat className="h-3.5 w-3.5 mr-1.5" />
-                  Chantier
-                </TabsTrigger>
-                <TabsTrigger value="documents">
-                  <FileText className="h-3.5 w-3.5 mr-1.5" />
-                  Documents
-                </TabsTrigger>
-                <TabsTrigger value="invoicing">
-                  <Receipt className="h-3.5 w-3.5 mr-1.5" />
-                  Facturation
-                </TabsTrigger>
-                <TabsTrigger value="commercial">
-                  <Briefcase className="h-3.5 w-3.5 mr-1.5" />
-                  Commercial
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-auto p-4 sm:p-6">
-          {activeTab === "overview" && (
-            <OverviewTab 
-              project={project} 
-              phases={phases} 
-              progressPercent={progressPercent}
-              onRefreshSummary={handleGenerateSummary}
-              isGeneratingSummary={isGeneratingSummary}
-              onUpdateProject={(updates) => updateProject.mutate({ id: project.id, ...updates })}
-              isUpdatingProject={updateProject.isPending}
-            />
-          )}
-          {activeTab === "planning" && <ProjectPlanningTab projectId={project.id} />}
-          {activeTab === "tasks" && (
-            <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
-          )}
-          {activeTab === "chantier" && <ChantierDashboard projectId={project.id} />}
-          {activeTab === "documents" && (
-            <ProjectDocumentsTab projectId={project.id} />
-          )}
-          {activeTab === "invoicing" && (
-            <ProjectInvoicingTab projectId={project.id} projectName={project.name} />
-          )}
-          {activeTab === "commercial" && (
-            <ProjectCommercialTab projectId={project.id} projectName={project.name} />
-          )}
-        </div>
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Content - no more header here, it's in TopBar */}
+      <div className="flex-1 overflow-auto p-4 sm:p-6">
+        {activeTab === "overview" && (
+          <OverviewTab 
+            project={project} 
+            phases={phases} 
+            progressPercent={progressPercent}
+            onRefreshSummary={handleGenerateSummary}
+            isGeneratingSummary={isGeneratingSummary}
+            onUpdateProject={(updates) => updateProject.mutate({ id: project.id, ...updates })}
+            isUpdatingProject={updateProject.isPending}
+          />
+        )}
+        {activeTab === "planning" && <ProjectPlanningTab projectId={project.id} />}
+        {activeTab === "tasks" && (
+          <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
+        )}
+        {activeTab === "chantier" && <ChantierDashboard projectId={project.id} />}
+        {activeTab === "documents" && (
+          <ProjectDocumentsTab projectId={project.id} />
+        )}
+        {activeTab === "invoicing" && (
+          <ProjectInvoicingTab projectId={project.id} projectName={project.name} />
+        )}
+        {activeTab === "commercial" && (
+          <ProjectCommercialTab projectId={project.id} projectName={project.name} />
+        )}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -402,194 +352,217 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                             )}
                           </div>
                           <span className={cn(
-                            "text-sm font-medium whitespace-nowrap",
-                            isCompleted && "line-through"
+                            "text-sm font-medium",
+                            isActive && "text-primary-foreground",
+                            isCompleted && "text-muted-foreground line-through",
+                            isPending && "text-foreground"
                           )}>
                             {phase.name}
                           </span>
                         </div>
                         {hasDate && (
                           <span className={cn(
-                            "text-[10px] pl-7 whitespace-nowrap",
-                            isActive && !isOverdue && "text-primary-foreground/70",
-                            isActive && isOverdue && "text-destructive-foreground/70",
-                            !isActive && isOverdue && "text-destructive",
-                            !isActive && !isOverdue && "text-muted-foreground"
+                            "text-[10px] pl-7",
+                            isActive && "text-primary-foreground/70",
+                            isCompleted && "text-muted-foreground",
+                            isPending && "text-muted-foreground",
+                            isOverdue && !isCompleted && "text-destructive font-medium"
                           )}>
-                            {phase.start_date && format(parseISO(phase.start_date), "dd MMM", { locale: fr })}
-                            {phase.start_date && phase.end_date && " → "}
-                            {phase.end_date && format(parseISO(phase.end_date), "dd MMM", { locale: fr })}
-                            {isOverdue && " (en retard)"}
+                            {phase.end_date && format(parseISO(phase.end_date), "d MMM", { locale: fr })}
                           </span>
                         )}
                       </button>
-                      
                       {index < phases.length - 1 && (
                         <div className={cn(
-                          "w-6 h-0.5 mx-1 shrink-0",
-                          phases[index + 1].status === "completed" || isCompleted 
-                            ? "bg-success" 
-                            : "bg-border"
+                          "w-4 h-0.5 mx-1",
+                          isCompleted ? "bg-muted-foreground/30" : "bg-border"
                         )} />
                       )}
                     </div>
                   );
                 })}
               </div>
-              
-              <div className="flex justify-end mt-3">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-xs"
-                  onClick={() => setPhaseEditOpen(true)}
-                >
-                  <Pencil className="h-3 w-3 mr-1" />
-                  Gérer les phases
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Project Info - Compact */}
+      {/* Project Summary with AI */}
       <Card>
-        <CardContent className="py-5">
-          <div className="flex items-start justify-between mb-4">
-            <h3 className="text-sm font-medium">Informations du projet</h3>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-7 px-2 text-xs"
-              onClick={() => setProjectEditOpen(true)}
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h3 className="font-medium">Résumé du projet</h3>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRefreshSummary}
+              disabled={isGeneratingSummary}
+              className="gap-1.5"
             >
-              <Pencil className="h-3 w-3 mr-1" />
-              Modifier
+              {isGeneratingSummary ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              {isGeneratingSummary ? "Génération..." : "Actualiser"}
             </Button>
           </div>
           
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            {projectType && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Type</p>
-                <p className="font-medium">{projectType.label}</p>
-              </div>
-            )}
-            <div>
-              <p className="text-xs text-muted-foreground mb-0.5">Client</p>
-              <p className="font-medium">{project.crm_company?.name || <span className="text-muted-foreground italic">—</span>}</p>
-            </div>
-            {project.city && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Ville</p>
-                <p className="font-medium">{project.city}</p>
-              </div>
-            )}
-            {(project.start_date || project.end_date) && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Période</p>
-                <p className="font-medium">
-                  {project.start_date && format(parseISO(project.start_date), "MMM yy", { locale: fr })}
-                  {project.start_date && project.end_date && " → "}
-                  {project.end_date && format(parseISO(project.end_date), "MMM yy", { locale: fr })}
-                </p>
-              </div>
-            )}
-            {project.surface_area && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Surface</p>
-                <p className="font-medium">{project.surface_area} m²</p>
-              </div>
-            )}
-            {project.budget && (
-              <div>
-                <p className="text-xs text-muted-foreground mb-0.5">Budget</p>
-                <p className="font-medium">{project.budget.toLocaleString("fr-FR")} €</p>
-              </div>
-            )}
-          </div>
-
-          {project.description && (
-            <p className="mt-4 pt-4 border-t text-sm text-muted-foreground leading-relaxed">
-              {project.description}
+          {project.ai_summary ? (
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {project.ai_summary}
             </p>
+          ) : (
+            <div className="text-center py-6">
+              <Sparkles className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+              <p className="text-sm text-muted-foreground mb-3">
+                Aucun résumé disponible
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRefreshSummary}
+                disabled={isGeneratingSummary}
+              >
+                {isGeneratingSummary ? "Génération..." : "Générer un résumé IA"}
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* MOE Team */}
-      <Card>
-        <CardContent className="py-5">
-          <ProjectMOESection projectId={project.id} />
-        </CardContent>
-      </Card>
-
-      {/* Project Modules */}
-      <Card>
-        <CardContent className="py-5">
-          <ModulesSelector projectId={project.id} />
-        </CardContent>
-      </Card>
-
-      {/* AI Summary - Optional */}
-      {project.ai_summary && (
+      {/* Project Info Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
-          <CardContent className="py-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-                <h3 className="text-sm font-medium">Résumé AI</h3>
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-6 w-6 p-0"
-                onClick={onRefreshSummary}
-                disabled={isGeneratingSummary}
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium">Informations</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setProjectEditOpen(true)}
               >
-                {isGeneratingSummary ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3 w-3" />
-                )}
+                <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                Modifier
               </Button>
             </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">{project.ai_summary}</p>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Type</dt>
+                <dd>{projectType?.label || "-"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Ville</dt>
+                <dd>{project.city || "-"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Surface</dt>
+                <dd>{project.surface ? `${project.surface} m²` : "-"}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Budget</dt>
+                <dd>{project.budget ? `${project.budget.toLocaleString()} €` : "-"}</dd>
+              </div>
+              {project.crm_company && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Client</dt>
+                  <dd>{project.crm_company.name}</dd>
+                </div>
+              )}
+            </dl>
           </CardContent>
         </Card>
-      )}
 
-      {/* Dialogs */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium">Phases</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPhaseEditOpen(true)}
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                Gérer
+              </Button>
+            </div>
+            {phases.length > 0 ? (
+              <div className="space-y-2">
+                {phases.slice(0, 5).map((phase) => (
+                  <div key={phase.id} className="flex items-center justify-between text-sm">
+                    <span className={cn(
+                      phase.status === "completed" && "text-muted-foreground line-through"
+                    )}>
+                      {phase.name}
+                    </span>
+                    <Badge
+                      variant={
+                        phase.status === "completed" ? "secondary" :
+                        phase.status === "in_progress" ? "default" : "outline"
+                      }
+                      className="text-xs"
+                    >
+                      {phase.status === "completed" ? "Terminée" :
+                       phase.status === "in_progress" ? "En cours" : "À venir"}
+                    </Badge>
+                  </div>
+                ))}
+                {phases.length > 5 && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    +{phases.length - 5} autres phases
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Aucune phase définie</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* MOE Section */}
+      <ProjectMOESection projectId={project.id} />
+
+      {/* Modules */}
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="font-medium mb-4">Modules activés</h3>
+          <ModulesSelector
+            projectId={project.id}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Phase Edit Dialog */}
       <PhaseQuickEditDialog
         open={phaseEditOpen}
         onOpenChange={setPhaseEditOpen}
         phases={phases}
-        onCreatePhase={(phase) => createPhase.mutate(phase)}
+        onCreatePhase={createPhase.mutate}
         onUpdatePhase={(id, updates) => updatePhase.mutate({ id, ...updates })}
-        onDeletePhase={(id) => deletePhase.mutate(id)}
-        onReorderPhases={(orderedIds) => reorderPhases.mutate(orderedIds)}
+        onDeletePhase={deletePhase.mutate}
+        onReorderPhases={reorderPhases.mutate}
       />
 
+      {/* Project Edit Dialog */}
       <EditProjectDialog
         open={projectEditOpen}
         onOpenChange={setProjectEditOpen}
         project={project}
-        onSave={(updates) => {
-          onUpdateProject(updates);
-          setProjectEditOpen(false);
-        }}
-        isSaving={isUpdatingProject}
+        onSave={(updates) => updateProject.mutate({ id: project.id, ...updates })}
       />
 
-      {/* Confirmation dialog for going back to a previous phase */}
-      <AlertDialog open={!!confirmPhaseId} onOpenChange={(open) => !open && setConfirmPhaseId(null)}>
+      {/* Confirm Phase Change Dialog */}
+      <AlertDialog open={!!confirmPhaseId} onOpenChange={() => setConfirmPhaseId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Revenir à une phase précédente ?</AlertDialogTitle>
+            <AlertDialogTitle>Revenir à cette phase ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Vous allez réactiver la phase "{phaseToConfirm?.name}". 
-              Les phases suivantes seront remises en attente.
+              Vous êtes sur le point de revenir à la phase "{phaseToConfirm?.name}". 
+              Toutes les phases suivantes seront marquées comme "en attente".
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
