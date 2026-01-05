@@ -1,12 +1,19 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { 
   CommercialDocument, 
   CommercialDocumentPhase,
-  DOCUMENT_TYPE_LABELS,
   PROJECT_TYPE_LABELS,
   FEE_MODE_LABELS
 } from './commercialTypes';
+import { 
+  AgencyPDFInfo, 
+  loadImageAsBase64, 
+  formatFullAddress,
+  formatLegalInfo 
+} from './pdfUtils';
 
 /**
  * Génère un contrat complet (A4 portrait, multi-pages)
@@ -14,7 +21,8 @@ import {
 export async function generateContractPDF(
   document: Partial<CommercialDocument>,
   phases: CommercialDocumentPhase[],
-  total: number
+  total: number,
+  agencyInfo?: AgencyPDFInfo
 ): Promise<Blob> {
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -25,6 +33,17 @@ export async function generateContractPDF(
 
   const formatCurrency = (amount: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
+
+  // Load images
+  let logoBase64: string | null = null;
+  let signatureBase64: string | null = null;
+  
+  if (agencyInfo?.logo_url) {
+    logoBase64 = await loadImageAsBase64(agencyInfo.logo_url);
+  }
+  if (agencyInfo?.signature_url) {
+    signatureBase64 = await loadImageAsBase64(agencyInfo.signature_url);
+  }
 
   const addPageIfNeeded = (requiredSpace: number = 30) => {
     if (y + requiredSpace > pageHeight - 30) {
@@ -42,6 +61,15 @@ export async function generateContractPDF(
     pdf.setTextColor(150);
     pdf.text(`Page ${pageNumber}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
     pdf.text('Paraphe MOE ______    Paraphe MOA ______', pageWidth - margin, pageHeight - 10, { align: 'right' });
+    
+    // Legal info
+    if (agencyInfo) {
+      const legalInfo = formatLegalInfo(agencyInfo);
+      if (legalInfo) {
+        pdf.setFontSize(6);
+        pdf.text(legalInfo, margin, pageHeight - 10);
+      }
+    }
   };
 
   const addSectionTitle = (title: string, level: number = 1) => {
@@ -80,22 +108,50 @@ export async function generateContractPDF(
   };
 
   // ==========================================
-  // PAGE 1 - COVER
+  // PAGE 1 - COVER with Logo
   // ==========================================
   
+  // Logo
+  if (logoBase64) {
+    try {
+      pdf.addImage(logoBase64, 'PNG', margin, y, 30, 30);
+    } catch (e) {
+      console.error('Error adding logo to PDF:', e);
+    }
+  }
+
+  // Agency info next to logo
+  const textStartX = logoBase64 ? margin + 35 : margin;
+  if (agencyInfo) {
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(0);
+    pdf.text(agencyInfo.name, textStartX, y + 8);
+    
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(80);
+    const address = formatFullAddress(agencyInfo);
+    if (address) pdf.text(address, textStartX, y + 14);
+    if (agencyInfo.phone) pdf.text(agencyInfo.phone, textStartX, y + 19);
+    if (agencyInfo.email) pdf.text(agencyInfo.email, textStartX, y + 24);
+  }
+  
+  y = logoBase64 ? margin + 40 : margin + 10;
+  
   // Header with document type
-  pdf.setFontSize(28);
+  pdf.setFontSize(24);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(0);
-  pdf.text('CONTRAT DE MAÎTRISE D\'ŒUVRE', margin, y + 15);
+  pdf.text('CONTRAT DE MAÎTRISE D\'ŒUVRE', margin, y);
   
-  y += 25;
+  y += 10;
   pdf.setFontSize(11);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(100);
   pdf.text(`RÉFÉRENCE : ${document.document_number || 'N/A'}`, margin, y);
   
-  y += 20;
+  y += 15;
   
   // Project info box
   pdf.setDrawColor(200);
@@ -142,7 +198,7 @@ export async function generateContractPDF(
       : 'Non défini';
   pdf.text(budgetText, margin + 50, y);
   
-  y += 25;
+  y += 20;
   
   // Client info
   pdf.setFont('helvetica', 'bold');
@@ -171,7 +227,14 @@ export async function generateContractPDF(
   y += 5;
   addSectionTitle('1.2 L\'architecte / Maître d\'œuvre', 2);
   addParagraph('Ci-après dénommé "l\'Architecte" ou "MOE"');
-  addParagraph('La société représentée assure la mission de maîtrise d\'œuvre selon les termes du présent contrat.');
+  if (agencyInfo) {
+    addParagraph(`Représenté par : ${agencyInfo.name}`);
+    const address = formatFullAddress(agencyInfo);
+    if (address) addParagraph(`Adresse : ${address}`);
+    if (agencyInfo.siret) addParagraph(`SIRET : ${agencyInfo.siret}`);
+  } else {
+    addParagraph('La société représentée assure la mission de maîtrise d\'œuvre selon les termes du présent contrat.');
+  }
   
   // ==========================================
   // ARTICLE 2 - OBJET DU CONTRAT
@@ -389,7 +452,7 @@ export async function generateContractPDF(
   pdf.setFontSize(10);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(60);
-  pdf.text(`Fait en deux exemplaires originaux, le ${new Date().toLocaleDateString('fr-FR')}`, margin, y);
+  pdf.text(`Fait en deux exemplaires originaux, le ${format(new Date(), 'dd MMMM yyyy', { locale: fr })}`, margin, y);
   
   y += 15;
   
@@ -410,7 +473,7 @@ export async function generateContractPDF(
   pdf.text('Signature précédée de la mention', margin + 5, y + 35);
   pdf.text('"Lu et approuvé, bon pour accord" :', margin + 5, y + 40);
   
-  // Right box - Architect
+  // Right box - Architect with signature
   pdf.rect(margin + boxWidth + 10, y, boxWidth, boxHeight);
   pdf.setFontSize(10);
   pdf.setFont('helvetica', 'bold');
@@ -418,9 +481,25 @@ export async function generateContractPDF(
   pdf.text('L\'architecte / Maître d\'œuvre', margin + boxWidth + 15, y + 10);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(60);
-  pdf.setFontSize(8);
-  pdf.text('Signature précédée de la mention', margin + boxWidth + 15, y + 35);
-  pdf.text('"Lu et approuvé, bon pour accord" :', margin + boxWidth + 15, y + 40);
+  if (agencyInfo?.name) {
+    pdf.text(agencyInfo.name, margin + boxWidth + 15, y + 18);
+  }
+  
+  // Add signature if available
+  if (signatureBase64) {
+    try {
+      pdf.addImage(signatureBase64, 'PNG', margin + boxWidth + 15, y + 30, 60, 24);
+    } catch (e) {
+      console.error('Error adding signature to PDF:', e);
+      pdf.setFontSize(8);
+      pdf.text('Signature précédée de la mention', margin + boxWidth + 15, y + 35);
+      pdf.text('"Lu et approuvé, bon pour accord" :', margin + boxWidth + 15, y + 40);
+    }
+  } else {
+    pdf.setFontSize(8);
+    pdf.text('Signature précédée de la mention', margin + boxWidth + 15, y + 35);
+    pdf.text('"Lu et approuvé, bon pour accord" :', margin + boxWidth + 15, y + 40);
+  }
   
   y += boxHeight + 10;
   

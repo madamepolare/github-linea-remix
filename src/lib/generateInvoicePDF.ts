@@ -2,6 +2,13 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { 
+  AgencyPDFInfo, 
+  loadImageAsBase64, 
+  formatFullAddress,
+  formatLegalInfo,
+  addPDFFooter 
+} from './pdfUtils';
 
 interface InvoicePhase {
   code: string;
@@ -30,6 +37,7 @@ interface InvoiceData {
   agency_address?: string;
   agency_siret?: string;
   agency_vat?: string;
+  agencyInfo?: AgencyPDFInfo;
 }
 
 export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
@@ -42,31 +50,64 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
   };
 
-  // Header - Agency info
+  // Load images
+  let logoBase64: string | null = null;
+  let signatureBase64: string | null = null;
+  
+  if (data.agencyInfo?.logo_url) {
+    logoBase64 = await loadImageAsBase64(data.agencyInfo.logo_url);
+  }
+  if (data.agencyInfo?.signature_url) {
+    signatureBase64 = await loadImageAsBase64(data.agencyInfo.signature_url);
+  }
+
+  // Header - Logo and agency info
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, 'PNG', margin, y - 5, 25, 25);
+    } catch (e) {
+      console.error('Error adding logo to PDF:', e);
+    }
+  }
+
+  const textStartX = logoBase64 ? margin + 30 : margin;
+  
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(data.agency_name || 'AGENCE D\'ARCHITECTURE', margin, y);
+  doc.setTextColor(0);
+  doc.text(data.agencyInfo?.name || data.agency_name || 'AGENCE D\'ARCHITECTURE', textStartX, y + 3);
   y += 6;
   
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(100);
-  if (data.agency_address) doc.text(data.agency_address, margin, y);
-  y += 5;
-  if (data.agency_siret) doc.text(`SIRET: ${data.agency_siret}`, margin, y);
-  y += 5;
-  if (data.agency_vat) doc.text(`TVA: ${data.agency_vat}`, margin, y);
+  doc.setTextColor(80);
+  
+  if (data.agencyInfo) {
+    const address = formatFullAddress(data.agencyInfo);
+    if (address) doc.text(address, textStartX, y + 3);
+    y += 5;
+    if (data.agencyInfo.siret) doc.text(`SIRET: ${data.agencyInfo.siret}`, textStartX, y + 3);
+    y += 5;
+    if (data.agencyInfo.vat_number) doc.text(`TVA: ${data.agencyInfo.vat_number}`, textStartX, y + 3);
+  } else {
+    if (data.agency_address) doc.text(data.agency_address, textStartX, y + 3);
+    y += 5;
+    if (data.agency_siret) doc.text(`SIRET: ${data.agency_siret}`, textStartX, y + 3);
+    y += 5;
+    if (data.agency_vat) doc.text(`TVA: ${data.agency_vat}`, textStartX, y + 3);
+  }
 
   // Invoice title and number
   y = 20;
-  doc.setFontSize(24);
+  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0);
   doc.text('NOTE D\'HONORAIRES', pageWidth - margin, y, { align: 'right' });
   y += 10;
   
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60);
   doc.text(`N° ${data.document_number}`, pageWidth - margin, y, { align: 'right' });
 
   y = 55;
@@ -76,18 +117,21 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
   doc.setFillColor(250, 250, 250);
   doc.roundedRect(pageWidth - margin - 80, y, 80, 35, 2, 2, 'FD');
   
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(60);
   doc.text('FACTURÉ À :', pageWidth - margin - 75, y + 8);
   doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0);
   doc.text(data.client_name || '-', pageWidth - margin - 75, y + 16);
   
   const addressLines = doc.splitTextToSize(data.client_address || '', 70);
   doc.text(addressLines, pageWidth - margin - 75, y + 22);
 
   // Invoice details
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60);
   doc.text(`Date : ${data.invoice_date ? format(new Date(data.invoice_date), 'dd/MM/yyyy') : '-'}`, margin, y + 10);
   doc.text(`Échéance : ${data.due_date ? format(new Date(data.due_date), 'dd/MM/yyyy') : '-'}`, margin, y + 18);
   
@@ -96,8 +140,10 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
   // Project reference
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(60);
   doc.text('Projet :', margin, y);
   doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0);
   doc.text(data.project_name || '-', margin + 20, y);
 
   y += 15;
@@ -115,7 +161,7 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
     startY: y,
     head: [['Code', 'Désignation', 'Montant HT', '% facturé', 'Montant']],
     body: tableData,
-    theme: 'striped',
+    theme: 'plain',
     headStyles: {
       fillColor: [60, 60, 60],
       textColor: 255,
@@ -124,6 +170,7 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
     },
     bodyStyles: {
       fontSize: 9,
+      textColor: 30,
     },
     columnStyles: {
       0: { cellWidth: 20 },
@@ -142,11 +189,15 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
   
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60);
   doc.text('Total HT :', totalsX, y);
+  doc.setTextColor(0);
   doc.text(formatCurrency(data.subtotal || 0), pageWidth - margin, y, { align: 'right' });
   y += 7;
   
+  doc.setTextColor(60);
   doc.text(`TVA (${data.tva_rate || 20}%) :`, totalsX, y);
+  doc.setTextColor(0);
   doc.text(formatCurrency(data.tva_amount || 0), pageWidth - margin, y, { align: 'right' });
   y += 7;
   
@@ -160,9 +211,11 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
   // Payment terms
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(60);
   doc.text('Conditions de paiement :', margin, y);
   y += 6;
   doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0);
   const termsLines = doc.splitTextToSize(data.payment_terms || 'Paiement à 30 jours.', pageWidth - 2 * margin);
   doc.text(termsLines, margin, y);
   y += termsLines.length * 4 + 10;
@@ -170,9 +223,11 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
   // Bank details
   if (data.bank_iban || data.bank_bic) {
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(60);
     doc.text('Coordonnées bancaires :', margin, y);
     y += 6;
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0);
     if (data.bank_name) doc.text(`Banque : ${data.bank_name}`, margin, y);
     y += 5;
     if (data.bank_iban) doc.text(`IBAN : ${data.bank_iban}`, margin, y);
@@ -180,11 +235,23 @@ export async function generateInvoicePDF(data: InvoiceData): Promise<Blob> {
     if (data.bank_bic) doc.text(`BIC : ${data.bank_bic}`, margin, y);
   }
 
+  // Signature area (if available)
+  if (signatureBase64) {
+    y += 15;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(60);
+    doc.setFontSize(9);
+    doc.text('Cachet et signature :', pageWidth - margin - 60, y);
+    y += 5;
+    try {
+      doc.addImage(signatureBase64, 'PNG', pageWidth - margin - 60, y, 50, 20);
+    } catch (e) {
+      console.error('Error adding signature to PDF:', e);
+    }
+  }
+
   // Footer
-  const footerY = doc.internal.pageSize.getHeight() - 15;
-  doc.setFontSize(8);
-  doc.setTextColor(150);
-  doc.text('En cas de retard de paiement, des pénalités de retard seront appliquées au taux légal en vigueur.', pageWidth / 2, footerY, { align: 'center' });
+  addPDFFooter(doc, data.agencyInfo);
 
   return doc.output('blob');
 }

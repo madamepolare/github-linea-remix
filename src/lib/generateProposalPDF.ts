@@ -1,10 +1,16 @@
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { 
   CommercialDocument, 
   CommercialDocumentPhase,
   PROJECT_TYPE_LABELS
 } from './commercialTypes';
+import { 
+  AgencyPDFInfo, 
+  loadImageAsBase64, 
+  formatLegalInfo 
+} from './pdfUtils';
 
 /**
  * Génère une proposition commerciale (A4 paysage, style slide/présentation)
@@ -12,7 +18,8 @@ import {
 export async function generateProposalPDF(
   document: Partial<CommercialDocument>,
   phases: CommercialDocumentPhase[],
-  total: number
+  total: number,
+  agencyInfo?: AgencyPDFInfo
 ): Promise<Blob> {
   const pdf = new jsPDF('l', 'mm', 'a4'); // Landscape
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -23,17 +30,39 @@ export async function generateProposalPDF(
   const formatCurrency = (amount: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
 
+  // Load images
+  let logoBase64: string | null = null;
+  let signatureBase64: string | null = null;
+  
+  if (agencyInfo?.logo_url) {
+    logoBase64 = await loadImageAsBase64(agencyInfo.logo_url);
+  }
+  if (agencyInfo?.signature_url) {
+    signatureBase64 = await loadImageAsBase64(agencyInfo.signature_url);
+  }
+
   const addSlideHeader = (title: string, subtitle?: string) => {
     pdf.setFillColor(35, 35, 40);
     pdf.rect(0, 0, pageWidth, 35, 'F');
     
-    pdf.setFontSize(24);
+    // Logo in header
+    if (logoBase64) {
+      try {
+        pdf.addImage(logoBase64, 'PNG', margin, 8, 20, 20);
+      } catch (e) {
+        console.error('Error adding logo to PDF:', e);
+      }
+    }
+    
+    const textStartX = logoBase64 ? margin + 25 : margin;
+    
+    pdf.setFontSize(20);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(255);
-    pdf.text(title.toUpperCase(), margin, 24);
+    pdf.text(title.toUpperCase(), textStartX, 24);
     
     if (subtitle) {
-      pdf.setFontSize(11);
+      pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(180);
       pdf.text(subtitle, pageWidth - margin, 24, { align: 'right' });
@@ -45,30 +74,47 @@ export async function generateProposalPDF(
     pdf.setTextColor(150);
     pdf.text(`${pageNum} / ${totalPages}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
     pdf.text(document.document_number || '', margin, pageHeight - 10);
+    
+    // Legal info
+    if (agencyInfo) {
+      const legalInfo = formatLegalInfo(agencyInfo);
+      if (legalInfo) {
+        pdf.text(legalInfo, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      }
+    }
   };
 
   // === SLIDE 1: COVER ===
   pdf.setFillColor(35, 35, 40);
   pdf.rect(0, 0, pageWidth, pageHeight, 'F');
   
+  // Logo on cover
+  if (logoBase64) {
+    try {
+      pdf.addImage(logoBase64, 'PNG', margin, 30, 30, 30);
+    } catch (e) {
+      console.error('Error adding logo to PDF:', e);
+    }
+  }
+  
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(120);
-  pdf.text('PROPOSITION COMMERCIALE', margin, 50);
+  pdf.text('PROPOSITION COMMERCIALE', margin, 75);
   
   pdf.setFontSize(36);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(255);
-  pdf.text(document.title || 'Projet', margin, 75);
+  pdf.text(document.title || 'Projet', margin, 95);
   
   pdf.setFontSize(16);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(180);
   const location = [document.project_address, document.project_city].filter(Boolean).join(', ');
-  if (location) pdf.text(location, margin, 90);
+  if (location) pdf.text(location, margin, 108);
   
   // Project info cards
-  const cardY = 120;
+  const cardY = 130;
   const cardWidth = 60;
   const cardGap = 15;
   
@@ -104,10 +150,15 @@ export async function generateProposalPDF(
   pdf.setTextColor(255);
   pdf.text(document.client_company?.name || 'Client', margin, pageHeight - 30);
   
-  // Date
+  // Date and agency name
   pdf.setFontSize(10);
   pdf.setTextColor(100);
-  pdf.text(new Date().toLocaleDateString('fr-FR'), pageWidth - margin, pageHeight - 30, { align: 'right' });
+  pdf.text(format(new Date(), 'dd MMMM yyyy', { locale: fr }), pageWidth - margin, pageHeight - 35, { align: 'right' });
+  if (agencyInfo?.name) {
+    pdf.setFontSize(12);
+    pdf.setTextColor(180);
+    pdf.text(agencyInfo.name, pageWidth - margin, pageHeight - 25, { align: 'right' });
+  }
   
   // === SLIDE 2: PHASES OVERVIEW ===
   pdf.addPage();
@@ -253,7 +304,18 @@ export async function generateProposalPDF(
   
   pdf.setDrawColor(180);
   pdf.rect(margin + 30, y + 5, 100, 35);
-  pdf.rect(pageWidth - margin - 100, y + 5, 100, 35);
+  
+  // Right box with signature if available
+  if (signatureBase64) {
+    try {
+      pdf.addImage(signatureBase64, 'PNG', pageWidth - margin - 95, y + 10, 60, 24);
+    } catch (e) {
+      console.error('Error adding signature to PDF:', e);
+      pdf.rect(pageWidth - margin - 100, y + 5, 100, 35);
+    }
+  } else {
+    pdf.rect(pageWidth - margin - 100, y + 5, 100, 35);
+  }
   
   addSlideFooter(includedPhases.length > maxPhasesPerPage ? 4 : 3, includedPhases.length > maxPhasesPerPage ? 4 : 3);
   
