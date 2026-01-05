@@ -29,6 +29,8 @@ import {
   MoreVertical,
   Sparkles,
   RefreshCw,
+  ChevronsUpDown,
+  Rows3,
 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -97,7 +99,9 @@ export function ChantierPlanningTab({
     left: number;
     width: number;
     color: string;
+    subRow: number;
   } | null>(null);
+  const [expandedLots, setExpandedLots] = useState<Record<string, boolean>>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<HTMLDivElement>(null);
 
@@ -111,8 +115,9 @@ export function ChantierPlanningTab({
   // Day width based on zoom level
   const dayWidth = zoomLevel === "day" ? 36 : zoomLevel === "week" ? 20 : 8;
   const totalWidth = days.length * dayWidth;
-  const rowHeight = 44;
-  const interventionRowHeight = 32;
+  const rowHeight = 36;
+  const subRowHeight = 32;
+  const interventionRowHeight = 28;
   const headerHeight = 80;
   const sidebarWidth = 280;
 
@@ -148,14 +153,28 @@ export function ChantierPlanningTab({
     });
   }, [filteredLots]);
 
-  // Group interventions by lot
+  // Group interventions by lot and sub_row
   const interventionsByLot = useMemo(() => {
     const map: Record<string, Intervention[]> = {};
     for (const lot of sortedLots) {
-      map[lot.id] = interventions.filter(i => i.lot_id === lot.id);
+      map[lot.id] = interventions
+        .filter(i => i.lot_id === lot.id)
+        .sort((a, b) => a.sub_row - b.sub_row);
     }
     return map;
   }, [interventions, sortedLots]);
+
+  // Calculate max sub_row for each lot
+  const maxSubRowByLot = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const lot of sortedLots) {
+      const lotInterventions = interventionsByLot[lot.id] || [];
+      map[lot.id] = lotInterventions.length > 0 
+        ? Math.max(...lotInterventions.map(i => i.sub_row))
+        : 0;
+    }
+    return map;
+  }, [interventionsByLot, sortedLots]);
 
   // Stats
   const stats = useMemo(() => {
@@ -254,7 +273,7 @@ export function ChantierPlanningTab({
   }, [dragState]);
 
   // Click on timeline to add intervention - inline creation
-  const handleTimelineClick = useCallback((e: React.MouseEvent, lotId: string, lotColor: string) => {
+  const handleTimelineClick = useCallback((e: React.MouseEvent, lotId: string, lotColor: string, subRow: number = 0) => {
     if (dragState || inlineCreation) return;
     
     const rect = e.currentTarget.getBoundingClientRect();
@@ -272,14 +291,27 @@ export function ChantierPlanningTab({
       left,
       width,
       color: lotColor || "#3b82f6",
+      subRow,
     });
   }, [dragState, inlineCreation, getDateForPosition, getPositionForDate, dayWidth]);
 
+  // Toggle expanded state for a lot
+  const toggleLotExpanded = useCallback((lotId: string) => {
+    setExpandedLots(prev => ({ ...prev, [lotId]: !prev[lotId] }));
+  }, []);
+
+  // Add a new sub-row to a lot
+  const addSubRow = useCallback((lotId: string) => {
+    const currentMax = maxSubRowByLot[lotId] || 0;
+    setExpandedLots(prev => ({ ...prev, [lotId]: true }));
+    // We'll auto-expand when adding
+  }, [maxSubRowByLot]);
+
   // Handle inline creation save
   const handleInlineSave = useCallback((intervention: CreateInterventionInput) => {
-    createMultipleInterventions.mutate([intervention]);
+    createMultipleInterventions.mutate([{ ...intervention, sub_row: inlineCreation?.subRow || 0 }]);
     setInlineCreation(null);
-  }, [createMultipleInterventions]);
+  }, [createMultipleInterventions, inlineCreation]);
 
   // Handle saving interventions
   const handleSaveInterventions = useCallback((newInterventions: CreateInterventionInput[]) => {
@@ -307,21 +339,24 @@ export function ChantierPlanningTab({
     return groups;
   }, [days]);
 
-  // Calculate row positions - now one row per lot with all interventions on the same line
+  // Calculate row positions - with sub-rows support
   const rowPositions = useMemo(() => {
-    const positions: { lotId: string; y: number; height: number }[] = [];
+    const positions: { lotId: string; y: number; height: number; subRowCount: number }[] = [];
     let currentY = 0;
 
     for (const lot of sortedLots) {
-      // Each lot is just one row now (all interventions on same line)
-      positions.push({ lotId: lot.id, y: currentY, height: rowHeight });
-      currentY += rowHeight;
+      const isExpanded = expandedLots[lot.id];
+      const maxSubRow = maxSubRowByLot[lot.id] || 0;
+      const subRowCount = isExpanded ? maxSubRow + 2 : 1; // +2 for existing + one empty for adding
+      const height = isExpanded ? rowHeight + (subRowCount - 1) * subRowHeight : rowHeight;
+      positions.push({ lotId: lot.id, y: currentY, height, subRowCount: isExpanded ? subRowCount : 1 });
+      currentY += height;
     }
 
     return positions;
-  }, [sortedLots]);
+  }, [sortedLots, expandedLots, maxSubRowByLot]);
 
-  const totalHeight = rowPositions.reduce((acc, p) => acc + p.height, 0);
+  const totalHeight = rowPositions.reduce((acc, p) => acc + p.height, 0) + 20;
 
   // Export A1 PDF - keeping simplified version
   const handleExportA1 = useCallback(async () => {
@@ -510,73 +545,114 @@ export function ChantierPlanningTab({
                     const lotInterventions = interventionsByLot[lot.id] || [];
                     const statusConfig = LOT_STATUS.find(s => s.value === lot.status) || LOT_STATUS[0];
                     const company = companies.find(c => c.id === lot.crm_company_id);
+                    const isExpanded = expandedLots[lot.id];
+                    const position = rowPositions.find(p => p.lotId === lot.id);
+                    const maxSubRow = maxSubRowByLot[lot.id] || 0;
 
                     return (
-                      <div
-                        key={lot.id}
-                        className={cn(
-                          "flex items-center gap-2 px-3 border-b transition-colors group",
-                          hoveredItemId === lot.id && "bg-primary/5",
-                          lotIndex > 0 && "border-t-2 border-t-muted"
-                        )}
-                        style={{ height: rowHeight }}
-                        onMouseEnter={() => setHoveredItemId(lot.id)}
-                        onMouseLeave={() => setHoveredItemId(null)}
-                      >
-                        {/* Color dot */}
+                      <div key={lot.id} style={{ height: position?.height || rowHeight }}>
+                        {/* Main lot row */}
                         <div
-                          className="w-3 h-3 rounded-full shrink-0 ring-2 ring-background shadow-sm"
-                          style={{ backgroundColor: lot.color || statusConfig.color }}
-                        />
+                          className={cn(
+                            "flex items-center gap-2 px-3 border-b transition-colors group",
+                            hoveredItemId === lot.id && "bg-primary/5",
+                            lotIndex > 0 && "border-t-2 border-t-muted"
+                          )}
+                          style={{ height: rowHeight }}
+                          onMouseEnter={() => setHoveredItemId(lot.id)}
+                          onMouseLeave={() => setHoveredItemId(null)}
+                        >
+                          {/* Expand/collapse button */}
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="shrink-0"
+                            onClick={() => toggleLotExpanded(lot.id)}
+                          >
+                            <Rows3 className={cn("w-3.5 h-3.5 transition-colors", isExpanded && "text-primary")} />
+                          </Button>
 
-                        {/* Name & company */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm truncate">{lot.name}</span>
-                            {lotInterventions.length > 0 && (
-                              <Badge variant="secondary" className="shrink-0 text-[10px] h-5">
-                                {lotInterventions.length}
-                              </Badge>
+                          {/* Color dot */}
+                          <div
+                            className="w-3 h-3 rounded-full shrink-0 ring-2 ring-background shadow-sm"
+                            style={{ backgroundColor: lot.color || statusConfig.color }}
+                          />
+
+                          {/* Name & company */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm truncate">{lot.name}</span>
+                              {lotInterventions.length > 0 && (
+                                <Badge variant="secondary" className="shrink-0 text-[10px] h-5">
+                                  {lotInterventions.length}
+                                </Badge>
+                              )}
+                            </div>
+                            {company && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Building2 className="w-3 h-3" />
+                                <span className="truncate">{company.name}</span>
+                              </div>
                             )}
                           </div>
-                          {company && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Building2 className="w-3 h-3" />
-                              <span className="truncate">{company.name}</span>
-                            </div>
-                          )}
+
+                          {/* Quick add button */}
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => { setPreselectedLotId(lot.id); setShowAddDialog(true); }}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+
+                          {/* Actions dropdown */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon-xs" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-popover">
+                              <DropdownMenuItem onClick={() => { setPreselectedLotId(lot.id); setShowAddDialog(true); }}>
+                                <Plus className="w-4 h-4 mr-2" />
+                                Ajouter intervention
+                              </DropdownMenuItem>
+                              {onEditLot && (
+                                <DropdownMenuItem onClick={() => onEditLot(lot)}>
+                                  <Pencil className="w-4 h-4 mr-2" />
+                                  Modifier
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
 
-                        {/* Quick add button */}
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => { setPreselectedLotId(lot.id); setShowAddDialog(true); }}
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-
-                        {/* Actions dropdown */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon-xs" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-popover">
-                            <DropdownMenuItem onClick={() => { setPreselectedLotId(lot.id); setShowAddDialog(true); }}>
-                              <Plus className="w-4 h-4 mr-2" />
-                              Ajouter intervention
-                            </DropdownMenuItem>
-                            {onEditLot && (
-                              <DropdownMenuItem onClick={() => onEditLot(lot)}>
-                                <Pencil className="w-4 h-4 mr-2" />
-                                Modifier
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {/* Sub-rows when expanded */}
+                        {isExpanded && Array.from({ length: (position?.subRowCount || 1) - 1 }).map((_, subIdx) => {
+                          const subRowNum = subIdx + 1;
+                          const interventionsOnSubRow = lotInterventions.filter(i => i.sub_row === subRowNum);
+                          return (
+                            <div
+                              key={`${lot.id}-sub-${subRowNum}`}
+                              className={cn(
+                                "flex items-center gap-2 pl-10 pr-3 border-b border-dashed transition-colors",
+                                hoveredItemId === `${lot.id}-${subRowNum}` && "bg-primary/5"
+                              )}
+                              style={{ height: subRowHeight }}
+                              onMouseEnter={() => setHoveredItemId(`${lot.id}-${subRowNum}`)}
+                              onMouseLeave={() => setHoveredItemId(null)}
+                            >
+                              <span className="text-xs text-muted-foreground w-6">#{subRowNum}</span>
+                              <span className="text-xs text-muted-foreground flex-1 truncate">
+                                {interventionsOnSubRow.length > 0 
+                                  ? `${interventionsOnSubRow.length} intervention(s)`
+                                  : "Sous-ligne vide"
+                                }
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}
@@ -643,27 +719,25 @@ export function ChantierPlanningTab({
                   {sortedLots.map((lot, lotIndex) => {
                     const lotInterventions = interventionsByLot[lot.id] || [];
                     const statusConfig = LOT_STATUS.find(s => s.value === lot.status) || LOT_STATUS[0];
-                    const isDelayed = lot.end_date && lot.status !== "completed" && isPast(parseISO(lot.end_date));
+                    const isExpanded = expandedLots[lot.id];
+                    const position = rowPositions.find(p => p.lotId === lot.id);
 
-                    const lotTempDates = tempDates[lot.id];
-                    const lotStartDate = lotTempDates?.start || (lot.start_date ? parseISO(lot.start_date) : null);
-                    const lotEndDate = lotTempDates?.end || (lot.end_date ? parseISO(lot.end_date) : null);
+                    // Get unique sub_rows for this lot
+                    const subRows = isExpanded 
+                      ? Array.from({ length: (position?.subRowCount || 1) }).map((_, i) => i)
+                      : [0];
 
                     return (
                       <div
                         key={lot.id}
                         className={cn(
-                          "relative border-b cursor-pointer transition-colors",
+                          "relative transition-colors",
                           lotIndex % 2 === 0 ? "bg-background" : "bg-muted/10",
-                          hoveredItemId === lot.id && "bg-primary/5",
                           lotIndex > 0 && "border-t-2 border-t-muted"
                         )}
-                        style={{ height: rowHeight }}
-                        onClick={(e) => handleTimelineClick(e, lot.id, lot.color || statusConfig.color)}
-                        onMouseEnter={() => setHoveredItemId(lot.id)}
-                        onMouseLeave={() => setHoveredItemId(null)}
+                        style={{ height: position?.height || rowHeight }}
                       >
-                        {/* Today line */}
+                        {/* Today line spans entire lot height */}
                         {(() => {
                           const todayPos = getPositionForDate(new Date());
                           if (todayPos >= 0 && todayPos <= totalWidth) {
@@ -688,77 +762,110 @@ export function ChantierPlanningTab({
                           )
                         ))}
 
-                        {/* Click hint on hover when no interventions */}
-                        {hoveredItemId === lot.id && lotInterventions.length === 0 && !inlineCreation && (
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <span className="text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-                              Cliquez pour ajouter une intervention
-                            </span>
-                          </div>
-                        )}
-
-                        {/* All interventions on the same row */}
-                        {lotInterventions.map((intervention) => {
-                          const intTempDates = tempDates[intervention.id];
-                          const intStartDate = intTempDates?.start || parseISO(intervention.start_date);
-                          const intEndDate = intTempDates?.end || parseISO(intervention.end_date);
-                          const intStatus = INTERVENTION_STATUS.find(s => s.value === intervention.status) || INTERVENTION_STATUS[0];
+                        {/* Sub-rows rendering */}
+                        {subRows.map((subRowIndex) => {
+                          const subRowY = subRowIndex === 0 ? 0 : rowHeight + (subRowIndex - 1) * subRowHeight;
+                          const currentSubRowHeight = subRowIndex === 0 ? rowHeight : subRowHeight;
+                          const interventionsOnRow = isExpanded 
+                            ? lotInterventions.filter(i => i.sub_row === subRowIndex)
+                            : lotInterventions;
 
                           return (
-                            <Tooltip key={intervention.id}>
-                              <TooltipTrigger asChild>
-                                <div
-                                  className="absolute top-2 h-8 rounded-md flex items-center px-2 cursor-grab active:cursor-grabbing text-white text-xs font-medium shadow-sm hover:ring-2 hover:ring-white/50"
-                                  style={{
-                                    left: getPositionForDate(intStartDate),
-                                    width: Math.max((differenceInDays(intEndDate, intStartDate) + 1) * dayWidth, 30),
-                                    backgroundColor: intervention.color || intStatus.color,
-                                  }}
-                                  onMouseDown={(e) => handleMouseDown(e, intervention.id, "intervention", "move")}
-                                  onClick={(e) => { e.stopPropagation(); setSelectedIntervention(intervention); }}
-                                >
-                                  {/* Resize handles */}
-                                  <div
-                                    className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 rounded-l-md"
-                                    onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, intervention.id, "intervention", "resize-start"); }}
-                                  />
-                                  <div
-                                    className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 rounded-r-md"
-                                    onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, intervention.id, "intervention", "resize-end"); }}
-                                  />
-                                  <span className="truncate drop-shadow-sm">
-                                    {(differenceInDays(intEndDate, intStartDate) + 1) * dayWidth > 50 
-                                      ? intervention.title 
-                                      : `${differenceInDays(intEndDate, intStartDate) + 1}j`
-                                    }
+                            <div
+                              key={`${lot.id}-row-${subRowIndex}`}
+                              className={cn(
+                                "absolute left-0 right-0 cursor-pointer border-b",
+                                subRowIndex > 0 && "border-dashed",
+                                hoveredItemId === (subRowIndex === 0 ? lot.id : `${lot.id}-${subRowIndex}`) && "bg-primary/5"
+                              )}
+                              style={{ 
+                                top: subRowY, 
+                                height: currentSubRowHeight 
+                              }}
+                              onClick={(e) => handleTimelineClick(e, lot.id, lot.color || statusConfig.color, subRowIndex)}
+                              onMouseEnter={() => setHoveredItemId(subRowIndex === 0 ? lot.id : `${lot.id}-${subRowIndex}`)}
+                              onMouseLeave={() => setHoveredItemId(null)}
+                            >
+                              {/* Click hint on hover when no interventions on this row */}
+                              {hoveredItemId === (subRowIndex === 0 ? lot.id : `${lot.id}-${subRowIndex}`) && 
+                                interventionsOnRow.length === 0 && 
+                                !inlineCreation && (
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                  <span className="text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                                    {subRowIndex === 0 ? "Cliquez pour ajouter" : `Sous-ligne #${subRowIndex}`}
                                   </span>
                                 </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <div className="text-sm">
-                                  <p className="font-medium">{intervention.title}</p>
-                                  <p className="text-muted-foreground">
-                                    {format(intStartDate, "d MMM", { locale: fr })} → {format(intEndDate, "d MMM", { locale: fr })}
-                                  </p>
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
+                              )}
+
+                              {/* Interventions on this sub-row */}
+                              {interventionsOnRow.map((intervention) => {
+                                const intTempDates = tempDates[intervention.id];
+                                const intStartDate = intTempDates?.start || parseISO(intervention.start_date);
+                                const intEndDate = intTempDates?.end || parseISO(intervention.end_date);
+                                const intStatus = INTERVENTION_STATUS.find(s => s.value === intervention.status) || INTERVENTION_STATUS[0];
+
+                                return (
+                                  <Tooltip key={intervention.id}>
+                                    <TooltipTrigger asChild>
+                                      <div
+                                        className="absolute h-6 rounded-md flex items-center px-2 cursor-grab active:cursor-grabbing text-white text-xs font-medium shadow-sm hover:ring-2 hover:ring-white/50"
+                                        style={{
+                                          left: getPositionForDate(intStartDate),
+                                          top: 4,
+                                          width: Math.max((differenceInDays(intEndDate, intStartDate) + 1) * dayWidth, 30),
+                                          backgroundColor: intervention.color || intStatus.color,
+                                        }}
+                                        onMouseDown={(e) => handleMouseDown(e, intervention.id, "intervention", "move")}
+                                        onClick={(e) => { e.stopPropagation(); setSelectedIntervention(intervention); }}
+                                      >
+                                        {/* Resize handles */}
+                                        <div
+                                          className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 rounded-l-md"
+                                          onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, intervention.id, "intervention", "resize-start"); }}
+                                        />
+                                        <div
+                                          className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-white/30 rounded-r-md"
+                                          onMouseDown={(e) => { e.stopPropagation(); handleMouseDown(e, intervention.id, "intervention", "resize-end"); }}
+                                        />
+                                        <span className="truncate drop-shadow-sm">
+                                          {(differenceInDays(intEndDate, intStartDate) + 1) * dayWidth > 50 
+                                            ? intervention.title 
+                                            : `${differenceInDays(intEndDate, intStartDate) + 1}j`
+                                          }
+                                        </span>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <div className="text-sm">
+                                        <p className="font-medium">{intervention.title}</p>
+                                        <p className="text-muted-foreground">
+                                          {format(intStartDate, "d MMM", { locale: fr })} → {format(intEndDate, "d MMM", { locale: fr })}
+                                        </p>
+                                        {isExpanded && intervention.sub_row > 0 && (
+                                          <p className="text-muted-foreground text-xs">Sous-ligne #{intervention.sub_row}</p>
+                                        )}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                );
+                              })}
+
+                              {/* Inline creation on this sub-row */}
+                              {inlineCreation && inlineCreation.lotId === lot.id && inlineCreation.subRow === subRowIndex && (
+                                <InlineInterventionCreator
+                                  lotId={inlineCreation.lotId}
+                                  startDate={inlineCreation.startDate}
+                                  endDate={inlineCreation.endDate}
+                                  left={inlineCreation.left}
+                                  width={inlineCreation.width}
+                                  color={inlineCreation.color}
+                                  onSave={handleInlineSave}
+                                  onCancel={() => setInlineCreation(null)}
+                                />
+                              )}
+                            </div>
                           );
                         })}
-
-                        {/* Inline creation */}
-                        {inlineCreation && inlineCreation.lotId === lot.id && (
-                          <InlineInterventionCreator
-                            lotId={inlineCreation.lotId}
-                            startDate={inlineCreation.startDate}
-                            endDate={inlineCreation.endDate}
-                            left={inlineCreation.left}
-                            width={inlineCreation.width}
-                            color={inlineCreation.color}
-                            onSave={handleInlineSave}
-                            onCancel={() => setInlineCreation(null)}
-                          />
-                        )}
                       </div>
                     );
                   })}

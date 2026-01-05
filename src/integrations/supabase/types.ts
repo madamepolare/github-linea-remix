@@ -2247,6 +2247,7 @@ export type Database = {
           project_id: string
           start_date: string
           status: string | null
+          sub_row: number
           team_size: number | null
           title: string
           updated_at: string | null
@@ -2264,6 +2265,7 @@ export type Database = {
           project_id: string
           start_date: string
           status?: string | null
+          sub_row?: number
           team_size?: number | null
           title: string
           updated_at?: string | null
@@ -2281,6 +2283,7 @@ export type Database = {
           project_id?: string
           start_date?: string
           status?: string | null
+          sub_row?: number
           team_size?: number | null
           title?: string
           updated_at?: string | null
