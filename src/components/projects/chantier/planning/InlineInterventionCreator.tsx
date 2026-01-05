@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { format, addDays, differenceInDays } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
+import { Check, X, Calendar } from "lucide-react";
 import { CreateInterventionInput } from "@/hooks/useInterventions";
 
 interface InlineInterventionCreatorProps {
@@ -16,10 +16,6 @@ interface InlineInterventionCreatorProps {
   onSave: (intervention: CreateInterventionInput) => void;
   onCancel: () => void;
 }
-
-const INTERVENTION_COLORS = [
-  "#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16",
-];
 
 export function InlineInterventionCreator({
   lotId,
@@ -40,13 +36,10 @@ export function InlineInterventionCreator({
   }, []);
 
   const handleSave = () => {
-    if (!title.trim()) {
-      onCancel();
-      return;
-    }
+    const finalTitle = title.trim() || `Intervention ${format(startDate, "d MMM", { locale: fr })}`;
     onSave({
       lot_id: lotId,
-      title: title.trim(),
+      title: finalTitle,
       start_date: format(startDate, "yyyy-MM-dd"),
       end_date: format(endDate, "yyyy-MM-dd"),
       color,
@@ -55,6 +48,7 @@ export function InlineInterventionCreator({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
+      e.preventDefault();
       handleSave();
     } else if (e.key === "Escape") {
       onCancel();
@@ -65,33 +59,49 @@ export function InlineInterventionCreator({
 
   return (
     <div
-      className="absolute top-1.5 flex items-center gap-1 z-20"
-      style={{ left, width: Math.max(width, 200) }}
+      className="absolute top-1.5 flex items-center gap-0.5 z-20 animate-in fade-in zoom-in-95 duration-150"
+      style={{ left, width: Math.max(width, 180) }}
+      onClick={(e) => e.stopPropagation()}
     >
+      {/* Main intervention bar */}
       <div
-        className="h-8 rounded flex items-center px-2 gap-1 shadow-lg border border-white/30"
-        style={{ backgroundColor: color, width: "100%" }}
+        className="flex-1 h-8 rounded-md shadow-lg ring-2 ring-primary/50 ring-offset-1 ring-offset-background flex items-center gap-1 px-1.5 overflow-hidden"
+        style={{ backgroundColor: color }}
       >
+        {/* Date badge */}
+        <div className="flex items-center gap-1 text-[10px] text-white/90 font-medium shrink-0 bg-black/20 rounded px-1 py-0.5">
+          <Calendar className="w-3 h-3" />
+          {format(startDate, "d/MM")}
+          <span className="opacity-60">→</span>
+          {format(endDate, "d/MM")}
+        </div>
+
+        {/* Title input */}
         <Input
           ref={inputRef}
+          type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`${duration}j - Titre...`}
-          className="h-6 text-xs bg-white/20 border-0 text-white placeholder:text-white/60 focus-visible:ring-0 focus-visible:ring-offset-0"
+          placeholder="Nom... (Entrée = créer)"
+          className="flex-1 h-6 min-w-0 text-xs bg-white/95 border-0 text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-0 rounded px-1.5"
         />
+      </div>
+
+      {/* Quick actions */}
+      <div className="flex gap-0.5 shrink-0">
         <Button
+          variant="default"
           size="icon"
-          variant="ghost"
-          className="h-6 w-6 text-white hover:bg-white/20"
+          className="h-7 w-7 rounded-md shadow-md"
           onClick={handleSave}
         >
           <Check className="w-3.5 h-3.5" />
         </Button>
         <Button
+          variant="secondary"
           size="icon"
-          variant="ghost"
-          className="h-6 w-6 text-white hover:bg-white/20"
+          className="h-7 w-7 rounded-md shadow-md"
           onClick={onCancel}
         >
           <X className="w-3.5 h-3.5" />

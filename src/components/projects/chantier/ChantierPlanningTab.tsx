@@ -98,7 +98,7 @@ export function ChantierPlanningTab({
   companies,
   projectName,
 }: ChantierPlanningTabProps) {
-  const { interventions, isLoading: interventionsLoading, createMultipleInterventions, updateIntervention, deleteIntervention } = useInterventions(projectId);
+  const { interventions, isLoading: interventionsLoading, createMultipleInterventions, updateIntervention, deleteIntervention, deleteMultipleInterventions } = useInterventions(projectId);
   
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [zoomLevel, setZoomLevel] = useState<ZoomLevel>("week");
@@ -410,139 +410,101 @@ export function ChantierPlanningTab({
 
   return (
     <div className="flex flex-col h-full" ref={containerRef}>
-      {/* Toolbar */}
-      <div className="flex items-center justify-between gap-4 p-4 border-b bg-background/95 backdrop-blur sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          {/* Zoom controls */}
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-            <Button variant={zoomLevel === "day" ? "secondary" : "ghost"} size="sm" onClick={() => setZoomLevel("day")}>
-              Jour
+      {/* Simplified Toolbar */}
+      <div className="flex items-center justify-between gap-4 p-3 border-b bg-background/95 backdrop-blur sticky top-0 z-20">
+        {/* Left side - Navigation */}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon-sm" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={goToToday} className="font-medium">
+            Aujourd'hui
+          </Button>
+          <Button variant="ghost" size="icon-sm" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+          
+          <div className="h-5 w-px bg-border mx-1" />
+          
+          {/* Zoom - compact */}
+          <div className="flex items-center gap-0.5 bg-muted rounded-md p-0.5">
+            <Button variant={zoomLevel === "day" ? "secondary" : "ghost"} size="sm" className="h-7 px-2 text-xs" onClick={() => setZoomLevel("day")}>
+              J
             </Button>
-            <Button variant={zoomLevel === "week" ? "secondary" : "ghost"} size="sm" onClick={() => setZoomLevel("week")}>
-              Semaine
+            <Button variant={zoomLevel === "week" ? "secondary" : "ghost"} size="sm" className="h-7 px-2 text-xs" onClick={() => setZoomLevel("week")}>
+              S
             </Button>
-            <Button variant={zoomLevel === "month" ? "secondary" : "ghost"} size="sm" onClick={() => setZoomLevel("month")}>
-              Mois
-            </Button>
-          </div>
-
-          <div className="h-6 w-px bg-border" />
-
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon-sm" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={goToToday}>
-              Aujourd'hui
-            </Button>
-            <Button variant="ghost" size="icon-sm" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-              <ChevronRight className="w-4 h-4" />
+            <Button variant={zoomLevel === "month" ? "secondary" : "ghost"} size="sm" className="h-7 px-2 text-xs" onClick={() => setZoomLevel("month")}>
+              M
             </Button>
           </div>
         </div>
 
+        {/* Center - Stats (minimal) */}
+        <div className="hidden md:flex items-center gap-3 text-sm text-muted-foreground">
+          <span>{stats.totalInterventions} interventions</span>
+          {stats.delayedInterventions > 0 && (
+            <Badge variant="destructive" className="gap-1 text-xs">
+              <AlertTriangle className="w-3 h-3" />
+              {stats.delayedInterventions}
+            </Badge>
+          )}
+        </div>
+
+        {/* Right side - Actions */}
         <div className="flex items-center gap-2">
-          {/* Stats badges */}
-          <div className="hidden md:flex items-center gap-2 mr-2">
-            <Badge variant="secondary" className="gap-1">
-              <Layers className="w-3 h-3" />
-              {stats.totalLots} lots
-            </Badge>
-            <Badge variant="secondary" className="gap-1">
-              <GanttChart className="w-3 h-3" />
-              {stats.totalInterventions} interventions
-            </Badge>
-            {stats.delayedInterventions > 0 && (
-              <Badge variant="destructive" className="gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                {stats.delayedInterventions} retard
-              </Badge>
-            )}
-          </div>
-
-          {/* Filters */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Filter className="w-4 h-4 mr-1" />
-                Filtres
-                {(statusFilter || companyFilter) && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                    {[statusFilter, companyFilter].filter(Boolean).length}
-                  </Badge>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64" align="end">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Statut</label>
-                  <Select value={statusFilter || "all"} onValueChange={(v) => setStatusFilter(v === "all" ? null : v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tous les statuts" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tous les statuts</SelectItem>
-                      {LOT_STATUS.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                            {s.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Entreprise</label>
-                  <Select value={companyFilter || "all"} onValueChange={(v) => setCompanyFilter(v === "all" ? null : v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Toutes les entreprises" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Toutes les entreprises</SelectItem>
-                      {companies.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {(statusFilter || companyFilter) && (
-                  <Button variant="ghost" size="sm" className="w-full" onClick={() => { setStatusFilter(null); setCompanyFilter(null); }}>
-                    <X className="w-4 h-4 mr-1" />
-                    Réinitialiser
-                  </Button>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-
+          {/* AI Button - Prominent */}
           <Button 
-            variant={showAIPanel ? "secondary" : "outline"} 
+            variant={showAIPanel ? "default" : "secondary"} 
             size="sm" 
             onClick={() => setShowAIPanel(!showAIPanel)}
-            className="gap-1"
+            className="gap-1.5"
           >
-            <Wand2 className="w-4 h-4" />
-            Planifier avec IA
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">Planifier avec IA</span>
           </Button>
 
-          <Button size="sm" onClick={() => { setPreselectedLotId(undefined); setPreselectedDates(undefined); setShowAddDialog(true); }}>
-            <Plus className="w-4 h-4 mr-1" />
-            Intervention
-          </Button>
+          {/* Reset button - if interventions exist */}
+          {interventions.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 text-muted-foreground">
+                  <RefreshCw className="w-4 h-4" />
+                  <span className="hidden sm:inline">Reset</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={() => {
+                    if (confirm(`Supprimer les ${interventions.length} interventions ?`)) {
+                      deleteMultipleInterventions.mutate(interventions.map(i => i.id));
+                    }
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Tout supprimer ({interventions.length})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
+          {/* More options */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon-sm">
+              <Button variant="ghost" size="icon-sm">
                 <MoreVertical className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => { setPreselectedLotId(undefined); setPreselectedDates(undefined); setShowAddDialog(true); }}>
+                <Plus className="w-4 h-4 mr-2" />
+                Ajouter intervention
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleExportA1} disabled={isExporting}>
                 <Download className="w-4 h-4 mr-2" />
-                Exporter PDF A1
+                Exporter PDF
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setCollapsedLots(new Set(sortedLots.map(l => l.id)))}>
