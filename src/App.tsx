@@ -28,6 +28,7 @@ const Tenders = lazy(() => import("./pages/Tenders"));
 const TenderDetail = lazy(() => import("./pages/TenderDetail"));
 const Documents = lazy(() => import("./pages/Documents"));
 const Team = lazy(() => import("./pages/Team"));
+const Chantier = lazy(() => import("./pages/Chantier"));
 const Welcome = lazy(() => import("./pages/Welcome"));
 const ModuleDetail = lazy(() => import("./pages/ModuleDetail"));
 const SolutionDetail = lazy(() => import("./pages/SolutionDetail"));
@@ -278,6 +279,30 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Team />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/chantier"
+                element={
+                  <ProtectedRoute>
+                    <Chantier />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/chantier/:projectId"
+                element={
+                  <ProtectedRoute>
+                    <Chantier />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/chantier/:projectId/:section"
+                element={
+                  <ProtectedRoute>
+                    <Chantier />
                   </ProtectedRoute>
                 }
               />

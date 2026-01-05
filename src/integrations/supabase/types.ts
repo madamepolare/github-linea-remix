@@ -2192,6 +2192,48 @@ export type Database = {
           },
         ]
       }
+      project_enabled_modules: {
+        Row: {
+          enabled_at: string
+          enabled_by: string | null
+          id: string
+          module_key: string
+          project_id: string
+          workspace_id: string
+        }
+        Insert: {
+          enabled_at?: string
+          enabled_by?: string | null
+          id?: string
+          module_key: string
+          project_id: string
+          workspace_id: string
+        }
+        Update: {
+          enabled_at?: string
+          enabled_by?: string | null
+          id?: string
+          module_key?: string
+          project_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_enabled_modules_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_enabled_modules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_lot_interventions: {
         Row: {
           color: string | null
