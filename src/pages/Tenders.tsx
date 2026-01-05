@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { format, formatDistanceToNow, isPast, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -16,11 +16,11 @@ import {
   Eye,
 } from "lucide-react";
 
-import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { THIN_STROKE } from "@/components/ui/icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +46,13 @@ export default function Tenders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
+  // Listen for command palette event
+  useEffect(() => {
+    const handleOpen = () => setShowCreateDialog(true);
+    window.addEventListener("open-create-tender", handleOpen);
+    return () => window.removeEventListener("open-create-tender", handleOpen);
+  }, []);
+
   const filteredTenders = tenders.filter(
     (t) =>
       t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -58,48 +65,8 @@ export default function Tenders() {
   return (
     <>
       <div className="flex flex-col h-full">
-        <PageHeader
-          title="Concours"
-          description="Gérez vos appels d'offres et marchés publics"
-          actions={
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-[200px]"
-                />
-              </div>
-              <div className="flex items-center border rounded-lg p-0.5">
-                <Button
-                  variant={viewMode === "kanban" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => navigate("/tenders/kanban")}
-                  className="h-7 px-2"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => navigate("/tenders/list")}
-                  className="h-7 px-2"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          }
-          primaryAction={{
-            label: "Nouveau concours",
-            onClick: () => setShowCreateDialog(true),
-          }}
-        />
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 px-6 py-4 border-b">
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 px-6 py-4 border-b border-border">
           <div className="text-center">
             <p className="text-2xl font-bold">{stats.total}</p>
             <p className="text-xs text-muted-foreground">Total</p>
@@ -251,18 +218,18 @@ function TenderCard({
         )}
         
         <div className="flex flex-wrap gap-1.5 text-xs text-muted-foreground">
-          {tender.location && (
-            <span className="flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              {tender.location}
-            </span>
-          )}
-          {tender.estimated_budget && (
-            <span className="flex items-center gap-1">
-              <Euro className="h-3 w-3" />
-              {(tender.estimated_budget / 1000000).toFixed(1)}M€
-            </span>
-          )}
+        {tender.location && (
+          <span className="flex items-center gap-1">
+            <MapPin className="h-3 w-3" strokeWidth={THIN_STROKE} />
+            {tender.location}
+          </span>
+        )}
+        {tender.estimated_budget && (
+          <span className="flex items-center gap-1">
+            <Euro className="h-3 w-3" strokeWidth={THIN_STROKE} />
+            {(tender.estimated_budget / 1000000).toFixed(1)}M€
+          </span>
+        )}
         </div>
         
         {deadline && (
@@ -270,8 +237,8 @@ function TenderCard({
             "flex items-center gap-1.5 text-xs",
             isOverdue ? "text-destructive" : isUrgent ? "text-amber-600" : "text-muted-foreground"
           )}>
-            {(isUrgent || isOverdue) && <AlertTriangle className="h-3 w-3" />}
-            <Clock className="h-3 w-3" />
+            {(isUrgent || isOverdue) && <AlertTriangle className="h-3 w-3" strokeWidth={THIN_STROKE} />}
+            <Clock className="h-3 w-3" strokeWidth={THIN_STROKE} />
             <span>
               {isOverdue 
                 ? "Expiré" 
