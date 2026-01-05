@@ -1,7 +1,6 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { MainLayout } from "@/components/layout/MainLayout";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useParams } from "react-router-dom";
+import { PageLayout } from "@/components/layout/PageLayout";
+import { Users } from "lucide-react";
 import { TeamUsersTab } from "@/components/team/TeamUsersTab";
 import { TimeTrackingTab } from "@/components/team/TimeTrackingTab";
 import { TimeValidationTab } from "@/components/team/TimeValidationTab";
@@ -12,25 +11,22 @@ import { EvaluationsTab } from "@/components/team/EvaluationsTab";
 import { DirectoryTab } from "@/components/team/DirectoryTab";
 import { SEOHead } from "@/components/seo/SEOHead";
 
-const sections = [
-  { id: "users", label: "Utilisateurs" },
-  { id: "time-tracking", label: "Suivi temps" },
-  { id: "time-validation", label: "Validation" },
-  { id: "recruitment", label: "Recrutement" },
-  { id: "absences", label: "Absences" },
-  { id: "requests", label: "Demandes" },
-  { id: "evaluations", label: "Évaluations" },
-  { id: "directory", label: "Annuaire" },
-];
+type TeamSection = "users" | "time-tracking" | "time-validation" | "recruitment" | "absences" | "requests" | "evaluations" | "directory";
+
+const sectionDescriptions: Record<TeamSection, string> = {
+  users: "Gérez les membres de votre équipe",
+  "time-tracking": "Suivi du temps de travail",
+  "time-validation": "Validation des heures",
+  recruitment: "Gestion des candidatures",
+  absences: "Congés et absences",
+  requests: "Demandes de l'équipe",
+  evaluations: "Évaluations et objectifs",
+  directory: "Annuaire de l'équipe",
+};
 
 export default function Team() {
   const { section } = useParams();
-  const navigate = useNavigate();
-  const activeSection = section || "users";
-
-  const handleSectionChange = (value: string) => {
-    navigate(`/team/${value}`);
-  };
+  const activeSection = (section as TeamSection) || "users";
 
   const renderContent = () => {
     switch (activeSection) {
@@ -56,29 +52,18 @@ export default function Team() {
   };
 
   return (
-    <MainLayout>
+    <>
       <SEOHead
         title="Équipe | Gestion des ressources humaines"
         description="Gérez votre équipe, suivez les temps, validez les absences et recrutez de nouveaux talents."
       />
-      <div className="space-y-6">
-        <PageHeader
-          title="Équipe"
-          description="Gestion des ressources humaines et suivi de l'équipe"
-        />
-
-        <Tabs value={activeSection} onValueChange={handleSectionChange}>
-          <TabsList className="w-full justify-start overflow-x-auto flex-wrap h-auto gap-1 p-1">
-            {sections.map((s) => (
-              <TabsTrigger key={s.id} value={s.id} className="shrink-0">
-                {s.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-
-        <div className="mt-6">{renderContent()}</div>
-      </div>
-    </MainLayout>
+      <PageLayout
+        icon={Users}
+        title="Équipe"
+        description={sectionDescriptions[activeSection] || "Gestion des ressources humaines"}
+      >
+        {renderContent()}
+      </PageLayout>
+    </>
   );
 }
