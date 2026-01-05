@@ -1749,6 +1749,143 @@ export type Database = {
           },
         ]
       }
+      job_applications: {
+        Row: {
+          candidate_email: string
+          candidate_name: string
+          candidate_phone: string | null
+          cover_letter: string | null
+          created_at: string
+          cv_url: string | null
+          id: string
+          interview_date: string | null
+          job_offer_id: string
+          linkedin_url: string | null
+          notes: string | null
+          portfolio_url: string | null
+          rating: number | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          candidate_email: string
+          candidate_name: string
+          candidate_phone?: string | null
+          cover_letter?: string | null
+          created_at?: string
+          cv_url?: string | null
+          id?: string
+          interview_date?: string | null
+          job_offer_id: string
+          linkedin_url?: string | null
+          notes?: string | null
+          portfolio_url?: string | null
+          rating?: number | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          candidate_email?: string
+          candidate_name?: string
+          candidate_phone?: string | null
+          cover_letter?: string | null
+          created_at?: string
+          cv_url?: string | null
+          id?: string
+          interview_date?: string | null
+          job_offer_id?: string
+          linkedin_url?: string | null
+          notes?: string | null
+          portfolio_url?: string | null
+          rating?: number | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_applications_job_offer_id_fkey"
+            columns: ["job_offer_id"]
+            isOneToOne: false
+            referencedRelation: "job_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applications_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_offers: {
+        Row: {
+          closes_at: string | null
+          contract_type: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          location: string | null
+          published_at: string | null
+          remote_policy: string | null
+          requirements: string | null
+          salary_max: number | null
+          salary_min: number | null
+          status: string
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          closes_at?: string | null
+          contract_type?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          published_at?: string | null
+          remote_policy?: string | null
+          requirements?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          status?: string
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          closes_at?: string | null
+          contract_type?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          published_at?: string | null
+          remote_policy?: string | null
+          requirements?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          status?: string
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_offers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base_entries: {
         Row: {
           category: string | null
@@ -3629,6 +3766,262 @@ export type Database = {
           },
           {
             foreignKeyName: "tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_absences: {
+        Row: {
+          absence_type: string
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          end_date: string
+          end_half_day: boolean | null
+          id: string
+          reason: string | null
+          rejection_reason: string | null
+          start_date: string
+          start_half_day: boolean | null
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          absence_type?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          end_date: string
+          end_half_day?: boolean | null
+          id?: string
+          reason?: string | null
+          rejection_reason?: string | null
+          start_date: string
+          start_half_day?: boolean | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          absence_type?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          end_date?: string
+          end_half_day?: boolean | null
+          id?: string
+          reason?: string | null
+          rejection_reason?: string | null
+          start_date?: string
+          start_half_day?: boolean | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_absences_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_evaluations: {
+        Row: {
+          completed_date: string | null
+          created_at: string
+          evaluation_type: string
+          evaluator_id: string
+          id: string
+          notes: string | null
+          objectives: Json | null
+          rating: number | null
+          scheduled_date: string
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          completed_date?: string | null
+          created_at?: string
+          evaluation_type?: string
+          evaluator_id: string
+          id?: string
+          notes?: string | null
+          objectives?: Json | null
+          rating?: number | null
+          scheduled_date: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          completed_date?: string | null
+          created_at?: string
+          evaluation_type?: string
+          evaluator_id?: string
+          id?: string
+          notes?: string | null
+          objectives?: Json | null
+          rating?: number | null
+          scheduled_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_evaluations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_requests: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          priority: string
+          request_type: string
+          response: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string
+          request_type?: string
+          response?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string
+          request_type?: string
+          response?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_time_entries: {
+        Row: {
+          created_at: string
+          date: string
+          description: string | null
+          duration_minutes: number
+          ended_at: string | null
+          id: string
+          is_billable: boolean | null
+          project_id: string | null
+          rejection_reason: string | null
+          started_at: string | null
+          status: string
+          task_id: string | null
+          updated_at: string
+          user_id: string
+          validated_at: string | null
+          validated_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          description?: string | null
+          duration_minutes?: number
+          ended_at?: string | null
+          id?: string
+          is_billable?: boolean | null
+          project_id?: string | null
+          rejection_reason?: string | null
+          started_at?: string | null
+          status?: string
+          task_id?: string | null
+          updated_at?: string
+          user_id: string
+          validated_at?: string | null
+          validated_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          description?: string | null
+          duration_minutes?: number
+          ended_at?: string | null
+          id?: string
+          is_billable?: boolean | null
+          project_id?: string | null
+          rejection_reason?: string | null
+          started_at?: string | null
+          status?: string
+          task_id?: string | null
+          updated_at?: string
+          user_id?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_time_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_time_entries_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_time_entries_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
