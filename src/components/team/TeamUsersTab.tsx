@@ -63,29 +63,57 @@ export function TeamUsersTab() {
     m.profile?.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const buildInviteUrl = (inviteToken: string) =>
+    `${window.location.origin}/invite?token=${encodeURIComponent(inviteToken)}`;
+
+  const copyInviteLink = async (inviteToken: string) => {
+    const url = buildInviteUrl(inviteToken);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Lien d'invitation copié" });
+    } catch {
+      toast({ title: "Lien d'invitation", description: url });
+    }
+  };
+
   const handleInvite = async () => {
     if (!activeWorkspace || !inviteEmail) return;
 
     setInviting(true);
     try {
-      const { error } = await (supabase.from("workspace_invites") as any).insert({
-        workspace_id: activeWorkspace.id,
-        email: inviteEmail.toLowerCase(),
-        role: inviteRole,
-        invited_by: user?.id,
-      });
+      const { data: invite, error } = await (supabase.from("workspace_invites") as any)
+        .insert({
+          workspace_id: activeWorkspace.id,
+          email: inviteEmail.toLowerCase(),
+          role: inviteRole,
+          invited_by: user?.id,
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      await supabase.functions.invoke("send-invite", {
+      const { error: emailError } = await supabase.functions.invoke("send-invite", {
         body: {
           email: inviteEmail,
+          workspaceId: activeWorkspace.id,
           workspaceName: activeWorkspace.name,
-          inviterName: user?.email,
+          role: inviteRole,
+          inviteToken: invite.token,
+          inviterName: user?.email || "A team member",
         },
       });
 
-      toast({ title: "Invitation envoyée" });
+      if (emailError) {
+        await copyInviteLink(invite.token);
+        toast({
+          title: "Invitation créée",
+          description: "Email non envoyé — lien d'invitation copié.",
+        });
+      } else {
+        toast({ title: "Invitation envoyée" });
+      }
+
       setInviteOpen(false);
       setInviteEmail("");
       setInviteRole("member");
