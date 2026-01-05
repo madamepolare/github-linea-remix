@@ -137,11 +137,22 @@ serve(async (req: Request): Promise<Response> => {
       }),
     });
 
-    if (!res.ok) {
-      const errorData = await res.json();
-      console.error("Resend API error:", errorData);
-      throw new Error(errorData.message || "Failed to send email");
-    }
+     if (!res.ok) {
+       const errorData = await res.json().catch(() => ({} as any));
+       console.error("Resend API error:", errorData);
+       return new Response(
+         JSON.stringify({
+           success: false,
+           error:
+             errorData?.message ||
+             `Failed to send email (status ${res.status})`,
+         }),
+         {
+           status: res.status,
+           headers: { "Content-Type": "application/json", ...corsHeaders },
+         }
+       );
+     }
 
     const data = await res.json();
     console.log("Email sent successfully:", data);
