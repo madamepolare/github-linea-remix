@@ -36,6 +36,7 @@ import { ProjectPlanningTab } from "@/components/projects/ProjectPlanningTab";
 import { ProjectMOESection } from "@/components/projects/ProjectMOESection";
 import { PhaseQuickEditDialog } from "@/components/projects/PhaseQuickEditDialog";
 import { EditProjectDialog } from "@/components/projects/EditProjectDialog";
+import { ModulesSelector } from "@/components/projects/ModulesSelector";
 import { EntityTasksList } from "@/components/tasks/EntityTasksList";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -494,6 +495,13 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
       <Card>
         <CardContent className="py-5">
           <ProjectMOESection projectId={project.id} />
+        </CardContent>
+      </Card>
+
+      {/* Project Modules */}
+      <Card>
+        <CardContent className="py-5">
+          <ModulesSelector projectId={project.id} />
         </CardContent>
       </Card>
 

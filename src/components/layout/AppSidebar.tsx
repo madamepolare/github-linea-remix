@@ -16,6 +16,7 @@ import {
   FileStack,
   LockOpen,
   UsersRound,
+  HardHat,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
@@ -117,6 +118,15 @@ const coreNavigation: NavItem[] = [
 
 // Premium extensions - unlocked in this workspace
 const extensionNavigation: NavItem[] = [
+  { 
+    title: "Chantier", 
+    icon: HardHat, 
+    href: "/chantier", 
+    isExtension: true,
+    children: [
+      { title: "Tous les chantiers", href: "/chantier" },
+    ]
+  },
   { 
     title: "Concours", 
     icon: Trophy, 
