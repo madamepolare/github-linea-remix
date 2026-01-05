@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -32,13 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserPlus, MoreHorizontal, Mail, Shield, Trash2, Search } from "lucide-react";
-
-const roleLabels: Record<string, string> = {
-  owner: "Propriétaire",
-  admin: "Administrateur",
-  member: "Membre",
-  viewer: "Lecteur",
-};
+import { ROLE_LABELS } from "@/lib/permissions";
 
 const roleColors: Record<string, string> = {
   owner: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
@@ -50,6 +45,7 @@ const roleColors: Record<string, string> = {
 export function TeamUsersTab() {
   const { data: members, isLoading } = useTeamMembers();
   const { activeWorkspace, user } = useAuth();
+  const { can, isAdmin } = usePermissions();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
@@ -58,8 +54,9 @@ export function TeamUsersTab() {
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
 
-  const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role;
-  const canManage = currentUserRole === "owner" || currentUserRole === "admin";
+  const canInvite = can("team.invite");
+  const canManageRoles = can("team.manage_roles");
+  const canRemove = can("team.remove");
 
   const filteredMembers = members?.filter((m) =>
     m.profile?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -163,7 +160,7 @@ export function TeamUsersTab() {
             className="pl-9"
           />
         </div>
-        {canManage && (
+        {canInvite && (
           <Button onClick={() => setInviteOpen(true)}>
             <UserPlus className="h-4 w-4 mr-2" />
             Inviter
@@ -176,7 +173,7 @@ export function TeamUsersTab() {
           <MemberCard
             key={member.id}
             member={member}
-            canManage={canManage && member.user_id !== user?.id && member.role !== "owner"}
+            canManage={canManageRoles && member.user_id !== user?.id && member.role !== "owner"}
             onUpdateRole={(role) => handleUpdateRole(member.id, role)}
             onRemove={() => handleRemoveMember(member.id)}
           />
@@ -293,7 +290,7 @@ function MemberCard({
         </div>
         <div className="mt-3 flex items-center gap-2">
           <Badge className={roleColors[member.role]}>
-            {roleLabels[member.role] || member.role}
+            {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] || member.role}
           </Badge>
           {member.profile?.email && (
             <a
