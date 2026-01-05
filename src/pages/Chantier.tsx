@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChantierOverview } from "@/components/projects/chantier/ChantierOverview";
 import { ChantierPlanningTab } from "@/components/projects/chantier/ChantierPlanningTab";
+import { LotsSection } from "@/components/projects/chantier/LotsSection";
 import { MeetingsSection } from "@/components/projects/chantier/MeetingsSection";
 import { ReportsSection } from "@/components/projects/chantier/ReportsSection";
 import { ObservationsSection } from "@/components/projects/chantier/ObservationsSection";
@@ -32,6 +33,7 @@ import {
   Plus,
   Search,
   AlertTriangle,
+  Layers,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -454,6 +456,10 @@ function ChantierProject({ projectId, section = "overview" }: ChantierProjectPro
                   <Eye className="h-3.5 w-3.5 mr-1.5" />
                   Vue d'ensemble
                 </TabsTrigger>
+                <TabsTrigger value="lots">
+                  <Layers className="h-3.5 w-3.5 mr-1.5" />
+                  Lots
+                </TabsTrigger>
                 <TabsTrigger value="planning">
                   <Calendar className="h-3.5 w-3.5 mr-1.5" />
                   Planning
@@ -483,6 +489,19 @@ function ChantierProject({ projectId, section = "overview" }: ChantierProjectPro
               onNavigate={handleTabChange}
               onOpenReport={() => handleTabChange("reports")}
               onOpenPlanning={() => handleTabChange("planning")}
+            />
+          )}
+          {activeTab === "lots" && (
+            <LotsSection
+              projectId={projectId}
+              lots={lots}
+              lotsLoading={lotsLoading}
+              onCreateLot={(name, startDate, endDate, companyId) => 
+                createLot.mutate({ name, start_date: startDate, end_date: endDate, crm_company_id: companyId, status: "pending", sort_order: lots.length })
+              }
+              onUpdateLot={(id, updates) => updateLot.mutate({ id, ...updates })}
+              onDeleteLot={(id) => deleteLot.mutate(id)}
+              companies={companies}
             />
           )}
           {activeTab === "planning" && (
