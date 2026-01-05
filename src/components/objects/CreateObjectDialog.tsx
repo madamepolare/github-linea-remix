@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { useDesignObjects, useObjectCategories } from "@/hooks/useDesignObjects";
 import { Loader2 } from "lucide-react";
+import { AutoSourceImageButton } from "./AutoSourceImageButton";
 
 interface CreateObjectDialogProps {
   open: boolean;
@@ -220,13 +221,23 @@ export function CreateObjectDialog({ open, onOpenChange }: CreateObjectDialogPro
 
             <div className="col-span-2">
               <Label htmlFor="image_url">URL de l'image</Label>
-              <Input
-                id="image_url"
-                type="url"
-                value={formData.image_url}
-                onChange={(e) => setFormData((p) => ({ ...p, image_url: e.target.value }))}
-                placeholder="https://..."
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="image_url"
+                  type="url"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData((p) => ({ ...p, image_url: e.target.value }))}
+                  placeholder="https://..."
+                  className="flex-1"
+                />
+                <AutoSourceImageButton
+                  name={formData.name}
+                  brand={formData.brand}
+                  designer={formData.designer}
+                  description={formData.description}
+                  onImageFound={(url) => setFormData((p) => ({ ...p, image_url: url }))}
+                />
+              </div>
               {formData.image_url && (
                 <div className="mt-2 h-32 w-32 rounded-lg border bg-muted overflow-hidden">
                   <img
