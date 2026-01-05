@@ -18,7 +18,7 @@ import {
   FolderOpen,
   LayoutDashboard,
 } from "lucide-react";
-import { MainLayout } from "@/components/layout/MainLayout";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -72,32 +72,32 @@ export default function TenderDetail() {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <>
         <div className="p-6 space-y-6">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-32 w-full" />
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   if (!tender) {
     return (
-      <MainLayout>
+      <>
         <div className="p-6">
           <p className="text-muted-foreground">Concours non trouvé</p>
           <Button variant="outline" onClick={() => navigate("/tenders")} className="mt-4">
             Retour aux concours
           </Button>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   const deadline = tender.submission_deadline ? new Date(tender.submission_deadline) : null;
 
   return (
-    <MainLayout>
+    <>
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="border-b bg-card">
@@ -268,6 +268,6 @@ export default function TenderDetail() {
         tender={tender}
         onSave={(updates) => updateTender.mutate({ id: tender.id, ...updates })}
       />
-    </MainLayout>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { MainLayout } from "@/components/layout/MainLayout";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,18 +85,18 @@ export default function ContactDetail() {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <>
         <div className="p-6 max-w-4xl mx-auto space-y-6">
           <Skeleton className="h-10 w-64" />
           <Skeleton className="h-48 w-full" />
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   if (!contact) {
     return (
-      <MainLayout>
+      <>
         <div className="p-6 max-w-4xl mx-auto">
           <Button variant="ghost" onClick={() => navigate("/crm")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -107,12 +107,12 @@ export default function ContactDetail() {
             <h2 className="text-xl font-semibold">Contact non trouvé</h2>
           </div>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout>
+    <>
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
         <div className="flex-shrink-0 border-b border-border bg-card">
@@ -424,6 +424,6 @@ export default function ContactDetail() {
           </div>
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 }

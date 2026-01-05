@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { MainLayout } from "@/components/layout/MainLayout";
+
 import { useProject, useProjects } from "@/hooks/useProjects";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -81,18 +81,18 @@ export default function ProjectDetail() {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <>
         <div className="p-6 space-y-6">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-48 w-full" />
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   if (!project) {
     return (
-      <MainLayout>
+      <>
         <div className="flex items-center justify-center h-full">
           <div className="text-center">
             <FolderKanban className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -102,7 +102,7 @@ export default function ProjectDetail() {
             </Button>
           </div>
         </div>
-      </MainLayout>
+      </>
     );
   }
 
@@ -113,7 +113,7 @@ export default function ProjectDetail() {
   const currentPhase = phases.find((p) => p.status === "in_progress");
 
   return (
-    <MainLayout>
+    <>
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
         <div className="flex-shrink-0 border-b border-border bg-card">
@@ -241,7 +241,7 @@ export default function ProjectDetail() {
           )}
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 }
 

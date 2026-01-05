@@ -1,5 +1,5 @@
-import { ReactNode, useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useLocation, Outlet } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
@@ -8,11 +8,7 @@ import { useSidebarStore } from "@/hooks/useSidebarStore";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-interface MainLayoutProps {
-  children: ReactNode;
-}
-
-export function MainLayout({ children }: MainLayoutProps) {
+export function MainLayout() {
   const { collapsed } = useSidebarStore();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -76,7 +72,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <AnimatePresence mode="wait">
           <PageTransition key={location.pathname}>
             <div className="min-h-screen">
-              {children}
+              <Outlet />
             </div>
           </PageTransition>
         </AnimatePresence>

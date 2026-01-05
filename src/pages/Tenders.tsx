@@ -15,7 +15,7 @@ import {
   Trash2,
   Eye,
 } from "lucide-react";
-import { MainLayout } from "@/components/layout/MainLayout";
+
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,7 @@ export default function Tenders() {
   const kanbanColumns: TenderStatus[] = ['repere', 'en_analyse', 'go', 'en_montage', 'depose'];
 
   return (
-    <MainLayout>
+    <>
       <div className="flex flex-col h-full">
         <PageHeader
           title="Concours"
@@ -155,7 +155,7 @@ export default function Tenders() {
         open={showCreateDialog} 
         onOpenChange={setShowCreateDialog} 
       />
-    </MainLayout>
+    </>
   );
 }
 
