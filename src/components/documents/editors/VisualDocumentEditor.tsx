@@ -2,24 +2,21 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   ZoomIn, 
   ZoomOut, 
-  Maximize2, 
   Download,
-  RefreshCw,
   Loader2,
-  FileText,
   Eye,
   Edit3,
   Columns,
-  Monitor
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { type DocumentType } from '@/lib/documentTypes';
 import { LiveDocumentPreview } from './LiveDocumentPreview';
+import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 
 // Import specialized editors
 import { PowerOfAttorneyEditor } from './PowerOfAttorneyEditor';
@@ -32,6 +29,7 @@ import { generatePowerOfAttorneyPDF } from '@/lib/generatePowerOfAttorneyPDF';
 import { generateServiceOrderPDF } from '@/lib/generateServiceOrderPDF';
 import { generateInvoicePDF } from '@/lib/generateInvoicePDF';
 import { generateGenericDocumentPDF } from '@/lib/generateGenericDocumentPDF';
+import { type AgencyPDFInfo } from '@/lib/pdfUtils';
 import { toast } from 'sonner';
 
 type ViewMode = 'split' | 'editor' | 'preview';
@@ -65,6 +63,9 @@ export function VisualDocumentEditor({
   const [zoom, setZoom] = useState(0.5);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const previewContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Get agency info for PDF generation
+  const { agencyInfo } = useAgencyInfo();
 
   // Auto-adjust zoom based on container width
   useEffect(() => {
@@ -82,10 +83,34 @@ export function VisualDocumentEditor({
     return () => window.removeEventListener('resize', updateZoom);
   }, [viewMode]);
 
+  // Prepare agency info for PDF
+  const getAgencyPDFInfo = useCallback((): AgencyPDFInfo | undefined => {
+    if (!agencyInfo) return undefined;
+    
+    return {
+      name: agencyInfo.name,
+      logo_url: agencyInfo.logo_url,
+      signature_url: agencyInfo.signature_url,
+      address: agencyInfo.address,
+      city: agencyInfo.city,
+      postal_code: agencyInfo.postal_code,
+      phone: agencyInfo.phone,
+      email: agencyInfo.email,
+      website: agencyInfo.website,
+      siret: agencyInfo.siret,
+      vat_number: agencyInfo.vat_number,
+      capital_social: agencyInfo.capital_social,
+      forme_juridique: agencyInfo.forme_juridique,
+      rcs_city: agencyInfo.rcs_city,
+      footer_text: agencyInfo.footer_text,
+    };
+  }, [agencyInfo]);
+
   const generatePDF = useCallback(async () => {
     setIsGeneratingPdf(true);
     try {
       let blob: Blob;
+      const agencyPDFInfo = getAgencyPDFInfo();
       
       switch (documentType) {
         case 'power_of_attorney':
@@ -100,6 +125,7 @@ export function VisualDocumentEditor({
             specific_powers: (content.specific_powers as string[]) || [],
             start_date: (content.start_date as string) || '',
             end_date: (content.end_date as string) || '',
+            agencyInfo: agencyPDFInfo,
           });
           break;
           
@@ -113,6 +139,7 @@ export function VisualDocumentEditor({
             effective_date: (content.effective_date as string) || '',
             phase_name: (content.phase_name as string) || '',
             instructions: (content.instructions as string) || '',
+            agencyInfo: agencyPDFInfo,
           });
           break;
           
@@ -133,6 +160,7 @@ export function VisualDocumentEditor({
             bank_iban: (content.bank_iban as string) || '',
             bank_bic: (content.bank_bic as string) || '',
             bank_name: (content.bank_name as string) || '',
+            agencyInfo: agencyPDFInfo,
           });
           break;
           
@@ -143,6 +171,7 @@ export function VisualDocumentEditor({
             title: title,
             content: content,
             created_at: createdAt || new Date().toISOString(),
+            agencyInfo: agencyPDFInfo,
           });
       }
       
@@ -163,7 +192,7 @@ export function VisualDocumentEditor({
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [documentType, documentNumber, title, content, createdAt]);
+  }, [documentType, documentNumber, title, content, createdAt, getAgencyPDFInfo]);
 
   const renderEditor = () => {
     const editorProps = { content, onChange: isEditable ? onChange : () => {} };

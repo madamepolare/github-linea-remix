@@ -1,11 +1,17 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { 
   CommercialDocument, 
   CommercialDocumentPhase,
-  DOCUMENT_TYPE_LABELS,
-  PROJECT_TYPE_LABELS
 } from './commercialTypes';
+import { 
+  AgencyPDFInfo, 
+  loadImageAsBase64, 
+  formatFullAddress,
+  addPDFFooter 
+} from './pdfUtils';
 
 /**
  * Génère un devis compact (A4 portrait, 1 page max)
@@ -13,7 +19,8 @@ import {
 export async function generateQuotePDF(
   document: Partial<CommercialDocument>,
   phases: CommercialDocumentPhase[],
-  total: number
+  total: number,
+  agencyInfo?: AgencyPDFInfo
 ): Promise<Blob> {
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -24,19 +31,60 @@ export async function generateQuotePDF(
   const formatCurrency = (amount: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
 
-  // === HEADER ===
-  pdf.setFontSize(20);
+  // Load images
+  let logoBase64: string | null = null;
+  let signatureBase64: string | null = null;
+  
+  if (agencyInfo?.logo_url) {
+    logoBase64 = await loadImageAsBase64(agencyInfo.logo_url);
+  }
+  if (agencyInfo?.signature_url) {
+    signatureBase64 = await loadImageAsBase64(agencyInfo.signature_url);
+  }
+
+  // === HEADER with Logo ===
+  if (logoBase64) {
+    try {
+      pdf.addImage(logoBase64, 'PNG', margin, y - 2, 20, 20);
+    } catch (e) {
+      console.error('Error adding logo to PDF:', e);
+    }
+  }
+
+  const textStartX = logoBase64 ? margin + 25 : margin;
+  
+  // Agency name
+  pdf.setFontSize(11);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(0);
-  pdf.text('DEVIS', margin, y + 8);
+  pdf.text(agencyInfo?.name || 'Agence', textStartX, y + 5);
   
-  pdf.setFontSize(10);
+  // Agency contact
+  if (agencyInfo) {
+    pdf.setFontSize(7);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100);
+    const contactParts = [];
+    if (agencyInfo.address) contactParts.push(formatFullAddress(agencyInfo));
+    if (agencyInfo.phone) contactParts.push(agencyInfo.phone);
+    if (contactParts.length > 0) {
+      pdf.text(contactParts.join(' • '), textStartX, y + 10);
+    }
+  }
+
+  // Document info on right
+  pdf.setFontSize(18);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(0);
+  pdf.text('DEVIS', pageWidth - margin, y + 5, { align: 'right' });
+  
+  pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(100);
-  pdf.text(`N° ${document.document_number || 'N/A'}`, pageWidth - margin, y + 8, { align: 'right' });
-  pdf.text(new Date().toLocaleDateString('fr-FR'), pageWidth - margin, y + 14, { align: 'right' });
+  pdf.setTextColor(80);
+  pdf.text(`N° ${document.document_number || 'N/A'}`, pageWidth - margin, y + 12, { align: 'right' });
+  pdf.text(format(new Date(), 'dd MMMM yyyy', { locale: fr }), pageWidth - margin, y + 17, { align: 'right' });
   
-  y += 20;
+  y += 25;
   
   // === CLIENT & PROJECT INFO ===
   pdf.setDrawColor(220);
@@ -97,8 +145,8 @@ export async function generateQuotePDF(
     body: tableData,
     theme: 'plain',
     headStyles: { 
-      fillColor: [245, 245, 245], 
-      textColor: 60,
+      fillColor: [60, 60, 60], 
+      textColor: 255,
       fontStyle: 'bold',
       fontSize: 8,
       cellPadding: 3
@@ -154,7 +202,7 @@ export async function generateQuotePDF(
   pdf.setTextColor(100);
   pdf.text(`Devis valable ${document.validity_days || 30} jours. Conditions de paiement : ${document.payment_terms || 'selon contrat'}`, margin, y);
   
-  y += 12;
+  y += 10;
   pdf.setFontSize(9);
   pdf.setTextColor(0);
   pdf.text('Bon pour accord, date et signature :', margin, y);
@@ -162,12 +210,22 @@ export async function generateQuotePDF(
   // Signature box
   pdf.setDrawColor(180);
   pdf.rect(margin, y + 3, 70, 25);
+
+  // Agency signature (on the right)
+  if (signatureBase64) {
+    pdf.setFontSize(9);
+    pdf.setTextColor(60);
+    pdf.text('L\'architecte :', pageWidth - margin - 60, y);
+    y += 3;
+    try {
+      pdf.addImage(signatureBase64, 'PNG', pageWidth - margin - 60, y, 50, 20);
+    } catch (e) {
+      console.error('Error adding signature to PDF:', e);
+    }
+  }
   
   // Footer
-  pdf.setFontSize(7);
-  pdf.setTextColor(150);
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  pdf.text('Paraphe MOE ______    Paraphe MOA ______', pageWidth / 2, pageHeight - 8, { align: 'center' });
+  addPDFFooter(pdf, agencyInfo);
   
   return pdf.output('blob');
 }

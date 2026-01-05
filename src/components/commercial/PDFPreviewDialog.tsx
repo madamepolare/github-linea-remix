@@ -16,6 +16,8 @@ import {
 import { generateQuotePDF } from '@/lib/generateQuotePDF';
 import { generateContractPDF } from '@/lib/generateContractPDF';
 import { generateProposalPDF } from '@/lib/generateProposalPDF';
+import { useAgencyInfo } from '@/hooks/useAgencyInfo';
+import { type AgencyPDFInfo } from '@/lib/pdfUtils';
 
 type PDFTemplate = 'quote' | 'contract' | 'proposal';
 
@@ -58,24 +60,51 @@ export function PDFPreviewDialog({
   const [isGenerating, setIsGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<PDFTemplate>('quote');
+  
+  // Get agency info for PDF
+  const { agencyInfo } = useAgencyInfo();
+
+  // Convert agencyInfo to PDF format
+  const getAgencyPDFInfo = (): AgencyPDFInfo | undefined => {
+    if (!agencyInfo) return undefined;
+    
+    return {
+      name: agencyInfo.name,
+      logo_url: agencyInfo.logo_url,
+      signature_url: agencyInfo.signature_url,
+      address: agencyInfo.address,
+      city: agencyInfo.city,
+      postal_code: agencyInfo.postal_code,
+      phone: agencyInfo.phone,
+      email: agencyInfo.email,
+      website: agencyInfo.website,
+      siret: agencyInfo.siret,
+      vat_number: agencyInfo.vat_number,
+      capital_social: agencyInfo.capital_social,
+      forme_juridique: agencyInfo.forme_juridique,
+      rcs_city: agencyInfo.rcs_city,
+      footer_text: agencyInfo.footer_text,
+    };
+  };
 
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
       let pdfBlob: Blob;
+      const agencyPDFInfo = getAgencyPDFInfo();
       
       switch (selectedTemplate) {
         case 'quote':
-          pdfBlob = await generateQuotePDF(document, phases, total);
+          pdfBlob = await generateQuotePDF(document, phases, total, agencyPDFInfo);
           break;
         case 'contract':
-          pdfBlob = await generateContractPDF(document, phases, total);
+          pdfBlob = await generateContractPDF(document, phases, total, agencyPDFInfo);
           break;
         case 'proposal':
-          pdfBlob = await generateProposalPDF(document, phases, total);
+          pdfBlob = await generateProposalPDF(document, phases, total, agencyPDFInfo);
           break;
         default:
-          pdfBlob = await generateQuotePDF(document, phases, total);
+          pdfBlob = await generateQuotePDF(document, phases, total, agencyPDFInfo);
       }
       
       const url = URL.createObjectURL(pdfBlob);
