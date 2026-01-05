@@ -230,13 +230,16 @@ export default function CRM() {
 
         if (selectedPipeline) {
           return (
-            <LeadPipeline
-              pipeline={selectedPipeline}
-              onCreateLead={(stageId) => {
-                setPreselectedStageId(stageId);
-                setCreateLeadOpen(true);
-              }}
-            />
+            <div className="rounded-lg border border-border bg-card overflow-hidden">
+              <LeadPipeline
+                pipeline={selectedPipeline}
+                kanbanHeightClass="h-[calc(100vh-340px)]"
+                onCreateLead={(stageId) => {
+                  setPreselectedStageId(stageId);
+                  setCreateLeadOpen(true);
+                }}
+              />
+            </div>
           );
         }
 
