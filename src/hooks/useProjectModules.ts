@@ -145,7 +145,7 @@ export function useProjectsWithModule(moduleKey: ModuleKey) {
           project:projects(
             *,
             crm_company:crm_companies(*),
-            phases:project_phases(*)
+            phases:project_phases!project_phases_project_id_fkey(*)
           )
         `)
         .eq("module_key", moduleKey)
