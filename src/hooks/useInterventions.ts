@@ -16,6 +16,7 @@ export interface Intervention {
   status: "planned" | "in_progress" | "completed" | "delayed" | "cancelled";
   team_size: number;
   notes: string | null;
+  sub_row: number;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -37,6 +38,7 @@ export interface CreateInterventionInput {
   status?: "planned" | "in_progress" | "completed" | "delayed" | "cancelled";
   team_size?: number;
   notes?: string;
+  sub_row?: number;
 }
 
 export function useInterventions(projectId: string | null) {
