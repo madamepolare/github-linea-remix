@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { DesignObject, useDesignObjects, useObjectCategories } from "@/hooks/useDesignObjects";
 import { cn } from "@/lib/utils";
+import { AutoSourceImageButton } from "./AutoSourceImageButton";
 
 interface ObjectDetailSheetProps {
   object: DesignObject | undefined;
@@ -118,16 +119,25 @@ export function ObjectDetailSheet({ object, open, onOpenChange }: ObjectDetailSh
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
-          {/* Image */}
           <div className="aspect-square rounded-lg bg-muted overflow-hidden">
             {isEditing ? (
               <div className="p-4 space-y-2">
                 <Label>URL de l'image</Label>
-                <Input
-                  value={formData.image_url || ""}
-                  onChange={(e) => setFormData((p) => ({ ...p, image_url: e.target.value }))}
-                  placeholder="https://..."
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={formData.image_url || ""}
+                    onChange={(e) => setFormData((p) => ({ ...p, image_url: e.target.value }))}
+                    placeholder="https://..."
+                    className="flex-1"
+                  />
+                  <AutoSourceImageButton
+                    name={formData.name || ""}
+                    brand={formData.brand || undefined}
+                    designer={formData.designer || undefined}
+                    description={formData.description || undefined}
+                    onImageFound={(url) => setFormData((p) => ({ ...p, image_url: url }))}
+                  />
+                </div>
                 {formData.image_url && (
                   <img
                     src={formData.image_url}
