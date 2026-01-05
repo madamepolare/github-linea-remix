@@ -20,6 +20,9 @@ import {
   BarChart3,
   ListTodo,
   Settings,
+  HardHat,
+  Shield,
+  FileCheck,
 } from "lucide-react";
 
 export interface EntityTab {
@@ -37,6 +40,9 @@ export const PROJECT_TABS: EntityTab[] = [
   { key: "phases", label: "Phases", icon: Layers },
   { key: "deliverables", label: "Livrables", icon: FolderOpen },
   { key: "documents", label: "Documents", icon: FileText },
+  { key: "permits", label: "Autorisations", icon: FileCheck },
+  { key: "insurances", label: "Assurances", icon: Shield },
+  { key: "chantier", label: "Chantier", icon: HardHat },
   { key: "invoicing", label: "Facturation", icon: Receipt },
   { key: "commercial", label: "Commercial", icon: Briefcase },
 ];

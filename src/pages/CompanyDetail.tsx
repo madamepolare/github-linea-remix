@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/select";
 import {
   ArrowLeft,
-  Briefcase,
   Building2,
   FileText,
   Users,
@@ -35,10 +34,12 @@ import {
   ExternalLink,
   Save,
   X,
+  Briefcase,
 } from "lucide-react";
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useLeads, Lead } from "@/hooks/useLeads";
+import { useTopBar } from "@/contexts/TopBarContext";
 import { EntityTasksList } from "@/components/tasks/EntityTasksList";
 import {
   getCompanyTypeConfig,
@@ -48,6 +49,7 @@ import {
   CompanyCategory,
   BET_SPECIALTIES,
 } from "@/lib/crmTypes";
+import { COMPANY_TABS } from "@/lib/entityTabsConfig";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,10 +66,12 @@ import { EntityCommercialList } from "@/components/crm/EntityCommercialList";
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { setEntityConfig } = useTopBar();
   const { allCompanies, isLoading, updateCompany } = useCRMCompanies();
   const { contacts } = useContacts();
   const { leads } = useLeads();
 
+  const [activeTab, setActiveTab] = useState("overview");
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<CRMCompanyEnriched>>({});
 
@@ -87,6 +91,66 @@ export default function CompanyDetail() {
     }
     return "";
   };
+
+  const typeConfig = company ? getCompanyTypeConfig(company.industry) : null;
+
+  // Set up TopBar entity config
+  useEffect(() => {
+    if (company && typeConfig) {
+      const metadata = [];
+      if (company.city) {
+        metadata.push({ icon: MapPin, label: company.city });
+      }
+      if (company.phone) {
+        metadata.push({ icon: Phone, label: company.phone });
+      }
+
+      setEntityConfig({
+        backTo: "/crm",
+        color: typeConfig.color?.replace("bg-", "") || "#3B82F6",
+        title: company.name,
+        badges: [{ label: typeConfig.label, variant: "outline" as const }],
+        metadata,
+        tabs: COMPANY_TABS,
+        activeTab,
+        onTabChange: setActiveTab,
+        actions: (
+          <div className="flex gap-2">
+            {isEditing ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditData(company);
+                    setSelectedCategory(getCategoryFromIndustry(company.industry));
+                    setSelectedSpecialties(company.bet_specialties || []);
+                  }}
+                >
+                  <X className="h-4 w-4 mr-2" strokeWidth={1.5} />
+                  Annuler
+                </Button>
+                <Button size="sm" onClick={handleSave} disabled={updateCompany.isPending}>
+                  <Save className="h-4 w-4 mr-2" strokeWidth={1.5} />
+                  Enregistrer
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                <Pencil className="h-4 w-4 mr-2" strokeWidth={1.5} />
+                Modifier
+              </Button>
+            )}
+          </div>
+        ),
+      });
+    }
+
+    return () => {
+      setEntityConfig(null);
+    };
+  }, [company, typeConfig, activeTab, isEditing, updateCompany.isPending, setEntityConfig]);
 
   useEffect(() => {
     if (company) {
@@ -144,159 +208,184 @@ export default function CompanyDetail() {
     );
   }
 
-  const typeConfig = getCompanyTypeConfig(company.industry);
-
   return (
-    <>
-      <div className="flex flex-col h-full overflow-hidden">
-        {/* Header */}
-        <div className="flex-shrink-0 border-b border-border bg-card">
-          <div className="px-6 py-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => navigate("/crm")}
-                  className="h-9 w-9 rounded-full hover:bg-muted"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div
-                  className={cn(
-                    "h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-sm",
-                    typeConfig.color
-                  )}
-                >
-                  {company.logo_url ? (
-                    <img
-                      src={company.logo_url}
-                      alt={company.name}
-                      className="h-full w-full object-cover rounded-full"
-                    />
-                  ) : (
-                    company.name.slice(0, 2).toUpperCase()
-                  )}
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Content - TopBar handles header now */}
+      <div className="flex-1 overflow-auto p-6">
+        <div className="max-w-6xl mx-auto space-y-6">
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Users className="h-6 w-6 text-primary" strokeWidth={1.5} />
                 </div>
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-xl font-semibold tracking-tight">{company.name}</h1>
-                    <Badge variant="outline" className="text-xs font-normal gap-1.5">
-                      <div className={cn("w-2 h-2 rounded-full", typeConfig.color)} />
-                      {typeConfig.label}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                    {company.city && (
-                      <span className="flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5" />
-                        {company.city}
-                      </span>
-                    )}
-                  </div>
+                <div>
+                  <p className="text-2xl font-bold">{companyContacts.length}</p>
+                  <p className="text-sm text-muted-foreground">Contacts</p>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                {isEditing ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setIsEditing(false);
-                        if (company) {
-                          setEditData(company);
-                          setSelectedCategory(getCategoryFromIndustry(company.industry));
-                          setSelectedSpecialties(company.bet_specialties || []);
-                        }
-                      }}
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Annuler
-                    </Button>
-                    <Button size="sm" onClick={handleSave} disabled={updateCompany.isPending}>
-                      <Save className="h-4 w-4 mr-2" />
-                      Enregistrer
-                    </Button>
-                  </>
-                ) : (
-                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Modifier
-                  </Button>
-                )}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-lg bg-chart-2/10 flex items-center justify-center">
+                  <Target className="h-6 w-6 text-chart-2" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{companyLeads.length}</p>
+                  <p className="text-sm text-muted-foreground">Opportunités</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-lg bg-chart-3/10 flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-chart-3" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">
+                    {totalLeadValue > 0 ? formatCurrency(totalLeadValue) : "—"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Pipeline</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-auto p-6">
-          <div className="max-w-6xl mx-auto space-y-6">
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{companyContacts.length}</p>
-                <p className="text-sm text-muted-foreground">Contacts</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-lg bg-chart-2/10 flex items-center justify-center">
-                <Target className="h-6 w-6 text-chart-2" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{companyLeads.length}</p>
-                <p className="text-sm text-muted-foreground">Opportunités</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-lg bg-chart-3/10 flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-chart-3" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {totalLeadValue > 0 ? formatCurrency(totalLeadValue) : "—"}
-                </p>
-                <p className="text-sm text-muted-foreground">Pipeline</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Content Tabs */}
-        <Tabs defaultValue="overview">
-          <TabsList>
-            <TabsTrigger value="overview">Informations</TabsTrigger>
-            <TabsTrigger value="contacts">Contacts ({companyContacts.length})</TabsTrigger>
-            <TabsTrigger value="leads">Opportunités ({companyLeads.length})</TabsTrigger>
-            <TabsTrigger value="tasks">Tâches</TabsTrigger>
-            <TabsTrigger value="documents">
-              <FileText className="h-3.5 w-3.5 mr-1.5" />
-              Documents
-            </TabsTrigger>
-            <TabsTrigger value="invoicing">
-              <Receipt className="h-3.5 w-3.5 mr-1.5" />
-              Facturation
-            </TabsTrigger>
-            <TabsTrigger value="commercial">
-              <Briefcase className="h-3.5 w-3.5 mr-1.5" />
-              Commercial
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="mt-4">
+          {/* Content based on activeTab */}
+          {activeTab === "overview" && (
             <Card>
               <CardContent className="p-6 grid md:grid-cols-2 gap-6">
+                {/* Type & Industry */}
+                <div className="space-y-4">
+                  <h3 className="font-medium text-sm text-muted-foreground">Type d'entreprise</h3>
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <div className={selectedCategory === "bet" ? "space-y-2" : "grid grid-cols-2 gap-2"}>
+                        <div>
+                          <label className="text-xs text-muted-foreground">Catégorie</label>
+                          <Select
+                            value={selectedCategory}
+                            onValueChange={(v) => {
+                              setSelectedCategory(v as CompanyCategory);
+                              setEditData({ ...editData, industry: null });
+                              setSelectedSpecialties([]);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COMPANY_CATEGORIES.filter((c) => c.id !== "all").map((cat) => (
+                                <SelectItem key={cat.id} value={cat.id}>
+                                  {cat.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {selectedCategory !== "bet" && (
+                          <div>
+                            <label className="text-xs text-muted-foreground">Type</label>
+                            <Select
+                              value={(editData.industry as string) || ""}
+                              onValueChange={(v) => setEditData({ ...editData, industry: v })}
+                              disabled={!selectedCategory}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(selectedCategory
+                                  ? COMPANY_CATEGORIES.find((c) => c.id === selectedCategory)?.types || []
+                                  : []
+                                ).map((type) => {
+                                  const config = COMPANY_TYPE_CONFIG[type];
+                                  return (
+                                    <SelectItem key={type} value={type}>
+                                      {config.label}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedCategory === "bet" && (
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">Spécialités BET</label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" className="w-full justify-between h-auto min-h-10 py-2">
+                                {selectedSpecialties.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {selectedSpecialties.map((spec) => {
+                                      const specialty = BET_SPECIALTIES.find((s) => s.value === spec);
+                                      return (
+                                        <Badge key={spec} className={cn("text-white text-xs gap-1", specialty?.color)}>
+                                          {specialty?.label}
+                                          <X
+                                            className="h-3 w-3 cursor-pointer"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedSpecialties((prev) => prev.filter((s) => s !== spec));
+                                            }}
+                                          />
+                                        </Badge>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">Sélectionnez une ou plusieurs spécialités</span>
+                                )}
+                                <span className="text-muted-foreground">▾</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
+                              {BET_SPECIALTIES.map((spec) => (
+                                <DropdownMenuCheckboxItem
+                                  key={spec.value}
+                                  checked={selectedSpecialties.includes(spec.value)}
+                                  onSelect={(e) => e.preventDefault()}
+                                  onCheckedChange={() => {
+                                    setSelectedSpecialties((prev) =>
+                                      prev.includes(spec.value)
+                                        ? prev.filter((s) => s !== spec.value)
+                                        : [...prev, spec.value]
+                                    );
+                                  }}
+                                >
+                                  <Badge className={cn("text-white text-xs mr-2", spec.color)}>{spec.label}</Badge>
+                                </DropdownMenuCheckboxItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="text-xs text-muted-foreground">URL du logo</label>
+                        <Input
+                          value={editData.logo_url || ""}
+                          onChange={(e) => setEditData({ ...editData, logo_url: e.target.value })}
+                          placeholder="https://..."
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      {typeConfig && (
+                        <Badge variant="outline" className="gap-1.5">
+                          <div className={cn("w-2 h-2 rounded-full", typeConfig.color)} />
+                          {typeConfig.label}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
                 {/* Type & Industry */}
                 <div className="space-y-4">
                   <h3 className="font-medium text-sm text-muted-foreground">Type d'entreprise</h3>
@@ -579,21 +668,21 @@ export default function CompanyDetail() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="contacts" className="mt-4">
+          {activeTab === "contacts" && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Contacts</CardTitle>
                 <Button size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
+                  <Plus className="h-4 w-4 mr-1" strokeWidth={1.5} />
                   Ajouter
                 </Button>
               </CardHeader>
               <CardContent>
                 {companyContacts.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-8 w-8 mx-auto mb-2" />
+                    <Users className="h-8 w-8 mx-auto mb-2" strokeWidth={1.5} />
                     <p className="text-sm">Aucun contact</p>
                   </div>
                 ) : (
@@ -611,60 +700,41 @@ export default function CompanyDetail() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{contact.name}</p>
+                          <p className="font-medium">{contact.name}</p>
                           {contact.role && (
-                            <p className="text-xs text-muted-foreground">{contact.role}</p>
+                            <p className="text-sm text-muted-foreground">{contact.role}</p>
                           )}
                         </div>
-                        <div className="flex gap-1">
-                          {contact.email && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                window.location.href = `mailto:${contact.email}`;
-                              }}
-                            >
-                              <Mail className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {contact.phone && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                window.location.href = `tel:${contact.phone}`;
-                              }}
-                            >
-                              <Phone className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
+                        {contact.email && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              window.location.href = `mailto:${contact.email}`;
+                            }}
+                          >
+                            <Mail className="h-4 w-4" strokeWidth={1.5} />
+                          </Button>
+                        )}
                       </Link>
                     ))}
                   </div>
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="leads" className="mt-4">
+          {activeTab === "leads" && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader>
                 <CardTitle className="text-base">Opportunités</CardTitle>
-                <Button size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Créer
-                </Button>
               </CardHeader>
               <CardContent>
                 {companyLeads.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <Target className="h-8 w-8 mx-auto mb-2" />
+                    <Target className="h-8 w-8 mx-auto mb-2" strokeWidth={1.5} />
                     <p className="text-sm">Aucune opportunité</p>
                   </div>
                 ) : (
@@ -696,31 +766,30 @@ export default function CompanyDetail() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="tasks" className="mt-4">
+          {activeTab === "tasks" && (
             <EntityTasksList
               entityType="company"
               entityId={company.id}
               entityName={company.name}
             />
-          </TabsContent>
+          )}
 
-          <TabsContent value="documents" className="mt-4">
+          {activeTab === "documents" && (
             <EntityDocumentsList entityType="company" entityId={company.id} />
-          </TabsContent>
+          )}
 
-          <TabsContent value="invoicing" className="mt-4">
+          {activeTab === "invoicing" && (
             <EntityInvoicesList entityType="company" entityId={company.id} />
-          </TabsContent>
+          )}
 
-          <TabsContent value="commercial" className="mt-4">
+          {activeTab === "commercial" && (
             <EntityCommercialList entityType="company" entityId={company.id} />
-          </TabsContent>
-        </Tabs>
-          </div>
+          )}
+
         </div>
       </div>
-    </>
+    </div>
   );
 }
