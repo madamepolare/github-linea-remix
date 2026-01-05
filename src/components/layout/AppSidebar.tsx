@@ -15,6 +15,7 @@ import {
   Trophy,
   FileStack,
   LockOpen,
+  UsersRound,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
@@ -58,6 +59,21 @@ const coreNavigation: NavItem[] = [
   { title: "Tasks", icon: CheckSquare, href: "/tasks" },
   { title: "CRM", icon: Users, href: "/crm" },
   { title: "Commercial", icon: FileText, href: "/commercial" },
+  { 
+    title: "Équipe", 
+    icon: UsersRound, 
+    href: "/team",
+    children: [
+      { title: "Gestion des utilisateurs", href: "/team/users" },
+      { title: "Suivi des temps", href: "/team/time-tracking" },
+      { title: "Validation des temps", href: "/team/time-validation" },
+      { title: "Recrutement", href: "/team/recruitment" },
+      { title: "Absences & présences", href: "/team/absences" },
+      { title: "Demandes d'équipe", href: "/team/requests" },
+      { title: "Évaluations internes", href: "/team/evaluations" },
+      { title: "Annuaire", href: "/team/directory" },
+    ]
+  },
 ];
 
 // Premium extensions - unlocked in this workspace
