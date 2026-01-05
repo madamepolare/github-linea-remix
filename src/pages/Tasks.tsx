@@ -7,7 +7,6 @@ import { TaskArchiveView } from "@/components/tasks/TaskArchiveView";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { QuickTasksSection } from "@/components/tasks/QuickTasksSection";
-import { CheckSquare } from "lucide-react";
 
 type ViewType = "board" | "list" | "archive";
 
@@ -35,13 +34,8 @@ export default function Tasks() {
   return (
     <>
       <PageLayout
-        icon={CheckSquare}
         title="Tâches"
         description="Gérez et suivez vos tâches"
-        primaryAction={{
-          label: "Tâche",
-          onClick: () => setCreateOpen(true),
-        }}
       >
         {/* Filters - only show for non-archive views */}
         {view !== "archive" && (

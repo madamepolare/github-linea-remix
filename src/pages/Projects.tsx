@@ -6,7 +6,6 @@ import { ProjectBoard } from "@/components/projects/ProjectBoard";
 import { ProjectListView } from "@/components/projects/ProjectListView";
 import { ProjectGridView } from "@/components/projects/ProjectGridView";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
-import { FolderKanban } from "lucide-react";
 
 type ViewType = "timeline" | "board" | "list" | "grid";
 
@@ -26,13 +25,8 @@ export default function Projects() {
   return (
     <>
       <PageLayout
-        icon={FolderKanban}
         title="Projets"
         description="Gérez vos projets et suivez leur progression"
-        primaryAction={{
-          label: "Nouveau",
-          onClick: () => setCreateOpen(true),
-        }}
         contentPadding={false}
         contentOverflow="hidden"
       >

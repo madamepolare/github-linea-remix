@@ -80,7 +80,6 @@ const Commercial = () => {
     <PageLayout
       title="Commercial"
       description="Gérez vos devis, contrats et propositions commerciales"
-      icon={FileText}
       actions={
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

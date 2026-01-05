@@ -58,7 +58,6 @@ export default function Team() {
         description="Gérez votre équipe, suivez les temps, validez les absences et recrutez de nouveaux talents."
       />
       <PageLayout
-        icon={Users}
         title="Équipe"
         description={sectionDescriptions[activeSection] || "Gestion des ressources humaines"}
       >

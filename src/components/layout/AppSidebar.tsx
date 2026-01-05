@@ -1,26 +1,13 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  LayoutDashboard,
-  Users,
-  FolderKanban,
-  CheckSquare,
-  FileText,
   Settings,
   ChevronLeft,
-  ChevronDown,
   LogOut,
   ChevronsUpDown,
   HelpCircle,
-  Trophy,
-  FileStack,
   LockOpen,
-  UsersRound,
-  HardHat,
-  Receipt,
-  Gavel,
-  Sparkles,
-  UserCog,
+  LayoutDashboard,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
@@ -42,142 +29,29 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebarStore } from "@/hooks/useSidebarStore";
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { useModules, useWorkspaceModules } from "@/hooks/useModules";
+import { 
+  MODULE_CONFIG, 
+  CORE_MODULES, 
+  EXTENSION_MODULES,
+  ModuleNavConfig 
+} from "@/lib/navigationConfig";
 
 interface NavItem {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
-  badge?: number;
   isExtension?: boolean;
   moduleSlug?: string;
-  children?: { title: string; href: string }[];
 }
 
 interface AppSidebarProps {
   onNavigate?: () => void;
 }
 
-// Map module slugs to their navigation config
-const MODULE_NAV_CONFIG: Record<string, Omit<NavItem, "moduleSlug">> = {
-  projects: {
-    title: "Projets",
-    icon: FolderKanban,
-    href: "/projects",
-    children: [
-      { title: "Timeline", href: "/projects/timeline" },
-      { title: "Board", href: "/projects/board" },
-      { title: "Liste", href: "/projects/list" },
-      { title: "Grille", href: "/projects/grid" },
-    ],
-  },
-  tasks: {
-    title: "Tâches",
-    icon: CheckSquare,
-    href: "/tasks",
-    children: [
-      { title: "Board", href: "/tasks/board" },
-      { title: "Liste", href: "/tasks/list" },
-      { title: "Archives", href: "/tasks/archive" },
-    ],
-  },
-  crm: {
-    title: "CRM",
-    icon: Users,
-    href: "/crm",
-    children: [
-      { title: "Vue d'ensemble", href: "/crm/overview" },
-      { title: "Pipelines", href: "/crm/leads" },
-      { title: "Contacts", href: "/crm/contacts" },
-      { title: "Entreprises", href: "/crm/companies" },
-    ],
-  },
-  commercial: {
-    title: "Commercial",
-    icon: FileText,
-    href: "/commercial",
-    children: [
-      { title: "Tous les documents", href: "/commercial/all" },
-      { title: "Devis", href: "/commercial/quotes" },
-      { title: "Contrats", href: "/commercial/contracts" },
-      { title: "Propositions", href: "/commercial/proposals" },
-    ],
-  },
-  documents: {
-    title: "Documents",
-    icon: FileStack,
-    href: "/documents",
-    isExtension: true,
-    children: [
-      { title: "Tableau de bord", href: "/documents/dashboard" },
-      { title: "Tous", href: "/documents/all" },
-      { title: "Administratif", href: "/documents/administrative" },
-      { title: "Projets", href: "/documents/project" },
-      { title: "RH", href: "/documents/hr" },
-    ],
-  },
-  team: {
-    title: "Équipe",
-    icon: UsersRound,
-    href: "/team",
-    isExtension: true,
-    children: [
-      { title: "Utilisateurs", href: "/team/users" },
-      { title: "Suivi temps", href: "/team/time-tracking" },
-      { title: "Validation", href: "/team/time-validation" },
-      { title: "Recrutement", href: "/team/recruitment" },
-      { title: "Absences", href: "/team/absences" },
-      { title: "Demandes", href: "/team/requests" },
-      { title: "Évaluations", href: "/team/evaluations" },
-      { title: "Annuaire", href: "/team/directory" },
-    ],
-  },
-  chantier: {
-    title: "Chantier",
-    icon: HardHat,
-    href: "/chantier",
-    isExtension: true,
-    children: [{ title: "Tous les chantiers", href: "/chantier" }],
-  },
-  tenders: {
-    title: "Concours",
-    icon: Trophy,
-    href: "/tenders",
-    isExtension: true,
-    children: [
-      { title: "Kanban", href: "/tenders/kanban" },
-      { title: "Liste", href: "/tenders/list" },
-    ],
-  },
-  invoicing: {
-    title: "Facturation",
-    icon: Receipt,
-    href: "/invoicing",
-    isExtension: true,
-    children: [
-      { title: "Tableau de bord", href: "/invoicing" },
-      { title: "Toutes les factures", href: "/invoicing/all" },
-      { title: "En attente", href: "/invoicing/pending" },
-      { title: "Payées", href: "/invoicing/paid" },
-      { title: "En retard", href: "/invoicing/overdue" },
-    ],
-  },
-};
-
-// Core modules order (always shown if enabled)
-const CORE_MODULE_ORDER = ["projects", "tasks", "crm", "commercial"];
-
-// Extension modules order
-const EXTENSION_MODULE_ORDER = ["documents", "team", "chantier", "tenders", "invoicing"];
-
-const bottomNavigation: NavItem[] = [
-  { title: "Settings", icon: Settings, href: "/settings" },
-];
-
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { collapsed, toggle } = useSidebarStore();
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, activeWorkspace, workspaces, signOut, setActiveWorkspace } = useAuth();
@@ -195,7 +69,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     return workspaceModules.some((wm) => wm.module?.slug === slug);
   };
 
-  // Build navigation based on enabled modules
+  // Build navigation based on enabled modules - now without children!
   const { coreNavigation, extensionNavigation } = useMemo(() => {
     const core: NavItem[] = [
       { title: "Dashboard", icon: LayoutDashboard, href: "/" },
@@ -203,32 +77,40 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     const extensions: NavItem[] = [];
 
     // Add core modules
-    CORE_MODULE_ORDER.forEach((slug) => {
-      if (isModuleEnabled(slug) && MODULE_NAV_CONFIG[slug]) {
-        core.push({ ...MODULE_NAV_CONFIG[slug], moduleSlug: slug });
+    CORE_MODULES.forEach((slug) => {
+      const config = MODULE_CONFIG[slug];
+      if (config && isModuleEnabled(slug)) {
+        core.push({
+          title: config.title,
+          icon: config.icon,
+          href: config.subNav.length > 0 ? config.subNav[0].href : config.href,
+          moduleSlug: slug,
+        });
       }
     });
 
     // Add extension modules
-    EXTENSION_MODULE_ORDER.forEach((slug) => {
-      if (isModuleEnabled(slug) && MODULE_NAV_CONFIG[slug]) {
-        extensions.push({ ...MODULE_NAV_CONFIG[slug], moduleSlug: slug, isExtension: true });
+    EXTENSION_MODULES.forEach((slug) => {
+      const config = MODULE_CONFIG[slug];
+      if (config && isModuleEnabled(slug)) {
+        extensions.push({
+          title: config.title,
+          icon: config.icon,
+          href: config.subNav.length > 0 ? config.subNav[0].href : config.href,
+          moduleSlug: slug,
+          isExtension: true,
+        });
       }
     });
 
     return { coreNavigation: core, extensionNavigation: extensions };
   }, [modules, workspaceModules]);
 
-  const toggleExpanded = (title: string) => {
-    setExpandedItems((prev) =>
-      prev.includes(title)
-        ? prev.filter((item) => item !== title)
-        : [...prev, title]
-    );
-  };
-
-  const isActive = (href: string) => {
-    if (href === "/") return location.pathname === "/";
+  const isActive = (href: string, moduleSlug?: string) => {
+    if (href === "/" && !moduleSlug) return location.pathname === "/";
+    if (moduleSlug) {
+      return location.pathname.startsWith(`/${moduleSlug}`);
+    }
     return location.pathname.startsWith(href);
   };
 
@@ -251,9 +133,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     : user?.email?.slice(0, 2).toUpperCase() || "??";
 
   const NavItemComponent = ({ item, onClick }: { item: NavItem; onClick?: () => void }) => {
-    const active = isActive(item.href);
-    const hasChildren = item.children && item.children.length > 0;
-    const isExpanded = expandedItems.includes(item.title);
+    const active = isActive(item.href, item.moduleSlug);
 
     const content = (
       <div
@@ -279,19 +159,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 active ? "text-background" : "text-muted-foreground"
               )} />
             )}
-            {item.badge && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium">
-                {item.badge}
-              </span>
-            )}
-            {hasChildren && (
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                  isExpanded && "rotate-180"
-                )}
-              />
-            )}
           </>
         )}
       </div>
@@ -308,55 +175,8 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             {item.isExtension && (
               <LockOpen className="h-3 w-3 text-muted-foreground" />
             )}
-            {item.badge && (
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium">
-                {item.badge}
-              </span>
-            )}
           </TooltipContent>
         </Tooltip>
-      );
-    }
-
-    if (hasChildren) {
-      return (
-        <div>
-          <button
-            onClick={() => toggleExpanded(item.title)}
-            className="w-full"
-          >
-            {content}
-          </button>
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="overflow-hidden"
-              >
-                <div className="ml-7 mt-1 space-y-0.5 border-l border-border pl-3">
-                  {item.children?.map((child) => (
-                    <NavLink
-                      key={child.href}
-                      to={child.href}
-                      onClick={onClick}
-                      className={cn(
-                        "block rounded-md px-3 py-1.5 text-sm transition-colors",
-                        location.pathname === child.href
-                          ? "text-foreground font-medium"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {child.title}
-                    </NavLink>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
       );
     }
 
@@ -486,9 +306,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         <NotificationsDropdown collapsed={collapsed} />
         <ThemeToggle collapsed={collapsed} />
         
-        {bottomNavigation.map((item) => (
-          <NavItemComponent key={item.title} item={item} onClick={onNavigate} />
-        ))}
+        <NavItemComponent 
+          item={{ title: "Settings", icon: Settings, href: "/settings" }} 
+          onClick={onNavigate} 
+        />
         
         {!collapsed && (
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
