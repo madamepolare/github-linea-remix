@@ -108,6 +108,7 @@ const MODULE_NAV_CONFIG: Record<string, Omit<NavItem, "moduleSlug">> = {
     title: "Documents",
     icon: FileStack,
     href: "/documents",
+    isExtension: true,
     children: [
       { title: "Tableau de bord", href: "/documents/dashboard" },
       { title: "Tous", href: "/documents/all" },
@@ -165,10 +166,10 @@ const MODULE_NAV_CONFIG: Record<string, Omit<NavItem, "moduleSlug">> = {
 };
 
 // Core modules order (always shown if enabled)
-const CORE_MODULE_ORDER = ["projects", "tasks", "crm", "commercial", "documents"];
+const CORE_MODULE_ORDER = ["projects", "tasks", "crm", "commercial"];
 
 // Extension modules order
-const EXTENSION_MODULE_ORDER = ["team", "chantier", "tenders", "invoicing"];
+const EXTENSION_MODULE_ORDER = ["documents", "team", "chantier", "tenders", "invoicing"];
 
 const bottomNavigation: NavItem[] = [
   { title: "Settings", icon: Settings, href: "/settings" },
