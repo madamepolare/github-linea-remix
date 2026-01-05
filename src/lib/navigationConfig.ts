@@ -10,6 +10,8 @@ import {
   HardHat,
   Receipt,
   Trophy,
+  Award,
+  Package,
   LucideIcon,
 } from "lucide-react";
 
@@ -192,11 +194,36 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
     subNav: [],
     quickActions: [],
   },
+  references: {
+    slug: "references",
+    title: "Références",
+    icon: Award,
+    href: "/references",
+    isExtension: true,
+    subNav: [
+      { key: "all", label: "Toutes", href: "/references" },
+      { key: "featured", label: "À la une", href: "/references?featured=true" },
+    ],
+    quickActions: [
+      { key: "create", label: "Nouvelle référence", event: "open-create-reference" },
+    ],
+  },
+  materials: {
+    slug: "materials",
+    title: "Matériaux",
+    icon: Package,
+    href: "/materials",
+    isExtension: true,
+    subNav: [],
+    quickActions: [
+      { key: "create", label: "Nouveau matériau", event: "open-create-material" },
+    ],
+  },
 };
 
 // Module display order
 export const CORE_MODULES = ["projects", "tasks", "crm", "commercial"];
-export const EXTENSION_MODULES = ["documents", "team", "chantier", "tenders", "invoicing"];
+export const EXTENSION_MODULES = ["documents", "team", "chantier", "tenders", "invoicing", "references", "materials"];
 
 // Helper to get module config from current path
 export function getModuleFromPath(pathname: string): ModuleNavConfig | null {
