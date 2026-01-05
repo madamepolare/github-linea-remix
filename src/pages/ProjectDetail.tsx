@@ -28,6 +28,7 @@ import {
   Receipt,
   RefreshCw,
   Shield,
+  ShoppingCart,
   Sparkles,
 } from "lucide-react";
 import { format, parseISO, isPast, isToday } from "date-fns";
@@ -49,12 +50,13 @@ import { ProjectInvoicingTab } from "@/components/projects/ProjectInvoicingTab";
 import { ProjectCommercialTab } from "@/components/projects/ProjectCommercialTab";
 import { PermitsTab } from "@/components/projects/permits/PermitsTab";
 import { InsurancesSection } from "@/components/projects/insurances/InsurancesSection";
-
+import { ProjectOrdersTab } from "@/components/projects/ProjectOrdersTab";
 // Tab configuration for project detail
 const PROJECT_TABS = [
   { key: "overview", label: "Vue d'ensemble", icon: Sparkles },
   { key: "planning", label: "Calendrier", icon: Calendar },
   { key: "tasks", label: "Tâches", icon: ListTodo },
+  { key: "orders", label: "Commandes", icon: ShoppingCart },
   { key: "permits", label: "Autorisations", icon: FileCheck },
   { key: "insurances", label: "Assurances", icon: Shield },
   { key: "chantier", label: "Chantier", icon: HardHat },
@@ -186,6 +188,7 @@ export default function ProjectDetail() {
         {activeTab === "tasks" && (
           <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
         )}
+        {activeTab === "orders" && <ProjectOrdersTab projectId={project.id} />}
         {activeTab === "chantier" && <ChantierDashboard projectId={project.id} />}
         {activeTab === "permits" && <PermitsTab projectId={project.id} />}
         {activeTab === "insurances" && <InsurancesSection projectId={project.id} />}

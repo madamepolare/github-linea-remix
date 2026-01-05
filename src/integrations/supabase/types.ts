@@ -3721,37 +3721,94 @@ export type Database = {
       }
       project_objects: {
         Row: {
+          actual_delivery_date: string | null
           added_by: string | null
+          alert_days_before: number | null
+          alert_enabled: boolean | null
+          attachments: Json | null
           created_at: string
+          currency: string | null
+          expected_delivery_date: string | null
           id: string
+          installation_date: string | null
+          installed_by: string | null
           notes: string | null
           object_id: string
+          order_date: string | null
+          order_reference: string | null
+          order_status: string | null
+          price_total: number | null
+          price_unit: number | null
+          priority: string | null
           project_id: string
           quantity: number | null
           room: string | null
           status: string | null
+          supplier_name: string | null
+          supplier_url: string | null
+          tracking_number: string | null
+          tracking_url: string | null
+          updated_at: string | null
         }
         Insert: {
+          actual_delivery_date?: string | null
           added_by?: string | null
+          alert_days_before?: number | null
+          alert_enabled?: boolean | null
+          attachments?: Json | null
           created_at?: string
+          currency?: string | null
+          expected_delivery_date?: string | null
           id?: string
+          installation_date?: string | null
+          installed_by?: string | null
           notes?: string | null
           object_id: string
+          order_date?: string | null
+          order_reference?: string | null
+          order_status?: string | null
+          price_total?: number | null
+          price_unit?: number | null
+          priority?: string | null
           project_id: string
           quantity?: number | null
           room?: string | null
           status?: string | null
+          supplier_name?: string | null
+          supplier_url?: string | null
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string | null
         }
         Update: {
+          actual_delivery_date?: string | null
           added_by?: string | null
+          alert_days_before?: number | null
+          alert_enabled?: boolean | null
+          attachments?: Json | null
           created_at?: string
+          currency?: string | null
+          expected_delivery_date?: string | null
           id?: string
+          installation_date?: string | null
+          installed_by?: string | null
           notes?: string | null
           object_id?: string
+          order_date?: string | null
+          order_reference?: string | null
+          order_status?: string | null
+          price_total?: number | null
+          price_unit?: number | null
+          priority?: string | null
           project_id?: string
           quantity?: number | null
           room?: string | null
           status?: string | null
+          supplier_name?: string | null
+          supplier_url?: string | null
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
