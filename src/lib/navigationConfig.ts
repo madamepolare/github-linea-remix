@@ -17,6 +17,8 @@ export interface SubNavItem {
   key: string;
   label: string;
   href: string;
+  badge?: number; // For notification bubbles
+  children?: SubNavItem[]; // Nested sub-navigation
 }
 
 export interface QuickAction {
@@ -24,6 +26,7 @@ export interface QuickAction {
   label: string;
   icon?: LucideIcon;
   event: string; // Custom event to dispatch
+  variant?: "default" | "outline" | "ghost";
 }
 
 export interface ModuleNavConfig {
@@ -209,18 +212,49 @@ export function getModuleFromPath(pathname: string): ModuleNavConfig | null {
   return MODULE_CONFIG[moduleSlug] || null;
 }
 
-// Helper to get active sub-nav item
+// Helper to get active sub-nav item (supports nested)
 export function getActiveSubNav(pathname: string, module: ModuleNavConfig): SubNavItem | null {
   if (!module.subNav.length) return null;
   
-  // Exact match first
-  const exactMatch = module.subNav.find(item => item.href === pathname);
+  // Recursive search function
+  const findActive = (items: SubNavItem[]): SubNavItem | null => {
+    for (const item of items) {
+      // Exact match first
+      if (item.href === pathname) return item;
+      
+      // Check children
+      if (item.children) {
+        const childMatch = findActive(item.children);
+        if (childMatch) return childMatch;
+      }
+    }
+    return null;
+  };
+  
+  const exactMatch = findActive(module.subNav);
   if (exactMatch) return exactMatch;
   
-  // Starts with match
-  const startsWith = module.subNav.find(item => pathname.startsWith(item.href));
-  if (startsWith) return startsWith;
+  // Starts with match (fallback)
+  for (const item of module.subNav) {
+    if (pathname.startsWith(item.href) && item.href !== module.href) {
+      return item;
+    }
+  }
   
   // Default to first item
   return module.subNav[0];
+}
+
+// Helper to find parent of a sub-nav item
+export function getSubNavParent(pathname: string, module: ModuleNavConfig): SubNavItem | null {
+  for (const item of module.subNav) {
+    if (item.children) {
+      for (const child of item.children) {
+        if (child.href === pathname || pathname.startsWith(child.href)) {
+          return item;
+        }
+      }
+    }
+  }
+  return null;
 }

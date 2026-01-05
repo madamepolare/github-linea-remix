@@ -70,6 +70,9 @@ export function MainLayout() {
           collapsed ? "lg:pl-[72px]" : "lg:pl-[260px]"
         )}
       >
+        {/* Border separator aligned with sidebar workspace section */}
+        <div className="hidden lg:block h-14 border-b border-border" />
+        
         {/* Contextual TopBar */}
         <TopBar />
         
