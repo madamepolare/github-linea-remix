@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -26,7 +26,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { 
   Save, 
-  Download, 
   Send, 
   FileText, 
   CalendarIcon,
@@ -34,10 +33,8 @@ import {
   User,
   Briefcase,
   Loader2,
-  RefreshCw,
-  Eye,
   Lock,
-  AlertTriangle
+  Palette
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAgencyDocuments } from '@/hooks/useAgencyDocuments';
@@ -56,17 +53,8 @@ import {
   ALLOWED_STATUS_TRANSITIONS,
 } from '@/lib/documentTypes';
 
-// Import specialized editors
-import { PowerOfAttorneyEditor } from './editors/PowerOfAttorneyEditor';
-import { ServiceOrderEditor } from './editors/ServiceOrderEditor';
-import { InvoiceEditor } from './editors/InvoiceEditor';
-import { GenericDocumentEditor } from './editors/GenericDocumentEditor';
-
-// Import PDF generators
-import { generatePowerOfAttorneyPDF } from '@/lib/generatePowerOfAttorneyPDF';
-import { generateServiceOrderPDF } from '@/lib/generateServiceOrderPDF';
-import { generateInvoicePDF } from '@/lib/generateInvoicePDF';
-import { generateGenericDocumentPDF } from '@/lib/generateGenericDocumentPDF';
+// Import visual editor with live preview
+import { VisualDocumentEditor } from './editors/VisualDocumentEditor';
 
 interface DocumentBuilderSheetProps {
   document: AgencyDocument;
@@ -95,10 +83,6 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
   const [content, setContent] = useState<Record<string, unknown>>(document.content || {});
   const [isSaving, setIsSaving] = useState(false);
   
-  // PDF Preview state
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  
   // Check if document is editable based on status
   const isEditable = isDocumentEditable(document.status);
   const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[document.status] || [];
@@ -113,117 +97,7 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
     setValidFrom(document.valid_from ? new Date(document.valid_from) : undefined);
     setValidUntil(document.valid_until ? new Date(document.valid_until) : undefined);
     setContent(document.content || {});
-    setPdfUrl(null); // Reset PDF when document changes
   }, [document]);
-
-  // No cleanup needed for data URLs (they don't need revoking like blob URLs)
-
-  const generatePDF = useCallback(async (): Promise<Blob | null> => {
-    setIsGeneratingPdf(true);
-    try {
-      let blob: Blob;
-      
-      switch (document.document_type) {
-        case 'power_of_attorney':
-          blob = await generatePowerOfAttorneyPDF({
-            document_number: document.document_number || '',
-            title: title,
-            delegator_name: (content.delegator_name as string) || '',
-            delegator_role: (content.delegator_role as string) || '',
-            delegate_name: (content.delegate_name as string) || '',
-            delegate_role: (content.delegate_role as string) || '',
-            scope: (content.scope as string) || '',
-            specific_powers: (content.specific_powers as string[]) || [],
-            start_date: (content.start_date as string) || '',
-            end_date: (content.end_date as string) || '',
-          });
-          break;
-          
-        case 'service_order':
-          blob = await generateServiceOrderPDF({
-            document_number: document.document_number || '',
-            order_type: (content.order_type as 'start' | 'suspend' | 'resume' | 'stop') || 'start',
-            project_name: (content.project_name as string) || '',
-            project_address: (content.project_address as string) || '',
-            client_name: (content.client_name as string) || '',
-            effective_date: (content.effective_date as string) || '',
-            phase_name: (content.phase_name as string) || '',
-            instructions: (content.instructions as string) || '',
-          });
-          break;
-          
-        case 'invoice':
-          blob = await generateInvoicePDF({
-            document_number: document.document_number || '',
-            invoice_date: (content.invoice_date as string) || '',
-            due_date: (content.due_date as string) || '',
-            client_name: (content.client_name as string) || '',
-            client_address: (content.client_address as string) || '',
-            project_name: (content.project_name as string) || '',
-            phases: (content.phases as Array<{code: string; name: string; amount: number; percentage_invoiced: number}>) || [],
-            subtotal: (content.subtotal as number) || 0,
-            tva_rate: (content.tva_rate as number) || 20,
-            tva_amount: (content.tva_amount as number) || 0,
-            total: (content.total as number) || 0,
-            payment_terms: (content.payment_terms as string) || '',
-            bank_iban: (content.bank_iban as string) || '',
-            bank_bic: (content.bank_bic as string) || '',
-            bank_name: (content.bank_name as string) || '',
-          });
-          break;
-          
-        default:
-          blob = await generateGenericDocumentPDF({
-            document_number: document.document_number || '',
-            document_type: document.document_type as DocumentType,
-            title: title,
-            content: content,
-            created_at: document.created_at,
-          });
-      }
-      
-      // Convert blob to base64 data URL for iframe (avoids Chrome blocking blob URLs)
-      const reader = new FileReader();
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-      
-      setPdfUrl(dataUrl);
-      toast.success('PDF généré avec succès');
-      return blob;
-    } catch (error) {
-      console.error('Erreur génération PDF:', error);
-      toast.error('Erreur lors de la génération du PDF');
-      return null;
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  }, [document, title, content]);
-
-  const handleDownloadPDF = useCallback(async () => {
-    let urlToUse = pdfUrl;
-    
-    if (!urlToUse) {
-      const blob = await generatePDF();
-      if (!blob) return;
-      // Create a temporary blob URL just for download
-      urlToUse = URL.createObjectURL(blob);
-    }
-    
-    const link = window.document.createElement('a');
-    link.href = urlToUse;
-    link.download = `${document.document_number || 'document'}.pdf`;
-    window.document.body.appendChild(link);
-    link.click();
-    window.document.body.removeChild(link);
-    
-    // Revoke only if we created a new blob URL for download
-    if (!pdfUrl && urlToUse.startsWith('blob:')) {
-      URL.revokeObjectURL(urlToUse);
-    }
-  }, [pdfUrl, generatePDF, document.document_number]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -245,47 +119,9 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
     }
   };
 
-  const renderEditor = () => {
-    switch (document.document_type) {
-      case 'power_of_attorney':
-        return (
-          <PowerOfAttorneyEditor 
-            content={content} 
-            onChange={setContent}
-            contacts={contacts || []}
-          />
-        );
-      case 'service_order':
-        return (
-          <ServiceOrderEditor 
-            content={content} 
-            onChange={setContent}
-            projects={projects || []}
-          />
-        );
-      case 'invoice':
-        return (
-          <InvoiceEditor 
-            content={content} 
-            onChange={setContent}
-            projects={projects || []}
-            companies={companies || []}
-          />
-        );
-      default:
-        return (
-          <GenericDocumentEditor 
-            content={content} 
-            onChange={setContent}
-            documentType={document.document_type as DocumentType}
-          />
-        );
-    }
-  };
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-4xl overflow-y-auto">
         <SheetHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div>
@@ -303,14 +139,33 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
           </div>
         </SheetHeader>
 
-        <Tabs defaultValue="general" className="mt-4">
-          <TabsList className="grid grid-cols-3 w-full">
-            <TabsTrigger value="general">Général</TabsTrigger>
-            <TabsTrigger value="content">Contenu</TabsTrigger>
-            <TabsTrigger value="preview">Aperçu</TabsTrigger>
+        <Tabs defaultValue="editor" className="mt-4">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="editor" className="gap-2">
+              <Palette className="h-4 w-4" />
+              Éditeur visuel
+            </TabsTrigger>
+            <TabsTrigger value="settings">Paramètres</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general" className="space-y-4 mt-4">
+          {/* Visual Editor Tab */}
+          <TabsContent value="editor" className="mt-4">
+            <VisualDocumentEditor
+              documentType={document.document_type as DocumentType}
+              documentNumber={document.document_number || ''}
+              title={title}
+              content={content}
+              onChange={setContent}
+              projects={projects || []}
+              contacts={contacts || []}
+              companies={companies || []}
+              isEditable={isEditable}
+              createdAt={document.created_at}
+            />
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-4 mt-4">
             {/* Read-only alert */}
             {!isEditable && (
               <Alert variant="default" className="bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
@@ -511,103 +366,12 @@ export function DocumentBuilderSheet({ document, open, onOpenChange }: DocumentB
               </div>
             </div>
           </TabsContent>
-
-          <TabsContent value="content" className="mt-4">
-            {!isEditable && (
-              <Alert variant="default" className="mb-4 bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
-                <Lock className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-amber-800 dark:text-amber-200">
-                  Ce document est en lecture seule.
-                </AlertDescription>
-              </Alert>
-            )}
-            <div className={!isEditable ? 'pointer-events-none opacity-60' : ''}>
-              {renderEditor()}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="preview" className="mt-4">
-            <div className="border rounded-lg bg-card min-h-[500px] flex flex-col">
-              {pdfUrl ? (
-                <>
-                  <div className="flex items-center justify-between p-3 border-b bg-muted/30">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <Eye className="h-4 w-4" />
-                      Aperçu du document
-                    </span>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={generatePDF}
-                        disabled={isGeneratingPdf}
-                      >
-                        {isGeneratingPdf ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-4 w-4" />
-                        )}
-                        <span className="ml-2">Actualiser</span>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={handleDownloadPDF}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Télécharger
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex-1 p-2">
-                    <iframe
-                      src={pdfUrl}
-                      className="w-full h-[450px] rounded border"
-                      title="Aperçu PDF"
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center text-muted-foreground">
-                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p className="font-medium">Aperçu PDF</p>
-                    <p className="text-sm mb-4">Générez le document pour voir l'aperçu</p>
-                    <Button
-                      variant="outline"
-                      onClick={generatePDF}
-                      disabled={isGeneratingPdf}
-                    >
-                      {isGeneratingPdf ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Eye className="h-4 w-4 mr-2" />
-                      )}
-                      Générer l'aperçu
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </TabsContent>
         </Tabs>
 
         {/* Actions */}
         <div className="flex gap-3 mt-6 pt-4 border-t">
           <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
             Fermer
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleDownloadPDF}
-            disabled={isGeneratingPdf}
-          >
-            {isGeneratingPdf ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            PDF
           </Button>
           <Button variant="outline">
             <Send className="h-4 w-4 mr-2" />
