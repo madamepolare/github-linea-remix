@@ -17,6 +17,7 @@ import {
   LockOpen,
   UsersRound,
   HardHat,
+  Receipt,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
@@ -135,6 +136,19 @@ const extensionNavigation: NavItem[] = [
     children: [
       { title: "Kanban", href: "/tenders/kanban" },
       { title: "Liste", href: "/tenders/list" },
+    ]
+  },
+  { 
+    title: "Facturation", 
+    icon: Receipt, 
+    href: "/invoicing", 
+    isExtension: true,
+    children: [
+      { title: "Tableau de bord", href: "/invoicing" },
+      { title: "Toutes les factures", href: "/invoicing/all" },
+      { title: "En attente", href: "/invoicing/pending" },
+      { title: "Payées", href: "/invoicing/paid" },
+      { title: "En retard", href: "/invoicing/overdue" },
     ]
   },
   { 
