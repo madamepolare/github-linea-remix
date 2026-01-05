@@ -288,7 +288,6 @@ export default function CRM() {
             </DropdownMenuContent>
           </DropdownMenu>
         }
-        contentPadding={view !== "leads" || leadsMode === "all"}
       >
         {renderPipelinesBar()}
         {renderContent()}
