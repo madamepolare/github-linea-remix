@@ -1,0 +1,20 @@
+-- Ajouter les informations de l'agence au workspace
+ALTER TABLE public.workspaces
+ADD COLUMN IF NOT EXISTS address text,
+ADD COLUMN IF NOT EXISTS city text,
+ADD COLUMN IF NOT EXISTS postal_code text,
+ADD COLUMN IF NOT EXISTS phone text,
+ADD COLUMN IF NOT EXISTS email text,
+ADD COLUMN IF NOT EXISTS website text,
+ADD COLUMN IF NOT EXISTS siret text,
+ADD COLUMN IF NOT EXISTS siren text,
+ADD COLUMN IF NOT EXISTS vat_number text,
+ADD COLUMN IF NOT EXISTS capital_social numeric,
+ADD COLUMN IF NOT EXISTS forme_juridique text,
+ADD COLUMN IF NOT EXISTS rcs_city text,
+ADD COLUMN IF NOT EXISTS code_naf text,
+ADD COLUMN IF NOT EXISTS primary_color text DEFAULT '#1a1a2e',
+ADD COLUMN IF NOT EXISTS secondary_color text DEFAULT '#16213e',
+ADD COLUMN IF NOT EXISTS accent_color text DEFAULT '#0f3460',
+ADD COLUMN IF NOT EXISTS header_style jsonb DEFAULT '{"layout": "classic", "showLogo": true, "showAddress": true, "showContact": true}'::jsonb,
+ADD COLUMN IF NOT EXISTS footer_text text;
