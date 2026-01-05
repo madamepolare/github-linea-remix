@@ -4008,34 +4008,88 @@ export type Database = {
       }
       workspaces: {
         Row: {
+          accent_color: string | null
+          address: string | null
+          capital_social: number | null
+          city: string | null
+          code_naf: string | null
           created_at: string
           created_by: string | null
+          email: string | null
+          footer_text: string | null
+          forme_juridique: string | null
+          header_style: Json | null
           id: string
           logo_url: string | null
           name: string
+          phone: string | null
           plan: string
+          postal_code: string | null
+          primary_color: string | null
+          rcs_city: string | null
+          secondary_color: string | null
+          siren: string | null
+          siret: string | null
           slug: string
           updated_at: string
+          vat_number: string | null
+          website: string | null
         }
         Insert: {
+          accent_color?: string | null
+          address?: string | null
+          capital_social?: number | null
+          city?: string | null
+          code_naf?: string | null
           created_at?: string
           created_by?: string | null
+          email?: string | null
+          footer_text?: string | null
+          forme_juridique?: string | null
+          header_style?: Json | null
           id?: string
           logo_url?: string | null
           name: string
+          phone?: string | null
           plan?: string
+          postal_code?: string | null
+          primary_color?: string | null
+          rcs_city?: string | null
+          secondary_color?: string | null
+          siren?: string | null
+          siret?: string | null
           slug: string
           updated_at?: string
+          vat_number?: string | null
+          website?: string | null
         }
         Update: {
+          accent_color?: string | null
+          address?: string | null
+          capital_social?: number | null
+          city?: string | null
+          code_naf?: string | null
           created_at?: string
           created_by?: string | null
+          email?: string | null
+          footer_text?: string | null
+          forme_juridique?: string | null
+          header_style?: Json | null
           id?: string
           logo_url?: string | null
           name?: string
+          phone?: string | null
           plan?: string
+          postal_code?: string | null
+          primary_color?: string | null
+          rcs_city?: string | null
+          secondary_color?: string | null
+          siren?: string | null
+          siret?: string | null
           slug?: string
           updated_at?: string
+          vat_number?: string | null
+          website?: string | null
         }
         Relationships: []
       }

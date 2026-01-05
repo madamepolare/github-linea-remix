@@ -2,14 +2,13 @@ import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { DOCUMENT_TYPE_LABELS, type DocumentType } from '@/lib/documentTypes';
+import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 
 interface LiveDocumentPreviewProps {
   documentType: DocumentType;
   documentNumber: string;
   title: string;
   content: Record<string, unknown>;
-  agencyName?: string;
-  agencyAddress?: string;
   scale?: number;
 }
 
@@ -72,15 +71,17 @@ export function LiveDocumentPreview({
   documentNumber,
   title,
   content,
-  agencyName = 'Votre Agence',
-  agencyAddress = '',
   scale = 1,
 }: LiveDocumentPreviewProps) {
+  const { agencyInfo, getFullAddress, getLegalInfo } = useAgencyInfo();
   const formattedDate = format(new Date(), 'dd MMMM yyyy', { locale: fr });
+
+  const primaryColor = agencyInfo?.primary_color || '#1a1a2e';
+  const accentColor = agencyInfo?.accent_color || '#0f3460';
 
   const renderValue = (key: string, value: unknown) => {
     if (value === null || value === undefined || value === '') {
-      return <span className="text-muted-foreground/50 italic">Non renseigné</span>;
+      return <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>Non renseigné</span>;
     }
 
     if (key === 'order_type' && typeof value === 'string') {
@@ -96,7 +97,7 @@ export function LiveDocumentPreview({
 
     if (Array.isArray(value)) {
       return (
-        <ul className="list-disc list-inside space-y-1">
+        <ul style={{ listStyleType: 'disc', listStylePosition: 'inside', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {value.map((item, i) => (
             <li key={i}>{String(item)}</li>
           ))}
@@ -105,7 +106,6 @@ export function LiveDocumentPreview({
     }
 
     if (typeof value === 'string') {
-      // Check if it's a date
       if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
         try {
           return format(new Date(value), 'dd MMMM yyyy', { locale: fr });
@@ -113,7 +113,6 @@ export function LiveDocumentPreview({
           return value;
         }
       }
-      // Multi-line text
       if (value.includes('\n')) {
         return value.split('\n').map((line, i) => (
           <span key={i}>
@@ -146,63 +145,205 @@ export function LiveDocumentPreview({
 
   return (
     <div 
-      className="bg-white text-black shadow-2xl rounded-sm overflow-hidden"
       style={{
         width: '210mm',
         minHeight: '297mm',
         transform: `scale(${scale})`,
         transformOrigin: 'top left',
-        fontFamily: 'Georgia, serif',
+        fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+        backgroundColor: '#ffffff',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        borderRadius: '2px',
+        overflow: 'hidden',
+        color: '#1f2937',
+        position: 'relative',
       }}
     >
-      {/* Document content */}
-      <div className="p-12 min-h-[297mm] flex flex-col">
-        {/* Header */}
-        <header className="flex justify-between items-start mb-12 pb-6 border-b-2 border-gray-200">
+      {/* En-tête avec design professionnel */}
+      <header 
+        style={{
+          padding: '32px 40px',
+          background: `linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%)`,
+          color: '#ffffff',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: '24px',
+        }}
+      >
+        {/* Logo et nom de l'agence */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {agencyInfo?.logo_url ? (
+            <div 
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <img 
+                src={agencyInfo.logo_url} 
+                alt={agencyInfo.name}
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+              />
+            </div>
+          ) : (
+            <div 
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+                fontWeight: 'bold',
+              }}
+            >
+              {(agencyInfo?.name || 'D').charAt(0)}
+            </div>
+          )}
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{agencyName}</h2>
-            {agencyAddress && (
-              <p className="text-sm text-gray-500 mt-1 whitespace-pre-line">{agencyAddress}</p>
+            <h2 style={{ fontSize: '22px', fontWeight: '700', margin: 0, letterSpacing: '-0.5px' }}>
+              {agencyInfo?.name || 'DOMINI'}
+            </h2>
+            {getFullAddress() && (
+              <p style={{ fontSize: '11px', margin: '4px 0 0', opacity: 0.9, whiteSpace: 'pre-line', lineHeight: 1.4 }}>
+                {getFullAddress()}
+              </p>
             )}
           </div>
-          <div className="text-right">
-            <p className="text-sm font-mono text-gray-600 bg-gray-100 px-3 py-1 rounded">
-              {documentNumber || 'N° ---'}
-            </p>
-            <p className="text-sm text-gray-500 mt-2">{formattedDate}</p>
-          </div>
-        </header>
-
-        {/* Document type badge */}
-        <div className="mb-8">
-          <span className="inline-block text-xs uppercase tracking-widest text-primary font-semibold bg-primary/10 px-4 py-2 rounded-full">
-            {DOCUMENT_TYPE_LABELS[documentType] || documentType}
-          </span>
         </div>
 
-        {/* Title */}
-        <h1 className="text-3xl font-bold text-gray-900 mb-10 leading-tight">
+        {/* Infos de contact */}
+        <div style={{ textAlign: 'right', fontSize: '11px' }}>
+          {agencyInfo?.phone && (
+            <p style={{ margin: '0 0 2px', opacity: 0.9 }}>Tél : {agencyInfo.phone}</p>
+          )}
+          {agencyInfo?.email && (
+            <p style={{ margin: '0 0 2px', opacity: 0.9 }}>{agencyInfo.email}</p>
+          )}
+          {agencyInfo?.website && (
+            <p style={{ margin: 0, opacity: 0.9 }}>{agencyInfo.website}</p>
+          )}
+        </div>
+      </header>
+
+      {/* Bandeau du type de document et numéro */}
+      <div 
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px 40px',
+          backgroundColor: '#f8fafc',
+          borderBottom: '1px solid #e2e8f0',
+        }}
+      >
+        <span 
+          style={{
+            fontSize: '10px',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '1.5px',
+            color: primaryColor,
+            backgroundColor: `${primaryColor}15`,
+            padding: '6px 16px',
+            borderRadius: '100px',
+          }}
+        >
+          {DOCUMENT_TYPE_LABELS[documentType] || documentType}
+        </span>
+        <div style={{ textAlign: 'right' }}>
+          <span 
+            style={{
+              fontSize: '12px',
+              fontWeight: '500',
+              fontFamily: "'SF Mono', 'Fira Code', monospace",
+              color: '#475569',
+              backgroundColor: '#e2e8f0',
+              padding: '4px 12px',
+              borderRadius: '4px',
+            }}
+          >
+            {documentNumber || 'N° ---'}
+          </span>
+          <p style={{ fontSize: '11px', color: '#64748b', margin: '6px 0 0' }}>
+            {formattedDate}
+          </p>
+        </div>
+      </div>
+
+      {/* Corps du document */}
+      <div style={{ padding: '40px', minHeight: '600px' }}>
+        {/* Titre du document */}
+        <h1 
+          style={{
+            fontSize: '26px',
+            fontWeight: '700',
+            color: '#0f172a',
+            margin: '0 0 32px',
+            lineHeight: 1.3,
+            letterSpacing: '-0.5px',
+            paddingBottom: '16px',
+            borderBottom: `3px solid ${primaryColor}`,
+          }}
+        >
           {title || 'Sans titre'}
         </h1>
 
-        {/* Content */}
-        <div className="flex-1 space-y-6">
+        {/* Contenu */}
+        <div style={{ marginTop: '24px' }}>
           {!hasContent ? (
-            <div className="text-center py-16 text-gray-400">
-              <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <div style={{ textAlign: 'center', padding: '64px 0', color: '#94a3b8' }}>
+              <svg 
+                style={{ width: '64px', height: '64px', margin: '0 auto 16px', opacity: 0.5 }}
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={1.5} 
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+                />
               </svg>
-              <p className="text-lg">Commencez à remplir le formulaire</p>
-              <p className="text-sm mt-1">Le contenu apparaîtra ici en temps réel</p>
+              <p style={{ fontSize: '16px', margin: 0 }}>Commencez à remplir le formulaire</p>
+              <p style={{ fontSize: '13px', margin: '8px 0 0', opacity: 0.7 }}>Le contenu apparaîtra ici en temps réel</p>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {contentFields.map(({ key, label, value }) => (
-                <div key={key} className="group">
-                  <dt className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-1">
+                <div key={key} style={{ pageBreakInside: 'avoid' }}>
+                  <dt 
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      color: '#64748b',
+                      marginBottom: '6px',
+                    }}
+                  >
                     {label}
                   </dt>
-                  <dd className="text-base text-gray-800 leading-relaxed pl-0">
+                  <dd 
+                    style={{
+                      fontSize: '14px',
+                      color: '#1e293b',
+                      lineHeight: 1.6,
+                      margin: 0,
+                      paddingLeft: '12px',
+                      borderLeft: `2px solid ${primaryColor}30`,
+                    }}
+                  >
                     {renderValue(key, value)}
                   </dd>
                 </div>
@@ -211,26 +352,49 @@ export function LiveDocumentPreview({
           )}
         </div>
 
-        {/* Signature area */}
-        <div className="mt-auto pt-12">
-          <p className="text-sm text-gray-600 italic mb-8">
+        {/* Zone de signature */}
+        <div style={{ marginTop: '64px', paddingTop: '24px' }}>
+          <p style={{ fontSize: '13px', color: '#475569', fontStyle: 'italic', marginBottom: '32px' }}>
             Fait pour servir et valoir ce que de droit.
           </p>
-          <div className="flex justify-end">
-            <div className="text-center">
-              <p className="text-sm font-semibold text-gray-700 mb-12">Signature</p>
-              <div className="w-48 border-b-2 border-gray-400"></div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '48px' }}>
+                Signature
+              </p>
+              <div style={{ width: '180px', borderBottom: '2px solid #334155' }} />
             </div>
           </div>
         </div>
-
-        {/* Footer */}
-        <footer className="mt-8 pt-4 border-t border-gray-200 text-center">
-          <p className="text-xs text-gray-400">
-            Document généré le {formattedDate}
-          </p>
-        </footer>
       </div>
+
+      {/* Pied de page */}
+      <footer 
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: '16px 40px',
+          backgroundColor: '#f8fafc',
+          borderTop: '1px solid #e2e8f0',
+          textAlign: 'center',
+        }}
+      >
+        {getLegalInfo() && (
+          <p style={{ fontSize: '8px', color: '#64748b', margin: '0 0 4px', letterSpacing: '0.3px' }}>
+            {getLegalInfo()}
+          </p>
+        )}
+        {agencyInfo?.footer_text && (
+          <p style={{ fontSize: '8px', color: '#94a3b8', margin: 0 }}>
+            {agencyInfo.footer_text}
+          </p>
+        )}
+        <p style={{ fontSize: '8px', color: '#94a3b8', margin: '4px 0 0' }}>
+          Document généré le {formattedDate}
+        </p>
+      </footer>
     </div>
   );
 }
