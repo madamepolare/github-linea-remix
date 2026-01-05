@@ -29,7 +29,7 @@ export function EmptyState({
   className,
   size = "md",
 }: EmptyStateProps) {
-  const { iconSize, iconSizeSm, spacing } = illustrations[size];
+  const { spacing } = illustrations[size];
 
   return (
     <motion.div
@@ -47,17 +47,12 @@ export function EmptyState({
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.3, delay: 0.1, ease: [0.4, 0, 0.2, 1] }}
-          className="relative mb-3 sm:mb-4"
+          className="mb-4"
         >
-          {/* Decorative circles */}
-          <div className="absolute inset-0 -m-3 sm:-m-4">
-            <div className="absolute inset-0 rounded-full bg-muted/50" />
-            <div className="absolute inset-1.5 sm:inset-2 rounded-full bg-muted" />
-          </div>
-          <div className="relative flex items-center justify-center rounded-full bg-background border border-border p-3 sm:p-4">
+          <div className="flex items-center justify-center rounded-full bg-muted p-4">
             <Icon
-              className="text-muted-foreground w-6 h-6 sm:w-12 sm:h-12"
-              strokeWidth={1}
+              className="text-muted-foreground w-8 h-8"
+              strokeWidth={1.5}
             />
           </div>
         </motion.div>
@@ -67,11 +62,11 @@ export function EmptyState({
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.15, ease: [0.4, 0, 0.2, 1] }}
-        className="space-y-1.5 sm:space-y-2 max-w-sm"
+        className="space-y-2 max-w-sm"
       >
-        <h3 className="text-sm sm:text-base font-medium text-foreground">{title}</h3>
+        <h3 className="text-base font-medium text-foreground">{title}</h3>
         {description && (
-          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             {description}
           </p>
         )}
@@ -82,10 +77,10 @@ export function EmptyState({
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
-          className="mt-4 sm:mt-6"
+          className="mt-6"
         >
-          <Button onClick={action.onClick} size="sm" className="gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm">
-            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" strokeWidth={1.5} />
+          <Button onClick={action.onClick} size="default" className="gap-2">
+            <Plus className="h-4 w-4" strokeWidth={2} />
             {action.label}
           </Button>
         </motion.div>

@@ -140,51 +140,68 @@
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-size: 14px;
+    line-height: 1.5;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply tracking-tight;
+    @apply tracking-tight font-semibold;
+    letter-spacing: -0.02em;
   }
 
-  /* Typography scale - Responsive */
-  h1 { @apply text-xl sm:text-2xl font-semibold leading-tight; }
-  h2 { @apply text-lg sm:text-xl font-semibold leading-tight; }
-  h3 { @apply text-base sm:text-lg font-medium leading-snug; }
-  h4 { @apply text-sm sm:text-base font-medium leading-snug; }
+  /* Typography scale - Qonto-inspired */
+  h1 { @apply text-2xl sm:text-3xl font-semibold leading-tight; }
+  h2 { @apply text-xl sm:text-2xl font-semibold leading-tight; }
+  h3 { @apply text-lg sm:text-xl font-medium leading-snug; }
+  h4 { @apply text-base font-medium leading-snug; }
+  h5 { @apply text-sm font-medium leading-snug; }
+  h6 { @apply text-xs font-medium leading-snug; }
+
+  /* Paragraph defaults */
+  p {
+    @apply text-sm leading-relaxed;
+    color: hsl(var(--text-secondary));
+  }
+
+  /* Small text */
+  small {
+    @apply text-xs;
+    color: hsl(var(--text-tertiary));
+  }
 }
 
 @layer components {
-  /* Clean card style */
+  /* Clean card style - Qonto inspired */
   .card-programa {
-    @apply bg-card rounded-lg border border-border;
-    box-shadow: var(--shadow-card);
-    transition: box-shadow 0.15s ease, transform 0.15s ease;
+    @apply bg-card rounded-xl border border-border p-5;
+    box-shadow: none;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
   }
 
   .card-programa:hover {
-    box-shadow: var(--shadow-card-hover);
+    box-shadow: var(--shadow-sm);
+    border-color: hsl(var(--border));
   }
 
   /* Phase/status badge */
   .badge-phase {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
     background: hsl(var(--muted));
     color: hsl(var(--text-secondary));
   }
 
   .badge-phase-active {
-    background: hsl(var(--primary));
-    color: hsl(var(--primary-foreground));
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
   }
 
-  /* View switcher pill */
+  /* View switcher pill - Qonto style */
   .view-switcher {
-    @apply inline-flex items-center p-1 rounded-lg border border-border;
-    background: hsl(var(--background));
+    @apply inline-flex items-center p-1 rounded-lg bg-muted;
   }
 
   .view-switcher-item {
-    @apply px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-150;
+    @apply px-4 py-2 text-sm font-medium rounded-md transition-all duration-150;
     color: hsl(var(--muted-foreground));
   }
 
@@ -193,7 +210,7 @@
   }
 
   .view-switcher-item.active {
-    @apply bg-primary text-primary-foreground;
+    @apply bg-background text-foreground shadow-sm;
   }
 
   /* Kanban column */
