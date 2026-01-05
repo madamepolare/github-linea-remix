@@ -3,6 +3,7 @@ import { useLocation, Outlet } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
+import { TopBar } from "./TopBar";
 import { PageTransition } from "./PageTransition";
 import { useSidebarStore } from "@/hooks/useSidebarStore";
 import { cn } from "@/lib/utils";
@@ -61,22 +62,28 @@ export function MainLayout() {
         <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
       </div>
 
-      {/* Main content */}
-      <main 
+      {/* Main content with TopBar */}
+      <div 
         className={cn(
-          "min-h-screen transition-all duration-200 ease-out",
+          "min-h-screen flex flex-col transition-all duration-200 ease-out",
           "pt-14 lg:pt-0", // Account for mobile header
           collapsed ? "lg:pl-[72px]" : "lg:pl-[260px]"
         )}
       >
-        <AnimatePresence mode="wait">
-          <PageTransition key={location.pathname}>
-            <div className="min-h-screen">
-              <Outlet />
-            </div>
-          </PageTransition>
-        </AnimatePresence>
-      </main>
+        {/* Contextual TopBar */}
+        <TopBar />
+        
+        {/* Page content */}
+        <main className="flex-1 flex flex-col">
+          <AnimatePresence mode="wait">
+            <PageTransition key={location.pathname}>
+              <div className="flex-1 flex flex-col">
+                <Outlet />
+              </div>
+            </PageTransition>
+          </AnimatePresence>
+        </main>
+      </div>
     </div>
   );
 }

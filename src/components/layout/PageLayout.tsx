@@ -1,21 +1,16 @@
 import { ReactNode } from "react";
-import { LucideIcon } from "lucide-react";
 import { PageHeader } from "./PageHeader";
 
 interface PageLayoutProps {
-  /** Page icon */
-  icon?: LucideIcon;
   /** Page title */
   title: string;
   /** Page description */
   description?: string;
   /** Actions slot (view switchers, etc.) */
   actions?: ReactNode;
-  /** Tabs slot (navigation tabs) */
-  tabs?: ReactNode;
   /** Filters slot */
   filters?: ReactNode;
-  /** Primary action button */
+  /** Primary action button - now handled by TopBar, kept for backwards compat */
   primaryAction?: {
     label: string;
     onClick: () => void;
@@ -26,31 +21,32 @@ interface PageLayoutProps {
   contentPadding?: boolean;
   /** Content overflow - default is "auto" */
   contentOverflow?: "auto" | "hidden";
+  /** Hide the page header entirely */
+  hideHeader?: boolean;
 }
 
 export function PageLayout({
-  icon,
   title,
   description,
   actions,
-  tabs,
   filters,
   primaryAction,
   children,
   contentPadding = true,
   contentOverflow = "auto",
+  hideHeader = false,
 }: PageLayoutProps) {
   return (
     <div className="flex flex-col h-full">
-      <PageHeader
-        icon={icon}
-        title={title}
-        description={description}
-        actions={actions}
-        tabs={tabs}
-        filters={filters}
-        primaryAction={primaryAction}
-      />
+      {!hideHeader && (
+        <PageHeader
+          title={title}
+          description={description}
+          actions={actions}
+          filters={filters}
+          primaryAction={primaryAction}
+        />
+      )}
       <div
         className={`flex-1 ${contentOverflow === "auto" ? "overflow-auto" : "overflow-hidden"} ${contentPadding ? "px-6 sm:px-8 py-6" : ""}`}
       >

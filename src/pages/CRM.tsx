@@ -253,7 +253,6 @@ export default function CRM() {
   return (
     <>
       <PageLayout
-        icon={Target}
         title="CRM"
         description={`${totalEntities} entités · ${formatCurrency(leadStats.weightedValue)} en pipeline`}
         actions={

@@ -120,7 +120,6 @@ export default function Documents() {
   return (
     <PageLayout 
       title="Documents" 
-      icon={FileStack}
       description={sectionDescriptions[activeTab]}
       primaryAction={activeTab !== 'dashboard' ? {
         label: "Nouveau document",
