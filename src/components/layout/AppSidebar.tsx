@@ -190,8 +190,8 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       className="fixed left-0 top-0 z-40 flex h-screen flex-col bg-background border-r border-border"
     >
-      {/* Workspace Switcher (top) */}
-      <div className="flex items-center justify-between h-14 px-3 border-b border-border">
+      {/* Workspace Switcher (top) - h-14 aligns with TopBar */}
+      <div className="flex items-center justify-between h-14 px-3">
         {activeWorkspace ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
