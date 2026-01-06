@@ -10,9 +10,28 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Search, Plus, Building2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useContacts } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { cn } from "@/lib/utils";
+
+// Helper pour obtenir le label d'industrie
+const getIndustryLabel = (industry: string | null) => {
+  const labels: Record<string, string> = {
+    "promoteur": "Promoteur",
+    "bet_structure": "BET Structure",
+    "bet_fluides": "BET Fluides",
+    "bet_environnement": "BET Environnement",
+    "paysagiste": "Paysagiste",
+    "agenceur": "Agenceur",
+    "epa_sem": "EPA/SEM",
+    "acousticien": "Acousticien",
+    "economiste": "Économiste",
+    "vrd": "VRD",
+    "electricite": "Électricité",
+  };
+  return industry ? labels[industry] || industry : null;
+};
 
 // Rôles/fonctions prédéfinis pour les contacts
 const CONTACT_ROLES = [
@@ -43,7 +62,6 @@ const schema = z.object({
   custom_role: z.string().optional(),
   crm_company_id: z.string().optional(),
   location: z.string().optional(),
-  avatar_url: z.string().optional(),
   notes: z.string().optional(),
   is_individual: z.boolean().default(false),
 });
@@ -72,7 +90,6 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
       custom_role: "",
       crm_company_id: "",
       location: "",
-      avatar_url: "",
       notes: "",
       is_individual: false,
     },
@@ -128,7 +145,6 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
       contact_type: contactType,
       crm_company_id: data.is_individual ? undefined : (data.crm_company_id || undefined),
       location: data.location || undefined,
-      avatar_url: data.avatar_url || undefined,
       notes: data.notes || undefined,
     });
     form.reset();
@@ -273,7 +289,12 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
                                 }}
                               >
                                 <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                <span className="truncate">{company.name}</span>
+                                <span className="truncate flex-1">{company.name}</span>
+                                {company.industry && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
+                                    {getIndustryLabel(company.industry)}
+                                  </Badge>
+                                )}
                               </button>
                             ))}
                           </>
