@@ -290,25 +290,14 @@ export function CommercialDocumentBuilder({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Surface (m²)</Label>
-                <Input
-                  type="number"
-                  value={document.project_surface || ''}
-                  onChange={(e) => onDocumentChange({ ...document, project_surface: parseFloat(e.target.value) || undefined })}
-                  placeholder="Surface en m²"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Budget honoraires estimé (€)</Label>
-                <Input
-                  type="number"
-                  value={document.project_budget || ''}
-                  onChange={(e) => onDocumentChange({ ...document, project_budget: parseFloat(e.target.value) || undefined })}
-                  placeholder="Budget prévisionnel honoraires"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Surface (m²)</Label>
+              <Input
+                type="number"
+                value={document.project_surface || ''}
+                onChange={(e) => onDocumentChange({ ...document, project_surface: parseFloat(e.target.value) || undefined })}
+                placeholder="Surface en m²"
+              />
             </div>
           </CardContent>
         </Card>
