@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, User, Hammer, FolderKanban, Target, CheckSquare, FileText, FileStack, Shield, CreditCard, Puzzle, Mail } from "lucide-react";
+import { Building2, Users, User, Hammer, FolderKanban, Target, CheckSquare, FileText, FileStack, Shield, CreditCard, Puzzle, Mail, Layers } from "lucide-react";
 import { WorkspaceSettings } from "@/components/settings/WorkspaceSettings";
 import { MembersSettings } from "@/components/settings/MembersSettings";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { LotsTemplatesSettings } from "@/components/settings/LotsTemplatesSettings";
 import { ProjectsSettings } from "@/components/settings/ProjectsSettings";
+import { PhasesSettings } from "@/components/settings/PhasesSettings";
 import { CRMSettings } from "@/components/settings/CRMSettings";
 import { TasksSettings } from "@/components/settings/TasksSettings";
 import { CommercialSettings } from "@/components/settings/CommercialSettings";
@@ -50,6 +51,10 @@ export default function Settings() {
           <FolderKanban className="h-3.5 w-3.5" strokeWidth={1.5} />
           <span className="hidden sm:inline">Projets</span>
         </TabsTrigger>
+        <TabsTrigger value="phases" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
+          <Layers className="h-3.5 w-3.5" strokeWidth={1.5} />
+          <span className="hidden sm:inline">Phases</span>
+        </TabsTrigger>
         <TabsTrigger value="lots" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
           <Hammer className="h-3.5 w-3.5" strokeWidth={1.5} />
           <span className="hidden sm:inline">Lots</span>
@@ -91,6 +96,7 @@ export default function Settings() {
       {activeTab === "members" && <MembersSettings />}
       {activeTab === "profile" && <ProfileSettings />}
       {activeTab === "projects" && <ProjectsSettings />}
+      {activeTab === "phases" && <PhasesSettings />}
       {activeTab === "lots" && <LotsTemplatesSettings />}
       {activeTab === "documents" && <DocumentsSettings />}
       {activeTab === "commercial" && <CommercialSettings />}

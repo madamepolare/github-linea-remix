@@ -65,9 +65,9 @@ export function CommercialSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Paramètres Commercial</h3>
+        <h3 className="text-lg font-medium">Paramètres Finance</h3>
         <p className="text-sm text-muted-foreground">
-          Gérez vos templates de devis et grilles tarifaires
+          Gérez vos templates de devis et grilles tarifaires. Les phases sont gérées dans l'onglet "Phases" des paramètres.
         </p>
       </div>
 
