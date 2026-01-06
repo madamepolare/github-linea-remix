@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/table";
 import { Building2, Users, Target, Euro, ArrowRight, Search, Mail, Phone } from "lucide-react";
 import { motion } from "framer-motion";
-import { CRMCompanyEnriched, getCompanyTypeConfig, Contact } from "@/lib/crmTypes";
+import { CRMCompanyEnriched, Contact } from "@/lib/crmTypes";
+import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { cn } from "@/lib/utils";
 
 interface CRMOverviewProps {
@@ -42,6 +43,7 @@ export function CRMOverview({
   contacts,
 }: CRMOverviewProps) {
   const navigate = useNavigate();
+  const { getCompanyTypeShortLabel, getCompanyTypeColor, getContactTypeLabel, getContactTypeColor } = useCRMSettings();
 
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
@@ -95,14 +97,6 @@ export function CRMOverview({
       action: () => onNavigate("leads"),
     },
   ];
-
-  const contactTypeLabels: Record<string, string> = {
-    client: "Client",
-    bet: "BET",
-    entreprise: "Entreprise",
-    fournisseur: "Fournisseur",
-    partenaire: "Partenaire",
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -173,7 +167,8 @@ export function CRMOverview({
                   </TableRow>
                 ) : (
                   recentCompanies.map((company) => {
-                    const typeConfig = getCompanyTypeConfig(company.industry);
+                    const typeColor = getCompanyTypeColor(company.industry || "");
+                    const typeLabel = getCompanyTypeShortLabel(company.industry || "");
                     return (
                       <TableRow
                         key={company.id}
@@ -183,9 +178,10 @@ export function CRMOverview({
                         <TableCell>
                           <Badge
                             variant="secondary"
-                            className={cn("text-white text-xs", typeConfig.color)}
+                            className="text-white text-xs"
+                            style={{ backgroundColor: typeColor }}
                           >
-                            {typeConfig.shortLabel}
+                            {typeLabel}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -303,8 +299,12 @@ export function CRMOverview({
                       </TableCell>
                       <TableCell>
                         {contact.contact_type && (
-                          <Badge variant="outline">
-                            {contactTypeLabels[contact.contact_type] || contact.contact_type}
+                          <Badge variant="outline" className="gap-1.5">
+                            <div 
+                              className="w-2 h-2 rounded-full" 
+                              style={{ backgroundColor: getContactTypeColor(contact.contact_type) }}
+                            />
+                            {getContactTypeLabel(contact.contact_type)}
                           </Badge>
                         )}
                       </TableCell>

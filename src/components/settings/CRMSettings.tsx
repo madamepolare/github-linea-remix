@@ -9,56 +9,20 @@ import {
   Phone,
   Ruler
 } from "lucide-react";
+import {
+  DEFAULT_BET_SPECIALTIES,
+  DEFAULT_CONTACT_TYPES,
+  DEFAULT_LEAD_SOURCES,
+  DEFAULT_ACTIVITY_TYPES,
+  DEFAULT_COMPANY_TYPES,
+} from "@/lib/crmDefaults";
 
-// Default values for BET specialties
-const DEFAULT_BET_SPECIALTIES = [
-  { key: "structure", label: "Structure", color: "#F97316" },
-  { key: "fluides", label: "Fluides (CVC)", color: "#06B6D4" },
-  { key: "electricite", label: "Électricité", color: "#EAB308" },
-  { key: "acoustique", label: "Acoustique", color: "#8B5CF6" },
-  { key: "thermique", label: "Thermique / RE2020", color: "#EF4444" },
-  { key: "vrd", label: "VRD", color: "#D97706" },
-  { key: "facade", label: "Façades", color: "#64748B" },
-  { key: "environnement", label: "Environnement / HQE", color: "#16A34A" },
-  { key: "economie", label: "Économie", color: "#3B82F6" },
-  { key: "securite", label: "Sécurité incendie", color: "#F43F5E" },
-  { key: "geotechnique", label: "Géotechnique", color: "#78716C" },
-];
-
-// Default contact types
-const DEFAULT_CONTACT_TYPES = [
-  { key: "client", label: "Client", color: "#10B981" },
-  { key: "partner", label: "Partenaire", color: "#8B5CF6" },
-  { key: "supplier", label: "Fournisseur", color: "#3B82F6" },
-  { key: "amo", label: "AMO", color: "#F59E0B" },
-  { key: "bet", label: "BET", color: "#06B6D4" },
-  { key: "entreprise", label: "Entreprise", color: "#EF4444" },
-];
-
-// Default lead sources
-const DEFAULT_LEAD_SOURCES = [
-  { key: "referral", label: "Recommandation", color: "#10B981" },
-  { key: "website", label: "Site web", color: "#3B82F6" },
-  { key: "linkedin", label: "LinkedIn", color: "#0077B5" },
-  { key: "cold_call", label: "Prospection téléphonique", color: "#F59E0B" },
-  { key: "event", label: "Événement / Salon", color: "#8B5CF6" },
-  { key: "tender", label: "Appel d'offres", color: "#EC4899" },
-  { key: "partner", label: "Partenaire", color: "#06B6D4" },
-  { key: "press", label: "Presse / Publication", color: "#84CC16" },
-  { key: "other", label: "Autre", color: "#6B7280" },
-];
-
-// Default activity types
-const DEFAULT_ACTIVITY_TYPES = [
-  { key: "call", label: "Appel", color: "#10B981" },
-  { key: "email", label: "Email", color: "#3B82F6" },
-  { key: "meeting", label: "Réunion", color: "#8B5CF6" },
-  { key: "note", label: "Note", color: "#EAB308" },
-  { key: "task", label: "Tâche", color: "#F97316" },
-  { key: "proposal", label: "Proposition", color: "#EC4899" },
-  { key: "site_visit", label: "Visite site", color: "#14B8A6" },
-  { key: "document", label: "Document", color: "#64748B" },
-];
+// Transform company types for GenericSettingsManager format
+const companyTypesForSettings = DEFAULT_COMPANY_TYPES.map((t) => ({
+  key: t.key,
+  label: `${t.label} (${t.shortLabel})`,
+  color: t.color,
+}));
 
 export function CRMSettings() {
   return (
@@ -80,6 +44,10 @@ export function CRMSettings() {
           <TabsTrigger value="contacts" className="gap-1.5 text-xs">
             <Users className="h-3.5 w-3.5" />
             Contacts
+          </TabsTrigger>
+          <TabsTrigger value="companies" className="gap-1.5 text-xs">
+            <Building2 className="h-3.5 w-3.5" />
+            Entreprises
           </TabsTrigger>
           <TabsTrigger value="bet" className="gap-1.5 text-xs">
             <Ruler className="h-3.5 w-3.5" />
@@ -121,6 +89,17 @@ export function CRMSettings() {
             icon={<Users className="h-5 w-5 text-primary" />}
             showColor
             defaultItems={DEFAULT_CONTACT_TYPES}
+          />
+        </TabsContent>
+
+        <TabsContent value="companies" className="mt-6">
+          <GenericSettingsManager
+            settingType="company_types"
+            title="Types d'entreprises"
+            description="Définissez les différents types d'entreprises de votre CRM"
+            icon={<Building2 className="h-5 w-5 text-primary" />}
+            showColor
+            defaultItems={companyTypesForSettings}
           />
         </TabsContent>
 

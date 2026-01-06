@@ -1,57 +1,27 @@
 import { useWorkspaceSettings, type WorkspaceSetting } from "./useWorkspaceSettings";
-
-// Default values - used when no settings are configured
-const DEFAULT_BET_SPECIALTIES = [
-  { key: "structure", label: "Structure", color: "#F97316" },
-  { key: "fluides", label: "Fluides (CVC)", color: "#06B6D4" },
-  { key: "electricite", label: "Électricité", color: "#EAB308" },
-  { key: "acoustique", label: "Acoustique", color: "#8B5CF6" },
-  { key: "thermique", label: "Thermique / RE2020", color: "#EF4444" },
-  { key: "vrd", label: "VRD", color: "#D97706" },
-  { key: "facade", label: "Façades", color: "#64748B" },
-  { key: "environnement", label: "Environnement / HQE", color: "#16A34A" },
-  { key: "economie", label: "Économie", color: "#3B82F6" },
-  { key: "securite", label: "Sécurité incendie", color: "#F43F5E" },
-  { key: "geotechnique", label: "Géotechnique", color: "#78716C" },
-];
-
-const DEFAULT_CONTACT_TYPES = [
-  { key: "client", label: "Client", color: "#10B981" },
-  { key: "partner", label: "Partenaire", color: "#8B5CF6" },
-  { key: "supplier", label: "Fournisseur", color: "#3B82F6" },
-  { key: "amo", label: "AMO", color: "#F59E0B" },
-  { key: "bet", label: "BET", color: "#06B6D4" },
-  { key: "entreprise", label: "Entreprise", color: "#EF4444" },
-];
-
-const DEFAULT_LEAD_SOURCES = [
-  { key: "referral", label: "Recommandation", color: "#10B981" },
-  { key: "website", label: "Site web", color: "#3B82F6" },
-  { key: "linkedin", label: "LinkedIn", color: "#0077B5" },
-  { key: "cold_call", label: "Prospection téléphonique", color: "#F59E0B" },
-  { key: "event", label: "Événement / Salon", color: "#8B5CF6" },
-  { key: "tender", label: "Appel d'offres", color: "#EC4899" },
-  { key: "partner", label: "Partenaire", color: "#06B6D4" },
-  { key: "press", label: "Presse / Publication", color: "#84CC16" },
-  { key: "other", label: "Autre", color: "#6B7280" },
-];
-
-const DEFAULT_ACTIVITY_TYPES = [
-  { key: "call", label: "Appel", color: "#10B981" },
-  { key: "email", label: "Email", color: "#3B82F6" },
-  { key: "meeting", label: "Réunion", color: "#8B5CF6" },
-  { key: "note", label: "Note", color: "#EAB308" },
-  { key: "task", label: "Tâche", color: "#F97316" },
-  { key: "proposal", label: "Proposition", color: "#EC4899" },
-  { key: "site_visit", label: "Visite site", color: "#14B8A6" },
-  { key: "document", label: "Document", color: "#64748B" },
-];
+import {
+  DEFAULT_BET_SPECIALTIES,
+  DEFAULT_CONTACT_TYPES,
+  DEFAULT_LEAD_SOURCES,
+  DEFAULT_ACTIVITY_TYPES,
+  DEFAULT_COMPANY_CATEGORIES,
+  DEFAULT_COMPANY_TYPES,
+} from "@/lib/crmDefaults";
 
 export interface CRMSettingItem {
   key: string;
   label: string;
   color: string;
   icon?: string;
+}
+
+export interface CompanyTypeItem extends CRMSettingItem {
+  shortLabel: string;
+  category: string;
+}
+
+export interface CompanyCategoryItem extends CRMSettingItem {
+  types: string[];
 }
 
 function transformSettings(
@@ -72,20 +42,62 @@ function transformSettings(
     }));
 }
 
+function transformCompanyTypes(
+  settings: WorkspaceSetting[],
+  defaults: { key: string; label: string; shortLabel: string; category: string; color: string }[]
+): CompanyTypeItem[] {
+  if (settings.length === 0) {
+    return defaults;
+  }
+
+  return settings
+    .filter((s) => s.is_active)
+    .map((s) => ({
+      key: s.setting_key,
+      label: s.setting_value.label,
+      shortLabel: s.setting_value.shortLabel || s.setting_value.label,
+      category: s.setting_value.category || "autre",
+      color: s.setting_value.color || "#6B7280",
+    }));
+}
+
+function transformCompanyCategories(
+  settings: WorkspaceSetting[],
+  defaults: { key: string; label: string; color: string; icon?: string; types: string[] }[]
+): CompanyCategoryItem[] {
+  if (settings.length === 0) {
+    return defaults;
+  }
+
+  return settings
+    .filter((s) => s.is_active)
+    .map((s) => ({
+      key: s.setting_key,
+      label: s.setting_value.label,
+      color: s.setting_value.color || "#6B7280",
+      icon: s.setting_value.icon,
+      types: s.setting_value.types || [],
+    }));
+}
+
 export function useCRMSettings() {
   const { settings: betSettings, isLoading: betLoading } = useWorkspaceSettings("bet_specialties");
   const { settings: contactTypeSettings, isLoading: contactLoading } = useWorkspaceSettings("contact_types");
   const { settings: leadSourceSettings, isLoading: leadLoading } = useWorkspaceSettings("lead_sources");
   const { settings: activityTypeSettings, isLoading: activityLoading } = useWorkspaceSettings("activity_types");
+  const { settings: companyTypeSettings, isLoading: companyTypeLoading } = useWorkspaceSettings("company_types");
+  const { settings: companyCategorySettings, isLoading: companyCategoryLoading } = useWorkspaceSettings("company_categories");
 
   const betSpecialties = transformSettings(betSettings, DEFAULT_BET_SPECIALTIES);
   const contactTypes = transformSettings(contactTypeSettings, DEFAULT_CONTACT_TYPES);
   const leadSources = transformSettings(leadSourceSettings, DEFAULT_LEAD_SOURCES);
   const activityTypes = transformSettings(activityTypeSettings, DEFAULT_ACTIVITY_TYPES);
+  const companyTypes = transformCompanyTypes(companyTypeSettings, DEFAULT_COMPANY_TYPES);
+  const companyCategories = transformCompanyCategories(companyCategorySettings, DEFAULT_COMPANY_CATEGORIES);
 
-  const isLoading = betLoading || contactLoading || leadLoading || activityLoading;
+  const isLoading = betLoading || contactLoading || leadLoading || activityLoading || companyTypeLoading || companyCategoryLoading;
 
-  // Helper to get label by key
+  // === BET Specialties helpers ===
   const getBetSpecialtyLabel = (key: string): string => {
     const item = betSpecialties.find((s) => s.key === key);
     return item?.label || key;
@@ -96,6 +108,7 @@ export function useCRMSettings() {
     return item?.color || "#6B7280";
   };
 
+  // === Contact Types helpers ===
   const getContactTypeLabel = (key: string): string => {
     const item = contactTypes.find((s) => s.key === key);
     return item?.label || key;
@@ -106,6 +119,7 @@ export function useCRMSettings() {
     return item?.color || "#6B7280";
   };
 
+  // === Lead Sources helpers ===
   const getLeadSourceLabel = (key: string): string => {
     const item = leadSources.find((s) => s.key === key);
     return item?.label || key;
@@ -116,6 +130,7 @@ export function useCRMSettings() {
     return item?.color || "#6B7280";
   };
 
+  // === Activity Types helpers ===
   const getActivityTypeLabel = (key: string): string => {
     const item = activityTypes.find((s) => s.key === key);
     return item?.label || key;
@@ -126,24 +141,87 @@ export function useCRMSettings() {
     return item?.color || "#6B7280";
   };
 
+  // === Company Types helpers ===
+  const getCompanyTypeLabel = (key: string): string => {
+    const item = companyTypes.find((s) => s.key === key);
+    return item?.label || key;
+  };
+
+  const getCompanyTypeShortLabel = (key: string): string => {
+    const item = companyTypes.find((s) => s.key === key);
+    return item?.shortLabel || key;
+  };
+
+  const getCompanyTypeColor = (key: string): string => {
+    const item = companyTypes.find((s) => s.key === key);
+    return item?.color || "#6B7280";
+  };
+
+  const getCompanyTypeCategory = (key: string): string => {
+    const item = companyTypes.find((s) => s.key === key);
+    return item?.category || "autre";
+  };
+
+  // === Company Categories helpers ===
+  const getCompanyCategoryLabel = (key: string): string => {
+    const item = companyCategories.find((s) => s.key === key);
+    return item?.label || key;
+  };
+
+  const getCompanyCategoryColor = (key: string): string => {
+    const item = companyCategories.find((s) => s.key === key);
+    return item?.color || "#6B7280";
+  };
+
+  const getCompanyTypesForCategory = (categoryKey: string): CompanyTypeItem[] => {
+    const category = companyCategories.find((c) => c.key === categoryKey);
+    if (!category) return [];
+    return companyTypes.filter((t) => category.types.includes(t.key));
+  };
+
+  const getCategoryFromType = (typeKey: string): string | null => {
+    const type = companyTypes.find((t) => t.key === typeKey);
+    return type?.category || null;
+  };
+
   return {
     // Raw lists for selects/dropdowns
     betSpecialties,
     contactTypes,
     leadSources,
     activityTypes,
+    companyTypes,
+    companyCategories,
     
     // Loading state
     isLoading,
     
-    // Helper functions
+    // BET Specialty helpers
     getBetSpecialtyLabel,
     getBetSpecialtyColor,
+    
+    // Contact Type helpers
     getContactTypeLabel,
     getContactTypeColor,
+    
+    // Lead Source helpers
     getLeadSourceLabel,
     getLeadSourceColor,
+    
+    // Activity Type helpers
     getActivityTypeLabel,
     getActivityTypeColor,
+    
+    // Company Type helpers
+    getCompanyTypeLabel,
+    getCompanyTypeShortLabel,
+    getCompanyTypeColor,
+    getCompanyTypeCategory,
+    
+    // Company Category helpers
+    getCompanyCategoryLabel,
+    getCompanyCategoryColor,
+    getCompanyTypesForCategory,
+    getCategoryFromType,
   };
 }

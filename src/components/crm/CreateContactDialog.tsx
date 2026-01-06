@@ -13,8 +13,9 @@ import { Loader2, Search, Plus, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useContacts } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
+import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
-import { cn } from "@/lib/utils";
+import { CONTACT_ROLES } from "@/lib/crmDefaults";
 
 // Helper pour obtenir le label d'industrie - formatage propre
 const getIndustryLabel = (industry: string | null) => {
@@ -49,33 +50,13 @@ const getIndustryLabel = (industry: string | null) => {
   return labels[industry] || industry.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
-// Rôles/fonctions prédéfinis pour les contacts
-const CONTACT_ROLES = [
-  { value: "directeur_general", label: "Directeur Général" },
-  { value: "directeur_technique", label: "Directeur Technique" },
-  { value: "directeur_commercial", label: "Directeur Commercial" },
-  { value: "chef_projet", label: "Chef de Projet" },
-  { value: "charge_affaires", label: "Chargé d'Affaires" },
-  { value: "responsable_travaux", label: "Responsable Travaux" },
-  { value: "conducteur_travaux", label: "Conducteur de Travaux" },
-  { value: "ingenieur", label: "Ingénieur" },
-  { value: "architecte", label: "Architecte" },
-  { value: "assistant", label: "Assistant(e)" },
-  { value: "comptable", label: "Comptable" },
-  { value: "acheteur", label: "Acheteur" },
-  { value: "responsable_achats", label: "Responsable Achats" },
-  { value: "gerant", label: "Gérant" },
-  { value: "president", label: "Président" },
-  { value: "associe", label: "Associé" },
-  { value: "autre", label: "Autre" },
-];
-
 const schema = z.object({
   name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
   email: z.string().email("Email invalide").optional().or(z.literal("")),
   phone: z.string().optional(),
   role: z.string().optional(),
   custom_role: z.string().optional(),
+  contact_type: z.string().optional(),
   crm_company_id: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
@@ -94,6 +75,7 @@ interface CreateContactDialogProps {
 export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogProps) {
   const { createContact } = useContacts();
   const { companies, createCompany } = useCRMCompanies();
+  const { contactTypes } = useCRMSettings();
   const [companySearch, setCompanySearch] = useState("");
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [isCreatingCompany, setIsCreatingCompany] = useState(false);
@@ -106,6 +88,7 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
       phone: "", 
       role: "",
       custom_role: "",
+      contact_type: "client",
       crm_company_id: "",
       address: "",
       city: "",
@@ -157,7 +140,7 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
         : CONTACT_ROLES.find(r => r.value === data.role)?.label || data.role;
 
     // Determine contact type
-    const contactType = data.is_individual ? "particulier" : "client";
+    const contactType = data.is_individual ? "particulier" : (data.contact_type || "client");
 
     // Build full location string from address parts
     const locationParts = [data.address, data.postal_code, data.city].filter(Boolean);
@@ -199,6 +182,9 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
                 form.setValue("is_individual", checked);
                 if (checked) {
                   form.setValue("crm_company_id", "");
+                  form.setValue("contact_type", "particulier");
+                } else {
+                  form.setValue("contact_type", "client");
                 }
               }}
             />
@@ -224,6 +210,32 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
               <Input {...form.register("phone")} placeholder="+33 1 23 45 67 89" />
             </div>
           </div>
+
+          {/* Type de contact - visible seulement si pas particulier */}
+          {!isIndividual && (
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select 
+                value={form.watch("contact_type")} 
+                onValueChange={(v) => form.setValue("contact_type", v)}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {contactTypes.filter(t => t.key !== "particulier").map((type) => (
+                    <SelectItem key={type.key} value={type.key}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: type.color }}
+                        />
+                        {type.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Fonction/Rôle - masqué pour les particuliers */}
           {!isIndividual && (
