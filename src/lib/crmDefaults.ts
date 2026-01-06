@@ -208,7 +208,7 @@ export interface DefaultContactPipeline {
 export const DEFAULT_CONTACT_PIPELINES: DefaultContactPipeline[] = [
   {
     key: "client_prospection",
-    name: "Prospection Clients",
+    name: "Clients",
     target_contact_type: "client",
     color: "#10B981",
     description: "Pipeline de prospection pour les clients potentiels",
@@ -223,39 +223,8 @@ export const DEFAULT_CONTACT_PIPELINES: DefaultContactPipeline[] = [
     ]
   },
   {
-    key: "bet_prospection",
-    name: "Prospection BET",
-    target_contact_type: "bet",
-    color: "#F97316",
-    description: "Pipeline de prospection pour les Bureaux d'Études Techniques",
-    stages: [
-      { name: "À contacter", color: "#6B7280", requires_email: false, probability: 0 },
-      { name: "Premier contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_bet", probability: 20 },
-      { name: "Relance 1", color: "#8B5CF6", requires_email: true, email_template_type: "contact_followup_1", probability: 30 },
-      { name: "Relance 2", color: "#EC4899", requires_email: true, email_template_type: "contact_followup_2", probability: 40 },
-      { name: "En discussion", color: "#F59E0B", requires_email: false, probability: 60 },
-      { name: "Partenariat établi", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
-      { name: "Non intéressé", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
-    ]
-  },
-  {
-    key: "partenaire_prospection",
-    name: "Prospection Partenaires MOE",
-    target_contact_type: "partenaire",
-    color: "#8B5CF6",
-    description: "Pipeline de prospection pour architectes, paysagistes, économistes...",
-    stages: [
-      { name: "Identifié", color: "#6B7280", requires_email: false, probability: 0 },
-      { name: "Contact initial", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_partner", probability: 20 },
-      { name: "Proposition collaboration", color: "#8B5CF6", requires_email: true, email_template_type: "contact_partnership_proposal", probability: 40 },
-      { name: "Négociation", color: "#F59E0B", requires_email: false, probability: 60 },
-      { name: "Partenaire actif", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
-      { name: "Décliné", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
-    ]
-  },
-  {
     key: "promoteur_prospection",
-    name: "Prospection Promoteurs",
+    name: "Promoteurs",
     target_contact_type: "promoteur",
     color: "#6366F1",
     description: "Pipeline de prospection pour les promoteurs immobiliers",
@@ -271,7 +240,7 @@ export const DEFAULT_CONTACT_PIPELINES: DefaultContactPipeline[] = [
   },
   {
     key: "amenageur_prospection",
-    name: "Prospection Aménageurs",
+    name: "Aménageurs",
     target_contact_type: "amenageur",
     color: "#0EA5E9",
     description: "Pipeline de prospection pour les aménageurs",
@@ -283,6 +252,37 @@ export const DEFAULT_CONTACT_PIPELINES: DefaultContactPipeline[] = [
       { name: "Négociation", color: "#EC4899", requires_email: false, probability: 70 },
       { name: "Partenaire", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
       { name: "Non retenu", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
+    ]
+  },
+  {
+    key: "bet_prospection",
+    name: "BET",
+    target_contact_type: "bet",
+    color: "#F97316",
+    description: "Pipeline de prospection pour les Bureaux d'Études Techniques",
+    stages: [
+      { name: "À contacter", color: "#6B7280", requires_email: false, probability: 0 },
+      { name: "Premier contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_bet", probability: 20 },
+      { name: "Relance 1", color: "#8B5CF6", requires_email: true, email_template_type: "contact_followup_1", probability: 30 },
+      { name: "Relance 2", color: "#EC4899", requires_email: true, email_template_type: "contact_followup_2", probability: 40 },
+      { name: "En discussion", color: "#F59E0B", requires_email: false, probability: 60 },
+      { name: "Partenariat établi", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
+      { name: "Non intéressé", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
+    ]
+  },
+  {
+    key: "partenaire_prospection",
+    name: "Partenaires MOE",
+    target_contact_type: "partenaire",
+    color: "#8B5CF6",
+    description: "Pipeline de prospection pour architectes, paysagistes, économistes...",
+    stages: [
+      { name: "Identifié", color: "#6B7280", requires_email: false, probability: 0 },
+      { name: "Contact initial", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_partner", probability: 20 },
+      { name: "Proposition collaboration", color: "#8B5CF6", requires_email: true, email_template_type: "contact_partnership_proposal", probability: 40 },
+      { name: "Négociation", color: "#F59E0B", requires_email: false, probability: 60 },
+      { name: "Partenaire actif", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
+      { name: "Décliné", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
     ]
   },
 ];
