@@ -281,12 +281,10 @@ export default function CRM() {
                     </div>
                   </header>
 
-                  <div className="rounded-lg border border-border bg-card overflow-hidden">
-                    <ContactPipeline
-                      pipeline={pipeline}
-                      kanbanHeightClass="h-[480px]"
-                    />
-                  </div>
+                  <ContactPipeline
+                    pipeline={pipeline}
+                    kanbanHeightClass="h-[480px]"
+                  />
                 </section>
               ))}
             </div>
@@ -295,12 +293,10 @@ export default function CRM() {
 
         if (selectedContactPipeline) {
           return (
-            <div className="rounded-lg border border-border bg-card overflow-hidden">
-              <ContactPipeline
-                pipeline={selectedContactPipeline}
-                kanbanHeightClass="h-[calc(100vh-340px)]"
-              />
-            </div>
+            <ContactPipeline
+              pipeline={selectedContactPipeline}
+              kanbanHeightClass="h-[calc(100vh-340px)]"
+            />
           );
         }
 

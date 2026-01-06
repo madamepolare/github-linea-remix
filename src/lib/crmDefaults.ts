@@ -207,6 +207,22 @@ export interface DefaultContactPipeline {
 
 export const DEFAULT_CONTACT_PIPELINES: DefaultContactPipeline[] = [
   {
+    key: "client_prospection",
+    name: "Prospection Clients",
+    target_contact_type: "client",
+    color: "#10B981",
+    description: "Pipeline de prospection pour les clients potentiels",
+    stages: [
+      { name: "Identifié", color: "#6B7280", requires_email: false, probability: 0 },
+      { name: "Premier contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_client", probability: 20 },
+      { name: "Qualification", color: "#8B5CF6", requires_email: false, probability: 40 },
+      { name: "Présentation", color: "#F59E0B", requires_email: false, probability: 60 },
+      { name: "Proposition", color: "#EC4899", requires_email: false, probability: 75 },
+      { name: "Client actif", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
+      { name: "Perdu", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
+    ]
+  },
+  {
     key: "bet_prospection",
     name: "Prospection BET",
     target_contact_type: "bet",
@@ -220,21 +236,6 @@ export const DEFAULT_CONTACT_PIPELINES: DefaultContactPipeline[] = [
       { name: "En discussion", color: "#F59E0B", requires_email: false, probability: 60 },
       { name: "Partenariat établi", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
       { name: "Non intéressé", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
-    ]
-  },
-  {
-    key: "societe_prospection",
-    name: "Prospection Sociétés",
-    target_contact_type: "societe",
-    color: "#EF4444",
-    description: "Pipeline de prospection pour les sociétés de construction",
-    stages: [
-      { name: "À contacter", color: "#6B7280", requires_email: false, probability: 0 },
-      { name: "Premier contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_societe", probability: 20 },
-      { name: "Relance 1", color: "#8B5CF6", requires_email: true, email_template_type: "contact_followup_1", probability: 30 },
-      { name: "Qualification", color: "#F59E0B", requires_email: false, probability: 50 },
-      { name: "Référencé", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
-      { name: "Non retenu", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
     ]
   },
   {
@@ -253,17 +254,34 @@ export const DEFAULT_CONTACT_PIPELINES: DefaultContactPipeline[] = [
     ]
   },
   {
-    key: "fournisseur_prospection",
-    name: "Prospection Fournisseurs",
-    target_contact_type: "fournisseur",
-    color: "#3B82F6",
-    description: "Pipeline de prospection pour les fournisseurs et fabricants",
+    key: "promoteur_prospection",
+    name: "Prospection Promoteurs",
+    target_contact_type: "promoteur",
+    color: "#6366F1",
+    description: "Pipeline de prospection pour les promoteurs immobiliers",
     stages: [
-      { name: "À qualifier", color: "#6B7280", requires_email: false, probability: 0 },
-      { name: "Demande d'info", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_supplier", probability: 20 },
-      { name: "Comparaison", color: "#8B5CF6", requires_email: false, probability: 40 },
-      { name: "Négociation tarifs", color: "#F59E0B", requires_email: false, probability: 60 },
-      { name: "Fournisseur validé", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
+      { name: "Cible identifiée", color: "#6B7280", requires_email: false, probability: 0 },
+      { name: "Prise de contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_promoteur", probability: 15 },
+      { name: "RDV planifié", color: "#8B5CF6", requires_email: false, probability: 30 },
+      { name: "Présentation agence", color: "#F59E0B", requires_email: false, probability: 50 },
+      { name: "En veille projet", color: "#EC4899", requires_email: false, probability: 60 },
+      { name: "Collaboration active", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
+      { name: "Non retenu", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
+    ]
+  },
+  {
+    key: "amenageur_prospection",
+    name: "Prospection Aménageurs",
+    target_contact_type: "amenageur",
+    color: "#0EA5E9",
+    description: "Pipeline de prospection pour les aménageurs",
+    stages: [
+      { name: "Identifié", color: "#6B7280", requires_email: false, probability: 0 },
+      { name: "Premier contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_amenageur", probability: 20 },
+      { name: "Qualification projet", color: "#8B5CF6", requires_email: false, probability: 35 },
+      { name: "Présentation", color: "#F59E0B", requires_email: false, probability: 50 },
+      { name: "Négociation", color: "#EC4899", requires_email: false, probability: 70 },
+      { name: "Partenaire", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
       { name: "Non retenu", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
     ]
   },
