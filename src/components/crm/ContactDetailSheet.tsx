@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Phone, Building2, MapPin, User, FileText, Edit, ExternalLink } from "lucide-react";
 import { Contact } from "@/hooks/useContacts";
+import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { cn } from "@/lib/utils";
 
 interface ContactDetailSheetProps {
@@ -13,34 +14,9 @@ interface ContactDetailSheetProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Helper pour obtenir le label du type de contact
-const getContactTypeLabel = (type: string | null) => {
-  const labels: Record<string, string> = {
-    "client": "Client",
-    "prospect": "Prospect",
-    "fournisseur": "Fournisseur",
-    "partenaire": "Partenaire",
-    "particulier": "Particulier",
-    "prescripteur": "Prescripteur",
-    "sous_traitant": "Sous-traitant",
-  };
-  return type ? labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : null;
-};
-
-const getContactTypeColor = (type: string | null) => {
-  const colors: Record<string, string> = {
-    "client": "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-    "prospect": "bg-blue-500/10 text-blue-600 border-blue-500/20",
-    "fournisseur": "bg-amber-500/10 text-amber-600 border-amber-500/20",
-    "partenaire": "bg-purple-500/10 text-purple-600 border-purple-500/20",
-    "particulier": "bg-slate-500/10 text-slate-600 border-slate-500/20",
-    "prescripteur": "bg-pink-500/10 text-pink-600 border-pink-500/20",
-    "sous_traitant": "bg-orange-500/10 text-orange-600 border-orange-500/20",
-  };
-  return type ? colors[type] || "bg-muted text-muted-foreground" : "bg-muted text-muted-foreground";
-};
-
 export function ContactDetailSheet({ contact, open, onOpenChange }: ContactDetailSheetProps) {
+  const { getContactTypeLabel, getContactTypeColor } = useCRMSettings();
+  
   if (!contact) return null;
 
   const initials = contact.name
@@ -76,7 +52,12 @@ export function ContactDetailSheet({ contact, open, onOpenChange }: ContactDetai
             {contact.contact_type && (
               <Badge 
                 variant="outline" 
-                className={cn("font-medium", getContactTypeColor(contact.contact_type))}
+                className="font-medium border"
+                style={{ 
+                  backgroundColor: `${getContactTypeColor(contact.contact_type)}20`,
+                  borderColor: `${getContactTypeColor(contact.contact_type)}40`,
+                  color: getContactTypeColor(contact.contact_type)
+                }}
               >
                 {getContactTypeLabel(contact.contact_type)}
               </Badge>

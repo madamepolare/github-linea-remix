@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, X, ChevronDown } from "lucide-react";
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
-import { COMPANY_CATEGORIES, COMPANY_TYPE_CONFIG, CompanyCategory, CompanyType, BET_SPECIALTIES } from "@/lib/crmTypes";
+import { useCRMSettings } from "@/hooks/useCRMSettings";
+import { COMPANY_CATEGORIES, COMPANY_TYPE_CONFIG, CompanyCategory, CompanyType } from "@/lib/crmTypes";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -67,6 +68,7 @@ function getCategoryFromIndustry(industry: string | null): CompanyCategory | "" 
 
 export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDialogProps) {
   const { updateCompany } = useCRMCompanies();
+  const { betSpecialties } = useCRMSettings();
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<CompanyCategory | "">("");
   const [sameAsBilling, setSameAsBilling] = useState(false);
@@ -257,13 +259,14 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
                       {selectedSpecialties.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {selectedSpecialties.map((spec) => {
-                            const specialty = BET_SPECIALTIES.find((s) => s.value === spec);
+                            const specialty = betSpecialties.find((s) => s.key === spec);
                             return (
                               <Badge
                                 key={spec}
-                                className={cn("text-white text-xs gap-1", specialty?.color)}
+                                className="text-white text-xs gap-1"
+                                style={{ backgroundColor: specialty?.color }}
                               >
-                                {specialty?.label}
+                                {specialty?.label || spec}
                                 <X
                                   className="h-3 w-3 cursor-pointer"
                                   onClick={(e) => {
@@ -282,13 +285,16 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                    {BET_SPECIALTIES.map((spec) => (
+                    {betSpecialties.map((spec) => (
                       <DropdownMenuCheckboxItem
-                        key={spec.value}
-                        checked={selectedSpecialties.includes(spec.value)}
-                        onCheckedChange={() => toggleSpecialty(spec.value)}
+                        key={spec.key}
+                        checked={selectedSpecialties.includes(spec.key)}
+                        onCheckedChange={() => toggleSpecialty(spec.key)}
                       >
-                        <Badge className={cn("text-white text-xs mr-2", spec.color)}>
+                        <Badge 
+                          className="text-white text-xs mr-2"
+                          style={{ backgroundColor: spec.color }}
+                        >
                           {spec.label}
                         </Badge>
                       </DropdownMenuCheckboxItem>
