@@ -503,6 +503,161 @@ export type Database = {
           },
         ]
       }
+      contact_pipeline_emails: {
+        Row: {
+          body_html: string
+          clicked_at: string | null
+          created_at: string | null
+          entry_id: string
+          id: string
+          opened_at: string | null
+          sent_at: string | null
+          stage_id: string
+          status: string | null
+          subject: string
+          template_id: string | null
+          to_email: string
+          workspace_id: string
+        }
+        Insert: {
+          body_html: string
+          clicked_at?: string | null
+          created_at?: string | null
+          entry_id: string
+          id?: string
+          opened_at?: string | null
+          sent_at?: string | null
+          stage_id: string
+          status?: string | null
+          subject: string
+          template_id?: string | null
+          to_email: string
+          workspace_id: string
+        }
+        Update: {
+          body_html?: string
+          clicked_at?: string | null
+          created_at?: string | null
+          entry_id?: string
+          id?: string
+          opened_at?: string | null
+          sent_at?: string | null
+          stage_id?: string
+          status?: string | null
+          subject?: string
+          template_id?: string | null
+          to_email?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_pipeline_emails_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "contact_pipeline_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_pipeline_emails_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_pipeline_emails_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_pipeline_emails_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_pipeline_entries: {
+        Row: {
+          company_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          entered_at: string | null
+          id: string
+          last_email_sent_at: string | null
+          notes: string | null
+          pipeline_id: string
+          stage_id: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          entered_at?: string | null
+          id?: string
+          last_email_sent_at?: string | null
+          notes?: string | null
+          pipeline_id: string
+          stage_id: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          entered_at?: string | null
+          id?: string
+          last_email_sent_at?: string | null
+          notes?: string | null
+          pipeline_id?: string
+          stage_id?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_pipeline_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_pipeline_entries_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_pipeline_entries_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_pipeline_entries_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_pipeline_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           avatar_url: string | null
@@ -745,31 +900,47 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string | null
+          email_template_id: string | null
           id: string
+          is_final_stage: boolean | null
           name: string
           pipeline_id: string
           probability: number | null
+          requires_email_on_enter: boolean | null
           sort_order: number | null
         }
         Insert: {
           color?: string | null
           created_at?: string | null
+          email_template_id?: string | null
           id?: string
+          is_final_stage?: boolean | null
           name: string
           pipeline_id: string
           probability?: number | null
+          requires_email_on_enter?: boolean | null
           sort_order?: number | null
         }
         Update: {
           color?: string | null
           created_at?: string | null
+          email_template_id?: string | null
           id?: string
+          is_final_stage?: boolean | null
           name?: string
           pipeline_id?: string
           probability?: number | null
+          requires_email_on_enter?: boolean | null
           sort_order?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_pipeline_stages_email_template_id_fkey"
+            columns: ["email_template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_pipeline_stages_pipeline_id_fkey"
             columns: ["pipeline_id"]
@@ -787,7 +958,9 @@ export type Database = {
           id: string
           is_default: boolean | null
           name: string
+          pipeline_type: string | null
           sort_order: number | null
+          target_contact_type: string | null
           updated_at: string | null
           workspace_id: string
         }
@@ -798,7 +971,9 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           name: string
+          pipeline_type?: string | null
           sort_order?: number | null
+          target_contact_type?: string | null
           updated_at?: string | null
           workspace_id: string
         }
@@ -809,7 +984,9 @@ export type Database = {
           id?: string
           is_default?: boolean | null
           name?: string
+          pipeline_type?: string | null
           sort_order?: number | null
+          target_contact_type?: string | null
           updated_at?: string | null
           workspace_id?: string
         }

@@ -189,3 +189,203 @@ export const DEFAULT_COMPANY_TYPES = [
   // Autre
   { key: "autre", label: "Autre", shortLabel: "Autre", category: "autre", color: "#6B7280" },
 ];
+
+// ============================================================
+// Pipelines Contacts par défaut (pour prospection/campagnes email)
+// ============================================================
+
+export interface DefaultContactPipelineStage {
+  name: string;
+  color: string;
+  requires_email: boolean;
+  email_template_type?: string;
+  is_final?: boolean;
+  probability?: number;
+}
+
+export interface DefaultContactPipeline {
+  key: string;
+  name: string;
+  target_contact_type: string;
+  color: string;
+  description: string;
+  stages: DefaultContactPipelineStage[];
+}
+
+export const DEFAULT_CONTACT_PIPELINES: DefaultContactPipeline[] = [
+  {
+    key: "bet_prospection",
+    name: "Prospection BET",
+    target_contact_type: "bet",
+    color: "#F97316",
+    description: "Pipeline de prospection pour les Bureaux d'Études Techniques",
+    stages: [
+      { name: "À contacter", color: "#6B7280", requires_email: false, probability: 0 },
+      { name: "Premier contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_bet", probability: 20 },
+      { name: "Relance 1", color: "#8B5CF6", requires_email: true, email_template_type: "contact_followup_1", probability: 30 },
+      { name: "Relance 2", color: "#EC4899", requires_email: true, email_template_type: "contact_followup_2", probability: 40 },
+      { name: "En discussion", color: "#F59E0B", requires_email: false, probability: 60 },
+      { name: "Partenariat établi", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
+      { name: "Non intéressé", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
+    ]
+  },
+  {
+    key: "entreprise_prospection",
+    name: "Prospection Entreprises",
+    target_contact_type: "entreprise",
+    color: "#EF4444",
+    description: "Pipeline de prospection pour les entreprises de construction",
+    stages: [
+      { name: "À contacter", color: "#6B7280", requires_email: false, probability: 0 },
+      { name: "Premier contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_entreprise", probability: 20 },
+      { name: "Relance 1", color: "#8B5CF6", requires_email: true, email_template_type: "contact_followup_1", probability: 30 },
+      { name: "Qualification", color: "#F59E0B", requires_email: false, probability: 50 },
+      { name: "Référencé", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
+      { name: "Non retenu", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
+    ]
+  },
+  {
+    key: "partenaire_prospection",
+    name: "Prospection Partenaires MOE",
+    target_contact_type: "partenaire",
+    color: "#8B5CF6",
+    description: "Pipeline de prospection pour architectes, paysagistes, économistes...",
+    stages: [
+      { name: "Identifié", color: "#6B7280", requires_email: false, probability: 0 },
+      { name: "Contact initial", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_partner", probability: 20 },
+      { name: "Proposition collaboration", color: "#8B5CF6", requires_email: true, email_template_type: "contact_partnership_proposal", probability: 40 },
+      { name: "Négociation", color: "#F59E0B", requires_email: false, probability: 60 },
+      { name: "Partenaire actif", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
+      { name: "Décliné", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
+    ]
+  },
+  {
+    key: "fournisseur_prospection",
+    name: "Prospection Fournisseurs",
+    target_contact_type: "fournisseur",
+    color: "#3B82F6",
+    description: "Pipeline de prospection pour les fournisseurs et fabricants",
+    stages: [
+      { name: "À qualifier", color: "#6B7280", requires_email: false, probability: 0 },
+      { name: "Demande d'info", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_supplier", probability: 20 },
+      { name: "Comparaison", color: "#8B5CF6", requires_email: false, probability: 40 },
+      { name: "Négociation tarifs", color: "#F59E0B", requires_email: false, probability: 60 },
+      { name: "Fournisseur validé", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
+      { name: "Non retenu", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
+    ]
+  },
+];
+
+// Templates email par défaut pour les pipelines contacts
+export const DEFAULT_CONTACT_PIPELINE_EMAIL_TEMPLATES = [
+  {
+    template_type: "contact_first_bet",
+    name: "Premier contact BET",
+    subject: "Collaboration potentielle - {{agency_name}}",
+    body_html: `<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <p>Bonjour {{contact_name}},</p>
+  <p>Je me permets de vous contacter au nom de <strong>{{agency_name}}</strong>, agence d'architecture basée à {{agency_city}}.</p>
+  <p>Nous recherchons des partenaires BET {{specialty}} pour nos projets et votre expertise a retenu notre attention.</p>
+  <p>Seriez-vous disponible pour un échange téléphonique afin de discuter d'une éventuelle collaboration ?</p>
+  <p>Cordialement,<br/>{{sender_name}}<br/>{{agency_name}}</p>
+</body>
+</html>`,
+    variables: ["contact_name", "agency_name", "agency_city", "specialty", "sender_name"],
+  },
+  {
+    template_type: "contact_first_entreprise",
+    name: "Premier contact Entreprise",
+    subject: "Partenariat travaux - {{agency_name}}",
+    body_html: `<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <p>Bonjour {{contact_name}},</p>
+  <p>L'agence <strong>{{agency_name}}</strong> développe son réseau d'entreprises partenaires.</p>
+  <p>Nous intervenons principalement sur des projets de {{project_types}} et cherchons des entreprises fiables pour nos chantiers.</p>
+  <p>Pourriez-vous nous transmettre votre plaquette et références ?</p>
+  <p>Cordialement,<br/>{{sender_name}}</p>
+</body>
+</html>`,
+    variables: ["contact_name", "agency_name", "project_types", "sender_name"],
+  },
+  {
+    template_type: "contact_first_partner",
+    name: "Premier contact Partenaire MOE",
+    subject: "Proposition de collaboration - {{agency_name}}",
+    body_html: `<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <p>Bonjour {{contact_name}},</p>
+  <p>Nous avons découvert votre travail et souhaitons vous proposer une collaboration sur nos futurs projets.</p>
+  <p><strong>{{agency_name}}</strong> intervient sur des projets variés où votre expertise serait précieuse.</p>
+  <p>Seriez-vous intéressé par un échange pour en discuter ?</p>
+  <p>Cordialement,<br/>{{sender_name}}</p>
+</body>
+</html>`,
+    variables: ["contact_name", "agency_name", "sender_name"],
+  },
+  {
+    template_type: "contact_first_supplier",
+    name: "Premier contact Fournisseur",
+    subject: "Demande d'information produits - {{agency_name}}",
+    body_html: `<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <p>Bonjour {{contact_name}},</p>
+  <p>L'agence <strong>{{agency_name}}</strong> souhaite référencer de nouveaux fournisseurs.</p>
+  <p>Pourriez-vous nous transmettre votre catalogue et conditions tarifaires ?</p>
+  <p>Cordialement,<br/>{{sender_name}}</p>
+</body>
+</html>`,
+    variables: ["contact_name", "agency_name", "sender_name"],
+  },
+  {
+    template_type: "contact_followup_1",
+    name: "Relance 1 - Générique",
+    subject: "Relance - {{agency_name}}",
+    body_html: `<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <p>Bonjour {{contact_name}},</p>
+  <p>Je me permets de revenir vers vous suite à mon précédent message.</p>
+  <p>Avez-vous eu l'occasion de considérer ma proposition ?</p>
+  <p>Je reste disponible pour en discuter.</p>
+  <p>Cordialement,<br/>{{sender_name}}<br/>{{agency_name}}</p>
+</body>
+</html>`,
+    variables: ["contact_name", "agency_name", "sender_name"],
+  },
+  {
+    template_type: "contact_followup_2",
+    name: "Relance 2 - Générique",
+    subject: "Dernier suivi - {{agency_name}}",
+    body_html: `<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <p>Bonjour {{contact_name}},</p>
+  <p>Je vous contacte une dernière fois concernant notre éventuelle collaboration.</p>
+  <p>Si vous n'êtes pas intéressé, je le comprends parfaitement. N'hésitez pas à me contacter si votre situation évolue.</p>
+  <p>Cordialement,<br/>{{sender_name}}<br/>{{agency_name}}</p>
+</body>
+</html>`,
+    variables: ["contact_name", "agency_name", "sender_name"],
+  },
+  {
+    template_type: "contact_partnership_proposal",
+    name: "Proposition de partenariat",
+    subject: "Proposition de partenariat - {{agency_name}}",
+    body_html: `<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <p>Bonjour {{contact_name}},</p>
+  <p>Suite à nos échanges, je vous propose de formaliser notre collaboration.</p>
+  <p>Nous pourrions travailler ensemble sur nos prochains projets {{project_types}}.</p>
+  <p>Seriez-vous disponible pour une rencontre afin de définir les modalités ?</p>
+  <p>Cordialement,<br/>{{sender_name}}<br/>{{agency_name}}</p>
+</body>
+</html>`,
+    variables: ["contact_name", "agency_name", "project_types", "sender_name"],
+  },
+];

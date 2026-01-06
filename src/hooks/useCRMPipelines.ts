@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
+export type PipelineType = "opportunity" | "contact";
+
 export interface PipelineStage {
   id: string;
   pipeline_id: string;
@@ -11,6 +13,10 @@ export interface PipelineStage {
   probability: number | null;
   sort_order: number | null;
   created_at: string | null;
+  // New fields for contact pipelines
+  email_template_id: string | null;
+  requires_email_on_enter: boolean | null;
+  is_final_stage: boolean | null;
 }
 
 export interface Pipeline {
@@ -23,6 +29,9 @@ export interface Pipeline {
   sort_order: number | null;
   created_at: string | null;
   updated_at: string | null;
+  // New fields
+  pipeline_type: PipelineType | null;
+  target_contact_type: string | null;
   stages?: PipelineStage[];
 }
 
