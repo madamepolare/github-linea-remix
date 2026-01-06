@@ -28,11 +28,12 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-interface ContactPipelineProps {
+export interface ContactPipelineProps {
   pipeline: Pipeline;
+  kanbanHeightClass?: string;
 }
 
-export function ContactPipeline({ pipeline }: ContactPipelineProps) {
+export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: ContactPipelineProps) {
   const { entries, isLoading, moveEntry, removeEntry } = useContactPipeline(pipeline.id);
   const [selectedEntry, setSelectedEntry] = useState<PipelineEntry | null>(null);
   const [targetStage, setTargetStage] = useState<PipelineStage | null>(null);
@@ -123,7 +124,7 @@ export function ContactPipeline({ pipeline }: ContactPipelineProps) {
 
       {/* Kanban Board */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className={`flex gap-4 overflow-x-auto pb-4 ${kanbanHeightClass}`}>
           {pipeline.stages.map((stage) => (
             <div key={stage.id} className="flex-shrink-0 w-72">
               {/* Stage Header */}
