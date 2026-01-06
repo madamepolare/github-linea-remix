@@ -8,8 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AIPhaseSuggestion } from './AIPhaseSuggestion';
-import { useQuoteTemplates } from '@/hooks/useQuoteTemplates';
-import { usePhaseTemplates, PhaseTemplate as DBPhaseTemplate } from '@/hooks/usePhaseTemplates';
+import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
 import { toast } from 'sonner';
 import {
   CommercialDocument,
@@ -42,7 +41,6 @@ export function PhaseSelector({
 }: PhaseSelectorProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const { templates: savedTemplates, isLoadingTemplates } = useQuoteTemplates(projectType);
   const { templates: phaseTemplates } = usePhaseTemplates(projectType);
 
   // Use totalAmount if available (forfait mode), otherwise calculate from percentage
@@ -54,24 +52,6 @@ export function PhaseSelector({
   const basePhaseTemplates = phaseTemplates.filter(t => t.is_active && t.category === 'base');
   const complementaryPhaseTemplates = phaseTemplates.filter(t => t.is_active && t.category === 'complementary');
 
-  const loadTemplatePhases = (template: { phases: Array<{ code: string; name: string; description?: string; defaultPercentage: number; deliverables: string[] }> }) => {
-    const newPhases: CommercialDocumentPhase[] = template.phases.map((phase, index) => ({
-      id: crypto.randomUUID(),
-      document_id: documentId || '',
-      phase_code: phase.code,
-      phase_name: phase.name,
-      phase_description: phase.description || '',
-      percentage_fee: phase.defaultPercentage,
-      amount: baseFee * phase.defaultPercentage / 100,
-      is_included: true,
-      deliverables: phase.deliverables,
-      sort_order: index,
-      created_at: null,
-      updated_at: null,
-    }));
-    onPhasesChange(newPhases);
-    toast.success('Template chargé');
-  };
 
   const loadBasePhasesBundle = () => {
     const newPhases: CommercialDocumentPhase[] = basePhaseTemplates.map((phase, index) => ({
@@ -230,18 +210,6 @@ export function PhaseSelector({
                         <Badge variant="secondary" className="ml-auto text-xs">{basePhaseTemplates.length} phases</Badge>
                       </div>
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                
-                {savedTemplates && savedTemplates.length > 0 && (
-                  <>
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Mes templates</div>
-                    {savedTemplates.map((template) => (
-                      <DropdownMenuItem key={template.id} onClick={() => loadTemplatePhases(template)}>
-                        {template.name}
-                      </DropdownMenuItem>
-                    ))}
                     <DropdownMenuSeparator />
                   </>
                 )}
