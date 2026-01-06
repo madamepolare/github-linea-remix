@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.analyze-dce-before-creation]
 verify_jwt = false
+
+[functions.generate-pipeline-stages]
+verify_jwt = false
