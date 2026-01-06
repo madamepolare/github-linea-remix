@@ -74,13 +74,30 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Validate RESEND_API_KEY at the start
+    if (!RESEND_API_KEY) {
+      console.error("RESEND_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Email service not configured. Please add RESEND_API_KEY to secrets." 
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     const { email, workspaceId, workspaceName, role, inviteToken, inviterName }: InviteRequest = await req.json();
 
-    console.log(`Sending invite email to ${email} for workspace ${workspaceName}`);
+    console.log(`[send-invite] Starting invite for ${email} to workspace "${workspaceName}"`);
+    console.log(`[send-invite] Role: ${role}, Inviter: ${inviterName}`);
 
     // Get the app URL from the request origin or use a default
     const origin = req.headers.get("origin") || "https://archimind.app";
     const inviteUrl = `${origin}/invite?token=${inviteToken}`;
+    console.log(`[send-invite] Invite URL: ${inviteUrl}`);
 
     // Variables for template
     const variables = {
@@ -108,20 +125,24 @@ serve(async (req: Request): Promise<Response> => {
           .single();
 
         if (template) {
-          console.log("Using custom email template");
+          console.log("[send-invite] Using custom email template");
           subject = template.subject;
           bodyHtml = template.body_html;
         } else {
-          console.log("No custom template found, using default");
+          console.log("[send-invite] No custom template found, using default");
         }
       } catch (dbError) {
-        console.log("Error fetching template, using default:", dbError);
+        console.log("[send-invite] Error fetching template, using default:", dbError);
       }
     }
 
     // Replace variables in template
     const finalSubject = replaceVariables(subject, variables);
     const finalHtml = replaceVariables(bodyHtml, variables);
+
+    // Use validated domain or fallback to resend dev domain
+    const fromEmail = "ARCHIMIND <onboarding@resend.dev>";
+    console.log(`[send-invite] Sending email from: ${fromEmail}`);
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -130,39 +151,37 @@ serve(async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "ARCHIMIND <noreply@domini.archi>",
+        from: fromEmail,
         to: [email],
         subject: finalSubject,
         html: finalHtml,
       }),
     });
 
-     if (!res.ok) {
-       const errorData = await res.json().catch(() => ({} as any));
-       console.error("Resend API error:", errorData);
-       return new Response(
-         JSON.stringify({
-           success: false,
-           error:
-             errorData?.message ||
-             `Failed to send email (status ${res.status})`,
-         }),
-         {
-           status: res.status,
-           headers: { "Content-Type": "application/json", ...corsHeaders },
-         }
-       );
-     }
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({} as any));
+      console.error("[send-invite] Resend API error:", JSON.stringify(errorData));
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: errorData?.message || `Failed to send email (status ${res.status})`,
+        }),
+        {
+          status: res.status,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
 
     const data = await res.json();
-    console.log("Email sent successfully:", data);
+    console.log("[send-invite] Email sent successfully:", JSON.stringify(data));
 
     return new Response(JSON.stringify({ success: true, data }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
-    console.error("Error in send-invite function:", error);
+    console.error("[send-invite] Unexpected error:", error.message, error.stack);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       {

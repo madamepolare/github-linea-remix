@@ -187,6 +187,8 @@ export function MembersSettings() {
     if (!activeWorkspace || !user || !profile) return;
     setIsInviting(true);
 
+    console.log("[MembersSettings] Starting invitation process for:", data.email);
+
     try {
       // Create invite in database
       const { data: invite, error: inviteError } = await supabase
@@ -201,11 +203,12 @@ export function MembersSettings() {
         .single();
 
       if (inviteError) {
+        console.error("[MembersSettings] Invite creation error:", inviteError);
         if (inviteError.message.includes("duplicate")) {
           toast({
             variant: "destructive",
-            title: "Already invited",
-            description: "This email has already been invited to the workspace.",
+            title: "Déjà invité",
+            description: "Cet email a déjà reçu une invitation pour ce workspace.",
           });
         } else {
           throw inviteError;
@@ -213,24 +216,32 @@ export function MembersSettings() {
         return;
       }
 
+      console.log("[MembersSettings] Invite created successfully, token:", invite.token);
+
       // Send invite email
-      const { error: emailError } = await supabase.functions.invoke("send-invite", {
+      console.log("[MembersSettings] Calling send-invite edge function...");
+      const { data: emailResponse, error: emailError } = await supabase.functions.invoke("send-invite", {
         body: {
           email: data.email,
           workspaceId: activeWorkspace.id,
           workspaceName: activeWorkspace.name,
           role: data.role,
           inviteToken: invite.token,
-          inviterName: profile.full_name || "A team member",
+          inviterName: profile.full_name || "Un membre de l'équipe",
         },
       });
 
-      if (emailError) {
-        console.error("Email send error:", emailError);
+      console.log("[MembersSettings] Edge function response:", emailResponse, emailError);
+
+      if (emailError || (emailResponse && !emailResponse.success)) {
+        const errorMessage = emailError?.message || emailResponse?.error || "Erreur inconnue";
+        console.error("[MembersSettings] Email send error:", errorMessage);
+        
+        // Copy invite link as fallback
         await copyInviteLink(invite.token);
         toast({
           title: "Invitation créée",
-          description: "Email non envoyé — lien d'invitation copié pour partage manuel.",
+          description: "L'email n'a pas pu être envoyé. Le lien d'invitation a été copié dans votre presse-papiers.",
         });
       } else {
         toast({
@@ -243,9 +254,10 @@ export function MembersSettings() {
       setDialogOpen(false);
       fetchInvites();
     } catch (error: any) {
+      console.error("[MembersSettings] Unexpected error:", error);
       toast({
         variant: "destructive",
-        title: "Error sending invite",
+        title: "Erreur lors de l'invitation",
         description: error.message,
       });
     } finally {
