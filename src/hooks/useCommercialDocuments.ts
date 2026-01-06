@@ -494,6 +494,78 @@ export const useCommercialDocuments = () => {
     }
   });
 
+  // Duplicate document
+  const duplicateDocument = useMutation({
+    mutationFn: async (documentId: string) => {
+      if (!activeWorkspace?.id) throw new Error('No workspace');
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user');
+
+      // Get original document
+      const { data: originalDoc, error: docError } = await supabase
+        .from('commercial_documents')
+        .select('*')
+        .eq('id', documentId)
+        .single();
+
+      if (docError) throw docError;
+
+      // Get original phases
+      const { data: originalPhases, error: phasesError } = await supabase
+        .from('commercial_document_phases')
+        .select('*')
+        .eq('document_id', documentId)
+        .order('sort_order');
+
+      if (phasesError) throw phasesError;
+
+      // Create new document (copy without id, dates, status)
+      const { id, document_number, created_at, updated_at, sent_at, accepted_at, signed_at, project_id, status, ...docData } = originalDoc;
+      
+      const { data: newDoc, error: createError } = await supabase
+        .from('commercial_documents')
+        .insert({
+          ...docData,
+          title: `${docData.title} (copie)`,
+          workspace_id: activeWorkspace.id,
+          created_by: user.id,
+          document_number: '', // Auto-generated
+          status: 'draft'
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+
+      // Duplicate phases
+      if (originalPhases && originalPhases.length > 0) {
+        const newPhases = originalPhases.map(({ id, document_id, created_at, updated_at, ...phaseData }) => ({
+          ...phaseData,
+          document_id: newDoc.id
+        }));
+
+        const { error: phasesCreateError } = await supabase
+          .from('commercial_document_phases')
+          .insert(newPhases);
+
+        if (phasesCreateError) {
+          console.error('Error duplicating phases:', phasesCreateError);
+        }
+      }
+
+      return newDoc;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['commercial-documents'] });
+      toast.success('Document dupliqué');
+    },
+    onError: (error) => {
+      toast.error('Erreur lors de la duplication');
+      console.error(error);
+    }
+  });
+
   return {
     documents: documentsQuery.data || [],
     isLoading: documentsQuery.isLoading,
@@ -509,6 +581,7 @@ export const useCommercialDocuments = () => {
     updatePhasesOrder,
     createItem,
     deleteItem,
-    acceptAndCreateProject
+    acceptAndCreateProject,
+    duplicateDocument
   };
 };

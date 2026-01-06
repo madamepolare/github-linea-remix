@@ -76,24 +76,44 @@ export function CommercialDocumentBuilder({
     }));
   };
 
-  // Convert quote items back to phases
+  // Convert quote items back to phases (with calculated amounts)
   const itemsToPhases = (items: QuoteLineItem[]): CommercialDocumentPhase[] => {
-    return items
-      .filter(item => item.type === 'phase')
-      .map((item, index) => ({
+    const phaseItems = items.filter(item => item.type === 'phase');
+    const includedPhases = phaseItems.filter(p => !p.isOptional);
+    const totalPercentage = includedPhases.reduce((sum, i) => sum + (i.percentageFee || 0), 0);
+    
+    // Calculate base amount for phases
+    const constructionBudget = document.construction_budget || 0;
+    const feePercentage = document.fee_percentage || 0;
+    const feeMode = document.fee_mode || 'fixed';
+    
+    let phaseBaseAmount = document.total_amount || 0;
+    if (feeMode === 'percentage' && constructionBudget > 0 && feePercentage > 0) {
+      phaseBaseAmount = constructionBudget * (feePercentage / 100);
+    }
+
+    return phaseItems.map((item, index) => {
+      // Calculate amount from percentage
+      let calculatedAmount = item.amount;
+      if (item.percentageFee && totalPercentage > 0 && phaseBaseAmount > 0 && !item.isOptional) {
+        calculatedAmount = (item.percentageFee / totalPercentage) * phaseBaseAmount;
+      }
+      
+      return {
         id: item.id,
         document_id: documentId || '',
         phase_code: item.code || '',
         phase_name: item.designation,
         phase_description: item.description,
         percentage_fee: item.percentageFee || 15,
-        amount: item.amount,
+        amount: calculatedAmount,
         is_included: !item.isOptional,
         deliverables: item.deliverables,
         sort_order: index,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      }));
+      };
+    });
   };
 
   // Initialize quote items from phases
@@ -106,19 +126,26 @@ export function CommercialDocumentBuilder({
   // Handle quote items change
   const handleQuoteItemsChange = (items: QuoteLineItem[]) => {
     setQuoteItems(items);
-    // Update phases from items
+    // Update phases from items (with calculated amounts)
     const newPhases = itemsToPhases(items);
     onPhasesChange(newPhases);
     
-    // Update total amount
-    const total = items
-      .filter(i => !i.isOptional && i.type !== 'discount')
+    // Calculate total from phases amounts
+    const phasesTotal = newPhases
+      .filter(p => p.is_included)
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+    
+    // Add non-phase items
+    const otherTotal = items
+      .filter(i => i.type !== 'phase' && !i.isOptional && i.type !== 'discount')
       .reduce((sum, i) => sum + i.amount, 0);
+    
     const discount = items
       .filter(i => i.type === 'discount')
       .reduce((sum, i) => sum + Math.abs(i.amount), 0);
     
-    onDocumentChange({ ...document, total_amount: total - discount });
+    const total = phasesTotal + otherTotal - discount;
+    onDocumentChange({ ...document, total_amount: total });
   };
 
   // Initialize defaults for current project type

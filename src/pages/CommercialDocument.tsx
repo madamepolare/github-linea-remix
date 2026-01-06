@@ -195,22 +195,22 @@ const CommercialDocument = () => {
   };
 
   const calculateTotal = () => {
-    // For fixed/mixed mode, use total_amount directly
-    if (documentData.fee_mode === 'fixed' || documentData.fee_mode === 'mixed') {
-      return documentData.total_amount || 0;
+    // Always calculate from phases amounts first
+    const phasesTotal = phases
+      .filter(p => p.is_included)
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+    
+    if (phasesTotal > 0) {
+      return phasesTotal;
     }
-    // For percentage mode, calculate from budget and percentage
-    if (documentData.fee_mode === 'percentage' && documentData.project_budget && documentData.fee_percentage) {
-      const baseFee = documentData.project_budget * (documentData.fee_percentage / 100);
-      const totalPercentage = phases
-        .filter(p => p.is_included)
-        .reduce((sum, p) => sum + p.percentage_fee, 0);
-      return baseFee * (totalPercentage / 100);
+
+    // Fallback to percentage calculation if phases have no direct amounts
+    if (documentData.fee_mode === 'percentage' && documentData.construction_budget && documentData.fee_percentage) {
+      const baseFee = documentData.construction_budget * (documentData.fee_percentage / 100);
+      return baseFee;
     }
-    // For hourly mode
-    if (documentData.fee_mode === 'hourly' && documentData.hourly_rate) {
-      return phases.filter(p => p.is_included).length * 40 * documentData.hourly_rate;
-    }
+    
+    // Use stored total_amount as last resort
     return documentData.total_amount || 0;
   };
 
