@@ -1,17 +1,11 @@
 // Company types for French architecture industry
+// IMPORTANT: Les BET sont maintenant un TYPE UNIQUE avec des spécialités séparées (bet_specialties)
 export type CompanyType =
   | 'client'
   | 'prospect'
   | 'client_prive'
   | 'client_public'
-  | 'bet_structure'
-  | 'bet_fluides'
-  | 'bet_electricite'
-  | 'bet_acoustique'
-  | 'bet_thermique'
-  | 'bet_vrd'
-  | 'bet_facade'
-  | 'bet_environnement'
+  | 'bet' // Type unique - les spécialités sont gérées via bet_specialties[]
   | 'architecte'
   | 'urbaniste'
   | 'paysagiste'
@@ -63,15 +57,8 @@ export const COMPANY_TYPE_CONFIG: Record<
   client_prive: { label: 'Client privé', shortLabel: 'Privé', category: 'client', color: 'bg-emerald-600' },
   client_public: { label: 'Client public', shortLabel: 'Public', category: 'client', color: 'bg-indigo-500' },
 
-  // BET
-  bet_structure: { label: 'BET Structure', shortLabel: 'Structure', category: 'bet', color: 'bg-orange-500' },
-  bet_fluides: { label: 'BET Fluides', shortLabel: 'Fluides', category: 'bet', color: 'bg-cyan-500' },
-  bet_electricite: { label: 'BET Électricité', shortLabel: 'Élec', category: 'bet', color: 'bg-yellow-500' },
-  bet_acoustique: { label: 'BET Acoustique', shortLabel: 'Acoustique', category: 'bet', color: 'bg-purple-500' },
-  bet_thermique: { label: 'BET Thermique', shortLabel: 'Thermique', category: 'bet', color: 'bg-red-500' },
-  bet_vrd: { label: 'BET VRD', shortLabel: 'VRD', category: 'bet', color: 'bg-amber-600' },
-  bet_facade: { label: 'BET Façade', shortLabel: 'Façade', category: 'bet', color: 'bg-slate-500' },
-  bet_environnement: { label: 'BET Environnement', shortLabel: 'Env.', category: 'bet', color: 'bg-green-600' },
+  // BET - Type unique, spécialités gérées via bet_specialties[]
+  bet: { label: 'Bureau d\'Études Techniques', shortLabel: 'BET', category: 'bet', color: 'bg-orange-500' },
 
   // Partenaires MOE
   architecte: { label: 'Architecte', shortLabel: 'Archi', category: 'partenaire', color: 'bg-violet-500' },
@@ -127,16 +114,7 @@ export const COMPANY_CATEGORIES: {
     id: 'bet',
     label: 'BET',
     icon: 'Ruler',
-    types: [
-      'bet_structure',
-      'bet_fluides',
-      'bet_electricite',
-      'bet_acoustique',
-      'bet_thermique',
-      'bet_vrd',
-      'bet_facade',
-      'bet_environnement',
-    ],
+    types: ['bet'], // Type unique - spécialités gérées via bet_specialties[]
   },
   {
     id: 'partenaire',
