@@ -3144,7 +3144,10 @@ export type Database = {
           id: string
           is_all_day: boolean | null
           location: string | null
+          parent_event_id: string | null
           project_id: string
+          recurrence_end_date: string | null
+          recurrence_rule: string | null
           start_datetime: string
           title: string
           updated_at: string
@@ -3163,7 +3166,10 @@ export type Database = {
           id?: string
           is_all_day?: boolean | null
           location?: string | null
+          parent_event_id?: string | null
           project_id: string
+          recurrence_end_date?: string | null
+          recurrence_rule?: string | null
           start_datetime: string
           title: string
           updated_at?: string
@@ -3182,13 +3188,23 @@ export type Database = {
           id?: string
           is_all_day?: boolean | null
           location?: string | null
+          parent_event_id?: string | null
           project_id?: string
+          recurrence_end_date?: string | null
+          recurrence_rule?: string | null
           start_datetime?: string
           title?: string
           updated_at?: string
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_calendar_events_parent_event_id_fkey"
+            columns: ["parent_event_id"]
+            isOneToOne: false
+            referencedRelation: "project_calendar_events"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_calendar_events_project_id_fkey"
             columns: ["project_id"]

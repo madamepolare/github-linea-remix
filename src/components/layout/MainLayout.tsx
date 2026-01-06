@@ -8,6 +8,7 @@ import { PageTransition } from "./PageTransition";
 import { useSidebarStore } from "@/hooks/useSidebarStore";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { GlobalTimeTracker } from "@/components/time-tracking/GlobalTimeTracker";
 
 export function MainLayout() {
   const { collapsed } = useSidebarStore();
@@ -84,6 +85,9 @@ export function MainLayout() {
           </AnimatePresence>
         </main>
       </div>
+
+      {/* Global Time Tracker Overlay */}
+      <GlobalTimeTracker />
     </div>
   );
 }

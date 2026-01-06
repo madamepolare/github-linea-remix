@@ -20,6 +20,8 @@ import { useProjects, CreateProjectInput } from "@/hooks/useProjects";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { usePhaseTemplates } from "@/hooks/usePhaseTemplates";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
+import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
+import { AIRewriteButton } from "@/components/projects/meeting-report/AIRewriteButton";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -71,6 +73,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
+  const [region, setRegion] = useState("");
   const [surfaceArea, setSurfaceArea] = useState("");
   
   const [crmCompanyId, setCrmCompanyId] = useState<string | null>(null);
@@ -148,6 +151,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     setDescription("");
     setAddress("");
     setCity("");
+    setRegion("");
     setSurfaceArea("");
     
     setCrmCompanyId(null);
@@ -155,6 +159,16 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     setEndDate(null);
     setBudget("");
     setPhases([]);
+  };
+
+  const handleAddressSelect = (result: {
+    address: string;
+    city: string;
+    postalCode: string;
+    region: string;
+  }) => {
+    setCity(result.city);
+    setRegion(result.region);
   };
 
   const canProceed = () => {
@@ -279,19 +293,20 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="address">
-                        <MapPin className="h-3.5 w-3.5 inline mr-1" />
-                        Adresse
-                      </Label>
-                      <Input
-                        id="address"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder="123 rue de Paris"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">
+                      <MapPin className="h-3.5 w-3.5 inline mr-1" />
+                      Adresse
+                    </Label>
+                    <AddressAutocomplete
+                      value={address}
+                      onChange={setAddress}
+                      onAddressSelect={handleAddressSelect}
+                      placeholder="Rechercher une adresse..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="city">Ville</Label>
                       <Input
@@ -301,21 +316,36 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                         placeholder="Paris"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="region">Région</Label>
+                      <Input
+                        id="region"
+                        value={region}
+                        onChange={(e) => setRegion(e.target.value)}
+                        placeholder="Île-de-France"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="surface">Surface (m²)</Label>
+                      <Input
+                        id="surface"
+                        type="number"
+                        value={surfaceArea}
+                        onChange={(e) => setSurfaceArea(e.target.value)}
+                        placeholder="150"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="surface">Surface (m²)</Label>
-                    <Input
-                      id="surface"
-                      type="number"
-                      value={surfaceArea}
-                      onChange={(e) => setSurfaceArea(e.target.value)}
-                      placeholder="150"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="description">Description</Label>
+                      <AIRewriteButton
+                        text={description}
+                        onRewrite={setDescription}
+                        context="description de projet d'architecture"
+                      />
+                    </div>
                     <Textarea
                       id="description"
                       value={description}
