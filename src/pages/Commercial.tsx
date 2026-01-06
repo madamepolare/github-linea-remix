@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, FileText, FileSignature, FileCheck, Search, MoreVertical, Trash2, Copy, Send, Eye } from 'lucide-react';
+import { Plus, FileText, FileSignature, FileCheck, Search, MoreVertical, Trash2, Copy, Send, Eye, LayoutList, Kanban } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
+import { CommercialPipeline } from '@/components/commercial/CommercialPipeline';
 import { 
   DocumentType, 
   DocumentStatus,
@@ -35,9 +36,10 @@ import {
 const Commercial = () => {
   const navigate = useNavigate();
   const { view } = useParams();
-  const { documents, isLoading, deleteDocument } = useCommercialDocuments();
+  const { documents, isLoading, deleteDocument, duplicateDocument } = useCommercialDocuments();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all');
+  const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
 
   // Derive type filter from URL
   const typeFilter: DocumentType | 'all' = 
@@ -68,6 +70,14 @@ const Commercial = () => {
     navigate(`/commercial/new?type=${type}`);
   };
 
+  const handleDuplicate = (id: string) => {
+    duplicateDocument.mutate(id);
+  };
+
+  const handleDelete = (id: string) => {
+    deleteDocument.mutate(id);
+  };
+
   const getDocumentIcon = (type: DocumentType) => {
     switch (type) {
       case 'quote': return FileText;
@@ -81,28 +91,46 @@ const Commercial = () => {
       title="Commercial"
       description="Gérez vos devis, contrats et propositions commerciales"
       actions={
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nouveau document
+        <div className="flex items-center gap-2">
+          <div className="flex items-center border rounded-lg p-1">
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+            >
+              <LayoutList className="h-4 w-4" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleNewDocument('quote')}>
-              <FileText className="h-4 w-4 mr-2" />
-              Devis
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleNewDocument('contract')}>
-              <FileSignature className="h-4 w-4 mr-2" />
-              Contrat
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleNewDocument('proposal')}>
-              <FileCheck className="h-4 w-4 mr-2" />
-              Proposition
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <Button
+              variant={viewMode === 'pipeline' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('pipeline')}
+            >
+              <Kanban className="h-4 w-4" />
+            </Button>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Nouveau document
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleNewDocument('quote')}>
+                <FileText className="h-4 w-4 mr-2" />
+                Devis
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNewDocument('contract')}>
+                <FileSignature className="h-4 w-4 mr-2" />
+                Contrat
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleNewDocument('proposal')}>
+                <FileCheck className="h-4 w-4 mr-2" />
+                Proposition
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       }
     >
       {/* KPIs */}
@@ -182,9 +210,15 @@ const Commercial = () => {
         </div>
       </div>
 
-      {/* Documents List */}
+      {/* Documents View */}
       {isLoading ? (
         <div className="text-center py-12 text-muted-foreground">Chargement...</div>
+      ) : viewMode === 'pipeline' ? (
+        <CommercialPipeline 
+          documents={filteredDocuments}
+          onDelete={handleDelete}
+          onDuplicate={handleDuplicate}
+        />
       ) : filteredDocuments.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -262,7 +296,7 @@ const Commercial = () => {
                             <Eye className="h-4 w-4 mr-2" />
                             Voir / Modifier
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDuplicate(doc.id); }}>
                             <Copy className="h-4 w-4 mr-2" />
                             Dupliquer
                           </DropdownMenuItem>
@@ -276,7 +310,7 @@ const Commercial = () => {
                             onClick={(e) => { 
                               e.stopPropagation(); 
                               if (confirm('Supprimer ce document ?')) {
-                                deleteDocument.mutate(doc.id);
+                                handleDelete(doc.id);
                               }
                             }}
                           >
