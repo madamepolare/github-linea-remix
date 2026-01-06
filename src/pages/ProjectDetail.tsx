@@ -54,6 +54,7 @@ import { InsurancesSection } from "@/components/projects/insurances/InsurancesSe
 import { ProjectOrdersTab } from "@/components/projects/ProjectOrdersTab";
 import { LinkedEntitiesPanel } from "@/components/shared/LinkedEntitiesPanel";
 import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
+import { TimeTrackerButton } from "@/components/time-tracking/TimeTrackerButton";
 // Tab configuration for project detail
 const PROJECT_TABS = [
   { key: "overview", label: "Vue d'ensemble", icon: Sparkles },
@@ -301,6 +302,11 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
+                  <TimeTrackerButton 
+                    projectId={project.id} 
+                    projectName={project.name}
+                    showLabel
+                  />
                   {currentPhase && (
                     <Button 
                       onClick={completeCurrentAndActivateNext}

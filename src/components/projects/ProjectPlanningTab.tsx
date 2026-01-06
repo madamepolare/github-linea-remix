@@ -4,8 +4,9 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
-import { useCalendarEvents, CalendarEvent } from "@/hooks/useCalendarEvents";
+import { useCalendarEvents, CalendarEvent, RecurrenceRule } from "@/hooks/useCalendarEvents";
 import { useProjectPhases, ProjectPhase } from "@/hooks/useProjectPhases";
+import { useProjectMOE } from "@/hooks/useProjectMOE";
 import { useProjectDeliverables } from "@/hooks/useProjectDeliverables";
 import { useTasks } from "@/hooks/useTasks";
 import { useQuickTasksDB, QuickTask } from "@/hooks/useQuickTasksDB";
@@ -44,6 +45,7 @@ import {
   Trash2,
   Zap,
   Sparkles,
+  Repeat,
 } from "lucide-react";
 import { AIPhasePlannerDialog } from "./AIPhasePlannerDialog";
 import { format, parseISO, addHours, addDays, differenceInDays } from "date-fns";
@@ -82,9 +84,32 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const { events, isLoading: eventsLoading, createEvent, updateEvent, deleteEvent } = useCalendarEvents(projectId);
   const { phases, updatePhase } = useProjectPhases(projectId);
+  const { moeTeam } = useProjectMOE(projectId);
   const { deliverables, createDeliverable, updateDeliverable, deleteDeliverable } = useProjectDeliverables(projectId);
   const { tasks, createTask, updateTask, deleteTask } = useTasks();
   const { quickTasks, pendingTasks, createQuickTask } = useQuickTasksDB();
+
+  // Pre-compute available attendees from MOE team
+  const availableAttendees = useMemo(() => {
+    const attendees: Array<{ email: string; name: string; role: string }> = [];
+    moeTeam.forEach((member) => {
+      if (member.contact?.email) {
+        attendees.push({
+          email: member.contact.email,
+          name: member.contact.name,
+          role: member.role,
+        });
+      }
+      if (member.crm_company?.email) {
+        attendees.push({
+          email: member.crm_company.email,
+          name: member.crm_company.name,
+          role: member.role,
+        });
+      }
+    });
+    return attendees;
+  }, [moeTeam]);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -103,6 +128,9 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const [formLocation, setFormLocation] = useState("");
   const [formIsAllDay, setFormIsAllDay] = useState(false);
   const [formCreateMeet, setFormCreateMeet] = useState(false);
+  const [formRecurrence, setFormRecurrence] = useState<RecurrenceRule>(null);
+  const [formRecurrenceEnd, setFormRecurrenceEnd] = useState("");
+  const [formAttendees, setFormAttendees] = useState<Array<{ email: string; name?: string }>>([]);
 
   // Phase edit form state
   const [phaseStartDate, setPhaseStartDate] = useState("");
@@ -297,6 +325,9 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
     setFormLocation("");
     setFormIsAllDay(false);
     setFormCreateMeet(false);
+    setFormRecurrence(null);
+    setFormRecurrenceEnd("");
+    setFormAttendees([]);
   };
 
   const openCreateDialog = (date?: Date) => {
@@ -306,10 +337,17 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       setFormStartDate(dateStr);
       setFormEndDate(dateStr);
     }
+    // Pre-populate attendees from MOE team for meetings
+    setFormAttendees(availableAttendees.map(a => ({ email: a.email, name: a.name })));
     setIsCreateOpen(true);
   };
 
   const openEditDialog = (event: CalendarEvent) => {
+    // Don't allow editing recurring instances directly
+    if (event.id.includes("-")) {
+      toast.info("Modifiez l'événement parent pour changer cette récurrence");
+      return;
+    }
     setEditingEvent(event);
     setFormTitle(event.title);
     setFormDescription(event.description || "");
@@ -323,6 +361,9 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
     setFormLocation(event.location || "");
     setFormIsAllDay(event.is_all_day);
     setFormCreateMeet(!!event.google_meet_link);
+    setFormRecurrence(event.recurrence_rule);
+    setFormRecurrenceEnd(event.recurrence_end_date ? format(parseISO(event.recurrence_end_date), "yyyy-MM-dd") : "");
+    setFormAttendees(event.attendees || []);
   };
 
   const handleCreate = () => {
@@ -347,6 +388,9 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       location: formLocation.trim() || undefined,
       is_all_day: formIsAllDay,
       create_google_meet: formCreateMeet,
+      recurrence_rule: formRecurrence,
+      recurrence_end_date: formRecurrenceEnd || undefined,
+      attendees: formAttendees.filter(a => a.email),
     });
 
     setIsCreateOpen(false);
@@ -901,6 +945,52 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
               </div>
             )}
 
+            {/* Attendees */}
+            {formType === "meeting" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5" />
+                    Participants
+                  </Label>
+                  {availableAttendees.length > 0 && formAttendees.length === 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => setFormAttendees(availableAttendees.map(a => ({ email: a.email, name: a.name })))}
+                    >
+                      Charger équipe projet
+                    </Button>
+                  )}
+                </div>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {formAttendees.map((attendee, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded text-sm">
+                      <span className="flex-1 truncate">
+                        {attendee.name || attendee.email}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setFormAttendees(formAttendees.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  {formAttendees.length === 0 && (
+                    <p className="text-xs text-muted-foreground py-2">
+                      Aucun participant ajouté
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Google Meet */}
             {formType === "meeting" && !editingEvent && (
               <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
@@ -931,6 +1021,42 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
                 >
                   {editingEvent.google_meet_link}
                 </a>
+              </div>
+            )}
+
+            {/* Recurrence - for reminders only */}
+            {formType === "reminder" && (
+              <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Repeat className="h-4 w-4" />
+                  <Label>Récurrence</Label>
+                </div>
+                <Select 
+                  value={formRecurrence || "none"} 
+                  onValueChange={(v) => setFormRecurrence(v === "none" ? null : v as RecurrenceRule)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pas de récurrence" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Pas de récurrence</SelectItem>
+                    <SelectItem value="weekly">Hebdomadaire</SelectItem>
+                    <SelectItem value="monthly">Mensuel</SelectItem>
+                    <SelectItem value="quarterly">Trimestriel</SelectItem>
+                    <SelectItem value="yearly">Annuel</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                {formRecurrence && (
+                  <div className="space-y-2">
+                    <Label className="text-xs">Jusqu'au (optionnel)</Label>
+                    <Input
+                      type="date"
+                      value={formRecurrenceEnd}
+                      onChange={(e) => setFormRecurrenceEnd(e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
