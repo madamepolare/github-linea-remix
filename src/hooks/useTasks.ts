@@ -57,6 +57,17 @@ export function useTasks(options?: UseTasksOptions) {
   const { data: tasks, isLoading, error } = useQuery({
     queryKey: ["tasks", activeWorkspace?.id, options],
     queryFn: async () => {
+      // First, auto-archive old completed tasks (done > 3 days)
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      
+      await supabase
+        .from("tasks")
+        .update({ status: "archived" })
+        .eq("workspace_id", activeWorkspace!.id)
+        .eq("status", "done")
+        .lt("completed_at", threeDaysAgo.toISOString());
+
       let query = supabase
         .from("tasks")
         .select("*")

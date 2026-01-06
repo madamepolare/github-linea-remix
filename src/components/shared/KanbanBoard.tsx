@@ -1,4 +1,4 @@
-import { useState, ReactNode } from "react";
+import { useState, ReactNode, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,8 +37,11 @@ export function KanbanBoard<T>({
 }: KanbanBoardProps<T>) {
   const [draggedItem, setDraggedItem] = useState<{ id: string; fromColumn: string } | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  // Track if any drag is happening globally to disable layout animations
+  const isDraggingRef = useRef(false);
 
   const handleDragStart = (e: React.DragEvent, itemId: string, columnId: string) => {
+    isDraggingRef.current = true;
     setDraggedItem({ id: itemId, fromColumn: columnId });
     e.dataTransfer.effectAllowed = "move";
     // Set a transparent drag image
@@ -64,11 +67,13 @@ export function KanbanBoard<T>({
     if (draggedItem && draggedItem.fromColumn !== columnId) {
       onDrop?.(draggedItem.id, draggedItem.fromColumn, columnId);
     }
+    isDraggingRef.current = false;
     setDraggedItem(null);
     setDragOverColumn(null);
   };
 
   const handleDragEnd = () => {
+    isDraggingRef.current = false;
     setDraggedItem(null);
     setDragOverColumn(null);
   };
@@ -147,14 +152,15 @@ export function KanbanBoard<T>({
                 return (
                   <motion.div
                     key={itemId}
-                    layout
-                    initial={{ opacity: 0, scale: 0.95 }}
+                    layoutId={`kanban-item-${itemId}`}
+                    layout={!isDraggingRef.current}
+                    initial={false}
                     animate={{ 
                       opacity: isDragging ? 0.5 : 1, 
                       scale: isDragging ? 0.98 : 1,
                     }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
+                    transition={{ duration: 0.15, layout: { duration: 0.2 } }}
                     draggable
                     onDragStart={(e) => handleDragStart(e as any, itemId, column.id)}
                     onDragEnd={handleDragEnd}
@@ -188,16 +194,34 @@ export interface KanbanCardProps {
   onClick?: () => void;
   accentColor?: string;
   className?: string;
+  isCompleted?: boolean;
+  onComplete?: () => void;
 }
 
-export function KanbanCard({ children, onClick, accentColor, className }: KanbanCardProps) {
+export function KanbanCard({ children, onClick, accentColor, className, isCompleted, onComplete }: KanbanCardProps) {
+  const [showCelebration, setShowCelebration] = useState(false);
+
+  const handleComplete = () => {
+    if (!isCompleted) {
+      setShowCelebration(true);
+      setTimeout(() => setShowCelebration(false), 600);
+    }
+    onComplete?.();
+  };
+
   return (
     <motion.div
       whileHover={{ boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
       onClick={onClick}
+      animate={showCelebration ? {
+        scale: [1, 1.03, 1],
+        backgroundColor: ['hsl(var(--card))', 'hsl(142 76% 36% / 0.15)', 'hsl(var(--card))']
+      } : {}}
+      transition={{ duration: 0.4 }}
       className={cn(
         "p-2.5 sm:p-3 rounded-lg border bg-card cursor-pointer transition-colors",
         "hover:border-primary/20",
+        isCompleted && "opacity-60",
         className
       )}
       style={accentColor ? { borderLeftColor: accentColor, borderLeftWidth: 3 } : undefined}

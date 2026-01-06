@@ -9,12 +9,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { KanbanBoard, KanbanColumn, KanbanCard } from "@/components/shared/KanbanBoard";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckSquare, Calendar, FolderKanban, Building2, FileText, Target } from "lucide-react";
+import { CheckSquare, Calendar, FolderKanban, Building2, FileText, Target, CheckCircle2 } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/taskTypes";
 import { WorkspaceProfile } from "@/hooks/useWorkspaceProfiles";
+import { motion } from "framer-motion";
+import confetti from "canvas-confetti";
 
 const COLUMNS: { id: Task["status"]; label: string; color: string }[] = TASK_STATUSES
   .filter(s => s.id !== 'archived')
@@ -32,8 +34,34 @@ export function TaskBoard({ statusFilter, priorityFilter, onCreateTask }: TaskBo
   const { projects } = useProjects();
   const { data: profiles } = useWorkspaceProfiles();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(new Set());
 
   const handleDrop = (taskId: string, _fromColumn: string, toColumn: string) => {
+    // Check if moving to "done" column
+    if (toColumn === "done") {
+      setRecentlyCompleted(prev => new Set([...prev, taskId]));
+      
+      // Confetti celebration
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { x: 0.5, y: 0.6 },
+        colors: ['#22c55e', '#16a34a', '#4ade80'],
+        startVelocity: 20,
+        gravity: 0.8,
+        scalar: 0.7,
+        ticks: 60,
+      });
+      
+      setTimeout(() => {
+        setRecentlyCompleted(prev => {
+          const next = new Set(prev);
+          next.delete(taskId);
+          return next;
+        });
+      }, 800);
+    }
+    
     updateTaskStatus.mutate({ id: taskId, status: toColumn as Task["status"] });
   };
 
@@ -98,6 +126,7 @@ export function TaskBoard({ statusFilter, priorityFilter, onCreateTask }: TaskBo
             profiles={profiles || []}
             onClick={() => setSelectedTask(task)}
             isDragging={isDragging}
+            isJustCompleted={recentlyCompleted.has(task.id)}
           />
         )}
         renderQuickAdd={(columnId) => (
@@ -122,9 +151,10 @@ interface TaskKanbanCardProps {
   profiles: WorkspaceProfile[];
   onClick: () => void;
   isDragging: boolean;
+  isJustCompleted?: boolean;
 }
 
-function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, isDragging }: TaskKanbanCardProps) {
+function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, isDragging, isJustCompleted }: TaskKanbanCardProps) {
   const completedSubtasks = task.subtasks?.filter((s) => s.status === "done").length || 0;
   const totalSubtasks = task.subtasks?.length || 0;
   const progress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
@@ -166,90 +196,110 @@ function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, isD
   };
 
   return (
-    <KanbanCard onClick={onClick}>
-      <div className="space-y-2">
-        {/* Relation badge */}
-        {relationInfo && (
-          <Badge variant="outline" className={cn("text-2xs px-1.5 py-0.5 gap-1 font-normal", relationInfo.color)}>
-            <relationInfo.icon className="h-2.5 w-2.5" />
-            <span className="truncate max-w-[120px]">{relationInfo.label}</span>
-          </Badge>
-        )}
+    <motion.div
+      animate={isJustCompleted ? {
+        scale: [1, 1.05, 1],
+        backgroundColor: ['hsl(var(--card))', 'hsl(142 76% 36% / 0.2)', 'hsl(var(--card))']
+      } : {}}
+      transition={{ duration: 0.5 }}
+    >
+      <KanbanCard onClick={onClick} isCompleted={task.status === "done"}>
+        <div className="space-y-2">
+          {/* Relation badge */}
+          {relationInfo && (
+            <Badge variant="outline" className={cn("text-2xs px-1.5 py-0.5 gap-1 font-normal", relationInfo.color)}>
+              <relationInfo.icon className="h-2.5 w-2.5" />
+              <span className="truncate max-w-[120px]">{relationInfo.label}</span>
+            </Badge>
+          )}
 
-        {/* Title */}
-        <p className="text-sm font-medium leading-snug line-clamp-2">{task.title}</p>
-
-        {/* Tags */}
-        {task.tags && task.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {task.tags.slice(0, 2).map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-2xs px-1.5 py-0">
-                {tag}
-              </Badge>
-            ))}
-            {task.tags.length > 2 && (
-              <span className="text-2xs text-muted-foreground">+{task.tags.length - 2}</span>
+          {/* Title with completion indicator */}
+          <div className="flex items-start gap-2">
+            {task.status === "done" && (
+              <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
             )}
+            <p className={cn(
+              "text-sm font-medium leading-snug line-clamp-2",
+              task.status === "done" && "line-through text-muted-foreground"
+            )}>
+              {task.title}
+            </p>
           </div>
-        )}
 
-        {/* Subtasks progress */}
-        {totalSubtasks > 0 && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <CheckSquare className="h-3 w-3" />
-              <span>{completedSubtasks}/{totalSubtasks}</span>
+          {/* Tags */}
+          {task.tags && task.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {task.tags.slice(0, 2).map((tag) => (
+                <Badge key={tag} variant="secondary" className="text-2xs px-1.5 py-0">
+                  {tag}
+                </Badge>
+              ))}
+              {task.tags.length > 2 && (
+                <span className="text-2xs text-muted-foreground">+{task.tags.length - 2}</span>
+              )}
             </div>
-            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-              <div
-                className={cn("h-full rounded-full transition-all", getProgressColor())}
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* Footer: Assignees, Due Date */}
-        <div className="flex items-center justify-between gap-2 pt-1">
-          <div className="flex items-center gap-2">
-            {/* Assignees with profile pictures */}
-            {task.assigned_to && task.assigned_to.length > 0 && (
-              <div className="flex -space-x-1.5">
-                {task.assigned_to.slice(0, 2).map((userId) => {
-                  const profile = getProfile(userId);
-                  const initials = profile?.full_name
-                    ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-                    : userId.slice(0, 2).toUpperCase();
-                  return (
-                    <Avatar key={userId} className="h-5 w-5 border-2 border-card">
-                      {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name || ""} className="object-cover" />}
-                      <AvatarFallback className="text-2xs bg-primary/10">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                  );
-                })}
-                {task.assigned_to.length > 2 && (
-                  <div className="h-5 w-5 rounded-full bg-muted border-2 border-card flex items-center justify-center">
-                    <span className="text-2xs text-muted-foreground">+{task.assigned_to.length - 2}</span>
-                  </div>
-                )}
+          {/* Subtasks progress */}
+          {totalSubtasks > 0 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <CheckSquare className="h-3 w-3" />
+                <span>{completedSubtasks}/{totalSubtasks}</span>
+              </div>
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                <motion.div
+                  className={cn("h-full rounded-full", getProgressColor())}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Footer: Assignees, Due Date */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <div className="flex items-center gap-2">
+              {/* Assignees with profile pictures */}
+              {task.assigned_to && task.assigned_to.length > 0 && (
+                <div className="flex -space-x-1.5">
+                  {task.assigned_to.slice(0, 2).map((userId) => {
+                    const profile = getProfile(userId);
+                    const initials = profile?.full_name
+                      ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+                      : userId.slice(0, 2).toUpperCase();
+                    return (
+                      <Avatar key={userId} className="h-5 w-5 border-2 border-card">
+                        {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name || ""} className="object-cover" />}
+                        <AvatarFallback className="text-2xs bg-primary/10">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                    );
+                  })}
+                  {task.assigned_to.length > 2 && (
+                    <div className="h-5 w-5 rounded-full bg-muted border-2 border-card flex items-center justify-center">
+                      <span className="text-2xs text-muted-foreground">+{task.assigned_to.length - 2}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Due date */}
+            {task.due_date && (
+              <div className={cn(
+                "flex items-center gap-1 text-xs",
+                isOverdue ? "text-destructive" : "text-muted-foreground"
+              )}>
+                <Calendar className="h-3 w-3" />
+                <span>{formatDueDate(task.due_date)}</span>
               </div>
             )}
           </div>
-
-          {/* Due date */}
-          {task.due_date && (
-            <div className={cn(
-              "flex items-center gap-1 text-xs",
-              isOverdue ? "text-destructive" : "text-muted-foreground"
-            )}>
-              <Calendar className="h-3 w-3" />
-              <span>{formatDueDate(task.due_date)}</span>
-            </div>
-          )}
         </div>
-      </div>
-    </KanbanCard>
+      </KanbanCard>
+    </motion.div>
   );
 }
