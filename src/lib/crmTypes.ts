@@ -15,8 +15,8 @@ export type CompanyType =
   | 'sps'
   | 'geometre'
   | 'diagnostiqueur'
-  | 'entreprise_gros_oeuvre'
-  | 'entreprise_second_oeuvre'
+  | 'gros_oeuvre'
+  | 'second_oeuvre'
   | 'entreprise_generale'
   | 'artisan'
   | 'fournisseur'
@@ -36,7 +36,7 @@ export type CompanyCategory =
   | 'client'
   | 'bet'
   | 'partenaire'
-  | 'entreprise'
+  | 'societe' // Renommé de 'entreprise'
   | 'fournisseur'
   | 'conseil'
   | 'admin'
@@ -71,11 +71,11 @@ export const COMPANY_TYPE_CONFIG: Record<
   geometre: { label: 'Géomètre', shortLabel: 'Géo', category: 'partenaire', color: 'bg-stone-500' },
   diagnostiqueur: { label: 'Diagnostiqueur', shortLabel: 'Diag', category: 'partenaire', color: 'bg-zinc-500' },
 
-  // Entreprises
-  entreprise_gros_oeuvre: { label: 'Gros œuvre', shortLabel: 'GO', category: 'entreprise', color: 'bg-amber-700' },
-  entreprise_second_oeuvre: { label: 'Second œuvre', shortLabel: 'SO', category: 'entreprise', color: 'bg-orange-600' },
-  entreprise_generale: { label: 'Entreprise générale', shortLabel: 'EG', category: 'entreprise', color: 'bg-red-600' },
-  artisan: { label: 'Artisan', shortLabel: 'Artisan', category: 'entreprise', color: 'bg-yellow-600' },
+  // Sociétés (ex-Entreprises)
+  gros_oeuvre: { label: 'Gros œuvre', shortLabel: 'GO', category: 'societe', color: 'bg-amber-700' },
+  second_oeuvre: { label: 'Second œuvre', shortLabel: 'SO', category: 'societe', color: 'bg-orange-600' },
+  entreprise_generale: { label: 'Entreprise générale', shortLabel: 'EG', category: 'societe', color: 'bg-red-600' },
+  artisan: { label: 'Artisan', shortLabel: 'Artisan', category: 'societe', color: 'bg-yellow-600' },
 
   // Fournisseurs
   fournisseur: { label: 'Fournisseur', shortLabel: 'Fourn.', category: 'fournisseur', color: 'bg-blue-600' },
@@ -133,10 +133,10 @@ export const COMPANY_CATEGORIES: {
     ],
   },
   {
-    id: 'entreprise',
-    label: 'Entreprises',
+    id: 'societe',
+    label: 'Sociétés',
     icon: 'HardHat',
-    types: ['entreprise_gros_oeuvre', 'entreprise_second_oeuvre', 'entreprise_generale', 'artisan'],
+    types: ['gros_oeuvre', 'second_oeuvre', 'entreprise_generale', 'artisan'],
   },
   {
     id: 'fournisseur',
@@ -304,6 +304,8 @@ export const CONTACT_TYPES = [
   { value: "partner", label: "Partenaire" },
   { value: "supplier", label: "Fournisseur" },
   { value: "amo", label: "AMO" },
+  { value: "partner", label: "Partenaire" },
+  { value: "supplier", label: "Fournisseur" },
   { value: "bet", label: "BET" },
-  { value: "entreprise", label: "Entreprise" },
+  { value: "societe", label: "Société" },
 ];

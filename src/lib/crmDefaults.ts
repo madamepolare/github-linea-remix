@@ -11,7 +11,7 @@ export const DEFAULT_CONTACT_TYPES = [
   { key: "supplier", label: "Fournisseur", color: "#3B82F6" },
   { key: "amo", label: "AMO", color: "#F59E0B" },
   { key: "bet", label: "BET", color: "#06B6D4" },
-  { key: "entreprise", label: "Entreprise", color: "#EF4444" },
+  { key: "societe", label: "Société", color: "#EF4444" },
 ];
 
 // --- Spécialités BET ---
@@ -99,11 +99,11 @@ export const DEFAULT_COMPANY_CATEGORIES = [
     types: ["architecte", "urbaniste", "paysagiste", "decorateur", "economiste", "opc", "sps", "geometre", "diagnostiqueur"]
   },
   { 
-    key: "entreprise", 
-    label: "Entreprises", 
+    key: "societe", 
+    label: "Sociétés", 
     color: "#EF4444",
     icon: "HardHat",
-    types: ["entreprise_gros_oeuvre", "entreprise_second_oeuvre", "entreprise_generale", "artisan"]
+    types: ["gros_oeuvre", "second_oeuvre", "entreprise_generale", "artisan"]
   },
   { 
     key: "fournisseur", 
@@ -157,11 +157,11 @@ export const DEFAULT_COMPANY_TYPES = [
   { key: "geometre", label: "Géomètre", shortLabel: "Géo", category: "partenaire", color: "#78716C" },
   { key: "diagnostiqueur", label: "Diagnostiqueur", shortLabel: "Diag", category: "partenaire", color: "#71717A" },
   
-  // Entreprises
-  { key: "entreprise_gros_oeuvre", label: "Gros œuvre", shortLabel: "GO", category: "entreprise", color: "#B45309" },
-  { key: "entreprise_second_oeuvre", label: "Second œuvre", shortLabel: "SO", category: "entreprise", color: "#EA580C" },
-  { key: "entreprise_generale", label: "Entreprise générale", shortLabel: "EG", category: "entreprise", color: "#DC2626" },
-  { key: "artisan", label: "Artisan", shortLabel: "Artisan", category: "entreprise", color: "#CA8A04" },
+  // Sociétés
+  { key: "gros_oeuvre", label: "Gros œuvre", shortLabel: "GO", category: "societe", color: "#B45309" },
+  { key: "second_oeuvre", label: "Second œuvre", shortLabel: "SO", category: "societe", color: "#EA580C" },
+  { key: "entreprise_generale", label: "Entreprise générale", shortLabel: "EG", category: "societe", color: "#DC2626" },
+  { key: "artisan", label: "Artisan", shortLabel: "Artisan", category: "societe", color: "#CA8A04" },
   
   // Fournisseurs
   { key: "fournisseur", label: "Fournisseur", shortLabel: "Fourn.", category: "fournisseur", color: "#2563EB" },
@@ -223,14 +223,14 @@ export const DEFAULT_CONTACT_PIPELINES: DefaultContactPipeline[] = [
     ]
   },
   {
-    key: "entreprise_prospection",
-    name: "Prospection Entreprises",
-    target_contact_type: "entreprise",
+    key: "societe_prospection",
+    name: "Prospection Sociétés",
+    target_contact_type: "societe",
     color: "#EF4444",
-    description: "Pipeline de prospection pour les entreprises de construction",
+    description: "Pipeline de prospection pour les sociétés de construction",
     stages: [
       { name: "À contacter", color: "#6B7280", requires_email: false, probability: 0 },
-      { name: "Premier contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_entreprise", probability: 20 },
+      { name: "Premier contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_societe", probability: 20 },
       { name: "Relance 1", color: "#8B5CF6", requires_email: true, email_template_type: "contact_followup_1", probability: 30 },
       { name: "Qualification", color: "#F59E0B", requires_email: false, probability: 50 },
       { name: "Référencé", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
@@ -288,14 +288,14 @@ export const DEFAULT_CONTACT_PIPELINE_EMAIL_TEMPLATES = [
     variables: ["contact_name", "agency_name", "agency_city", "specialty", "sender_name"],
   },
   {
-    template_type: "contact_first_entreprise",
-    name: "Premier contact Entreprise",
+    template_type: "contact_first_societe",
+    name: "Premier contact Société",
     subject: "Partenariat travaux - {{agency_name}}",
     body_html: `<!DOCTYPE html>
 <html>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
   <p>Bonjour {{contact_name}},</p>
-  <p>L'agence <strong>{{agency_name}}</strong> développe son réseau d'entreprises partenaires.</p>
+  <p>L'agence <strong>{{agency_name}}</strong> développe son réseau de sociétés partenaires.</p>
   <p>Nous intervenons principalement sur des projets de {{project_types}} et cherchons des entreprises fiables pour nos chantiers.</p>
   <p>Pourriez-vous nous transmettre votre plaquette et références ?</p>
   <p>Cordialement,<br/>{{sender_name}}</p>
