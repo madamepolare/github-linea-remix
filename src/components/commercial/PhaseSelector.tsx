@@ -1,22 +1,22 @@
 import { useState } from 'react';
-import { GripVertical, Check, ChevronDown, ChevronUp, Trash2, Plus, FolderOpen } from 'lucide-react';
+import { GripVertical, Check, ChevronDown, ChevronUp, Trash2, Plus, FolderOpen, Layers } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AIPhaseSuggestion } from './AIPhaseSuggestion';
 import { useQuoteTemplates } from '@/hooks/useQuoteTemplates';
-import { ALL_MISSION_TEMPLATES, getMissionCategories, MissionTemplate } from '@/lib/defaultMissionTemplates';
+import { usePhaseTemplates, PhaseTemplate as DBPhaseTemplate } from '@/hooks/usePhaseTemplates';
 import { toast } from 'sonner';
 import {
   CommercialDocument,
   CommercialDocumentPhase,
-  ProjectType,
-  PHASES_BY_PROJECT_TYPE
+  ProjectType
 } from '@/lib/commercialTypes';
+
 interface PhaseSelectorProps {
   phases: CommercialDocumentPhase[];
   projectType: ProjectType;
@@ -43,11 +43,16 @@ export function PhaseSelector({
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const { templates: savedTemplates, isLoadingTemplates } = useQuoteTemplates(projectType);
+  const { templates: phaseTemplates } = usePhaseTemplates(projectType);
 
   // Use totalAmount if available (forfait mode), otherwise calculate from percentage
   const baseFee = totalAmount || (projectBudget && feePercentage 
     ? projectBudget * (feePercentage / 100) 
     : 0);
+
+  // Phase templates from settings
+  const basePhaseTemplates = phaseTemplates.filter(t => t.is_active && t.category === 'base');
+  const complementaryPhaseTemplates = phaseTemplates.filter(t => t.is_active && t.category === 'complementary');
 
   const loadTemplatePhases = (template: { phases: Array<{ code: string; name: string; description?: string; defaultPercentage: number; deliverables: string[] }> }) => {
     const newPhases: CommercialDocumentPhase[] = template.phases.map((phase, index) => ({
@@ -68,26 +73,24 @@ export function PhaseSelector({
     toast.success('Template chargé');
   };
 
-  const loadMissionTemplate = (template: MissionTemplate) => {
-    const newPhases: CommercialDocumentPhase[] = template.phases.map((phase, index) => ({
+  const loadBasePhasesBundle = () => {
+    const newPhases: CommercialDocumentPhase[] = basePhaseTemplates.map((phase, index) => ({
       id: crypto.randomUUID(),
       document_id: documentId || '',
       phase_code: phase.code,
       phase_name: phase.name,
       phase_description: phase.description || '',
-      percentage_fee: phase.defaultPercentage,
-      amount: baseFee * phase.defaultPercentage / 100,
+      percentage_fee: phase.default_percentage,
+      amount: baseFee * phase.default_percentage / 100,
       is_included: true,
-      deliverables: phase.deliverables,
+      deliverables: phase.deliverables || [],
       sort_order: index,
       created_at: null,
       updated_at: null,
     }));
     onPhasesChange(newPhases);
-    toast.success(`Template "${template.name}" chargé`);
+    toast.success('Mission de base chargée');
   };
-
-  const missionCategories = getMissionCategories();
 
   const toggleExpanded = (id: string) => {
     const newExpanded = new Set(expandedPhases);
@@ -217,36 +220,57 @@ export function PhaseSelector({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-80 max-h-[400px] overflow-y-auto">
+                {/* Mission de base (bundle) */}
+                {basePhaseTemplates.length > 0 && (
+                  <>
+                    <DropdownMenuItem onClick={() => loadBasePhasesBundle()} className="flex flex-col items-start py-2">
+                      <div className="flex items-center gap-2 w-full">
+                        <Layers className="h-4 w-4" />
+                        <span className="font-medium">Mission de base complète</span>
+                        <Badge variant="secondary" className="ml-auto text-xs">{basePhaseTemplates.length} phases</Badge>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                
                 {savedTemplates && savedTemplates.length > 0 && (
                   <>
                     <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Mes templates</div>
                     {savedTemplates.map((template) => (
-                      <DropdownMenuItem
-                        key={template.id}
-                        onClick={() => loadTemplatePhases(template)}
-                      >
+                      <DropdownMenuItem key={template.id} onClick={() => loadTemplatePhases(template)}>
                         {template.name}
                       </DropdownMenuItem>
                     ))}
                     <DropdownMenuSeparator />
                   </>
                 )}
-                {missionCategories.map((cat, catIndex) => (
-                  <div key={cat.type}>
-                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{cat.label}</div>
-                    {cat.templates.map((template) => (
-                      <DropdownMenuItem
-                        key={template.id}
-                        onClick={() => loadMissionTemplate(template)}
-                        className="flex flex-col items-start py-2"
-                      >
-                        <div className="font-medium">{template.name}</div>
-                        <div className="text-xs text-muted-foreground">{template.description}</div>
+                
+                {/* Phases from settings */}
+                {basePhaseTemplates.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Phases de base</div>
+                    {basePhaseTemplates.map((t) => (
+                      <DropdownMenuItem key={t.code} className="text-sm">
+                        <Badge variant="outline" className="mr-2 text-xs">{t.code}</Badge>
+                        {t.name} ({t.default_percentage}%)
                       </DropdownMenuItem>
                     ))}
-                    {catIndex < missionCategories.length - 1 && <DropdownMenuSeparator />}
-                  </div>
-                ))}
+                  </>
+                )}
+                
+                {complementaryPhaseTemplates.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Complémentaires</div>
+                    {complementaryPhaseTemplates.map((t) => (
+                      <DropdownMenuItem key={t.code} className="text-sm">
+                        <Badge variant="outline" className="mr-2 text-xs">{t.code}</Badge>
+                        {t.name} ({t.default_percentage}%)
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 

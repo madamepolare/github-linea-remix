@@ -64,12 +64,12 @@ import {
   CommercialDocumentPhase,
   FeeMode,
   FEE_MODE_LABELS,
-  PHASES_BY_PROJECT_TYPE,
-  PhaseTemplate
+  PhaseTemplate,
+  PHASE_CATEGORY_LABELS
 } from '@/lib/commercialTypes';
 import { AIPhaseSuggestion } from './AIPhaseSuggestion';
 import { useQuoteTemplates, QuoteTemplate, PricingGridItem } from '@/hooks/useQuoteTemplates';
-import { ALL_MISSION_TEMPLATES, getMissionCategories, MissionTemplate } from '@/lib/defaultMissionTemplates';
+import { usePhaseTemplates, PhaseTemplate as DBPhaseTemplate } from '@/hooks/usePhaseTemplates';
 
 interface FeesAndQuoteEditorProps {
   items: QuoteLineItem[];
@@ -115,6 +115,9 @@ export function FeesAndQuoteEditor({
   
   // Load templates and pricing grids
   const { templates, pricingGrids } = useQuoteTemplates(projectType);
+  
+  // Load phase templates from database (settings)
+  const { templates: phaseTemplates } = usePhaseTemplates(projectType);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -229,13 +232,13 @@ export function FeesAndQuoteEditor({
     setExpandedItems(new Set([...expandedItems, newItem.id]));
   };
 
-  const addPhaseFromTemplate = (template: PhaseTemplate) => {
+  const addPhaseFromTemplate = (template: DBPhaseTemplate) => {
     const newItem: QuoteLineItem = {
       id: generateId(),
       type: 'phase',
       code: template.code,
       designation: template.name,
-      description: template.description,
+      description: template.description || undefined,
       quantity: 1,
       unit: 'forfait',
       unitPrice: 0,
@@ -243,11 +246,38 @@ export function FeesAndQuoteEditor({
       isOptional: false,
       deliverables: template.deliverables || [],
       sortOrder: items.length,
-      percentageFee: template.defaultPercentage || 10
+      percentageFee: template.default_percentage || 10
     };
     onItemsChange([...items, newItem]);
     setExpandedItems(new Set([...expandedItems, newItem.id]));
   };
+
+  // Add all base phases as a bundle
+  const addBasePhasesBundle = () => {
+    const existingCodes = phaseItems.map(p => p.code).filter(Boolean);
+    const newPhases: QuoteLineItem[] = basePhaseTemplates
+      .filter(phase => !existingCodes.includes(phase.code))
+      .map((phase, index) => ({
+        id: generateId(),
+        type: 'phase' as LineItemType,
+        code: phase.code,
+        designation: phase.name,
+        description: phase.description || undefined,
+        quantity: 1,
+        unit: 'forfait',
+        unitPrice: 0,
+        amount: 0,
+        isOptional: false,
+        deliverables: phase.deliverables || [],
+        sortOrder: items.length + index,
+        percentageFee: phase.default_percentage || 10
+      }));
+    
+    if (newPhases.length > 0) {
+      onItemsChange([...items, ...newPhases]);
+    }
+  };
+
 
   // Add multiple phases from a template bundle
   const addPhasesFromTemplate = (template: QuoteTemplate) => {
@@ -294,14 +324,14 @@ export function FeesAndQuoteEditor({
     setExpandedItems(new Set([...expandedItems, newItem.id]));
   };
 
-  // Get available phase templates based on project type
-  const availablePhaseTemplates = PHASES_BY_PROJECT_TYPE[projectType] || PHASES_BY_PROJECT_TYPE.architecture;
+  // Get available phase templates from database (settings)
+  const basePhaseTemplates = phaseTemplates.filter(t => t.category === 'base' && t.is_active);
+  const complementaryPhaseTemplates = phaseTemplates.filter(t => t.category === 'complementary' && t.is_active);
   
   // Filter out phases that are already added
   const existingPhaseCodes = phaseItems.map(p => p.code).filter(Boolean);
-  const remainingPhaseTemplates = availablePhaseTemplates.filter(
-    t => !existingPhaseCodes.includes(t.code)
-  );
+  const remainingBasePhases = basePhaseTemplates.filter(t => !existingPhaseCodes.includes(t.code));
+  const remainingComplementaryPhases = complementaryPhaseTemplates.filter(t => !existingPhaseCodes.includes(t.code));
 
   // Filter templates for current project type
   const availableQuoteTemplates = templates.filter(t => t.project_type === projectType);
@@ -346,25 +376,6 @@ export function FeesAndQuoteEditor({
     }
   };
 
-  const loadMissionTemplate = (template: MissionTemplate) => {
-    const newItems: QuoteLineItem[] = template.phases.map((phase, index) => ({
-      id: generateId(),
-      type: 'phase' as LineItemType,
-      designation: phase.name,
-      description: phase.description || '',
-      code: phase.code,
-      percentageFee: phase.defaultPercentage,
-      quantity: 1,
-      unit: 'forfait',
-      unitPrice: 0,
-      amount: 0,
-      isOptional: false,
-      deliverables: phase.deliverables,
-      sortOrder: index
-    }));
-    onItemsChange(newItems);
-  };
-
   const loadSavedTemplate = (template: QuoteTemplate) => {
     const newItems: QuoteLineItem[] = template.phases.map((phase: any, index: number) => ({
       id: generateId(),
@@ -384,7 +395,25 @@ export function FeesAndQuoteEditor({
     onItemsChange(newItems);
   };
 
-  const missionCategories = getMissionCategories();
+  // Load all base phases from settings as bundle
+  const loadBasePhasesBundle = () => {
+    const newItems: QuoteLineItem[] = basePhaseTemplates.map((phase, index) => ({
+      id: generateId(),
+      type: 'phase' as LineItemType,
+      designation: phase.name,
+      description: phase.description || '',
+      code: phase.code,
+      percentageFee: phase.default_percentage,
+      quantity: 1,
+      unit: 'forfait',
+      unitPrice: 0,
+      amount: 0,
+      isOptional: false,
+      deliverables: phase.deliverables || [],
+      sortOrder: index
+    }));
+    onItemsChange(newItems);
+  };
 
   // === DRAG & DROP ===
   const handleDragStart = (index: number) => {
@@ -1062,13 +1091,36 @@ export function FeesAndQuoteEditor({
                     </>
                   )}
                   
-                  {remainingPhaseTemplates.length > 0 && (
+                  {/* Missions de base (bundle) */}
+                  {basePhaseTemplates.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => addBasePhasesBundle()}
+                        className="flex flex-col items-start py-2"
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <Layers className="h-4 w-4" />
+                          <span className="font-medium">Mission de base complète</span>
+                          <Badge variant="secondary" className="ml-auto text-xs">
+                            {basePhaseTemplates.length} phases
+                          </Badge>
+                        </div>
+                        <span className="text-xs text-muted-foreground mt-0.5">
+                          Charger toutes les phases de base
+                        </span>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  
+                  {/* Phases de base individuelles */}
+                  {remainingBasePhases.length > 0 && (
                     <>
                       <DropdownMenuSeparator />
                       <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                        Phases standards
+                        Phases de base
                       </div>
-                      {remainingPhaseTemplates.map((template) => (
+                      {remainingBasePhases.map((template) => (
                         <DropdownMenuItem 
                           key={template.code} 
                           onClick={() => addPhaseFromTemplate(template)}
@@ -1080,7 +1132,39 @@ export function FeesAndQuoteEditor({
                             </Badge>
                             <span className="font-medium">{template.name}</span>
                             <span className="ml-auto text-xs text-muted-foreground">
-                              {template.defaultPercentage}%
+                              {template.default_percentage}%
+                            </span>
+                          </div>
+                          {template.description && (
+                            <span className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                              {template.description}
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Missions complémentaires */}
+                  {remainingComplementaryPhases.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                        Missions complémentaires
+                      </div>
+                      {remainingComplementaryPhases.map((template) => (
+                        <DropdownMenuItem 
+                          key={template.code} 
+                          onClick={() => addPhaseFromTemplate(template)}
+                          className="flex flex-col items-start py-2"
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            <Badge variant="outline" className="text-xs font-mono">
+                              {template.code}
+                            </Badge>
+                            <span className="font-medium">{template.name}</span>
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              {template.default_percentage}%
                             </span>
                           </div>
                           {template.description && (
@@ -1133,6 +1217,28 @@ export function FeesAndQuoteEditor({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="center" className="w-80 max-h-[400px] overflow-y-auto">
+                      {/* Mission de base complète (bundle) */}
+                      {basePhaseTemplates.length > 0 && (
+                        <>
+                          <DropdownMenuItem 
+                            onClick={() => loadBasePhasesBundle()}
+                            className="flex flex-col items-start py-2"
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              <Layers className="h-4 w-4" />
+                              <span className="font-medium">Mission de base complète</span>
+                              <Badge variant="secondary" className="ml-auto text-xs">
+                                {basePhaseTemplates.length} phases
+                              </Badge>
+                            </div>
+                            <span className="text-xs text-muted-foreground mt-0.5">
+                              Charger toutes les phases de base
+                            </span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
+                      
                       {templates && templates.length > 0 && (
                         <>
                           <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Mes templates</div>
@@ -1147,22 +1253,46 @@ export function FeesAndQuoteEditor({
                           <DropdownMenuSeparator />
                         </>
                       )}
-                      {missionCategories.map((cat, catIndex) => (
-                        <div key={cat.type}>
-                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{cat.label}</div>
-                          {cat.templates.map((template) => (
+                      
+                      {/* Phases individuelles */}
+                      {basePhaseTemplates.length > 0 && (
+                        <>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Phases de base</div>
+                          {basePhaseTemplates.map((template) => (
                             <DropdownMenuItem
-                              key={template.id}
-                              onClick={() => loadMissionTemplate(template)}
+                              key={template.code}
+                              onClick={() => addPhaseFromTemplate(template)}
                               className="flex flex-col items-start py-2"
                             >
-                              <div className="font-medium">{template.name}</div>
-                              <div className="text-xs text-muted-foreground">{template.description}</div>
+                              <div className="flex items-center gap-2 w-full">
+                                <Badge variant="outline" className="text-xs font-mono">{template.code}</Badge>
+                                <span className="font-medium">{template.name}</span>
+                                <span className="ml-auto text-xs text-muted-foreground">{template.default_percentage}%</span>
+                              </div>
                             </DropdownMenuItem>
                           ))}
-                          {catIndex < missionCategories.length - 1 && <DropdownMenuSeparator />}
-                        </div>
-                      ))}
+                        </>
+                      )}
+                      
+                      {complementaryPhaseTemplates.length > 0 && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Complémentaires</div>
+                          {complementaryPhaseTemplates.map((template) => (
+                            <DropdownMenuItem
+                              key={template.code}
+                              onClick={() => addPhaseFromTemplate(template)}
+                              className="flex flex-col items-start py-2"
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <Badge variant="outline" className="text-xs font-mono">{template.code}</Badge>
+                                <span className="font-medium">{template.name}</span>
+                                <span className="ml-auto text-xs text-muted-foreground">{template.default_percentage}%</span>
+                              </div>
+                            </DropdownMenuItem>
+                          ))}
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
