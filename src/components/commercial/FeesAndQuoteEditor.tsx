@@ -54,9 +54,7 @@ import {
   QuoteLineItem, 
   LineItemType, 
   LINE_ITEM_UNITS,
-  QUOTE_TEMPLATES,
-  COMMON_ADDITIONAL_ITEMS,
-  getTemplatesForProjectType
+  COMMON_ADDITIONAL_ITEMS
 } from '@/lib/quoteTemplates';
 import { 
   ProjectType, 
@@ -68,7 +66,7 @@ import {
   PHASE_CATEGORY_LABELS
 } from '@/lib/commercialTypes';
 import { AIPhaseSuggestion } from './AIPhaseSuggestion';
-import { useQuoteTemplates, QuoteTemplate, PricingGridItem } from '@/hooks/useQuoteTemplates';
+import { useQuoteTemplates, PricingGridItem } from '@/hooks/useQuoteTemplates';
 import { usePhaseTemplates, PhaseTemplate as DBPhaseTemplate } from '@/hooks/usePhaseTemplates';
 
 interface FeesAndQuoteEditorProps {
@@ -278,33 +276,6 @@ export function FeesAndQuoteEditor({
     }
   };
 
-
-  // Add multiple phases from a template bundle
-  const addPhasesFromTemplate = (template: QuoteTemplate) => {
-    const existingCodes = phaseItems.map(p => p.code).filter(Boolean);
-    const newPhases: QuoteLineItem[] = template.phases
-      .filter(phase => !existingCodes.includes(phase.code))
-      .map((phase, index) => ({
-        id: generateId(),
-        type: 'phase' as LineItemType,
-        code: phase.code,
-        designation: phase.name,
-        description: phase.description,
-        quantity: 1,
-        unit: 'forfait',
-        unitPrice: 0,
-        amount: 0,
-        isOptional: false,
-        deliverables: phase.deliverables || [],
-        sortOrder: items.length + index,
-        percentageFee: phase.defaultPercentage || 10
-      }));
-    
-    if (newPhases.length > 0) {
-      onItemsChange([...items, ...newPhases]);
-    }
-  };
-
   // Add item from pricing grid
   const addItemFromPricingGrid = (item: PricingGridItem, gridType: string) => {
     const newItem: QuoteLineItem = {
@@ -333,8 +304,7 @@ export function FeesAndQuoteEditor({
   const remainingBasePhases = basePhaseTemplates.filter(t => !existingPhaseCodes.includes(t.code));
   const remainingComplementaryPhases = complementaryPhaseTemplates.filter(t => !existingPhaseCodes.includes(t.code));
 
-  // Filter templates for current project type
-  const availableQuoteTemplates = templates.filter(t => t.project_type === projectType);
+  // Templates are loaded from phase settings only
   
   // Filter active pricing grids
   const activePricingGrids = pricingGrids.filter(g => g.is_active && g.items.length > 0);
@@ -364,36 +334,6 @@ export function FeesAndQuoteEditor({
     setExpandedItems(new Set(expandedItems));
   };
 
-  const loadTemplate = (templateId: string) => {
-    const template = QUOTE_TEMPLATES.find(t => t.id === templateId);
-    if (template) {
-      const newItems: QuoteLineItem[] = template.lineItems.map((item, index) => ({
-        ...item,
-        id: generateId(),
-        sortOrder: index
-      }));
-      onItemsChange(newItems);
-    }
-  };
-
-  const loadSavedTemplate = (template: QuoteTemplate) => {
-    const newItems: QuoteLineItem[] = template.phases.map((phase: any, index: number) => ({
-      id: generateId(),
-      type: 'phase' as LineItemType,
-      designation: phase.name,
-      description: phase.description || '',
-      code: phase.code,
-      percentageFee: phase.defaultPercentage,
-      quantity: 1,
-      unit: 'forfait',
-      unitPrice: 0,
-      amount: 0,
-      isOptional: false,
-      deliverables: phase.deliverables || [],
-      sortOrder: index
-    }));
-    onItemsChange(newItems);
-  };
 
   // Load all base phases from settings as bundle
   const loadBasePhasesBundle = () => {
@@ -461,7 +401,7 @@ export function FeesAndQuoteEditor({
     }
   };
 
-  const quoteTemplatesForType = getTemplatesForProjectType(projectType);
+  // Templates are now loaded from database only
 
   // === RENDER PHASE ROW ===
   const renderPhaseRow = (item: QuoteLineItem, index: number) => {
@@ -1061,36 +1001,6 @@ export function FeesAndQuoteEditor({
                     Phase personnalisée
                   </DropdownMenuItem>
                   
-                  {/* Templates (bundles) */}
-                  {availableQuoteTemplates.length > 0 && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                        <Layers className="h-3 w-3" />
-                        Charger un template
-                      </div>
-                      {availableQuoteTemplates.map((template) => (
-                        <DropdownMenuItem 
-                          key={template.id} 
-                          onClick={() => addPhasesFromTemplate(template)}
-                          className="flex flex-col items-start py-2"
-                        >
-                          <div className="flex items-center gap-2 w-full">
-                            <span className="font-medium">{template.name}</span>
-                            <Badge variant="secondary" className="ml-auto text-xs">
-                              {template.phases.length} phases
-                            </Badge>
-                          </div>
-                          {template.description && (
-                            <span className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                              {template.description}
-                            </span>
-                          )}
-                        </DropdownMenuItem>
-                      ))}
-                    </>
-                  )}
-                  
                   {/* Missions de base (bundle) */}
                   {basePhaseTemplates.length > 0 && (
                     <>
@@ -1235,21 +1145,6 @@ export function FeesAndQuoteEditor({
                               Charger toutes les phases de base
                             </span>
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                        </>
-                      )}
-                      
-                      {templates && templates.length > 0 && (
-                        <>
-                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Mes templates</div>
-                          {templates.map((template) => (
-                            <DropdownMenuItem
-                              key={template.id}
-                              onClick={() => loadSavedTemplate(template)}
-                            >
-                              {template.name}
-                            </DropdownMenuItem>
-                          ))}
                           <DropdownMenuSeparator />
                         </>
                       )}
