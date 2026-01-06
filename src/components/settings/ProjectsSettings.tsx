@@ -1,7 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PhaseTemplatesSettings } from "./PhaseTemplatesSettings";
 import { GenericSettingsManager } from "./GenericSettingsManager";
-import { Layers, FolderKanban, FileText } from "lucide-react";
+import { FolderKanban, FileText } from "lucide-react";
 
 // Default project types
 const DEFAULT_PROJECT_TYPES = [
@@ -25,12 +24,15 @@ const DEFAULT_DELIVERABLE_TYPES = [
 export function ProjectsSettings() {
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="phases">
+      <div>
+        <h3 className="text-lg font-medium">Configuration des projets</h3>
+        <p className="text-sm text-muted-foreground">
+          Gérez les types de projets et catégories de livrables
+        </p>
+      </div>
+
+      <Tabs defaultValue="types">
         <TabsList className="flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="phases" className="gap-1.5 text-xs">
-            <Layers className="h-4 w-4" />
-            Phases
-          </TabsTrigger>
           <TabsTrigger value="types" className="gap-1.5 text-xs">
             <FolderKanban className="h-4 w-4" />
             Types de projet
@@ -40,10 +42,6 @@ export function ProjectsSettings() {
             Livrables
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="phases" className="mt-6">
-          <PhaseTemplatesSettings />
-        </TabsContent>
 
         <TabsContent value="types" className="mt-6">
           <GenericSettingsManager
