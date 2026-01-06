@@ -48,7 +48,7 @@ export default function Onboarding() {
   const [createdWorkspaceId, setCreatedWorkspaceId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, profile, loading, refreshProfile } = useAuth();
+  const { user, profile, loading, refreshProfile, workspaces } = useAuth();
 
   const workspaceForm = useForm<WorkspaceFormData>({
     resolver: zodResolver(workspaceSchema),
@@ -78,11 +78,25 @@ export default function Onboarding() {
     if (!loading) {
       if (!user) {
         navigate("/auth");
-      } else if (profile?.onboarding_completed) {
+        return;
+      }
+      if (profile?.onboarding_completed) {
         navigate("/");
+        return;
+      }
+      // If user is already a member of a workspace (invited), skip to step 2
+      if (workspaces && workspaces.length > 0 && currentStep === 1) {
+        setCurrentStep(2);
+        // Set active workspace if not already set
+        if (!profile?.active_workspace_id) {
+          supabase
+            .from("profiles")
+            .update({ active_workspace_id: workspaces[0].id })
+            .eq("user_id", user.id);
+        }
       }
     }
-  }, [user, profile, loading, navigate]);
+  }, [user, profile, loading, navigate, workspaces, currentStep]);
 
   const handleCreateWorkspace = async (data: WorkspaceFormData) => {
     if (!user) return;
@@ -198,7 +212,7 @@ export default function Onboarding() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
               <Hexagon className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="font-display text-xl font-bold text-foreground">LINEA SUITE</span>
+            <span className="font-display text-xl font-bold text-foreground">ARCHIMIND</span>
           </div>
         </div>
       </header>
@@ -291,7 +305,7 @@ export default function Onboarding() {
                     <Label htmlFor="companySlug">URL de l'espace</Label>
                     <div className="flex items-center">
                       <span className="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-input bg-muted text-sm text-muted-foreground">
-                        lineasuite.app/
+                        archimind.app/
                       </span>
                       <Input
                         id="companySlug"

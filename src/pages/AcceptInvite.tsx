@@ -78,62 +78,48 @@ export default function AcceptInvite() {
     setIsAccepting(true);
 
     try {
-      // Check if user email matches invite email
-      if (user.email?.toLowerCase() !== invite.email.toLowerCase()) {
+      // Use secure RPC function to accept invitation
+      const { data, error } = await supabase.rpc('accept_workspace_invite', {
+        invite_token: token
+      });
+
+      if (error) throw error;
+
+      // Cast the response to the expected type
+      const result = data as { success: boolean; error?: string; already_member?: boolean; workspace_name?: string; workspace_id?: string } | null;
+
+      if (!result || !result.success) {
         toast({
           variant: "destructive",
-          title: "Email mismatch",
-          description: `This invitation was sent to ${invite.email}. Please sign in with that email.`,
+          title: "Erreur",
+          description: result?.error || "Impossible d'accepter l'invitation",
         });
         setIsAccepting(false);
         return;
       }
 
-      // Add user to workspace
-      const { error: memberError } = await supabase
-        .from("workspace_members")
-        .insert({
-          workspace_id: invite.workspace.id,
-          user_id: user.id,
-          role: invite.role as any,
-        });
-
-      if (memberError) {
-        if (memberError.message.includes("duplicate")) {
-          toast({
-            title: "Already a member",
-            description: "You're already a member of this workspace.",
-          });
-        } else {
-          throw memberError;
-        }
-      }
-
-      // Delete the invite
-      await supabase
-        .from("workspace_invites")
-        .delete()
-        .eq("id", invite.id);
-
-      // Update active workspace
-      await supabase
-        .from("profiles")
-        .update({ active_workspace_id: invite.workspace.id })
-        .eq("user_id", user.id);
-
+      // Refresh profile to get new workspace
       await refreshProfile();
 
-      toast({
-        title: "Welcome to the team!",
-        description: `You've joined ${invite.workspace.name}`,
-      });
+      if (result.already_member) {
+        toast({
+          title: "Déjà membre",
+          description: `Vous êtes déjà membre de ${result.workspace_name}`,
+        });
+      } else {
+        toast({
+          title: "Bienvenue dans l'équipe !",
+          description: `Vous avez rejoint ${result.workspace_name}`,
+        });
+      }
 
       navigate("/");
     } catch (err: any) {
+      console.error("Error accepting invite:", err);
       toast({
         variant: "destructive",
-        title: "Error accepting invite",
-        description: err.message,
+        title: "Erreur lors de l'acceptation",
+        description: err.message || "Une erreur est survenue",
       });
     } finally {
       setIsAccepting(false);
