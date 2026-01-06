@@ -259,12 +259,15 @@ export default function CRM() {
       setCreateLeadOpen(true);
     };
     const handleCreateContact = () => setCreateContactOpen(true);
+    const handleCreateCompany = () => setCreateCompanyOpen(true);
     
     window.addEventListener("open-create-lead", handleCreateLead);
     window.addEventListener("open-create-contact", handleCreateContact);
+    window.addEventListener("open-create-company", handleCreateCompany);
     return () => {
       window.removeEventListener("open-create-lead", handleCreateLead);
       window.removeEventListener("open-create-contact", handleCreateContact);
+      window.removeEventListener("open-create-company", handleCreateCompany);
     };
   }, [selectedPipelineId, pipelines]);
 
