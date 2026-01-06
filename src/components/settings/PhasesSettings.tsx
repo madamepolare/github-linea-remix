@@ -169,6 +169,33 @@ export function PhasesSettings() {
     setResetConfirmType(null);
   };
 
+  const handleNormalizePercentages = async () => {
+    if (groupedTemplates.base.length === 0 || totals.base === 100) return;
+    
+    const ratio = 100 / totals.base;
+    const updates = groupedTemplates.base.map((phase, index, arr) => {
+      if (index === arr.length - 1) {
+        // Last phase gets the remainder to ensure exactly 100%
+        const previousSum = arr.slice(0, -1).reduce((sum, p) => {
+          return sum + Math.round(p.default_percentage * ratio);
+        }, 0);
+        return {
+          id: phase.id,
+          default_percentage: 100 - previousSum,
+        };
+      }
+      return {
+        id: phase.id,
+        default_percentage: Math.round(phase.default_percentage * ratio),
+      };
+    });
+
+    // Update each phase sequentially
+    for (const update of updates) {
+      await updateTemplate.mutateAsync(update);
+    }
+  };
+
   const movePhase = async (phaseId: string, direction: "up" | "down", categoryTemplates: PhaseTemplate[]) => {
     const index = categoryTemplates.findIndex(t => t.id === phaseId);
     const newIndex = direction === "up" ? index - 1 : index + 1;
@@ -333,7 +360,7 @@ export function PhasesSettings() {
         {PROJECT_TYPES.map((type) => (
           <TabsContent key={type} value={type} className="space-y-6 mt-6">
             {/* Summary Card */}
-            <Card>
+            <Card className={totals.base !== 100 && groupedTemplates.base.length > 0 ? "border-orange-500" : ""}>
               <CardContent className="py-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-6">
@@ -346,19 +373,37 @@ export function PhasesSettings() {
                       <p className="text-xs text-muted-foreground">Complémentaires</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-semibold text-primary">{totals.base}%</p>
+                      <p className={`text-2xl font-semibold ${totals.base === 100 ? "text-green-600" : "text-orange-500"}`}>
+                        {totals.base}%
+                      </p>
                       <p className="text-xs text-muted-foreground">Total base</p>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setResetConfirmType(type)}
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Réinitialiser
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {totals.base !== 100 && groupedTemplates.base.length > 0 && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleNormalizePercentages()}
+                      >
+                        Ajuster à 100%
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setResetConfirmType(type)}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Réinitialiser
+                    </Button>
+                  </div>
                 </div>
+                {totals.base !== 100 && groupedTemplates.base.length > 0 && (
+                  <p className="text-sm text-orange-500 mt-2">
+                    ⚠️ Le total des missions de base doit être égal à 100% (actuellement {totals.base}%)
+                  </p>
+                )}
               </CardContent>
             </Card>
 
