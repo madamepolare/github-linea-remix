@@ -1,14 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useTasks, Task, SubtaskPreview } from "@/hooks/useTasks";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjects } from "@/hooks/useProjects";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
+import { TextEditCell, StatusEditCell, PriorityEditCell, DateEditCell, AssigneeEditCell } from "./InlineTaskEditCell";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/table";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Calendar, 
   ChevronRight, 
   Plus, 
   FolderKanban, 
@@ -28,11 +27,9 @@ import {
   ArrowUp, 
   ArrowDown,
   ArrowUpDown,
-  CheckCircle2,
-  Sparkles
+  CheckCircle2
 } from "lucide-react";
-import { format, isPast, isToday } from "date-fns";
-import { fr } from "date-fns/locale";
+import { isPast, isToday } from "date-fns";
 import { cn } from "@/lib/utils";
 import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/taskTypes";
 import confetti from "canvas-confetti";
@@ -52,17 +49,8 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
   const { projects } = useProjects();
   const { data: profiles } = useWorkspaceProfiles();
 
-  const getProfileByUserId = useMemo(() => {
-    const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-    return (userId: string) => profileMap.get(userId);
-  }, [profiles]);
 
-  const getInitials = (profile: { full_name: string | null } | undefined, userId: string) => {
-    if (profile?.full_name) {
-      return profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-    }
-    return userId.slice(0, 2).toUpperCase();
-  };
+
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -249,8 +237,8 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
     );
   }
 
-  const getStatusConfig = (status: Task["status"]) => TASK_STATUSES.find(s => s.id === status);
-  const getPriorityConfig = (priority: Task["priority"]) => TASK_PRIORITIES.find(p => p.id === priority);
+
+
 
   const SortableHeader = ({ column, children, className }: { column: SortColumn; children: React.ReactNode; className?: string }) => (
     <TableHead 
@@ -284,7 +272,7 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
             <TableRow className="bg-muted/30 hover:bg-muted/30">
               <TableHead className="w-10"></TableHead>
               <TableHead className="w-6"></TableHead>
-              <SortableHeader column="relation" className="w-36">Projet</SortableHeader>
+              <SortableHeader column="relation" className="w-36">Relation</SortableHeader>
               <SortableHeader column="title">Tâche</SortableHeader>
               <SortableHeader column="status" className="w-24">Statut</SortableHeader>
               <SortableHeader column="due_date" className="w-24">Échéance</SortableHeader>
@@ -318,8 +306,6 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
               {filteredTasks?.map((task) => {
                 const hasSubtasks = task.subtasks && task.subtasks.length > 0;
                 const isExpanded = expandedTasks.has(task.id);
-                const statusConfig = getStatusConfig(task.status);
-                const priorityConfig = getPriorityConfig(task.priority);
                 const completedSubtasks = task.subtasks?.filter(s => s.status === "done").length || 0;
                 const relation = getRelationDisplay(task);
                 const isJustCompleted = recentlyCompleted.has(task.id);
@@ -372,12 +358,11 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
                     </TableCell>
                     <TableCell className="py-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className={cn(
-                          "font-medium truncate",
-                          task.status === "done" && "line-through text-muted-foreground"
-                        )}>
-                          {task.title}
-                        </span>
+                        <TextEditCell
+                          value={task.title}
+                          onSave={(title) => updateTask.mutate({ id: task.id, title })}
+                          className={task.status === "done" ? "line-through text-muted-foreground" : ""}
+                        />
                         {hasSubtasks && (
                           <Badge variant="outline" className="text-2xs px-1.5 py-0 h-5 flex-shrink-0">
                             {completedSubtasks}/{task.subtasks!.length}
@@ -386,48 +371,30 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
                       </div>
                     </TableCell>
                     <TableCell className="py-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className={cn("h-2 w-2 rounded-full flex-shrink-0", statusConfig?.dotClass)} />
-                        <span className="text-xs truncate">{statusConfig?.label}</span>
-                      </div>
+                      <StatusEditCell
+                        value={task.status}
+                        onSave={(status) => updateTaskStatus.mutate({ id: task.id, status: status as Task["status"] })}
+                      />
                     </TableCell>
                     <TableCell className="py-2">
-                      {task.due_date && (
-                        <div className={cn("flex items-center gap-1 text-xs", getDueDateStyle(task.due_date, task.status))}>
-                          <Calendar className="h-3 w-3 flex-shrink-0" />
-                          <span>{format(new Date(task.due_date), "d MMM", { locale: fr })}</span>
-                        </div>
-                      )}
+                      <DateEditCell
+                        value={task.due_date}
+                        onSave={(due_date) => updateTask.mutate({ id: task.id, due_date })}
+                        className={getDueDateStyle(task.due_date, task.status)}
+                      />
                     </TableCell>
                     <TableCell className="py-2">
-                      <Badge className={cn("text-2xs", priorityConfig?.color)}>
-                        {priorityConfig?.label}
-                      </Badge>
+                      <PriorityEditCell
+                        value={task.priority}
+                        onSave={(priority) => updateTask.mutate({ id: task.id, priority: priority as Task["priority"] })}
+                      />
                     </TableCell>
                     <TableCell className="py-2">
-                      {task.assigned_to && task.assigned_to.length > 0 && (
-                        <div className="flex -space-x-1">
-                          {task.assigned_to.slice(0, 3).map((userId) => {
-                            const profile = getProfileByUserId(userId);
-                            return (
-                              <Avatar key={userId} className="h-6 w-6 border-2 border-background" title={profile?.full_name || userId}>
-                                {profile?.avatar_url ? (
-                                  <img src={profile.avatar_url} alt={profile.full_name || ''} className="h-full w-full object-cover" />
-                                ) : (
-                                  <AvatarFallback className="text-2xs bg-primary/10">
-                                    {getInitials(profile, userId)}
-                                  </AvatarFallback>
-                                )}
-                              </Avatar>
-                            );
-                          })}
-                          {task.assigned_to.length > 3 && (
-                            <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                              <span className="text-2xs">+{task.assigned_to.length - 3}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      <AssigneeEditCell
+                        value={task.assigned_to || []}
+                        profiles={profiles || []}
+                        onSave={(assigned_to) => updateTask.mutate({ id: task.id, assigned_to })}
+                      />
                     </TableCell>
                   </motion.tr>
                   
