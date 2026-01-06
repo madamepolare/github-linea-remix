@@ -71,8 +71,10 @@ export function useCRMPipelines() {
     (p) => !p.pipeline_type || p.pipeline_type === "opportunity"
   );
 
+  // Compat: certaines anciennes pipelines “prospection” peuvent avoir pipeline_type null
+  // mais target_contact_type renseigné. On les considère comme des pipelines contacts.
   const contactPipelines = (pipelines || []).filter(
-    (p) => p.pipeline_type === "contact"
+    (p) => p.pipeline_type === "contact" || !!p.target_contact_type
   );
 
   const createPipeline = useMutation({

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,8 @@ export default function CRM() {
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
   const [preselectedStageId, setPreselectedStageId] = useState<string | undefined>();
 
+  const prospectionAutoCreatedRef = useRef(false);
+
   const { 
     opportunityPipelines, 
     contactPipelines, 
@@ -76,6 +78,21 @@ export default function CRM() {
       setProspectionMode("single");
     }
   }, [pipelinesLoading, contactPipelines.length]);
+
+  // Auto-création des pipelines Prospection lors de la première visite
+  useEffect(() => {
+    if (
+      view === "prospection" &&
+      !pipelinesLoading &&
+      contactPipelines.length === 0 &&
+      !createDefaultContactPipelines.isPending &&
+      !prospectionAutoCreatedRef.current
+    ) {
+      prospectionAutoCreatedRef.current = true;
+      createDefaultContactPipelines.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, pipelinesLoading, contactPipelines.length]);
 
   // Select default pipeline for single mode
   useEffect(() => {
