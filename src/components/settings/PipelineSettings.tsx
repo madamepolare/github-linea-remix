@@ -1,11 +1,20 @@
 import { useState } from "react";
-import { useCRMPipelines, Pipeline, PipelineStage } from "@/hooks/useCRMPipelines";
+import { useCRMPipelines, Pipeline, PipelineStage, PipelineType } from "@/hooks/useCRMPipelines";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -28,53 +37,81 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, Target, Layers } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, Target, Users, Layers, Mail } from "lucide-react";
+import { DEFAULT_CONTACT_TYPES } from "@/lib/crmDefaults";
 
 const STAGE_COLORS = [
   "#6B7280", "#3B82F6", "#8B5CF6", "#EC4899", "#F97316", "#22C55E", "#EF4444"
 ];
 
+const CONTACT_TYPE_OPTIONS = DEFAULT_CONTACT_TYPES.filter(t => 
+  ["bet", "societe", "partenaire_moe", "fournisseur"].includes(t.key)
+);
+
 export function PipelineSettings() {
   const {
-    pipelines,
+    opportunityPipelines,
+    contactPipelines,
     isLoading,
     createPipeline,
     updatePipeline,
     deletePipeline,
     createDefaultPipeline,
+    createDefaultContactPipelines,
     createStage,
     updateStage,
     deleteStage,
     reorderStages,
   } = useCRMPipelines();
 
+  const [activeTab, setActiveTab] = useState<"opportunity" | "contact">("opportunity");
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null);
   const [isPipelineDialogOpen, setIsPipelineDialogOpen] = useState(false);
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
   const [editingPipeline, setEditingPipeline] = useState<Pipeline | null>(null);
   const [editingStage, setEditingStage] = useState<PipelineStage | null>(null);
   const [currentPipelineId, setCurrentPipelineId] = useState<string | null>(null);
+  const [currentPipelineType, setCurrentPipelineType] = useState<PipelineType>("opportunity");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteType, setDeleteType] = useState<"pipeline" | "stage">("pipeline");
 
-  const [pipelineForm, setPipelineForm] = useState({ name: "", color: "#3B82F6" });
-  const [stageForm, setStageForm] = useState({ name: "", color: STAGE_COLORS[0], probability: 0 });
+  const [pipelineForm, setPipelineForm] = useState({ 
+    name: "", 
+    color: "#3B82F6",
+    target_contact_type: "" 
+  });
+  const [stageForm, setStageForm] = useState({ 
+    name: "", 
+    color: STAGE_COLORS[0], 
+    probability: 0,
+    requires_email_on_enter: false,
+    is_final_stage: false,
+  });
+
+  const currentPipelines = activeTab === "opportunity" ? opportunityPipelines : contactPipelines;
 
   const handleCreateDefaultPipeline = async () => {
-    await createDefaultPipeline.mutateAsync();
+    if (activeTab === "opportunity") {
+      await createDefaultPipeline.mutateAsync();
+    } else {
+      await createDefaultContactPipelines.mutateAsync();
+    }
   };
 
   const handleOpenCreatePipeline = () => {
     setEditingPipeline(null);
-    setPipelineForm({ name: "", color: "#3B82F6" });
+    setCurrentPipelineType(activeTab);
+    setPipelineForm({ name: "", color: "#3B82F6", target_contact_type: "" });
     setIsPipelineDialogOpen(true);
   };
 
   const handleOpenEditPipeline = (pipeline: Pipeline) => {
     setEditingPipeline(pipeline);
+    setCurrentPipelineType(pipeline.pipeline_type || "opportunity");
     setPipelineForm({
       name: pipeline.name,
       color: pipeline.color || "#3B82F6",
+      target_contact_type: pipeline.target_contact_type || "",
     });
     setIsPipelineDialogOpen(true);
   };
@@ -85,29 +122,42 @@ export function PipelineSettings() {
         id: editingPipeline.id,
         name: pipelineForm.name,
         color: pipelineForm.color,
+        target_contact_type: pipelineForm.target_contact_type || undefined,
       });
     } else {
       await createPipeline.mutateAsync({
         name: pipelineForm.name,
         color: pipelineForm.color,
+        pipeline_type: currentPipelineType,
+        target_contact_type: pipelineForm.target_contact_type || undefined,
       });
     }
     setIsPipelineDialogOpen(false);
   };
 
-  const handleOpenCreateStage = (pipelineId: string) => {
+  const handleOpenCreateStage = (pipelineId: string, pipelineType: PipelineType) => {
     setCurrentPipelineId(pipelineId);
+    setCurrentPipelineType(pipelineType);
     setEditingStage(null);
-    setStageForm({ name: "", color: STAGE_COLORS[0], probability: 0 });
+    setStageForm({ 
+      name: "", 
+      color: STAGE_COLORS[0], 
+      probability: 0,
+      requires_email_on_enter: false,
+      is_final_stage: false,
+    });
     setIsStageDialogOpen(true);
   };
 
-  const handleOpenEditStage = (stage: PipelineStage) => {
+  const handleOpenEditStage = (stage: PipelineStage, pipelineType: PipelineType) => {
     setEditingStage(stage);
+    setCurrentPipelineType(pipelineType);
     setStageForm({
       name: stage.name,
       color: stage.color || STAGE_COLORS[0],
       probability: stage.probability || 0,
+      requires_email_on_enter: stage.requires_email_on_enter || false,
+      is_final_stage: stage.is_final_stage || false,
     });
     setIsStageDialogOpen(true);
   };
@@ -119,6 +169,8 @@ export function PipelineSettings() {
         name: stageForm.name,
         color: stageForm.color,
         probability: stageForm.probability,
+        requires_email_on_enter: stageForm.requires_email_on_enter,
+        is_final_stage: stageForm.is_final_stage,
       });
     } else if (currentPipelineId) {
       await createStage.mutateAsync({
@@ -126,6 +178,8 @@ export function PipelineSettings() {
         name: stageForm.name,
         color: stageForm.color,
         probability: stageForm.probability,
+        requires_email_on_enter: stageForm.requires_email_on_enter,
+        is_final_stage: stageForm.is_final_stage,
       });
     }
     setIsStageDialogOpen(false);
@@ -143,7 +197,7 @@ export function PipelineSettings() {
   };
 
   const handleMoveStage = async (pipelineId: string, stageId: string, direction: "up" | "down") => {
-    const pipeline = pipelines.find((p) => p.id === pipelineId);
+    const pipeline = currentPipelines.find((p) => p.id === pipelineId);
     if (!pipeline?.stages) return;
 
     const stages = [...pipeline.stages];
@@ -159,6 +213,12 @@ export function PipelineSettings() {
     );
   };
 
+  const getContactTypeLabel = (type: string | null) => {
+    if (!type) return null;
+    const found = CONTACT_TYPE_OPTIONS.find(t => t.key === type);
+    return found?.label || type;
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -172,6 +232,177 @@ export function PipelineSettings() {
     );
   }
 
+  const renderPipelineList = (pipelines: Pipeline[], pipelineType: PipelineType) => {
+    if (pipelines.length === 0) {
+      return (
+        <div className="text-center py-6 text-sm text-muted-foreground">
+          Aucun pipeline configuré
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {pipelines.map((pipeline) => {
+          const pipelineStages = pipeline.stages || [];
+
+          return (
+            <Collapsible
+              key={pipeline.id}
+              open={expandedPipeline === pipeline.id}
+              onOpenChange={(open) => setExpandedPipeline(open ? pipeline.id : null)}
+            >
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="py-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="h-3 w-3 rounded-full"
+                          style={{ backgroundColor: pipeline.color || "#3B82F6" }}
+                        />
+                        <span className="font-medium">{pipeline.name}</span>
+                        {pipeline.target_contact_type && (
+                          <Badge variant="outline" className="text-xs">
+                            {getContactTypeLabel(pipeline.target_contact_type)}
+                          </Badge>
+                        )}
+                        <Badge variant="secondary" className="text-xs">
+                          {pipelineStages.length} étapes
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditPipeline(pipeline);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteType("pipeline");
+                            setDeleteConfirmId(pipeline.id);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                        {expandedPipeline === pipeline.id ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
+
+                <CollapsibleContent>
+                  <CardContent className="pt-0 pb-3">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                          <Layers className="h-3 w-3" />
+                          Étapes du pipeline
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => handleOpenCreateStage(pipeline.id, pipelineType)}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Étape
+                        </Button>
+                      </div>
+
+                      {pipelineStages.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Aucune étape
+                        </p>
+                      ) : (
+                        <div className="space-y-1">
+                          {pipelineStages.map((stage, index) => (
+                            <div
+                              key={stage.id}
+                              className="flex items-center gap-2 p-2 rounded bg-muted/50"
+                            >
+                              <div className="flex flex-col gap-0.5">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-4 w-4"
+                                  disabled={index === 0}
+                                  onClick={() => handleMoveStage(pipeline.id, stage.id, "up")}
+                                >
+                                  <ChevronUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-4 w-4"
+                                  disabled={index === pipelineStages.length - 1}
+                                  onClick={() => handleMoveStage(pipeline.id, stage.id, "down")}
+                                >
+                                  <ChevronDown className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              <div
+                                className="h-3 w-3 rounded-full"
+                                style={{ backgroundColor: stage.color || "#6B7280" }}
+                              />
+                              <span className="flex-1 text-sm">{stage.name}</span>
+                              {pipelineType === "contact" && stage.requires_email_on_enter && (
+                                <Mail className="h-3 w-3 text-primary" />
+                              )}
+                              {stage.is_final_stage && (
+                                <Badge variant="outline" className="text-[10px] h-4">Final</Badge>
+                              )}
+                              <Badge variant="outline" className="text-xs">
+                                {stage.probability || 0}%
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => handleOpenEditStage(stage, pipelineType)}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-destructive"
+                                onClick={() => {
+                                  setDeleteType("stage");
+                                  setDeleteConfirmId(stage.id);
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <>
       <Card>
@@ -180,179 +411,54 @@ export function PipelineSettings() {
             <div className="flex items-center gap-2">
               <Target className="h-5 w-5 text-primary" />
               <div>
-                <CardTitle className="text-base">Pipelines commerciaux</CardTitle>
+                <CardTitle className="text-base">Pipelines CRM</CardTitle>
                 <CardDescription className="text-xs">
-                  Gérez vos pipelines et leurs étapes
+                  Gérez vos pipelines commerciaux et de prospection
                 </CardDescription>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {pipelines.length === 0 && (
-                <Button variant="outline" size="sm" onClick={handleCreateDefaultPipeline}>
-                  Créer le pipeline par défaut
-                </Button>
-              )}
-              <Button size="sm" onClick={handleOpenCreatePipeline}>
-                <Plus className="h-4 w-4 mr-1" />
-                Pipeline
-              </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {pipelines.length === 0 ? (
-            <div className="text-center py-6 text-sm text-muted-foreground">
-              Aucun pipeline configuré
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {pipelines.map((pipeline) => {
-                const pipelineStages = pipeline.stages || [];
-
-                return (
-                  <Collapsible
-                    key={pipeline.id}
-                    open={expandedPipeline === pipeline.id}
-                    onOpenChange={(open) => setExpandedPipeline(open ? pipeline.id : null)}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "opportunity" | "contact")}>
+            <div className="flex items-center justify-between mb-4">
+              <TabsList>
+                <TabsTrigger value="opportunity" className="gap-1.5">
+                  <Target className="h-3.5 w-3.5" />
+                  Opportunités
+                </TabsTrigger>
+                <TabsTrigger value="contact" className="gap-1.5">
+                  <Users className="h-3.5 w-3.5" />
+                  Prospection
+                </TabsTrigger>
+              </TabsList>
+              
+              <div className="flex items-center gap-2">
+                {currentPipelines.length === 0 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleCreateDefaultPipeline}
+                    disabled={createDefaultPipeline.isPending || createDefaultContactPipelines.isPending}
                   >
-                    <Card>
-                      <CollapsibleTrigger asChild>
-                        <CardHeader className="py-3 cursor-pointer hover:bg-muted/50 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className="h-3 w-3 rounded-full"
-                                style={{ backgroundColor: pipeline.color || "#3B82F6" }}
-                              />
-                              <span className="font-medium">{pipeline.name}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                {pipelineStages.length} étapes
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenEditPipeline(pipeline);
-                                }}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteType("pipeline");
-                                  setDeleteConfirmId(pipeline.id);
-                                }}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                              {expandedPipeline === pipeline.id ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )}
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </CollapsibleTrigger>
-
-                      <CollapsibleContent>
-                        <CardContent className="pt-0 pb-3">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                                <Layers className="h-3 w-3" />
-                                Étapes du pipeline
-                              </span>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => handleOpenCreateStage(pipeline.id)}
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Étape
-                              </Button>
-                            </div>
-
-                            {pipelineStages.length === 0 ? (
-                              <p className="text-sm text-muted-foreground text-center py-4">
-                                Aucune étape
-                              </p>
-                            ) : (
-                              <div className="space-y-1">
-                                {pipelineStages.map((stage, index) => (
-                                  <div
-                                    key={stage.id}
-                                    className="flex items-center gap-2 p-2 rounded bg-muted/50"
-                                  >
-                                    <div className="flex flex-col gap-0.5">
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-4 w-4"
-                                        disabled={index === 0}
-                                        onClick={() => handleMoveStage(pipeline.id, stage.id, "up")}
-                                      >
-                                        <ChevronUp className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-4 w-4"
-                                        disabled={index === pipelineStages.length - 1}
-                                        onClick={() => handleMoveStage(pipeline.id, stage.id, "down")}
-                                      >
-                                        <ChevronDown className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                    <div
-                                      className="h-3 w-3 rounded-full"
-                                      style={{ backgroundColor: stage.color || "#6B7280" }}
-                                    />
-                                    <span className="flex-1 text-sm">{stage.name}</span>
-                                    <Badge variant="outline" className="text-xs">
-                                      {stage.probability || 0}%
-                                    </Badge>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-6 w-6"
-                                      onClick={() => handleOpenEditStage(stage)}
-                                    >
-                                      <Pencil className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-6 w-6 text-destructive"
-                                      onClick={() => {
-                                        setDeleteType("stage");
-                                        setDeleteConfirmId(stage.id);
-                                      }}
-                                    >
-                                      <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </CollapsibleContent>
-                    </Card>
-                  </Collapsible>
-                );
-              })}
+                    Créer les pipelines par défaut
+                  </Button>
+                )}
+                <Button size="sm" onClick={handleOpenCreatePipeline}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Pipeline
+                </Button>
+              </div>
             </div>
-          )}
+
+            <TabsContent value="opportunity" className="mt-0">
+              {renderPipelineList(opportunityPipelines, "opportunity")}
+            </TabsContent>
+
+            <TabsContent value="contact" className="mt-0">
+              {renderPipelineList(contactPipelines, "contact")}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
@@ -373,6 +479,28 @@ export function PipelineSettings() {
                 placeholder="Ex: Pipeline Principal"
               />
             </div>
+            
+            {currentPipelineType === "contact" && (
+              <div className="space-y-2">
+                <Label>Type de contact cible</Label>
+                <Select
+                  value={pipelineForm.target_contact_type}
+                  onValueChange={(value) => setPipelineForm({ ...pipelineForm, target_contact_type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONTACT_TYPE_OPTIONS.map((type) => (
+                      <SelectItem key={type.key} value={type.key}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Couleur</Label>
               <div className="flex gap-2">
@@ -432,6 +560,40 @@ export function PipelineSettings() {
                 }
               />
             </div>
+            
+            {currentPipelineType === "contact" && (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Email requis à l'entrée</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Ouvre une modale email lors du déplacement vers cette étape
+                    </p>
+                  </div>
+                  <Switch
+                    checked={stageForm.requires_email_on_enter}
+                    onCheckedChange={(checked) => 
+                      setStageForm({ ...stageForm, requires_email_on_enter: checked })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Étape finale</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Marque la fin du parcours de prospection
+                    </p>
+                  </div>
+                  <Switch
+                    checked={stageForm.is_final_stage}
+                    onCheckedChange={(checked) => 
+                      setStageForm({ ...stageForm, is_final_stage: checked })
+                    }
+                  />
+                </div>
+              </>
+            )}
+
             <div className="space-y-2">
               <Label>Couleur</Label>
               <div className="flex gap-2">
@@ -466,11 +628,12 @@ export function PipelineSettings() {
       <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogTitle>
+              Supprimer {deleteType === "pipeline" ? "le pipeline" : "l'étape"} ?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {deleteType === "pipeline"
-                ? "Voulez-vous vraiment supprimer ce pipeline et toutes ses étapes ? Cette action est irréversible."
-                : "Voulez-vous vraiment supprimer cette étape ? Cette action est irréversible."}
+              Cette action est irréversible.
+              {deleteType === "pipeline" && " Toutes les étapes et entrées associées seront également supprimées."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

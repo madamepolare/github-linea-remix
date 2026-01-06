@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { DEFAULT_CONTACT_PIPELINES } from "@/lib/crmDefaults";
 
 export type PipelineType = "opportunity" | "contact";
 
@@ -13,7 +14,6 @@ export interface PipelineStage {
   probability: number | null;
   sort_order: number | null;
   created_at: string | null;
-  // New fields for contact pipelines
   email_template_id: string | null;
   requires_email_on_enter: boolean | null;
   is_final_stage: boolean | null;
@@ -29,7 +29,6 @@ export interface Pipeline {
   sort_order: number | null;
   created_at: string | null;
   updated_at: string | null;
-  // New fields
   pipeline_type: PipelineType | null;
   target_contact_type: string | null;
   stages?: PipelineStage[];
@@ -67,8 +66,23 @@ export function useCRMPipelines() {
     enabled: !!activeWorkspace?.id,
   });
 
+  // Computed properties for filtering by type
+  const opportunityPipelines = (pipelines || []).filter(
+    (p) => !p.pipeline_type || p.pipeline_type === "opportunity"
+  );
+
+  const contactPipelines = (pipelines || []).filter(
+    (p) => p.pipeline_type === "contact"
+  );
+
   const createPipeline = useMutation({
-    mutationFn: async (input: { name: string; description?: string; color?: string }) => {
+    mutationFn: async (input: { 
+      name: string; 
+      description?: string; 
+      color?: string;
+      pipeline_type?: PipelineType;
+      target_contact_type?: string;
+    }) => {
       const { data, error } = await supabase
         .from("crm_pipelines")
         .insert({
@@ -76,6 +90,8 @@ export function useCRMPipelines() {
           name: input.name,
           description: input.description,
           color: input.color,
+          pipeline_type: input.pipeline_type || "opportunity",
+          target_contact_type: input.target_contact_type,
           sort_order: pipelines?.length || 0,
         })
         .select()
@@ -94,7 +110,14 @@ export function useCRMPipelines() {
   });
 
   const updatePipeline = useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; name?: string; description?: string; color?: string }) => {
+    mutationFn: async ({ id, ...input }: { 
+      id: string; 
+      name?: string; 
+      description?: string; 
+      color?: string;
+      pipeline_type?: PipelineType;
+      target_contact_type?: string;
+    }) => {
       const { data, error } = await supabase
         .from("crm_pipelines")
         .update(input)
@@ -116,7 +139,15 @@ export function useCRMPipelines() {
 
   const deletePipeline = useMutation({
     mutationFn: async (id: string) => {
-      // First delete all stages
+      // First delete all entries
+      const { error: entriesError } = await supabase
+        .from("contact_pipeline_entries")
+        .delete()
+        .eq("pipeline_id", id);
+
+      if (entriesError) throw entriesError;
+
+      // Then delete all stages
       const { error: stagesError } = await supabase
         .from("crm_pipeline_stages")
         .delete()
@@ -150,6 +181,7 @@ export function useCRMPipelines() {
           color: "#3B82F6",
           is_default: true,
           sort_order: 0,
+          pipeline_type: "opportunity",
         })
         .select()
         .single();
@@ -188,9 +220,76 @@ export function useCRMPipelines() {
     },
   });
 
+  // Create default contact pipelines from crmDefaults
+  const createDefaultContactPipelines = useMutation({
+    mutationFn: async () => {
+      const createdPipelines: any[] = [];
+      const existingContactPipelines = (pipelines || []).filter(p => p.pipeline_type === "contact");
+      let sortOrder = existingContactPipelines.length;
+
+      for (const template of DEFAULT_CONTACT_PIPELINES) {
+        // Check if pipeline for this target already exists
+        const exists = existingContactPipelines.some(
+          p => p.target_contact_type === template.target_contact_type
+        );
+        if (exists) continue;
+
+        const { data: pipeline, error: pipelineError } = await supabase
+          .from("crm_pipelines")
+          .insert({
+            workspace_id: activeWorkspace!.id,
+            name: template.name,
+            color: template.color,
+            is_default: false,
+            sort_order: sortOrder++,
+            pipeline_type: "contact",
+            target_contact_type: template.target_contact_type,
+          })
+          .select()
+          .single();
+
+        if (pipelineError) throw pipelineError;
+
+        const stagesData = template.stages.map((s, i) => ({
+          pipeline_id: pipeline.id,
+          name: s.name,
+          color: s.color,
+          probability: s.probability,
+          sort_order: i,
+          requires_email_on_enter: s.requires_email || false,
+          is_final_stage: s.is_final || false,
+        }));
+
+        const { error: stagesError } = await supabase
+          .from("crm_pipeline_stages")
+          .insert(stagesData);
+
+        if (stagesError) throw stagesError;
+
+        createdPipelines.push(pipeline);
+      }
+
+      return createdPipelines;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      toast({ title: "Pipelines contacts créés" });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    },
+  });
+
   // Stage mutations
   const createStage = useMutation({
-    mutationFn: async (input: { pipeline_id: string; name: string; color?: string; probability?: number }) => {
+    mutationFn: async (input: { 
+      pipeline_id: string; 
+      name: string; 
+      color?: string; 
+      probability?: number;
+      requires_email_on_enter?: boolean;
+      is_final_stage?: boolean;
+    }) => {
       const existingStages = pipelines?.find((p) => p.id === input.pipeline_id)?.stages || [];
       
       const { data, error } = await supabase
@@ -201,6 +300,8 @@ export function useCRMPipelines() {
           color: input.color,
           probability: input.probability,
           sort_order: existingStages.length,
+          requires_email_on_enter: input.requires_email_on_enter || false,
+          is_final_stage: input.is_final_stage || false,
         })
         .select()
         .single();
@@ -218,7 +319,15 @@ export function useCRMPipelines() {
   });
 
   const updateStage = useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; name?: string; color?: string; probability?: number }) => {
+    mutationFn: async ({ id, ...input }: { 
+      id: string; 
+      name?: string; 
+      color?: string; 
+      probability?: number;
+      requires_email_on_enter?: boolean;
+      is_final_stage?: boolean;
+      email_template_id?: string | null;
+    }) => {
       const { data, error } = await supabase
         .from("crm_pipeline_stages")
         .update(input)
@@ -277,12 +386,15 @@ export function useCRMPipelines() {
 
   return {
     pipelines: pipelines || [],
+    opportunityPipelines,
+    contactPipelines,
     isLoading,
     error,
     createPipeline,
     updatePipeline,
     deletePipeline,
     createDefaultPipeline,
+    createDefaultContactPipelines,
     createStage,
     updateStage,
     deleteStage,
