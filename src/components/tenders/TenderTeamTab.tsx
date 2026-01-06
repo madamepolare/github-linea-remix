@@ -102,8 +102,8 @@ Cordialement`,
 
   const roles: TenderTeamRole[] = ['mandataire', 'cotraitant', 'sous_traitant'];
 
-  // Check for missing required specialties
-  const requiredSpecialties = ['architecte', 'bet_structure', 'bet_fluides', 'thermicien'];
+  // Check for missing required specialties - using BET specialties keys
+  const requiredSpecialties = ['architecte', 'structure', 'fluides', 'thermique'];
   const coveredSpecialties = teamMembers.map(m => m.specialty).filter(Boolean);
   const missingSpecialties = requiredSpecialties.filter(s => !coveredSpecialties.includes(s));
 

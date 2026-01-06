@@ -298,14 +298,13 @@ export const BET_SPECIALTIES = [
   { value: "geotechnique", label: "Géotechnique", color: "bg-stone-500" },
 ];
 
-// Contact Types - Liste unifiée pour création et édition
+// Contact Types - Liste unifiée pour création et édition (sans doublons)
 export const CONTACT_TYPES = [
   { value: "client", label: "Client" },
+  { value: "particulier", label: "Particulier" },
   { value: "partner", label: "Partenaire" },
   { value: "supplier", label: "Fournisseur" },
   { value: "amo", label: "AMO" },
-  { value: "partner", label: "Partenaire" },
-  { value: "supplier", label: "Fournisseur" },
   { value: "bet", label: "BET" },
   { value: "societe", label: "Société" },
 ];

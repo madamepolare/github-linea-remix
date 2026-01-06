@@ -7,7 +7,9 @@ import {
   Target, 
   Briefcase, 
   Phone,
-  Ruler
+  Ruler,
+  HardHat,
+  Layers
 } from "lucide-react";
 import {
   DEFAULT_BET_SPECIALTIES,
@@ -15,6 +17,7 @@ import {
   DEFAULT_LEAD_SOURCES,
   DEFAULT_ACTIVITY_TYPES,
   DEFAULT_COMPANY_TYPES,
+  DEFAULT_COMPANY_CATEGORIES,
 } from "@/lib/crmDefaults";
 
 // Transform company types for GenericSettingsManager format
@@ -22,6 +25,13 @@ const companyTypesForSettings = DEFAULT_COMPANY_TYPES.map((t) => ({
   key: t.key,
   label: `${t.label} (${t.shortLabel})`,
   color: t.color,
+}));
+
+// Transform company categories for GenericSettingsManager format
+const companyCategoriesForSettings = DEFAULT_COMPANY_CATEGORIES.map((c) => ({
+  key: c.key,
+  label: c.label,
+  color: c.color,
 }));
 
 export function CRMSettings() {
@@ -45,13 +55,17 @@ export function CRMSettings() {
             <Users className="h-3.5 w-3.5" />
             Contacts
           </TabsTrigger>
+          <TabsTrigger value="categories" className="gap-1.5 text-xs">
+            <Layers className="h-3.5 w-3.5" />
+            Catégories
+          </TabsTrigger>
           <TabsTrigger value="companies" className="gap-1.5 text-xs">
             <Building2 className="h-3.5 w-3.5" />
-            Entreprises
+            Types sociétés
           </TabsTrigger>
           <TabsTrigger value="bet" className="gap-1.5 text-xs">
             <Ruler className="h-3.5 w-3.5" />
-            BET
+            Spécialités BET
           </TabsTrigger>
         </TabsList>
 
@@ -85,18 +99,29 @@ export function CRMSettings() {
           <GenericSettingsManager
             settingType="contact_types"
             title="Types de contacts"
-            description="Catégorisez vos contacts selon leur rôle"
+            description="Catégorisez vos contacts selon leur rôle (Client, Partenaire, BET, Société...)"
             icon={<Users className="h-5 w-5 text-primary" />}
             showColor
             defaultItems={DEFAULT_CONTACT_TYPES}
           />
         </TabsContent>
 
+        <TabsContent value="categories" className="mt-6">
+          <GenericSettingsManager
+            settingType="company_categories"
+            title="Catégories de sociétés"
+            description="Les grandes catégories pour organiser vos sociétés (Clients, BET, Partenaires MOE, Sociétés, Fournisseurs...)"
+            icon={<Layers className="h-5 w-5 text-primary" />}
+            showColor
+            defaultItems={companyCategoriesForSettings}
+          />
+        </TabsContent>
+
         <TabsContent value="companies" className="mt-6">
           <GenericSettingsManager
             settingType="company_types"
-            title="Types d'entreprises"
-            description="Définissez les différents types d'entreprises de votre CRM"
+            title="Types de sociétés"
+            description="Les types spécifiques de sociétés dans chaque catégorie"
             icon={<Building2 className="h-5 w-5 text-primary" />}
             showColor
             defaultItems={companyTypesForSettings}
@@ -107,7 +132,7 @@ export function CRMSettings() {
           <GenericSettingsManager
             settingType="bet_specialties"
             title="Spécialités BET"
-            description="Gérez les spécialités des Bureaux d'Études Techniques"
+            description="Les spécialités des Bureaux d'Études Techniques (Structure, Fluides, Électricité, Acoustique...)"
             icon={<Ruler className="h-5 w-5 text-primary" />}
             showColor
             defaultItems={DEFAULT_BET_SPECIALTIES}

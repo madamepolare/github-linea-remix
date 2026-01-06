@@ -163,8 +163,8 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   const [singleInviteSubject, setSingleInviteSubject] = useState("");
   const [singleInviteBody, setSingleInviteBody] = useState("");
 
-  // Missing specialties
-  const defaultRequired = ['architecte', 'bet_structure', 'bet_fluides', 'thermicien'];
+  // Missing specialties - using BET specialties keys
+  const defaultRequired = ['architecte', 'structure', 'fluides', 'thermique'];
   const requiredSpecialties = requiredCompetencies.length > 0 ? requiredCompetencies : defaultRequired;
   const coveredByTeam = teamMembers.map(m => m.specialty).filter(Boolean);
   const coveredByCandidates = candidates.filter(c => c.status === 'confirmed').map(c => c.specialty);
