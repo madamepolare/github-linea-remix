@@ -36,7 +36,7 @@ import {
 const Commercial = () => {
   const navigate = useNavigate();
   const { view } = useParams();
-  const { documents, isLoading, deleteDocument, duplicateDocument } = useCommercialDocuments();
+  const { documents, isLoading, deleteDocument, duplicateDocument, updateDocument } = useCommercialDocuments();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
@@ -76,6 +76,10 @@ const Commercial = () => {
 
   const handleDelete = (id: string) => {
     deleteDocument.mutate(id);
+  };
+
+  const handleStatusChange = (id: string, status: DocumentStatus) => {
+    updateDocument.mutate({ id, status });
   };
 
   const getDocumentIcon = (type: DocumentType) => {
@@ -216,8 +220,11 @@ const Commercial = () => {
       ) : viewMode === 'pipeline' ? (
         <CommercialPipeline 
           documents={filteredDocuments}
+          isLoading={isLoading}
           onDelete={handleDelete}
           onDuplicate={handleDuplicate}
+          onStatusChange={handleStatusChange}
+          onCreateDocument={() => handleNewDocument('quote')}
         />
       ) : filteredDocuments.length === 0 ? (
         <Card>
