@@ -128,33 +128,7 @@ export function CommercialDocumentBuilder({
     }
   }, [document.project_type]);
 
-  // Initialize phases when project type changes (for new documents)
-  // Do NOT auto-load phases - user must explicitly add them from settings
-  useEffect(() => {
-    if (isNew && phases.length === 0 && document.project_type && phaseTemplates.length > 0) {
-      // Auto-load base phases from settings for new documents
-      const baseTemplates = phaseTemplates.filter(t => t.is_active && t.category === 'base');
-      
-      if (baseTemplates.length > 0) {
-        const initialPhases: CommercialDocumentPhase[] = baseTemplates.map((p, index) => ({
-          id: `temp-${index}`,
-          document_id: documentId || '',
-          phase_code: p.code,
-          phase_name: p.name,
-          phase_description: p.description || '',
-          percentage_fee: p.default_percentage,
-          amount: 0,
-          is_included: true,
-          deliverables: Array.isArray(p.deliverables) ? p.deliverables : [],
-          sort_order: index,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }));
-        onPhasesChange(initialPhases);
-        setQuoteItems(phasesToItems(initialPhases));
-      }
-    }
-  }, [document.project_type, isNew, phaseTemplates]);
+  // Phases are NOT auto-loaded - user must explicitly add them from settings via the "+ Phase" menu
 
   // Load default clauses when project type changes
   useEffect(() => {
