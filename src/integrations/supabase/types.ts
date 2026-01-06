@@ -6279,6 +6279,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_workspace_invite: { Args: { invite_token: string }; Returns: Json }
       can_access_emails: {
         Args: { _created_by: string; _user_id: string; _workspace_id: string }
         Returns: boolean

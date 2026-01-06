@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -35,7 +35,11 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signIn, signUp, user, profile, loading } = useAuth();
+  
+  // Get redirect parameter for invitation flow
+  const redirectTo = searchParams.get('redirect');
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -50,13 +54,19 @@ export default function Auth() {
   // Redirect if already logged in
   useEffect(() => {
     if (!loading && user) {
+      // If redirect parameter exists (invitation flow), go there first
+      if (redirectTo) {
+        navigate(redirectTo);
+        return;
+      }
+      // Otherwise check if onboarding is completed
       if (profile?.onboarding_completed) {
         navigate("/");
       } else {
         navigate("/onboarding");
       }
     }
-  }, [user, profile, loading, navigate]);
+  }, [user, profile, loading, navigate, redirectTo]);
 
   const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -92,7 +102,7 @@ export default function Auth() {
     } else {
       toast({
         title: "Account created!",
-        description: "Welcome to Linea Suite. Let's set up your workspace.",
+        description: "Welcome to ARCHIMIND. Let's set up your workspace.",
       });
     }
   };
@@ -128,7 +138,7 @@ export default function Auth() {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent">
               <Hexagon className="h-7 w-7 text-accent-foreground" />
             </div>
-            <span className="font-display text-2xl font-bold">LINEA SUITE</span>
+            <span className="font-display text-2xl font-bold">ARCHIMIND</span>
           </div>
 
           <div className="space-y-6">
@@ -177,7 +187,7 @@ export default function Auth() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
               <Hexagon className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="font-display text-xl font-bold text-foreground">LINEA SUITE</span>
+            <span className="font-display text-xl font-bold text-foreground">ARCHIMIND</span>
           </div>
 
           <motion.div
