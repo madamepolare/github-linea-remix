@@ -13,6 +13,7 @@ export type SettingType =
   | "lead_sources"
   | "activity_types"
   | "company_types"
+  | "company_categories"
   | "task_statuses"
   | "task_priorities"
   | "project_types"
