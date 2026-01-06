@@ -46,16 +46,6 @@ interface CreateProjectDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const colors = [
-  { value: "#3B82F6", label: "Bleu" },
-  { value: "#10B981", label: "Vert" },
-  { value: "#F59E0B", label: "Ambre" },
-  { value: "#8B5CF6", label: "Violet" },
-  { value: "#EF4444", label: "Rouge" },
-  { value: "#EC4899", label: "Rose" },
-  { value: "#06B6D4", label: "Cyan" },
-  { value: "#000000", label: "Noir" },
-];
 
 const STEPS = [
   { id: "type", label: "Type" },
@@ -82,7 +72,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [surfaceArea, setSurfaceArea] = useState("");
-  const [color, setColor] = useState("#3B82F6");
+  
   const [crmCompanyId, setCrmCompanyId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -129,6 +119,9 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const handleCreate = () => {
     if (!name.trim() || !projectType) return;
     
+    // Use project type color as the project color
+    const projectTypeConfig = PROJECT_TYPES.find(t => t.value === projectType);
+    
     const input: CreateProjectInput = {
       name: name.trim(),
       project_type: projectType,
@@ -137,7 +130,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       address: address.trim() || null,
       city: city.trim() || null,
       surface_area: surfaceArea ? parseFloat(surfaceArea) : null,
-      color,
+      color: projectTypeConfig?.color || "#3B82F6",
       start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
       end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
       budget: budget ? parseFloat(budget) : null,
@@ -156,7 +149,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     setAddress("");
     setCity("");
     setSurfaceArea("");
-    setColor("#3B82F6");
+    
     setCrmCompanyId(null);
     setStartDate(null);
     setEndDate(null);
@@ -310,34 +303,15 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="surface">Surface (m²)</Label>
-                      <Input
-                        id="surface"
-                        type="number"
-                        value={surfaceArea}
-                        onChange={(e) => setSurfaceArea(e.target.value)}
-                        placeholder="150"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Couleur</Label>
-                      <div className="flex gap-2 flex-wrap">
-                        {colors.map((c) => (
-                          <button
-                            key={c.value}
-                            onClick={() => setColor(c.value)}
-                            className={cn(
-                              "w-8 h-8 rounded-full transition-all",
-                              color === c.value && "ring-2 ring-offset-2 ring-primary"
-                            )}
-                            style={{ backgroundColor: c.value }}
-                            title={c.label}
-                          />
-                        ))}
-                      </div>
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="surface">Surface (m²)</Label>
+                    <Input
+                      id="surface"
+                      type="number"
+                      value={surfaceArea}
+                      onChange={(e) => setSurfaceArea(e.target.value)}
+                      placeholder="150"
+                    />
                   </div>
 
                   <div className="space-y-2">

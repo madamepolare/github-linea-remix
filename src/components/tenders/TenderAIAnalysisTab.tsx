@@ -192,7 +192,7 @@ export function TenderAIAnalysisTab({ tender, onNavigateToTab, pendingFiles, onF
     // Title and reference - AI can now modify these
     if (mergedExtractedData.title || mergedExtractedData.market_title) {
       const newTitle = (mergedExtractedData.title || mergedExtractedData.market_title) as string;
-      if (newTitle && tender.title === "Nouveau concours - En attente d'analyse IA") {
+      if (newTitle && tender.title === "Nouvel appel d'offre - En attente d'analyse IA") {
         updates.title = newTitle;
       }
     }
@@ -498,7 +498,7 @@ export function TenderAIAnalysisTab({ tender, onNavigateToTab, pendingFiles, onF
                 onClick={handleApplyExtractedData}
               >
                 <Zap className="h-4 w-4 mr-2" />
-                Appliquer les données extraites au concours
+                Appliquer les données extraites à l'appel d'offre
               </Button>
             )}
           </CardContent>

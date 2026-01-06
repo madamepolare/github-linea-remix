@@ -95,7 +95,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   // Form state for events
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
-  const [formType, setFormType] = useState<"meeting" | "milestone" | "reminder">("meeting");
+  const [formType, setFormType] = useState<"meeting" | "milestone" | "reminder" | "rendu">("meeting");
   const [formStartDate, setFormStartDate] = useState("");
   const [formStartTime, setFormStartTime] = useState("09:00");
   const [formEndDate, setFormEndDate] = useState("");
@@ -202,7 +202,8 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
           end: event.end_datetime || undefined,
           allDay: event.is_all_day,
           backgroundColor: event.event_type === "meeting" ? "#8B5CF6" : 
-                           event.event_type === "milestone" ? "#F59E0B" : "#6B7280",
+                           event.event_type === "milestone" ? "#F59E0B" : 
+                           event.event_type === "rendu" ? "#3B82F6" : "#6B7280",
           borderColor: "transparent",
           textColor: "#FFFFFF",
           editable: true,
@@ -734,6 +735,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
                 case "event":
                   if (originalData?.event_type === "meeting") return <Video className="h-3 w-3 shrink-0" />;
                   if (originalData?.event_type === "milestone") return <Flag className="h-3 w-3 shrink-0" />;
+                  if (originalData?.event_type === "rendu") return <FileText className="h-3 w-3 shrink-0" />;
                   return <Clock className="h-3 w-3 shrink-0" />;
                 case "task":
                   return <CheckSquare className="h-3 w-3 shrink-0" />;
@@ -802,6 +804,12 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
                       Réunion
                     </div>
                   </SelectItem>
+                  <SelectItem value="rendu">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Rendu
+                    </div>
+                  </SelectItem>
                   <SelectItem value="milestone">
                     <div className="flex items-center gap-2">
                       <Flag className="h-4 w-4" />
@@ -828,11 +836,13 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
               />
             </div>
 
-            {/* All day switch */}
-            <div className="flex items-center justify-between">
-              <Label>Journée entière</Label>
-              <Switch checked={formIsAllDay} onCheckedChange={setFormIsAllDay} />
-            </div>
+            {/* All day switch - not for meetings */}
+            {formType !== "meeting" && (
+              <div className="flex items-center justify-between">
+                <Label>Journée entière</Label>
+                <Switch checked={formIsAllDay} onCheckedChange={setFormIsAllDay} />
+              </div>
+            )}
 
             {/* Date/Time */}
             <div className="grid grid-cols-2 gap-3">

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-export type EventType = "meeting" | "milestone" | "reminder";
+export type EventType = "meeting" | "milestone" | "reminder" | "rendu";
 
 export interface CalendarEvent {
   id: string;

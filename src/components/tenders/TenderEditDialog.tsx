@@ -116,7 +116,7 @@ export function TenderEditDialog({ open, onOpenChange, tender, onSave }: TenderE
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Modifier le concours</DialogTitle>
+          <DialogTitle>Modifier l'appel d'offre</DialogTitle>
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

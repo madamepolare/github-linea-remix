@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { addMonths, format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -22,9 +24,11 @@ import {
   CreatePermitInput,
   PERMIT_TYPE_LABELS,
   PERMIT_STATUS_LABELS,
+  PERMIT_RESPONSE_DELAYS,
   PermitType,
   PermitStatus,
 } from "@/hooks/useProjectPermits";
+import { useContacts } from "@/hooks/useContacts";
 
 interface CreatePermitDialogProps {
   open: boolean;
@@ -34,6 +38,7 @@ interface CreatePermitDialogProps {
 
 export function CreatePermitDialog({ open, onOpenChange, projectId }: CreatePermitDialogProps) {
   const { createPermit } = useProjectPermits(projectId);
+  const { contacts } = useContacts();
 
   const [formData, setFormData] = useState<Partial<CreatePermitInput>>({
     project_id: projectId,
@@ -42,7 +47,21 @@ export function CreatePermitDialog({ open, onOpenChange, projectId }: CreatePerm
     prescriptions: [],
     reserves: [],
     documents: [],
+    no_surface: false,
   });
+
+  // Auto-calculate expected response date when submission date or permit type changes
+  useEffect(() => {
+    if (formData.submission_date && formData.permit_type) {
+      const submissionDate = new Date(formData.submission_date);
+      const delayMonths = PERMIT_RESPONSE_DELAYS[formData.permit_type] || 2;
+      const expectedDate = addMonths(submissionDate, delayMonths);
+      setFormData(prev => ({
+        ...prev,
+        expected_response_date: format(expectedDate, "yyyy-MM-dd")
+      }));
+    }
+  }, [formData.submission_date, formData.permit_type]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +75,7 @@ export function CreatePermitDialog({ open, onOpenChange, projectId }: CreatePerm
       prescriptions: [],
       reserves: [],
       documents: [],
+      no_surface: false,
     });
   };
 
@@ -139,6 +159,63 @@ export function CreatePermitDialog({ open, onOpenChange, projectId }: CreatePerm
             />
           </div>
 
+          {/* Affaire suivie par */}
+          <div className="space-y-4 p-4 border border-border rounded-lg bg-muted/30">
+            <Label className="text-sm font-medium">Affaire suivie par</Label>
+            
+            <div className="space-y-2">
+              <Label htmlFor="contact_name" className="text-sm text-muted-foreground">Nom</Label>
+              <Input
+                id="contact_name"
+                value={formData.contact_name || ""}
+                onChange={(e) => updateField("contact_name", e.target.value)}
+                placeholder="Nom du chargé de dossier"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="contact_email" className="text-sm text-muted-foreground">Email</Label>
+              <Input
+                id="contact_email"
+                type="email"
+                value={formData.contact_email || ""}
+                onChange={(e) => updateField("contact_email", e.target.value)}
+                placeholder="email@autorite.fr"
+              />
+            </div>
+
+            {/* Load from CRM */}
+            {contacts.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Ou charger depuis le CRM</Label>
+                <Select
+                  value=""
+                  onValueChange={(contactId) => {
+                    const contact = contacts.find(c => c.id === contactId);
+                    if (contact) {
+                      setFormData(prev => ({
+                        ...prev,
+                        contact_name: contact.name,
+                        contact_email: contact.email || "",
+                      }));
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un contact..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contacts.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.name} {contact.email && `(${contact.email})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
           {/* Authority */}
           <div className="space-y-2">
             <Label htmlFor="authority">Autorité compétente</Label>
@@ -152,7 +229,7 @@ export function CreatePermitDialog({ open, onOpenChange, projectId }: CreatePerm
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="authority_email">Email</Label>
+              <Label htmlFor="authority_email">Email autorité</Label>
               <Input
                 id="authority_email"
                 type="email"
@@ -184,7 +261,12 @@ export function CreatePermitDialog({ open, onOpenChange, projectId }: CreatePerm
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="expected_date">Réponse attendue</Label>
+              <Label htmlFor="expected_date">
+                Réponse attendue
+                <span className="text-xs text-muted-foreground ml-1">
+                  ({PERMIT_RESPONSE_DELAYS[formData.permit_type as PermitType] || 2} mois)
+                </span>
+              </Label>
               <Input
                 id="expected_date"
                 type="date"
@@ -194,16 +276,33 @@ export function CreatePermitDialog({ open, onOpenChange, projectId }: CreatePerm
             </div>
           </div>
 
-          {/* Surface */}
-          <div className="space-y-2">
-            <Label htmlFor="surface">Surface de plancher (m²)</Label>
-            <Input
-              id="surface"
-              type="number"
-              value={formData.surface_plancher || ""}
-              onChange={(e) => updateField("surface_plancher", e.target.value ? parseFloat(e.target.value) : null)}
-              placeholder="150"
-            />
+          {/* Surface with switch */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Aucune surface créée</Label>
+              <Switch
+                checked={formData.no_surface || false}
+                onCheckedChange={(checked) => {
+                  updateField("no_surface", checked);
+                  if (checked) {
+                    updateField("surface_plancher", null);
+                  }
+                }}
+              />
+            </div>
+            
+            {!formData.no_surface && (
+              <div className="space-y-2">
+                <Label htmlFor="surface">Surface de plancher (m²)</Label>
+                <Input
+                  id="surface"
+                  type="number"
+                  value={formData.surface_plancher || ""}
+                  onChange={(e) => updateField("surface_plancher", e.target.value ? parseFloat(e.target.value) : null)}
+                  placeholder="150"
+                />
+              </div>
+            )}
           </div>
 
           {/* Notes */}

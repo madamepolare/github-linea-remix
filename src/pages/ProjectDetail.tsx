@@ -402,13 +402,28 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
         </Card>
       )}
 
+      {/* Project Description */}
+      {project.description && (
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="h-4 w-4 text-primary" />
+              <h3 className="font-medium">Description</h3>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+              {project.description}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Project Summary with AI */}
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              <h3 className="font-medium">Résumé du projet</h3>
+              <h3 className="font-medium">Résumé IA</h3>
             </div>
             <Button
               variant="ghost"
@@ -559,15 +574,6 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
         />
       </div>
 
-      {/* Modules */}
-      <Card>
-        <CardContent className="p-6">
-          <h3 className="font-medium mb-4">Modules activés</h3>
-          <ModulesSelector
-            projectId={project.id}
-          />
-        </CardContent>
-      </Card>
 
       {/* Phase Edit Dialog */}
       <PhaseQuickEditDialog

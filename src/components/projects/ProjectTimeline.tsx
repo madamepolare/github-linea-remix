@@ -170,6 +170,8 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
             {projects.map((project) => {
               const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
               const currentPhase = project.phases?.find((p) => p.status === "in_progress");
+              // Use project type color, then project color as fallback
+              const displayColor = projectType?.color || project.color || "#3B82F6";
 
               return (
                 <div
@@ -180,14 +182,21 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                     <div
                       className="w-1 sm:w-1.5 h-6 sm:h-8 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: project.color || "#3B82F6" }}
+                      style={{ backgroundColor: displayColor }}
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs sm:text-sm font-medium truncate group-hover:text-primary transition-colors">
                         {project.name}
                       </p>
                       <div className="flex items-center gap-1 sm:gap-2 text-2xs sm:text-xs text-muted-foreground">
-                        {projectType && <span className="hidden sm:inline">{projectType.label}</span>}
+                        {projectType && (
+                          <span 
+                            className="px-1.5 py-0.5 rounded text-white text-2xs font-medium"
+                            style={{ backgroundColor: displayColor }}
+                          >
+                            {projectType.label}
+                          </span>
+                        )}
                         {currentPhase && (
                           <>
                             <span className="hidden sm:inline">•</span>
@@ -292,13 +301,18 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
                         if (!position) return null;
 
                         const statusConfig = PHASE_STATUS_CONFIG[phase.status as keyof typeof PHASE_STATUS_CONFIG] || PHASE_STATUS_CONFIG.pending;
+                        
+                        // Calculate days in phase
+                        const phaseDays = phase.start_date && phase.end_date 
+                          ? differenceInDays(parseISO(phase.end_date), parseISO(phase.start_date)) + 1
+                          : null;
 
                         return (
                           <Tooltip key={phase.id}>
                             <TooltipTrigger asChild>
                               <div
                                 className={cn(
-                                  "absolute top-2 h-10 rounded-md flex items-center px-2 gap-1.5 cursor-pointer transition-all hover:shadow-md border",
+                                  "absolute top-2 h-10 rounded-md flex items-center justify-between px-2 gap-1 cursor-pointer transition-all hover:shadow-md border",
                                   phase.status === "completed" && "opacity-70"
                                 )}
                                 style={{
@@ -313,6 +327,14 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
                                     {phase.name}
                                   </span>
                                 )}
+                                {/* Days badge */}
+                                {phaseDays && position.width >= 32 && (
+                                  <div className="w-5 h-5 rounded-full bg-white/90 text-2xs font-bold flex items-center justify-center shrink-0 shadow-sm"
+                                    style={{ color: phase.color || project.color || "#3B82F6" }}
+                                  >
+                                    {phaseDays}
+                                  </div>
+                                )}
                               </div>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="max-w-xs">
@@ -325,6 +347,7 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
                                   <p className="text-xs">
                                     {format(parseISO(phase.start_date), "d MMM", { locale: fr })} -{" "}
                                     {format(parseISO(phase.end_date), "d MMM yyyy", { locale: fr })}
+                                    <span className="ml-2 font-medium">({phaseDays} j)</span>
                                   </p>
                                 )}
                               </div>

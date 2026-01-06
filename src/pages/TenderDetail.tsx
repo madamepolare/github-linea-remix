@@ -125,9 +125,9 @@ export default function TenderDetail() {
   if (!tender) {
     return (
       <div className="p-6">
-        <p className="text-muted-foreground">Concours non trouvé</p>
+        <p className="text-muted-foreground">Appel d'offre non trouvé</p>
         <Button variant="outline" onClick={() => navigate("/tenders")} className="mt-4">
-          Retour aux concours
+          Retour aux appels d'offre
         </Button>
       </div>
     );
