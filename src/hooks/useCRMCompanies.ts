@@ -176,7 +176,7 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
       client: 0,
       bet: 0,
       partenaire: 0,
-      entreprise: 0,
+      societe: 0,
       fournisseur: 0,
       conseil: 0,
       admin: 0,
