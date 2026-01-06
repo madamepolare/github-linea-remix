@@ -13,15 +13,19 @@ import { Loader2, Search, Plus, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useContacts } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
+import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 import { cn } from "@/lib/utils";
 
-// Helper pour obtenir le label d'industrie
+// Helper pour obtenir le label d'industrie - formatage propre
 const getIndustryLabel = (industry: string | null) => {
   const labels: Record<string, string> = {
     "promoteur": "Promoteur",
     "bet_structure": "BET Structure",
     "bet_fluides": "BET Fluides",
     "bet_environnement": "BET Environnement",
+    "bet_acoustique": "BET Acoustique",
+    "bet_vrd": "BET VRD",
+    "bet_electricite": "BET Électricité",
     "paysagiste": "Paysagiste",
     "agenceur": "Agenceur",
     "epa_sem": "EPA/SEM",
@@ -29,8 +33,20 @@ const getIndustryLabel = (industry: string | null) => {
     "economiste": "Économiste",
     "vrd": "VRD",
     "electricite": "Électricité",
+    "architecte": "Architecte",
+    "constructeur": "Constructeur",
+    "maitre_ouvrage": "Maître d'ouvrage",
+    "entreprise_generale": "Entreprise Générale",
+    "bureau_controle": "Bureau de Contrôle",
+    "coordinateur_sps": "Coordinateur SPS",
+    "geometre": "Géomètre",
+    "notaire": "Notaire",
+    "assureur": "Assureur",
+    "banque": "Banque",
   };
-  return industry ? labels[industry] || industry : null;
+  // Si pas de label prédéfini, formatter proprement (underscore -> espace, capitalize)
+  if (!industry) return null;
+  return labels[industry] || industry.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
 // Rôles/fonctions prédéfinis pour les contacts
@@ -61,7 +77,9 @@ const schema = z.object({
   role: z.string().optional(),
   custom_role: z.string().optional(),
   crm_company_id: z.string().optional(),
-  location: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  postal_code: z.string().optional(),
   notes: z.string().optional(),
   is_individual: z.boolean().default(false),
 });
@@ -89,7 +107,9 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
       role: "",
       custom_role: "",
       crm_company_id: "",
-      location: "",
+      address: "",
+      city: "",
+      postal_code: "",
       notes: "",
       is_individual: false,
     },
@@ -129,13 +149,19 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
   };
 
   const onSubmit = async (data: FormData) => {
-    // Determine the final role
-    let finalRole = data.role === "autre" && data.custom_role 
-      ? data.custom_role 
-      : CONTACT_ROLES.find(r => r.value === data.role)?.label || data.role;
+    // Determine the final role (only for non-individuals)
+    let finalRole = data.is_individual 
+      ? undefined 
+      : data.role === "autre" && data.custom_role 
+        ? data.custom_role 
+        : CONTACT_ROLES.find(r => r.value === data.role)?.label || data.role;
 
     // Determine contact type
     const contactType = data.is_individual ? "particulier" : "client";
+
+    // Build full location string from address parts
+    const locationParts = [data.address, data.postal_code, data.city].filter(Boolean);
+    const location = locationParts.length > 0 ? locationParts.join(", ") : undefined;
 
     await createContact.mutateAsync({
       name: data.name,
@@ -144,7 +170,7 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
       role: finalRole || undefined,
       contact_type: contactType,
       crm_company_id: data.is_individual ? undefined : (data.crm_company_id || undefined),
-      location: data.location || undefined,
+      location,
       notes: data.notes || undefined,
     });
     form.reset();
@@ -199,40 +225,44 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
             </div>
           </div>
 
-          {/* Fonction/Rôle */}
-          <div className="space-y-2">
-            <Label>Fonction</Label>
-            <Select 
-              value={selectedRole} 
-              onValueChange={(v) => {
-                form.setValue("role", v);
-                if (v !== "autre") {
-                  form.setValue("custom_role", "");
-                }
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner une fonction..." />
-              </SelectTrigger>
-              <SelectContent className="bg-popover max-h-60">
-                {CONTACT_ROLES.map((role) => (
-                  <SelectItem key={role.value} value={role.value}>
-                    {role.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Fonction/Rôle - masqué pour les particuliers */}
+          {!isIndividual && (
+            <>
+              <div className="space-y-2">
+                <Label>Fonction</Label>
+                <Select 
+                  value={selectedRole} 
+                  onValueChange={(v) => {
+                    form.setValue("role", v);
+                    if (v !== "autre") {
+                      form.setValue("custom_role", "");
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner une fonction..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover max-h-60">
+                    {CONTACT_ROLES.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Champ personnalisé si "Autre" */}
-          {selectedRole === "autre" && (
-            <div className="space-y-2">
-              <Label>Fonction personnalisée</Label>
-              <Input 
-                {...form.register("custom_role")} 
-                placeholder="Précisez la fonction..." 
-              />
-            </div>
+              {/* Champ personnalisé si "Autre" */}
+              {selectedRole === "autre" && (
+                <div className="space-y-2">
+                  <Label>Fonction personnalisée</Label>
+                  <Input 
+                    {...form.register("custom_role")} 
+                    placeholder="Précisez la fonction..." 
+                  />
+                </div>
+              )}
+            </>
           )}
 
           {/* Entreprise (masqué si particulier) */}
@@ -332,10 +362,19 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
             </div>
           )}
 
-          {/* Localisation */}
+          {/* Adresse */}
           <div className="space-y-2">
-            <Label>Localisation</Label>
-            <Input {...form.register("location")} placeholder="Paris, France" />
+            <Label>Adresse</Label>
+            <AddressAutocomplete
+              value={form.watch("address") || ""}
+              onChange={(address) => form.setValue("address", address)}
+              onAddressSelect={(result) => {
+                form.setValue("address", result.address);
+                form.setValue("city", result.city);
+                form.setValue("postal_code", result.postalCode);
+              }}
+              placeholder="Rechercher une adresse..."
+            />
           </div>
 
           {/* Notes */}
