@@ -55,7 +55,7 @@ function transformCompanyTypes(
     .map((s) => ({
       key: s.setting_key,
       label: s.setting_value.label,
-      shortLabel: s.setting_value.shortLabel || s.setting_value.label,
+      shortLabel: (s.setting_value.shortLabel as string) || s.setting_value.label,
       category: s.setting_value.category || "autre",
       color: s.setting_value.color || "#6B7280",
     }));
@@ -76,7 +76,7 @@ function transformCompanyCategories(
       label: s.setting_value.label,
       color: s.setting_value.color || "#6B7280",
       icon: s.setting_value.icon,
-      types: s.setting_value.types || [],
+      types: (s.setting_value.types as string[]) || [],
     }));
 }
 
