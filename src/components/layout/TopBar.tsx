@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useLocation, NavLink, useNavigate } from "react-router-dom";
 import { ArrowLeft, MoreHorizontal, Plus } from "lucide-react";
 import { motion } from "framer-motion";
@@ -12,6 +13,7 @@ import {
   ModuleNavConfig,
   SubNavItem 
 } from "@/lib/navigationConfig";
+import { CRMAddDropdown } from "@/components/crm/CRMAddDropdown";
 
 interface TopBarProps {
   /** Override module config (useful for detail pages) */
@@ -57,6 +59,21 @@ function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) 
   const location = useLocation();
   const hasModuleSubNav = module.subNav.length > 0;
   const hasQuickActions = !hideQuickActions && module.quickActions && module.quickActions.length > 0;
+  const isCRM = module.slug === "crm";
+  
+  // CRM add menu state
+  const [crmContactOpen, setCrmContactOpen] = useState(false);
+  const [crmCompanyOpen, setCrmCompanyOpen] = useState(false);
+  const [crmLeadOpen, setCrmLeadOpen] = useState(false);
+  
+  // Listen for CRM add menu events
+  useEffect(() => {
+    const handleCrmAddMenu = () => {
+      // This is handled by the dropdown itself
+    };
+    window.addEventListener("open-crm-add-menu", handleCrmAddMenu);
+    return () => window.removeEventListener("open-crm-add-menu", handleCrmAddMenu);
+  }, []);
 
   const handleQuickAction = (event: string) => {
     window.dispatchEvent(new CustomEvent(event));
@@ -131,7 +148,17 @@ function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) 
         <div className="flex items-center gap-2">
           {actions}
           
-          {hasQuickActions && module.quickActions?.map((action) => (
+          {/* Special handling for CRM module */}
+          {isCRM && (
+            <CRMAddDropdown
+              onCreateContact={() => window.dispatchEvent(new CustomEvent("open-create-contact"))}
+              onCreateCompany={() => window.dispatchEvent(new CustomEvent("open-create-company"))}
+              onCreateLead={() => window.dispatchEvent(new CustomEvent("open-create-lead"))}
+            />
+          )}
+          
+          {/* Standard quick actions for non-CRM modules */}
+          {!isCRM && hasQuickActions && module.quickActions?.map((action) => (
             <Button
               key={action.key}
               variant={action.variant || "default"}

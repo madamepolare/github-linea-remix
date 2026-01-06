@@ -93,8 +93,7 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
       { key: "companies", label: "Entreprises", href: "/crm/companies" },
     ],
     quickActions: [
-      { key: "create-lead", label: "Nouvelle opportunité", event: "open-create-lead" },
-      { key: "create-contact", label: "Nouveau contact", event: "open-create-contact" },
+      { key: "crm-add", label: "Ajouter", event: "open-crm-add-menu" },
     ],
   },
   commercial: {
