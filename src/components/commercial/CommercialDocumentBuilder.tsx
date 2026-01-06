@@ -21,8 +21,7 @@ import {
   DocumentType,
   ProjectType,
   DOCUMENT_TYPE_LABELS,
-  PROJECT_TYPE_LABELS,
-  PHASES_BY_PROJECT_TYPE
+  PROJECT_TYPE_LABELS
 } from '@/lib/commercialTypes';
 import { QuoteLineItem } from '@/lib/quoteTemplates';
 import { DEFAULT_CLAUSES_BY_PROJECT_TYPE } from '@/lib/defaultContractClauses';
@@ -130,30 +129,30 @@ export function CommercialDocumentBuilder({
   }, [document.project_type]);
 
   // Initialize phases when project type changes (for new documents)
+  // Do NOT auto-load phases - user must explicitly add them from settings
   useEffect(() => {
-    if (isNew && phases.length === 0 && document.project_type) {
-      // Use templates from database if available, fallback to hardcoded
-      const activeTemplates = phaseTemplates.filter(t => t.is_active);
-      const templatePhases = activeTemplates.length > 0 
-        ? activeTemplates 
-        : PHASES_BY_PROJECT_TYPE[document.project_type];
+    if (isNew && phases.length === 0 && document.project_type && phaseTemplates.length > 0) {
+      // Auto-load base phases from settings for new documents
+      const baseTemplates = phaseTemplates.filter(t => t.is_active && t.category === 'base');
       
-      const initialPhases: CommercialDocumentPhase[] = templatePhases.map((p, index) => ({
-        id: `temp-${index}`,
-        document_id: documentId || '',
-        phase_code: 'code' in p ? p.code : p.code,
-        phase_name: 'name' in p ? p.name : p.name,
-        phase_description: 'description' in p ? p.description : p.description,
-        percentage_fee: 'default_percentage' in p ? p.default_percentage : ('defaultPercentage' in p ? p.defaultPercentage : 0),
-        amount: 0,
-        is_included: true,
-        deliverables: 'deliverables' in p ? (Array.isArray(p.deliverables) ? p.deliverables : []) : [],
-        sort_order: index,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }));
-      onPhasesChange(initialPhases);
-      setQuoteItems(phasesToItems(initialPhases));
+      if (baseTemplates.length > 0) {
+        const initialPhases: CommercialDocumentPhase[] = baseTemplates.map((p, index) => ({
+          id: `temp-${index}`,
+          document_id: documentId || '',
+          phase_code: p.code,
+          phase_name: p.name,
+          phase_description: p.description || '',
+          percentage_fee: p.default_percentage,
+          amount: 0,
+          is_included: true,
+          deliverables: Array.isArray(p.deliverables) ? p.deliverables : [],
+          sort_order: index,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }));
+        onPhasesChange(initialPhases);
+        setQuoteItems(phasesToItems(initialPhases));
+      }
     }
   }, [document.project_type, isNew, phaseTemplates]);
 
@@ -173,23 +172,9 @@ export function CommercialDocumentBuilder({
     // Initialize defaults for the new project type
     await initializeDefaultsIfEmpty.mutateAsync(projectType);
     
-    // Get templates - will be refetched when project type changes
-    // Use fallback for now since templates will load async
-    const templatePhases = PHASES_BY_PROJECT_TYPE[projectType];
-    const newPhases: CommercialDocumentPhase[] = templatePhases.map((p, index) => ({
-      id: `temp-${index}`,
-      document_id: documentId || '',
-      phase_code: p.code,
-      phase_name: p.name,
-      phase_description: p.description,
-      percentage_fee: p.defaultPercentage,
-      amount: 0,
-      is_included: true,
-      deliverables: p.deliverables,
-      sort_order: index,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }));
+    // Clear phases - they will be loaded from settings when user adds them
+    onPhasesChange([]);
+    setQuoteItems([]);
     
     const clauses = DEFAULT_CLAUSES_BY_PROJECT_TYPE[projectType];
     
@@ -199,7 +184,6 @@ export function CommercialDocumentBuilder({
       general_conditions: clauses.general_conditions,
       payment_terms: clauses.payment_terms
     });
-    onPhasesChange(newPhases);
   };
 
   const handleRestoreVersion = (doc: Partial<CommercialDocument>, restoredPhases: CommercialDocumentPhase[]) => {
