@@ -31,7 +31,8 @@ import {
   Globe,
 } from "lucide-react";
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
-import { COMPANY_CATEGORIES, getCompanyTypeConfig, CompanyCategory } from "@/lib/crmTypes";
+import { useCRMSettings } from "@/hooks/useCRMSettings";
+import { CompanyCategory } from "@/lib/crmTypes";
 import { EditCompanyDialog } from "./EditCompanyDialog";
 import { cn } from "@/lib/utils";
 
@@ -44,8 +45,9 @@ export interface CRMCompanyTableProps {
 export function CRMCompanyTable({ category = "all", search = "", onCreateCompany }: CRMCompanyTableProps) {
   const navigate = useNavigate();
   const { companies, allCompanies, isLoading, deleteCompany, statsByCategory } = useCRMCompanies({ category, search });
+  const { companyCategories, getCompanyTypeShortLabel, getCompanyTypeColor, getCategoryFromType } = useCRMSettings();
   const [letterFilter, setLetterFilter] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<CompanyCategory>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [editingCompany, setEditingCompany] = useState<CRMCompanyEnriched | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
@@ -57,9 +59,9 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
 
     // Filter by category
     if (selectedCategory !== "all") {
-      const categoryConfig = COMPANY_CATEGORIES.find((c) => c.id === selectedCategory);
+      const categoryConfig = companyCategories.find((c) => c.key === selectedCategory);
       if (categoryConfig?.types) {
-        result = result.filter((c) => categoryConfig.types!.includes(c.industry as any));
+        result = result.filter((c) => categoryConfig.types.includes(c.industry as string));
       }
     }
 
@@ -80,19 +82,20 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
     }
 
     return result;
-  }, [allCompanies, selectedCategory, search, letterFilter]);
+  }, [allCompanies, selectedCategory, search, letterFilter, companyCategories]);
 
   // Category filter chips with counts
   const categoryChips = useMemo(() => {
-    return [
-      { id: "all" as CompanyCategory, label: "Tous", count: allCompanies.length },
-      ...COMPANY_CATEGORIES.filter((c) => c.id !== "all").map((cat) => ({
-        id: cat.id,
+    const chips = [
+      { id: "all", label: "Tous", count: allCompanies.length },
+      ...companyCategories.map((cat) => ({
+        id: cat.key,
         label: cat.label,
-        count: (statsByCategory as Record<string, number>)[cat.id] || 0,
+        count: (statsByCategory as Record<string, number>)[cat.key] || 0,
       })),
-    ].filter((c) => c.count > 0 || c.id === "all");
-  }, [statsByCategory, allCompanies.length]);
+    ];
+    return chips.filter((c) => c.count > 0 || c.id === "all");
+  }, [statsByCategory, allCompanies.length, companyCategories]);
 
   if (isLoading) {
     return (
@@ -227,7 +230,8 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                   </TableHeader>
                   <TableBody>
                     {filteredCompanies.map((company, index) => {
-                      const typeConfig = getCompanyTypeConfig(company.industry);
+                      const typeColor = getCompanyTypeColor(company.industry || "");
+                      const typeLabel = getCompanyTypeShortLabel(company.industry || "");
                       return (
                         <motion.tr
                           key={company.id}
@@ -240,9 +244,10 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                           <TableCell className="py-2 sm:py-4">
                             <Badge
                               variant="secondary"
-                              className={cn("text-white text-2xs sm:text-xs", typeConfig.color)}
+                              className="text-white text-2xs sm:text-xs"
+                              style={{ backgroundColor: typeColor }}
                             >
-                              {typeConfig.shortLabel}
+                              {typeLabel}
                             </Badge>
                           </TableCell>
                           <TableCell className="py-2 sm:py-4">

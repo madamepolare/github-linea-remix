@@ -37,30 +37,9 @@ import {
 } from "lucide-react";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
+import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { ContactDetailSheet } from "./ContactDetailSheet";
 import { EditContactDialog } from "./EditContactDialog";
-
-const contactTypeLabels: Record<string, string> = {
-  client: "Client",
-  amo: "AMO",
-  bet: "BET",
-  entreprise: "Entreprise",
-  fournisseur: "Fournisseur",
-  partenaire: "Partenaire",
-  partner: "Partenaire",
-  supplier: "Fournisseur",
-};
-
-const contactTypeColors: Record<string, string> = {
-  client: "bg-emerald-500",
-  amo: "bg-cyan-500",
-  bet: "bg-orange-500",
-  entreprise: "bg-amber-500",
-  fournisseur: "bg-purple-500",
-  partenaire: "bg-pink-500",
-  partner: "bg-pink-500",
-  supplier: "bg-purple-500",
-};
 
 export interface CRMContactsTableProps {
   search?: string;
@@ -71,6 +50,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact 
   const navigate = useNavigate();
   const { contacts, isLoading, deleteContact } = useContacts();
   const { canViewSensitiveData, canEditContacts, canDeleteContacts } = useWorkspaceRole();
+  const { getContactTypeLabel, getContactTypeColor } = useCRMSettings();
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -249,11 +229,10 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact 
                           {contact.contact_type && (
                             <Badge variant="outline" className="gap-1.5">
                               <div
-                                className={`w-2 h-2 rounded-full ${
-                                  contactTypeColors[contact.contact_type] || "bg-neutral-500"
-                                }`}
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: getContactTypeColor(contact.contact_type) }}
                               />
-                              {contactTypeLabels[contact.contact_type] || contact.contact_type}
+                              {getContactTypeLabel(contact.contact_type)}
                             </Badge>
                           )}
                         </TableCell>
