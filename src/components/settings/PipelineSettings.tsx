@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -37,8 +38,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, Target, Users, Layers, Mail } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, Target, Users, Layers, Mail, Sparkles, Loader2 } from "lucide-react";
 import { DEFAULT_CONTACT_TYPES } from "@/lib/crmDefaults";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const STAGE_COLORS = [
   "#6B7280", "#3B82F6", "#8B5CF6", "#EC4899", "#F97316", "#22C55E", "#EF4444"
@@ -47,6 +50,14 @@ const STAGE_COLORS = [
 const CONTACT_TYPE_OPTIONS = DEFAULT_CONTACT_TYPES.filter(t => 
   ["bet", "societe", "partenaire_moe", "fournisseur"].includes(t.key)
 );
+
+interface GeneratedStage {
+  name: string;
+  color: string;
+  probability: number;
+  requires_email_on_enter: boolean;
+  is_final_stage: boolean;
+}
 
 export function PipelineSettings() {
   const {
@@ -78,7 +89,8 @@ export function PipelineSettings() {
   const [pipelineForm, setPipelineForm] = useState({ 
     name: "", 
     color: "#3B82F6",
-    target_contact_type: "" 
+    target_contact_type: "",
+    objective: ""
   });
   const [stageForm, setStageForm] = useState({ 
     name: "", 
@@ -87,8 +99,43 @@ export function PipelineSettings() {
     requires_email_on_enter: false,
     is_final_stage: false,
   });
+  const [generatedStages, setGeneratedStages] = useState<GeneratedStage[]>([]);
+  const [isGeneratingStages, setIsGeneratingStages] = useState(false);
 
   const currentPipelines = activeTab === "opportunity" ? opportunityPipelines : contactPipelines;
+
+  const handleGenerateStages = async () => {
+    if (!pipelineForm.name) {
+      toast.error("Veuillez d'abord saisir un nom de pipeline");
+      return;
+    }
+
+    setIsGeneratingStages(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-pipeline-stages", {
+        body: {
+          pipelineName: pipelineForm.name,
+          pipelineType: currentPipelineType,
+          targetContactType: pipelineForm.target_contact_type,
+          objective: pipelineForm.objective,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.stages && Array.isArray(data.stages)) {
+        setGeneratedStages(data.stages);
+        toast.success(`${data.stages.length} étapes générées avec succès`);
+      } else {
+        throw new Error("Format de réponse invalide");
+      }
+    } catch (error) {
+      console.error("Error generating stages:", error);
+      toast.error("Erreur lors de la génération des étapes");
+    } finally {
+      setIsGeneratingStages(false);
+    }
+  };
 
   const handleCreateDefaultPipeline = async () => {
     if (activeTab === "opportunity") {
@@ -101,7 +148,8 @@ export function PipelineSettings() {
   const handleOpenCreatePipeline = () => {
     setEditingPipeline(null);
     setCurrentPipelineType(activeTab);
-    setPipelineForm({ name: "", color: "#3B82F6", target_contact_type: "" });
+    setPipelineForm({ name: "", color: "#3B82F6", target_contact_type: "", objective: "" });
+    setGeneratedStages([]);
     setIsPipelineDialogOpen(true);
   };
 
@@ -112,7 +160,9 @@ export function PipelineSettings() {
       name: pipeline.name,
       color: pipeline.color || "#3B82F6",
       target_contact_type: pipeline.target_contact_type || "",
+      objective: "",
     });
+    setGeneratedStages([]);
     setIsPipelineDialogOpen(true);
   };
 
@@ -125,14 +175,31 @@ export function PipelineSettings() {
         target_contact_type: pipelineForm.target_contact_type || undefined,
       });
     } else {
-      await createPipeline.mutateAsync({
+      const newPipeline = await createPipeline.mutateAsync({
         name: pipelineForm.name,
         color: pipelineForm.color,
         pipeline_type: currentPipelineType,
         target_contact_type: pipelineForm.target_contact_type || undefined,
       });
+
+      // Create generated stages if any
+      if (generatedStages.length > 0 && newPipeline?.id) {
+        for (let i = 0; i < generatedStages.length; i++) {
+          const stage = generatedStages[i];
+          await createStage.mutateAsync({
+            pipeline_id: newPipeline.id,
+            name: stage.name,
+            color: stage.color,
+            probability: stage.probability,
+            requires_email_on_enter: stage.requires_email_on_enter,
+            is_final_stage: stage.is_final_stage,
+          });
+        }
+        toast.success(`Pipeline créé avec ${generatedStages.length} étapes`);
+      }
     }
     setIsPipelineDialogOpen(false);
+    setGeneratedStages([]);
   };
 
   const handleOpenCreateStage = (pipelineId: string, pipelineType: PipelineType) => {
@@ -464,7 +531,7 @@ export function PipelineSettings() {
 
       {/* Pipeline Dialog */}
       <Dialog open={isPipelineDialogOpen} onOpenChange={setIsPipelineDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {editingPipeline ? "Modifier le pipeline" : "Nouveau pipeline"}
@@ -519,13 +586,93 @@ export function PipelineSettings() {
                 ))}
               </div>
             </div>
+
+            {/* AI Stage Generation Section - Only for new pipelines */}
+            {!editingPipeline && (
+              <div className="space-y-3 pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <Label className="font-medium">Générer des étapes avec l'IA</Label>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Objectif du pipeline (optionnel)</Label>
+                  <Textarea
+                    value={pipelineForm.objective}
+                    onChange={(e) => setPipelineForm({ ...pipelineForm, objective: e.target.value })}
+                    placeholder="Ex: Qualifier et convertir des promoteurs immobiliers en clients..."
+                    className="h-16 text-sm"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateStages}
+                  disabled={isGeneratingStages || !pipelineForm.name}
+                  className="w-full"
+                >
+                  {isGeneratingStages ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Génération en cours...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Générer les étapes
+                    </>
+                  )}
+                </Button>
+
+                {/* Display generated stages preview */}
+                {generatedStages.length > 0 && (
+                  <div className="space-y-2 mt-3">
+                    <Label className="text-xs text-muted-foreground">
+                      Étapes générées ({generatedStages.length})
+                    </Label>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {generatedStages.map((stage, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 p-2 rounded bg-muted/50 text-sm"
+                        >
+                          <div
+                            className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: stage.color }}
+                          />
+                          <span className="flex-1 truncate">{stage.name}</span>
+                          <Badge variant="outline" className="text-[10px] h-4">
+                            {stage.probability}%
+                          </Badge>
+                          {stage.requires_email_on_enter && (
+                            <Mail className="h-3 w-3 text-primary" />
+                          )}
+                          {stage.is_final_stage && (
+                            <Badge variant="secondary" className="text-[10px] h-4">Final</Badge>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setGeneratedStages([])}
+                      className="text-xs text-muted-foreground"
+                    >
+                      Effacer les étapes générées
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPipelineDialogOpen(false)}>
               Annuler
             </Button>
             <Button onClick={handleSavePipeline} disabled={!pipelineForm.name}>
-              {editingPipeline ? "Enregistrer" : "Créer"}
+              {editingPipeline ? "Enregistrer" : generatedStages.length > 0 ? `Créer avec ${generatedStages.length} étapes` : "Créer"}
             </Button>
           </DialogFooter>
         </DialogContent>
