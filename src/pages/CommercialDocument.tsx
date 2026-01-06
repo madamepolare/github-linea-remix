@@ -174,9 +174,11 @@ const CommercialDocument = () => {
         
         navigate(`/commercial/${result.id}`, { replace: true });
       } else {
+        // Only send valid columns, not joined objects
+        const { client_company, client_contact, project, ...updateData } = documentData as any;
         await updateDocument.mutateAsync({
           id: id!,
-          ...documentData,
+          ...updateData,
           total_amount: calculateTotal()
         });
         
