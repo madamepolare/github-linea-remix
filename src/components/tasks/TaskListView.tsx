@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTasks, Task, SubtaskPreview } from "@/hooks/useTasks";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjects } from "@/hooks/useProjects";
+import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +50,19 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
   const { tasks, isLoading, updateTaskStatus, updateTask } = useTasks();
   const { companies } = useCRMCompanies();
   const { projects } = useProjects();
+  const { data: profiles } = useWorkspaceProfiles();
+
+  const getProfileByUserId = useMemo(() => {
+    const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+    return (userId: string) => profileMap.get(userId);
+  }, [profiles]);
+
+  const getInitials = (profile: { full_name: string | null } | undefined, userId: string) => {
+    if (profile?.full_name) {
+      return profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    }
+    return userId.slice(0, 2).toUpperCase();
+  };
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [showQuickAdd, setShowQuickAdd] = useState(false);
@@ -311,6 +325,7 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
                 const isJustCompleted = recentlyCompleted.has(task.id);
 
                 return (
+                  <>
                   <motion.tr
                     key={task.id}
                     layout
@@ -322,7 +337,7 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.2 }}
                     className={cn(
-                      "cursor-pointer hover:bg-muted/50 border-b transition-colors",
+                      "cursor-pointer border-b transition-all duration-150 hover:bg-accent/50 hover:shadow-sm",
                       task.status === "done" && "opacity-60"
                     )}
                     onClick={() => setSelectedTask(task)}
@@ -392,73 +407,75 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
                     <TableCell className="py-2">
                       {task.assigned_to && task.assigned_to.length > 0 && (
                         <div className="flex -space-x-1">
-                          {task.assigned_to.slice(0, 2).map((userId) => (
-                            <Avatar key={userId} className="h-6 w-6 border-2 border-background">
-                              <AvatarFallback className="text-2xs bg-primary/10">
-                                {userId.slice(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
-                          {task.assigned_to.length > 2 && (
+                          {task.assigned_to.slice(0, 3).map((userId) => {
+                            const profile = getProfileByUserId(userId);
+                            return (
+                              <Avatar key={userId} className="h-6 w-6 border-2 border-background" title={profile?.full_name || userId}>
+                                {profile?.avatar_url ? (
+                                  <img src={profile.avatar_url} alt={profile.full_name || ''} className="h-full w-full object-cover" />
+                                ) : (
+                                  <AvatarFallback className="text-2xs bg-primary/10">
+                                    {getInitials(profile, userId)}
+                                  </AvatarFallback>
+                                )}
+                              </Avatar>
+                            );
+                          })}
+                          {task.assigned_to.length > 3 && (
                             <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                              <span className="text-2xs">+{task.assigned_to.length - 2}</span>
+                              <span className="text-2xs">+{task.assigned_to.length - 3}</span>
                             </div>
                           )}
                         </div>
                       )}
                     </TableCell>
                   </motion.tr>
+                  
+                  {/* Subtasks inline */}
+                  {isExpanded && task.subtasks?.map((subtask) => {
+                    const isSubtaskCompleted = recentlyCompleted.has(subtask.id);
+                    
+                    return (
+                      <motion.tr
+                        key={subtask.id}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ 
+                          opacity: 1, 
+                          height: "auto",
+                          backgroundColor: isSubtaskCompleted ? "hsl(142 76% 36% / 0.1)" : "transparent"
+                        }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="bg-muted/20 hover:bg-muted/40 transition-colors border-b"
+                      >
+                        <TableCell className="py-1.5 pl-6" onClick={(e) => handleToggleSubtask(e, subtask)}>
+                          <motion.div
+                            animate={isSubtaskCompleted ? { scale: [1, 1.3, 1] } : {}}
+                            transition={{ duration: 0.3 }}
+                          >
+                            {subtask.status === "done" ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Checkbox checked={false} className="h-4 w-4" />
+                            )}
+                          </motion.div>
+                        </TableCell>
+                        <TableCell className="py-1.5"></TableCell>
+                        <TableCell className="py-1.5 text-muted-foreground text-xs">↳ sous-tâche</TableCell>
+                        <TableCell colSpan={5} className="py-1.5">
+                          <span className={cn(
+                            "text-sm",
+                            subtask.status === "done" && "line-through text-muted-foreground"
+                          )}>
+                            {subtask.title}
+                          </span>
+                        </TableCell>
+                      </motion.tr>
+                    );
+                  })}
+                </>
                 );
               })}
             </AnimatePresence>
-
-            {/* Expanded subtasks - render after AnimatePresence */}
-            {filteredTasks?.map((task) => {
-              const isExpanded = expandedTasks.has(task.id);
-              if (!isExpanded || !task.subtasks) return null;
-              
-              return task.subtasks.map((subtask) => {
-                const isSubtaskCompleted = recentlyCompleted.has(subtask.id);
-                
-                return (
-                  <motion.tr
-                    key={subtask.id}
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ 
-                      opacity: 1, 
-                      height: "auto",
-                      backgroundColor: isSubtaskCompleted ? "hsl(142 76% 36% / 0.1)" : "hsl(var(--muted) / 0.3)"
-                    }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="bg-muted/30"
-                  >
-                    <TableCell className="py-1.5" onClick={(e) => handleToggleSubtask(e, subtask)}>
-                      <motion.div
-                        animate={isSubtaskCompleted ? { scale: [1, 1.3, 1] } : {}}
-                        transition={{ duration: 0.3 }}
-                        className="pl-4"
-                      >
-                        {subtask.status === "done" ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <Checkbox checked={false} className="h-4 w-4" />
-                        )}
-                      </motion.div>
-                    </TableCell>
-                    <TableCell className="py-1.5"></TableCell>
-                    <TableCell className="py-1.5"></TableCell>
-                    <TableCell colSpan={5} className="py-1.5 pl-6">
-                      <span className={cn(
-                        "text-sm",
-                        subtask.status === "done" && "line-through text-muted-foreground"
-                      )}>
-                        {subtask.title}
-                      </span>
-                    </TableCell>
-                  </motion.tr>
-                );
-              });
-            })}
             
             {(!filteredTasks || filteredTasks.length === 0) && (
               <TableRow>
