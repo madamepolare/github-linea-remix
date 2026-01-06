@@ -89,7 +89,7 @@ export const DEFAULT_COMPANY_CATEGORIES = [
     label: "BET", 
     color: "#F97316",
     icon: "Ruler",
-    types: ["bet_structure", "bet_fluides", "bet_electricite", "bet_acoustique", "bet_thermique", "bet_vrd", "bet_facade", "bet_environnement"]
+    types: ["bet"] // Type unique - spécialités gérées via bet_specialties[]
   },
   { 
     key: "partenaire", 
@@ -135,7 +135,7 @@ export const DEFAULT_COMPANY_CATEGORIES = [
   },
 ];
 
-// --- Types d'entreprises (tous les types avec leur configuration) ---
+// --- Types d'entreprises (simplifiés - BET est un type unique) ---
 export const DEFAULT_COMPANY_TYPES = [
   // Clients
   { key: "client", label: "Client actif", shortLabel: "Client", category: "client", color: "#10B981" },
@@ -143,15 +143,8 @@ export const DEFAULT_COMPANY_TYPES = [
   { key: "client_prive", label: "Client privé", shortLabel: "Privé", category: "client", color: "#059669" },
   { key: "client_public", label: "Client public", shortLabel: "Public", category: "client", color: "#6366F1" },
   
-  // BET
-  { key: "bet_structure", label: "BET Structure", shortLabel: "Structure", category: "bet", color: "#F97316" },
-  { key: "bet_fluides", label: "BET Fluides", shortLabel: "Fluides", category: "bet", color: "#06B6D4" },
-  { key: "bet_electricite", label: "BET Électricité", shortLabel: "Élec", category: "bet", color: "#EAB308" },
-  { key: "bet_acoustique", label: "BET Acoustique", shortLabel: "Acoustique", category: "bet", color: "#8B5CF6" },
-  { key: "bet_thermique", label: "BET Thermique", shortLabel: "Thermique", category: "bet", color: "#EF4444" },
-  { key: "bet_vrd", label: "BET VRD", shortLabel: "VRD", category: "bet", color: "#D97706" },
-  { key: "bet_facade", label: "BET Façade", shortLabel: "Façade", category: "bet", color: "#64748B" },
-  { key: "bet_environnement", label: "BET Environnement", shortLabel: "Env.", category: "bet", color: "#16A34A" },
+  // BET - Type unique, les spécialités sont dans bet_specialties[]
+  { key: "bet", label: "Bureau d'Études Techniques", shortLabel: "BET", category: "bet", color: "#F97316" },
   
   // Partenaires MOE
   { key: "architecte", label: "Architecte", shortLabel: "Archi", category: "partenaire", color: "#8B5CF6" },
