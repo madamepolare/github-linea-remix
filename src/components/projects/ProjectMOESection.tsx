@@ -272,31 +272,36 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* Category selection */}
+            {/* Category selection - exclude Client and AMO as they should be managed in project settings */}
             <div className="space-y-2">
               <Label>Catégorie</Label>
               <div className="flex flex-wrap gap-1.5">
-                {MOE_CATEGORIES.map((cat) => {
-                  const Icon = CATEGORY_ICONS[cat.value];
-                  return (
-                    <Button
-                      key={cat.value}
-                      type="button"
-                      variant={selectedCategory === cat.value ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setSelectedCategory(cat.value);
-                        setSelectedRole("");
-                        setSelectedBETSpecialties([]);
-                      }}
-                      className="gap-1 h-8 text-xs"
-                    >
-                      <Icon className="h-3 w-3" />
-                      {cat.label}
-                    </Button>
-                  );
-                })}
+                {MOE_CATEGORIES
+                  .filter(cat => cat.value !== "client" && cat.value !== "amo")
+                  .map((cat) => {
+                    const Icon = CATEGORY_ICONS[cat.value];
+                    return (
+                      <Button
+                        key={cat.value}
+                        type="button"
+                        variant={selectedCategory === cat.value ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCategory(cat.value);
+                          setSelectedRole("");
+                          setSelectedBETSpecialties([]);
+                        }}
+                        className="gap-1 h-8 text-xs"
+                      >
+                        <Icon className="h-3 w-3" />
+                        {cat.label}
+                      </Button>
+                    );
+                  })}
               </div>
+              <p className="text-xs text-muted-foreground">
+                Client et AMO sont gérés dans les informations du projet.
+              </p>
             </div>
 
             {/* Role selection (for non-BET) */}
@@ -398,7 +403,7 @@ export function ProjectMOESection({ projectId }: ProjectMOESectionProps) {
             {/* BET Specialties selection (multi-select) */}
             {selectedCategory === "bet" && selectedCompanyId && (
               <div className="space-y-2">
-                <Label>Spécialités (plusieurs possibles)</Label>
+                <Label>Spécialités pour ce projet (plusieurs possibles)</Label>
                 <div className="grid grid-cols-2 gap-1.5 p-2 border rounded-md max-h-40 overflow-y-auto">
                   {BET_SPECIALTIES.map((specialty) => (
                     <label

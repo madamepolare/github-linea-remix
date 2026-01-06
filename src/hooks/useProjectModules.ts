@@ -31,8 +31,8 @@ export const AVAILABLE_MODULES: AvailableModule[] = [
   },
   {
     key: "concours",
-    name: "Concours",
-    description: "Suivi des appels d'offres et concours",
+    name: "Appels d'Offre",
+    description: "Suivi des appels d'offres",
     icon: "Trophy",
     color: "amber",
   },

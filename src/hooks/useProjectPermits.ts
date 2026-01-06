@@ -42,6 +42,19 @@ export const PERMIT_STATUS_COLORS: Record<PermitStatus, string> = {
   withdrawn: "bg-muted text-muted-foreground",
 };
 
+// Official response delays in months by permit type
+export const PERMIT_RESPONSE_DELAYS: Record<PermitType, number> = {
+  pc: 3,       // Permis de construire: 3 mois
+  dp: 1,       // Déclaration préalable: 1 mois
+  pa: 3,       // Permis d'aménager: 3 mois
+  pd: 2,       // Permis de démolir: 2 mois
+  at: 4,       // Autorisation travaux ERP: 4 mois
+  erp: 5,      // Commission sécurité ERP: 5 mois
+  abf: 2,      // ABF: 2 mois
+  icpe: 3,     // ICPE: 3 mois
+  other: 2,    // Autre: 2 mois par défaut
+};
+
 export interface ProjectPermit {
   id: string;
   project_id: string;
@@ -63,7 +76,10 @@ export interface ProjectPermit {
   authority_contact: string | null;
   authority_email: string | null;
   authority_phone: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
   surface_plancher: number | null;
+  no_surface: boolean;
   construction_type: string | null;
   conditions: string | null;
   prescriptions: string[];

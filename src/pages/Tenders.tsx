@@ -158,7 +158,7 @@ function KanbanColumn({
         ))}
         {tenders.length === 0 && (
           <div className="text-center py-8 text-muted-foreground text-sm">
-            Aucun concours
+            Aucun appel d'offre
           </div>
         )}
       </div>
@@ -333,7 +333,7 @@ function TenderListView({
           {tenders.length === 0 && (
             <tr>
               <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-                Aucun concours trouvé
+                Aucun appel d'offre trouvé
               </td>
             </tr>
           )}

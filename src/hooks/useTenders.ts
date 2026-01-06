@@ -86,10 +86,10 @@ export function useTenders() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenders"] });
-      toast.success("Concours créé");
+      toast.success("Appel d'offre créé");
     },
     onError: (error) => {
-      toast.error("Erreur lors de la création du concours");
+      toast.error("Erreur lors de la création de l'appel d'offre");
       console.error(error);
     },
   });

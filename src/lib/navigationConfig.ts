@@ -158,16 +158,15 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
   },
   tenders: {
     slug: "tenders",
-    title: "Concours",
+    title: "Appels d'Offre",
     icon: Trophy,
     href: "/tenders",
-    isExtension: true,
     subNav: [
-      { key: "kanban", label: "Kanban", href: "/tenders/kanban" },
-      { key: "list", label: "Liste", href: "/tenders/list" },
+      { key: "dashboard", href: "/tenders", label: "Tableau de bord" },
+      { key: "list", href: "/tenders/list", label: "Liste" },
     ],
     quickActions: [
-      { key: "create-tender", label: "Nouveau concours", event: "open-create-tender" },
+      { key: "create-tender", label: "Nouvel appel d'offre", event: "open-create-tender" },
     ],
   },
   invoicing: {

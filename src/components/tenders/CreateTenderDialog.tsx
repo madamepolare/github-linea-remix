@@ -147,7 +147,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         setFormData(data.extractedData);
         toast.success("Analyse terminée !");
       } else {
-        setFormData({ title: "Nouveau concours" });
+        setFormData({ title: "Nouvel appel d'offre" });
       }
       
       setStep('form');
@@ -211,7 +211,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       // Reset and navigate
       handleClose();
       navigate(`/tenders/${result.id}?autoUpload=true`);
-      toast.success("Concours créé avec succès");
+      toast.success("Appel d'offre créé avec succès");
     } catch (error) {
       console.error('Create error:', error);
       toast.error("Erreur lors de la création");
@@ -242,19 +242,19 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
             {step === 'upload' ? (
               <>
                 <Sparkles className="h-5 w-5 text-primary" />
-                Nouveau concours
+                Nouvel appel d'offre
               </>
             ) : (
               <>
                 <FileSearch className="h-5 w-5 text-primary" />
-                Informations du concours
+                Informations de l'appel d'offre
               </>
             )}
           </DialogTitle>
           <DialogDescription>
             {step === 'upload'
               ? "Déposez vos documents DCE et l'IA extraira automatiquement les informations"
-              : "Vérifiez et complétez les informations avant de créer le concours"
+              : "Vérifiez et complétez les informations avant de créer l'appel d'offre"
             }
           </DialogDescription>
         </DialogHeader>
@@ -574,7 +574,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Vous pourrez planifier la visite depuis la fiche du concours
+                        Vous pourrez planifier la visite depuis la fiche de l'appel d'offre
                       </p>
                     </div>
                   )}
@@ -663,7 +663,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                     </>
                   ) : (
                     <>
-                      Créer le concours
+                      Créer l'appel d'offre
                       <Check className="h-4 w-4" />
                     </>
                   )}

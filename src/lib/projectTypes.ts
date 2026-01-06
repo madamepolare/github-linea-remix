@@ -9,6 +9,7 @@ export interface ProjectTypeConfig {
   label: string;
   icon: string;
   description: string;
+  color: string;
 }
 
 export const PROJECT_TYPES: ProjectTypeConfig[] = [
@@ -16,19 +17,22 @@ export const PROJECT_TYPES: ProjectTypeConfig[] = [
     value: "interior", 
     label: "Intérieur", 
     icon: "Sofa",
-    description: "Aménagement intérieur, design d'espace"
+    description: "Aménagement intérieur, design d'espace",
+    color: "#8B5CF6"
   },
   { 
     value: "architecture", 
     label: "Architecture", 
     icon: "Building2",
-    description: "Construction, rénovation, extension"
+    description: "Construction, rénovation, extension",
+    color: "#3B82F6"
   },
   { 
     value: "scenography", 
     label: "Scénographie", 
     icon: "Theater",
-    description: "Exposition, événementiel, muséographie"
+    description: "Exposition, événementiel, muséographie",
+    color: "#F59E0B"
   },
 ];
 
