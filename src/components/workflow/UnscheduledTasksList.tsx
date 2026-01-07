@@ -174,33 +174,13 @@ function TaskCard({ task, onDragStart, onTaskSelect }: TaskCardProps) {
               </Badge>
             )}
             
-            {/* Afficher temps planifié vs estimé */}
-            {(estimatedHours > 0 || scheduledHours > 0) && (
-              <Badge 
-                variant="outline" 
-                className={cn(
-                  "text-[10px] px-1.5 py-0 max-w-full",
-                  hasSchedule && !isOverPlanned && "border-primary/50 text-primary",
-                  isOverPlanned && "border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-950/30"
-                )}
-              >
-                {hasSchedule ? (
-                  <span className="flex items-center gap-0.5">
-                    <CalendarCheck className="h-2.5 w-2.5 flex-shrink-0" />
-                    <span>{scheduledHours}h</span>
-                    {estimatedHours > 0 && <span>/ {estimatedHours}h</span>}
-                    {planningProgress !== null && (
-                      <span className={cn("opacity-70", isOverPlanned && "text-amber-600 font-medium opacity-100")}>
-                        ({planningProgress}%)
-                      </span>
-                    )}
-                  </span>
-                ) : (
-                  <>
-                    <Clock className="h-2.5 w-2.5 mr-0.5" />
-                    {estimatedHours}h
-                  </>
-                )}
+            {/* Icône calendrier vert si planifié, sinon afficher estimation */}
+            {hasSchedule ? (
+              <CalendarCheck className="h-3.5 w-3.5 text-green-500" />
+            ) : estimatedHours > 0 && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                <Clock className="h-2.5 w-2.5 mr-0.5" />
+                {estimatedHours}h
               </Badge>
             )}
 
