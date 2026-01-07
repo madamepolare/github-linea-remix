@@ -317,13 +317,29 @@ export function useProjectMembers(projectId: string | null) {
     queryFn: async () => {
       if (!projectId) return [];
 
-      const { data, error } = await supabase
+      // Get project members
+      const { data: membersData, error } = await supabase
         .from("project_members")
         .select("*")
         .eq("project_id", projectId);
 
       if (error) throw error;
-      return data as ProjectMember[];
+      if (!membersData || membersData.length === 0) return [];
+
+      // Get profiles for these members
+      const userIds = membersData.map(m => m.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url")
+        .in("id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Join manually
+      return membersData.map(member => ({
+        ...member,
+        profile: profiles?.find(p => p.id === member.user_id) || null
+      })) as (ProjectMember & { profile: { id: string; full_name: string | null; avatar_url: string | null } | null })[];
     },
     enabled: !!projectId,
   });
@@ -341,6 +357,15 @@ export function useProjectMembers(projectId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-members"] });
+      queryClient.invalidateQueries({ queryKey: ["user-project-ids"] });
+      toast.success("Membre ajouté au projet");
+    },
+    onError: (error: any) => {
+      if (error.code === "23505") {
+        toast.error("Ce membre est déjà assigné au projet");
+      } else {
+        toast.error("Erreur lors de l'ajout du membre");
+      }
     },
   });
 
@@ -355,6 +380,38 @@ export function useProjectMembers(projectId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-members"] });
+      queryClient.invalidateQueries({ queryKey: ["user-project-ids"] });
+      toast.success("Membre retiré du projet");
+    },
+  });
+
+  const setMembers = useMutation({
+    mutationFn: async ({ projectId, userIds }: { projectId: string; userIds: string[] }) => {
+      // Delete all existing members
+      await supabase
+        .from("project_members")
+        .delete()
+        .eq("project_id", projectId);
+
+      // Insert new members
+      if (userIds.length > 0) {
+        const { error } = await supabase
+          .from("project_members")
+          .insert(userIds.map(userId => ({
+            project_id: projectId,
+            user_id: userId,
+            role: "member"
+          })));
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-members"] });
+      queryClient.invalidateQueries({ queryKey: ["user-project-ids"] });
+    },
+    onError: () => {
+      toast.error("Erreur lors de la mise à jour des membres");
     },
   });
 
@@ -363,5 +420,77 @@ export function useProjectMembers(projectId: string | null) {
     isLoading,
     addMember,
     removeMember,
+    setMembers,
   };
+}
+
+/**
+ * Hook to get project IDs where a user is a member
+ * Used for planning view to show events from assigned projects
+ */
+export function useUserProjectIds(userId: string | null) {
+  const { activeWorkspace } = useAuth();
+
+  return useQuery({
+    queryKey: ["user-project-ids", userId, activeWorkspace?.id],
+    queryFn: async () => {
+      if (!userId || !activeWorkspace?.id) return new Set<string>();
+
+      const { data, error } = await supabase
+        .from("project_members")
+        .select("project_id")
+        .eq("user_id", userId);
+
+      if (error) throw error;
+
+      return new Set((data || []).map(m => m.project_id));
+    },
+    enabled: !!userId && !!activeWorkspace?.id,
+  });
+}
+
+/**
+ * Hook to get all project assignments in the workspace
+ * Returns a Map of userId -> Set of projectIds
+ */
+export function useAllProjectMembers() {
+  const { activeWorkspace } = useAuth();
+
+  return useQuery({
+    queryKey: ["all-project-members", activeWorkspace?.id],
+    queryFn: async () => {
+      if (!activeWorkspace?.id) return new Map<string, Set<string>>();
+
+      // Get all project IDs in workspace first
+      const { data: projects, error: projectsError } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("workspace_id", activeWorkspace.id);
+
+      if (projectsError) throw projectsError;
+
+      const projectIds = projects?.map(p => p.id) || [];
+      if (projectIds.length === 0) return new Map<string, Set<string>>();
+
+      // Get all members for these projects
+      const { data, error } = await supabase
+        .from("project_members")
+        .select("user_id, project_id")
+        .in("project_id", projectIds);
+
+      if (error) throw error;
+
+      // Build a map of userId -> Set of projectIds
+      const userProjectsMap = new Map<string, Set<string>>();
+      (data || []).forEach(member => {
+        if (!userProjectsMap.has(member.user_id)) {
+          userProjectsMap.set(member.user_id, new Set());
+        }
+        userProjectsMap.get(member.user_id)!.add(member.project_id);
+      });
+
+      return userProjectsMap;
+    },
+    enabled: !!activeWorkspace?.id,
+  });
 }

@@ -18,7 +18,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
+import { useProjectMembers } from "@/hooks/useProjects";
+import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
+import { MultiAssigneePicker } from "@/components/tasks/MultiAssigneePicker";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { PROJECT_TYPES, ProjectType } from "@/lib/projectTypes";
@@ -27,6 +30,7 @@ import {
   Sofa,
   Theater,
   Loader2,
+  Users,
 } from "lucide-react";
 
 interface Project {
@@ -77,6 +81,8 @@ export function EditProjectDialog({
   isSaving = false 
 }: EditProjectDialogProps) {
   const { companies } = useCRMCompanies();
+  const { members, setMembers: setProjectMembers } = useProjectMembers(project.id);
+  const { data: profiles } = useWorkspaceProfiles();
   
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description || "");
@@ -93,6 +99,16 @@ export function EditProjectDialog({
     project.end_date ? parseISO(project.end_date) : null
   );
   const [budget, setBudget] = useState(project.budget?.toString() || "");
+  const [assignedMembers, setAssignedMembers] = useState<string[]>(
+    members?.map(m => m.user_id) || []
+  );
+
+  // Update assigned members when members data loads
+  useEffect(() => {
+    if (members) {
+      setAssignedMembers(members.map(m => m.user_id));
+    }
+  }, [members]);
 
   // Sync state when project changes
   useEffect(() => {
@@ -109,8 +125,16 @@ export function EditProjectDialog({
     setBudget(project.budget?.toString() || "");
   }, [project]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) return;
+    
+    // Save project members
+    const currentMemberIds = members?.map(m => m.user_id) || [];
+    const hasChangedMembers = JSON.stringify(currentMemberIds.sort()) !== JSON.stringify(assignedMembers.sort());
+    
+    if (hasChangedMembers) {
+      await setProjectMembers.mutateAsync({ projectId: project.id, userIds: assignedMembers });
+    }
     
     onSave({
       name: name.trim(),
@@ -286,6 +310,22 @@ export function EditProjectDialog({
                 className="w-full"
               />
             </div>
+          </div>
+
+          {/* Team Members */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Équipe projet
+            </Label>
+            <MultiAssigneePicker
+              value={assignedMembers}
+              onChange={setAssignedMembers}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Les membres assignés verront les événements du projet dans leur planning
+            </p>
           </div>
 
           {/* Description */}
