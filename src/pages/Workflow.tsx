@@ -1,10 +1,11 @@
 import { useState, useCallback } from "react";
-import { WorkflowCalendar } from "@/components/workflow/WorkflowCalendar";
+import { TeamPlanningGrid } from "@/components/workflow/TeamPlanningGrid";
 import { WorkflowSidebar } from "@/components/workflow/WorkflowSidebar";
 import { ScheduleDetailSheet } from "@/components/workflow/ScheduleDetailSheet";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { Button } from "@/components/ui/button";
-import { PanelRight, CalendarClock } from "lucide-react";
+import { PanelRight, CalendarClock, Plus } from "lucide-react";
+import { TeamMember } from "@/hooks/useTeamMembers";
 
 export default function Workflow() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -18,37 +19,29 @@ export default function Workflow() {
     setDetailSheetOpen(true);
   }, []);
 
-  const handleExternalDrop = useCallback((
-    taskId: string,
-    userId: string,
-    start: Date,
-    end: Date
-  ) => {
-    createSchedule.mutate({
-      task_id: taskId,
-      user_id: userId,
-      start_datetime: start.toISOString(),
-      end_datetime: end.toISOString(),
-    });
-  }, [createSchedule]);
+  const handleCellClick = useCallback((date: Date, member: TeamMember) => {
+    // TODO: Ouvrir un dialog pour créer une nouvelle planification
+    console.log("Cell clicked:", date, member);
+  }, []);
 
   return (
     <div className="flex h-[calc(100vh-4rem)]">
-      {/* Main calendar area */}
+      {/* Main planning area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center justify-between p-4 border-b bg-background">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <CalendarClock className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold">Workflow</h1>
+              <h1 className="text-xl font-semibold">Planning d'équipe</h1>
               <p className="text-sm text-muted-foreground">
-                  Planifiez les tâches de votre équipe
-                </p>
-              </div>
+                Visualisez et planifiez les tâches de votre équipe
+              </p>
             </div>
+          </div>
 
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -58,11 +51,12 @@ export default function Workflow() {
               {sidebarOpen ? "Masquer" : "Afficher"} le panneau
             </Button>
           </div>
+        </div>
 
-        <div className="flex-1 p-4">
-          <WorkflowCalendar
+        <div className="flex-1 overflow-hidden">
+          <TeamPlanningGrid
             onEventClick={handleEventClick}
-            externalDrop={handleExternalDrop}
+            onCellClick={handleCellClick}
           />
         </div>
       </div>
