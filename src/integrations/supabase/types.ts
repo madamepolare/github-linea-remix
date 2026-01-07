@@ -1834,6 +1834,7 @@ export type Database = {
           created_at: string
           feedback_type: string | null
           id: string
+          is_resolved: boolean | null
           route_path: string
           status: string | null
           updated_at: string
@@ -1845,6 +1846,7 @@ export type Database = {
           created_at?: string
           feedback_type?: string | null
           id?: string
+          is_resolved?: boolean | null
           route_path: string
           status?: string | null
           updated_at?: string
@@ -1856,6 +1858,7 @@ export type Database = {
           created_at?: string
           feedback_type?: string | null
           id?: string
+          is_resolved?: boolean | null
           route_path?: string
           status?: string | null
           updated_at?: string
