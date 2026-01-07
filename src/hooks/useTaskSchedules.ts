@@ -84,11 +84,11 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
       if (userIds.length > 0) {
         const { data: profiles } = await supabase
           .from("profiles")
-          .select("id, full_name, avatar_url")
-          .in("id", userIds);
+          .select("user_id, full_name, avatar_url")
+          .in("user_id", userIds);
         
         const profilesMap = new Map(
-          (profiles || []).map((p: any) => [p.id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+          (profiles || []).map((p: any) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
         );
         
         // Enrichir les schedules avec les infos utilisateur
