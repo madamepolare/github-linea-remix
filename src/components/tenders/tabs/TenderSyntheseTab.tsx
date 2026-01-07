@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -17,6 +17,8 @@ import {
   Clock,
   CalendarDays,
   ExternalLink,
+  CalendarPlus,
+  Check,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +44,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useTenders } from "@/hooks/useTenders";
+import { useTenderCalendarEvents } from "@/hooks/useTenderCalendarEvents";
 import { 
   PROCEDURE_TYPE_LABELS, 
   CLIENT_TYPES,
@@ -79,10 +82,13 @@ const MARKET_TYPES = [
 
 export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTabProps) {
   const { updateTender, updateStatus } = useTenders();
+  const { addSiteVisitToCalendar, createTenderEvent } = useTenderCalendarEvents();
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [showGoDialog, setShowGoDialog] = useState(false);
   const [goDecisionNotes, setGoDecisionNotes] = useState("");
   const [pendingDecision, setPendingDecision] = useState<'go' | 'no_go' | null>(null);
+  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
+  const [addedToCalendar, setAddedToCalendar] = useState(false);
   
   // Local form state for inline editing
   const [formData, setFormData] = useState<Partial<Tender>>({
@@ -97,6 +103,30 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
     site_visit_date: tender.site_visit_date,
     description: tender.description,
   });
+
+  // Auto-add to calendar when site visit date is set for required visits
+  useEffect(() => {
+    if (formData.site_visit_required && formData.site_visit_date && !addedToCalendar) {
+      // Auto-add when setting the date
+      const autoAdd = async () => {
+        try {
+          await addSiteVisitToCalendar({
+            id: tender.id,
+            title: tender.title,
+            location: formData.location || tender.location,
+            site_visit_date: formData.site_visit_date!,
+          });
+          setAddedToCalendar(true);
+        } catch (error) {
+          console.error("Failed to auto-add to calendar:", error);
+        }
+      };
+      
+      // Debounce to avoid multiple calls during typing
+      const timeout = setTimeout(autoAdd, 1000);
+      return () => clearTimeout(timeout);
+    }
+  }, [formData.site_visit_required, formData.site_visit_date]);
 
   // Calculate missing fields
   const missingFields = useMemo(() => {
@@ -421,9 +451,34 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
                       />
                     </div>
                     {formData.site_visit_date && (
-                      <Button variant="outline" size="sm" className="w-full">
-                        <CalendarDays className="h-4 w-4 mr-2" />
-                        Planifier dans l'agenda
+                      <Button 
+                        variant={addedToCalendar ? "secondary" : "outline"} 
+                        size="sm" 
+                        className="w-full"
+                        disabled={isAddingToCalendar || addedToCalendar}
+                        onClick={async () => {
+                          setIsAddingToCalendar(true);
+                          try {
+                            await addSiteVisitToCalendar({
+                              id: tender.id,
+                              title: tender.title,
+                              location: formData.location || tender.location,
+                              site_visit_date: formData.site_visit_date!,
+                            });
+                            setAddedToCalendar(true);
+                          } finally {
+                            setIsAddingToCalendar(false);
+                          }
+                        }}
+                      >
+                        {isAddingToCalendar ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : addedToCalendar ? (
+                          <Check className="h-4 w-4 mr-2" />
+                        ) : (
+                          <CalendarPlus className="h-4 w-4 mr-2" />
+                        )}
+                        {addedToCalendar ? "Ajouté à l'agenda" : "Ajouter à l'agenda"}
                       </Button>
                     )}
                   </div>

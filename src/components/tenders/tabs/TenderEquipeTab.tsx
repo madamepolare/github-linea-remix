@@ -31,6 +31,7 @@ import {
   RefreshCw,
   CheckSquare,
   Square,
+  Wand2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -91,6 +98,7 @@ import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
 import { TEAM_ROLE_LABELS, SPECIALTIES, type TenderTeamRole } from "@/lib/tenderTypes";
 import { BulkInvitationDialog } from "@/components/tenders/BulkInvitationDialog";
+import { PartnerPrefilterPanel } from "@/components/tenders/PartnerPrefilterPanel";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -125,6 +133,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   const [showAddCandidateDialog, setShowAddCandidateDialog] = useState(false);
   const [showAddTeamMemberDialog, setShowAddTeamMemberDialog] = useState(false);
   const [showBulkInviteDialog, setShowBulkInviteDialog] = useState(false);
+  const [showPrefilterPanel, setShowPrefilterPanel] = useState(false);
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>("");
   const [companySearch, setCompanySearch] = useState("");
   const [pipelineSearch, setPipelineSearch] = useState("");
@@ -334,6 +343,12 @@ Cordialement`);
         </Tabs>
 
         <div className="flex items-center gap-2">
+          {activeView === "pipeline" && (
+            <Button variant="outline" onClick={() => setShowPrefilterPanel(true)}>
+              <Wand2 className="h-4 w-4 mr-2" />
+              Sélection intelligente
+            </Button>
+          )}
           {activeView === "pipeline" && candidatesToInvite.length > 0 && (
             <Button onClick={() => setShowBulkInviteDialog(true)}>
               <Send className="h-4 w-4 mr-2" />
@@ -1037,6 +1052,34 @@ Cordialement`);
           isSending={sendBulkInvitations.isPending}
         />
       )}
+
+      {/* Partner Prefilter Sheet */}
+      <Sheet open={showPrefilterPanel} onOpenChange={setShowPrefilterPanel}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Constitution d'équipe</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6">
+            <PartnerPrefilterPanel
+              requiredSpecialties={requiredSpecialties.length > 0 ? requiredSpecialties : ['architecte', 'structure', 'fluides', 'thermique']}
+              existingPartnerIds={[...candidates.map(c => c.company_id).filter(Boolean) as string[], ...teamMembers.map(m => m.company_id).filter(Boolean)]}
+              tenderLocation={tender?.location}
+              onAddPartners={(partners) => {
+                partners.forEach(p => {
+                  addCandidate.mutate({
+                    specialty: p.specialty,
+                    role: p.role as TenderTeamRole,
+                    company_id: p.company_id,
+                    contact_id: p.contact_id,
+                  });
+                });
+                setShowPrefilterPanel(false);
+              }}
+              onClose={() => setShowPrefilterPanel(false)}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
