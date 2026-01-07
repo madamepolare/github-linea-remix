@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { cn } from "@/lib/utils";
 import { PHASE_STATUS_CONFIG, PHASE_COLORS, PhaseStatus } from "@/lib/projectTypes";
@@ -41,6 +42,12 @@ interface PhaseFormDialogProps {
     color: string;
     end_date?: string;
   }) => void;
+  onSubmitMultiple?: (phases: {
+    name: string;
+    description?: string;
+    status: PhaseStatus;
+    color: string;
+  }[]) => void;
   existingPhasesCount: number;
 }
 
@@ -49,13 +56,14 @@ export function PhaseFormDialog({
   onOpenChange,
   editingPhase,
   onSubmit,
+  onSubmitMultiple,
   existingPhasesCount,
 }: PhaseFormDialogProps) {
   const [mode, setMode] = useState<"template" | "custom">("template");
   const [selectedProjectType, setSelectedProjectType] = useState<ProjectType>("architecture");
-  const [selectedTemplate, setSelectedTemplate] = useState<PhaseTemplate | null>(null);
+  const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set());
 
-  // Form state
+  // Form state for custom/edit mode
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formStatus, setFormStatus] = useState<PhaseStatus>("pending");
@@ -77,7 +85,7 @@ export function PhaseFormDialog({
       setFormStatus(editingPhase.status as PhaseStatus);
       setFormColor(editingPhase.color || PHASE_COLORS[0]);
       setFormDeadline(editingPhase.end_date ? new Date(editingPhase.end_date) : null);
-      setSelectedTemplate(null);
+      setSelectedTemplates(new Set());
     } else if (newOpen) {
       // Creating mode - reset form
       setMode("template");
@@ -86,42 +94,90 @@ export function PhaseFormDialog({
       setFormStatus("pending");
       setFormColor(PHASE_COLORS[existingPhasesCount % PHASE_COLORS.length]);
       setFormDeadline(null);
-      setSelectedTemplate(null);
+      setSelectedTemplates(new Set());
     }
     onOpenChange(newOpen);
   };
 
-  const selectTemplate = (template: PhaseTemplate) => {
-    setSelectedTemplate(template);
-    setFormName(template.name);
-    setFormDescription(template.description || "");
+  const toggleTemplate = (templateCode: string) => {
+    setSelectedTemplates((prev) => {
+      const next = new Set(prev);
+      if (next.has(templateCode)) {
+        next.delete(templateCode);
+      } else {
+        next.add(templateCode);
+      }
+      return next;
+    });
+  };
+
+  const selectAllBase = () => {
+    const baseCodes = templates.filter(t => t.category === "base").map(t => t.code);
+    setSelectedTemplates(new Set(baseCodes));
+  };
+
+  const selectAll = () => {
+    setSelectedTemplates(new Set(templates.map(t => t.code)));
+  };
+
+  const clearSelection = () => {
+    setSelectedTemplates(new Set());
   };
 
   const handleSubmit = () => {
-    if (!formName.trim()) return;
+    if (mode === "template" && selectedTemplates.size > 0 && !editingPhase) {
+      // Submit multiple phases from templates
+      const selectedPhases = templates
+        .filter(t => selectedTemplates.has(t.code))
+        .map((template, index) => ({
+          name: template.name,
+          description: template.description || undefined,
+          status: "pending" as PhaseStatus,
+          color: PHASE_COLORS[(existingPhasesCount + index) % PHASE_COLORS.length],
+        }));
 
-    onSubmit({
-      name: formName.trim(),
-      description: formDescription.trim() || undefined,
-      status: formStatus,
-      color: formColor,
-      end_date: formDeadline ? formDeadline.toISOString().split("T")[0] : undefined,
-    });
+      if (onSubmitMultiple && selectedPhases.length > 1) {
+        onSubmitMultiple(selectedPhases);
+      } else if (selectedPhases.length === 1) {
+        onSubmit(selectedPhases[0]);
+      }
+      
+      setSelectedTemplates(new Set());
+      onOpenChange(false);
+    } else if (formName.trim()) {
+      // Submit single custom phase
+      onSubmit({
+        name: formName.trim(),
+        description: formDescription.trim() || undefined,
+        status: formStatus,
+        color: formColor,
+        end_date: formDeadline ? formDeadline.toISOString().split("T")[0] : undefined,
+      });
 
-    // Reset and close
-    setSelectedTemplate(null);
-    setFormName("");
-    setFormDescription("");
-    onOpenChange(false);
+      setSelectedTemplates(new Set());
+      setFormName("");
+      setFormDescription("");
+      onOpenChange(false);
+    }
   };
 
   const isEditing = !!editingPhase;
+  const canSubmit = mode === "template" 
+    ? selectedTemplates.size > 0 
+    : formName.trim().length > 0;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Modifier la phase" : "Ajouter une phase"}</DialogTitle>
+          <DialogTitle>
+            {isEditing 
+              ? "Modifier la phase" 
+              : selectedTemplates.size > 1 
+                ? `Ajouter ${selectedTemplates.size} phases`
+                : "Ajouter une phase"
+            }
+          </DialogTitle>
         </DialogHeader>
 
         {!isEditing && (
@@ -129,44 +185,66 @@ export function PhaseFormDialog({
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="template" className="gap-2">
                 <FileText className="h-4 w-4" />
-                Depuis les phases types
+                Phases types
               </TabsTrigger>
               <TabsTrigger value="custom" className="gap-2">
                 <Plus className="h-4 w-4" />
-                Phase personnalisée
+                Personnalisée
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="template" className="space-y-4 mt-4">
               {/* Project type selector */}
-              <div className="space-y-2">
-                <Label>Type de projet</Label>
-                <Select value={selectedProjectType} onValueChange={(v) => setSelectedProjectType(v as ProjectType)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PROJECT_TYPE_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 space-y-1">
+                  <Label className="text-xs">Type de projet</Label>
+                  <Select value={selectedProjectType} onValueChange={(v) => {
+                    setSelectedProjectType(v as ProjectType);
+                    setSelectedTemplates(new Set());
+                  }}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(PROJECT_TYPE_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-1 pt-5">
+                  <Button variant="ghost" size="sm" className="text-xs h-7" onClick={selectAllBase}>
+                    Base
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-xs h-7" onClick={selectAll}>
+                    Tout
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-xs h-7" onClick={clearSelection}>
+                    Aucun
+                  </Button>
+                </div>
               </div>
 
-              {/* Template list */}
-              <div className="space-y-2">
-                <Label>Sélectionner une phase</Label>
-                <ScrollArea className="h-[200px] border rounded-lg p-2">
-                  <div className="space-y-1">
-                    {templates.map((template) => {
-                      const isSelected = selectedTemplate?.code === template.code;
-                      return (
+              {/* Template list with checkboxes */}
+              <ScrollArea className="h-[280px] border rounded-lg">
+                <div className="p-2 space-y-1">
+                  {templates.map((template, index) => {
+                    const isSelected = selectedTemplates.has(template.code);
+                    const isFirstComplementary = template.category === "complementary" && 
+                      (index === 0 || templates[index - 1].category === "base");
+                    
+                    return (
+                      <div key={template.code}>
+                        {isFirstComplementary && (
+                          <div className="py-2 px-2 text-xs font-medium text-muted-foreground border-t mt-2 pt-3">
+                            Missions complémentaires
+                          </div>
+                        )}
                         <button
-                          key={template.code}
                           type="button"
-                          onClick={() => selectTemplate(template)}
+                          onClick={() => toggleTemplate(template.code)}
                           className={cn(
                             "w-full flex items-center gap-3 p-2 rounded-lg text-left transition-colors",
                             isSelected
@@ -174,25 +252,17 @@ export function PhaseFormDialog({
                               : "hover:bg-muted/50"
                           )}
                         >
-                          <div
-                            className={cn(
-                              "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0",
-                              isSelected ? "border-primary bg-primary" : "border-muted-foreground/30"
-                            )}
-                          >
-                            {isSelected && <Check className="h-3 w-3 text-primary-foreground" />}
-                          </div>
+                          <Checkbox 
+                            checked={isSelected} 
+                            onCheckedChange={() => toggleTemplate(template.code)}
+                            className="shrink-0"
+                          />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-xs font-mono shrink-0">
                                 {template.code}
                               </Badge>
                               <span className="font-medium text-sm truncate">{template.name}</span>
-                              {template.category === "complementary" && (
-                                <Badge variant="secondary" className="text-xs shrink-0">
-                                  Complémentaire
-                                </Badge>
-                              )}
                             </div>
                             {template.description && (
                               <p className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -200,37 +270,25 @@ export function PhaseFormDialog({
                               </p>
                             )}
                           </div>
+                          {template.defaultPercentage && (
+                            <Badge variant="secondary" className="text-xs shrink-0">
+                              {template.defaultPercentage}%
+                            </Badge>
+                          )}
                         </button>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              </div>
-
-              {/* Selected template preview */}
-              {selectedTemplate && (
-                <div className="space-y-3 p-3 bg-muted/30 rounded-lg border">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">{selectedTemplate.name}</h4>
-                    <Badge variant="outline">{selectedTemplate.defaultPercentage}% honoraires</Badge>
-                  </div>
-                  {selectedTemplate.deliverables && selectedTemplate.deliverables.length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground font-medium">Livrables types :</p>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedTemplate.deliverables.slice(0, 4).map((d, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
-                            {d}
-                          </Badge>
-                        ))}
-                        {selectedTemplate.deliverables.length > 4 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{selectedTemplate.deliverables.length - 4}
-                          </Badge>
-                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+
+              {/* Selection summary */}
+              {selectedTemplates.size > 0 && (
+                <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg text-sm">
+                  <Check className="h-4 w-4 text-primary" />
+                  <span>
+                    <strong>{selectedTemplates.size}</strong> phase{selectedTemplates.size > 1 ? "s" : ""} sélectionnée{selectedTemplates.size > 1 ? "s" : ""}
+                  </span>
                 </div>
               )}
             </TabsContent>
@@ -271,11 +329,13 @@ export function PhaseFormDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={mode === "template" && !selectedTemplate && !isEditing ? true : !formName.trim()}
-          >
-            {isEditing ? "Enregistrer" : "Ajouter"}
+          <Button onClick={handleSubmit} disabled={!canSubmit}>
+            {isEditing 
+              ? "Enregistrer" 
+              : selectedTemplates.size > 1 
+                ? `Ajouter ${selectedTemplates.size} phases`
+                : "Ajouter"
+            }
           </Button>
         </DialogFooter>
       </DialogContent>

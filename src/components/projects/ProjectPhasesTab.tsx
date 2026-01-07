@@ -107,6 +107,30 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
     }
   };
 
+  const handleMultiplePhasesSubmit = async (phasesData: {
+    name: string;
+    description?: string;
+    status: PhaseStatus;
+    color: string;
+  }[]) => {
+    if (!activeWorkspace) return;
+
+    await createManyPhases.mutateAsync(
+      phasesData.map((p, index) => ({
+        project_id: projectId,
+        workspace_id: activeWorkspace.id,
+        name: p.name,
+        description: p.description,
+        status: p.status,
+        color: p.color,
+        sort_order: phases.length + index,
+      }))
+    );
+
+    toast.success(`${phasesData.length} phases ajoutées`);
+    setIsCreateOpen(false);
+  };
+
   const handleDelete = (phaseId: string) => {
     if (confirm("Supprimer cette phase ?")) {
       deletePhase.mutate(phaseId);
@@ -205,6 +229,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
           open={isCreateOpen}
           onOpenChange={setIsCreateOpen}
           onSubmit={handlePhaseSubmit}
+          onSubmitMultiple={handleMultiplePhasesSubmit}
           existingPhasesCount={0}
         />
         
@@ -385,6 +410,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
         }}
         editingPhase={editingPhase}
         onSubmit={handlePhaseSubmit}
+        onSubmitMultiple={handleMultiplePhasesSubmit}
         existingPhasesCount={phases.length}
       />
 
