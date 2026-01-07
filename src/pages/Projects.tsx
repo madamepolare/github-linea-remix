@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { ProjectTimeline } from "@/components/projects/ProjectTimeline";
 import { ProjectBoard } from "@/components/projects/ProjectBoard";
 import { ProjectListView } from "@/components/projects/ProjectListView";
@@ -7,9 +7,15 @@ import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 
 type ViewType = "list" | "board" | "timeline";
 
+function getProjectsViewFromPath(pathname: string): ViewType {
+  const segment = pathname.split("/").filter(Boolean).pop();
+  if (segment === "board" || segment === "timeline" || segment === "list") return segment;
+  return "list";
+}
+
 export default function Projects() {
-  const { view: urlView } = useParams();
-  const view = (urlView as ViewType) || "list";
+  const { pathname } = useLocation();
+  const view = useMemo(() => getProjectsViewFromPath(pathname), [pathname]);
   const [createOpen, setCreateOpen] = useState(false);
 
   // Listen for command palette event
@@ -31,3 +37,4 @@ export default function Projects() {
     </>
   );
 }
+
