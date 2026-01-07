@@ -3,6 +3,7 @@ import { useTasks, Task, SubtaskPreview } from "@/hooks/useTasks";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjects } from "@/hooks/useProjects";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
+import { useTaskCommunicationsCounts } from "@/hooks/useTaskCommunicationsCounts";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
 import { TextEditCell, StatusEditCell, PriorityEditCell, DateEditCell, AssigneeEditCell } from "./InlineTaskEditCell";
@@ -49,6 +50,10 @@ export function TaskListView({ entityFilter = "all" }: TaskListViewProps) {
   const { companies } = useCRMCompanies();
   const { projects } = useProjects();
   const { data: profiles } = useWorkspaceProfiles();
+  
+  // Get all task IDs for fetching communication counts
+  const taskIds = useMemo(() => tasks?.map(t => t.id) || [], [tasks]);
+  const { data: communicationsCounts } = useTaskCommunicationsCounts(taskIds);
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTaskTab, setSelectedTaskTab] = useState<string>("details");
@@ -395,8 +400,7 @@ export function TaskListView({ entityFilter = "all" }: TaskListViewProps) {
                           const completedSubtasks = task.subtasks?.filter(s => s.status === "done").length || 0;
                           const relation = getRelationDisplay(task);
                           const isJustCompleted = recentlyCompleted.has(task.id);
-                          // Mock comment count - would come from task data
-                          const commentCount = Math.floor(Math.random() * 5);
+                          const commentCount = communicationsCounts?.[task.id] || 0;
 
                           return (
                             <div key={task.id}>
