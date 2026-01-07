@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
-import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay } from "date-fns";
+import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay, setHours } from "date-fns";
 import { fr } from "date-fns/locale";
-// Note: TeamMember.joined_at was renamed to created_at
 import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -15,19 +14,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface TeamPlanningGridProps {
   onEventClick?: (schedule: TaskSchedule) => void;
   onCellClick?: (date: Date, member: TeamMember) => void;
+  onTaskDrop?: (taskId: string, userId: string, date: Date) => void;
 }
 
 type ViewMode = "week" | "2weeks" | "month";
 
-const CELL_WIDTH = 52;
-const ROW_HEIGHT = 100;
+const CELL_WIDTH = 80; // Plus large
+const ROW_HEIGHT = 120; // Plus haut pour plus de tâches
 const HOURS_PER_DAY = 8;
 
-export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGridProps) {
+export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: TeamPlanningGridProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("2weeks");
+  const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   
-  const { schedules, isLoading: schedulesLoading } = useTaskSchedules();
+  const { schedules, isLoading: schedulesLoading, createSchedule } = useTaskSchedules();
   const { data: members, isLoading: membersLoading } = useTeamMembers();
 
   const isLoading = schedulesLoading || membersLoading;
@@ -107,10 +108,49 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
     return Math.min(100, Math.round((totalMinutes / maxMinutes) * 100));
   }, [getSchedulesForMemberAndDay]);
 
+  // Gestion du drag & drop
+  const handleDragOver = useCallback((e: React.DragEvent, cellKey: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverCell(cellKey);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverCell(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, day: Date, member: TeamMember) => {
+    e.preventDefault();
+    setDragOverCell(null);
+    
+    try {
+      const taskData = e.dataTransfer.getData("application/json");
+      if (!taskData) return;
+      
+      const task = JSON.parse(taskData);
+      const estimatedHours = task.estimated_hours || 2; // Default 2h si pas d'estimation
+      
+      // Créer le schedule : début à 9h, fin selon estimation
+      const startDate = setHours(startOfDay(day), 9);
+      const endDate = new Date(startDate.getTime() + estimatedHours * 60 * 60 * 1000);
+      
+      createSchedule.mutate({
+        task_id: task.id,
+        user_id: member.user_id,
+        start_datetime: startDate.toISOString(),
+        end_datetime: endDate.toISOString(),
+      });
+      
+      onTaskDrop?.(task.id, member.user_id, day);
+    } catch (error) {
+      console.error("Error handling drop:", error);
+    }
+  }, [createSchedule, onTaskDrop]);
+
   if (isLoading) {
     return (
       <div className="flex h-full">
-        <div className="w-56 border-r p-4 space-y-4">
+        <div className="w-60 border-r p-4 space-y-4">
           <Skeleton className="h-8 w-full" />
           {[1, 2, 3].map(i => (
             <div key={i} className="flex items-center gap-3">
@@ -154,8 +194,8 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
         <div className="flex items-center gap-2">
           <div className="flex bg-muted rounded-lg p-0.5">
             {[
-              { key: "week", label: "7j" },
-              { key: "2weeks", label: "14j" },
+              { key: "week", label: "7 jours" },
+              { key: "2weeks", label: "14 jours" },
               { key: "month", label: "Mois" },
             ].map(({ key, label }) => (
               <Button
@@ -178,13 +218,13 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
       {/* Grille principale */}
       <div className="flex-1 overflow-hidden flex">
         {/* Colonne des membres (fixe) */}
-        <div className="flex-shrink-0 w-56 border-r bg-card/30">
+        <div className="flex-shrink-0 w-60 border-r bg-card/30">
           {/* Header aligné */}
           <div className="h-[72px] border-b flex items-center px-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Users className="h-4 w-4" />
               <span className="text-xs font-medium uppercase tracking-wider">Équipe</span>
-              <span className="text-xs bg-muted rounded-full px-2 py-0.5">
+              <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
                 {members?.length || 0}
               </span>
             </div>
@@ -251,21 +291,21 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
                     <div
                       key={day.toISOString()}
                       className={cn(
-                        "flex items-center justify-center gap-1 border-r text-xs transition-colors",
+                        "flex items-center justify-center gap-1.5 border-r text-xs transition-colors",
                         weekend && "bg-muted/40",
                         isToday && "bg-primary/10"
                       )}
                       style={{ width: CELL_WIDTH }}
                     >
                       <span className={cn(
-                        "uppercase text-[10px]",
+                        "uppercase text-[11px]",
                         weekend ? "text-muted-foreground" : "text-muted-foreground"
                       )}>
-                        {format(day, "EEE", { locale: fr }).slice(0, 2)}
+                        {format(day, "EEE", { locale: fr }).slice(0, 3)}
                       </span>
                       <span className={cn(
-                        "font-semibold text-xs",
-                        isToday && "bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px]"
+                        "font-semibold text-sm",
+                        isToday && "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs"
                       )}>
                         {format(day, "d")}
                       </span>
@@ -291,6 +331,10 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
                     getOccupancyRate={getOccupancyRate}
                     onEventClick={onEventClick}
                     onCellClick={onCellClick}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    dragOverCell={dragOverCell}
                     cellWidth={CELL_WIDTH}
                     rowHeight={ROW_HEIGHT}
                   />
@@ -312,6 +356,10 @@ interface MemberRowProps {
   getOccupancyRate: (memberId: string, day: Date) => number;
   onEventClick?: (schedule: TaskSchedule) => void;
   onCellClick?: (date: Date, member: TeamMember) => void;
+  onDragOver: (e: React.DragEvent, cellKey: string) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent, day: Date, member: TeamMember) => void;
+  dragOverCell: string | null;
   cellWidth: number;
   rowHeight: number;
 }
@@ -323,28 +371,39 @@ function MemberRow({
   getOccupancyRate,
   onEventClick,
   onCellClick,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  dragOverCell,
   cellWidth,
   rowHeight,
 }: MemberRowProps) {
   return (
     <div className="flex border-b" style={{ height: rowHeight }}>
       {days.map(day => {
+        const cellKey = `${member.user_id}-${day.toISOString()}`;
         const schedules = getSchedulesForMemberAndDay(member.user_id, day);
         const occupancy = getOccupancyRate(member.user_id, day);
         const isToday = isSameDay(day, new Date());
         const weekend = isWeekend(day);
+        const isDragOver = dragOverCell === cellKey;
         
         return (
           <DayCell
-            key={day.toISOString()}
+            key={cellKey}
+            cellKey={cellKey}
             day={day}
             member={member}
             schedules={schedules}
             occupancy={occupancy}
             isToday={isToday}
             isWeekend={weekend}
+            isDragOver={isDragOver}
             onEventClick={onEventClick}
             onCellClick={onCellClick}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
             cellWidth={cellWidth}
           />
         );
@@ -354,26 +413,36 @@ function MemberRow({
 }
 
 interface DayCellProps {
+  cellKey: string;
   day: Date;
   member: TeamMember;
   schedules: TaskSchedule[];
   occupancy: number;
   isToday: boolean;
   isWeekend: boolean;
+  isDragOver: boolean;
   onEventClick?: (schedule: TaskSchedule) => void;
   onCellClick?: (date: Date, member: TeamMember) => void;
+  onDragOver: (e: React.DragEvent, cellKey: string) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent, day: Date, member: TeamMember) => void;
   cellWidth: number;
 }
 
 function DayCell({
+  cellKey,
   day,
   member,
   schedules,
   occupancy,
   isToday,
   isWeekend,
+  isDragOver,
   onEventClick,
   onCellClick,
+  onDragOver,
+  onDragLeave,
+  onDrop,
   cellWidth,
 }: DayCellProps) {
   const getOccupancyColor = (rate: number) => {
@@ -396,25 +465,29 @@ function DayCell({
     <TooltipProvider delayDuration={200}>
       <div
         className={cn(
-          "relative border-r p-1 flex flex-col cursor-pointer transition-all duration-150",
-          "hover:bg-accent/50 hover:shadow-inner",
+          "relative border-r p-1.5 flex flex-col cursor-pointer transition-all duration-150",
+          "hover:bg-accent/50",
           isWeekend && "bg-muted/30",
           isToday && "bg-primary/5 ring-1 ring-inset ring-primary/30",
-          occupancy > 0 && getOccupancyBg(occupancy)
+          occupancy > 0 && getOccupancyBg(occupancy),
+          isDragOver && "bg-primary/20 ring-2 ring-inset ring-primary shadow-inner"
         )}
         style={{ width: cellWidth }}
         onClick={() => onCellClick?.(day, member)}
+        onDragOver={(e) => onDragOver(e, cellKey)}
+        onDragLeave={onDragLeave}
+        onDrop={(e) => onDrop(e, day, member)}
       >
         {/* Tâches planifiées */}
-        <div className="flex-1 space-y-0.5 overflow-hidden">
-          {schedules.slice(0, 3).map(schedule => {
+        <div className="flex-1 space-y-1 overflow-hidden">
+          {schedules.slice(0, 4).map(schedule => {
             const color = schedule.color || schedule.task?.project?.color || "#6366f1";
             
             return (
               <Tooltip key={schedule.id}>
                 <TooltipTrigger asChild>
                   <div
-                    className="rounded-sm text-[9px] leading-tight px-1 py-0.5 truncate cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02] transition-all font-medium"
+                    className="rounded text-[10px] leading-tight px-1.5 py-1 truncate cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02] transition-all font-medium"
                     style={{
                       backgroundColor: color,
                       color: "white",
@@ -447,17 +520,26 @@ function DayCell({
               </Tooltip>
             );
           })}
-          {schedules.length > 3 && (
-            <div className="text-[9px] text-muted-foreground text-center font-medium">
-              +{schedules.length - 3}
+          {schedules.length > 4 && (
+            <div className="text-[10px] text-muted-foreground text-center font-medium bg-muted/50 rounded px-1 py-0.5">
+              +{schedules.length - 4} autres
             </div>
           )}
         </div>
 
+        {/* Indicateur de drop zone */}
+        {isDragOver && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="text-xs font-medium text-primary bg-background/90 rounded px-2 py-1 shadow">
+              Déposer ici
+            </div>
+          </div>
+        )}
+
         {/* Taux d'occupation */}
-        {occupancy > 0 && (
+        {occupancy > 0 && !isDragOver && (
           <div className={cn(
-            "text-[10px] font-semibold text-center mt-auto pt-0.5",
+            "text-[11px] font-semibold text-center mt-auto pt-0.5",
             getOccupancyColor(occupancy)
           )}>
             {occupancy}%
