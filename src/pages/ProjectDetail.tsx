@@ -42,7 +42,7 @@ import { ProjectMOESection } from "@/components/projects/ProjectMOESection";
 import { PhaseQuickEditDialog } from "@/components/projects/PhaseQuickEditDialog";
 import { EditProjectDialog } from "@/components/projects/EditProjectDialog";
 import { ModulesSelector } from "@/components/projects/ModulesSelector";
-import { EntityTasksList } from "@/components/tasks/EntityTasksList";
+import { ProjectTasksTab } from "@/components/projects/ProjectTasksTab";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -194,7 +194,7 @@ export default function ProjectDetail() {
         )}
         {activeTab === "planning" && <ProjectPlanningTab projectId={project.id} />}
         {activeTab === "tasks" && (
-          <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
+          <ProjectTasksTab projectId={project.id} />
         )}
         {activeTab === "communications" && (
           <EntityCommunications entityType="project" entityId={project.id} />
