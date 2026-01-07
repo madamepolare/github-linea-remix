@@ -5698,6 +5698,9 @@ export type Database = {
       tender_calendar_events: {
         Row: {
           attendees: Json | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
           description: string | null
           end_datetime: string | null
@@ -5712,6 +5715,9 @@ export type Database = {
         }
         Insert: {
           attendees?: Json | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           description?: string | null
           end_datetime?: string | null
@@ -5726,6 +5732,9 @@ export type Database = {
         }
         Update: {
           attendees?: Json | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           description?: string | null
           end_datetime?: string | null
