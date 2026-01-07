@@ -232,12 +232,12 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
   },
   workflow: {
     slug: "workflow",
-    title: "Workflow",
+    title: "Planning",
     icon: CalendarClock,
     href: "/workflow",
     isExtension: true,
     subNav: [
-      { key: "planning", label: "Planning", href: "/workflow" },
+      { key: "planning", label: "Planning équipe", href: "/workflow" },
     ],
     quickActions: [
       { key: "ai-plan", label: "Planifier avec IA", event: "open-ai-planning" },
