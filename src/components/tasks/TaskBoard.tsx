@@ -3,13 +3,15 @@ import { useTasks, Task } from "@/hooks/useTasks";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjects } from "@/hooks/useProjects";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
+import { useScheduledTaskIds } from "@/hooks/useScheduledTaskIds";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
 import { EmptyState } from "@/components/ui/empty-state";
 import { KanbanBoard, KanbanColumn, KanbanCard } from "@/components/shared/KanbanBoard";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckSquare, Calendar, FolderKanban, Building2, FileText, Target, CheckCircle2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CheckSquare, Calendar, FolderKanban, Building2, FileText, Target, CheckCircle2, CalendarClock } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -34,6 +36,7 @@ export function TaskBoard({ statusFilter, priorityFilter, projectId, onCreateTas
   const { companies } = useCRMCompanies();
   const { projects } = useProjects();
   const { data: profiles } = useWorkspaceProfiles();
+  const { data: scheduledTaskIds } = useScheduledTaskIds();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(new Set());
 
@@ -128,6 +131,7 @@ export function TaskBoard({ statusFilter, priorityFilter, projectId, onCreateTas
             onClick={() => setSelectedTask(task)}
             isDragging={isDragging}
             isJustCompleted={recentlyCompleted.has(task.id)}
+            isScheduled={scheduledTaskIds?.has(task.id) || false}
           />
         )}
         renderQuickAdd={(columnId) => (
@@ -153,9 +157,10 @@ interface TaskKanbanCardProps {
   onClick: () => void;
   isDragging: boolean;
   isJustCompleted?: boolean;
+  isScheduled?: boolean;
 }
 
-function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, isDragging, isJustCompleted }: TaskKanbanCardProps) {
+function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, isDragging, isJustCompleted, isScheduled }: TaskKanbanCardProps) {
   const completedSubtasks = task.subtasks?.filter((s) => s.status === "done").length || 0;
   const totalSubtasks = task.subtasks?.length || 0;
   const progress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
@@ -206,13 +211,30 @@ function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, isD
     >
       <KanbanCard onClick={onClick} isCompleted={task.status === "done"}>
         <div className="space-y-2">
-          {/* Relation badge */}
-          {relationInfo && (
-            <Badge variant="outline" className={cn("text-2xs px-1.5 py-0.5 gap-1 font-normal", relationInfo.color)}>
-              <relationInfo.icon className="h-2.5 w-2.5" />
-              <span className="truncate max-w-[120px]">{relationInfo.label}</span>
-            </Badge>
-          )}
+          {/* Relation badge + Scheduled badge */}
+          <div className="flex items-center gap-1 flex-wrap">
+            {relationInfo && (
+              <Badge variant="outline" className={cn("text-2xs px-1.5 py-0.5 gap-1 font-normal", relationInfo.color)}>
+                <relationInfo.icon className="h-2.5 w-2.5" />
+                <span className="truncate max-w-[120px]">{relationInfo.label}</span>
+              </Badge>
+            )}
+            {isScheduled && (
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="secondary" className="text-2xs px-1.5 py-0.5 gap-1 font-normal bg-primary/10 text-primary border-primary/20">
+                      <CalendarClock className="h-2.5 w-2.5" />
+                      <span>Planifiée</span>
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Cette tâche est planifiée dans le workflow</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
 
           {/* Title with completion indicator */}
           <div className="flex items-start gap-2">
