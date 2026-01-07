@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Link } from "react-router-dom";
 import {
   MessageCircle,
   FileText,
@@ -15,6 +16,13 @@ import {
   Pin,
   Trash2,
   MoreHorizontal,
+  ExternalLink,
+  ListTodo,
+  FolderKanban,
+  Target,
+  Building2,
+  User,
+  FileSearch,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +43,7 @@ import {
   Communication,
   CommunicationType,
   EntityType,
+  getEntityTypeLabel,
 } from "@/hooks/useCommunications";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,6 +61,27 @@ const typeConfig: Record<CommunicationType, { icon: typeof MessageCircle; label:
   email_received: { icon: MailOpen, label: "Email reçu", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
   note: { icon: StickyNote, label: "Note", color: "bg-yellow-500/10 text-yellow-700 border-yellow-200" },
 };
+
+const entityIcons: Record<EntityType, typeof MessageCircle> = {
+  task: ListTodo,
+  project: FolderKanban,
+  lead: Target,
+  company: Building2,
+  contact: User,
+  tender: FileSearch,
+};
+
+function getEntityLink(entityType: EntityType, entityId: string): string {
+  const routes: Record<EntityType, string> = {
+    task: `/tasks`, // Tasks don't have individual pages, handled differently
+    project: `/projects/${entityId}`,
+    lead: `/crm/leads/${entityId}`,
+    company: `/crm/companies/${entityId}`,
+    contact: `/crm/contacts/${entityId}`,
+    tender: `/tenders/${entityId}`,
+  };
+  return routes[entityType];
+}
 
 export function EntityCommunications({ entityType, entityId, className }: EntityCommunicationsProps) {
   const { user } = useAuth();
@@ -150,6 +180,10 @@ export function EntityCommunications({ entityType, entityId, className }: Entity
     const replies = repliesMap.get(comm.id) || [];
     const isExpanded = expandedThreads.has(comm.id);
     const isOwner = comm.created_by === user?.id;
+    
+    // Check if this communication comes from a different entity (child entity)
+    const isFromChildEntity = comm.entity_type !== entityType || comm.entity_id !== entityId;
+    const SourceIcon = isFromChildEntity ? entityIcons[comm.entity_type] : null;
 
     return (
       <motion.div
@@ -193,6 +227,24 @@ export function EntityCommunications({ entityType, entityId, className }: Entity
                   {format(new Date(comm.created_at), "d MMM à HH:mm", { locale: fr })}
                 </span>
               </div>
+
+              {/* Source indicator for communications from child entities */}
+              {isFromChildEntity && SourceIcon && (
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <SourceIcon className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    depuis {getEntityTypeLabel(comm.entity_type).toLowerCase()}
+                  </span>
+                  {comm.entity_type !== 'task' && (
+                    <Link
+                      to={getEntityLink(comm.entity_type, comm.entity_id)}
+                      className="text-xs text-primary hover:underline flex items-center gap-0.5"
+                    >
+                      Voir <ExternalLink className="h-2.5 w-2.5" />
+                    </Link>
+                  )}
+                </div>
+              )}
 
               {comm.title && (
                 <h4 className="font-medium text-sm mt-1">{comm.title}</h4>

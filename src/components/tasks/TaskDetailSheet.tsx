@@ -331,7 +331,20 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
 
           {/* Communications Tab */}
           <TabsContent value="comments" className="h-[calc(100vh-200px)]">
-            <TaskCommunications taskId={task.id} />
+            <TaskCommunications 
+              taskId={task.id}
+              contextEntityType={
+                task.project_id ? "project" : 
+                relatedType === "lead" ? "lead" :
+                relatedType === "company" ? "company" :
+                relatedType === "contact" ? "contact" :
+                undefined
+              }
+              contextEntityId={
+                task.project_id ? task.project_id :
+                relatedId || undefined
+              }
+            />
           </TabsContent>
         </Tabs>
       </SheetContent>
