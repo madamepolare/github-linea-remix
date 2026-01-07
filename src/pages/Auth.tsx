@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Hexagon, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import { Hexagon, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, UserPlus } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +46,8 @@ export default function Auth() {
   // Check for pending invite in sessionStorage
   const pendingInviteToken = sessionStorage.getItem('pendingInviteToken');
   const pendingInviteEmail = sessionStorage.getItem('pendingInviteEmail');
+  const pendingInviteWorkspace = sessionStorage.getItem('pendingInviteWorkspace');
+  const pendingInviteRole = sessionStorage.getItem('pendingInviteRole');
   
   // Determine if we're in invite flow
   const isInviteFlow = !!(redirectTo?.includes('/invite') || pendingInviteToken);
@@ -209,14 +212,41 @@ export default function Auth() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
+            {/* Invitation Banner */}
+            {isInviteFlow && pendingInviteWorkspace && (
+              <Card className="border-primary/30 bg-primary/5">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                      <UserPlus className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">
+                        Rejoignez {pendingInviteWorkspace}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Invité en tant que <strong>{pendingInviteRole}</strong>
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="text-center space-y-2">
               <h2 className="font-display text-3xl font-bold text-foreground">
-                {isLogin ? "Welcome back" : "Create your account"}
+                {isInviteFlow 
+                  ? (isLogin ? "Connectez-vous" : "Créez votre compte")
+                  : (isLogin ? "Welcome back" : "Create your account")}
               </h2>
               <p className="text-muted-foreground">
-                {isLogin
-                  ? "Sign in to access your workspace"
-                  : "Start managing your architecture practice"}
+                {isInviteFlow
+                  ? (isLogin 
+                      ? "Connectez-vous pour rejoindre l'équipe" 
+                      : `Inscrivez-vous avec ${suggestedEmail}`)
+                  : (isLogin
+                      ? "Sign in to access your workspace"
+                      : "Start managing your architecture practice")}
               </p>
             </div>
 
@@ -230,7 +260,7 @@ export default function Auth() {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Sign In
+                {isInviteFlow ? "Connexion" : "Sign In"}
               </button>
               <button
                 onClick={() => setIsLogin(false)}
@@ -240,7 +270,7 @@ export default function Auth() {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                Sign Up
+                {isInviteFlow ? "Inscription" : "Sign Up"}
               </button>
             </div>
 
