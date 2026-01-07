@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isWithinInterval, parseISO, addMonths, subMonths } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useTeamAbsences, useCreateAbsence, useApproveAbsence, absenceTypeLabels, TeamAbsence } from "@/hooks/useTeamAbsences";
+import { useTeamAbsences, useCreateAbsence, useUpdateAbsence, useDeleteAbsence, useApproveAbsence, absenceTypeLabels, TeamAbsence } from "@/hooks/useTeamAbsences";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Tabs,
   TabsContent,
   TabsList,
@@ -34,7 +44,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { CalendarOff, Plus, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
+import { CalendarOff, Plus, ChevronLeft, ChevronRight, Check, X, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AbsencesTab() {
@@ -49,11 +59,15 @@ export function AbsencesTab() {
     end_half_day: false,
     reason: "",
   });
+  const [editingAbsence, setEditingAbsence] = useState<TeamAbsence | null>(null);
+  const [deleteAbsenceId, setDeleteAbsenceId] = useState<string | null>(null);
 
   const { data: absences, isLoading } = useTeamAbsences();
   const { data: members } = useTeamMembers();
   const { user, activeWorkspace } = useAuth();
   const createAbsence = useCreateAbsence();
+  const updateAbsence = useUpdateAbsence();
+  const deleteAbsence = useDeleteAbsence();
   const approveAbsence = useApproveAbsence();
 
   const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role;
@@ -91,6 +105,26 @@ export function AbsencesTab() {
       end_half_day: false,
       reason: "",
     });
+  };
+
+  const handleUpdate = async () => {
+    if (!editingAbsence) return;
+    await updateAbsence.mutateAsync({
+      id: editingAbsence.id,
+      absence_type: editingAbsence.absence_type,
+      start_date: editingAbsence.start_date,
+      end_date: editingAbsence.end_date,
+      start_half_day: editingAbsence.start_half_day,
+      end_half_day: editingAbsence.end_half_day,
+      reason: editingAbsence.reason,
+    });
+    setEditingAbsence(null);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteAbsenceId) return;
+    await deleteAbsence.mutateAsync(deleteAbsenceId);
+    setDeleteAbsenceId(null);
   };
 
   if (isLoading) {
@@ -263,7 +297,7 @@ export function AbsencesTab() {
             />
           ) : (
             <div className="space-y-4">
-              {myAbsences.map((absence) => (
+            {myAbsences.map((absence) => (
                 <Card key={absence.id}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
@@ -280,6 +314,27 @@ export function AbsencesTab() {
                         )}
                         {absence.rejection_reason && (
                           <p className="text-sm mt-1 text-destructive">Motif: {absence.rejection_reason}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {absence.status === "pending" && (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setEditingAbsence(absence)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeleteAbsenceId(absence.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -372,6 +427,108 @@ export function AbsencesTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Absence Dialog */}
+      <Dialog open={!!editingAbsence} onOpenChange={(open) => !open && setEditingAbsence(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier la demande</DialogTitle>
+          </DialogHeader>
+          {editingAbsence && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Type d'absence</Label>
+                <Select
+                  value={editingAbsence.absence_type}
+                  onValueChange={(v) => setEditingAbsence({ ...editingAbsence, absence_type: v as TeamAbsence["absence_type"] })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(absenceTypeLabels).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Date de début</Label>
+                  <Input
+                    type="date"
+                    value={editingAbsence.start_date}
+                    onChange={(e) => setEditingAbsence({ ...editingAbsence, start_date: e.target.value })}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="edit_start_half"
+                      checked={editingAbsence.start_half_day}
+                      onCheckedChange={(c) => setEditingAbsence({ ...editingAbsence, start_half_day: !!c })}
+                    />
+                    <Label htmlFor="edit_start_half" className="text-sm">Demi-journée</Label>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Date de fin</Label>
+                  <Input
+                    type="date"
+                    value={editingAbsence.end_date}
+                    onChange={(e) => setEditingAbsence({ ...editingAbsence, end_date: e.target.value })}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="edit_end_half"
+                      checked={editingAbsence.end_half_day}
+                      onCheckedChange={(c) => setEditingAbsence({ ...editingAbsence, end_half_day: !!c })}
+                    />
+                    <Label htmlFor="edit_end_half" className="text-sm">Demi-journée</Label>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Motif (optionnel)</Label>
+                <Textarea
+                  value={editingAbsence.reason || ""}
+                  onChange={(e) => setEditingAbsence({ ...editingAbsence, reason: e.target.value })}
+                  placeholder="Précisez le motif si nécessaire..."
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingAbsence(null)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleUpdate}
+              disabled={updateAbsence.isPending}
+            >
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteAbsenceId} onOpenChange={(open) => !open && setDeleteAbsenceId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette demande ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. La demande d'absence sera définitivement supprimée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

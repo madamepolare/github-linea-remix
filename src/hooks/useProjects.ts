@@ -19,6 +19,7 @@ export interface Project {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  is_archived: boolean;
   // New fields
   project_type: ProjectType | null;
   crm_company_id: string | null;
@@ -87,17 +88,17 @@ export interface CreateProjectInput {
   budget?: number | null;
 }
 
-export function useProjects() {
+export function useProjects(options?: { includeArchived?: boolean }) {
   const { activeWorkspace, user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: projects, isLoading, error } = useQuery({
-    queryKey: ["projects", activeWorkspace?.id],
+    queryKey: ["projects", activeWorkspace?.id, options?.includeArchived],
     queryFn: async () => {
       if (!activeWorkspace?.id) return [];
 
       // Fetch projects with CRM company relation
-      const { data: projectsData, error: projectsError } = await supabase
+      let query = supabase
         .from("projects")
         .select(`
           *,
@@ -105,6 +106,13 @@ export function useProjects() {
         `)
         .eq("workspace_id", activeWorkspace.id)
         .order("created_at", { ascending: false });
+
+      // Filter out archived projects unless explicitly requested
+      if (!options?.includeArchived) {
+        query = query.eq("is_archived", false);
+      }
+
+      const { data: projectsData, error: projectsError } = await query;
 
       if (projectsError) throw projectsError;
 
@@ -245,6 +253,25 @@ export function useProjects() {
     },
   });
 
+  const archiveProject = useMutation({
+    mutationFn: async ({ id, isArchived }: { id: string; isArchived: boolean }) => {
+      const { error } = await supabase
+        .from("projects")
+        .update({ is_archived: isArchived })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { isArchived }) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success(isArchived ? "Projet archivé" : "Projet restauré");
+    },
+    onError: (error) => {
+      toast.error("Erreur lors de l'archivage");
+      console.error(error);
+    },
+  });
+
   const deleteProject = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -270,6 +297,7 @@ export function useProjects() {
     error,
     createProject,
     updateProject,
+    archiveProject,
     deleteProject,
   };
 }
