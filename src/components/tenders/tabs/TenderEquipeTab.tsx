@@ -1472,6 +1472,23 @@ function CandidateRow({
         </div>
       </div>
 
+      {/* Direct email button */}
+      {candidate.contact?.email && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-8 w-8 shrink-0"
+              onClick={onSendInvite}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Envoyer proposition avec honoraires</TooltipContent>
+        </Tooltip>
+      )}
+
       <Select value={candidate.status} onValueChange={onUpdateStatus}>
         <SelectTrigger className={cn("w-[130px] h-8", CANDIDATE_STATUS_COLORS[candidate.status])}>
           <SelectValue />
@@ -1625,7 +1642,24 @@ function TeamView({
                   </div>
                 </div>
                 <StatusBadge status={member.status} />
-                
+
+                {/* Direct email button for team members */}
+                {member.contact?.email && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={() => onSendInvite(member)}
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Envoyer proposition</TooltipContent>
+                  </Tooltip>
+                )}
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button 
