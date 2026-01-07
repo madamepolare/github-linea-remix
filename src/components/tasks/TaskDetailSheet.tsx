@@ -38,6 +38,7 @@ interface TaskDetailSheetProps {
   task: Task | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultTab?: string;
 }
 
 const statusOptions = [
@@ -54,7 +55,7 @@ const priorityOptions = [
   { value: "urgent", label: "Urgente" },
 ];
 
-export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetProps) {
+export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "details" }: TaskDetailSheetProps) {
   const { activeWorkspace } = useAuth();
   const { updateTask, deleteTask } = useTasks();
   const { comments, createComment } = useTaskComments(task?.id || null);
@@ -190,7 +191,7 @@ export function TaskDetailSheet({ task, open, onOpenChange }: TaskDetailSheetPro
           <SheetTitle>Détails de la tâche</SheetTitle>
         </SheetHeader>
 
-        <Tabs defaultValue="details" className="space-y-4">
+        <Tabs defaultValue={defaultTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="details">Détails</TabsTrigger>
             <TabsTrigger value="subtasks">

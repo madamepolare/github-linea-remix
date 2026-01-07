@@ -51,6 +51,7 @@ export function TaskListView({ entityFilter = "all" }: TaskListViewProps) {
   const { data: profiles } = useWorkspaceProfiles();
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTaskTab, setSelectedTaskTab] = useState<string>("details");
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [sortColumn, setSortColumn] = useState<SortColumn>("status");
@@ -248,7 +249,7 @@ export function TaskListView({ entityFilter = "all" }: TaskListViewProps) {
     if (!assignedTo || assignedTo.length === 0 || !profiles) return null;
     
     const assignees = assignedTo
-      .map(id => profiles.find(p => p.id === id))
+      .map(id => profiles.find(p => p.user_id === id || p.id === id))
       .filter(Boolean)
       .slice(0, 3);
     
@@ -412,7 +413,10 @@ export function TaskListView({ entityFilter = "all" }: TaskListViewProps) {
                                   "grid grid-cols-[40px_1fr_120px_100px_100px_80px_60px] gap-2 px-4 py-2.5 items-center cursor-pointer border-b last:border-b-0 transition-all duration-150 hover:bg-accent/50",
                                   task.status === "done" && "opacity-60"
                                 )}
-                                onClick={() => setSelectedTask(task)}
+                                onClick={() => {
+                                  setSelectedTaskTab("details");
+                                  setSelectedTask(task);
+                                }}
                               >
                                 {/* Checkbox */}
                                 <div onClick={(e) => handleToggleComplete(e, task)} className="flex items-center justify-center">
@@ -492,13 +496,23 @@ export function TaskListView({ entityFilter = "all" }: TaskListViewProps) {
                                 </div>
 
                                 {/* Comments bubble */}
-                                <div className="flex justify-center">
-                                  {commentCount > 0 && (
-                                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                                      <MessageCircle className="h-3 w-3" />
+                                <div 
+                                  className="flex justify-center"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedTaskTab("comments");
+                                    setSelectedTask(task);
+                                  }}
+                                >
+                                  <div className={cn(
+                                    "flex items-center gap-1 px-2 py-0.5 rounded-full transition-colors cursor-pointer hover:bg-primary/10",
+                                    commentCount > 0 ? "bg-muted text-muted-foreground" : "text-muted-foreground/50 hover:text-muted-foreground"
+                                  )}>
+                                    <MessageCircle className="h-3 w-3" />
+                                    {commentCount > 0 && (
                                       <span className="text-2xs font-medium">{commentCount}</span>
-                                    </div>
-                                  )}
+                                    )}
+                                  </div>
                                 </div>
                               </motion.div>
                               
@@ -573,6 +587,7 @@ export function TaskListView({ entityFilter = "all" }: TaskListViewProps) {
         task={selectedTask}
         open={!!selectedTask}
         onOpenChange={(open) => !open && setSelectedTask(null)}
+        defaultTab={selectedTaskTab}
       />
     </>
   );
