@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 export type CommunicationType = 'comment' | 'exchange' | 'email_sent' | 'email_received' | 'note';
 export type EntityType = 'task' | 'project' | 'lead' | 'company' | 'contact' | 'tender';
@@ -246,9 +246,9 @@ export function useCommunications(
   });
 
   // Organiser en threads
-  const organizedCommunications = (() => {
+  const organizedCommunications = useMemo(() => {
     if (!communications) return { root: [], repliesMap: new Map<string, Communication[]>() };
-    
+
     const root: Communication[] = [];
     const repliesMap = new Map<string, Communication[]>();
 
@@ -263,7 +263,7 @@ export function useCommunications(
     });
 
     return { root, repliesMap };
-  })();
+  }, [communications]);
 
   return {
     communications,
