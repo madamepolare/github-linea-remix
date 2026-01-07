@@ -9,9 +9,8 @@ import {
   CompanyCategory,
   CompanyType,
   CRMFilters,
-  COMPANY_CATEGORIES,
-  getCompanyTypeConfig,
 } from "@/lib/crmTypes";
+import { useCRMSettings } from "@/hooks/useCRMSettings";
 
 export type { CRMCompany, CRMCompanyEnriched };
 
@@ -34,6 +33,7 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
   const { activeWorkspace, user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { getCompanyTypesForCategory, getCompanyTypeCategory } = useCRMSettings();
 
   const queryKey = ["crm-companies", activeWorkspace?.id];
 
@@ -124,9 +124,8 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
     let result = [...data];
 
     if (filters?.category && filters.category !== "all") {
-      const categoryConfig = COMPANY_CATEGORIES.find((c) => c.id === filters.category);
-      const allowedTypes = categoryConfig?.types || [];
-      result = result.filter((c) => allowedTypes.includes(c.industry as CompanyType));
+      const allowedTypes = getCompanyTypesForCategory(filters.category).map((t) => t.key);
+      result = result.filter((c) => allowedTypes.includes((c.industry || "") as CompanyType));
     }
 
     if (filters?.companyType && filters.companyType !== "all") {
@@ -184,8 +183,8 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
     };
 
     data.forEach((company) => {
-      const config = getCompanyTypeConfig(company.industry);
-      stats[config.category]++;
+      const category = (getCompanyTypeCategory(company.industry || "") as CompanyCategory) || "autre";
+      stats[category] = (stats[category] || 0) + 1;
     });
 
     return stats;

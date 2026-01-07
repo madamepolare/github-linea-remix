@@ -42,15 +42,9 @@ import { useLeads, Lead } from "@/hooks/useLeads";
 import { useTopBar } from "@/contexts/TopBarContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { EntityTasksList } from "@/components/tasks/EntityTasksList";
-import {
-  getCompanyTypeConfig,
-  COMPANY_TYPE_CONFIG,
-  CompanyType,
-  COMPANY_CATEGORIES,
-  CompanyCategory,
-  BET_SPECIALTIES,
-} from "@/lib/crmTypes";
+import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { COMPANY_TABS } from "@/lib/entityTabsConfig";
+import { BET_SPECIALTIES, CompanyCategory, CompanyType } from "@/lib/crmTypes";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,8 +67,17 @@ export default function CompanyDetail() {
   const { setEntityConfig } = useTopBar();
   const { activeWorkspace } = useAuth();
   const { allCompanies, isLoading, updateCompany } = useCRMCompanies();
+
   const { contacts } = useContacts();
   const { leads } = useLeads();
+  const {
+    companyCategories,
+    getCompanyTypesForCategory,
+    getCompanyTypeLabel,
+    getCompanyTypeShortLabel,
+    getCompanyTypeColor,
+    getCategoryFromType,
+  } = useCRMSettings();
 
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditing, setIsEditing] = useState(false);
@@ -88,33 +91,27 @@ export default function CompanyDetail() {
   const companyLeads = leads.filter((l) => l.crm_company_id === id);
   const totalLeadValue = companyLeads.reduce((sum, l) => sum + (Number(l.estimated_value) || 0), 0);
 
-  // Helper to find category from industry type
+  // Helper to find category from industry type (based on workspace settings)
   const getCategoryFromIndustry = (industry: string | null | undefined): CompanyCategory | "" => {
     if (!industry) return "";
-    for (const cat of COMPANY_CATEGORIES) {
-      if (cat.types?.includes(industry as CompanyType)) return cat.id;
-    }
-    return "";
+    return (getCategoryFromType(industry) as CompanyCategory) || "";
   };
-
-  const typeConfig = company ? getCompanyTypeConfig(company.industry) : null;
 
   // Set up TopBar entity config
   useEffect(() => {
-    if (company && typeConfig) {
-      const metadata = [];
-      if (company.city) {
-        metadata.push({ icon: MapPin, label: company.city });
-      }
-      if (company.phone) {
-        metadata.push({ icon: Phone, label: company.phone });
-      }
+    if (company) {
+      const metadata = [] as { icon: any; label: string }[];
+      if (company.city) metadata.push({ icon: MapPin, label: company.city });
+      if (company.phone) metadata.push({ icon: Phone, label: company.phone });
+
+      const badgeLabel = getCompanyTypeLabel(company.industry || "") || "Autre";
+      const color = getCompanyTypeColor(company.industry || "") || "#3B82F6";
 
       setEntityConfig({
         backTo: "/crm",
-        color: typeConfig.color?.replace("bg-", "") || "#3B82F6",
+        color,
         title: company.name,
-        badges: [{ label: typeConfig.label, variant: "outline" as const }],
+        badges: [{ label: badgeLabel, variant: "outline" as const }],
         metadata,
         tabs: COMPANY_TABS,
         activeTab,
@@ -155,7 +152,15 @@ export default function CompanyDetail() {
     return () => {
       setEntityConfig(null);
     };
-  }, [company, typeConfig, activeTab, isEditing, updateCompany.isPending, setEntityConfig]);
+  }, [
+    company,
+    activeTab,
+    isEditing,
+    updateCompany.isPending,
+    setEntityConfig,
+    getCompanyTypeLabel,
+    getCompanyTypeColor,
+  ]);
 
   useEffect(() => {
     if (company) {
@@ -286,8 +291,8 @@ export default function CompanyDetail() {
                               <SelectValue placeholder="Sélectionner..." />
                             </SelectTrigger>
                             <SelectContent>
-                              {COMPANY_CATEGORIES.filter((c) => c.id !== "all").map((cat) => (
-                                <SelectItem key={cat.id} value={cat.id}>
+                              {companyCategories.map((cat) => (
+                                <SelectItem key={cat.key} value={cat.key}>
                                   {cat.label}
                                 </SelectItem>
                               ))}
@@ -306,17 +311,11 @@ export default function CompanyDetail() {
                                 <SelectValue placeholder="Sélectionner..." />
                               </SelectTrigger>
                               <SelectContent>
-                                {(selectedCategory
-                                  ? COMPANY_CATEGORIES.find((c) => c.id === selectedCategory)?.types || []
-                                  : []
-                                ).map((type) => {
-                                  const config = COMPANY_TYPE_CONFIG[type];
-                                  return (
-                                    <SelectItem key={type} value={type}>
-                                      {config.label}
-                                    </SelectItem>
-                                  );
-                                })}
+                                {(selectedCategory ? getCompanyTypesForCategory(selectedCategory) : []).map((type) => (
+                                  <SelectItem key={type.key} value={type.key}>
+                                    {type.label}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -386,12 +385,15 @@ export default function CompanyDetail() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      {typeConfig && (
-                        <Badge variant="outline" className="gap-1.5">
-                          <div className={cn("w-2 h-2 rounded-full", typeConfig.color)} />
-                          {typeConfig.label}
-                        </Badge>
-                      )}
+                      <Badge variant="outline" className="gap-1.5">
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: getCompanyTypeColor(company.industry || "") }}
+                        />
+                        {company.industry === "bet" && (company.bet_specialties?.length || 0) > 0
+                          ? `${getCompanyTypeShortLabel(company.industry)} ${company.bet_specialties?.map((s) => s === "structure" ? "Structure" : s).join(", ")}`
+                          : getCompanyTypeLabel(company.industry || "")}
+                      </Badge>
                     </div>
                   )}
                 </div>
