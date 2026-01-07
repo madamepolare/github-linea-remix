@@ -246,8 +246,8 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
 };
 
 // Module display order
-export const CORE_MODULES = ["projects", "tasks", "crm", "commercial"];
-export const EXTENSION_MODULES = ["documents", "team", "chantier", "tenders", "invoicing", "references", "materials", "objects", "workflow"];
+export const CORE_MODULES = ["workflow", "projects", "tasks", "crm", "commercial"];
+export const EXTENSION_MODULES = ["documents", "team", "chantier", "tenders", "invoicing", "references", "materials", "objects"];
 
 // Helper to get module config from current path
 export function getModuleFromPath(pathname: string): ModuleNavConfig | null {
