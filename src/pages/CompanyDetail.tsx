@@ -180,14 +180,15 @@ export default function CompanyDetail() {
     };
   }, [company, activeTab, isEditing, updateCompany.isPending, setEntityConfig]);
 
+  // Initialize form state when company changes - but NOT while user is editing
   useEffect(() => {
-    if (company) {
+    if (company && !isEditing) {
       const normalizedIndustry = company.industry?.startsWith("bet_") ? "bet" : company.industry;
       setEditData({ ...company, industry: normalizedIndustry });
       setSelectedCategory(getCategoryFromIndustry(company.industry));
       setSelectedSpecialties(getNormalizedBetSpecialties(company.industry, company.bet_specialties));
     }
-  }, [company]);
+  }, [company, isEditing]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("fr-FR", {
