@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTasks, Task, SubtaskPreview } from "@/hooks/useTasks";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjects } from "@/hooks/useProjects";
@@ -9,14 +9,8 @@ import { TextEditCell, StatusEditCell, PriorityEditCell, DateEditCell, AssigneeE
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronRight, 
@@ -27,36 +21,42 @@ import {
   ArrowUp, 
   ArrowDown,
   ArrowUpDown,
-  CheckCircle2
+  CheckCircle2,
+  MessageCircle,
+  ChevronDown
 } from "lucide-react";
 import { isPast, isToday } from "date-fns";
 import { cn } from "@/lib/utils";
-import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/taskTypes";
+import { TASK_STATUSES } from "@/lib/taskTypes";
 import confetti from "canvas-confetti";
 
 interface TaskListViewProps {
-  statusFilter?: string | null;
-  priorityFilter?: string | null;
   entityFilter?: string;
 }
 
 type SortColumn = "title" | "status" | "due_date" | "priority" | "relation";
 type SortDirection = "asc" | "desc";
 
-export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all" }: TaskListViewProps) {
+const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+  todo: { bg: "bg-slate-50 dark:bg-slate-900/30", border: "border-l-slate-400", text: "text-slate-600" },
+  in_progress: { bg: "bg-blue-50/50 dark:bg-blue-900/20", border: "border-l-blue-500", text: "text-blue-600" },
+  review: { bg: "bg-amber-50/50 dark:bg-amber-900/20", border: "border-l-amber-500", text: "text-amber-600" },
+  done: { bg: "bg-green-50/50 dark:bg-green-900/20", border: "border-l-green-500", text: "text-green-600" },
+};
+
+export function TaskListView({ entityFilter = "all" }: TaskListViewProps) {
   const { tasks, isLoading, updateTaskStatus, updateTask } = useTasks();
   const { companies } = useCRMCompanies();
   const { projects } = useProjects();
   const { data: profiles } = useWorkspaceProfiles();
 
-
-
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [sortColumn, setSortColumn] = useState<SortColumn>("due_date");
+  const [sortColumn, setSortColumn] = useState<SortColumn>("status");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   const handleToggleComplete = (e: React.MouseEvent, task: Task) => {
     e.stopPropagation();
@@ -64,10 +64,8 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
     const newStatus = isCompleting ? "done" : "todo";
     
     if (isCompleting) {
-      // Celebration animation
       setRecentlyCompleted(prev => new Set([...prev, task.id]));
       
-      // Mini confetti burst
       const rect = (e.target as HTMLElement).getBoundingClientRect();
       confetti({
         particleCount: 30,
@@ -143,6 +141,18 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
     });
   };
 
+  const toggleGroup = (status: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return next;
+    });
+  };
+
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
       setSortDirection(prev => prev === "asc" ? "desc" : "asc");
@@ -177,55 +187,96 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
     return null;
   };
 
-  const getFilteredAndSortedTasks = () => {
+  const groupedTasks = useMemo(() => {
     let filtered = tasks || [];
     
-    if (statusFilter) {
-      filtered = filtered.filter((task) => task.status === statusFilter);
-    }
-    if (priorityFilter) {
-      filtered = filtered.filter((task) => task.priority === priorityFilter);
-    }
     if (entityFilter && entityFilter !== "all") {
       filtered = filtered.filter((task) => task.related_type === entityFilter);
     }
 
-    // Sort
-    const sorted = [...filtered].sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortColumn) {
-        case "title":
-          comparison = a.title.localeCompare(b.title);
-          break;
-        case "status":
-          const statusOrder = { todo: 0, in_progress: 1, review: 2, done: 3, archived: 4 };
-          comparison = statusOrder[a.status] - statusOrder[b.status];
-          break;
-        case "due_date":
-          if (!a.due_date && !b.due_date) comparison = 0;
-          else if (!a.due_date) comparison = 1;
-          else if (!b.due_date) comparison = -1;
-          else comparison = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-          break;
-        case "priority":
-          const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
-          comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
-          break;
-        case "relation":
-          const aRel = getRelationDisplay(a)?.label || "";
-          const bRel = getRelationDisplay(b)?.label || "";
-          comparison = aRel.localeCompare(bRel);
-          break;
+    // Group by status
+    const groups: Record<string, Task[]> = {
+      in_progress: [],
+      todo: [],
+      review: [],
+      done: [],
+    };
+
+    filtered.forEach(task => {
+      if (groups[task.status]) {
+        groups[task.status].push(task);
       }
-      
-      return sortDirection === "asc" ? comparison : -comparison;
     });
 
-    return sorted;
+    // Sort within each group
+    Object.keys(groups).forEach(status => {
+      groups[status].sort((a, b) => {
+        let comparison = 0;
+        switch (sortColumn) {
+          case "title":
+            comparison = a.title.localeCompare(b.title);
+            break;
+          case "due_date":
+            if (!a.due_date && !b.due_date) comparison = 0;
+            else if (!a.due_date) comparison = 1;
+            else if (!b.due_date) comparison = -1;
+            else comparison = new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+            break;
+          case "priority":
+            const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+            comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+            break;
+          default:
+            break;
+        }
+        return sortDirection === "asc" ? comparison : -comparison;
+      });
+    });
+
+    return groups;
+  }, [tasks, entityFilter, sortColumn, sortDirection]);
+
+  const getDueDateStyle = (dueDate: string | null, status: string) => {
+    if (!dueDate || status === "done") return "text-muted-foreground";
+    const date = new Date(dueDate);
+    if (isPast(date) && !isToday(date)) return "text-destructive font-medium";
+    if (isToday(date)) return "text-amber-600 font-medium";
+    return "text-muted-foreground";
   };
 
-  const filteredTasks = getFilteredAndSortedTasks();
+  const getAssigneeAvatars = (assignedTo: string[] | null) => {
+    if (!assignedTo || assignedTo.length === 0 || !profiles) return null;
+    
+    const assignees = assignedTo
+      .map(id => profiles.find(p => p.id === id))
+      .filter(Boolean)
+      .slice(0, 3);
+    
+    const remaining = (assignedTo.length || 0) - 3;
+    
+    return (
+      <div className="flex items-center -space-x-2">
+        {assignees.map((profile: any, idx) => (
+          <Tooltip key={profile.id}>
+            <TooltipTrigger asChild>
+              <Avatar className="h-6 w-6 border-2 border-background ring-0">
+                <AvatarImage src={profile.avatar_url} />
+                <AvatarFallback className="text-2xs bg-primary/10 text-primary">
+                  {profile.full_name?.slice(0, 2).toUpperCase() || "?"}
+                </AvatarFallback>
+              </Avatar>
+            </TooltipTrigger>
+            <TooltipContent>{profile.full_name}</TooltipContent>
+          </Tooltip>
+        ))}
+        {remaining > 0 && (
+          <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-2xs font-medium">
+            +{remaining}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -237,222 +288,285 @@ export function TaskListView({ statusFilter, priorityFilter, entityFilter = "all
     );
   }
 
-
-
-
   const SortableHeader = ({ column, children, className }: { column: SortColumn; children: React.ReactNode; className?: string }) => (
-    <TableHead 
-      className={cn("cursor-pointer hover:bg-muted/50 transition-colors select-none", className)}
+    <div 
+      className={cn("cursor-pointer hover:text-foreground transition-colors select-none flex items-center gap-1", className)}
       onClick={() => handleSort(column)}
     >
-      <div className="flex items-center gap-1">
-        {children}
-        {sortColumn === column ? (
-          sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-        ) : (
-          <ArrowUpDown className="h-3 w-3 opacity-30" />
-        )}
-      </div>
-    </TableHead>
+      {children}
+      {sortColumn === column ? (
+        sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-30" />
+      )}
+    </div>
   );
 
-  const getDueDateStyle = (dueDate: string | null, status: string) => {
-    if (!dueDate || status === "done") return "text-muted-foreground";
-    const date = new Date(dueDate);
-    if (isPast(date) && !isToday(date)) return "text-destructive font-medium";
-    if (isToday(date)) return "text-amber-600 font-medium";
-    return "text-muted-foreground";
-  };
+  const statusOrder = ["in_progress", "todo", "review", "done"];
 
   return (
     <>
-      <div className="border rounded-lg overflow-hidden bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/30 hover:bg-muted/30">
-              <TableHead className="w-10"></TableHead>
-              <TableHead className="w-6"></TableHead>
-              <SortableHeader column="relation" className="w-36">Relation</SortableHeader>
-              <SortableHeader column="title">Tâche</SortableHeader>
-              <SortableHeader column="status" className="w-24">Statut</SortableHeader>
-              <SortableHeader column="due_date" className="w-24">Échéance</SortableHeader>
-              <SortableHeader column="priority" className="w-20">Priorité</SortableHeader>
-              <TableHead className="w-20">Assigné</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {/* Quick add row */}
-            {showQuickAdd ? (
-              <TableRow>
-                <TableCell colSpan={8} className="p-0">
-                  <QuickTaskRow onCreated={() => setShowQuickAdd(false)} className="rounded-none border-0" />
-                </TableCell>
-              </TableRow>
-            ) : (
-              <TableRow 
-                className="cursor-pointer hover:bg-muted/30"
-                onClick={() => setShowQuickAdd(true)}
+      <div className="space-y-4">
+        {/* Quick add row */}
+        {showQuickAdd ? (
+          <div className="border rounded-lg overflow-hidden">
+            <QuickTaskRow onCreated={() => setShowQuickAdd(false)} className="rounded-none border-0" />
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowQuickAdd(true)}
+            className="w-full flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground border border-dashed rounded-lg hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Ajouter une tâche...</span>
+          </button>
+        )}
+
+        {/* Grouped task lists */}
+        {statusOrder.map(status => {
+          const statusTasks = groupedTasks[status] || [];
+          if (statusTasks.length === 0) return null;
+          
+          const statusConfig = TASK_STATUSES.find(s => s.id === status);
+          const isCollapsed = collapsedGroups.has(status);
+          const colors = STATUS_COLORS[status] || STATUS_COLORS.todo;
+
+          return (
+            <div key={status} className="space-y-1">
+              {/* Status group header */}
+              <button
+                onClick={() => toggleGroup(status)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors",
+                  colors.bg,
+                  "hover:opacity-80"
+                )}
               >
-                <TableCell colSpan={8} className="py-2">
-                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                    <Plus className="h-4 w-4" />
-                    <span>Ajouter une tâche...</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
+                <ChevronDown className={cn(
+                  "h-4 w-4 transition-transform",
+                  isCollapsed && "-rotate-90",
+                  colors.text
+                )} />
+                <div 
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: statusConfig?.color }}
+                />
+                <span className={cn("font-medium text-sm", colors.text)}>
+                  {statusConfig?.label}
+                </span>
+                <Badge variant="secondary" className="h-5 px-1.5 text-2xs">
+                  {statusTasks.length}
+                </Badge>
+              </button>
 
-            <AnimatePresence mode="popLayout">
-              {filteredTasks?.map((task) => {
-                const hasSubtasks = task.subtasks && task.subtasks.length > 0;
-                const isExpanded = expandedTasks.has(task.id);
-                const completedSubtasks = task.subtasks?.filter(s => s.status === "done").length || 0;
-                const relation = getRelationDisplay(task);
-                const isJustCompleted = recentlyCompleted.has(task.id);
-
-                return (
-                  <>
-                  <motion.tr
-                    key={task.id}
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ 
-                      opacity: 1,
-                      backgroundColor: isJustCompleted ? "hsl(142 76% 36% / 0.1)" : "transparent"
-                    }}
-                    exit={{ opacity: 0, height: 0 }}
+              {/* Task rows */}
+              <AnimatePresence>
+                {!isCollapsed && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
-                    className={cn(
-                      "cursor-pointer border-b transition-all duration-150 hover:bg-accent/50 hover:shadow-sm",
-                      task.status === "done" && "opacity-60"
-                    )}
-                    onClick={() => setSelectedTask(task)}
+                    className="overflow-hidden"
                   >
-                    <TableCell className="py-2" onClick={(e) => handleToggleComplete(e, task)}>
-                      <motion.div
-                        animate={isJustCompleted ? { scale: [1, 1.3, 1] } : {}}
-                        transition={{ duration: 0.3 }}
-                      >
-                        {task.status === "done" ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <Checkbox checked={false} className="h-5 w-5" />
-                        )}
-                      </motion.div>
-                    </TableCell>
-                    <TableCell className="py-2" onClick={(e) => hasSubtasks && toggleExpand(e, task.id)}>
-                      {hasSubtasks && (
-                        <ChevronRight className={cn(
-                          "h-4 w-4 text-muted-foreground transition-transform",
-                          isExpanded && "rotate-90"
-                        )} />
-                      )}
-                    </TableCell>
-                    <TableCell className="py-2">
-                      {relation && (
-                        <div className={cn("flex items-center gap-1.5 text-xs", relation.color)}>
-                          <relation.icon className="h-3 w-3 flex-shrink-0" />
-                          <span className="truncate max-w-[100px]">{relation.label}</span>
+                    <div className={cn(
+                      "border rounded-lg overflow-hidden",
+                      `border-l-4 ${colors.border}`
+                    )}>
+                      {/* Table header */}
+                      <div className="grid grid-cols-[40px_1fr_120px_100px_100px_80px_60px] gap-2 px-4 py-2 bg-muted/30 text-xs text-muted-foreground font-medium border-b">
+                        <div></div>
+                        <SortableHeader column="title">Tâche</SortableHeader>
+                        <SortableHeader column="relation">Relation</SortableHeader>
+                        <SortableHeader column="due_date">Échéance</SortableHeader>
+                        <SortableHeader column="priority">Priorité</SortableHeader>
+                        <div>Assignés</div>
+                        <div className="text-center">
+                          <MessageCircle className="h-3.5 w-3.5 mx-auto" />
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="py-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <TextEditCell
-                          value={task.title}
-                          onSave={(title) => updateTask.mutate({ id: task.id, title })}
-                          className={task.status === "done" ? "line-through text-muted-foreground" : ""}
-                        />
-                        {hasSubtasks && (
-                          <Badge variant="outline" className="text-2xs px-1.5 py-0 h-5 flex-shrink-0">
-                            {completedSubtasks}/{task.subtasks!.length}
-                          </Badge>
-                        )}
                       </div>
-                    </TableCell>
-                    <TableCell className="py-2">
-                      <StatusEditCell
-                        value={task.status}
-                        onSave={(status) => updateTaskStatus.mutate({ id: task.id, status: status as Task["status"] })}
-                      />
-                    </TableCell>
-                    <TableCell className="py-2">
-                      <DateEditCell
-                        value={task.due_date}
-                        onSave={(due_date) => updateTask.mutate({ id: task.id, due_date })}
-                        className={getDueDateStyle(task.due_date, task.status)}
-                      />
-                    </TableCell>
-                    <TableCell className="py-2">
-                      <PriorityEditCell
-                        value={task.priority}
-                        onSave={(priority) => updateTask.mutate({ id: task.id, priority: priority as Task["priority"] })}
-                      />
-                    </TableCell>
-                    <TableCell className="py-2">
-                      <AssigneeEditCell
-                        value={task.assigned_to || []}
-                        profiles={profiles || []}
-                        onSave={(assigned_to) => updateTask.mutate({ id: task.id, assigned_to })}
-                      />
-                    </TableCell>
-                  </motion.tr>
-                  
-                  {/* Subtasks inline */}
-                  {isExpanded && task.subtasks?.map((subtask) => {
-                    const isSubtaskCompleted = recentlyCompleted.has(subtask.id);
-                    
-                    return (
-                      <motion.tr
-                        key={subtask.id}
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ 
-                          opacity: 1, 
-                          height: "auto",
-                          backgroundColor: isSubtaskCompleted ? "hsl(142 76% 36% / 0.1)" : "transparent"
-                        }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="bg-muted/20 hover:bg-muted/40 transition-colors border-b"
-                      >
-                        <TableCell className="py-1.5 pl-6" onClick={(e) => handleToggleSubtask(e, subtask)}>
-                          <motion.div
-                            animate={isSubtaskCompleted ? { scale: [1, 1.3, 1] } : {}}
-                            transition={{ duration: 0.3 }}
-                          >
-                            {subtask.status === "done" ? (
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <Checkbox checked={false} className="h-4 w-4" />
-                            )}
-                          </motion.div>
-                        </TableCell>
-                        <TableCell className="py-1.5"></TableCell>
-                        <TableCell className="py-1.5 text-muted-foreground text-xs">↳ sous-tâche</TableCell>
-                        <TableCell colSpan={5} className="py-1.5">
-                          <span className={cn(
-                            "text-sm",
-                            subtask.status === "done" && "line-through text-muted-foreground"
-                          )}>
-                            {subtask.title}
-                          </span>
-                        </TableCell>
-                      </motion.tr>
-                    );
-                  })}
-                </>
-                );
-              })}
-            </AnimatePresence>
-            
-            {(!filteredTasks || filteredTasks.length === 0) && (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                  Aucune tâche
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+
+                      {/* Task rows */}
+                      <AnimatePresence mode="popLayout">
+                        {statusTasks.map((task) => {
+                          const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+                          const isExpanded = expandedTasks.has(task.id);
+                          const completedSubtasks = task.subtasks?.filter(s => s.status === "done").length || 0;
+                          const relation = getRelationDisplay(task);
+                          const isJustCompleted = recentlyCompleted.has(task.id);
+                          // Mock comment count - would come from task data
+                          const commentCount = Math.floor(Math.random() * 5);
+
+                          return (
+                            <div key={task.id}>
+                              <motion.div
+                                layout
+                                initial={{ opacity: 0 }}
+                                animate={{ 
+                                  opacity: 1,
+                                  backgroundColor: isJustCompleted ? "hsl(142 76% 36% / 0.1)" : "transparent"
+                                }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className={cn(
+                                  "grid grid-cols-[40px_1fr_120px_100px_100px_80px_60px] gap-2 px-4 py-2.5 items-center cursor-pointer border-b last:border-b-0 transition-all duration-150 hover:bg-accent/50",
+                                  task.status === "done" && "opacity-60"
+                                )}
+                                onClick={() => setSelectedTask(task)}
+                              >
+                                {/* Checkbox */}
+                                <div onClick={(e) => handleToggleComplete(e, task)} className="flex items-center justify-center">
+                                  <motion.div
+                                    animate={isJustCompleted ? { scale: [1, 1.3, 1] } : {}}
+                                    transition={{ duration: 0.3 }}
+                                  >
+                                    {task.status === "done" ? (
+                                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                    ) : (
+                                      <Checkbox checked={false} className="h-5 w-5" />
+                                    )}
+                                  </motion.div>
+                                </div>
+
+                                {/* Title */}
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {hasSubtasks && (
+                                    <button onClick={(e) => toggleExpand(e, task.id)}>
+                                      <ChevronRight className={cn(
+                                        "h-4 w-4 text-muted-foreground transition-transform",
+                                        isExpanded && "rotate-90"
+                                      )} />
+                                    </button>
+                                  )}
+                                  <TextEditCell
+                                    value={task.title}
+                                    onSave={(title) => updateTask.mutate({ id: task.id, title })}
+                                    className={cn(
+                                      "flex-1",
+                                      task.status === "done" && "line-through text-muted-foreground"
+                                    )}
+                                  />
+                                  {hasSubtasks && (
+                                    <Badge variant="outline" className="text-2xs px-1.5 py-0 h-5 flex-shrink-0">
+                                      {completedSubtasks}/{task.subtasks!.length}
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                {/* Relation */}
+                                <div>
+                                  {relation && (
+                                    <div className={cn("flex items-center gap-1.5 text-xs", relation.color)}>
+                                      <relation.icon className="h-3 w-3 flex-shrink-0" />
+                                      <span className="truncate">{relation.label}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Due date */}
+                                <div>
+                                  <DateEditCell
+                                    value={task.due_date}
+                                    onSave={(due_date) => updateTask.mutate({ id: task.id, due_date })}
+                                    className={getDueDateStyle(task.due_date, task.status)}
+                                  />
+                                </div>
+
+                                {/* Priority */}
+                                <div>
+                                  <PriorityEditCell
+                                    value={task.priority}
+                                    onSave={(priority) => updateTask.mutate({ id: task.id, priority: priority as Task["priority"] })}
+                                  />
+                                </div>
+
+                                {/* Assignees - stacked avatars */}
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  {getAssigneeAvatars(task.assigned_to) || (
+                                    <AssigneeEditCell
+                                      value={task.assigned_to || []}
+                                      profiles={profiles || []}
+                                      onSave={(assigned_to) => updateTask.mutate({ id: task.id, assigned_to })}
+                                    />
+                                  )}
+                                </div>
+
+                                {/* Comments bubble */}
+                                <div className="flex justify-center">
+                                  {commentCount > 0 && (
+                                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                      <MessageCircle className="h-3 w-3" />
+                                      <span className="text-2xs font-medium">{commentCount}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                              
+                              {/* Subtasks */}
+                              <AnimatePresence>
+                                {isExpanded && task.subtasks?.map((subtask) => {
+                                  const isSubtaskCompleted = recentlyCompleted.has(subtask.id);
+                                  
+                                  return (
+                                    <motion.div
+                                      key={subtask.id}
+                                      initial={{ opacity: 0, height: 0 }}
+                                      animate={{ 
+                                        opacity: 1, 
+                                        height: "auto",
+                                        backgroundColor: isSubtaskCompleted ? "hsl(142 76% 36% / 0.1)" : "transparent"
+                                      }}
+                                      exit={{ opacity: 0, height: 0 }}
+                                      className="grid grid-cols-[40px_1fr_120px_100px_100px_80px_60px] gap-2 px-4 py-2 items-center bg-muted/20 hover:bg-muted/40 transition-colors border-b"
+                                    >
+                                      <div onClick={(e) => handleToggleSubtask(e, subtask)} className="flex items-center justify-center pl-4">
+                                        <motion.div
+                                          animate={isSubtaskCompleted ? { scale: [1, 1.3, 1] } : {}}
+                                          transition={{ duration: 0.3 }}
+                                        >
+                                          {subtask.status === "done" ? (
+                                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                          ) : (
+                                            <Checkbox checked={false} className="h-4 w-4" />
+                                          )}
+                                        </motion.div>
+                                      </div>
+                                      <div className="flex items-center gap-2 pl-6">
+                                        <span className="text-muted-foreground text-xs">↳</span>
+                                        <span className={cn(
+                                          "text-sm",
+                                          subtask.status === "done" && "line-through text-muted-foreground"
+                                        )}>
+                                          {subtask.title}
+                                        </span>
+                                      </div>
+                                      <div></div>
+                                      <div></div>
+                                      <div></div>
+                                      <div></div>
+                                      <div></div>
+                                    </motion.div>
+                                  );
+                                })}
+                              </AnimatePresence>
+                            </div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
+
+        {/* Empty state */}
+        {Object.values(groupedTasks).every(g => g.length === 0) && (
+          <div className="text-center py-12 text-muted-foreground">
+            Aucune tâche
+          </div>
+        )}
       </div>
 
       <TaskDetailSheet
