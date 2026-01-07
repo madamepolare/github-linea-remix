@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
 import { usePhaseDependencies } from "@/hooks/usePhaseDependencies";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  Download,
   GanttChart,
   GripVertical,
   Link2,
@@ -51,13 +53,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PhaseGanttTimeline } from "./PhaseGanttTimeline";
 import { ViewSwitcher } from "@/components/ui/view-switcher";
+import { ImportPhasesFromQuoteDialog } from "./ImportPhasesFromQuoteDialog";
+import { toast } from "sonner";
 
 interface ProjectPhasesTabProps {
   projectId: string;
 }
 
 export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
-  const { phases, isLoading, createPhase, updatePhase, deletePhase } = useProjectPhases(projectId);
+  const { activeWorkspace } = useAuth();
+  const { phases, isLoading, createPhase, createManyPhases, updatePhase, deletePhase } = useProjectPhases(projectId);
   const { dependencies, addDependency, removeDependency } = usePhaseDependencies(projectId);
   
   const [editingPhase, setEditingPhase] = useState<any | null>(null);
@@ -65,7 +70,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
   const [isDependencyDialogOpen, setIsDependencyDialogOpen] = useState(false);
   const [selectedPhaseForDependency, setSelectedPhaseForDependency] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
-
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formStatus, setFormStatus] = useState<PhaseStatus>("pending");
@@ -152,6 +157,44 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
 
   const getPhaseById = (id: string) => phases.find((p) => p.id === id);
 
+  const handleImportPhases = async (
+    phasesToImport: {
+      name: string;
+      description?: string;
+      sort_order: number;
+      status: string;
+      phase_code?: string;
+    }[]
+  ) => {
+    if (!activeWorkspace) return;
+
+    // If replacing, delete all existing phases first
+    if (phases.length > 0) {
+      // Check if user selected "replace" mode - we handle this by checking sort_order starts at 0
+      const isReplacing = phasesToImport.length > 0 && phasesToImport[0].sort_order === 0;
+      if (isReplacing) {
+        // Delete existing phases
+        for (const phase of phases) {
+          await deletePhase.mutateAsync(phase.id);
+        }
+      }
+    }
+
+    // Create new phases with required fields
+    await createManyPhases.mutateAsync(
+      phasesToImport.map((p) => ({
+        project_id: projectId,
+        workspace_id: activeWorkspace.id,
+        name: p.name,
+        description: p.description,
+        sort_order: p.sort_order,
+        status: p.status as PhaseStatus,
+      }))
+    );
+
+    toast.success(`${phasesToImport.length} phase${phasesToImport.length > 1 ? "s" : ""} importée${phasesToImport.length > 1 ? "s" : ""}`);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -164,12 +207,114 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
 
   if (phases.length === 0) {
     return (
-      <EmptyState
-        icon={Calendar}
-        title="Aucune phase"
-        description="Ajoutez des phases pour organiser votre projet."
-        action={{ label: "Ajouter une phase", onClick: () => setIsCreateOpen(true) }}
-      />
+      <div className="space-y-4">
+        <div className="flex items-center justify-end">
+          <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
+            <Download className="h-4 w-4 mr-1" />
+            Importer depuis un devis
+          </Button>
+        </div>
+        <EmptyState
+          icon={Calendar}
+          title="Aucune phase"
+          description="Ajoutez des phases pour organiser votre projet ou importez-les depuis un devis."
+          action={{ label: "Ajouter une phase", onClick: () => setIsCreateOpen(true) }}
+        />
+        <ImportPhasesFromQuoteDialog
+          open={isImportDialogOpen}
+          onOpenChange={setIsImportDialogOpen}
+          projectId={projectId}
+          existingPhasesCount={0}
+          onImport={handleImportPhases}
+        />
+        {/* Create Dialog needed for empty state action */}
+        <Dialog open={isCreateOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateOpen(false);
+            resetForm();
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nouvelle phase</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Nom *</Label>
+                <Input
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="Ex: Esquisse"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Input
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  placeholder="Description de la phase..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Statut</Label>
+                  <Select value={formStatus} onValueChange={(v) => setFormStatus(v as PhaseStatus)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(PHASE_STATUS_CONFIG).map(([value, config]) => (
+                        <SelectItem key={value} value={value}>
+                          {config.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Couleur</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {PHASE_COLORS.slice(0, 8).map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setFormColor(color)}
+                        className={cn(
+                          "w-6 h-6 rounded-full transition-all",
+                          formColor === color && "ring-2 ring-offset-2 ring-primary"
+                        )}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Date d'échéance</Label>
+                <InlineDatePicker
+                  value={formDeadline}
+                  onChange={setFormDeadline}
+                  placeholder="Sélectionner une échéance..."
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setIsCreateOpen(false); resetForm(); }}>
+                Annuler
+              </Button>
+              <Button onClick={handleCreate} disabled={!formName.trim()}>
+                Créer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     );
   }
 
@@ -186,6 +331,10 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
               { value: "timeline", label: "Timeline", icon: <GanttChart className="h-3.5 w-3.5" /> },
             ]}
           />
+          <Button variant="outline" size="sm" onClick={() => setIsImportDialogOpen(true)}>
+            <Download className="h-4 w-4 mr-1" />
+            Importer
+          </Button>
           <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
             <Plus className="h-4 w-4 mr-1" />
             Ajouter
@@ -463,6 +612,15 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Import from Quote Dialog */}
+      <ImportPhasesFromQuoteDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        projectId={projectId}
+        existingPhasesCount={phases.length}
+        onImport={handleImportPhases}
+      />
     </div>
   );
 }

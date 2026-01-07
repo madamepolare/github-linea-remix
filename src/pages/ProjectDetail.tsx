@@ -24,6 +24,7 @@ import {
   FileText,
   FolderKanban,
   HardHat,
+  Layers,
   ListTodo,
   Loader2,
   MapPin,
@@ -60,12 +61,14 @@ import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 import { TimeTrackerButton } from "@/components/time-tracking/TimeTrackerButton";
 import { EntityCommunications } from "@/components/shared/EntityCommunications";
 import { ProjectElementsTab } from "@/components/projects/elements/ProjectElementsTab";
+import { ProjectPhasesTab } from "@/components/projects/ProjectPhasesTab";
 import { MessageCircle } from "lucide-react";
 
 // Tab configuration for project detail
 const PROJECT_TABS = [
   { key: "overview", label: "Vue d'ensemble", icon: Sparkles },
   { key: "planning", label: "Calendrier", icon: Calendar },
+  { key: "phases", label: "Phases", icon: Layers },
   { key: "tasks", label: "Tâches", icon: ListTodo },
   { key: "communications", label: "Communications", icon: MessageCircle },
   { key: "elements", label: "Éléments", icon: FolderKanban },
@@ -256,6 +259,7 @@ export default function ProjectDetail() {
             />
           )}
           {activeTab === "planning" && <ProjectPlanningTab projectId={project.id} />}
+          {activeTab === "phases" && <ProjectPhasesTab projectId={project.id} />}
           {activeTab === "tasks" && (
             <ProjectTasksTab projectId={project.id} />
           )}
