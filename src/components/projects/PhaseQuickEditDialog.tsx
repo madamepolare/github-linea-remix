@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Plus, Pencil, Trash2, GripVertical, Calendar } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, Calendar, FileText, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -23,6 +27,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { ProjectPhase } from "@/hooks/useProjectPhases";
 import { PHASE_STATUS_CONFIG, PhaseStatus, PHASE_COLORS } from "@/lib/projectTypes";
+import {
+  PHASES_BY_PROJECT_TYPE,
+  PROJECT_TYPE_LABELS,
+  PhaseTemplate,
+  ProjectType,
+} from "@/lib/commercialTypes";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +49,7 @@ interface PhaseQuickEditDialogProps {
   onOpenChange: (open: boolean) => void;
   phases: ProjectPhase[];
   onCreatePhase: (phase: { name: string; status?: PhaseStatus; start_date?: string | null; end_date?: string | null; color?: string }) => void;
+  onCreateManyPhases?: (phases: { name: string; description?: string; status?: PhaseStatus; color?: string }[]) => void;
   onUpdatePhase: (id: string, updates: Partial<ProjectPhase>) => void;
   onDeletePhase: (id: string) => void;
   onReorderPhases: (orderedIds: string[]) => void;
@@ -49,6 +60,7 @@ export function PhaseQuickEditDialog({
   onOpenChange,
   phases,
   onCreatePhase,
+  onCreateManyPhases,
   onUpdatePhase,
   onDeletePhase,
   onReorderPhases,
@@ -57,6 +69,13 @@ export function PhaseQuickEditDialog({
   const [newPhaseName, setNewPhaseName] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [addMode, setAddMode] = useState<"custom" | "template">("custom");
+  const [selectedProjectType, setSelectedProjectType] = useState<ProjectType>("architecture");
+  const [selectedTemplates, setSelectedTemplates] = useState<Set<string>>(new Set());
+
+  const templates = useMemo(() => {
+    return PHASES_BY_PROJECT_TYPE[selectedProjectType] || [];
+  }, [selectedProjectType]);
 
   const handleAddPhase = () => {
     if (!newPhaseName.trim()) return;
@@ -70,6 +89,43 @@ export function PhaseQuickEditDialog({
       color,
     });
     setNewPhaseName("");
+  };
+
+  const handleAddFromTemplates = () => {
+    if (selectedTemplates.size === 0) return;
+    
+    const selectedPhases = templates
+      .filter(t => selectedTemplates.has(t.code))
+      .map((template, index) => ({
+        name: template.name,
+        description: template.description || undefined,
+        status: "pending" as PhaseStatus,
+        color: PHASE_COLORS[(phases.length + index) % PHASE_COLORS.length],
+      }));
+
+    if (onCreateManyPhases && selectedPhases.length > 0) {
+      onCreateManyPhases(selectedPhases);
+    } else {
+      // Fallback: create one by one
+      selectedPhases.forEach(phase => {
+        onCreatePhase(phase);
+      });
+    }
+    
+    setSelectedTemplates(new Set());
+    setAddMode("custom");
+  };
+
+  const toggleTemplate = (code: string) => {
+    setSelectedTemplates(prev => {
+      const next = new Set(prev);
+      if (next.has(code)) {
+        next.delete(code);
+      } else {
+        next.add(code);
+      }
+      return next;
+    });
   };
 
   const handleDragStart = (e: React.DragEvent, phaseId: string) => {
@@ -140,20 +196,117 @@ export function PhaseQuickEditDialog({
           </div>
 
           {/* Add new phase */}
-          <div className="border-t pt-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Nom de la nouvelle phase..."
-                value={newPhaseName}
-                onChange={(e) => setNewPhaseName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddPhase()}
-                className="flex-1"
-              />
-              <Button onClick={handleAddPhase} disabled={!newPhaseName.trim()}>
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter
-              </Button>
-            </div>
+          <div className="border-t pt-4 space-y-3">
+            <Tabs value={addMode} onValueChange={(v) => setAddMode(v as "custom" | "template")}>
+              <TabsList className="grid w-full grid-cols-2 h-8">
+                <TabsTrigger value="custom" className="text-xs gap-1.5">
+                  <Plus className="h-3 w-3" />
+                  Personnalisée
+                </TabsTrigger>
+                <TabsTrigger value="template" className="text-xs gap-1.5">
+                  <FileText className="h-3 w-3" />
+                  Phases types
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="custom" className="mt-3">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nom de la nouvelle phase..."
+                    value={newPhaseName}
+                    onChange={(e) => setNewPhaseName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddPhase()}
+                    className="flex-1"
+                  />
+                  <Button onClick={handleAddPhase} disabled={!newPhaseName.trim()}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Ajouter
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="template" className="mt-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Select value={selectedProjectType} onValueChange={(v) => {
+                    setSelectedProjectType(v as ProjectType);
+                    setSelectedTemplates(new Set());
+                  }}>
+                    <SelectTrigger className="w-[200px] h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(PROJECT_TYPE_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value} className="text-xs">
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-xs h-8"
+                    onClick={() => {
+                      const baseCodes = templates.filter(t => t.category === "base").map(t => t.code);
+                      setSelectedTemplates(new Set(baseCodes));
+                    }}
+                  >
+                    Base
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-xs h-8"
+                    onClick={() => setSelectedTemplates(new Set(templates.map(t => t.code)))}
+                  >
+                    Tout
+                  </Button>
+                </div>
+
+                <ScrollArea className="h-[150px] border rounded-lg">
+                  <div className="p-2 space-y-1">
+                    {templates.map((template, index) => {
+                      const isSelected = selectedTemplates.has(template.code);
+                      const isFirstComplementary = template.category === "complementary" && 
+                        (index === 0 || templates[index - 1].category === "base");
+                      
+                      return (
+                        <div key={template.code}>
+                          {isFirstComplementary && (
+                            <div className="py-1.5 px-2 text-[10px] font-medium text-muted-foreground border-t mt-1 pt-2">
+                              Complémentaires
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => toggleTemplate(template.code)}
+                            className={cn(
+                              "w-full flex items-center gap-2 p-1.5 rounded text-left transition-colors text-xs",
+                              isSelected ? "bg-primary/10" : "hover:bg-muted/50"
+                            )}
+                          >
+                            <Checkbox checked={isSelected} className="h-3.5 w-3.5" />
+                            <Badge variant="outline" className="text-[10px] font-mono px-1 py-0">
+                              {template.code}
+                            </Badge>
+                            <span className="truncate">{template.name}</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+
+                <Button 
+                  onClick={handleAddFromTemplates} 
+                  disabled={selectedTemplates.size === 0}
+                  className="w-full"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter {selectedTemplates.size > 0 ? `${selectedTemplates.size} phase${selectedTemplates.size > 1 ? "s" : ""}` : ""}
+                </Button>
+              </TabsContent>
+            </Tabs>
           </div>
         </DialogContent>
       </Dialog>
