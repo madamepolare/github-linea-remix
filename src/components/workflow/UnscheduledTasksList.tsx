@@ -3,7 +3,7 @@ import { useUnscheduledTasks } from "@/hooks/useTaskSchedules";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Clock, Flag, GripVertical } from "lucide-react";
+import { Search, Clock, Flag, GripVertical, CalendarCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PRIORITY_CONFIG = {
@@ -41,6 +41,10 @@ export function UnscheduledTasksList({ onTaskSelect }: UnscheduledTasksListProps
     );
   }
 
+  // Séparer les tâches avec créneaux et sans créneaux
+  const tasksWithSchedule = filteredTasks.filter(t => t.scheduled_hours > 0);
+  const tasksWithoutSchedule = filteredTasks.filter(t => !t.scheduled_hours || t.scheduled_hours === 0);
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-3 border-b">
@@ -59,76 +63,149 @@ export function UnscheduledTasksList({ onTaskSelect }: UnscheduledTasksListProps
         <div className="p-2 space-y-2">
           {filteredTasks.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
-              {search ? "Aucune tâche trouvée" : "Toutes les tâches sont planifiées !"}
+              {search ? "Aucune tâche trouvée" : "Aucune tâche en cours"}
             </div>
           ) : (
-            filteredTasks.map(task => (
-              <div
-                key={task.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, task)}
-                onClick={() => onTaskSelect?.(task)}
-                className={cn(
-                  "p-3 rounded-lg border bg-card cursor-grab active:cursor-grabbing",
-                  "hover:border-primary/50 hover:shadow-sm transition-all",
-                  "group"
-                )}
-              >
-                <div className="flex items-start gap-2">
-                  <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 flex-shrink-0" />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{task.title}</div>
-                    
-                    {task.project && (
-                      <div className="text-xs text-muted-foreground truncate mt-0.5">
-                        {task.project.name}
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      {task.priority && (
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            "text-[10px] px-1.5 py-0",
-                            PRIORITY_CONFIG[task.priority as keyof typeof PRIORITY_CONFIG]?.color,
-                            "text-white"
-                          )}
-                        >
-                          <Flag className="h-2.5 w-2.5 mr-0.5" />
-                          {PRIORITY_CONFIG[task.priority as keyof typeof PRIORITY_CONFIG]?.label}
-                        </Badge>
-                      )}
-                      
-                      {task.estimated_hours && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          <Clock className="h-2.5 w-2.5 mr-0.5" />
-                          {task.estimated_hours}h
-                        </Badge>
-                      )}
-
-                      {task.due_date && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {new Date(task.due_date).toLocaleDateString("fr-FR", { 
-                            day: "numeric", 
-                            month: "short" 
-                          })}
-                        </Badge>
-                      )}
-                    </div>
+            <>
+              {/* Tâches sans créneaux - priorité */}
+              {tasksWithoutSchedule.length > 0 && (
+                <>
+                  <div className="text-xs font-medium text-muted-foreground px-1 pt-2">
+                    À planifier ({tasksWithoutSchedule.length})
                   </div>
-                </div>
-              </div>
-            ))
+                  {tasksWithoutSchedule.map(task => (
+                    <TaskCard 
+                      key={task.id} 
+                      task={task} 
+                      onDragStart={handleDragStart}
+                      onTaskSelect={onTaskSelect}
+                    />
+                  ))}
+                </>
+              )}
+
+              {/* Tâches avec créneaux existants */}
+              {tasksWithSchedule.length > 0 && (
+                <>
+                  <div className="text-xs font-medium text-muted-foreground px-1 pt-4">
+                    Déjà planifiées ({tasksWithSchedule.length})
+                  </div>
+                  {tasksWithSchedule.map(task => (
+                    <TaskCard 
+                      key={task.id} 
+                      task={task} 
+                      onDragStart={handleDragStart}
+                      onTaskSelect={onTaskSelect}
+                    />
+                  ))}
+                </>
+              )}
+            </>
           )}
         </div>
       </ScrollArea>
 
       <div className="p-3 border-t bg-muted/30">
         <p className="text-xs text-muted-foreground text-center">
-          Glissez une tâche sur le calendrier pour la planifier
+          Glissez une tâche pour ajouter un créneau
         </p>
+      </div>
+    </div>
+  );
+}
+
+interface TaskCardProps {
+  task: any;
+  onDragStart: (e: React.DragEvent, task: any) => void;
+  onTaskSelect?: (task: any) => void;
+}
+
+function TaskCard({ task, onDragStart, onTaskSelect }: TaskCardProps) {
+  const scheduledHours = task.scheduled_hours || 0;
+  const estimatedHours = task.estimated_hours || 0;
+  const hasSchedule = scheduledHours > 0;
+  
+  // Calculer le pourcentage de planification
+  const planningProgress = estimatedHours > 0 
+    ? Math.min(100, Math.round((scheduledHours / estimatedHours) * 100))
+    : null;
+
+  return (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, task)}
+      onClick={() => onTaskSelect?.(task)}
+      className={cn(
+        "p-3 rounded-lg border bg-card cursor-grab active:cursor-grabbing",
+        "hover:border-primary/50 hover:shadow-sm transition-all",
+        "group",
+        hasSchedule && "border-l-2 border-l-primary/50"
+      )}
+    >
+      <div className="flex items-start gap-2">
+        <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 flex-shrink-0" />
+        
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-sm truncate">{task.title}</div>
+          
+          {task.project && (
+            <div className="text-xs text-muted-foreground truncate mt-0.5">
+              {task.project.name}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {task.priority && (
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "text-[10px] px-1.5 py-0",
+                  PRIORITY_CONFIG[task.priority as keyof typeof PRIORITY_CONFIG]?.color,
+                  "text-white"
+                )}
+              >
+                <Flag className="h-2.5 w-2.5 mr-0.5" />
+                {PRIORITY_CONFIG[task.priority as keyof typeof PRIORITY_CONFIG]?.label}
+              </Badge>
+            )}
+            
+            {/* Afficher temps planifié vs estimé */}
+            {(estimatedHours > 0 || scheduledHours > 0) && (
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  "text-[10px] px-1.5 py-0",
+                  hasSchedule && "border-primary/50 text-primary"
+                )}
+              >
+                {hasSchedule ? (
+                  <>
+                    <CalendarCheck className="h-2.5 w-2.5 mr-0.5" />
+                    {scheduledHours}h
+                    {estimatedHours > 0 && ` / ${estimatedHours}h`}
+                    {planningProgress !== null && (
+                      <span className="ml-1 opacity-70">({planningProgress}%)</span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Clock className="h-2.5 w-2.5 mr-0.5" />
+                    {estimatedHours}h
+                  </>
+                )}
+              </Badge>
+            )}
+
+            {task.due_date && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                {new Date(task.due_date).toLocaleDateString("fr-FR", { 
+                  day: "numeric", 
+                  month: "short" 
+                })}
+              </Badge>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
