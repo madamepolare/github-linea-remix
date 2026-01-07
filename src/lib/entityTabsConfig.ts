@@ -63,6 +63,7 @@ export const LEAD_TABS: EntityTab[] = [
 // Tender detail tabs
 export const TENDER_TABS: EntityTab[] = [
   { key: "synthese", label: "Synthèse", icon: LayoutDashboard },
+  { key: "calendrier", label: "Calendrier", icon: Calendar },
   { key: "analyse", label: "Analyse IA", icon: Brain },
   { key: "documents", label: "Documents", icon: FolderOpen },
   { key: "livrables", label: "Livrables", icon: CheckSquare },
