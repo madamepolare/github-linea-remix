@@ -503,6 +503,48 @@ export type Database = {
           },
         ]
       }
+      communication_reactions: {
+        Row: {
+          communication_id: string
+          created_at: string
+          emoji: string
+          id: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          communication_id: string
+          created_at?: string
+          emoji: string
+          id?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          communication_id?: string
+          created_at?: string
+          emoji?: string
+          id?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_reactions_communication_id_fkey"
+            columns: ["communication_id"]
+            isOneToOne: false
+            referencedRelation: "communications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communication_reactions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       communications: {
         Row: {
           attachments: Json | null
