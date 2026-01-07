@@ -151,8 +151,10 @@ export default function TenderDetail() {
       case "livrables":
         return <TenderLivrablesTab tenderId={tender.id} />;
       case "equipe":
-        const requiredSpecialties = Array.isArray(tender.required_team) 
-          ? (tender.required_team as Array<{ specialty: string }>).map(t => t.specialty)
+        const requiredSpecialties = Array.isArray(tender.required_team)
+          ? (tender.required_team as any[])
+              .map((t) => (typeof t === "string" ? t : t?.specialty))
+              .filter(Boolean)
           : [];
         return <TenderEquipeTab tenderId={tender.id} requiredCompetencies={requiredSpecialties} />;
       case "memoire":
