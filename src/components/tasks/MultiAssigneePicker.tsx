@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 
 interface Profile {
   id: string;
-  user_id: string;
   full_name: string | null;
   avatar_url: string | null;
 }
@@ -45,8 +44,8 @@ export function MultiAssigneePicker({ value, onChange, className }: MultiAssigne
 
       const { data: profiles, error: profileError } = await supabase
         .from("profiles")
-        .select("id, user_id, full_name, avatar_url")
-        .in("user_id", userIds);
+        .select("id, full_name, avatar_url")
+        .in("id", userIds);
 
       if (profileError) throw profileError;
       return profiles as Profile[];
@@ -54,20 +53,20 @@ export function MultiAssigneePicker({ value, onChange, className }: MultiAssigne
     enabled: !!activeWorkspace?.id,
   });
 
-  const toggleMember = (userId: string) => {
-    if (value.includes(userId)) {
-      onChange(value.filter((id) => id !== userId));
+  const toggleMember = (profileId: string) => {
+    if (value.includes(profileId)) {
+      onChange(value.filter((id) => id !== profileId));
     } else {
-      onChange([...value, userId]);
+      onChange([...value, profileId]);
     }
   };
 
-  const removeMember = (userId: string, e: React.MouseEvent) => {
+  const removeMember = (profileId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    onChange(value.filter((id) => id !== userId));
+    onChange(value.filter((id) => id !== profileId));
   };
 
-  const selectedMembers = members?.filter((m) => value.includes(m.user_id)) || [];
+  const selectedMembers = members?.filter((m) => value.includes(m.id)) || [];
 
   const getInitials = (name: string | null) => {
     if (!name) return "?";
@@ -96,7 +95,7 @@ export function MultiAssigneePicker({ value, onChange, className }: MultiAssigne
           ) : (
             <div className="flex flex-wrap gap-1">
               {selectedMembers.map((member) => (
-                <Badge key={member.user_id} variant="secondary" className="gap-1">
+                <Badge key={member.id} variant="secondary" className="gap-1">
                   <Avatar className="h-4 w-4">
                     <AvatarImage src={member.avatar_url || undefined} />
                     <AvatarFallback className="text-[8px]">
@@ -106,7 +105,7 @@ export function MultiAssigneePicker({ value, onChange, className }: MultiAssigne
                   <span className="max-w-20 truncate">{member.full_name || "Utilisateur"}</span>
                   <X
                     className="h-3 w-3 cursor-pointer hover:text-destructive"
-                    onClick={(e) => removeMember(member.user_id, e)}
+                    onClick={(e) => removeMember(member.id, e)}
                   />
                 </Badge>
               ))}
@@ -118,11 +117,11 @@ export function MultiAssigneePicker({ value, onChange, className }: MultiAssigne
         <div className="space-y-1">
           {members?.map((member) => (
             <div
-              key={member.user_id}
+              key={member.id}
               className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer"
-              onClick={() => toggleMember(member.user_id)}
+              onClick={() => toggleMember(member.id)}
             >
-              <Checkbox checked={value.includes(member.user_id)} />
+              <Checkbox checked={value.includes(member.id)} />
               <Avatar className="h-6 w-6">
                 <AvatarImage src={member.avatar_url || undefined} />
                 <AvatarFallback className="text-xs">

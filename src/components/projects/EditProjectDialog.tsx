@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/select";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjectMembers } from "@/hooks/useProjects";
-import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { MultiAssigneePicker } from "@/components/tasks/MultiAssigneePicker";
 import { format, parseISO } from "date-fns";
@@ -32,6 +31,7 @@ import {
   Loader2,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Project {
   id: string;
@@ -82,8 +82,6 @@ export function EditProjectDialog({
 }: EditProjectDialogProps) {
   const { companies } = useCRMCompanies();
   const { members, setMembers: setProjectMembers } = useProjectMembers(project.id);
-  const { data: profiles } = useWorkspaceProfiles();
-  
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description || "");
   const [projectType, setProjectType] = useState<ProjectType | null>(project.project_type);
@@ -152,6 +150,7 @@ export function EditProjectDialog({
       });
     } catch (error) {
       console.error("Error saving project:", error);
+      toast.error("Erreur lors de l'enregistrement du projet");
     }
   };
 

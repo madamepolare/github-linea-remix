@@ -88,6 +88,7 @@ export default function ProjectDetail() {
   const { updateProject } = useProjects();
   const [activeTab, setActiveTab] = useState("overview");
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [projectEditOpen, setProjectEditOpen] = useState(false);
 
   // Build entity config for TopBar
   const projectType = project ? PROJECT_TYPES.find((t) => t.value === project.project_type) : null;
@@ -95,42 +96,57 @@ export default function ProjectDetail() {
   const currentPhase = phases.find((p) => p.status === "in_progress");
 
   // Build team members display for actions slot
-  const teamMembersDisplay = projectMembers.length > 0 ? (
+  const teamMembersDisplay = (
     <TooltipProvider>
       <div className="flex items-center gap-2 mr-2">
-        <div className="flex items-center -space-x-2">
-          {projectMembers.slice(0, 4).map((member) => (
-            <Tooltip key={member.id}>
-              <TooltipTrigger asChild>
-                <Avatar className="h-7 w-7 border-2 border-background ring-0 cursor-pointer hover:z-10 hover:scale-110 transition-transform">
-                  <AvatarImage src={member.profile?.avatar_url || ""} />
-                  <AvatarFallback className="text-2xs bg-primary/10 text-primary">
-                    {member.profile?.full_name?.slice(0, 2).toUpperCase() || "?"}
-                  </AvatarFallback>
-                </Avatar>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{member.profile?.full_name || "Membre"}</p>
-              </TooltipContent>
-            </Tooltip>
-          ))}
-          {projectMembers.length > 4 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-2xs font-medium text-muted-foreground">
-                  +{projectMembers.length - 4}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{projectMembers.length - 4} autres membres</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-        <Users className="h-4 w-4 text-muted-foreground" />
+        {projectMembers.length > 0 && (
+          <div className="flex items-center -space-x-2">
+            {projectMembers.slice(0, 4).map((member) => (
+              <Tooltip key={member.id}>
+                <TooltipTrigger asChild>
+                  <Avatar className="h-7 w-7 border-2 border-background ring-0 cursor-pointer hover:z-10 hover:scale-110 transition-transform" onClick={() => setProjectEditOpen(true)}>
+                    <AvatarImage src={member.profile?.avatar_url || ""} />
+                    <AvatarFallback className="text-2xs bg-primary/10 text-primary">
+                      {member.profile?.full_name?.slice(0, 2).toUpperCase() || "?"}
+                    </AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{member.profile?.full_name || "Membre"}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+            {projectMembers.length > 4 && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-2xs font-medium text-muted-foreground cursor-pointer"
+                    onClick={() => setProjectEditOpen(true)}
+                  >
+                    +{projectMembers.length - 4}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{projectMembers.length - 4} autres membres</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        )}
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="gap-2"
+          onClick={() => setProjectEditOpen(true)}
+        >
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <span className="hidden sm:inline">Équipe</span>
+        </Button>
       </div>
     </TooltipProvider>
-  ) : null;
+  );
 
   // Set TopBar entity config when project data is available
   useEffect(() => {
@@ -223,43 +239,54 @@ export default function ProjectDetail() {
   const progressPercent = phases.length > 0 ? Math.round((completedPhases / phases.length) * 100) : 0;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Content - no more header here, it's in TopBar */}
-      <div className="flex-1 overflow-auto p-4 sm:p-6">
-        {activeTab === "overview" && (
-          <OverviewTab 
-            project={project} 
-            phases={phases} 
-            progressPercent={progressPercent}
-            onRefreshSummary={handleGenerateSummary}
-            isGeneratingSummary={isGeneratingSummary}
-            onUpdateProject={(updates) => updateProject.mutate({ id: project.id, ...updates })}
-            isUpdatingProject={updateProject.isPending}
-          />
-        )}
-        {activeTab === "planning" && <ProjectPlanningTab projectId={project.id} />}
-        {activeTab === "tasks" && (
-          <ProjectTasksTab projectId={project.id} />
-        )}
-        {activeTab === "communications" && (
-          <EntityCommunications entityType="project" entityId={project.id} />
-        )}
-        {activeTab === "elements" && <ProjectElementsTab projectId={project.id} />}
-        {activeTab === "orders" && <ProjectOrdersTab projectId={project.id} />}
-        {activeTab === "chantier" && <ChantierDashboard projectId={project.id} />}
-        {activeTab === "permits" && <PermitsTab projectId={project.id} />}
-        {activeTab === "insurances" && <InsurancesSection projectId={project.id} />}
-        {activeTab === "documents" && (
-          <ProjectDocumentsTab projectId={project.id} />
-        )}
-        {activeTab === "invoicing" && (
-          <ProjectInvoicingTab projectId={project.id} projectName={project.name} />
-        )}
-        {activeTab === "commercial" && (
-          <ProjectCommercialTab projectId={project.id} projectName={project.name} />
-        )}
+    <>
+      <div className="flex flex-col h-full overflow-hidden">
+        {/* Content - no more header here, it's in TopBar */}
+        <div className="flex-1 overflow-auto p-4 sm:p-6">
+          {activeTab === "overview" && (
+            <OverviewTab 
+              project={project} 
+              phases={phases} 
+              progressPercent={progressPercent}
+              onRefreshSummary={handleGenerateSummary}
+              isGeneratingSummary={isGeneratingSummary}
+              onUpdateProject={(updates) => updateProject.mutate({ id: project.id, ...updates })}
+              isUpdatingProject={updateProject.isPending}
+              onOpenProjectEdit={() => setProjectEditOpen(true)}
+            />
+          )}
+          {activeTab === "planning" && <ProjectPlanningTab projectId={project.id} />}
+          {activeTab === "tasks" && (
+            <ProjectTasksTab projectId={project.id} />
+          )}
+          {activeTab === "communications" && (
+            <EntityCommunications entityType="project" entityId={project.id} />
+          )}
+          {activeTab === "elements" && <ProjectElementsTab projectId={project.id} />}
+          {activeTab === "orders" && <ProjectOrdersTab projectId={project.id} />}
+          {activeTab === "chantier" && <ChantierDashboard projectId={project.id} />}
+          {activeTab === "permits" && <PermitsTab projectId={project.id} />}
+          {activeTab === "insurances" && <InsurancesSection projectId={project.id} />}
+          {activeTab === "documents" && (
+            <ProjectDocumentsTab projectId={project.id} />
+          )}
+          {activeTab === "invoicing" && (
+            <ProjectInvoicingTab projectId={project.id} projectName={project.name} />
+          )}
+          {activeTab === "commercial" && (
+            <ProjectCommercialTab projectId={project.id} projectName={project.name} />
+          )}
+        </div>
       </div>
-    </div>
+
+      <EditProjectDialog
+        open={projectEditOpen}
+        onOpenChange={setProjectEditOpen}
+        project={project}
+        onSave={(updates) => updateProject.mutate({ id: project.id, ...updates })}
+        isSaving={updateProject.isPending}
+      />
+    </>
   );
 }
 
@@ -271,16 +298,15 @@ interface OverviewTabProps {
   isGeneratingSummary: boolean;
   onUpdateProject: (updates: any) => void;
   isUpdatingProject: boolean;
+  onOpenProjectEdit: () => void;
 }
 
-function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary, onUpdateProject, isUpdatingProject }: OverviewTabProps) {
+function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary, onUpdateProject, isUpdatingProject, onOpenProjectEdit }: OverviewTabProps) {
   const completedPhases = phases.filter((p) => p.status === "completed").length;
   const { updatePhase, createPhase, deletePhase, reorderPhases } = useProjectPhases(project.id);
   const { activeWorkspace } = useAuth();
   const [phaseEditOpen, setPhaseEditOpen] = useState(false);
-  const [projectEditOpen, setProjectEditOpen] = useState(false);
   const [confirmPhaseId, setConfirmPhaseId] = useState<string | null>(null);
-  const { updateProject } = useProjects();
 
   const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
 
@@ -532,7 +558,7 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setProjectEditOpen(true)}
+                onClick={onOpenProjectEdit}
               >
                 <Pencil className="h-3.5 w-3.5 mr-1.5" />
                 Modifier
@@ -645,13 +671,6 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
         onReorderPhases={reorderPhases.mutate}
       />
 
-      {/* Project Edit Dialog */}
-      <EditProjectDialog
-        open={projectEditOpen}
-        onOpenChange={setProjectEditOpen}
-        project={project}
-        onSave={(updates) => updateProject.mutate({ id: project.id, ...updates })}
-      />
 
       {/* Confirm Phase Change Dialog */}
       <AlertDialog open={!!confirmPhaseId} onOpenChange={() => setConfirmPhaseId(null)}>
