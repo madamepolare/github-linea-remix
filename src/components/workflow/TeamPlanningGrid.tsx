@@ -1,15 +1,18 @@
 import { useState, useMemo, useCallback } from "react";
 import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay, setHours } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
+import { useWorkspaceEvents, WorkspaceEvent } from "@/hooks/useWorkspaceEvents";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface TeamPlanningGridProps {
   onEventClick?: (schedule: TaskSchedule) => void;
@@ -19,19 +22,53 @@ interface TeamPlanningGridProps {
 
 type ViewMode = "week" | "2weeks" | "month";
 
-const CELL_WIDTH = 80; // Plus large
-const ROW_HEIGHT = 120; // Plus haut pour plus de tâches
+// Types pour les items affichés dans le planning
+type PlanningItem = {
+  id: string;
+  type: "task" | "event";
+  title: string;
+  start: Date;
+  end: Date | null;
+  color: string;
+  projectName?: string;
+  projectColor?: string;
+  eventType?: string;
+  originalData: TaskSchedule | WorkspaceEvent;
+};
+
+const CELL_WIDTH = 80;
+const ROW_HEIGHT = 130;
 const HOURS_PER_DAY = 8;
+
+const EVENT_TYPE_COLORS: Record<string, string> = {
+  meeting: "#3b82f6", // blue
+  milestone: "#f59e0b", // amber
+  reminder: "#8b5cf6", // violet
+  rendu: "#10b981", // emerald
+};
 
 export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: TeamPlanningGridProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("2weeks");
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
+  const [showEvents, setShowEvents] = useState(true);
   
   const { schedules, isLoading: schedulesLoading, createSchedule } = useTaskSchedules();
   const { data: members, isLoading: membersLoading } = useTeamMembers();
+  const { data: events, isLoading: eventsLoading } = useWorkspaceEvents();
 
-  const isLoading = schedulesLoading || membersLoading;
+  const isLoading = schedulesLoading || membersLoading || eventsLoading;
+
+  // Map des emails vers user_ids
+  const emailToUserMap = useMemo(() => {
+    const map = new Map<string, string>();
+    members?.forEach(m => {
+      if (m.profile?.email) {
+        map.set(m.profile.email.toLowerCase(), m.user_id);
+      }
+    });
+    return map;
+  }, [members]);
 
   // Calculer les jours à afficher
   const days = useMemo(() => {
@@ -73,40 +110,84 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
 
   const goToToday = () => setCurrentDate(new Date());
 
-  const getSchedulesForMemberAndDay = useCallback((memberId: string, day: Date) => {
-    if (!schedules) return [];
-    
-    return schedules.filter(schedule => {
-      if (schedule.user_id !== memberId) return false;
+  // Récupérer les items (tâches + événements) pour un membre et un jour
+  const getItemsForMemberAndDay = useCallback((memberId: string, memberEmail: string | null, day: Date): PlanningItem[] => {
+    const items: PlanningItem[] = [];
+    const dayStart = startOfDay(day);
+    const dayEnd = addDays(dayStart, 1);
+
+    // Ajouter les tâches planifiées
+    schedules?.forEach(schedule => {
+      if (schedule.user_id !== memberId) return;
       
       const scheduleStart = new Date(schedule.start_datetime);
       const scheduleEnd = new Date(schedule.end_datetime);
-      const dayStart = startOfDay(day);
-      const dayEnd = addDays(dayStart, 1);
       
-      return scheduleStart < dayEnd && scheduleEnd > dayStart;
+      if (scheduleStart < dayEnd && scheduleEnd > dayStart) {
+        items.push({
+          id: schedule.id,
+          type: "task",
+          title: schedule.task?.title || "Tâche",
+          start: scheduleStart,
+          end: scheduleEnd,
+          color: schedule.color || schedule.task?.project?.color || "#6366f1",
+          projectName: schedule.task?.project?.name,
+          projectColor: schedule.task?.project?.color || undefined,
+          originalData: schedule,
+        });
+      }
     });
-  }, [schedules]);
 
-  const getOccupancyRate = useCallback((memberId: string, day: Date) => {
-    const daySchedules = getSchedulesForMemberAndDay(memberId, day);
+    // Ajouter les événements (si activés)
+    if (showEvents && events && memberEmail) {
+      events.forEach(event => {
+        // Vérifier si le membre est dans les attendees
+        const isAttendee = event.attendees?.some(a => 
+          a.email?.toLowerCase() === memberEmail.toLowerCase() ||
+          a.user_id === memberId
+        );
+        
+        if (!isAttendee) return;
+
+        const eventStart = new Date(event.start_datetime);
+        const eventEnd = event.end_datetime ? new Date(event.end_datetime) : addDays(eventStart, 0);
+        
+        if (eventStart < dayEnd && eventEnd > dayStart) {
+          items.push({
+            id: event.id,
+            type: "event",
+            title: event.title,
+            start: eventStart,
+            end: eventEnd,
+            color: EVENT_TYPE_COLORS[event.event_type] || "#6366f1",
+            projectName: event.project?.name,
+            projectColor: event.project?.color || undefined,
+            eventType: event.event_type,
+            originalData: event,
+          });
+        }
+      });
+    }
+
+    return items.sort((a, b) => a.start.getTime() - b.start.getTime());
+  }, [schedules, events, showEvents]);
+
+  const getOccupancyRate = useCallback((memberId: string, memberEmail: string | null, day: Date) => {
+    const items = getItemsForMemberAndDay(memberId, memberEmail, day);
     
     let totalMinutes = 0;
-    daySchedules.forEach(schedule => {
-      const start = new Date(schedule.start_datetime);
-      const end = new Date(schedule.end_datetime);
-      const dayStart = startOfDay(day);
-      const dayEnd = addDays(dayStart, 1);
-      
-      const effectiveStart = start < dayStart ? dayStart : start;
-      const effectiveEnd = end > dayEnd ? dayEnd : end;
-      
+    const dayStart = startOfDay(day);
+    const dayEnd = addDays(dayStart, 1);
+    
+    items.forEach(item => {
+      const effectiveStart = item.start < dayStart ? dayStart : item.start;
+      const effectiveEnd = item.end && item.end > dayEnd ? dayEnd : (item.end || dayEnd);
       totalMinutes += Math.max(0, differenceInMinutes(effectiveEnd, effectiveStart));
     });
     
     const maxMinutes = HOURS_PER_DAY * 60;
     return Math.min(100, Math.round((totalMinutes / maxMinutes) * 100));
-  }, [getSchedulesForMemberAndDay]);
+  }, [getItemsForMemberAndDay]);
 
   // Gestion du drag & drop
   const handleDragOver = useCallback((e: React.DragEvent, cellKey: string) => {
@@ -128,9 +209,8 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
       if (!taskData) return;
       
       const task = JSON.parse(taskData);
-      const estimatedHours = task.estimated_hours || 2; // Default 2h si pas d'estimation
+      const estimatedHours = task.estimated_hours || 2;
       
-      // Créer le schedule : début à 9h, fin selon estimation
       const startDate = setHours(startOfDay(day), 9);
       const endDate = new Date(startDate.getTime() + estimatedHours * 60 * 60 * 1000);
       
@@ -191,7 +271,22 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          {/* Toggle événements */}
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-events"
+              checked={showEvents}
+              onCheckedChange={setShowEvents}
+            />
+            <Label htmlFor="show-events" className="text-xs flex items-center gap-1.5 cursor-pointer">
+              <Calendar className="h-3.5 w-3.5" />
+              Événements
+            </Label>
+          </div>
+
+          <div className="h-6 w-px bg-border" />
+
           <div className="flex bg-muted rounded-lg p-0.5">
             {[
               { key: "week", label: "7 jours" },
@@ -214,6 +309,29 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
           </div>
         </div>
       </div>
+
+      {/* Légende */}
+      {showEvents && (
+        <div className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-xs">
+          <span className="text-muted-foreground">Légende :</span>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: EVENT_TYPE_COLORS.meeting }} />
+            <span>Réunion</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: EVENT_TYPE_COLORS.milestone }} />
+            <span>Jalon</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: EVENT_TYPE_COLORS.rendu }} />
+            <span>Rendu</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: "#6366f1" }} />
+            <span>Tâche</span>
+          </div>
+        </div>
+      )}
 
       {/* Grille principale */}
       <div className="flex-1 overflow-hidden flex">
@@ -327,7 +445,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                     key={member.user_id}
                     member={member}
                     days={days}
-                    getSchedulesForMemberAndDay={getSchedulesForMemberAndDay}
+                    getItemsForMemberAndDay={getItemsForMemberAndDay}
                     getOccupancyRate={getOccupancyRate}
                     onEventClick={onEventClick}
                     onCellClick={onCellClick}
@@ -352,8 +470,8 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
 interface MemberRowProps {
   member: TeamMember;
   days: Date[];
-  getSchedulesForMemberAndDay: (memberId: string, day: Date) => TaskSchedule[];
-  getOccupancyRate: (memberId: string, day: Date) => number;
+  getItemsForMemberAndDay: (memberId: string, memberEmail: string | null, day: Date) => PlanningItem[];
+  getOccupancyRate: (memberId: string, memberEmail: string | null, day: Date) => number;
   onEventClick?: (schedule: TaskSchedule) => void;
   onCellClick?: (date: Date, member: TeamMember) => void;
   onDragOver: (e: React.DragEvent, cellKey: string) => void;
@@ -367,7 +485,7 @@ interface MemberRowProps {
 function MemberRow({
   member,
   days,
-  getSchedulesForMemberAndDay,
+  getItemsForMemberAndDay,
   getOccupancyRate,
   onEventClick,
   onCellClick,
@@ -378,12 +496,14 @@ function MemberRow({
   cellWidth,
   rowHeight,
 }: MemberRowProps) {
+  const memberEmail = member.profile?.email || null;
+  
   return (
     <div className="flex border-b" style={{ height: rowHeight }}>
       {days.map(day => {
         const cellKey = `${member.user_id}-${day.toISOString()}`;
-        const schedules = getSchedulesForMemberAndDay(member.user_id, day);
-        const occupancy = getOccupancyRate(member.user_id, day);
+        const items = getItemsForMemberAndDay(member.user_id, memberEmail, day);
+        const occupancy = getOccupancyRate(member.user_id, memberEmail, day);
         const isToday = isSameDay(day, new Date());
         const weekend = isWeekend(day);
         const isDragOver = dragOverCell === cellKey;
@@ -394,7 +514,7 @@ function MemberRow({
             cellKey={cellKey}
             day={day}
             member={member}
-            schedules={schedules}
+            items={items}
             occupancy={occupancy}
             isToday={isToday}
             isWeekend={weekend}
@@ -416,7 +536,7 @@ interface DayCellProps {
   cellKey: string;
   day: Date;
   member: TeamMember;
-  schedules: TaskSchedule[];
+  items: PlanningItem[];
   occupancy: number;
   isToday: boolean;
   isWeekend: boolean;
@@ -433,7 +553,7 @@ function DayCell({
   cellKey,
   day,
   member,
-  schedules,
+  items,
   occupancy,
   isToday,
   isWeekend,
@@ -478,51 +598,67 @@ function DayCell({
         onDragLeave={onDragLeave}
         onDrop={(e) => onDrop(e, day, member)}
       >
-        {/* Tâches planifiées */}
+        {/* Items planifiés */}
         <div className="flex-1 space-y-1 overflow-hidden">
-          {schedules.slice(0, 4).map(schedule => {
-            const color = schedule.color || schedule.task?.project?.color || "#6366f1";
-            
-            return (
-              <Tooltip key={schedule.id}>
-                <TooltipTrigger asChild>
-                  <div
-                    className="rounded text-[10px] leading-tight px-1.5 py-1 truncate cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02] transition-all font-medium"
-                    style={{
-                      backgroundColor: color,
-                      color: "white",
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEventClick?.(schedule);
-                    }}
-                  >
-                    {schedule.task?.title || "Tâche"}
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="max-w-xs">
-                  <div className="space-y-1">
-                    <div className="font-medium">{schedule.task?.title}</div>
-                    {schedule.task?.project?.name && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1">
-                        <div 
-                          className="w-2 h-2 rounded-full" 
-                          style={{ backgroundColor: schedule.task.project.color || "#6366f1" }}
-                        />
-                        {schedule.task.project.name}
-                      </div>
+          {items.slice(0, 4).map(item => (
+            <Tooltip key={item.id}>
+              <TooltipTrigger asChild>
+                <div
+                  className={cn(
+                    "rounded text-[10px] leading-tight px-1.5 py-1 truncate cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02] transition-all font-medium flex items-center gap-1",
+                    item.type === "event" && "border-l-2"
+                  )}
+                  style={{
+                    backgroundColor: item.color,
+                    color: "white",
+                    borderLeftColor: item.type === "event" ? "rgba(255,255,255,0.5)" : undefined,
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (item.type === "task") {
+                      onEventClick?.(item.originalData as TaskSchedule);
+                    }
+                  }}
+                >
+                  {item.type === "event" && <Calendar className="h-2.5 w-2.5 flex-shrink-0" />}
+                  {item.type === "task" && <Clock className="h-2.5 w-2.5 flex-shrink-0" />}
+                  <span className="truncate">{item.title}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs">
+                <div className="space-y-1">
+                  <div className="font-medium flex items-center gap-1.5">
+                    {item.type === "event" ? (
+                      <Calendar className="h-3.5 w-3.5" />
+                    ) : (
+                      <Clock className="h-3.5 w-3.5" />
                     )}
-                    <div className="text-xs text-muted-foreground">
-                      {format(new Date(schedule.start_datetime), "HH:mm")} - {format(new Date(schedule.end_datetime), "HH:mm")}
-                    </div>
+                    {item.title}
                   </div>
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-          {schedules.length > 4 && (
+                  {item.projectName && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      <div 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: item.projectColor || "#6366f1" }}
+                      />
+                      {item.projectName}
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground">
+                    {format(item.start, "HH:mm")} {item.end && `- ${format(item.end, "HH:mm")}`}
+                  </div>
+                  {item.type === "event" && item.eventType && (
+                    <div className="text-xs text-muted-foreground capitalize">
+                      Type : {item.eventType === "meeting" ? "Réunion" : item.eventType === "milestone" ? "Jalon" : item.eventType === "rendu" ? "Rendu" : item.eventType}
+                    </div>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+          {items.length > 4 && (
             <div className="text-[10px] text-muted-foreground text-center font-medium bg-muted/50 rounded px-1 py-0.5">
-              +{schedules.length - 4} autres
+              +{items.length - 4} autres
             </div>
           )}
         </div>
