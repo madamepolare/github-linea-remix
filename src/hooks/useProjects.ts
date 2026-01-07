@@ -330,16 +330,16 @@ export function useProjectMembers(projectId: string | null) {
       const userIds = membersData.map(m => m.user_id);
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, full_name, avatar_url")
-        .in("id", userIds);
+        .select("user_id, full_name, avatar_url")
+        .in("user_id", userIds);
 
       if (profilesError) throw profilesError;
 
       // Join manually
       return membersData.map(member => ({
         ...member,
-        profile: profiles?.find(p => p.id === member.user_id) || null
-      })) as (ProjectMember & { profile: { id: string; full_name: string | null; avatar_url: string | null } | null })[];
+        profile: profiles?.find(p => p.user_id === member.user_id) || null
+      })) as (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[];
     },
     enabled: !!projectId,
   });
