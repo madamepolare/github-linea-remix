@@ -73,8 +73,11 @@ export default function CompanyDetail() {
   const {
     companyCategories,
     companyTypes,
+    betSpecialties,
     getCompanyTypesForCategory,
     getCategoryFromType,
+    getBetSpecialtyLabel,
+    getBetSpecialtyColor,
   } = useCRMSettings();
 
   const [activeTab, setActiveTab] = useState("overview");
@@ -409,24 +412,46 @@ export default function CompanyDetail() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="gap-1.5">
-                        <div
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: getCompanyTypeColorLocal(company.industry || "") }}
-                        />
-                        {(() => {
-                          const industry = company.industry || "";
-                          const specs = getNormalizedBetSpecialties(company.industry, company.bet_specialties);
-                          if ((industry === "bet" || industry.startsWith("bet_")) && specs.length > 0) {
-                            const labels = specs
-                              .map((s) => BET_SPECIALTIES.find((x) => x.value === s)?.label || s)
-                              .join(", ");
-                            return `${getCompanyTypeShortLabelLocal("bet")} · ${labels}`;
-                          }
-                          return getCompanyTypeLabelLocal(company.industry || "");
-                        })()}
-                      </Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {(() => {
+                        const industry = company.industry || "";
+                        const specs = getNormalizedBetSpecialties(company.industry, company.bet_specialties);
+                        
+                        // If BET with specialties, show category badge + specialty badges
+                        if ((industry === "bet" || industry.startsWith("bet_")) && specs.length > 0) {
+                          return (
+                            <>
+                              <Badge variant="outline" className="gap-1.5">
+                                <div
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: getCompanyTypeColorLocal("bet") }}
+                                />
+                                {getCompanyTypeShortLabelLocal("bet")}
+                              </Badge>
+                              {specs.map((spec) => (
+                                <Badge
+                                  key={spec}
+                                  className="text-white text-xs"
+                                  style={{ backgroundColor: getBetSpecialtyColor(spec) }}
+                                >
+                                  {getBetSpecialtyLabel(spec)}
+                                </Badge>
+                              ))}
+                            </>
+                          );
+                        }
+                        
+                        // Regular company type
+                        return (
+                          <Badge variant="outline" className="gap-1.5">
+                            <div
+                              className="w-2 h-2 rounded-full"
+                              style={{ backgroundColor: getCompanyTypeColorLocal(industry) }}
+                            />
+                            {getCompanyTypeLabelLocal(industry)}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
