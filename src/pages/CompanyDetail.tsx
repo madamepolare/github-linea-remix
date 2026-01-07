@@ -65,6 +65,7 @@ import { EntityInvoicesList } from "@/components/crm/EntityInvoicesList";
 import { EntityCommercialList } from "@/components/crm/EntityCommercialList";
 import { LinkedEntitiesPanel } from "@/components/shared/LinkedEntitiesPanel";
 import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
+import { EntityCommunications } from "@/components/shared/EntityCommunications";
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
@@ -258,6 +259,9 @@ export default function CompanyDetail() {
           </div>
 
           {/* Content based on activeTab */}
+          {activeTab === "communications" && (
+            <EntityCommunications entityType="company" entityId={company.id} />
+          )}
           {activeTab === "overview" && (
             <Card>
               <CardContent className="p-6 space-y-6">

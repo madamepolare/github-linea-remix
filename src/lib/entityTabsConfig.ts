@@ -50,7 +50,8 @@ export const PROJECT_TABS: EntityTab[] = [
 // Lead detail tabs
 export const LEAD_TABS: EntityTab[] = [
   { key: "overview", label: "Aperçu", icon: LayoutDashboard },
-  { key: "activities", label: "Activités", icon: MessageSquare },
+  { key: "communications", label: "Communications", icon: MessageSquare },
+  { key: "activities", label: "Activités", icon: Clock },
   { key: "tasks", label: "Tâches", icon: CheckSquare },
   { key: "details", label: "Détails", icon: Settings },
   { key: "documents", label: "Documents", icon: FileText },
@@ -78,6 +79,7 @@ export const CONTACT_TABS: EntityTab[] = [
 // Company detail tabs  
 export const COMPANY_TABS: EntityTab[] = [
   { key: "overview", label: "Informations", icon: LayoutDashboard },
+  { key: "communications", label: "Communications", icon: MessageSquare },
   { key: "contacts", label: "Contacts", icon: Users },
   { key: "leads", label: "Opportunités", icon: Target },
   { key: "tasks", label: "Tâches", icon: CheckSquare },
