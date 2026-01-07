@@ -11,7 +11,7 @@ export interface TenderCalendarEvent {
   start_datetime: string;
   end_datetime?: string;
   location?: string;
-  attendees?: Array<{ email: string; name?: string }>;
+  attendees?: Array<{ user_id?: string; email?: string; name?: string }>;
 }
 
 export function useTenderCalendarEvents() {

@@ -1357,7 +1357,7 @@ function PipelineView({
           );
         })}
         
-        {/* Other specialties not required */}
+        {/* Other specialties not in required list */}
         {Object.entries(candidatesBySpecialty)
           .filter(([specialty]) => !requiredSpecialties.includes(specialty))
           .map(([specialty, specCandidates]) => (
@@ -1395,51 +1395,6 @@ function PipelineView({
               </CardContent>
             </Card>
           ))}
-      </div>
-      <div className="space-y-4">
-        {Object.keys(candidatesBySpecialty).length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="py-8 text-center text-muted-foreground">
-              <p>Aucun résultat pour cette recherche</p>
-            </CardContent>
-          </Card>
-        ) : (
-          Object.entries(candidatesBySpecialty).map(([specialty, specCandidates]) => (
-            <Card key={specialty}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    {SPECIALTIES.find(s => s.value === specialty)?.label || specialty}
-                    <Badge variant="secondary">{specCandidates.length}</Badge>
-                  </CardTitle>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => onAddWithSpecialty(specialty)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {specCandidates.map((candidate) => (
-                  <CandidateRow
-                    key={candidate.id}
-                    candidate={candidate}
-                    estimatedBudget={estimatedBudget}
-                    isSelected={selectedCandidates.has(candidate.id)}
-                    onToggleSelect={() => toggleCandidate(candidate.id)}
-                    onEdit={() => onEditCandidate(candidate)}
-                    onUpdateStatus={(status) => onUpdateCandidate(candidate.id, { status: status as any })}
-                    onRemove={() => onRemoveCandidate(candidate.id, candidate.company?.name || candidate.contact?.name || 'ce partenaire')}
-                    onConfirmToTeam={() => onConfirmToTeam(candidate.id)}
-                    onSendInvite={() => onSendInvite(candidate)}
-                  />
-                ))}
-              </CardContent>
-            </Card>
-          ))
-        )}
       </div>
 
       <Button variant="outline" className="w-full" onClick={onAddCandidate}>

@@ -50,21 +50,24 @@ export function useTeamMembers() {
       );
 
       // Combine members with their profiles
-      return members.map(member => ({
-        id: member.id,
-        user_id: member.user_id,
-        role: member.role,
-        created_at: member.created_at,
-        profile: profileMap.get(member.user_id) ? {
-          id: profileMap.get(member.user_id)!.id,
-          full_name: profileMap.get(member.user_id)!.full_name,
-          avatar_url: profileMap.get(member.user_id)!.avatar_url,
-          email: null,
-          job_title: profileMap.get(member.user_id)!.job_title,
-          phone: profileMap.get(member.user_id)!.phone,
-          department: null,
-        } : null,
-      }));
+      return members.map(member => {
+        const profile = profileMap.get(member.user_id);
+        return {
+          id: member.id,
+          user_id: member.user_id,
+          role: member.role,
+          created_at: member.created_at,
+          profile: profile ? {
+            id: profile.id,
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url,
+            email: null,
+            job_title: profile.job_title,
+            phone: profile.phone,
+            department: null,
+          } : null,
+        };
+      });
     },
     enabled: !!activeWorkspace,
   });

@@ -66,10 +66,11 @@ export function SiteVisitAssignment({
       const endDate = new Date(siteVisitDate);
       endDate.setHours(endDate.getHours() + 2);
 
+      // Use user_id as attendee identifier and name for display
       const attendees = selectedMembers.map((m) => ({
-        email: m.profile?.email || "",
-        name: m.profile?.full_name || undefined,
-      })).filter(a => a.email);
+        user_id: m.user_id,
+        name: m.profile?.full_name || "Membre",
+      }));
 
       await createTenderEvent.mutateAsync({
         tender_id: tenderId,
