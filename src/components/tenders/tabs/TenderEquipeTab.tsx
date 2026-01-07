@@ -338,7 +338,7 @@ Cordialement`);
           <TabsList>
             <TabsTrigger value="pipeline" className="gap-2">
               <UserPlus className="h-4 w-4" />
-              Pipeline partenaires
+              Équipe potentielle
               {stats.total > 0 && (
                 <Badge variant="secondary" className="ml-1">{stats.total}</Badge>
               )}
@@ -458,6 +458,7 @@ Cordialement`);
           }}
           onBulkInvite={() => setShowBulkInviteDialog(true)}
           isLoading={isLoading}
+          requiredSpecialties={requiredSpecialties}
         />
       ) : (
         <TeamView
@@ -1143,6 +1144,7 @@ function PipelineView({
   onSendInvite,
   onBulkInvite,
   isLoading,
+  requiredSpecialties,
 }: {
   candidates: PartnerCandidate[];
   candidatesBySpecialty: Record<string, PartnerCandidate[]>;
@@ -1166,6 +1168,7 @@ function PipelineView({
   onSendInvite: (candidate: PartnerCandidate) => void;
   onBulkInvite: () => void;
   isLoading: boolean;
+  requiredSpecialties: string[];
 }) {
   const toggleCandidate = (id: string) => {
     const newSet = new Set(selectedCandidates);
@@ -1304,16 +1307,95 @@ function PipelineView({
         </Card>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-5 gap-3">
-        <StatCard label="Suggérés" value={stats.suggested} color="bg-muted" />
-        <StatCard label="Contactés" value={stats.contacted} color="bg-blue-100 dark:bg-blue-900/30" />
-        <StatCard label="Intéressés" value={stats.interested} color="bg-amber-100 dark:bg-amber-900/30" />
-        <StatCard label="Confirmés" value={stats.confirmed} color="bg-green-100 dark:bg-green-900/30" />
-        <StatCard label="Déclinés" value={stats.declined} color="bg-red-100 dark:bg-red-900/30" />
+      {/* Required Specialties Slots */}
+      <div className="space-y-4">
+        {requiredSpecialties.map(specialty => {
+          const specCandidates = candidatesBySpecialty[specialty] || [];
+          const hasCandidate = specCandidates.length > 0;
+          
+          return (
+            <Card key={specialty} className={cn(!hasCandidate && "border-dashed border-muted-foreground/30")}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    {SPECIALTIES.find(s => s.value === specialty)?.label || specialty}
+                    {hasCandidate && <Badge variant="secondary">{specCandidates.length}</Badge>}
+                    {!hasCandidate && <Badge variant="outline" className="text-amber-600 border-amber-300">Requis</Badge>}
+                  </CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => onAddWithSpecialty(specialty)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {hasCandidate ? (
+                  specCandidates.map((candidate) => (
+                    <CandidateRow
+                      key={candidate.id}
+                      candidate={candidate}
+                      estimatedBudget={estimatedBudget}
+                      isSelected={selectedCandidates.has(candidate.id)}
+                      onToggleSelect={() => toggleCandidate(candidate.id)}
+                      onEdit={() => onEditCandidate(candidate)}
+                      onUpdateStatus={(status) => onUpdateCandidate(candidate.id, { status: status as any })}
+                      onRemove={() => onRemoveCandidate(candidate.id, candidate.company?.name || candidate.contact?.name || "ce partenaire")}
+                      onConfirmToTeam={() => onConfirmToTeam(candidate.id)}
+                      onSendInvite={() => onSendInvite(candidate)}
+                    />
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Aucun partenaire ajouté pour cette spécialité
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+        
+        {/* Other specialties not required */}
+        {Object.entries(candidatesBySpecialty)
+          .filter(([specialty]) => !requiredSpecialties.includes(specialty))
+          .map(([specialty, specCandidates]) => (
+            <Card key={specialty}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    {SPECIALTIES.find(s => s.value === specialty)?.label || specialty}
+                    <Badge variant="secondary">{specCandidates.length}</Badge>
+                  </CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => onAddWithSpecialty(specialty)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {specCandidates.map((candidate) => (
+                  <CandidateRow
+                    key={candidate.id}
+                    candidate={candidate}
+                    estimatedBudget={estimatedBudget}
+                    isSelected={selectedCandidates.has(candidate.id)}
+                    onToggleSelect={() => toggleCandidate(candidate.id)}
+                    onEdit={() => onEditCandidate(candidate)}
+                    onUpdateStatus={(status) => onUpdateCandidate(candidate.id, { status: status as any })}
+                    onRemove={() => onRemoveCandidate(candidate.id, candidate.company?.name || candidate.contact?.name || "ce partenaire")}
+                    onConfirmToTeam={() => onConfirmToTeam(candidate.id)}
+                    onSendInvite={() => onSendInvite(candidate)}
+                  />
+                ))}
+              </CardContent>
+            </Card>
+          ))}
       </div>
-
-      {/* By Specialty */}
       <div className="space-y-4">
         {Object.keys(candidatesBySpecialty).length === 0 ? (
           <Card className="border-dashed">

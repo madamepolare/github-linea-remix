@@ -12,6 +12,7 @@ import {
   Eye,
   Building2,
   Theater,
+  GripVertical,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { KanbanBoard, type KanbanColumn as KanbanColumnType, KanbanCard } from "@/components/shared/KanbanBoard";
 import { useTenders } from "@/hooks/useTenders";
 import { 
   PIPELINE_STATUS_LABELS, 
@@ -35,6 +37,13 @@ import {
 } from "@/lib/tenderTypes";
 import { cn } from "@/lib/utils";
 import { CreateTenderDialog } from "@/components/tenders/CreateTenderDialog";
+
+// Color mapping for pipeline status
+const PIPELINE_COLUMN_COLORS: Record<PipelineStatus, string> = {
+  a_approuver: "#f59e0b",
+  en_cours: "#3b82f6",
+  deposes: "#10b981",
+};
 
 export default function Tenders() {
   const navigate = useNavigate();
@@ -57,11 +66,21 @@ export default function Tenders() {
       t.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const pipelineColumns: PipelineStatus[] = ['a_approuver', 'en_cours', 'deposes'];
+  const pipelineColumns: PipelineStatus[] = ["a_approuver", "en_cours", "deposes"];
 
-  const handleDrop = (tenderId: string, newStatus: PipelineStatus) => {
-    updateTender.mutate({ id: tenderId, pipeline_status: newStatus });
+  const handleDrop = (tenderId: string, fromColumnId: string, toColumnId: string) => {
+    if (fromColumnId !== toColumnId) {
+      updateTender.mutate({ id: tenderId, pipeline_status: toColumnId as PipelineStatus });
+    }
   };
+
+  // Build kanban columns
+  const kanbanColumns: KanbanColumnType<Tender>[] = pipelineColumns.map((status) => ({
+    id: status,
+    label: PIPELINE_STATUS_LABELS[status],
+    color: PIPELINE_COLUMN_COLORS[status],
+    items: tendersByPipeline[status] || [],
+  }));
 
   return (
     <>
@@ -97,18 +116,20 @@ export default function Tenders() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
           ) : viewMode === "kanban" ? (
-            <div className="flex gap-4 h-full overflow-x-auto pb-4">
-              {pipelineColumns.map((status) => (
-                <KanbanColumn
-                  key={status}
-                  status={status}
-                  tenders={tendersByPipeline[status] || []}
-                  onTenderClick={(id) => navigate(`/tenders/${id}`)}
-                  onDelete={(id) => deleteTender.mutate(id)}
-                  onDrop={(tenderId) => handleDrop(tenderId, status)}
+            <KanbanBoard<Tender>
+              columns={kanbanColumns}
+              isLoading={isLoading}
+              onDrop={handleDrop}
+              getItemId={(tender) => tender.id}
+              emptyColumnContent="Aucun appel d'offre"
+              renderCard={(tender, isDragging) => (
+                <TenderKanbanCard
+                  tender={tender}
+                  onClick={() => navigate(`/tenders/${tender.id}`)}
+                  onDelete={() => deleteTender.mutate(tender.id)}
                 />
-              ))}
-            </div>
+              )}
+            />
           ) : (
             <TenderListView 
               tenders={filteredTenders} 
@@ -127,64 +148,7 @@ export default function Tenders() {
   );
 }
 
-function KanbanColumn({ 
-  status, 
-  tenders, 
-  onTenderClick,
-  onDelete,
-  onDrop,
-}: { 
-  status: PipelineStatus; 
-  tenders: Tender[];
-  onTenderClick: (id: string) => void;
-  onDelete: (id: string) => void;
-  onDrop: (tenderId: string) => void;
-}) {
-  const [isDragOver, setIsDragOver] = useState(false);
-
-  return (
-    <div 
-      className={cn(
-        "flex-shrink-0 w-80 flex flex-col rounded-lg transition-colors",
-        isDragOver ? "bg-primary/10" : "bg-muted/30"
-      )}
-      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-      onDragLeave={() => setIsDragOver(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setIsDragOver(false);
-        const tenderId = e.dataTransfer.getData("tenderId");
-        if (tenderId) onDrop(tenderId);
-      }}
-    >
-      <div className="p-3 border-b flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className={cn("text-xs", PIPELINE_STATUS_COLORS[status])}>
-            {PIPELINE_STATUS_LABELS[status]}
-          </Badge>
-          <span className="text-xs text-muted-foreground">{tenders.length}</span>
-        </div>
-      </div>
-      <div className="flex-1 overflow-y-auto p-2 space-y-2">
-        {tenders.map((tender) => (
-          <TenderCard 
-            key={tender.id} 
-            tender={tender} 
-            onClick={() => onTenderClick(tender.id)}
-            onDelete={() => onDelete(tender.id)}
-          />
-        ))}
-        {tenders.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            Aucun appel d'offre
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TenderCard({ 
+function TenderKanbanCard({ 
   tender, 
   onClick,
   onDelete,
@@ -196,16 +160,11 @@ function TenderCard({
   const deadline = tender.submission_deadline ? new Date(tender.submission_deadline) : null;
   const isUrgent = deadline && differenceInDays(deadline, new Date()) <= 7 && !isPast(deadline);
   const isOverdue = deadline && isPast(deadline);
-  const TypeIcon = tender.tender_type === 'scenographie' ? Theater : Building2;
+  const TypeIcon = tender.tender_type === "scenographie" ? Theater : Building2;
 
   return (
-    <Card 
-      className="cursor-pointer hover:shadow-md transition-shadow"
-      onClick={onClick}
-      draggable
-      onDragStart={(e) => e.dataTransfer.setData("tenderId", tender.id)}
-    >
-      <CardContent className="p-3 space-y-2">
+    <KanbanCard onClick={onClick}>
+      <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1">
@@ -270,8 +229,8 @@ function TenderCard({
             </span>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </KanbanCard>
   );
 }
 
