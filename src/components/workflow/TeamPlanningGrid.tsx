@@ -11,13 +11,13 @@ import { useAllProjectMembers } from "@/hooks/useProjects";
 import { useTeamAbsences, TeamAbsence, absenceTypeLabels } from "@/hooks/useTeamAbsences";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Task } from "@/hooks/useTasks";
 import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
+import { ResizablePlanningItem, PlanningItem } from "./ResizablePlanningItem";
 
 interface TeamPlanningGridProps {
   onEventClick?: (schedule: TaskSchedule) => void;
@@ -26,21 +26,6 @@ interface TeamPlanningGridProps {
 }
 
 type ViewMode = "week" | "2weeks" | "month";
-
-// Types pour les items affichés dans le planning
-type PlanningItem = {
-  id: string;
-  type: "task" | "event" | "absence";
-  title: string;
-  start: Date;
-  end: Date | null;
-  color: string;
-  projectName?: string;
-  projectColor?: string;
-  eventType?: string;
-  durationHours?: number;
-  originalData: TaskSchedule | WorkspaceEvent | TeamAbsence;
-};
 
 // Configuration des dimensions - colonnes plus larges
 const CELL_WIDTH = 110;
@@ -273,6 +258,20 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
       id: scheduleId,
       user_id: newUserId,
       start_datetime: newStart.toISOString(),
+      end_datetime: newEnd.toISOString(),
+    });
+  }, [schedules, updateSchedule]);
+
+  // Handler pour redimensionner une tâche planifiée (modifier la durée)
+  const handleResizeSchedule = useCallback((scheduleId: string, newDurationHours: number) => {
+    const schedule = schedules?.find(s => s.id === scheduleId);
+    if (!schedule) return;
+    
+    const oldStart = new Date(schedule.start_datetime);
+    const newEnd = new Date(oldStart.getTime() + newDurationHours * 60 * 60 * 1000);
+    
+    updateSchedule.mutate({
+      id: scheduleId,
       end_datetime: newEnd.toISOString(),
     });
   }, [schedules, updateSchedule]);
@@ -559,6 +558,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                     onViewTask={handleViewTask}
                     onUnschedule={handleUnschedule}
                     onScheduleDragStart={handleScheduleDragStart}
+                    onResizeSchedule={handleResizeSchedule}
                   />
                 ))
               )}
@@ -594,6 +594,7 @@ interface MemberRowProps {
   onViewTask: (schedule: TaskSchedule) => void;
   onUnschedule: (scheduleId: string) => void;
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
+  onResizeSchedule: (scheduleId: string, newDurationHours: number) => void;
 }
 
 function MemberRow({
@@ -612,6 +613,7 @@ function MemberRow({
   onViewTask,
   onUnschedule,
   onScheduleDragStart,
+  onResizeSchedule,
 }: MemberRowProps) {
   const memberEmail = member.profile?.email || null;
   
@@ -645,6 +647,7 @@ function MemberRow({
             onViewTask={onViewTask}
             onUnschedule={onUnschedule}
             onScheduleDragStart={onScheduleDragStart}
+            onResizeSchedule={onResizeSchedule}
           />
         );
       })}
@@ -670,6 +673,7 @@ interface DayCellProps {
   onViewTask: (schedule: TaskSchedule) => void;
   onUnschedule: (scheduleId: string) => void;
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
+  onResizeSchedule: (scheduleId: string, newDurationHours: number) => void;
 }
 
 function DayCell({
@@ -690,8 +694,8 @@ function DayCell({
   onViewTask,
   onUnschedule,
   onScheduleDragStart,
+  onResizeSchedule,
 }: DayCellProps) {
-  const [isDragging, setIsDragging] = useState(false);
   const getOccupancyColor = (rate: number) => {
     if (rate === 0) return "";
     if (rate < 50) return "text-amber-600 dark:text-amber-400";
@@ -725,167 +729,21 @@ function DayCell({
         onDragLeave={onDragLeave}
         onDrop={(e) => onDrop(e, day, member)}
       >
-        {/* Items planifiés avec hauteur proportionnelle */}
+        {/* Items planifiés avec hauteur proportionnelle et resize */}
         <div className="flex-1 space-y-1 overflow-hidden">
-          {items.slice(0, 5).map(item => {
-            const schedule = item.type === "task" ? item.originalData as TaskSchedule : null;
-            const isAbsence = item.type === "absence";
-            
-            // Calculer la hauteur proportionnelle à la durée
-            const hours = item.durationHours || 1;
-            const calculatedHeight = Math.max(MIN_ITEM_HEIGHT, hours * PIXELS_PER_HOUR);
-            
-            // Format des heures pour le badge
-            const hoursLabel = hours >= 1 ? `${Math.round(hours)}h` : `${Math.round(hours * 60)}m`;
-            
-            return (
-              <ContextMenu key={item.id}>
-                <ContextMenuTrigger asChild>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={cn(
-                          "rounded text-[11px] leading-tight px-2 py-1.5 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all font-medium flex items-start gap-1.5 relative",
-                          item.type === "event" && "border-l-2",
-                          isAbsence && "opacity-60 cursor-not-allowed",
-                          item.type === "task" && "cursor-grab active:cursor-grabbing"
-                        )}
-                        style={{
-                          backgroundColor: item.color,
-                          color: "white",
-                          borderLeftColor: item.type === "event" ? "rgba(255,255,255,0.5)" : undefined,
-                          minHeight: calculatedHeight,
-                          maxHeight: ROW_HEIGHT - 40,
-                        }}
-                        draggable={item.type === "task" && !isAbsence}
-                        onDragStart={(e) => {
-                          if (item.type === "task" && schedule) {
-                            e.stopPropagation();
-                            onScheduleDragStart(e, schedule.id, item.title);
-                            setIsDragging(true);
-                          }
-                        }}
-                        onDragEnd={() => setIsDragging(false)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (item.type === "task" && schedule) {
-                            onViewTask(schedule);
-                          }
-                        }}
-                      >
-                        {/* Badge durée */}
-                        <div className="absolute -top-1 -right-1 bg-white text-gray-700 rounded-full px-1.5 py-0.5 text-[9px] font-bold shadow-sm border">
-                          {hoursLabel}
-                        </div>
-                        
-                        {/* Icon */}
-                        {item.type === "event" && <Calendar className="h-3 w-3 flex-shrink-0 mt-0.5" />}
-                        {item.type === "task" && <Clock className="h-3 w-3 flex-shrink-0 mt-0.5" />}
-                        {isAbsence && <Users className="h-3 w-3 flex-shrink-0 mt-0.5" />}
-                        
-                        {/* Content */}
-                        <div className="flex-1 min-w-0 overflow-hidden">
-                          <span className="block truncate">{item.title}</span>
-                          {item.projectName && calculatedHeight > 40 && (
-                            <span className="block text-[9px] opacity-80 truncate mt-0.5">
-                              {item.projectName}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-xs">
-                      <div className="space-y-1">
-                        <div className="font-medium flex items-center gap-1.5">
-                          {item.type === "event" ? (
-                            <Calendar className="h-3.5 w-3.5" />
-                          ) : item.type === "task" ? (
-                            <Clock className="h-3.5 w-3.5" />
-                          ) : (
-                            <Users className="h-3.5 w-3.5" />
-                          )}
-                          {item.title}
-                        </div>
-                        {item.projectName && (
-                          <div className="text-xs text-muted-foreground flex items-center gap-1">
-                            <div 
-                              className="w-2 h-2 rounded-full" 
-                              style={{ backgroundColor: item.projectColor || "#6366f1" }}
-                            />
-                            {item.projectName}
-                          </div>
-                        )}
-                        <div className="text-xs text-muted-foreground">
-                          {format(item.start, "HH:mm")} {item.end && `- ${format(item.end, "HH:mm")}`}
-                          <span className="ml-2 font-medium">({hoursLabel})</span>
-                        </div>
-                        {item.type === "event" && item.eventType && (
-                          <div className="text-xs text-muted-foreground capitalize">
-                            Type : {item.eventType === "meeting" ? "Réunion" : item.eventType === "milestone" ? "Jalon" : item.eventType === "rendu" ? "Rendu" : item.eventType}
-                          </div>
-                        )}
-                        {item.type === "task" && (
-                          <div className="text-xs text-muted-foreground mt-1 pt-1 border-t border-border/50">
-                            Clic droit pour plus d'options
-                          </div>
-                        )}
-                        {isAbsence && (
-                          <div className="text-xs text-amber-500 mt-1">
-                            Membre absent
-                          </div>
-                        )}
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </ContextMenuTrigger>
-                {item.type === "task" && schedule && (
-                  <ContextMenuContent>
-                    <ContextMenuItem onClick={() => onViewTask(schedule)}>
-                      <Eye className="h-4 w-4 mr-2" />
-                      Voir la tâche
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onClick={() => {
-                      // Copy task name
-                      navigator.clipboard.writeText(item.title);
-                    }}>
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copier le nom
-                    </ContextMenuItem>
-                    {item.projectName && (
-                      <ContextMenuItem onClick={() => {
-                        const projectId = (schedule.task as any)?.project_id;
-                        if (projectId) window.open(`/projects/${projectId}`, '_blank');
-                      }}>
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Voir le projet
-                      </ContextMenuItem>
-                    )}
-                    <ContextMenuSeparator />
-                    <ContextMenuItem className="text-muted-foreground">
-                      <Move className="h-4 w-4 mr-2" />
-                      Glisser-déposer pour déplacer
-                    </ContextMenuItem>
-                    <ContextMenuItem onClick={() => {
-                      if (schedule.task) {
-                        // Mark as complete logic would go here
-                      }
-                    }}>
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Marquer terminée
-                    </ContextMenuItem>
-                    <ContextMenuItem 
-                      onClick={() => onUnschedule(schedule.id)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Déplanifier
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                )}
-              </ContextMenu>
-            );
-          })}
+          {items.slice(0, 5).map(item => (
+            <ResizablePlanningItem
+              key={item.id}
+              item={item}
+              minHeight={MIN_ITEM_HEIGHT}
+              maxHeight={ROW_HEIGHT - 40}
+              pixelsPerHour={PIXELS_PER_HOUR}
+              onViewTask={onViewTask}
+              onUnschedule={onUnschedule}
+              onScheduleDragStart={onScheduleDragStart}
+              onResize={onResizeSchedule}
+            />
+          ))}
           {items.length > 5 && (
             <div className="text-[10px] text-muted-foreground text-center font-medium bg-muted/50 rounded px-1 py-0.5">
               +{items.length - 5} autres
