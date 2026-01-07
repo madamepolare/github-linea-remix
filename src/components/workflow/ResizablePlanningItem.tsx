@@ -214,8 +214,8 @@ export function ResizablePlanningItem({
                 </div>
               )}
               
-              {/* Content */}
-              <div className="flex items-start gap-1.5 flex-1 min-w-0 overflow-hidden">
+              {/* Content - avec padding-right pour éviter le chevauchement avec le badge */}
+              <div className="flex items-start gap-1.5 flex-1 min-w-0 overflow-hidden pr-6">
                 {/* Icon */}
                 {item.type === "event" && <Calendar className="h-3 w-3 flex-shrink-0 mt-0.5" />}
                 {item.type === "task" && <Clock className="h-3 w-3 flex-shrink-0 mt-0.5" />}
