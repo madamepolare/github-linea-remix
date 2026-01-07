@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, Pause, Clock, Plus, Calendar, User, Pencil, Check, X } from "lucide-react";
+import { Play, Pause, Clock, Plus, Calendar, User, Pencil, Check, X, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO, addHours } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -20,7 +20,7 @@ interface TaskTimeTrackerProps {
 
 export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
   const { timeEntries, totalHours, createTimeEntry } = useTaskTimeEntries(taskId);
-  const { schedules, isLoading: schedulesLoading, updateSchedule } = useTaskSchedules({ taskId });
+  const { schedules, isLoading: schedulesLoading, updateSchedule, deleteSchedule } = useTaskSchedules({ taskId });
   
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -238,7 +238,7 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                         </div>
                       </div>
                       {editingEntryId !== entry.id && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <Badge variant="secondary" className="text-sm font-semibold">
                             {entry.durationHours}h
                           </Badge>
@@ -249,6 +249,14 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                             onClick={() => handleEditEntry(entry)}
                           >
                             <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                            onClick={() => deleteSchedule.mutate(entry.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
                       )}
