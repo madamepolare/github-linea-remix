@@ -317,7 +317,8 @@ export function AbsencesTab() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        {absence.status === "pending" && (
+                        {/* Admins can edit/delete any absence, users only pending ones */}
+                        {(canApprove || absence.status === "pending") && (
                           <>
                             <Button
                               size="icon"
