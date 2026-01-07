@@ -4754,6 +4754,7 @@ export type Database = {
           end_date: string | null
           fee_calculation: Json | null
           id: string
+          is_archived: boolean | null
           lead_id: string | null
           name: string
           phase: string | null
@@ -4780,6 +4781,7 @@ export type Database = {
           end_date?: string | null
           fee_calculation?: Json | null
           id?: string
+          is_archived?: boolean | null
           lead_id?: string | null
           name: string
           phase?: string | null
@@ -4806,6 +4808,7 @@ export type Database = {
           end_date?: string | null
           fee_calculation?: Json | null
           id?: string
+          is_archived?: boolean | null
           lead_id?: string | null
           name?: string
           phase?: string | null
