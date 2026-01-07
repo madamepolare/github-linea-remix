@@ -5,8 +5,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -21,11 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { PHASE_STATUS_CONFIG, PHASE_COLORS, PhaseStatus } from "@/lib/projectTypes";
+import { PHASE_STATUS_CONFIG, PhaseStatus } from "@/lib/projectTypes";
 import {
   ArrowRight,
   Calendar,
@@ -54,6 +51,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PhaseGanttTimeline } from "./PhaseGanttTimeline";
 import { ViewSwitcher } from "@/components/ui/view-switcher";
 import { ImportPhasesFromQuoteDialog } from "./ImportPhasesFromQuoteDialog";
+import { PhaseFormDialog } from "./PhaseFormDialog";
 import { toast } from "sonner";
 
 interface ProjectPhasesTabProps {
@@ -71,61 +69,42 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
   const [selectedPhaseForDependency, setSelectedPhaseForDependency] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-  const [formName, setFormName] = useState("");
-  const [formDescription, setFormDescription] = useState("");
-  const [formStatus, setFormStatus] = useState<PhaseStatus>("pending");
-  const [formColor, setFormColor] = useState(PHASE_COLORS[0]);
-  const [formDeadline, setFormDeadline] = useState<Date | null>(null);
   const [formDependsOn, setFormDependsOn] = useState<string>("");
-
-  const resetForm = () => {
-    setFormName("");
-    setFormDescription("");
-    setFormStatus("pending");
-    setFormColor(PHASE_COLORS[phases.length % PHASE_COLORS.length]);
-    setFormDeadline(null);
-    setFormDependsOn("");
-  };
 
   const openEditDialog = (phase: any) => {
     setEditingPhase(phase);
-    setFormName(phase.name);
-    setFormDescription(phase.description || "");
-    setFormStatus(phase.status as PhaseStatus);
-    setFormColor(phase.color || PHASE_COLORS[0]);
-    setFormDeadline(phase.end_date ? parseISO(phase.end_date) : null);
   };
 
-  const handleCreate = () => {
-    if (!formName.trim()) return;
-
-    createPhase.mutate({
-      name: formName.trim(),
-      description: formDescription.trim() || undefined,
-      status: formStatus,
-      color: formColor,
-      end_date: formDeadline ? format(formDeadline, "yyyy-MM-dd") : undefined,
-      sort_order: phases.length,
-    });
-
-    setIsCreateOpen(false);
-    resetForm();
-  };
-
-  const handleUpdate = () => {
-    if (!editingPhase || !formName.trim()) return;
-
-    updatePhase.mutate({
-      id: editingPhase.id,
-      name: formName.trim(),
-      description: formDescription.trim() || null,
-      status: formStatus,
-      color: formColor,
-      end_date: formDeadline ? format(formDeadline, "yyyy-MM-dd") : null,
-    });
-
-    setEditingPhase(null);
-    resetForm();
+  const handlePhaseSubmit = (data: {
+    name: string;
+    description?: string;
+    status: PhaseStatus;
+    color: string;
+    end_date?: string;
+  }) => {
+    if (editingPhase) {
+      // Update existing phase
+      updatePhase.mutate({
+        id: editingPhase.id,
+        name: data.name,
+        description: data.description || null,
+        status: data.status,
+        color: data.color,
+        end_date: data.end_date || null,
+      });
+      setEditingPhase(null);
+    } else {
+      // Create new phase
+      createPhase.mutate({
+        name: data.name,
+        description: data.description,
+        status: data.status,
+        color: data.color,
+        end_date: data.end_date,
+        sort_order: phases.length,
+      });
+      setIsCreateOpen(false);
+    }
   };
 
   const handleDelete = (phaseId: string) => {
@@ -220,6 +199,16 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
           description="Ajoutez des phases pour organiser votre projet ou importez-les depuis un devis."
           action={{ label: "Ajouter une phase", onClick: () => setIsCreateOpen(true) }}
         />
+        
+        {/* Phase Form Dialog */}
+        <PhaseFormDialog
+          open={isCreateOpen}
+          onOpenChange={setIsCreateOpen}
+          onSubmit={handlePhaseSubmit}
+          existingPhasesCount={0}
+        />
+        
+        {/* Import Dialog */}
         <ImportPhasesFromQuoteDialog
           open={isImportDialogOpen}
           onOpenChange={setIsImportDialogOpen}
@@ -227,93 +216,6 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
           existingPhasesCount={0}
           onImport={handleImportPhases}
         />
-        {/* Create Dialog needed for empty state action */}
-        <Dialog open={isCreateOpen} onOpenChange={(open) => {
-          if (!open) {
-            setIsCreateOpen(false);
-            resetForm();
-          }
-        }}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nouvelle phase</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Nom *</Label>
-                <Input
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Ex: Esquisse"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Input
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Description de la phase..."
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Statut</Label>
-                  <Select value={formStatus} onValueChange={(v) => setFormStatus(v as PhaseStatus)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(PHASE_STATUS_CONFIG).map(([value, config]) => (
-                        <SelectItem key={value} value={value}>
-                          {config.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Couleur</Label>
-                  <div className="flex gap-2 flex-wrap">
-                    {PHASE_COLORS.slice(0, 8).map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setFormColor(color)}
-                        className={cn(
-                          "w-6 h-6 rounded-full transition-all",
-                          formColor === color && "ring-2 ring-offset-2 ring-primary"
-                        )}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Date d'échéance</Label>
-                <InlineDatePicker
-                  value={formDeadline}
-                  onChange={setFormDeadline}
-                  placeholder="Sélectionner une échéance..."
-                  className="w-full"
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => { setIsCreateOpen(false); resetForm(); }}>
-                Annuler
-              </Button>
-              <Button onClick={handleCreate} disabled={!formName.trim()}>
-                Créer
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     );
   }
@@ -335,7 +237,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
             <Download className="h-4 w-4 mr-1" />
             Importer
           </Button>
-          <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+          <Button size="sm" onClick={() => setIsCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-1" />
             Ajouter
           </Button>
@@ -403,7 +305,7 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
                         {phaseDependencies.length > 0 && (
                           <div className="flex items-center gap-1">
                             <Link2 className="h-3 w-3 text-muted-foreground" />
-                            {phaseDependencies.map((dep, i) => {
+                            {phaseDependencies.map((dep) => {
                               const depPhase = getPhaseById(dep.depends_on_phase_id);
                               return (
                                 <Badge
@@ -472,94 +374,19 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={isCreateOpen || !!editingPhase} onOpenChange={(open) => {
-        if (!open) {
-          setIsCreateOpen(false);
-          setEditingPhase(null);
-          resetForm();
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingPhase ? "Modifier la phase" : "Nouvelle phase"}</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nom *</Label>
-              <Input
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="Ex: Esquisse"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Input
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                placeholder="Description de la phase..."
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Statut</Label>
-                <Select value={formStatus} onValueChange={(v) => setFormStatus(v as PhaseStatus)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(PHASE_STATUS_CONFIG).map(([value, config]) => (
-                      <SelectItem key={value} value={value}>
-                        {config.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Couleur</Label>
-                <div className="flex gap-2 flex-wrap">
-                  {PHASE_COLORS.slice(0, 8).map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => setFormColor(color)}
-                      className={cn(
-                        "w-6 h-6 rounded-full transition-all",
-                        formColor === color && "ring-2 ring-offset-2 ring-primary"
-                      )}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Date d'échéance</Label>
-              <InlineDatePicker
-                value={formDeadline}
-                onChange={setFormDeadline}
-                placeholder="Sélectionner une échéance..."
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsCreateOpen(false); setEditingPhase(null); resetForm(); }}>
-              Annuler
-            </Button>
-            <Button onClick={editingPhase ? handleUpdate : handleCreate} disabled={!formName.trim()}>
-              {editingPhase ? "Enregistrer" : "Créer"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Phase Form Dialog - Create/Edit */}
+      <PhaseFormDialog
+        open={isCreateOpen || !!editingPhase}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateOpen(false);
+            setEditingPhase(null);
+          }
+        }}
+        editingPhase={editingPhase}
+        onSubmit={handlePhaseSubmit}
+        existingPhasesCount={phases.length}
+      />
 
       {/* Dependency Dialog */}
       <Dialog open={isDependencyDialogOpen} onOpenChange={setIsDependencyDialogOpen}>
