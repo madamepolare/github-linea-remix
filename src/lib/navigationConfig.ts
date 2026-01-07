@@ -58,10 +58,8 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
     icon: FolderKanban,
     href: "/projects",
     subNav: [
-      { key: "timeline", label: "Timeline", href: "/projects/timeline" },
-      { key: "board", label: "Board", href: "/projects/board" },
       { key: "list", label: "Liste", href: "/projects/list" },
-      { key: "grid", label: "Grille", href: "/projects/grid" },
+      { key: "board", label: "Board", href: "/projects/board" },
     ],
     quickActions: [
       { key: "create-project", label: "Nouveau projet", event: "open-create-project" },
