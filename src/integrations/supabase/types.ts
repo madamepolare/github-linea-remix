@@ -509,6 +509,8 @@ export type Database = {
           communication_type: string
           content: string
           content_html: string | null
+          context_entity_id: string | null
+          context_entity_type: string | null
           created_at: string | null
           created_by: string | null
           email_metadata: Json | null
@@ -529,6 +531,8 @@ export type Database = {
           communication_type: string
           content: string
           content_html?: string | null
+          context_entity_id?: string | null
+          context_entity_type?: string | null
           created_at?: string | null
           created_by?: string | null
           email_metadata?: Json | null
@@ -549,6 +553,8 @@ export type Database = {
           communication_type?: string
           content?: string
           content_html?: string | null
+          context_entity_id?: string | null
+          context_entity_type?: string | null
           created_at?: string | null
           created_by?: string | null
           email_metadata?: Json | null

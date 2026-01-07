@@ -26,34 +26,75 @@ export interface Communication {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  // Context fields for aggregation
+  context_entity_type: EntityType | null;
+  context_entity_id: string | null;
+  // Joined data for display
+  source_entity_name?: string;
 }
+
 export interface CommunicationWithReplies extends Communication {
   replies?: Communication[];
 }
 
-export function useCommunications(entityType: EntityType, entityId: string | null) {
+interface CreateCommunicationParams {
+  type: CommunicationType;
+  content: string;
+  title?: string;
+  parentId?: string;
+  // Optional context for aggregation (e.g., project when creating on a task)
+  contextEntityType?: EntityType;
+  contextEntityId?: string;
+}
+
+/**
+ * Hook for communications on a specific entity
+ * @param entityType - The type of entity
+ * @param entityId - The entity ID
+ * @param options - Additional options
+ * @param options.includeContext - If true, also fetch communications from child entities (e.g., tasks) that have this entity as context
+ */
+export function useCommunications(
+  entityType: EntityType, 
+  entityId: string | null,
+  options?: { includeContext?: boolean }
+) {
   const { activeWorkspace, user } = useAuth();
   const queryClient = useQueryClient();
+  const includeContext = options?.includeContext ?? true;
 
-  const queryKey = ["communications", entityType, entityId];
+  const queryKey = ["communications", entityType, entityId, includeContext];
 
   const { data: communications, isLoading } = useQuery({
     queryKey,
     queryFn: async () => {
       if (!entityId) return [];
-      const { data, error } = await supabase
-        .from("communications")
-        .select("*")
-        .eq("entity_type", entityType)
-        .eq("entity_id", entityId)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data as Communication[];
+      
+      if (includeContext) {
+        // Fetch communications directly on this entity OR with this entity as context
+        const { data, error } = await supabase
+          .from("communications")
+          .select("*")
+          .or(`and(entity_type.eq.${entityType},entity_id.eq.${entityId}),and(context_entity_type.eq.${entityType},context_entity_id.eq.${entityId})`)
+          .order("created_at", { ascending: true });
+        if (error) throw error;
+        return data as Communication[];
+      } else {
+        // Only fetch communications directly on this entity
+        const { data, error } = await supabase
+          .from("communications")
+          .select("*")
+          .eq("entity_type", entityType)
+          .eq("entity_id", entityId)
+          .order("created_at", { ascending: true });
+        if (error) throw error;
+        return data as Communication[];
+      }
     },
     enabled: !!entityId && !!activeWorkspace?.id,
   });
 
-  // Realtime subscription
+  // Realtime subscription for both direct and context-based communications
   useEffect(() => {
     if (!entityId || !activeWorkspace?.id) return;
 
@@ -65,10 +106,21 @@ export function useCommunications(entityType: EntityType, entityId: string | nul
           event: '*',
           schema: 'public',
           table: 'communications',
-          filter: `entity_id=eq.${entityId}`,
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey });
+        (payload) => {
+          // Check if this change is relevant to our query
+          const record = payload.new as Communication | null;
+          const oldRecord = payload.old as Communication | null;
+          const relevantRecord = record || oldRecord;
+          
+          if (relevantRecord) {
+            const isDirectMatch = relevantRecord.entity_type === entityType && relevantRecord.entity_id === entityId;
+            const isContextMatch = relevantRecord.context_entity_type === entityType && relevantRecord.context_entity_id === entityId;
+            
+            if (isDirectMatch || (includeContext && isContextMatch)) {
+              queryClient.invalidateQueries({ queryKey });
+            }
+          }
         }
       )
       .subscribe();
@@ -76,7 +128,7 @@ export function useCommunications(entityType: EntityType, entityId: string | nul
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [entityId, entityType, activeWorkspace?.id, queryClient]);
+  }, [entityId, entityType, activeWorkspace?.id, queryClient, includeContext, queryKey]);
 
   const createCommunication = useMutation({
     mutationFn: async ({
@@ -84,12 +136,9 @@ export function useCommunications(entityType: EntityType, entityId: string | nul
       content,
       title,
       parentId,
-    }: {
-      type: CommunicationType;
-      content: string;
-      title?: string;
-      parentId?: string;
-    }) => {
+      contextEntityType,
+      contextEntityId,
+    }: CreateCommunicationParams) => {
       if (!entityId || !activeWorkspace) throw new Error("Missing entity or workspace");
       
       const { data, error } = await supabase
@@ -104,6 +153,8 @@ export function useCommunications(entityType: EntityType, entityId: string | nul
           parent_id: parentId || null,
           thread_id: parentId || null,
           created_by: user?.id,
+          context_entity_type: contextEntityType || null,
+          context_entity_id: contextEntityId || null,
         })
         .select()
         .single();
@@ -112,6 +163,7 @@ export function useCommunications(entityType: EntityType, entityId: string | nul
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
+      // Also invalidate context entity's communications
     },
     onError: (error) => {
       toast.error("Erreur: " + error.message);
@@ -214,21 +266,31 @@ export function useCommunications(entityType: EntityType, entityId: string | nul
   };
 }
 
-// Hook pour compter les communications d'une entité
-export function useCommunicationsCount(entityType: EntityType, entityId: string | null) {
+// Hook pour compter les communications d'une entité (incluant le contexte)
+export function useCommunicationsCount(entityType: EntityType, entityId: string | null, includeContext = true) {
   const { activeWorkspace } = useAuth();
 
   return useQuery({
-    queryKey: ["communications-count", entityType, entityId],
+    queryKey: ["communications-count", entityType, entityId, includeContext],
     queryFn: async () => {
       if (!entityId) return 0;
-      const { count, error } = await supabase
-        .from("communications")
-        .select("*", { count: "exact", head: true })
-        .eq("entity_type", entityType)
-        .eq("entity_id", entityId);
-      if (error) throw error;
-      return count || 0;
+      
+      if (includeContext) {
+        const { count, error } = await supabase
+          .from("communications")
+          .select("*", { count: "exact", head: true })
+          .or(`and(entity_type.eq.${entityType},entity_id.eq.${entityId}),and(context_entity_type.eq.${entityType},context_entity_id.eq.${entityId})`);
+        if (error) throw error;
+        return count || 0;
+      } else {
+        const { count, error } = await supabase
+          .from("communications")
+          .select("*", { count: "exact", head: true })
+          .eq("entity_type", entityType)
+          .eq("entity_id", entityId);
+        if (error) throw error;
+        return count || 0;
+      }
     },
     enabled: !!entityId && !!activeWorkspace?.id,
   });
@@ -261,4 +323,17 @@ export function useCommunicationsCounts(entityType: EntityType, entityIds: strin
     },
     enabled: !!entityIds.length && !!activeWorkspace?.id,
   });
+}
+
+// Helper to get entity type label in French
+export function getEntityTypeLabel(type: EntityType): string {
+  const labels: Record<EntityType, string> = {
+    task: "Tâche",
+    project: "Projet",
+    lead: "Opportunité",
+    company: "Entreprise",
+    contact: "Contact",
+    tender: "Appel d'offres",
+  };
+  return labels[type] || type;
 }
