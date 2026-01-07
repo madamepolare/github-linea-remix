@@ -3591,6 +3591,84 @@ export type Database = {
           },
         ]
       }
+      project_elements: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          element_type: Database["public"]["Enums"]["element_type"]
+          file_name: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string | null
+          id: string
+          is_pinned: boolean | null
+          project_id: string
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+          url: string | null
+          visibility: Database["public"]["Enums"]["element_visibility"]
+          workspace_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          element_type?: Database["public"]["Enums"]["element_type"]
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          project_id: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+          url?: string | null
+          visibility?: Database["public"]["Enums"]["element_visibility"]
+          workspace_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          element_type?: Database["public"]["Enums"]["element_type"]
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          is_pinned?: boolean | null
+          project_id?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+          url?: string | null
+          visibility?: Database["public"]["Enums"]["element_visibility"]
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_elements_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_elements_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_enabled_modules: {
         Row: {
           enabled_at: string
@@ -6607,6 +6685,14 @@ export type Database = {
         Args: { _created_by: string; _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      can_view_element: {
+        Args: {
+          _element_created_by: string
+          _element_visibility: Database["public"]["Enums"]["element_visibility"]
+          _element_workspace_id: string
+        }
+        Returns: boolean
+      }
       can_view_sensitive_contacts: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
@@ -6671,6 +6757,15 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "admin" | "member" | "viewer"
+      element_type:
+        | "link"
+        | "file"
+        | "email"
+        | "note"
+        | "order"
+        | "letter"
+        | "other"
+      element_visibility: "all" | "admin" | "owner"
       invitation_response: "pending" | "accepted" | "declined"
       procedure_type:
         | "ouvert"
@@ -6817,6 +6912,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "admin", "member", "viewer"],
+      element_type: [
+        "link",
+        "file",
+        "email",
+        "note",
+        "order",
+        "letter",
+        "other",
+      ],
+      element_visibility: ["all", "admin", "owner"],
       invitation_response: ["pending", "accepted", "declined"],
       procedure_type: [
         "ouvert",

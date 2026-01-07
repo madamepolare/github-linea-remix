@@ -38,6 +38,7 @@ export const PROJECT_TABS: EntityTab[] = [
   { key: "calendar", label: "Calendrier", icon: Calendar },
   { key: "tasks", label: "Tâches", icon: CheckSquare },
   { key: "phases", label: "Phases", icon: Layers },
+  { key: "elements", label: "Éléments", icon: FolderOpen },
   { key: "deliverables", label: "Livrables", icon: FolderOpen },
   { key: "documents", label: "Documents", icon: FileText },
   { key: "permits", label: "Autorisations", icon: FileCheck },
