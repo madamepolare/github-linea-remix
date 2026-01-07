@@ -277,7 +277,8 @@ export default function CompanyDetail() {
                             value={selectedCategory}
                             onValueChange={(v) => {
                               setSelectedCategory(v as CompanyCategory);
-                              setEditData({ ...editData, industry: null });
+                              // When changing to "bet", set industry to "bet" as well
+                              setEditData({ ...editData, industry: v === "bet" ? "bet" : null });
                               setSelectedSpecialties([]);
                             }}
                           >

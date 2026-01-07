@@ -207,7 +207,8 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
                   onValueChange={(v) => {
                     setSelectedCategory(v as CompanyCategory);
                     form.setValue("category", v);
-                    form.setValue("industry", ""); // Reset type when category changes
+                    // When changing to "bet", set industry to "bet" as well
+                    form.setValue("industry", v === "bet" ? "bet" : "");
                     setSelectedSpecialties([]); // Reset specialties
                   }}
                 >
