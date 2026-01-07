@@ -85,7 +85,7 @@ const MARKET_TYPES = [
 
 export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTabProps) {
   const { updateTender, updateStatus } = useTenders();
-  const { addSiteVisitToCalendar, createTenderEvent } = useTenderCalendarEvents();
+  const { syncSiteVisit, createTenderEvent } = useTenderCalendarEvents(tender.id);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [showGoDialog, setShowGoDialog] = useState(false);
   const [goDecisionNotes, setGoDecisionNotes] = useState("");
@@ -107,29 +107,33 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
     description: tender.description,
   });
 
-  // Auto-add to calendar when site visit date is set for required visits
+  // Auto-sync to calendar when site visit date changes
   useEffect(() => {
-    if (formData.site_visit_required && formData.site_visit_date && !addedToCalendar) {
-      // Auto-add when setting the date
-      const autoAdd = async () => {
+    if (formData.site_visit_date && !addedToCalendar) {
+      const autoSync = async () => {
         try {
-          await addSiteVisitToCalendar({
+          await syncSiteVisit({
             id: tender.id,
             title: tender.title,
             location: formData.location || tender.location,
             site_visit_date: formData.site_visit_date!,
+            site_visit_required: formData.site_visit_required,
+            site_visit_contact_name: (tender as any).site_visit_contact_name,
+            site_visit_contact_email: (tender as any).site_visit_contact_email,
+            site_visit_contact_phone: (tender as any).site_visit_contact_phone,
+            site_visit_assigned_users: (tender as any).site_visit_assigned_users,
           });
           setAddedToCalendar(true);
         } catch (error) {
-          console.error("Failed to auto-add to calendar:", error);
+          console.error("Failed to sync site visit:", error);
         }
       };
       
       // Debounce to avoid multiple calls during typing
-      const timeout = setTimeout(autoAdd, 1000);
+      const timeout = setTimeout(autoSync, 1500);
       return () => clearTimeout(timeout);
     }
-  }, [formData.site_visit_required, formData.site_visit_date]);
+  }, [formData.site_visit_date, formData.site_visit_required]);
 
   // Calculate missing fields
   const missingFields = useMemo(() => {

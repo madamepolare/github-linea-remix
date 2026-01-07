@@ -32,7 +32,7 @@ export function SiteVisitAssignment({
   onAssignmentChange,
 }: SiteVisitAssignmentProps) {
   const { data: teamMembers = [], isLoading } = useTeamMembers();
-  const { createTenderEvent } = useTenderCalendarEvents();
+  const { syncSiteVisit } = useTenderCalendarEvents(tenderId);
   const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -63,23 +63,13 @@ export function SiteVisitAssignment({
 
     setIsAddingToCalendar(true);
     try {
-      const endDate = new Date(siteVisitDate);
-      endDate.setHours(endDate.getHours() + 2);
-
-      // Use user_id as attendee identifier and name for display
-      const attendees = selectedMembers.map((m) => ({
-        user_id: m.user_id,
-        name: m.profile?.full_name || "Membre",
-      }));
-
-      await createTenderEvent.mutateAsync({
-        tender_id: tenderId,
-        title: `🏗️ Visite de site - ${tenderTitle}`,
-        event_type: "meeting",
-        start_datetime: siteVisitDate,
-        end_datetime: endDate.toISOString(),
-        location: location || undefined,
-        attendees,
+      await syncSiteVisit({
+        id: tenderId,
+        title: tenderTitle,
+        location: location,
+        site_visit_date: siteVisitDate,
+        site_visit_required: true,
+        site_visit_assigned_users: assignedUserIds,
       });
       setAddedToCalendar(true);
     } finally {

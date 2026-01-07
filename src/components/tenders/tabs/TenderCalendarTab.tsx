@@ -4,17 +4,14 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
-import { format, parseISO, addDays, addHours } from "date-fns";
+import { format, parseISO, addHours } from "date-fns";
 import { fr } from "date-fns/locale";
 import frLocale from "@fullcalendar/core/locales/fr";
 import {
   Calendar,
-  CalendarPlus,
-  Clock,
   MapPin,
   Plus,
   Users,
-  Eye,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -41,9 +38,9 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { EmptyState } from "@/components/ui/empty-state";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTenderCalendarEvents } from "@/hooks/useTenderCalendarEvents";
 
 interface TenderCalendarTabProps {
   tenderId: string;
@@ -95,9 +92,10 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
 };
 
 export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) {
+  const calendarRef = useRef<FullCalendar>(null);
+  const { events, isLoading, syncSiteVisit, syncDeadline } = useTenderCalendarEvents(tenderId);
   const { activeWorkspace } = useAuth();
   const queryClient = useQueryClient();
-  const calendarRef = useRef<FullCalendar>(null);
   
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<TenderEvent | null>(null);
@@ -113,25 +111,6 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
   const [formContactName, setFormContactName] = useState("");
   const [formContactEmail, setFormContactEmail] = useState("");
   const [formContactPhone, setFormContactPhone] = useState("");
-
-  // Fetch tender events
-  const { data: events = [], isLoading } = useQuery({
-    queryKey: ["tender-events", tenderId],
-    queryFn: async () => {
-      if (!activeWorkspace?.id) return [];
-      
-      const { data, error } = await supabase
-        .from("tender_calendar_events")
-        .select("*")
-        .eq("tender_id", tenderId)
-        .eq("workspace_id", activeWorkspace.id)
-        .order("start_datetime", { ascending: true });
-
-      if (error) throw error;
-      return data as TenderEvent[];
-    },
-    enabled: !!activeWorkspace?.id && !!tenderId,
-  });
 
   // Create event mutation
   const createEvent = useMutation({
@@ -280,89 +259,57 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
     }
   };
 
-  // Build virtual events from tender data (site visit & deadline)
-  const virtualEvents: TenderEvent[] = useMemo(() => {
-    const virtualList: TenderEvent[] = [];
-    
-    // Site visit from tender
-    if (tender.site_visit_date) {
-      const startDate = parseISO(tender.site_visit_date);
-      const endDate = addHours(startDate, 2);
-      virtualList.push({
-        id: `virtual-site-visit-${tender.id}`,
-        tender_id: tender.id,
-        title: `🏗️ Visite de site${tender.site_visit_required ? " (obligatoire)" : ""}`,
-        description: tender.site_visit_required ? "Visite de site obligatoire" : "Visite de site",
-        event_type: "site_visit",
-        start_datetime: tender.site_visit_date,
-        end_datetime: endDate.toISOString(),
-        location: tender.location || null,
-        contact_name: tender.site_visit_contact_name || null,
-        contact_email: tender.site_visit_contact_email || null,
-        contact_phone: tender.site_visit_contact_phone || null,
-        attendees: tender.site_visit_assigned_users?.map(id => ({ user_id: id })) || [],
-        created_at: "",
-        isVirtual: true,
-      });
-    }
-    
-    // Deadline from tender
-    if (tender.submission_deadline) {
-      virtualList.push({
-        id: `virtual-deadline-${tender.id}`,
-        tender_id: tender.id,
-        title: `📅 Dépôt des offres`,
-        description: "Date limite de remise des offres",
-        event_type: "deadline",
-        start_datetime: tender.submission_deadline,
-        end_datetime: null,
-        location: null,
-        created_at: "",
-        isVirtual: true,
-      });
-    }
-    
-    return virtualList;
-  }, [tender]);
+  // Check if site visit or deadline is missing and needs to be synced
+  const hasSiteVisit = events.some((e: any) => e.event_type === "site_visit");
+  const hasDeadline = events.some((e: any) => e.event_type === "deadline");
 
-  // Combine virtual events with saved events
-  const allEvents = useMemo(() => {
-    // Filter out virtual events if there's already a saved event of the same type
-    const savedSiteVisit = events.some((e) => e.event_type === "site_visit");
-    const savedDeadline = events.some((e) => e.event_type === "deadline");
-    
-    const filteredVirtual = virtualEvents.filter((v) => {
-      if (v.event_type === "site_visit" && savedSiteVisit) return false;
-      if (v.event_type === "deadline" && savedDeadline) return false;
-      return true;
+  // Sync buttons for missing events
+  const handleSyncSiteVisit = async () => {
+    if (!tender.site_visit_date) return;
+    await syncSiteVisit({
+      id: tender.id,
+      title: tender.title,
+      location: tender.location,
+      site_visit_date: tender.site_visit_date,
+      site_visit_required: tender.site_visit_required,
+      site_visit_contact_name: tender.site_visit_contact_name,
+      site_visit_contact_email: tender.site_visit_contact_email,
+      site_visit_contact_phone: tender.site_visit_contact_phone,
+      site_visit_assigned_users: tender.site_visit_assigned_users,
     });
-    
-    return [...filteredVirtual, ...events];
-  }, [events, virtualEvents]);
+    toast.success("Visite de site synchronisée");
+  };
+
+  const handleSyncDeadline = async () => {
+    if (!tender.submission_deadline) return;
+    await syncDeadline({
+      id: tender.id,
+      title: tender.title,
+      submission_deadline: tender.submission_deadline,
+    });
+    toast.success("Échéance synchronisée");
+  };
 
   // Convert events to FullCalendar format
   const calendarEvents = useMemo(() => {
-    return allEvents.map((event) => ({
+    return events.map((event: any) => ({
       id: event.id,
       title: event.title,
       start: event.start_datetime,
       end: event.end_datetime || undefined,
-      backgroundColor: event.isVirtual 
-        ? `${EVENT_TYPE_COLORS[event.event_type]}80` 
-        : EVENT_TYPE_COLORS[event.event_type] || "#6366f1",
+      backgroundColor: EVENT_TYPE_COLORS[event.event_type] || "#6366f1",
       borderColor: EVENT_TYPE_COLORS[event.event_type] || "#6366f1",
-      borderStyle: event.isVirtual ? "dashed" : "solid",
       extendedProps: {
         ...event,
       },
     }));
-  }, [allEvents]);
+  }, [events]);
 
   // Handle event click
   const handleEventClick = (info: any) => {
-    const event = allEvents.find((e) => e.id === info.event.id);
+    const event = events.find((e: any) => e.id === info.event.id);
     if (event) {
-      openEditDialog(event);
+      openEditDialog(event as any);
     }
   };
 
@@ -387,11 +334,18 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
       {/* Actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {/* Info about virtual events */}
-          {virtualEvents.length > 0 && (
-            <span className="text-xs text-muted-foreground">
-              Les événements en pointillé sont liés aux données du tender
-            </span>
+          {/* Sync buttons for missing events */}
+          {tender.site_visit_date && !hasSiteVisit && (
+            <Button size="sm" variant="outline" onClick={handleSyncSiteVisit}>
+              <MapPin className="h-4 w-4 mr-1.5" />
+              Synchroniser visite de site
+            </Button>
+          )}
+          {tender.submission_deadline && !hasDeadline && (
+            <Button size="sm" variant="outline" onClick={handleSyncDeadline}>
+              <Calendar className="h-4 w-4 mr-1.5" />
+              Synchroniser échéance
+            </Button>
           )}
         </div>
         <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
@@ -431,7 +385,7 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
       </Card>
 
       {/* Upcoming events list */}
-      {allEvents.length > 0 && (
+      {events.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -441,16 +395,13 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {allEvents
-                .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
-                .map((event) => (
+              {[...events]
+                .sort((a: any, b: any) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+                .map((event: any) => (
                   <div
                     key={event.id}
-                    className={cn(
-                      "p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors",
-                      event.isVirtual && "border-dashed"
-                    )}
-                    onClick={() => openEditDialog(event)}
+                    className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => openEditDialog(event as any)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -465,16 +416,9 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {event.isVirtual && (
-                          <Badge variant="outline" className="text-xs">
-                            Auto
-                          </Badge>
-                        )}
-                        <Badge variant="secondary" className="text-xs">
-                          {EVENT_TYPE_LABELS[event.event_type]}
-                        </Badge>
-                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {EVENT_TYPE_LABELS[event.event_type]}
+                      </Badge>
                     </div>
                     {/* Contact info */}
                     {(event.contact_name || event.location) && (
