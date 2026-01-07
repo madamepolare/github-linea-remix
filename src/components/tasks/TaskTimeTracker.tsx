@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, Pause, Clock, Plus, Calendar, User } from "lucide-react";
+import { Play, Pause, Clock, Plus, Calendar, User, Pencil, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, addHours } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { DurationInput } from "./DurationInput";
 
 interface TaskTimeTrackerProps {
   taskId: string;
@@ -18,7 +20,7 @@ interface TaskTimeTrackerProps {
 
 export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
   const { timeEntries, totalHours, createTimeEntry } = useTaskTimeEntries(taskId);
-  const { schedules, isLoading: schedulesLoading } = useTaskSchedules({ taskId });
+  const { schedules, isLoading: schedulesLoading, updateSchedule } = useTaskSchedules({ taskId });
   
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -26,6 +28,9 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
   const [description, setDescription] = useState("");
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<Date | null>(null);
+
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [editingDuration, setEditingDuration] = useState<string>("");
 
   // Calculer le temps total planifié depuis les schedules
   const { scheduledHours, scheduledEntries } = useMemo(() => {
@@ -41,9 +46,11 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
       
       return {
         id: schedule.id,
+        startDatetime: schedule.start_datetime,
         date: start,
         durationHours,
         userName: schedule.user?.full_name || "Non assigné",
+        userAvatar: schedule.user?.avatar_url || null,
         isLocked: schedule.is_locked,
       };
     });
@@ -55,6 +62,36 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
       scheduledEntries: entries.sort((a, b) => b.date.getTime() - a.date.getTime())
     };
   }, [schedules]);
+
+  const handleEditEntry = (entry: typeof scheduledEntries[0]) => {
+    setEditingEntryId(entry.id);
+    setEditingDuration(entry.durationHours.toString());
+  };
+
+  const handleSaveEntry = async (entryId: string, startDatetime: string) => {
+    const hours = parseFloat(editingDuration);
+    if (isNaN(hours) || hours <= 0) return;
+    
+    const startDate = new Date(startDatetime);
+    const endDate = addHours(startDate, hours);
+    
+    await updateSchedule.mutateAsync({
+      id: entryId,
+      end_datetime: endDate.toISOString(),
+    });
+    
+    setEditingEntryId(null);
+    setEditingDuration("");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingEntryId(null);
+    setEditingDuration("");
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  };
 
   // Temps total = temps manuel + temps planifié
   const combinedTotalHours = Math.round((totalHours + scheduledHours) * 10) / 10;
@@ -179,12 +216,15 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                 {scheduledEntries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-card border text-sm"
+                    className="flex items-center justify-between p-3 rounded-lg bg-card border text-sm group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={entry.userAvatar || undefined} />
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                          {getInitials(entry.userName)}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <div className="font-medium">{entry.userName}</div>
                         <div className="text-xs text-muted-foreground">
@@ -192,9 +232,49 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                         </div>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-sm font-semibold">
-                      {entry.durationHours}h
-                    </Badge>
+                    {editingEntryId === entry.id ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          step="0.25"
+                          min="0.25"
+                          value={editingDuration}
+                          onChange={(e) => setEditingDuration(e.target.value)}
+                          className="h-7 w-16 text-sm"
+                        />
+                        <span className="text-xs text-muted-foreground">h</span>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={() => handleSaveEntry(entry.id, entry.startDatetime)}
+                        >
+                          <Check className="h-3 w-3 text-green-600" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={handleCancelEdit}
+                        >
+                          <X className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-sm font-semibold">
+                          {entry.durationHours}h
+                        </Badge>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleEditEntry(entry)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
