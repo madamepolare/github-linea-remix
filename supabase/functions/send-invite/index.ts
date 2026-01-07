@@ -140,8 +140,8 @@ serve(async (req: Request): Promise<Response> => {
     const finalSubject = replaceVariables(subject, variables);
     const finalHtml = replaceVariables(bodyHtml, variables);
 
-    // Use validated domain or fallback to resend dev domain
-    const fromEmail = "ARCHIMIND <onboarding@resend.dev>";
+    // Use validated domain domini.archi
+    const fromEmail = "ARCHIMIND <noreply@domini.archi>";
     console.log(`[send-invite] Sending email from: ${fromEmail}`);
 
     const res = await fetch("https://api.resend.com/emails", {

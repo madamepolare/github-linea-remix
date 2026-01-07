@@ -98,6 +98,10 @@ export default function AcceptInvite() {
         return;
       }
 
+      // Clear pending invite from sessionStorage
+      sessionStorage.removeItem('pendingInviteToken');
+      sessionStorage.removeItem('pendingInviteEmail');
+
       // Refresh profile to get new workspace
       await refreshProfile();
 
@@ -106,14 +110,15 @@ export default function AcceptInvite() {
           title: "Déjà membre",
           description: `Vous êtes déjà membre de ${result.workspace_name}`,
         });
+        navigate("/");
       } else {
         toast({
           title: "Bienvenue dans l'équipe !",
           description: `Vous avez rejoint ${result.workspace_name}`,
         });
+        // Redirect to onboarding for profile completion
+        navigate("/onboarding");
       }
-
-      navigate("/");
     } catch (err: any) {
       console.error("Error accepting invite:", err);
       toast({
@@ -138,8 +143,12 @@ export default function AcceptInvite() {
     );
   }
 
-  // If not logged in, redirect to auth with return URL
+  // If not logged in, redirect to auth with return URL and invite info
   if (!user && invite) {
+    // Store invite token in sessionStorage so it persists through signup/login
+    sessionStorage.setItem('pendingInviteToken', token || '');
+    sessionStorage.setItem('pendingInviteEmail', invite.email);
+    
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <motion.div
@@ -164,16 +173,19 @@ export default function AcceptInvite() {
                 </div>
               </div>
               <h2 className="text-xl font-semibold mb-2">
-                You're invited to join {invite.workspace.name}
+                Rejoignez {invite.workspace.name}
               </h2>
-              <p className="text-muted-foreground mb-6">
-                Sign in or create an account to accept this invitation.
+              <p className="text-muted-foreground mb-2">
+                Vous avez été invité en tant que <strong className="text-foreground">{invite.role}</strong>
+              </p>
+              <p className="text-sm text-muted-foreground mb-6">
+                Connectez-vous ou créez un compte avec l'adresse <strong>{invite.email}</strong> pour accepter.
               </p>
               <Button
-                onClick={() => navigate(`/auth?redirect=/invite?token=${token}`)}
+                onClick={() => navigate(`/auth?redirect=/invite?token=${token}&email=${encodeURIComponent(invite.email)}`)}
                 className="w-full"
               >
-                Sign In to Accept
+                Continuer
               </Button>
             </CardContent>
           </Card>

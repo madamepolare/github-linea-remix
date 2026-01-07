@@ -40,20 +40,34 @@ export default function Auth() {
   
   // Get redirect parameter for invitation flow
   const redirectTo = searchParams.get('redirect');
+  const inviteEmail = searchParams.get('email');
+  
+  // Check for pending invite in sessionStorage
+  const pendingInviteToken = sessionStorage.getItem('pendingInviteToken');
+  const pendingInviteEmail = sessionStorage.getItem('pendingInviteEmail');
+  
+  // Determine if we're in invite flow
+  const isInviteFlow = !!(redirectTo?.includes('/invite') || pendingInviteToken);
+  const suggestedEmail = inviteEmail || pendingInviteEmail || '';
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: suggestedEmail, password: "" },
   });
 
   const signupForm = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: "", email: "", password: "", confirmPassword: "" },
+    defaultValues: { fullName: "", email: suggestedEmail, password: "", confirmPassword: "" },
   });
 
   // Redirect if already logged in
   useEffect(() => {
     if (!loading && user) {
+      // If there's a pending invite, go accept it
+      if (pendingInviteToken) {
+        navigate(`/invite?token=${pendingInviteToken}`);
+        return;
+      }
       // If redirect parameter exists (invitation flow), go there first
       if (redirectTo) {
         navigate(redirectTo);
@@ -66,7 +80,7 @@ export default function Auth() {
         navigate("/onboarding");
       }
     }
-  }, [user, profile, loading, navigate, redirectTo]);
+  }, [user, profile, loading, navigate, redirectTo, pendingInviteToken]);
 
   const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);

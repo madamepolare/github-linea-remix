@@ -46,6 +46,7 @@ export default function Onboarding() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [createdWorkspaceId, setCreatedWorkspaceId] = useState<string | null>(null);
+  const [isInvitedMember, setIsInvitedMember] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, profile, loading, refreshProfile, workspaces } = useAuth();
@@ -86,6 +87,7 @@ export default function Onboarding() {
       }
       // If user is already a member of a workspace (invited), skip to step 2
       if (workspaces && workspaces.length > 0 && currentStep === 1) {
+        setIsInvitedMember(true);
         setCurrentStep(2);
         // Set active workspace if not already set
         if (!profile?.active_workspace_id) {
@@ -383,16 +385,18 @@ export default function Onboarding() {
                   </div>
 
                   <div className="flex gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setCurrentStep(1)}
-                      className="flex-1"
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Retour
-                    </Button>
-                    <Button type="submit" className="flex-1" disabled={isLoading}>
+                    {!isInvitedMember && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setCurrentStep(1)}
+                        className="flex-1"
+                      >
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Retour
+                      </Button>
+                    )}
+                    <Button type="submit" className={isInvitedMember ? "w-full" : "flex-1"} disabled={isLoading}>
                       {isLoading ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                       ) : (
