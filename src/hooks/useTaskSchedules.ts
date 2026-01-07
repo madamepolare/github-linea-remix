@@ -208,7 +208,7 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
   };
 }
 
-// Hook pour récupérer les tâches non planifiées
+// Hook pour récupérer les tâches à planifier (toutes les tâches non terminées, même si elles ont déjà des créneaux)
 export function useUnscheduledTasks() {
   const { activeWorkspace } = useAuth();
 
@@ -217,15 +217,8 @@ export function useUnscheduledTasks() {
     queryFn: async () => {
       if (!activeWorkspace?.id) return [];
 
-      // Récupérer les tâches qui n'ont pas de schedule
-      const { data: scheduledTaskIds } = await supabase
-        .from("task_schedules")
-        .select("task_id")
-        .eq("workspace_id", activeWorkspace.id);
-
-      const scheduledIds = (scheduledTaskIds || []).map(s => s.task_id);
-
-      let query = supabase
+      // Récupérer toutes les tâches non terminées
+      const { data: tasks, error: tasksError } = await supabase
         .from("tasks")
         .select(`
           *,
@@ -237,14 +230,29 @@ export function useUnscheduledTasks() {
         .order("priority", { ascending: true })
         .order("due_date", { ascending: true, nullsFirst: false });
 
-      if (scheduledIds.length > 0) {
-        query = query.not("id", "in", `(${scheduledIds.join(",")})`);
-      }
+      if (tasksError) throw tasksError;
 
-      const { data, error } = await query;
+      // Récupérer le temps total planifié pour chaque tâche
+      const { data: schedules } = await supabase
+        .from("task_schedules")
+        .select("task_id, start_datetime, end_datetime")
+        .eq("workspace_id", activeWorkspace.id);
 
-      if (error) throw error;
-      return data || [];
+      // Calculer les heures planifiées par tâche
+      const scheduledHoursMap = new Map<string, number>();
+      (schedules || []).forEach(schedule => {
+        const start = new Date(schedule.start_datetime);
+        const end = new Date(schedule.end_datetime);
+        const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        const current = scheduledHoursMap.get(schedule.task_id) || 0;
+        scheduledHoursMap.set(schedule.task_id, current + durationHours);
+      });
+
+      // Enrichir les tâches avec le temps planifié
+      return (tasks || []).map(task => ({
+        ...task,
+        scheduled_hours: Math.round((scheduledHoursMap.get(task.id) || 0) * 10) / 10,
+      }));
     },
     enabled: !!activeWorkspace?.id,
   });
