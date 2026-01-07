@@ -6344,6 +6344,7 @@ export type Database = {
           required_team: Json | null
           results_date: string | null
           site_visit_assigned_user_id: string | null
+          site_visit_assigned_users: string[] | null
           site_visit_contact_email: string | null
           site_visit_contact_name: string | null
           site_visit_contact_phone: string | null
@@ -6409,6 +6410,7 @@ export type Database = {
           required_team?: Json | null
           results_date?: string | null
           site_visit_assigned_user_id?: string | null
+          site_visit_assigned_users?: string[] | null
           site_visit_contact_email?: string | null
           site_visit_contact_name?: string | null
           site_visit_contact_phone?: string | null
@@ -6474,6 +6476,7 @@ export type Database = {
           required_team?: Json | null
           results_date?: string | null
           site_visit_assigned_user_id?: string | null
+          site_visit_assigned_users?: string[] | null
           site_visit_contact_email?: string | null
           site_visit_contact_name?: string | null
           site_visit_contact_phone?: string | null

@@ -99,6 +99,7 @@ import { useContacts } from "@/hooks/useContacts";
 import { TEAM_ROLE_LABELS, SPECIALTIES, type TenderTeamRole } from "@/lib/tenderTypes";
 import { BulkInvitationDialog } from "@/components/tenders/BulkInvitationDialog";
 import { PartnerPrefilterPanel } from "@/components/tenders/PartnerPrefilterPanel";
+import { PartnerProposalEmailDialog } from "@/components/tenders/PartnerProposalEmailDialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -161,7 +162,17 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   const [editingTeamMember, setEditingTeamMember] = useState<any>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'candidate' | 'team'; id: string; name: string } | null>(null);
 
-  // Single invitation dialog
+  // Partner proposal email dialog
+  const [proposalEmailTarget, setProposalEmailTarget] = useState<{
+    id: string;
+    companyName: string;
+    contactEmail: string;
+    contactName?: string;
+    specialty: string;
+    proposedFeePercentage?: number;
+  } | null>(null);
+
+  // Single invitation dialog (legacy - keeping for compatibility)
   const [singleInviteTarget, setSingleInviteTarget] = useState<{ 
     type: 'candidate' | 'team'; 
     id: string; 
@@ -433,7 +444,14 @@ Cordialement`);
           onConfirmToTeam={(id) => confirmToTeam.mutate(id)}
           onSendInvite={(candidate) => {
             if (candidate.contact?.email) {
-              openSingleInvite('candidate', candidate.id, candidate.contact.email, candidate.company?.name || candidate.contact.name, candidate.specialty);
+              setProposalEmailTarget({
+                id: candidate.id,
+                companyName: candidate.company?.name || candidate.contact?.name || "Partenaire",
+                contactEmail: candidate.contact.email,
+                contactName: candidate.contact?.name,
+                specialty: candidate.specialty,
+                proposedFeePercentage: candidate.fee_percentage || undefined,
+              });
             } else {
               toast.error("Pas d'email pour ce contact");
             }
@@ -449,7 +467,13 @@ Cordialement`);
           onRemoveMember={(id, name) => setDeleteConfirm({ type: 'team', id, name })}
           onSendInvite={(member) => {
             if (member.contact?.email) {
-              openSingleInvite('team', member.id, member.contact.email, member.company?.name || member.contact.name, member.specialty);
+              setProposalEmailTarget({
+                id: member.id,
+                companyName: member.company?.name || member.contact?.name || "Partenaire",
+                contactEmail: member.contact.email,
+                contactName: member.contact?.name,
+                specialty: member.specialty || "",
+              });
             } else {
               toast.error("Pas d'email pour ce contact");
             }
@@ -1080,6 +1104,17 @@ Cordialement`);
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Partner Proposal Email Dialog */}
+      {tender && (
+        <PartnerProposalEmailDialog
+          open={!!proposalEmailTarget}
+          onOpenChange={(open) => !open && setProposalEmailTarget(null)}
+          tender={tender}
+          partner={proposalEmailTarget}
+          onSent={() => setProposalEmailTarget(null)}
+        />
+      )}
     </div>
   );
 }

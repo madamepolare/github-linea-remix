@@ -56,6 +56,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { RequiredTeamEditor } from "@/components/tenders/RequiredTeamEditor";
+import { SiteVisitAssignment } from "@/components/tenders/SiteVisitAssignment";
 
 interface TenderSyntheseTabProps {
   tender: Tender;
@@ -453,35 +454,16 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
                       />
                     </div>
                     {formData.site_visit_date && (
-                      <Button 
-                        variant={addedToCalendar ? "secondary" : "outline"} 
-                        size="sm" 
-                        className="w-full"
-                        disabled={isAddingToCalendar || addedToCalendar}
-                        onClick={async () => {
-                          setIsAddingToCalendar(true);
-                          try {
-                            await addSiteVisitToCalendar({
-                              id: tender.id,
-                              title: tender.title,
-                              location: formData.location || tender.location,
-                              site_visit_date: formData.site_visit_date!,
-                            });
-                            setAddedToCalendar(true);
-                          } finally {
-                            setIsAddingToCalendar(false);
-                          }
+                      <SiteVisitAssignment
+                        tenderId={tender.id}
+                        tenderTitle={tender.title}
+                        siteVisitDate={formData.site_visit_date}
+                        location={formData.location || tender.location}
+                        assignedUserIds={(tender as any).site_visit_assigned_users || []}
+                        onAssignmentChange={(userIds) => {
+                          handleSaveField('site_visit_assigned_users', userIds);
                         }}
-                      >
-                        {isAddingToCalendar ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : addedToCalendar ? (
-                          <Check className="h-4 w-4 mr-2" />
-                        ) : (
-                          <CalendarPlus className="h-4 w-4 mr-2" />
-                        )}
-                        {addedToCalendar ? "Ajouté à l'agenda" : "Ajouter à l'agenda"}
-                      </Button>
+                      />
                     )}
                   </div>
                 )}
