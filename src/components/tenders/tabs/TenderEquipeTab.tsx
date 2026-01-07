@@ -191,15 +191,25 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   const allCovered = [...coveredByTeam, ...coveredByCandidates];
   const missingSpecialties = requiredSpecialties.filter(s => !allCovered.includes(s));
 
+  // Normalize specialty key: remove "bet_" prefix if present to match CRM format
+  const normalizeSpecialty = (key: string) => key.startsWith('bet_') ? key.slice(4) : key;
+
   // Filter companies by specialty
   const filteredCompanies = companies.filter(c => {
     const matchesSearch = !companySearch || 
       c.name.toLowerCase().includes(companySearch.toLowerCase());
     const targetSpecialty = showAddCandidateDialog ? newCandidate.specialty : newTeamMember.specialty;
-    const matchesSpecialty = !targetSpecialty || 
-      c.bet_specialties?.includes(targetSpecialty) ||
-      c.industry?.toLowerCase().includes(targetSpecialty.replace('_', ' '));
-    return matchesSearch && (matchesSpecialty || !targetSpecialty);
+    if (!targetSpecialty) return matchesSearch;
+    
+    // Normalize the target specialty to match CRM format (without bet_ prefix)
+    const normalizedTarget = normalizeSpecialty(targetSpecialty);
+    
+    // Check if company is a BET with matching specialty
+    const isBetWithSpecialty = c.industry === 'bet' && c.bet_specialties?.includes(normalizedTarget);
+    // Legacy fallback: check if industry matches the normalized specialty
+    const isLegacyMatch = c.industry === targetSpecialty || c.industry === normalizedTarget;
+    
+    return matchesSearch && (isBetWithSpecialty || isLegacyMatch);
   });
 
   // Get contacts for selected company
