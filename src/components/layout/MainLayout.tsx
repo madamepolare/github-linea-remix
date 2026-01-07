@@ -9,6 +9,8 @@ import { useSidebarStore } from "@/hooks/useSidebarStore";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { GlobalTimeTracker } from "@/components/time-tracking/GlobalTimeTracker";
+import { FeedbackButton } from "@/components/feedback/FeedbackButton";
+import { FeedbackSidebar } from "@/components/feedback/FeedbackSidebar";
 
 export function MainLayout() {
   const { collapsed } = useSidebarStore();
@@ -88,6 +90,10 @@ export function MainLayout() {
 
       {/* Global Time Tracker Overlay */}
       <GlobalTimeTracker />
+
+      {/* Feedback Mode Components */}
+      <FeedbackButton />
+      <FeedbackSidebar />
     </div>
   );
 }

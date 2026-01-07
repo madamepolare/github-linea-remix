@@ -1827,6 +1827,50 @@ export type Database = {
           },
         ]
       }
+      feedback_entries: {
+        Row: {
+          author_id: string | null
+          content: string
+          created_at: string
+          feedback_type: string | null
+          id: string
+          route_path: string
+          status: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          content: string
+          created_at?: string
+          feedback_type?: string | null
+          id?: string
+          route_path: string
+          status?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          author_id?: string | null
+          content?: string
+          created_at?: string
+          feedback_type?: string | null
+          id?: string
+          route_path?: string
+          status?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_calendar_tokens: {
         Row: {
           access_token: string

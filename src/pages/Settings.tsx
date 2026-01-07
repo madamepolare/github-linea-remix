@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, User, Hammer, FolderKanban, Target, CheckSquare, FileText, FileStack, Shield, CreditCard, Puzzle, Mail, Layers } from "lucide-react";
+import { Building2, Users, User, Hammer, FolderKanban, Target, CheckSquare, FileText, FileStack, Shield, CreditCard, Puzzle, Mail, Layers, MessageSquarePlus } from "lucide-react";
 import { WorkspaceSettings } from "@/components/settings/WorkspaceSettings";
 import { MembersSettings } from "@/components/settings/MembersSettings";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
@@ -16,6 +16,7 @@ import { PermissionsSettings } from "@/components/settings/PermissionsSettings";
 import { PlanSettings } from "@/components/settings/PlanSettings";
 import { ModulesSettings } from "@/components/settings/ModulesSettings";
 import { EmailTemplatesSettings } from "@/components/settings/EmailTemplatesSettings";
+import { FeedbackSettings } from "@/components/settings/FeedbackSettings";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("workspace");
@@ -79,6 +80,10 @@ export default function Settings() {
           <Mail className="h-3.5 w-3.5" strokeWidth={1.5} />
           <span className="hidden sm:inline">Emails</span>
         </TabsTrigger>
+        <TabsTrigger value="feedback" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
+          <MessageSquarePlus className="h-3.5 w-3.5" strokeWidth={1.5} />
+          <span className="hidden sm:inline">Feedback</span>
+        </TabsTrigger>
       </TabsList>
     </Tabs>
   );
@@ -103,6 +108,7 @@ export default function Settings() {
       {activeTab === "crm" && <CRMSettings />}
       {activeTab === "tasks" && <TasksSettings />}
       {activeTab === "emails" && <EmailTemplatesSettings />}
+      {activeTab === "feedback" && <FeedbackSettings />}
     </PageLayout>
   );
 }
