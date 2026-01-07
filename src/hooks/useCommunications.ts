@@ -280,7 +280,7 @@ export function useCommunications(
     },
   });
 
-  // Organiser en threads
+  // Organiser en threads avec tri par date décroissante (plus récent en premier)
   const organizedCommunications = useMemo(() => {
     if (!communications) return { root: [], repliesMap: new Map<string, Communication[]>() };
 
@@ -295,6 +295,14 @@ export function useCommunications(
         existing.push(comm);
         repliesMap.set(comm.parent_id, existing);
       }
+    });
+
+    // Trier les réponses par date décroissante (plus récent en premier)
+    repliesMap.forEach((replies, parentId) => {
+      repliesMap.set(
+        parentId,
+        replies.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      );
     });
 
     return { root, repliesMap };
