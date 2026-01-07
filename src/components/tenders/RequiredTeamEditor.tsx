@@ -13,7 +13,7 @@ export interface RequiredTeamItem {
   id: string;
   specialty: string;
   is_mandatory: boolean;
-  notes: string;
+  notes?: string;
   company_id?: string | null;
 }
 

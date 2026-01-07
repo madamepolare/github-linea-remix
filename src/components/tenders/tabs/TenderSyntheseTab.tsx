@@ -19,6 +19,7 @@ import {
   ExternalLink,
   CalendarPlus,
   Check,
+  Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { RequiredTeamEditor } from "@/components/tenders/RequiredTeamEditor";
 
 interface TenderSyntheseTabProps {
   tender: Tender;
@@ -521,6 +523,25 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
                   Ce résumé sera utilisé dans le mémoire technique et les présentations.
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Required Team / Competencies */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                Équipe requise
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Définissez les compétences requises pour constituer l'équipe de maîtrise d'œuvre.
+              </p>
+              <RequiredTeamEditor
+                team={(Array.isArray(tender.required_team) ? tender.required_team : []) as Array<{ id: string; specialty: string; is_mandatory: boolean; notes?: string }>}
+                onChange={(team) => handleSaveField('required_team', team)}
+              />
             </CardContent>
           </Card>
         </div>
