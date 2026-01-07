@@ -137,12 +137,28 @@ export function EntityCommunications({ entityType, entityId, className }: Entity
 
   const handleReply = (parentId: string) => {
     if (!replyContent.trim()) return;
+
     const parentComm = rootCommunications.find((c) => c.id === parentId);
+
+    // If the parent comm comes from another entity (e.g. a Task), reply on that entity,
+    // while keeping the current entity as context so it stays visible here.
+    const targetEntityType = parentComm?.entity_type;
+    const targetEntityId = parentComm?.entity_id;
+
+    const needsContext =
+      !!targetEntityType &&
+      !!targetEntityId &&
+      (targetEntityType !== entityType || targetEntityId !== entityId);
+
     createCommunication.mutate(
       {
         type: parentComm?.communication_type || "comment",
         content: replyContent,
         parentId,
+        targetEntityType: targetEntityType || undefined,
+        targetEntityId: targetEntityId || undefined,
+        contextEntityType: needsContext ? entityType : undefined,
+        contextEntityId: needsContext ? (entityId || undefined) : undefined,
       },
       {
         onSuccess: () => {
