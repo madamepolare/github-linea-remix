@@ -159,8 +159,10 @@ export default function CompanyDetail() {
       const isBet = industry === "bet" || industry.startsWith("bet_");
 
       // Always show a clean BET label (uppercase) even if no specialty is set yet
+      const betLabel = "BET";
+
       const badgeLabel = isBet
-        ? `${getCompanyTypeShortLabelLocal("bet")}${specs.length ? ` · ${specs.map(getBetSpecialtyLabel).join(", ")}` : ""}`
+        ? `${betLabel}${specs.length ? ` · ${specs.map(getBetSpecialtyLabel).join(", ")}` : ""}`
         : getCompanyTypeLabelLocal(industry) || "Autre";
 
       const color = isBet
@@ -456,7 +458,7 @@ export default function CompanyDetail() {
                                   className="w-2 h-2 rounded-full"
                                   style={{ backgroundColor: getCompanyTypeColorLocal("bet") }}
                                 />
-                                {getCompanyTypeShortLabelLocal("bet")}
+                                {"BET"}
                               </Badge>
                               {specs.map((spec) => (
                                 <Badge
