@@ -72,7 +72,9 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
 
   // Handler pour démarrer le drag d'une tâche planifiée
   const handleScheduleDragStart = useCallback((e: React.DragEvent, scheduleId: string, taskTitle: string) => {
-    e.dataTransfer.setData("application/json", JSON.stringify({ scheduleId }));
+    const payload = JSON.stringify({ scheduleId });
+    e.dataTransfer.setData("application/json", payload);
+    e.dataTransfer.setData("text/plain", payload);
     e.dataTransfer.effectAllowed = "move";
   }, []);
 
@@ -292,9 +294,11 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     setDragOverCell(null);
     
     try {
-      const dataString = e.dataTransfer.getData("application/json");
+      const dataString =
+        e.dataTransfer.getData("application/json") ||
+        e.dataTransfer.getData("text/plain");
       if (!dataString) return;
-      
+
       const data = JSON.parse(dataString);
       
       // Check if this is a scheduled task being moved

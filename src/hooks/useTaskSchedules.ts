@@ -54,10 +54,6 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
             priority,
             estimated_hours,
             project:projects(name, color)
-          ),
-          user:profiles!task_schedules_user_id_fkey(
-            full_name,
-            avatar_url
           )
         `)
         .eq("workspace_id", activeWorkspace.id);
