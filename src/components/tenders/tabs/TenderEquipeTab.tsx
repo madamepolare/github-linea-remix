@@ -442,20 +442,21 @@ Cordialement`);
           }}
           onRemoveCandidate={(id, name) => setDeleteConfirm({ type: 'candidate', id, name })}
           onConfirmToTeam={(id) => confirmToTeam.mutate(id)}
-          onSendInvite={(candidate) => {
-            if (candidate.contact?.email) {
-              setProposalEmailTarget({
-                id: candidate.id,
-                companyName: candidate.company?.name || candidate.contact?.name || "Partenaire",
-                contactEmail: candidate.contact.email,
-                contactName: candidate.contact?.name,
-                specialty: candidate.specialty,
-                proposedFeePercentage: candidate.fee_percentage || undefined,
-              });
-            } else {
-              toast.error("Pas d'email pour ce contact");
-            }
-          }}
+           onSendInvite={(candidate) => {
+             const email = candidate.contact?.email || candidate.company?.email;
+             if (email) {
+               setProposalEmailTarget({
+                 id: candidate.id,
+                 companyName: candidate.company?.name || candidate.contact?.name || "Partenaire",
+                 contactEmail: email,
+                 contactName: candidate.contact?.name,
+                 specialty: candidate.specialty,
+                 proposedFeePercentage: candidate.fee_percentage || undefined,
+               });
+             } else {
+               toast.error("Pas d'email pour ce partenaire (contact ou entreprise)");
+             }
+           }}
           onBulkInvite={() => setShowBulkInviteDialog(true)}
           isLoading={isLoading}
           requiredSpecialties={requiredSpecialties}
@@ -1199,27 +1200,25 @@ function PipelineView({
     return c?.contact?.email && c.status === 'suggested';
   });
 
-  if (stats.total === 0) {
-    return (
-      <Card className="border-dashed">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-medium mb-2">Aucun partenaire dans le pipeline</h3>
-          <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
-            Commencez à constituer votre équipe en ajoutant des partenaires potentiels depuis votre CRM.
-            Vous pourrez ensuite les contacter en masse avec une synthèse du marché.
-          </p>
-          <Button onClick={onAddCandidate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Ajouter un partenaire
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
+      {stats.total === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="flex items-center justify-between py-4">
+            <div>
+              <p className="font-medium">Aucun candidat pour l’instant</p>
+              <p className="text-sm text-muted-foreground">
+                Ajoutez des partenaires dans les emplacements ci-dessous.
+              </p>
+            </div>
+            <Button onClick={onAddCandidate}>
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Search and Filter Bar */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
@@ -1229,6 +1228,7 @@ function PipelineView({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-9"
+            disabled={stats.total === 0}
           />
         </div>
         <Select value={statusFilter} onValueChange={onStatusFilterChange}>
@@ -1462,8 +1462,8 @@ function CandidateRow({
           {candidate.company?.name || candidate.contact?.name || 'Non défini'}
         </p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-          {candidate.contact?.email && (
-            <span className="truncate max-w-[150px]">{candidate.contact.email}</span>
+          {(candidate.contact?.email || candidate.company?.email) && (
+            <span className="truncate max-w-[150px]">{candidate.contact?.email || candidate.company?.email}</span>
           )}
           {candidate.fee_percentage && (
             <Tooltip>
@@ -1510,12 +1510,12 @@ function CandidateRow({
       </div>
 
       {/* Direct email button */}
-      {candidate.contact?.email && (
+      {(candidate.contact?.email || candidate.company?.email) && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="icon" 
+            <Button
+              variant="outline"
+              size="icon"
               className="h-8 w-8 shrink-0"
               onClick={onSendInvite}
             >
@@ -1550,14 +1550,14 @@ function CandidateRow({
             <Edit2 className="h-4 w-4 mr-2" />
             Modifier
           </DropdownMenuItem>
-          {candidate.contact?.email && (
+          {(candidate.contact?.email || candidate.company?.email) && (
             <>
               <DropdownMenuItem onClick={onSendInvite}>
                 <Mail className="h-4 w-4 mr-2" />
                 Envoyer une invitation
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <a href={`mailto:${candidate.contact.email}`}>
+                <a href={`mailto:${candidate.contact?.email || candidate.company?.email}`}> 
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Ouvrir dans client mail
                 </a>
