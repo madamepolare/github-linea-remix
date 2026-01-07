@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -101,7 +101,24 @@ export function EntityCommunications({ entityType, entityId, className }: Entity
   const [createType, setCreateType] = useState<"comment" | "exchange" | "note">("comment");
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
+  // Initialize with all thread IDs expanded by default
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
+
+  // Update expanded threads when communications change to include new threads with replies
+  useEffect(() => {
+    if (rootCommunications && repliesMap) {
+      setExpandedThreads(prev => {
+        const newSet = new Set(prev);
+        rootCommunications.forEach(c => {
+          const replies = repliesMap[c.id];
+          if (replies && replies.length > 0) {
+            newSet.add(c.id);
+          }
+        });
+        return newSet;
+      });
+    }
+  }, [rootCommunications, repliesMap]);
 
   const getProfile = (userId: string | null) => {
     if (!userId) return null;
