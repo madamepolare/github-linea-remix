@@ -11,6 +11,7 @@ export interface FeedbackEntry {
   content: string;
   feedback_type: string;
   status: string;
+  is_resolved: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -66,6 +67,22 @@ export function useFeedbackEntries() {
     },
   });
 
+  const toggleResolved = useMutation({
+    mutationFn: async ({ id, isResolved }: { id: string; isResolved: boolean }) => {
+      const { error } = await supabase
+        .from("feedback_entries")
+        .update({ is_resolved: isResolved })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["feedback-entries", activeWorkspace?.id] });
+    },
+    onError: (error) => {
+      toast.error("Erreur: " + error.message);
+    },
+  });
+
   const deleteEntry = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -87,6 +104,7 @@ export function useFeedbackEntries() {
     entries,
     isLoading,
     createEntry,
+    toggleResolved,
     deleteEntry,
   };
 }
