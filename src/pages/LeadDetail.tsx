@@ -55,6 +55,7 @@ import { EntityCommercialList } from "@/components/crm/EntityCommercialList";
 import { LinkedEntitiesPanel } from "@/components/shared/LinkedEntitiesPanel";
 import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 import { ConvertLeadToProjectDialog } from "@/components/shared/ConvertLeadToProjectDialog";
+import { EntityCommunications } from "@/components/shared/EntityCommunications";
 import { useAuth } from "@/contexts/AuthContext";
 
 const activityTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -337,6 +338,7 @@ export default function LeadDetail() {
             <Tabs defaultValue="overview">
               <TabsList>
                 <TabsTrigger value="overview">Aperçu</TabsTrigger>
+                <TabsTrigger value="communications">Communications</TabsTrigger>
                 <TabsTrigger value="activities">Activités ({activities.length})</TabsTrigger>
                 <TabsTrigger value="tasks">Tâches</TabsTrigger>
                 <TabsTrigger value="details">Détails</TabsTrigger>
@@ -443,6 +445,10 @@ export default function LeadDetail() {
                     </Button>
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              <TabsContent value="communications" className="mt-4">
+                <EntityCommunications entityType="lead" entityId={lead.id} />
               </TabsContent>
 
               <TabsContent value="activities" className="mt-4">

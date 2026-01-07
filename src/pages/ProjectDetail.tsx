@@ -55,11 +55,15 @@ import { ProjectOrdersTab } from "@/components/projects/ProjectOrdersTab";
 import { LinkedEntitiesPanel } from "@/components/shared/LinkedEntitiesPanel";
 import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 import { TimeTrackerButton } from "@/components/time-tracking/TimeTrackerButton";
+import { EntityCommunications } from "@/components/shared/EntityCommunications";
+import { MessageCircle } from "lucide-react";
+
 // Tab configuration for project detail
 const PROJECT_TABS = [
   { key: "overview", label: "Vue d'ensemble", icon: Sparkles },
   { key: "planning", label: "Calendrier", icon: Calendar },
   { key: "tasks", label: "Tâches", icon: ListTodo },
+  { key: "communications", label: "Communications", icon: MessageCircle },
   { key: "orders", label: "Commandes", icon: ShoppingCart },
   { key: "permits", label: "Autorisations", icon: FileCheck },
   { key: "insurances", label: "Assurances", icon: Shield },
@@ -191,6 +195,9 @@ export default function ProjectDetail() {
         {activeTab === "planning" && <ProjectPlanningTab projectId={project.id} />}
         {activeTab === "tasks" && (
           <EntityTasksList entityType="project" entityId={project.id} entityName={project.name} />
+        )}
+        {activeTab === "communications" && (
+          <EntityCommunications entityType="project" entityId={project.id} />
         )}
         {activeTab === "orders" && <ProjectOrdersTab projectId={project.id} />}
         {activeTab === "chantier" && <ChantierDashboard projectId={project.id} />}

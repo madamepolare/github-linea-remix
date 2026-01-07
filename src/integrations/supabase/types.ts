@@ -503,6 +503,84 @@ export type Database = {
           },
         ]
       }
+      communications: {
+        Row: {
+          attachments: Json | null
+          communication_type: string
+          content: string
+          content_html: string | null
+          created_at: string | null
+          created_by: string | null
+          email_metadata: Json | null
+          entity_id: string
+          entity_type: string
+          id: string
+          is_pinned: boolean | null
+          is_read: boolean | null
+          mentions: string[] | null
+          parent_id: string | null
+          thread_id: string | null
+          title: string | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          communication_type: string
+          content: string
+          content_html?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email_metadata?: Json | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          is_pinned?: boolean | null
+          is_read?: boolean | null
+          mentions?: string[] | null
+          parent_id?: string | null
+          thread_id?: string | null
+          title?: string | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          communication_type?: string
+          content?: string
+          content_html?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email_metadata?: Json | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          is_pinned?: boolean | null
+          is_read?: boolean | null
+          mentions?: string[] | null
+          parent_id?: string | null
+          thread_id?: string | null
+          title?: string | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communications_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "communications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_pipeline_emails: {
         Row: {
           body_html: string
