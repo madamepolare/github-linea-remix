@@ -1,10 +1,13 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { format } from "date-fns";
-import { Calendar, Clock, Users, Eye, Copy, ExternalLink, Move, CheckCircle2, Trash2 } from "lucide-react";
+import { Calendar, Clock, Users, Eye, Copy, ExternalLink, Move, CheckCircle2, Trash2, Pencil, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import { TaskSchedule } from "@/hooks/useTaskSchedules";
+import { DurationInput } from "@/components/tasks/DurationInput";
 
 // Types pour les items affichés dans le planning
 export type PlanningItem = {
@@ -50,6 +53,8 @@ export function ResizablePlanningItem({
   
   const [height, setHeight] = useState(initialHeight);
   const [isResizing, setIsResizing] = useState(false);
+  const [isEditingDuration, setIsEditingDuration] = useState(false);
+  const [editingDuration, setEditingDuration] = useState(hours.toString());
   const resizeRef = useRef<{ startY: number; startHeight: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -62,8 +67,23 @@ export function ResizablePlanningItem({
   }, [hours, pixelsPerHour, minHeight, isResizing]);
   
   const hoursLabel = hours >= 1 ? `${Math.round(hours * 10) / 10}h` : `${Math.round(hours * 60)}m`;
-  const currentHours = Math.max(0.5, Math.round((height / pixelsPerHour) * 2) / 2); // Arrondi à 0.5h
+  const currentHours = Math.max(0.25, Math.round((height / pixelsPerHour) * 4) / 4); // Arrondi à 0.25h
   const currentHoursLabel = currentHours >= 1 ? `${currentHours}h` : `${Math.round(currentHours * 60)}m`;
+
+  const handleOpenDurationEdit = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setEditingDuration(hours.toString());
+    setIsEditingDuration(true);
+  }, [hours]);
+
+  const handleSaveDuration = useCallback(() => {
+    const newHours = parseFloat(editingDuration);
+    if (!isNaN(newHours) && newHours > 0 && schedule && onResize) {
+      onResize(schedule.id, newHours);
+    }
+    setIsEditingDuration(false);
+  }, [editingDuration, schedule, onResize]);
 
   const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (item.type !== "task" || !schedule) return;
@@ -90,8 +110,8 @@ export function ResizablePlanningItem({
     setIsResizing(false);
     resizeRef.current = null;
     
-    // Calculer la nouvelle durée (arrondi à 0.5h)
-    const newDurationHours = Math.max(0.5, Math.round((height / pixelsPerHour) * 2) / 2);
+    // Calculer la nouvelle durée (arrondi à 0.25h pour permettre 15min)
+    const newDurationHours = Math.max(0.25, Math.round((height / pixelsPerHour) * 4) / 4);
     
     if (newDurationHours !== hours && onResize) {
       onResize(schedule.id, newDurationHours);
@@ -150,13 +170,49 @@ export function ResizablePlanningItem({
                 }
               }}
             >
-              {/* Badge durée - mis à jour pendant le resize */}
-              <div className={cn(
-                "absolute -top-1 -right-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold shadow-sm border transition-colors",
-                isResizing ? "bg-primary text-primary-foreground border-primary" : "bg-white text-gray-700"
-              )}>
-                {isResizing ? currentHoursLabel : hoursLabel}
-              </div>
+              {/* Badge durée avec bouton d'édition */}
+              {item.type === "task" && schedule ? (
+                <Popover open={isEditingDuration} onOpenChange={setIsEditingDuration}>
+                  <PopoverTrigger asChild>
+                    <button
+                      className={cn(
+                        "absolute -top-1 -right-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold shadow-sm border transition-all flex items-center gap-0.5 hover:scale-110",
+                        isResizing ? "bg-primary text-primary-foreground border-primary" : "bg-white text-gray-700 hover:bg-gray-100"
+                      )}
+                      onClick={handleOpenDurationEdit}
+                    >
+                      {isResizing ? currentHoursLabel : hoursLabel}
+                      <Pencil className="h-2 w-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-3" align="end" onClick={(e) => e.stopPropagation()}>
+                    <div className="space-y-3">
+                      <div className="text-sm font-medium">Modifier la durée</div>
+                      <DurationInput
+                        value={editingDuration}
+                        onChange={setEditingDuration}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => setIsEditingDuration(false)}>
+                          <X className="h-3 w-3 mr-1" />
+                          Annuler
+                        </Button>
+                        <Button size="sm" onClick={handleSaveDuration}>
+                          <Check className="h-3 w-3 mr-1" />
+                          OK
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <div className={cn(
+                  "absolute -top-1 -right-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold shadow-sm border transition-colors",
+                  isResizing ? "bg-primary text-primary-foreground border-primary" : "bg-white text-gray-700"
+                )}>
+                  {isResizing ? currentHoursLabel : hoursLabel}
+                </div>
+              )}
               
               {/* Content */}
               <div className="flex items-start gap-1.5 flex-1 min-w-0 overflow-hidden">
