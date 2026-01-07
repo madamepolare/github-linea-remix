@@ -42,6 +42,12 @@ interface CreateCommunicationParams {
   content: string;
   title?: string;
   parentId?: string;
+  /**
+   * When replying/adding from an aggregated view (e.g. from Project → a Task communication),
+   * we must write on the source entity, not the current view entity.
+   */
+  targetEntityType?: EntityType;
+  targetEntityId?: string;
   // Optional context for aggregation (e.g., project when creating on a task)
   contextEntityType?: EntityType;
   contextEntityId?: string;
@@ -136,18 +142,23 @@ export function useCommunications(
       content,
       title,
       parentId,
+      targetEntityType,
+      targetEntityId,
       contextEntityType,
       contextEntityId,
     }: CreateCommunicationParams) => {
       if (!entityId || !activeWorkspace) throw new Error("Missing entity or workspace");
-      
+
+      const writeEntityType = targetEntityType ?? entityType;
+      const writeEntityId = targetEntityId ?? entityId;
+
       const { data, error } = await supabase
         .from("communications")
         .insert({
           workspace_id: activeWorkspace.id,
           communication_type: type,
-          entity_type: entityType,
-          entity_id: entityId,
+          entity_type: writeEntityType,
+          entity_id: writeEntityId,
           content,
           title: title || null,
           parent_id: parentId || null,

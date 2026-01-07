@@ -1,13 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Task, useTasks } from "@/hooks/useTasks";
-import { useTaskComments } from "@/hooks/useTaskComments";
 import { useAuth } from "@/contexts/AuthContext";
 import { SubtasksManager } from "./SubtasksManager";
 import { TaskTimeTracker } from "./TaskTimeTracker";
 import { MultiAssigneePicker } from "./MultiAssigneePicker";
 import { InlineDatePicker } from "./InlineDatePicker";
 import { TagInput } from "./TagInput";
-import { MentionInput } from "./MentionInput";
+import { TaskCommunications } from "./TaskCommunications";
 import {
   Dialog,
   DialogContent,
@@ -25,23 +24,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  CheckSquare, 
-  Clock, 
-  MessageSquare, 
-  Trash2, 
-  Archive, 
+import {
+  CheckSquare,
+  Clock,
+  MessageSquare,
+  Trash2,
+  Archive,
   Calendar,
   User,
   Flag,
   Tag,
   FileText,
-  Send
 } from "lucide-react";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import type { EntityType } from "@/hooks/useCommunications";
 
 interface TaskDetailModalProps {
   task: Task | null;
@@ -66,7 +64,6 @@ const priorityOptions = [
 export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalProps) {
   const { activeWorkspace } = useAuth();
   const { updateTask, deleteTask } = useTasks();
-  const { comments, createComment } = useTaskComments(task?.id || null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -77,9 +74,16 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [estimatedHours, setEstimatedHours] = useState("");
-  const [newComment, setNewComment] = useState("");
-  const [commentMentions, setCommentMentions] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<"subtasks" | "time">("subtasks");
+
+  const context = useMemo((): { type?: EntityType; id?: string } => {
+    if (!task) return {};
+    if (task.project_id) return { type: "project", id: task.project_id };
+    if (task.lead_id) return { type: "lead", id: task.lead_id };
+    if (task.crm_company_id) return { type: "company", id: task.crm_company_id };
+    if (task.contact_id) return { type: "contact", id: task.contact_id };
+    return {};
+  }, [task]);
 
   useEffect(() => {
     if (task) {
@@ -127,12 +131,6 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
     onOpenChange(false);
   };
 
-  const handleAddComment = () => {
-    if (!newComment.trim()) return;
-    createComment.mutate({ content: newComment });
-    setNewComment("");
-    setCommentMentions([]);
-  };
 
   if (!task) return null;
 
@@ -207,47 +205,18 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                 )}
               </div>
 
-              {/* Comments */}
+              {/* Communications */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <MessageSquare className="h-4 w-4" />
-                  Comments ({comments?.length || 0})
+                  Communications
                 </div>
 
-                <div className="flex gap-2">
-                  <MentionInput
-                    value={newComment}
-                    onChange={setNewComment}
-                    onMentionsChange={setCommentMentions}
-                    placeholder="Add a comment... Use @ to mention"
-                    rows={2}
-                    className="flex-1"
-                  />
-                  <Button 
-                    size="icon" 
-                    onClick={handleAddComment} 
-                    disabled={!newComment.trim()}
-                    className="shrink-0"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  {comments?.map((comment) => (
-                    <div key={comment.id} className="p-3 rounded-lg bg-muted/50 space-y-1">
-                      <p className="text-sm whitespace-pre-wrap">
-                        {comment.content.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, "@$1")}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {comment.created_at && format(new Date(comment.created_at), "d MMM yyyy 'at' HH:mm", { locale: fr })}
-                      </p>
-                    </div>
-                  ))}
-                  {(!comments || comments.length === 0) && (
-                    <p className="text-center text-muted-foreground text-sm py-4">No comments yet</p>
-                  )}
-                </div>
+                <TaskCommunications
+                  taskId={task.id}
+                  contextEntityType={context.type}
+                  contextEntityId={context.id}
+                />
               </div>
             </div>
           </div>
