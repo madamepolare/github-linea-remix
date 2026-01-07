@@ -133,15 +133,16 @@ export default function CompanyDetail() {
       const industry = company.industry || "";
       const specs = getNormalizedBetSpecialties(company.industry, company.bet_specialties);
 
-      const badgeLabel =
-        (industry === "bet" || industry.startsWith("bet_")) && specs.length > 0
-          ? `${getCompanyTypeShortLabelLocal("bet")} · ${specs.map(getBetSpecialtyLabel).join(", ")}`
-          : getCompanyTypeLabelLocal(industry) || "Autre";
+      const isBet = industry === "bet" || industry.startsWith("bet_");
 
-      const color =
-        (industry === "bet" || industry.startsWith("bet_")) && specs.length > 0
-          ? getBetSpecialtyColor(specs[0])
-          : getCompanyTypeColorLocal(industry) || "#3B82F6";
+      // Always show a clean BET label (uppercase) even if no specialty is set yet
+      const badgeLabel = isBet
+        ? `${getCompanyTypeShortLabelLocal("bet")}${specs.length ? ` · ${specs.map(getBetSpecialtyLabel).join(", ")}` : ""}`
+        : getCompanyTypeLabelLocal(industry) || "Autre";
+
+      const color = isBet
+        ? (specs.length ? getBetSpecialtyColor(specs[0]) : getCompanyTypeColorLocal("bet"))
+        : getCompanyTypeColorLocal(industry) || "#3B82F6";
 
       setEntityConfig({
         backTo: "/crm",
@@ -382,9 +383,7 @@ export default function CompanyDetail() {
                                           className="h-3 w-3 cursor-pointer"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            const next = selectedSpecialties.filter((s) => s !== spec);
-                                            setSelectedSpecialties(next);
-                                            setEditData({ ...editData, bet_specialties: next });
+                                            setSelectedSpecialties((prev) => prev.filter((s) => s !== spec));
                                           }}
                                         />
                                       </Badge>
@@ -402,12 +401,13 @@ export default function CompanyDetail() {
                                   key={spec.key}
                                   checked={selectedSpecialties.includes(spec.key)}
                                   onSelect={(e) => e.preventDefault()}
-                                  onCheckedChange={() => {
-                                    const next = selectedSpecialties.includes(spec.key)
-                                      ? selectedSpecialties.filter((s) => s !== spec.key)
-                                      : [...selectedSpecialties, spec.key];
-                                    setSelectedSpecialties(next);
-                                    setEditData({ ...editData, bet_specialties: next });
+                                  onCheckedChange={(checked) => {
+                                    setSelectedSpecialties((prev) => {
+                                      const exists = prev.includes(spec.key);
+                                      if (checked && !exists) return [...prev, spec.key];
+                                      if (!checked && exists) return prev.filter((s) => s !== spec.key);
+                                      return prev;
+                                    });
                                   }}
                                 >
                                   <span className="inline-flex items-center gap-2">
@@ -438,9 +438,10 @@ export default function CompanyDetail() {
                       {(() => {
                         const industry = company.industry || "";
                         const specs = getNormalizedBetSpecialties(company.industry, company.bet_specialties);
-                        
-                        // If BET with specialties, show category badge + specialty badges
-                        if ((industry === "bet" || industry.startsWith("bet_")) && specs.length > 0) {
+                        const isBet = industry === "bet" || industry.startsWith("bet_");
+
+                        // BET: always show BET badge, plus specialties if any
+                        if (isBet) {
                           return (
                             <>
                               <Badge variant="outline" className="gap-1.5">
@@ -462,7 +463,7 @@ export default function CompanyDetail() {
                             </>
                           );
                         }
-                        
+
                         // Regular company type
                         return (
                           <Badge variant="outline" className="gap-1.5">
