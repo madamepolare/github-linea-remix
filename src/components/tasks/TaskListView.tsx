@@ -33,6 +33,7 @@ import confetti from "canvas-confetti";
 
 interface TaskListViewProps {
   entityFilter?: string;
+  projectId?: string | null;
 }
 
 type SortColumn = "title" | "status" | "due_date" | "priority" | "relation";
@@ -45,8 +46,8 @@ const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }
   done: { bg: "bg-green-50/50 dark:bg-green-900/20", border: "border-l-green-500", text: "text-green-600" },
 };
 
-export function TaskListView({ entityFilter = "all" }: TaskListViewProps) {
-  const { tasks, isLoading, updateTaskStatus, updateTask } = useTasks();
+export function TaskListView({ entityFilter = "all", projectId }: TaskListViewProps) {
+  const { tasks, isLoading, updateTaskStatus, updateTask } = useTasks(projectId ? { projectId } : undefined);
   const { companies } = useCRMCompanies();
   const { projects } = useProjects();
   const { data: profiles } = useWorkspaceProfiles();

@@ -25,11 +25,12 @@ const COLUMNS: { id: Task["status"]; label: string; color: string }[] = TASK_STA
 interface TaskBoardProps {
   statusFilter?: string | null;
   priorityFilter?: string | null;
+  projectId?: string | null;
   onCreateTask?: () => void;
 }
 
-export function TaskBoard({ statusFilter, priorityFilter, onCreateTask }: TaskBoardProps) {
-  const { tasks, isLoading, updateTaskStatus } = useTasks();
+export function TaskBoard({ statusFilter, priorityFilter, projectId, onCreateTask }: TaskBoardProps) {
+  const { tasks, isLoading, updateTaskStatus } = useTasks(projectId ? { projectId } : undefined);
   const { companies } = useCRMCompanies();
   const { projects } = useProjects();
   const { data: profiles } = useWorkspaceProfiles();
