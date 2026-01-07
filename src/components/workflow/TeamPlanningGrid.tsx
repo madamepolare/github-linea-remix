@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
-import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, getMonth, getYear, differenceInMinutes, addMinutes, startOfDay, parseISO } from "date-fns";
+import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Calendar, Clock, List, Grid3X3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
@@ -9,48 +9,53 @@ import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TeamPlanningGridProps {
   onEventClick?: (schedule: TaskSchedule) => void;
   onCellClick?: (date: Date, member: TeamMember) => void;
 }
 
-type ViewMode = "day" | "week" | "month";
+type ViewMode = "week" | "2weeks" | "month";
 
-const CELL_WIDTH = 48; // pixels per day
-const HOURS_PER_DAY = 8; // heures de travail par jour
+const CELL_WIDTH = 52;
+const ROW_HEIGHT = 100;
+const HOURS_PER_DAY = 8;
 
 export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGridProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [viewMode, setViewMode] = useState<ViewMode>("2weeks");
   
-  const { schedules } = useTaskSchedules();
-  const { data: members } = useTeamMembers();
+  const { schedules, isLoading: schedulesLoading } = useTaskSchedules();
+  const { data: members, isLoading: membersLoading } = useTeamMembers();
+
+  const isLoading = schedulesLoading || membersLoading;
 
   // Calculer les jours à afficher
   const days = useMemo(() => {
-    if (viewMode === "day") {
-      return [currentDate];
-    } else if (viewMode === "week") {
-      const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+    
+    if (viewMode === "week") {
       return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+    } else if (viewMode === "2weeks") {
+      return Array.from({ length: 14 }, (_, i) => addDays(start, i));
     } else {
-      // Month view - show a wider range
-      const start = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 });
-      const end = addDays(endOfMonth(currentDate), 14);
-      return eachDayOfInterval({ start, end });
+      const monthStart = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 });
+      const monthEnd = addDays(endOfMonth(currentDate), 7);
+      return eachDayOfInterval({ start: monthStart, end: monthEnd });
     }
   }, [currentDate, viewMode]);
 
-  // Grouper les jours par mois pour l'affichage
+  // Grouper les jours par mois
   const monthGroups = useMemo(() => {
-    const groups: { month: string; days: Date[] }[] = [];
-    let currentGroup: { month: string; days: Date[] } | null = null;
+    const groups: { month: string; year: number; days: Date[] }[] = [];
+    let currentGroup: { month: string; year: number; days: Date[] } | null = null;
 
     days.forEach(day => {
-      const monthKey = format(day, "MMMM yyyy", { locale: fr });
-      if (!currentGroup || currentGroup.month !== monthKey) {
-        currentGroup = { month: monthKey, days: [] };
+      const monthKey = format(day, "MMMM", { locale: fr });
+      const year = day.getFullYear();
+      if (!currentGroup || currentGroup.month !== monthKey || currentGroup.year !== year) {
+        currentGroup = { month: monthKey, year, days: [] };
         groups.push(currentGroup);
       }
       currentGroup.days.push(day);
@@ -59,24 +64,13 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
     return groups;
   }, [days]);
 
-  // Navigation
   const navigate = (direction: "prev" | "next") => {
-    if (viewMode === "day") {
-      setCurrentDate(prev => direction === "prev" ? addDays(prev, -1) : addDays(prev, 1));
-    } else if (viewMode === "week") {
-      setCurrentDate(prev => direction === "prev" ? subWeeks(prev, 1) : addWeeks(prev, 1));
-    } else {
-      setCurrentDate(prev => {
-        const newDate = new Date(prev);
-        newDate.setMonth(newDate.getMonth() + (direction === "prev" ? -1 : 1));
-        return newDate;
-      });
-    }
+    const weeks = viewMode === "week" ? 1 : viewMode === "2weeks" ? 2 : 4;
+    setCurrentDate(prev => direction === "prev" ? subWeeks(prev, weeks) : addWeeks(prev, weeks));
   };
 
   const goToToday = () => setCurrentDate(new Date());
 
-  // Calculer les schedules pour un membre et un jour
   const getSchedulesForMemberAndDay = useCallback((memberId: string, day: Date) => {
     if (!schedules) return [];
     
@@ -92,7 +86,6 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
     });
   }, [schedules]);
 
-  // Calculer le taux d'occupation pour un membre et un jour (en %)
   const getOccupancyRate = useCallback((memberId: string, day: Date) => {
     const daySchedules = getSchedulesForMemberAndDay(memberId, day);
     
@@ -113,58 +106,70 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
     return Math.min(100, Math.round((totalMinutes / maxMinutes) * 100));
   }, [getSchedulesForMemberAndDay]);
 
-  // Vérifier si c'est un jour de congé (placeholder - à connecter avec vraies données)
-  const isOffDay = (memberId: string, day: Date) => {
-    // À implémenter avec les vraies données d'absences
-    return false;
-  };
+  if (isLoading) {
+    return (
+      <div className="flex h-full">
+        <div className="w-56 border-r p-4 space-y-4">
+          <Skeleton className="h-8 w-full" />
+          {[1, 2, 3].map(i => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex-1 p-4">
+          <Skeleton className="h-full w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header avec navigation */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate("prev")}>
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-card/50">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("prev")} className="h-8 w-8">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={goToToday}>
+          <Button variant="outline" size="sm" onClick={goToToday} className="h-8 px-3 text-xs">
             Aujourd'hui
           </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate("next")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("next")} className="h-8 w-8">
             <ChevronRight className="h-4 w-4" />
           </Button>
           
-          <span className="ml-4 text-lg font-semibold capitalize">
-            {format(currentDate, "MMMM yyyy", { locale: fr })}
+          <div className="h-6 w-px bg-border mx-2" />
+          
+          <span className="text-sm font-semibold capitalize">
+            {format(days[0], "d MMM", { locale: fr })} - {format(days[days.length - 1], "d MMM yyyy", { locale: fr })}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex border rounded-lg overflow-hidden">
-            <Button
-              variant={viewMode === "day" ? "secondary" : "ghost"}
-              size="sm"
-              className="rounded-none"
-              onClick={() => setViewMode("day")}
-            >
-              Jour
-            </Button>
-            <Button
-              variant={viewMode === "week" ? "secondary" : "ghost"}
-              size="sm"
-              className="rounded-none border-x"
-              onClick={() => setViewMode("week")}
-            >
-              Semaine
-            </Button>
-            <Button
-              variant={viewMode === "month" ? "secondary" : "ghost"}
-              size="sm"
-              className="rounded-none"
-              onClick={() => setViewMode("month")}
-            >
-              Mois
-            </Button>
+          <div className="flex bg-muted rounded-lg p-0.5">
+            {[
+              { key: "week", label: "7j" },
+              { key: "2weeks", label: "14j" },
+              { key: "month", label: "Mois" },
+            ].map(({ key, label }) => (
+              <Button
+                key={key}
+                variant={viewMode === key ? "secondary" : "ghost"}
+                size="sm"
+                className={cn(
+                  "h-7 px-3 text-xs rounded-md",
+                  viewMode === key && "shadow-sm"
+                )}
+                onClick={() => setViewMode(key as ViewMode)}
+              >
+                {label}
+              </Button>
+            ))}
           </div>
         </div>
       </div>
@@ -172,38 +177,49 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
       {/* Grille principale */}
       <div className="flex-1 overflow-hidden flex">
         {/* Colonne des membres (fixe) */}
-        <div className="flex-shrink-0 w-52 border-r bg-muted/30">
-          {/* Header vide pour aligner avec les jours */}
-          <div className="h-16 border-b flex items-end justify-center pb-2">
-            <span className="text-xs text-muted-foreground font-medium">Équipe</span>
+        <div className="flex-shrink-0 w-56 border-r bg-card/30">
+          {/* Header aligné */}
+          <div className="h-[72px] border-b flex items-center px-4">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Users className="h-4 w-4" />
+              <span className="text-xs font-medium uppercase tracking-wider">Équipe</span>
+              <span className="text-xs bg-muted rounded-full px-2 py-0.5">
+                {members?.length || 0}
+              </span>
+            </div>
           </div>
           
           {/* Liste des membres */}
-          <div className="overflow-y-auto" style={{ height: "calc(100% - 4rem)" }}>
-            {(members || []).map(member => (
-              <div
-                key={member.user_id}
-                className="h-24 px-3 flex items-center gap-3 border-b hover:bg-muted/50 transition-colors"
-              >
-                <Avatar className="h-10 w-10 ring-2 ring-background shadow">
-                  <AvatarImage src={member.profile?.avatar_url || ""} />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                    {(member.profile?.full_name || "?").charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate">
-                    {member.profile?.full_name || member.profile?.email || "Membre"}
-                  </div>
-                  {member.profile?.job_title && (
-                    <div className="text-xs text-muted-foreground truncate">
-                      {member.profile.job_title}
-                    </div>
-                  )}
-                </div>
+          <ScrollArea className="h-[calc(100%-72px)]">
+            {(!members || members.length === 0) ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                Aucun membre dans l'équipe
               </div>
-            ))}
-          </div>
+            ) : (
+              members.map(member => (
+                <div
+                  key={member.user_id}
+                  className="px-4 flex items-center gap-3 border-b hover:bg-muted/30 transition-colors"
+                  style={{ height: ROW_HEIGHT }}
+                >
+                  <Avatar className="h-11 w-11 ring-2 ring-background shadow-md">
+                    <AvatarImage src={member.profile?.avatar_url || ""} />
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-sm font-medium">
+                      {(member.profile?.full_name || "?").charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm truncate">
+                      {member.profile?.full_name || "Membre"}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {member.profile?.job_title || member.role}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </ScrollArea>
         </div>
 
         {/* Grille des jours (scrollable) */}
@@ -212,21 +228,21 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
             {/* Header des mois et jours */}
             <div className="sticky top-0 bg-background z-10 border-b">
               {/* Ligne des mois */}
-              <div className="flex h-8">
+              <div className="flex h-9 border-b">
                 {monthGroups.map((group, idx) => (
                   <div
-                    key={`${group.month}-${idx}`}
-                    className="flex items-center justify-center border-r text-xs font-semibold text-muted-foreground capitalize"
+                    key={`${group.month}-${group.year}-${idx}`}
+                    className="flex items-center justify-center text-xs font-semibold capitalize bg-muted/30"
                     style={{ width: group.days.length * CELL_WIDTH }}
                   >
-                    {group.month}
+                    {group.month} {group.year}
                   </div>
                 ))}
               </div>
               
               {/* Ligne des jours */}
-              <div className="flex h-8">
-                {days.map((day, idx) => {
+              <div className="flex h-9">
+                {days.map((day) => {
                   const isToday = isSameDay(day, new Date());
                   const weekend = isWeekend(day);
                   
@@ -234,22 +250,21 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
                     <div
                       key={day.toISOString()}
                       className={cn(
-                        "flex flex-col items-center justify-center border-r text-xs",
-                        weekend && "bg-muted/50",
+                        "flex items-center justify-center gap-1 border-r text-xs transition-colors",
+                        weekend && "bg-muted/40",
                         isToday && "bg-primary/10"
                       )}
                       style={{ width: CELL_WIDTH }}
                     >
                       <span className={cn(
-                        "uppercase",
-                        weekend ? "text-muted-foreground" : "text-foreground",
-                        isToday && "text-primary font-bold"
+                        "uppercase text-[10px]",
+                        weekend ? "text-muted-foreground" : "text-muted-foreground"
                       )}>
-                        {format(day, "EEE", { locale: fr }).slice(0, 3)}
+                        {format(day, "EEE", { locale: fr }).slice(0, 2)}
                       </span>
                       <span className={cn(
-                        "font-semibold",
-                        isToday && "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center"
+                        "font-semibold text-xs",
+                        isToday && "bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-[10px]"
                       )}>
                         {format(day, "d")}
                       </span>
@@ -261,18 +276,25 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
 
             {/* Corps de la grille */}
             <div>
-              {(members || []).map(member => (
-                <MemberRow
-                  key={member.user_id}
-                  member={member}
-                  days={days}
-                  getSchedulesForMemberAndDay={getSchedulesForMemberAndDay}
-                  getOccupancyRate={getOccupancyRate}
-                  onEventClick={onEventClick}
-                  onCellClick={onCellClick}
-                  cellWidth={CELL_WIDTH}
-                />
-              ))}
+              {(!members || members.length === 0) ? (
+                <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
+                  Ajoutez des membres à votre équipe pour voir le planning
+                </div>
+              ) : (
+                members.map(member => (
+                  <MemberRow
+                    key={member.user_id}
+                    member={member}
+                    days={days}
+                    getSchedulesForMemberAndDay={getSchedulesForMemberAndDay}
+                    getOccupancyRate={getOccupancyRate}
+                    onEventClick={onEventClick}
+                    onCellClick={onCellClick}
+                    cellWidth={CELL_WIDTH}
+                    rowHeight={ROW_HEIGHT}
+                  />
+                ))
+              )}
             </div>
           </div>
           <ScrollBar orientation="horizontal" />
@@ -282,7 +304,6 @@ export function TeamPlanningGrid({ onEventClick, onCellClick }: TeamPlanningGrid
   );
 }
 
-// Composant pour une ligne de membre
 interface MemberRowProps {
   member: TeamMember;
   days: Date[];
@@ -291,6 +312,7 @@ interface MemberRowProps {
   onEventClick?: (schedule: TaskSchedule) => void;
   onCellClick?: (date: Date, member: TeamMember) => void;
   cellWidth: number;
+  rowHeight: number;
 }
 
 function MemberRow({
@@ -301,9 +323,10 @@ function MemberRow({
   onEventClick,
   onCellClick,
   cellWidth,
+  rowHeight,
 }: MemberRowProps) {
   return (
-    <div className="flex h-24 border-b">
+    <div className="flex border-b" style={{ height: rowHeight }}>
       {days.map(day => {
         const schedules = getSchedulesForMemberAndDay(member.user_id, day);
         const occupancy = getOccupancyRate(member.user_id, day);
@@ -329,7 +352,6 @@ function MemberRow({
   );
 }
 
-// Composant pour une cellule jour
 interface DayCellProps {
   day: Date;
   member: TeamMember;
@@ -354,68 +376,92 @@ function DayCell({
   cellWidth,
 }: DayCellProps) {
   const getOccupancyColor = (rate: number) => {
-    if (rate === 0) return "text-muted-foreground";
-    if (rate < 50) return "text-yellow-600 dark:text-yellow-400";
+    if (rate === 0) return "";
+    if (rate < 50) return "text-amber-600 dark:text-amber-400";
     if (rate < 80) return "text-blue-600 dark:text-blue-400";
-    if (rate <= 100) return "text-green-600 dark:text-green-400";
+    if (rate <= 100) return "text-emerald-600 dark:text-emerald-400";
     return "text-red-600 dark:text-red-400";
   };
 
+  const getOccupancyBg = (rate: number) => {
+    if (rate === 0) return "";
+    if (rate < 50) return "bg-amber-50 dark:bg-amber-950/20";
+    if (rate < 80) return "bg-blue-50 dark:bg-blue-950/20";
+    if (rate <= 100) return "bg-emerald-50 dark:bg-emerald-950/20";
+    return "bg-red-50 dark:bg-red-950/20";
+  };
+
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={200}>
       <div
         className={cn(
-          "relative border-r p-1 flex flex-col cursor-pointer hover:bg-muted/30 transition-colors",
-          isWeekend && "bg-muted/40",
-          isToday && "bg-primary/5 ring-1 ring-inset ring-primary/20"
+          "relative border-r p-1 flex flex-col cursor-pointer transition-all duration-150",
+          "hover:bg-accent/50 hover:shadow-inner",
+          isWeekend && "bg-muted/30",
+          isToday && "bg-primary/5 ring-1 ring-inset ring-primary/30",
+          occupancy > 0 && getOccupancyBg(occupancy)
         )}
         style={{ width: cellWidth }}
         onClick={() => onCellClick?.(day, member)}
       >
         {/* Tâches planifiées */}
         <div className="flex-1 space-y-0.5 overflow-hidden">
-          {schedules.slice(0, 3).map(schedule => (
-            <Tooltip key={schedule.id}>
-              <TooltipTrigger asChild>
-                <div
-                  className="rounded text-[9px] px-1 py-0.5 truncate cursor-pointer hover:opacity-80 transition-opacity"
-                  style={{
-                    backgroundColor: schedule.color || schedule.task?.project?.color || "#6366f1",
-                    color: "white",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEventClick?.(schedule);
-                  }}
-                >
-                  {schedule.task?.title || "Tâche"}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs">
-                <div className="text-sm font-medium">{schedule.task?.title}</div>
-                {schedule.task?.project?.name && (
-                  <div className="text-xs text-muted-foreground">{schedule.task.project.name}</div>
-                )}
-                <div className="text-xs mt-1">
-                  {format(new Date(schedule.start_datetime), "HH:mm")} - {format(new Date(schedule.end_datetime), "HH:mm")}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          ))}
+          {schedules.slice(0, 3).map(schedule => {
+            const color = schedule.color || schedule.task?.project?.color || "#6366f1";
+            
+            return (
+              <Tooltip key={schedule.id}>
+                <TooltipTrigger asChild>
+                  <div
+                    className="rounded-sm text-[9px] leading-tight px-1 py-0.5 truncate cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02] transition-all font-medium"
+                    style={{
+                      backgroundColor: color,
+                      color: "white",
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEventClick?.(schedule);
+                    }}
+                  >
+                    {schedule.task?.title || "Tâche"}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <div className="space-y-1">
+                    <div className="font-medium">{schedule.task?.title}</div>
+                    {schedule.task?.project?.name && (
+                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: schedule.task.project.color || "#6366f1" }}
+                        />
+                        {schedule.task.project.name}
+                      </div>
+                    )}
+                    <div className="text-xs text-muted-foreground">
+                      {format(new Date(schedule.start_datetime), "HH:mm")} - {format(new Date(schedule.end_datetime), "HH:mm")}
+                    </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
           {schedules.length > 3 && (
-            <div className="text-[9px] text-muted-foreground text-center">
+            <div className="text-[9px] text-muted-foreground text-center font-medium">
               +{schedules.length - 3}
             </div>
           )}
         </div>
 
         {/* Taux d'occupation */}
-        <div className={cn(
-          "text-[10px] font-medium text-center mt-auto",
-          getOccupancyColor(occupancy)
-        )}>
-          {occupancy > 0 ? `${occupancy}%` : ""}
-        </div>
+        {occupancy > 0 && (
+          <div className={cn(
+            "text-[10px] font-semibold text-center mt-auto pt-0.5",
+            getOccupancyColor(occupancy)
+          )}>
+            {occupancy}%
+          </div>
+        )}
       </div>
     </TooltipProvider>
   );
