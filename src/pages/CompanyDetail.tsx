@@ -130,8 +130,18 @@ export default function CompanyDetail() {
       if (company.city) metadata.push({ icon: MapPin, label: company.city });
       if (company.phone) metadata.push({ icon: Phone, label: company.phone });
 
-      const badgeLabel = getCompanyTypeLabelLocal(company.industry || "") || "Autre";
-      const color = getCompanyTypeColorLocal(company.industry || "") || "#3B82F6";
+      const industry = company.industry || "";
+      const specs = getNormalizedBetSpecialties(company.industry, company.bet_specialties);
+
+      const badgeLabel =
+        (industry === "bet" || industry.startsWith("bet_")) && specs.length > 0
+          ? `${getCompanyTypeShortLabelLocal("bet")} · ${specs.map(getBetSpecialtyLabel).join(", ")}`
+          : getCompanyTypeLabelLocal(industry) || "Autre";
+
+      const color =
+        (industry === "bet" || industry.startsWith("bet_")) && specs.length > 0
+          ? getBetSpecialtyColor(specs[0])
+          : getCompanyTypeColorLocal(industry) || "#3B82F6";
 
       setEntityConfig({
         backTo: "/crm",
@@ -187,9 +197,11 @@ export default function CompanyDetail() {
   useEffect(() => {
     if (company && !isEditing) {
       const normalizedIndustry = company.industry?.startsWith("bet_") ? "bet" : company.industry;
-      setEditData({ ...company, industry: normalizedIndustry });
+      const normalizedSpecs = getNormalizedBetSpecialties(company.industry, company.bet_specialties);
+
+      setEditData({ ...company, industry: normalizedIndustry, bet_specialties: normalizedSpecs });
       setSelectedCategory(getCategoryFromIndustry(company.industry));
-      setSelectedSpecialties(getNormalizedBetSpecialties(company.industry, company.bet_specialties));
+      setSelectedSpecialties(normalizedSpecs);
     }
   }, [company, isEditing]);
 
@@ -210,8 +222,11 @@ export default function CompanyDetail() {
           selectedCategory === "bet"
             ? "bet"
             : (editData.industry as string | null | undefined) || null,
-        bet_specialties:
-          selectedCategory === "bet" && selectedSpecialties.length > 0 ? selectedSpecialties : null,
+        bet_specialties: (() => {
+          if (selectedCategory !== "bet") return null;
+          const specs = ((editData as any).bet_specialties as string[] | null | undefined) ?? selectedSpecialties;
+          return specs && specs.length > 0 ? specs : null;
+        })(),
       });
       setIsEditing(false);
     }
@@ -358,21 +373,24 @@ export default function CompanyDetail() {
                               <Button variant="outline" className="w-full justify-between h-auto min-h-10 py-2">
                                 {selectedSpecialties.length > 0 ? (
                                   <div className="flex flex-wrap gap-1">
-                                    {selectedSpecialties.map((spec) => {
-                                      const specialty = BET_SPECIALTIES.find((s) => s.value === spec);
-                                      return (
-                                        <Badge key={spec} className={cn("text-white text-xs gap-1", specialty?.color)}>
-                                          {specialty?.label}
-                                          <X
-                                            className="h-3 w-3 cursor-pointer"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setSelectedSpecialties((prev) => prev.filter((s) => s !== spec));
-                                            }}
-                                          />
-                                        </Badge>
-                                      );
-                                    })}
+                                    {selectedSpecialties.map((spec) => (
+                                      <Badge
+                                        key={spec}
+                                        className="text-white text-xs gap-1"
+                                        style={{ backgroundColor: getBetSpecialtyColor(spec) }}
+                                      >
+                                        {getBetSpecialtyLabel(spec)}
+                                        <X
+                                          className="h-3 w-3 cursor-pointer"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const next = selectedSpecialties.filter((s) => s !== spec);
+                                            setSelectedSpecialties(next);
+                                            setEditData({ ...editData, bet_specialties: next });
+                                          }}
+                                        />
+                                      </Badge>
+                                    ))}
                                   </div>
                                 ) : (
                                   <span className="text-muted-foreground">Sélectionnez une ou plusieurs spécialités</span>
@@ -381,20 +399,26 @@ export default function CompanyDetail() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                              {BET_SPECIALTIES.map((spec) => (
+                              {betSpecialties.map((spec) => (
                                 <DropdownMenuCheckboxItem
-                                  key={spec.value}
-                                  checked={selectedSpecialties.includes(spec.value)}
+                                  key={spec.key}
+                                  checked={selectedSpecialties.includes(spec.key)}
                                   onSelect={(e) => e.preventDefault()}
                                   onCheckedChange={() => {
-                                    setSelectedSpecialties((prev) =>
-                                      prev.includes(spec.value)
-                                        ? prev.filter((s) => s !== spec.value)
-                                        : [...prev, spec.value]
-                                    );
+                                    const next = selectedSpecialties.includes(spec.key)
+                                      ? selectedSpecialties.filter((s) => s !== spec.key)
+                                      : [...selectedSpecialties, spec.key];
+                                    setSelectedSpecialties(next);
+                                    setEditData({ ...editData, bet_specialties: next });
                                   }}
                                 >
-                                  <Badge className={cn("text-white text-xs mr-2", spec.color)}>{spec.label}</Badge>
+                                  <span className="inline-flex items-center gap-2">
+                                    <span
+                                      className="h-2.5 w-2.5 rounded-full"
+                                      style={{ backgroundColor: spec.color }}
+                                    />
+                                    {spec.label}
+                                  </span>
                                 </DropdownMenuCheckboxItem>
                               ))}
                             </DropdownMenuContent>
