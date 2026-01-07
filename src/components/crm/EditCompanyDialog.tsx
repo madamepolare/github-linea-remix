@@ -102,16 +102,24 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
   // Pre-fill form when company changes
   useEffect(() => {
     if (company) {
-      const category = getCategoryFromIndustry(company.industry);
+      const legacyBet = company.industry?.startsWith("bet_") ? company.industry.slice("bet_".length) : null;
+      const normalizedIndustry = legacyBet ? "bet" : company.industry;
+
+      const category = getCategoryFromIndustry(normalizedIndustry);
       setSelectedCategory(category);
-      setSelectedSpecialties(company.bet_specialties || []);
+
+      const normalizedSpecs = legacyBet
+        ? (company.bet_specialties && company.bet_specialties.length > 0 ? company.bet_specialties : [legacyBet])
+        : company.bet_specialties || [];
+      setSelectedSpecialties(normalizedSpecs);
+
       setSameAsBilling(company.email === company.billing_email && !!company.email);
-      
+
       const companyAny = company as any;
       form.reset({
         name: company.name || "",
         category: category,
-        industry: company.industry || "",
+        industry: normalizedIndustry || "",
         email: company.email || "",
         phone: company.phone || "",
         website: company.website || "",
