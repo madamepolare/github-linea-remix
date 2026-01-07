@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,10 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
-import { format } from "date-fns";
+import { format, differenceInMinutes, addMinutes } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Calendar, Clock, User, Flag, Trash2, Lock, Unlock, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { DurationInput } from "@/components/tasks/DurationInput";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,8 +43,7 @@ export function ScheduleDetailSheet({ schedule, open, onOpenChange }: ScheduleDe
   
   const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [durationHours, setDurationHours] = useState("");
   const [notes, setNotes] = useState("");
   const [isLocked, setIsLocked] = useState(false);
 
@@ -51,11 +51,12 @@ export function ScheduleDetailSheet({ schedule, open, onOpenChange }: ScheduleDe
     if (schedule) {
       const start = new Date(schedule.start_datetime);
       const end = new Date(schedule.end_datetime);
+      const durationMins = differenceInMinutes(end, start);
+      const durationH = durationMins / 60;
       
       setStartDate(format(start, "yyyy-MM-dd"));
       setStartTime(format(start, "HH:mm"));
-      setEndDate(format(end, "yyyy-MM-dd"));
-      setEndTime(format(end, "HH:mm"));
+      setDurationHours(durationH.toString());
       setNotes(schedule.notes || "");
       setIsLocked(schedule.is_locked);
     }
@@ -64,13 +65,14 @@ export function ScheduleDetailSheet({ schedule, open, onOpenChange }: ScheduleDe
   if (!schedule) return null;
 
   const handleSave = () => {
-    const startDatetime = new Date(`${startDate}T${startTime}`).toISOString();
-    const endDatetime = new Date(`${endDate}T${endTime}`).toISOString();
+    const startDatetime = new Date(`${startDate}T${startTime}`);
+    const durationMins = parseFloat(durationHours || "1") * 60;
+    const endDatetime = addMinutes(startDatetime, durationMins);
 
     updateSchedule.mutate({
       id: schedule.id,
-      start_datetime: startDatetime,
-      end_datetime: endDatetime,
+      start_datetime: startDatetime.toISOString(),
+      end_datetime: endDatetime.toISOString(),
       notes: notes || null,
       is_locked: isLocked,
     });
@@ -168,23 +170,13 @@ export function ScheduleDetailSheet({ schedule, open, onOpenChange }: ScheduleDe
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Date de fin</Label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Heure de fin</Label>
-              <Input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </div>
+          {/* Duration - simplified input */}
+          <div className="space-y-2">
+            <Label>Durée</Label>
+            <DurationInput
+              value={durationHours}
+              onChange={setDurationHours}
+            />
           </div>
 
           {/* Notes */}

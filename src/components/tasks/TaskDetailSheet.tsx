@@ -7,6 +7,7 @@ import { TaskCommunications, useTaskCommunicationsCount } from "./TaskCommunicat
 import { MultiAssigneePicker } from "./MultiAssigneePicker";
 import { InlineDatePicker } from "./InlineDatePicker";
 import { TagInput } from "./TagInput";
+import { DurationInput } from "./DurationInput";
 import { EntitySelector, LinkedEntityBadge } from "./EntitySelector";
 import { RelatedEntityType } from "@/lib/taskTypes";
 import {
@@ -292,13 +293,10 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
             </div>
 
             <div className="space-y-2">
-              <Label>Estimation (heures)</Label>
-              <Input
-                type="number"
-                step="0.5"
+              <Label>Estimation</Label>
+              <DurationInput
                 value={estimatedHours}
-                onChange={(e) => setEstimatedHours(e.target.value)}
-                placeholder="4"
+                onChange={setEstimatedHours}
               />
             </div>
 
