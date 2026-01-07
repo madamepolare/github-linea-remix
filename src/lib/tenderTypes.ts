@@ -322,6 +322,8 @@ export interface Tender {
   source_url: string | null;
   source_contact_email: string | null;
   dce_link: string | null;
+  // Required team (stored as JSON, typed at runtime)
+  required_team: unknown;
   // Timestamps
   created_at: string;
   updated_at: string;

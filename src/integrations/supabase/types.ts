@@ -3495,7 +3495,7 @@ export type Database = {
           is_all_day: boolean | null
           location: string | null
           parent_event_id: string | null
-          project_id: string
+          project_id: string | null
           recurrence_end_date: string | null
           recurrence_rule: string | null
           start_datetime: string
@@ -3517,7 +3517,7 @@ export type Database = {
           is_all_day?: boolean | null
           location?: string | null
           parent_event_id?: string | null
-          project_id: string
+          project_id?: string | null
           recurrence_end_date?: string | null
           recurrence_rule?: string | null
           start_datetime: string
@@ -3539,7 +3539,7 @@ export type Database = {
           is_all_day?: boolean | null
           location?: string | null
           parent_event_id?: string | null
-          project_id?: string
+          project_id?: string | null
           recurrence_end_date?: string | null
           recurrence_rule?: string | null
           start_datetime?: string
@@ -6341,6 +6341,7 @@ export type Database = {
           questions_deadline_days: number | null
           reference: string
           region: string | null
+          required_team: Json | null
           results_date: string | null
           site_visit_assigned_user_id: string | null
           site_visit_contact_email: string | null
@@ -6405,6 +6406,7 @@ export type Database = {
           questions_deadline_days?: number | null
           reference: string
           region?: string | null
+          required_team?: Json | null
           results_date?: string | null
           site_visit_assigned_user_id?: string | null
           site_visit_contact_email?: string | null
@@ -6469,6 +6471,7 @@ export type Database = {
           questions_deadline_days?: number | null
           reference?: string
           region?: string | null
+          required_team?: Json | null
           results_date?: string | null
           site_visit_assigned_user_id?: string | null
           site_visit_contact_email?: string | null
