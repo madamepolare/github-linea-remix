@@ -1,7 +1,7 @@
-import { useState, useMemo, useCallback } from "react";
-import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay, setHours, parseISO } from "date-fns";
+import { useState, useMemo, useCallback, useRef } from "react";
+import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay, setHours, parseISO, addHours } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye, GripVertical, CheckCircle2, ExternalLink, Copy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye, GripVertical, CheckCircle2, ExternalLink, Copy, Move } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
@@ -84,6 +84,12 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const handleUnschedule = useCallback((scheduleId: string) => {
     deleteSchedule.mutate(scheduleId);
   }, [deleteSchedule]);
+
+  // Handler pour démarrer le drag d'une tâche planifiée
+  const handleScheduleDragStart = useCallback((e: React.DragEvent, scheduleId: string, taskTitle: string) => {
+    e.dataTransfer.setData("application/json", JSON.stringify({ scheduleId }));
+    e.dataTransfer.effectAllowed = "move";
+  }, []);
 
   // Map des emails vers user_ids
   const emailToUserMap = useMemo(() => {
@@ -249,6 +255,28 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     return Math.min(100, Math.round((totalMinutes / maxMinutes) * 100));
   }, [getItemsForMemberAndDay]);
 
+  // Handler pour déplacer une tâche planifiée
+  const handleMoveSchedule = useCallback((scheduleId: string, newUserId: string, newDay: Date) => {
+    const schedule = schedules?.find(s => s.id === scheduleId);
+    if (!schedule) return;
+    
+    const oldStart = new Date(schedule.start_datetime);
+    const oldEnd = new Date(schedule.end_datetime);
+    const durationMs = oldEnd.getTime() - oldStart.getTime();
+    
+    // Garder la même heure de début
+    const newStart = setHours(startOfDay(newDay), oldStart.getHours());
+    newStart.setMinutes(oldStart.getMinutes());
+    const newEnd = new Date(newStart.getTime() + durationMs);
+    
+    updateSchedule.mutate({
+      id: scheduleId,
+      user_id: newUserId,
+      start_datetime: newStart.toISOString(),
+      end_datetime: newEnd.toISOString(),
+    });
+  }, [schedules, updateSchedule]);
+
   // Gestion du drag & drop
   const handleDragOver = useCallback((e: React.DragEvent, cellKey: string) => {
     e.preventDefault();
@@ -265,10 +293,19 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     setDragOverCell(null);
     
     try {
-      const taskData = e.dataTransfer.getData("application/json");
-      if (!taskData) return;
+      const dataString = e.dataTransfer.getData("application/json");
+      if (!dataString) return;
       
-      const task = JSON.parse(taskData);
+      const data = JSON.parse(dataString);
+      
+      // Check if this is a scheduled task being moved
+      if (data.scheduleId) {
+        handleMoveSchedule(data.scheduleId, member.user_id, day);
+        return;
+      }
+      
+      // Otherwise it's a new task being scheduled
+      const task = data;
       const estimatedHours = task.estimated_hours || 2;
       
       const startDate = setHours(startOfDay(day), 9);
@@ -285,7 +322,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     } catch (error) {
       console.error("Error handling drop:", error);
     }
-  }, [createSchedule, onTaskDrop]);
+  }, [createSchedule, onTaskDrop, handleMoveSchedule]);
 
   if (isLoading) {
     return (
@@ -521,6 +558,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                     rowHeight={ROW_HEIGHT}
                     onViewTask={handleViewTask}
                     onUnschedule={handleUnschedule}
+                    onScheduleDragStart={handleScheduleDragStart}
                   />
                 ))
               )}
@@ -555,6 +593,7 @@ interface MemberRowProps {
   rowHeight: number;
   onViewTask: (schedule: TaskSchedule) => void;
   onUnschedule: (scheduleId: string) => void;
+  onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
 }
 
 function MemberRow({
@@ -572,6 +611,7 @@ function MemberRow({
   rowHeight,
   onViewTask,
   onUnschedule,
+  onScheduleDragStart,
 }: MemberRowProps) {
   const memberEmail = member.profile?.email || null;
   
@@ -604,6 +644,7 @@ function MemberRow({
             cellWidth={cellWidth}
             onViewTask={onViewTask}
             onUnschedule={onUnschedule}
+            onScheduleDragStart={onScheduleDragStart}
           />
         );
       })}
@@ -628,6 +669,7 @@ interface DayCellProps {
   cellWidth: number;
   onViewTask: (schedule: TaskSchedule) => void;
   onUnschedule: (scheduleId: string) => void;
+  onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
 }
 
 function DayCell({
@@ -647,7 +689,9 @@ function DayCell({
   cellWidth,
   onViewTask,
   onUnschedule,
+  onScheduleDragStart,
 }: DayCellProps) {
+  const [isDragging, setIsDragging] = useState(false);
   const getOccupancyColor = (rate: number) => {
     if (rate === 0) return "";
     if (rate < 50) return "text-amber-600 dark:text-amber-400";
@@ -701,9 +745,10 @@ function DayCell({
                     <TooltipTrigger asChild>
                       <div
                         className={cn(
-                          "rounded text-[11px] leading-tight px-2 py-1.5 cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02] transition-all font-medium flex items-start gap-1.5 relative",
+                          "rounded text-[11px] leading-tight px-2 py-1.5 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all font-medium flex items-start gap-1.5 relative",
                           item.type === "event" && "border-l-2",
-                          isAbsence && "opacity-60 cursor-not-allowed"
+                          isAbsence && "opacity-60 cursor-not-allowed",
+                          item.type === "task" && "cursor-grab active:cursor-grabbing"
                         )}
                         style={{
                           backgroundColor: item.color,
@@ -712,6 +757,15 @@ function DayCell({
                           minHeight: calculatedHeight,
                           maxHeight: ROW_HEIGHT - 40,
                         }}
+                        draggable={item.type === "task" && !isAbsence}
+                        onDragStart={(e) => {
+                          if (item.type === "task" && schedule) {
+                            e.stopPropagation();
+                            onScheduleDragStart(e, schedule.id, item.title);
+                            setIsDragging(true);
+                          }
+                        }}
+                        onDragEnd={() => setIsDragging(false)}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (item.type === "task" && schedule) {
@@ -808,6 +862,10 @@ function DayCell({
                       </ContextMenuItem>
                     )}
                     <ContextMenuSeparator />
+                    <ContextMenuItem className="text-muted-foreground">
+                      <Move className="h-4 w-4 mr-2" />
+                      Glisser-déposer pour déplacer
+                    </ContextMenuItem>
                     <ContextMenuItem onClick={() => {
                       if (schedule.task) {
                         // Mark as complete logic would go here

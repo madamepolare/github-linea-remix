@@ -133,6 +133,7 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task-schedules"] });
+      toast({ title: "Créneau mis à jour" });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
