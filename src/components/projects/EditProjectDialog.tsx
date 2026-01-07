@@ -128,27 +128,31 @@ export function EditProjectDialog({
   const handleSave = async () => {
     if (!name.trim()) return;
     
-    // Save project members
-    const currentMemberIds = members?.map(m => m.user_id) || [];
-    const hasChangedMembers = JSON.stringify(currentMemberIds.sort()) !== JSON.stringify(assignedMembers.sort());
-    
-    if (hasChangedMembers) {
-      await setProjectMembers.mutateAsync({ projectId: project.id, userIds: assignedMembers });
+    try {
+      // Save project members
+      const currentMemberIds = members?.map(m => m.user_id) || [];
+      const hasChangedMembers = JSON.stringify(currentMemberIds.sort()) !== JSON.stringify(assignedMembers.sort());
+      
+      if (hasChangedMembers) {
+        await setProjectMembers.mutateAsync({ projectId: project.id, userIds: assignedMembers });
+      }
+      
+      onSave({
+        name: name.trim(),
+        description: description.trim() || null,
+        project_type: projectType,
+        address: address.trim() || null,
+        city: city.trim() || null,
+        surface_area: surfaceArea ? parseFloat(surfaceArea) : null,
+        color,
+        crm_company_id: crmCompanyId,
+        start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
+        end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
+        budget: budget ? parseFloat(budget) : null,
+      });
+    } catch (error) {
+      console.error("Error saving project:", error);
     }
-    
-    onSave({
-      name: name.trim(),
-      description: description.trim() || null,
-      project_type: projectType,
-      address: address.trim() || null,
-      city: city.trim() || null,
-      surface_area: surfaceArea ? parseFloat(surfaceArea) : null,
-      color,
-      crm_company_id: crmCompanyId,
-      start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
-      end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
-      budget: budget ? parseFloat(budget) : null,
-    });
   };
 
   return (
