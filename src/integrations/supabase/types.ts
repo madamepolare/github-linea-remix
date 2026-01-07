@@ -6967,6 +6967,10 @@ export type Database = {
         | "concours"
         | "dialogue"
         | "partenariat"
+        | "mapa"
+        | "ppp"
+        | "conception_realisation"
+        | "autre"
       tender_status:
         | "repere"
         | "en_analyse"
@@ -7123,6 +7127,10 @@ export const Constants = {
         "concours",
         "dialogue",
         "partenariat",
+        "mapa",
+        "ppp",
+        "conception_realisation",
+        "autre",
       ],
       tender_status: [
         "repere",
