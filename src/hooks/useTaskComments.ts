@@ -10,6 +10,7 @@ export interface TaskComment {
   content: string;
   mentions: string[] | null;
   author_id: string | null;
+  parent_id: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
@@ -33,7 +34,7 @@ export function useTaskComments(taskId: string | null) {
   });
 
   const createComment = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, parentId }: { content: string; parentId?: string }) => {
       const { data, error } = await supabase
         .from("task_comments")
         .insert({
@@ -41,6 +42,7 @@ export function useTaskComments(taskId: string | null) {
           workspace_id: activeWorkspace!.id,
           content,
           author_id: user?.id,
+          parent_id: parentId || null,
         })
         .select()
         .single();

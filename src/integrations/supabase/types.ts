@@ -4787,6 +4787,7 @@ export type Database = {
           created_at: string | null
           id: string
           mentions: string[] | null
+          parent_id: string | null
           task_id: string
           updated_at: string | null
           workspace_id: string
@@ -4797,6 +4798,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           mentions?: string[] | null
+          parent_id?: string | null
           task_id: string
           updated_at?: string | null
           workspace_id: string
@@ -4807,11 +4809,19 @@ export type Database = {
           created_at?: string | null
           id?: string
           mentions?: string[] | null
+          parent_id?: string | null
           task_id?: string
           updated_at?: string | null
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "task_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "task_comments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "task_comments_task_id_fkey"
             columns: ["task_id"]
@@ -4873,6 +4883,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           id: string
+          parent_id: string | null
           task_id: string
           title: string | null
           updated_at: string | null
@@ -4883,6 +4894,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          parent_id?: string | null
           task_id: string
           title?: string | null
           updated_at?: string | null
@@ -4893,12 +4905,20 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          parent_id?: string | null
           task_id?: string
           title?: string | null
           updated_at?: string | null
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "task_exchanges_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "task_exchanges"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "task_exchanges_task_id_fkey"
             columns: ["task_id"]
