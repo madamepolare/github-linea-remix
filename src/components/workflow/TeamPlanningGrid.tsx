@@ -7,6 +7,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
 import { useWorkspaceEvents, WorkspaceEvent } from "@/hooks/useWorkspaceEvents";
+import { useAllProjectMembers } from "@/hooks/useProjects";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -61,8 +62,9 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const { schedules, isLoading: schedulesLoading, createSchedule, deleteSchedule } = useTaskSchedules();
   const { data: members, isLoading: membersLoading } = useTeamMembers();
   const { data: events, isLoading: eventsLoading } = useWorkspaceEvents();
+  const { data: userProjectsMap, isLoading: projectMembersLoading } = useAllProjectMembers();
 
-  const isLoading = schedulesLoading || membersLoading || eventsLoading;
+  const isLoading = schedulesLoading || membersLoading || eventsLoading || projectMembersLoading;
 
   // Handler pour voir les détails d'une tâche
   const handleViewTask = useCallback((schedule: TaskSchedule) => {
@@ -157,15 +159,20 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     });
 
     // Ajouter les événements (si activés)
-    if (showEvents && events && memberEmail) {
+    if (showEvents && events) {
+      // Get project IDs the member is assigned to
+      const memberProjectIds = userProjectsMap?.get(memberId) || new Set<string>();
+
       events.forEach(event => {
-        // Vérifier si le membre est dans les attendees
-        const isAttendee = event.attendees?.some(a => 
+        // Vérifier si le membre est dans les attendees OU si l'événement appartient à un projet assigné
+        const isAttendee = memberEmail && event.attendees?.some(a => 
           a.email?.toLowerCase() === memberEmail.toLowerCase() ||
           a.user_id === memberId
         );
         
-        if (!isAttendee) return;
+        const isAssignedToProject = event.project_id && memberProjectIds.has(event.project_id);
+        
+        if (!isAttendee && !isAssignedToProject) return;
 
         const eventStart = new Date(event.start_datetime);
         const eventEnd = event.end_datetime ? new Date(event.end_datetime) : addDays(eventStart, 0);
@@ -188,7 +195,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     }
 
     return items.sort((a, b) => a.start.getTime() - b.start.getTime());
-  }, [schedules, events, showEvents]);
+  }, [schedules, events, showEvents, userProjectsMap]);
 
   const getOccupancyRate = useCallback((memberId: string, memberEmail: string | null, day: Date) => {
     const items = getItemsForMemberAndDay(memberId, memberEmail, day);

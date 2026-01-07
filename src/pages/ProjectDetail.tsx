@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
-import { useProject, useProjects } from "@/hooks/useProjects";
+import { useProject, useProjects, useProjectMembers } from "@/hooks/useProjects";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
 import { useTopBar } from "@/contexts/TopBarContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertTriangle,
   Briefcase,
@@ -31,6 +33,7 @@ import {
   Shield,
   ShoppingCart,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { format, parseISO, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -81,6 +84,7 @@ export default function ProjectDetail() {
   const queryClient = useQueryClient();
   const { setEntityConfig } = useTopBar();
   const { data: project, isLoading } = useProject(id || null);
+  const { members: projectMembers } = useProjectMembers(id || null);
   const { updateProject } = useProjects();
   const [activeTab, setActiveTab] = useState("overview");
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
@@ -89,6 +93,44 @@ export default function ProjectDetail() {
   const projectType = project ? PROJECT_TYPES.find((t) => t.value === project.project_type) : null;
   const phases = project?.phases || [];
   const currentPhase = phases.find((p) => p.status === "in_progress");
+
+  // Build team members display for actions slot
+  const teamMembersDisplay = projectMembers.length > 0 ? (
+    <TooltipProvider>
+      <div className="flex items-center gap-2 mr-2">
+        <div className="flex items-center -space-x-2">
+          {projectMembers.slice(0, 4).map((member) => (
+            <Tooltip key={member.id}>
+              <TooltipTrigger asChild>
+                <Avatar className="h-7 w-7 border-2 border-background ring-0 cursor-pointer hover:z-10 hover:scale-110 transition-transform">
+                  <AvatarImage src={member.profile?.avatar_url || ""} />
+                  <AvatarFallback className="text-2xs bg-primary/10 text-primary">
+                    {member.profile?.full_name?.slice(0, 2).toUpperCase() || "?"}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{member.profile?.full_name || "Membre"}</p>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+          {projectMembers.length > 4 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-2xs font-medium text-muted-foreground">
+                  +{projectMembers.length - 4}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{projectMembers.length - 4} autres membres</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+        <Users className="h-4 w-4 text-muted-foreground" />
+      </div>
+    </TooltipProvider>
+  ) : null;
 
   // Set TopBar entity config when project data is available
   useEffect(() => {
@@ -123,13 +165,14 @@ export default function ProjectDetail() {
         tabs: PROJECT_TABS,
         activeTab,
         onTabChange: setActiveTab,
+        actions: teamMembersDisplay,
       });
     }
 
     return () => {
       setEntityConfig(null);
     };
-  }, [project, projectType, currentPhase, activeTab, setEntityConfig]);
+  }, [project, projectType, currentPhase, activeTab, setEntityConfig, projectMembers]);
 
   const handleGenerateSummary = async () => {
     if (!id) return;
