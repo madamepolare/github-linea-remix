@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { Task, useTasks } from "@/hooks/useTasks";
-import { useTaskComments } from "@/hooks/useTaskComments";
 import { useAuth } from "@/contexts/AuthContext";
 import { SubtasksManager } from "./SubtasksManager";
 import { TaskTimeTracker } from "./TaskTimeTracker";
+import { TaskCommunications, useTaskCommunicationsCount } from "./TaskCommunications";
 import { MultiAssigneePicker } from "./MultiAssigneePicker";
 import { InlineDatePicker } from "./InlineDatePicker";
 import { TagInput } from "./TagInput";
-import { MentionInput } from "./MentionInput";
 import { EntitySelector, LinkedEntityBadge } from "./EntitySelector";
 import { RelatedEntityType } from "@/lib/taskTypes";
 import {
@@ -58,7 +57,7 @@ const priorityOptions = [
 export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "details" }: TaskDetailSheetProps) {
   const { activeWorkspace } = useAuth();
   const { updateTask, deleteTask } = useTasks();
-  const { comments, createComment } = useTaskComments(task?.id || null);
+  const communicationsCount = useTaskCommunicationsCount(task?.id || null);
   const navigate = useNavigate();
 
   const [title, setTitle] = useState("");
@@ -70,8 +69,6 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [estimatedHours, setEstimatedHours] = useState("");
-  const [newComment, setNewComment] = useState("");
-  const [commentMentions, setCommentMentions] = useState<string[]>([]);
   const [relatedType, setRelatedType] = useState<RelatedEntityType | null>(null);
   const [relatedId, setRelatedId] = useState<string | null>(null);
 
@@ -150,13 +147,6 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
     onOpenChange(false);
   };
 
-  const handleAddComment = () => {
-    if (!newComment.trim()) return;
-    createComment.mutate(newComment);
-    setNewComment("");
-    setCommentMentions([]);
-  };
-
   const handleNavigateToEntity = () => {
     if (!relatedType || !relatedId) return;
     
@@ -204,7 +194,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
             </TabsTrigger>
             <TabsTrigger value="comments">
               <MessageSquare className="h-3 w-3 mr-1" />
-              {comments?.length || 0}
+              {communicationsCount}
             </TabsTrigger>
           </TabsList>
 
@@ -339,37 +329,9 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
             <TaskTimeTracker taskId={task.id} />
           </TabsContent>
 
-          {/* Comments Tab */}
-          <TabsContent value="comments" className="space-y-4">
-            <div className="space-y-2">
-              <MentionInput
-                value={newComment}
-                onChange={setNewComment}
-                onMentionsChange={setCommentMentions}
-                placeholder="Ajouter un commentaire... Utilisez @ pour mentionner"
-                rows={2}
-              />
-              <Button onClick={handleAddComment} disabled={!newComment.trim()}>
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Commenter
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              {comments?.map((comment) => (
-                <div key={comment.id} className="p-3 rounded-lg bg-muted/50 space-y-1">
-                  <p className="text-sm whitespace-pre-wrap">
-                    {comment.content.replace(/@\[([^\]]+)\]\(([^)]+)\)/g, "@$1")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {comment.created_at && format(new Date(comment.created_at), "d MMM yyyy à HH:mm", { locale: fr })}
-                  </p>
-                </div>
-              ))}
-              {(!comments || comments.length === 0) && (
-                <p className="text-center text-muted-foreground py-8">Aucun commentaire</p>
-              )}
-            </div>
+          {/* Communications Tab */}
+          <TabsContent value="comments" className="h-[calc(100vh-200px)]">
+            <TaskCommunications taskId={task.id} />
           </TabsContent>
         </Tabs>
       </SheetContent>
