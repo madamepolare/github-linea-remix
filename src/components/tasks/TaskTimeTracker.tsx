@@ -217,63 +217,65 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                 {scheduledEntries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-card border text-sm group"
+                    className={cn(
+                      "rounded-lg bg-card border text-sm group",
+                      editingEntryId === entry.id ? "p-3" : "p-3"
+                    )}
                   >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={entry.userAvatar || undefined} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                          {getInitials(entry.userName)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{entry.userName}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {format(entry.date, "EEEE d MMMM", { locale: fr })}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={entry.userAvatar || undefined} />
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {getInitials(entry.userName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{entry.userName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(entry.date, "EEEE d MMMM", { locale: fr })}
+                          </div>
                         </div>
                       </div>
+                      {editingEntryId !== entry.id && (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-sm font-semibold">
+                            {entry.durationHours}h
+                          </Badge>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleEditEntry(entry)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                    {editingEntryId === entry.id ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          step="0.25"
-                          min="0.25"
+                    {editingEntryId === entry.id && (
+                      <div className="mt-3 pt-3 border-t space-y-3">
+                        <DurationInput
                           value={editingDuration}
-                          onChange={(e) => setEditingDuration(e.target.value)}
-                          className="h-7 w-16 text-sm"
+                          onChange={setEditingDuration}
                         />
-                        <span className="text-xs text-muted-foreground">h</span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6"
-                          onClick={() => handleSaveEntry(entry.id, entry.startDatetime)}
-                        >
-                          <Check className="h-3 w-3 text-green-600" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6"
-                          onClick={handleCancelEdit}
-                        >
-                          <X className="h-3 w-3 text-destructive" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-sm font-semibold">
-                          {entry.durationHours}h
-                        </Badge>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleEditEntry(entry)}
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleCancelEdit}
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            Annuler
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleSaveEntry(entry.id, entry.startDatetime)}
+                          >
+                            <Check className="h-3 w-3 mr-1" />
+                            Enregistrer
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
