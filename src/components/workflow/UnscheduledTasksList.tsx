@@ -151,10 +151,10 @@ function TaskCard({ task, onDragStart, onTaskSelect }: TaskCardProps) {
         <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-0.5 flex-shrink-0" />
         
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm truncate">{task.title}</div>
+          <div className="font-medium text-sm leading-tight">{task.title}</div>
           
           {task.project && (
-            <div className="text-xs text-muted-foreground truncate mt-0.5">
+            <div className="text-xs text-muted-foreground mt-0.5 leading-tight">
               {task.project.name}
             </div>
           )}
