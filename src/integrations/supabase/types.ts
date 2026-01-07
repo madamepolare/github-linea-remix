@@ -5695,6 +5695,66 @@ export type Database = {
           },
         ]
       }
+      tender_calendar_events: {
+        Row: {
+          attendees: Json | null
+          created_at: string
+          description: string | null
+          end_datetime: string | null
+          event_type: string
+          id: string
+          location: string | null
+          start_datetime: string
+          tender_id: string
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          attendees?: Json | null
+          created_at?: string
+          description?: string | null
+          end_datetime?: string | null
+          event_type?: string
+          id?: string
+          location?: string | null
+          start_datetime: string
+          tender_id: string
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          attendees?: Json | null
+          created_at?: string
+          description?: string | null
+          end_datetime?: string | null
+          event_type?: string
+          id?: string
+          location?: string | null
+          start_datetime?: string
+          tender_id?: string
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_calendar_events_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_calendar_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tender_criteria: {
         Row: {
           created_at: string | null

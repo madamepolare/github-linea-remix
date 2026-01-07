@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 
 // Tab components
 import { TenderSyntheseTab } from "@/components/tenders/tabs/TenderSyntheseTab";
+import { TenderCalendarTab } from "@/components/tenders/tabs/TenderCalendarTab";
 import { TenderAnalyseTab } from "@/components/tenders/tabs/TenderAnalyseTab";
 import { TenderDocumentsTab } from "@/components/tenders/tabs/TenderDocumentsTab";
 import { TenderLivrablesTab } from "@/components/tenders/tabs/TenderLivrablesTab";
@@ -137,6 +138,8 @@ export default function TenderDetail() {
     switch (activeTab) {
       case "synthese":
         return <TenderSyntheseTab tender={tender} onNavigateToTab={setActiveTab} />;
+      case "calendrier":
+        return <TenderCalendarTab tenderId={tender.id} tender={tender} />;
       case "analyse":
         return (
           <TenderAnalyseTab 
