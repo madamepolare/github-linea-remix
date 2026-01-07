@@ -27,7 +27,10 @@ export function UnscheduledTasksList({ onTaskSelect }: UnscheduledTasksListProps
   );
 
   const handleDragStart = (e: React.DragEvent, task: any) => {
-    e.dataTransfer.setData("application/json", JSON.stringify(task));
+    const payload = JSON.stringify(task);
+    // Certains navigateurs sont capricieux avec application/json, on met aussi text/plain
+    e.dataTransfer.setData("application/json", payload);
+    e.dataTransfer.setData("text/plain", payload);
     e.dataTransfer.effectAllowed = "move";
   };
 
