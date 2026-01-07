@@ -6,7 +6,7 @@ export interface TeamMember {
   id: string;
   user_id: string;
   role: string;
-  joined_at: string;
+  created_at: string;
   profile: {
     id: string;
     full_name: string | null;
@@ -26,30 +26,44 @@ export function useTeamMembers() {
     queryFn: async (): Promise<TeamMember[]> => {
       if (!activeWorkspace) return [];
 
-      const { data, error } = await supabase
+      // Fetch workspace members
+      const { data: members, error: membersError } = await supabase
         .from("workspace_members")
-        .select(`
-          id,
-          user_id,
-          role,
-          joined_at,
-          profiles:user_id (
-            id,
-            full_name,
-            avatar_url,
-            email,
-            job_title,
-            phone,
-            department
-          )
-        `)
+        .select("id, user_id, role, created_at")
         .eq("workspace_id", activeWorkspace.id);
 
-      if (error) throw error;
+      if (membersError) throw membersError;
+      if (!members || members.length === 0) return [];
 
-      return (data || []).map((member: any) => ({
-        ...member,
-        profile: member.profiles,
+      // Fetch profiles separately
+      const userIds = members.map(m => m.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, id, full_name, avatar_url, job_title, phone")
+        .in("user_id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Create a map of profiles by user_id
+      const profileMap = new Map(
+        (profiles || []).map(p => [p.user_id, p])
+      );
+
+      // Combine members with their profiles
+      return members.map(member => ({
+        id: member.id,
+        user_id: member.user_id,
+        role: member.role,
+        created_at: member.created_at,
+        profile: profileMap.get(member.user_id) ? {
+          id: profileMap.get(member.user_id)!.id,
+          full_name: profileMap.get(member.user_id)!.full_name,
+          avatar_url: profileMap.get(member.user_id)!.avatar_url,
+          email: null,
+          job_title: profileMap.get(member.user_id)!.job_title,
+          phone: profileMap.get(member.user_id)!.phone,
+          department: null,
+        } : null,
       }));
     },
     enabled: !!activeWorkspace,
