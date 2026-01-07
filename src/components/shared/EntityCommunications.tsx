@@ -104,20 +104,21 @@ export function EntityCommunications({ entityType, entityId, className }: Entity
   // Initialize with all thread IDs expanded by default
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
 
-  // Update expanded threads when communications change to include new threads with replies
+  // Default: threads ouverts. On ne réinitialise pas un choix utilisateur,
+  // on initialise seulement au premier chargement puis on ajoute les nouveaux threads.
   useEffect(() => {
-    if (rootCommunications && repliesMap) {
-      setExpandedThreads(prev => {
-        const newSet = new Set(prev);
-        rootCommunications.forEach(c => {
-          const replies = repliesMap[c.id];
-          if (replies && replies.length > 0) {
-            newSet.add(c.id);
-          }
-        });
-        return newSet;
+    if (!rootCommunications) return;
+
+    setExpandedThreads((prev) => {
+      const next = prev.size === 0 ? new Set<string>() : new Set(prev);
+
+      rootCommunications.forEach((c) => {
+        const replies = repliesMap.get(c.id) || [];
+        if (replies.length > 0) next.add(c.id);
       });
-    }
+
+      return next;
+    });
   }, [rootCommunications, repliesMap]);
 
   const getProfile = (userId: string | null) => {
