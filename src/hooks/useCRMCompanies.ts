@@ -125,7 +125,12 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
 
     if (filters?.category && filters.category !== "all") {
       const allowedTypes = getCompanyTypesForCategory(filters.category).map((t) => t.key);
-      result = result.filter((c) => allowedTypes.includes((c.industry || "") as CompanyType));
+      result = result.filter((c) => {
+        const industry = c.industry || "";
+        // Support legacy BET subtypes (bet_structure, bet_fluides, etc.)
+        if (allowedTypes.includes("bet") && industry.startsWith("bet_")) return true;
+        return allowedTypes.includes(industry as CompanyType);
+      });
     }
 
     if (filters?.companyType && filters.companyType !== "all") {
@@ -183,7 +188,10 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
     };
 
     data.forEach((company) => {
-      const category = (getCompanyTypeCategory(company.industry || "") as CompanyCategory) || "autre";
+      const industry = company.industry || "";
+      const category = (industry.startsWith("bet_")
+        ? "bet"
+        : (getCompanyTypeCategory(industry) as CompanyCategory) || "autre") as CompanyCategory;
       stats[category] = (stats[category] || 0) + 1;
     });
 

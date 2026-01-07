@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -72,10 +72,8 @@ export default function CompanyDetail() {
   const { leads } = useLeads();
   const {
     companyCategories,
+    companyTypes,
     getCompanyTypesForCategory,
-    getCompanyTypeLabel,
-    getCompanyTypeShortLabel,
-    getCompanyTypeColor,
     getCategoryFromType,
   } = useCRMSettings();
 
@@ -94,8 +92,33 @@ export default function CompanyDetail() {
   // Helper to find category from industry type (based on workspace settings)
   const getCategoryFromIndustry = (industry: string | null | undefined): CompanyCategory | "" => {
     if (!industry) return "";
+    if (industry.startsWith("bet_")) return "bet";
     return (getCategoryFromType(industry) as CompanyCategory) || "";
   };
+
+  const getNormalizedBetSpecialties = (industry: string | null | undefined, betSpecialties: string[] | null | undefined) => {
+    if (industry?.startsWith("bet_")) {
+      const legacy = industry.slice("bet_".length);
+      if (betSpecialties && betSpecialties.length > 0) return betSpecialties;
+      return legacy ? [legacy] : [];
+    }
+    return betSpecialties || [];
+  };
+
+  // Keep latest companyTypes in a ref to avoid dependency loops with TopBar updates
+  const companyTypesRef = useRef(companyTypes);
+  useEffect(() => {
+    companyTypesRef.current = companyTypes;
+  }, [companyTypes]);
+
+  const getCompanyTypeLabelLocal = (key: string) =>
+    companyTypesRef.current.find((t) => t.key === key)?.label || key;
+
+  const getCompanyTypeShortLabelLocal = (key: string) =>
+    companyTypesRef.current.find((t) => t.key === key)?.shortLabel || key;
+
+  const getCompanyTypeColorLocal = (key: string) =>
+    companyTypesRef.current.find((t) => t.key === key)?.color || "#3B82F6";
 
   // Set up TopBar entity config
   useEffect(() => {
@@ -104,8 +127,8 @@ export default function CompanyDetail() {
       if (company.city) metadata.push({ icon: MapPin, label: company.city });
       if (company.phone) metadata.push({ icon: Phone, label: company.phone });
 
-      const badgeLabel = getCompanyTypeLabel(company.industry || "") || "Autre";
-      const color = getCompanyTypeColor(company.industry || "") || "#3B82F6";
+      const badgeLabel = getCompanyTypeLabelLocal(company.industry || "") || "Autre";
+      const color = getCompanyTypeColorLocal(company.industry || "") || "#3B82F6";
 
       setEntityConfig({
         backTo: "/crm",
@@ -125,9 +148,12 @@ export default function CompanyDetail() {
                   size="sm"
                   onClick={() => {
                     setIsEditing(false);
-                    setEditData(company);
+                    setEditData({
+                      ...company,
+                      industry: company.industry?.startsWith("bet_") ? "bet" : company.industry,
+                    });
                     setSelectedCategory(getCategoryFromIndustry(company.industry));
-                    setSelectedSpecialties(company.bet_specialties || []);
+                    setSelectedSpecialties(getNormalizedBetSpecialties(company.industry, company.bet_specialties));
                   }}
                 >
                   <X className="h-4 w-4 mr-2" strokeWidth={1.5} />
@@ -152,21 +178,14 @@ export default function CompanyDetail() {
     return () => {
       setEntityConfig(null);
     };
-  }, [
-    company,
-    activeTab,
-    isEditing,
-    updateCompany.isPending,
-    setEntityConfig,
-    getCompanyTypeLabel,
-    getCompanyTypeColor,
-  ]);
+  }, [company, activeTab, isEditing, updateCompany.isPending, setEntityConfig]);
 
   useEffect(() => {
     if (company) {
-      setEditData(company);
+      const normalizedIndustry = company.industry?.startsWith("bet_") ? "bet" : company.industry;
+      setEditData({ ...company, industry: normalizedIndustry });
       setSelectedCategory(getCategoryFromIndustry(company.industry));
-      setSelectedSpecialties(company.bet_specialties || []);
+      setSelectedSpecialties(getNormalizedBetSpecialties(company.industry, company.bet_specialties));
     }
   }, [company]);
 
@@ -183,7 +202,12 @@ export default function CompanyDetail() {
       updateCompany.mutate({
         id: company.id,
         ...editData,
-        bet_specialties: selectedCategory === "bet" ? selectedSpecialties : null,
+        industry:
+          selectedCategory === "bet"
+            ? "bet"
+            : (editData.industry as string | null | undefined) || null,
+        bet_specialties:
+          selectedCategory === "bet" && selectedSpecialties.length > 0 ? selectedSpecialties : null,
       });
       setIsEditing(false);
     }
@@ -388,11 +412,19 @@ export default function CompanyDetail() {
                       <Badge variant="outline" className="gap-1.5">
                         <div
                           className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: getCompanyTypeColor(company.industry || "") }}
+                          style={{ backgroundColor: getCompanyTypeColorLocal(company.industry || "") }}
                         />
-                        {company.industry === "bet" && (company.bet_specialties?.length || 0) > 0
-                          ? `${getCompanyTypeShortLabel(company.industry)} ${company.bet_specialties?.map((s) => s === "structure" ? "Structure" : s).join(", ")}`
-                          : getCompanyTypeLabel(company.industry || "")}
+                        {(() => {
+                          const industry = company.industry || "";
+                          const specs = getNormalizedBetSpecialties(company.industry, company.bet_specialties);
+                          if ((industry === "bet" || industry.startsWith("bet_")) && specs.length > 0) {
+                            const labels = specs
+                              .map((s) => BET_SPECIALTIES.find((x) => x.value === s)?.label || s)
+                              .join(", ");
+                            return `${getCompanyTypeShortLabelLocal("bet")} · ${labels}`;
+                          }
+                          return getCompanyTypeLabelLocal(company.industry || "");
+                        })()}
                       </Badge>
                     </div>
                   )}
