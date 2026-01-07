@@ -101,6 +101,8 @@ export default function AcceptInvite() {
       // Clear pending invite from sessionStorage
       sessionStorage.removeItem('pendingInviteToken');
       sessionStorage.removeItem('pendingInviteEmail');
+      sessionStorage.removeItem('pendingInviteWorkspace');
+      sessionStorage.removeItem('pendingInviteRole');
 
       // Refresh profile to get new workspace
       await refreshProfile();
@@ -145,9 +147,11 @@ export default function AcceptInvite() {
 
   // If not logged in, redirect to auth with return URL and invite info
   if (!user && invite) {
-    // Store invite token in sessionStorage so it persists through signup/login
+    // Store invite info in sessionStorage so it persists through signup/login
     sessionStorage.setItem('pendingInviteToken', token || '');
     sessionStorage.setItem('pendingInviteEmail', invite.email);
+    sessionStorage.setItem('pendingInviteWorkspace', invite.workspace.name);
+    sessionStorage.setItem('pendingInviteRole', invite.role);
     
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
