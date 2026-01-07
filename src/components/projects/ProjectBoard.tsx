@@ -115,7 +115,7 @@ export function ProjectBoard({ onCreateProject }: ProjectBoardProps) {
             isDragging={isDragging}
           />
         )}
-        className="pt-4"
+        className="p-4"
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
