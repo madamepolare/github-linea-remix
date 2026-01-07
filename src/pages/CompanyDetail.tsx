@@ -123,6 +123,29 @@ export default function CompanyDetail() {
   const getCompanyTypeColorLocal = (key: string) =>
     companyTypesRef.current.find((t) => t.key === key)?.color || "#3B82F6";
 
+  const handleSave = useCallback(() => {
+    if (!company) return;
+
+    const finalBetSpecialties =
+      selectedCategory === "bet" && selectedSpecialties.length > 0 ? selectedSpecialties : null;
+
+    console.debug("[CompanyDetail] save", {
+      companyId: company.id,
+      selectedCategory,
+      selectedSpecialties,
+      finalBetSpecialties,
+    });
+
+    updateCompany.mutate({
+      id: company.id,
+      ...editData,
+      industry: selectedCategory === "bet" ? "bet" : (editData.industry as string | null | undefined) || null,
+      bet_specialties: finalBetSpecialties,
+    });
+
+    setIsEditing(false);
+  }, [company, editData, selectedCategory, selectedSpecialties, updateCompany]);
+
   // Set up TopBar entity config
   useEffect(() => {
     if (company) {
@@ -192,7 +215,7 @@ export default function CompanyDetail() {
     return () => {
       setEntityConfig(null);
     };
-  }, [company, activeTab, isEditing, updateCompany.isPending, setEntityConfig]);
+  }, [company, activeTab, isEditing, updateCompany.isPending, setEntityConfig, handleSave]);
 
   // Initialize form state when company changes - but NOT while user is editing
   useEffect(() => {
@@ -212,23 +235,6 @@ export default function CompanyDetail() {
       currency: "EUR",
       maximumFractionDigits: 0,
     }).format(value);
-  };
-
-  const handleSave = () => {
-    if (company && editData) {
-      // Use selectedSpecialties as single source of truth for BET specialties
-      const finalBetSpecialties = selectedCategory === "bet" && selectedSpecialties.length > 0
-        ? selectedSpecialties
-        : null;
-
-      updateCompany.mutate({
-        id: company.id,
-        ...editData,
-        industry: selectedCategory === "bet" ? "bet" : (editData.industry as string | null | undefined) || null,
-        bet_specialties: finalBetSpecialties,
-      });
-      setIsEditing(false);
-    }
   };
 
   if (isLoading) {
@@ -402,6 +408,7 @@ export default function CompanyDetail() {
                                   checked={selectedSpecialties.includes(spec.key)}
                                   onSelect={(e) => e.preventDefault()}
                                   onCheckedChange={(checked) => {
+                                    console.debug("[CompanyDetail] toggle specialty", { key: spec.key, checked });
                                     setSelectedSpecialties((prev) => {
                                       const exists = prev.includes(spec.key);
                                       if (checked && !exists) return [...prev, spec.key];
