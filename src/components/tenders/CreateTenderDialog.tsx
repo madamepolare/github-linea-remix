@@ -621,13 +621,13 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                   <div>
                     <Label htmlFor="location" className="flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5" />
-                      Localisation
+                      Localisation du projet (code postal)
                     </Label>
                     <Input
                       id="location"
                       value={formData.location || ''}
                       onChange={(e) => updateFormField('location', e.target.value)}
-                      placeholder="Ex: Lyon, 69000"
+                      placeholder="Ex: 75001"
                       className="mt-1"
                     />
                   </div>
