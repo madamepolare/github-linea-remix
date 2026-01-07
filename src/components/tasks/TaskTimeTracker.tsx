@@ -1,11 +1,16 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useTaskTimeEntries } from "@/hooks/useTaskTimeEntries";
+import { useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, Pause, Clock, Plus } from "lucide-react";
+import { Play, Pause, Clock, Plus, Calendar, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface TaskTimeTrackerProps {
   taskId: string;
@@ -13,12 +18,46 @@ interface TaskTimeTrackerProps {
 
 export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
   const { timeEntries, totalHours, createTimeEntry } = useTaskTimeEntries(taskId);
+  const { schedules, isLoading: schedulesLoading } = useTaskSchedules({ taskId });
+  
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [manualMinutes, setManualMinutes] = useState("");
   const [description, setDescription] = useState("");
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<Date | null>(null);
+
+  // Calculer le temps total planifié depuis les schedules
+  const { scheduledHours, scheduledEntries } = useMemo(() => {
+    if (!schedules || schedules.length === 0) {
+      return { scheduledHours: 0, scheduledEntries: [] };
+    }
+    
+    const entries = schedules.map(schedule => {
+      const start = new Date(schedule.start_datetime);
+      const end = new Date(schedule.end_datetime);
+      const durationMs = end.getTime() - start.getTime();
+      const durationHours = Math.round((durationMs / (1000 * 60 * 60)) * 10) / 10;
+      
+      return {
+        id: schedule.id,
+        date: start,
+        durationHours,
+        userName: schedule.user?.full_name || "Non assigné",
+        isLocked: schedule.is_locked,
+      };
+    });
+    
+    const totalHours = entries.reduce((sum, e) => sum + e.durationHours, 0);
+    
+    return { 
+      scheduledHours: Math.round(totalHours * 10) / 10, 
+      scheduledEntries: entries.sort((a, b) => b.date.getTime() - a.date.getTime())
+    };
+  }, [schedules]);
+
+  // Temps total = temps manuel + temps planifié
+  const combinedTotalHours = Math.round((totalHours + scheduledHours) * 10) / 10;
 
   useEffect(() => {
     return () => {
@@ -82,24 +121,88 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
 
   return (
     <div className="space-y-4">
-      {/* Total Time Display */}
-      <div className="p-4 rounded-lg bg-muted/50 text-center">
-        <p className="text-3xl font-semibold tabular-nums">{totalHours}h</p>
-        <p className="text-sm text-muted-foreground">Temps total enregistré</p>
+      {/* Total Time Display - Combined */}
+      <div className="p-4 rounded-lg bg-muted/50 text-center space-y-2">
+        <p className="text-3xl font-semibold tabular-nums">{combinedTotalHours}h</p>
+        <p className="text-sm text-muted-foreground">Temps total</p>
+        
+        {/* Breakdown */}
+        {(scheduledHours > 0 || totalHours > 0) && (
+          <div className="flex items-center justify-center gap-4 pt-2 text-xs">
+            {scheduledHours > 0 && (
+              <div className="flex items-center gap-1 text-primary">
+                <Calendar className="h-3 w-3" />
+                <span>{scheduledHours}h planifié</span>
+              </div>
+            )}
+            {totalHours > 0 && (
+              <div className="flex items-center gap-1 text-emerald-600">
+                <Clock className="h-3 w-3" />
+                <span>{totalHours}h manuel</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      <Tabs defaultValue="timer" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="planning" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="planning">
+            <Calendar className="h-3 w-3 mr-1" />
+            Planning
+          </TabsTrigger>
           <TabsTrigger value="timer">
             <Play className="h-3 w-3 mr-1" />
-            Chronomètre
+            Chrono
           </TabsTrigger>
           <TabsTrigger value="manual">
             <Plus className="h-3 w-3 mr-1" />
-            Saisie manuelle
+            Manuel
           </TabsTrigger>
         </TabsList>
 
+        {/* Planning Tab - Shows scheduled time entries */}
+        <TabsContent value="planning" className="space-y-4">
+          {schedulesLoading ? (
+            <div className="text-center py-4 text-muted-foreground text-sm">
+              Chargement...
+            </div>
+          ) : scheduledEntries.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">Aucune planification</p>
+              <p className="text-xs mt-1">Planifiez cette tâche depuis le planning d'équipe</p>
+            </div>
+          ) : (
+            <ScrollArea className="h-[280px]">
+              <div className="space-y-2 pr-2">
+                {scheduledEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-card border text-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <div className="font-medium">{entry.userName}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(entry.date, "EEEE d MMMM", { locale: fr })}
+                        </div>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="text-sm font-semibold">
+                      {entry.durationHours}h
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </TabsContent>
+
+        {/* Timer Tab */}
         <TabsContent value="timer" className="space-y-4">
           {/* Timer Display */}
           <div className="text-center py-4">
@@ -146,6 +249,7 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
           )}
         </TabsContent>
 
+        {/* Manual Tab */}
         <TabsContent value="manual" className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -186,11 +290,14 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
         </TabsContent>
       </Tabs>
 
-      {/* Recent Time Entries */}
+      {/* Recent Manual Time Entries */}
       {timeEntries && timeEntries.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Entrées récentes</h4>
-          <div className="space-y-1 max-h-40 overflow-y-auto">
+        <div className="space-y-2 pt-2 border-t">
+          <h4 className="text-sm font-medium flex items-center gap-2">
+            <Clock className="h-3.5 w-3.5" />
+            Entrées manuelles
+          </h4>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
             {timeEntries.slice(0, 5).map((entry) => (
               <div
                 key={entry.id}
