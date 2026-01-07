@@ -129,7 +129,7 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
 
   const handleAddComment = () => {
     if (!newComment.trim()) return;
-    createComment.mutate(newComment);
+    createComment.mutate({ content: newComment });
     setNewComment("");
     setCommentMentions([]);
   };
