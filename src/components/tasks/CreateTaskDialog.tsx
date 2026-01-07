@@ -32,6 +32,7 @@ interface CreateTaskDialogProps {
   defaultStatus?: Task["status"];
   defaultRelatedType?: RelatedEntityType;
   defaultRelatedId?: string;
+  defaultProjectId?: string;
 }
 
 const priorityOptions = [
@@ -54,6 +55,7 @@ export function CreateTaskDialog({
   defaultStatus = "todo",
   defaultRelatedType,
   defaultRelatedId,
+  defaultProjectId,
 }: CreateTaskDialogProps) {
   const { createTask } = useTasks();
   const [title, setTitle] = useState("");
@@ -62,16 +64,25 @@ export function CreateTaskDialog({
   const [priority, setPriority] = useState<Task["priority"]>("medium");
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [estimatedHours, setEstimatedHours] = useState("");
-  const [relatedType, setRelatedType] = useState<RelatedEntityType | null>(defaultRelatedType || null);
-  const [relatedId, setRelatedId] = useState<string | null>(defaultRelatedId || null);
+  const [relatedType, setRelatedType] = useState<RelatedEntityType | null>(
+    defaultProjectId ? "project" : (defaultRelatedType || null)
+  );
+  const [relatedId, setRelatedId] = useState<string | null>(
+    defaultProjectId || defaultRelatedId || null
+  );
 
   // Reset form when dialog opens with new defaults
   useEffect(() => {
     if (open) {
-      setRelatedType(defaultRelatedType || null);
-      setRelatedId(defaultRelatedId || null);
+      if (defaultProjectId) {
+        setRelatedType("project");
+        setRelatedId(defaultProjectId);
+      } else {
+        setRelatedType(defaultRelatedType || null);
+        setRelatedId(defaultRelatedId || null);
+      }
     }
-  }, [open, defaultRelatedType, defaultRelatedId]);
+  }, [open, defaultRelatedType, defaultRelatedId, defaultProjectId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
