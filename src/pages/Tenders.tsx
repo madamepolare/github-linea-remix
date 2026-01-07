@@ -3,10 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { format, formatDistanceToNow, isPast, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
-  Search, 
-  LayoutGrid, 
-  List,
-  Calendar,
   MapPin,
   Euro,
   Clock,
@@ -14,10 +10,11 @@ import {
   MoreHorizontal,
   Trash2,
   Eye,
+  Building2,
+  Theater,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { THIN_STROKE } from "@/components/ui/icon";
@@ -30,10 +27,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTenders } from "@/hooks/useTenders";
 import { 
-  TENDER_STATUS_LABELS, 
-  TENDER_STATUS_COLORS, 
+  PIPELINE_STATUS_LABELS, 
+  PIPELINE_STATUS_COLORS,
+  TENDER_TYPE_LABELS,
   type Tender,
-  type TenderStatus,
+  type PipelineStatus,
 } from "@/lib/tenderTypes";
 import { cn } from "@/lib/utils";
 import { CreateTenderDialog } from "@/components/tenders/CreateTenderDialog";
@@ -41,12 +39,11 @@ import { CreateTenderDialog } from "@/components/tenders/CreateTenderDialog";
 export default function Tenders() {
   const navigate = useNavigate();
   const { view: urlView } = useParams();
-  const { tenders, tendersByStatus, stats, isLoading, deleteTender } = useTenders();
+  const { tenders, tendersByPipeline, stats, isLoading, deleteTender, updateTender } = useTenders();
   const viewMode = urlView === "list" ? "list" : "kanban";
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
-  // Listen for command palette event
   useEffect(() => {
     const handleOpen = () => setShowCreateDialog(true);
     window.addEventListener("open-create-tender", handleOpen);
@@ -60,7 +57,11 @@ export default function Tenders() {
       t.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const kanbanColumns: TenderStatus[] = ['repere', 'en_analyse', 'go', 'en_montage', 'depose'];
+  const pipelineColumns: PipelineStatus[] = ['a_approuver', 'en_cours', 'deposes'];
+
+  const handleDrop = (tenderId: string, newStatus: PipelineStatus) => {
+    updateTender.mutate({ id: tenderId, pipeline_status: newStatus });
+  };
 
   return (
     <>
@@ -72,15 +73,15 @@ export default function Tenders() {
             <p className="text-xs text-muted-foreground">Total</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-blue-600">{stats.enAnalyse}</p>
-            <p className="text-xs text-muted-foreground">En analyse</p>
+            <p className="text-2xl font-bold text-amber-600">{stats.aApprouver}</p>
+            <p className="text-xs text-muted-foreground">À approuver</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-amber-600">{stats.enMontage}</p>
-            <p className="text-xs text-muted-foreground">En montage</p>
+            <p className="text-2xl font-bold text-blue-600">{stats.enCours}</p>
+            <p className="text-xs text-muted-foreground">En cours</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-purple-600">{stats.deposes}</p>
+            <p className="text-2xl font-bold text-emerald-600">{stats.deposes}</p>
             <p className="text-xs text-muted-foreground">Déposés</p>
           </div>
           <div className="text-center">
@@ -97,13 +98,14 @@ export default function Tenders() {
             </div>
           ) : viewMode === "kanban" ? (
             <div className="flex gap-4 h-full overflow-x-auto pb-4">
-              {kanbanColumns.map((status) => (
+              {pipelineColumns.map((status) => (
                 <KanbanColumn
                   key={status}
                   status={status}
-                  tenders={tendersByStatus[status] || []}
+                  tenders={tendersByPipeline[status] || []}
                   onTenderClick={(id) => navigate(`/tenders/${id}`)}
                   onDelete={(id) => deleteTender.mutate(id)}
+                  onDrop={(tenderId) => handleDrop(tenderId, status)}
                 />
               ))}
             </div>
@@ -117,7 +119,6 @@ export default function Tenders() {
         </div>
       </div>
 
-      {/* Create Dialog */}
       <CreateTenderDialog 
         open={showCreateDialog} 
         onOpenChange={setShowCreateDialog} 
@@ -131,18 +132,35 @@ function KanbanColumn({
   tenders, 
   onTenderClick,
   onDelete,
+  onDrop,
 }: { 
-  status: TenderStatus; 
+  status: PipelineStatus; 
   tenders: Tender[];
   onTenderClick: (id: string) => void;
   onDelete: (id: string) => void;
+  onDrop: (tenderId: string) => void;
 }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
   return (
-    <div className="flex-shrink-0 w-72 flex flex-col bg-muted/30 rounded-lg">
+    <div 
+      className={cn(
+        "flex-shrink-0 w-80 flex flex-col rounded-lg transition-colors",
+        isDragOver ? "bg-primary/10" : "bg-muted/30"
+      )}
+      onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        const tenderId = e.dataTransfer.getData("tenderId");
+        if (tenderId) onDrop(tenderId);
+      }}
+    >
       <div className="p-3 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className={cn("text-xs", TENDER_STATUS_COLORS[status])}>
-            {TENDER_STATUS_LABELS[status]}
+          <Badge variant="outline" className={cn("text-xs", PIPELINE_STATUS_COLORS[status])}>
+            {PIPELINE_STATUS_LABELS[status]}
           </Badge>
           <span className="text-xs text-muted-foreground">{tenders.length}</span>
         </div>
@@ -178,16 +196,22 @@ function TenderCard({
   const deadline = tender.submission_deadline ? new Date(tender.submission_deadline) : null;
   const isUrgent = deadline && differenceInDays(deadline, new Date()) <= 7 && !isPast(deadline);
   const isOverdue = deadline && isPast(deadline);
+  const TypeIcon = tender.tender_type === 'scenographie' ? Theater : Building2;
 
   return (
     <Card 
       className="cursor-pointer hover:shadow-md transition-shadow"
       onClick={onClick}
+      draggable
+      onDragStart={(e) => e.dataTransfer.setData("tenderId", tender.id)}
     >
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-mono">{tender.reference}</p>
+            <div className="flex items-center gap-1.5 mb-1">
+              <TypeIcon className="h-3 w-3 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground font-mono">{tender.reference}</p>
+            </div>
             <p className="font-medium text-sm line-clamp-2">{tender.title}</p>
           </div>
           <DropdownMenu>
@@ -218,18 +242,18 @@ function TenderCard({
         )}
         
         <div className="flex flex-wrap gap-1.5 text-xs text-muted-foreground">
-        {tender.location && (
-          <span className="flex items-center gap-1">
-            <MapPin className="h-3 w-3" strokeWidth={THIN_STROKE} />
-            {tender.location}
-          </span>
-        )}
-        {tender.estimated_budget && (
-          <span className="flex items-center gap-1">
-            <Euro className="h-3 w-3" strokeWidth={THIN_STROKE} />
-            {(tender.estimated_budget / 1000000).toFixed(1)}M€
-          </span>
-        )}
+          {tender.location && (
+            <span className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" strokeWidth={THIN_STROKE} />
+              {tender.location}
+            </span>
+          )}
+          {tender.estimated_budget && (
+            <span className="flex items-center gap-1">
+              <Euro className="h-3 w-3" strokeWidth={THIN_STROKE} />
+              {(tender.estimated_budget / 1000000).toFixed(1)}M€
+            </span>
+          )}
         </div>
         
         {deadline && (
@@ -267,7 +291,7 @@ function TenderListView({
           <tr>
             <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Référence</th>
             <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Titre</th>
-            <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Client</th>
+            <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">MOA</th>
             <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Statut</th>
             <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Deadline</th>
             <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Budget</th>
@@ -289,8 +313,8 @@ function TenderListView({
                 <td className="px-4 py-3 text-sm max-w-xs truncate">{tender.title}</td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">{tender.client_name || "-"}</td>
                 <td className="px-4 py-3">
-                  <Badge variant="outline" className={cn("text-xs", TENDER_STATUS_COLORS[tender.status])}>
-                    {TENDER_STATUS_LABELS[tender.status]}
+                  <Badge variant="outline" className={cn("text-xs", PIPELINE_STATUS_COLORS[tender.pipeline_status || 'a_approuver'])}>
+                    {PIPELINE_STATUS_LABELS[tender.pipeline_status || 'a_approuver']}
                   </Badge>
                 </td>
                 <td className={cn(

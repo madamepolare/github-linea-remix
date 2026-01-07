@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import type { Tender, TenderStatus } from "@/lib/tenderTypes";
+import type { Tender, TenderStatus, PipelineStatus } from "@/lib/tenderTypes";
 
 export function useTenders() {
   const { activeWorkspace } = useAuth();
@@ -30,20 +30,24 @@ export function useTenders() {
       reference: string;
       title: string;
       description?: string | null;
+      tender_type?: string;
+      submission_type?: string;
+      pipeline_status?: string;
       client_name?: string | null;
       client_type?: string | null;
+      moa_company_id?: string | null;
       contracting_authority?: string | null;
       estimated_budget?: number | null;
       budget_disclosed?: boolean | null;
       location?: string | null;
       region?: string | null;
-      surface_area?: number | null;
       procedure_type?: string | null;
+      procedure_other?: string | null;
       submission_deadline?: string | null;
       site_visit_required?: boolean | null;
       site_visit_date?: string | null;
-      jury_date?: string | null;
-      results_date?: string | null;
+      site_visit_assigned_user_id?: string | null;
+      dce_link?: string | null;
       source_platform?: string | null;
       source_url?: string | null;
       status?: string | null;
@@ -58,20 +62,24 @@ export function useTenders() {
           reference: tender.reference,
           title: tender.title,
           description: tender.description ?? null,
+          tender_type: tender.tender_type ?? 'architecture',
+          submission_type: tender.submission_type ?? 'candidature_offre',
+          pipeline_status: tender.pipeline_status ?? 'a_approuver',
           client_name: tender.client_name ?? null,
           client_type: tender.client_type ?? null,
+          moa_company_id: tender.moa_company_id ?? null,
           contracting_authority: tender.contracting_authority ?? null,
           estimated_budget: tender.estimated_budget ?? null,
           budget_disclosed: tender.budget_disclosed ?? null,
           location: tender.location ?? null,
           region: tender.region ?? null,
-          surface_area: tender.surface_area ?? null,
           procedure_type: tender.procedure_type ?? null,
+          procedure_other: tender.procedure_other ?? null,
           submission_deadline: tender.submission_deadline ?? null,
           site_visit_required: tender.site_visit_required ?? null,
           site_visit_date: tender.site_visit_date ?? null,
-          jury_date: tender.jury_date ?? null,
-          results_date: tender.results_date ?? null,
+          site_visit_assigned_user_id: tender.site_visit_assigned_user_id ?? null,
+          dce_link: tender.dce_link ?? null,
           source_platform: tender.source_platform ?? null,
           source_url: tender.source_url ?? null,
           status: tender.status ?? 'repere',
@@ -108,7 +116,6 @@ export function useTenders() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tenders"] });
-      toast.success("Concours mis à jour");
     },
     onError: (error) => {
       toast.error("Erreur lors de la mise à jour");
@@ -163,7 +170,15 @@ export function useTenders() {
     },
   });
 
-  // Group tenders by status for Kanban view
+  // Group tenders by pipeline status (new 3 columns)
+  const tendersByPipeline = tenders.reduce((acc, tender) => {
+    const status = tender.pipeline_status || 'a_approuver';
+    if (!acc[status]) acc[status] = [];
+    acc[status].push(tender);
+    return acc;
+  }, {} as Record<PipelineStatus, Tender[]>);
+
+  // Group tenders by legacy status for backward compatibility
   const tendersByStatus = tenders.reduce((acc, tender) => {
     const status = tender.status;
     if (!acc[status]) acc[status] = [];
@@ -174,9 +189,9 @@ export function useTenders() {
   // Stats
   const stats = {
     total: tenders.length,
-    enAnalyse: tenders.filter(t => t.status === 'en_analyse').length,
-    enMontage: tenders.filter(t => t.status === 'en_montage' || t.status === 'go').length,
-    deposes: tenders.filter(t => t.status === 'depose').length,
+    aApprouver: tenders.filter(t => t.pipeline_status === 'a_approuver' || !t.pipeline_status).length,
+    enCours: tenders.filter(t => t.pipeline_status === 'en_cours').length,
+    deposes: tenders.filter(t => t.pipeline_status === 'deposes').length,
     gagnes: tenders.filter(t => t.status === 'gagne').length,
     tauxReussite: tenders.filter(t => t.status === 'depose' || t.status === 'gagne' || t.status === 'perdu').length > 0
       ? Math.round((tenders.filter(t => t.status === 'gagne').length / tenders.filter(t => t.status === 'depose' || t.status === 'gagne' || t.status === 'perdu').length) * 100)
@@ -186,6 +201,7 @@ export function useTenders() {
   return {
     tenders,
     tendersByStatus,
+    tendersByPipeline,
     stats,
     isLoading,
     createTender,
