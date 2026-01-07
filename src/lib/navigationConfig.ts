@@ -13,6 +13,7 @@ import {
   Award,
   Package,
   Armchair,
+  CalendarClock,
   LucideIcon,
 } from "lucide-react";
 
@@ -229,11 +230,24 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
       { key: "create", label: "Nouvelle commande", event: "open-create-object" },
     ],
   },
+  workflow: {
+    slug: "workflow",
+    title: "Workflow",
+    icon: CalendarClock,
+    href: "/workflow",
+    isExtension: true,
+    subNav: [
+      { key: "planning", label: "Planning", href: "/workflow" },
+    ],
+    quickActions: [
+      { key: "ai-plan", label: "Planifier avec IA", event: "open-ai-planning" },
+    ],
+  },
 };
 
 // Module display order
 export const CORE_MODULES = ["projects", "tasks", "crm", "commercial"];
-export const EXTENSION_MODULES = ["documents", "team", "chantier", "tenders", "invoicing", "references", "materials", "objects"];
+export const EXTENSION_MODULES = ["documents", "team", "chantier", "tenders", "invoicing", "references", "materials", "objects", "workflow"];
 
 // Helper to get module config from current path
 export function getModuleFromPath(pathname: string): ModuleNavConfig | null {

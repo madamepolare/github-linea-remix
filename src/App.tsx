@@ -46,6 +46,7 @@ const Contact = lazy(() => import("./pages/Contact"));
 const CGV = lazy(() => import("./pages/legal/CGV"));
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Legal = lazy(() => import("./pages/legal/Legal"));
+const Workflow = lazy(() => import("./pages/Workflow"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading fallback
@@ -130,6 +131,7 @@ const App = () => (
                 <Route path="/references/:id" element={<ReferenceDetail />} />
                 <Route path="/materials" element={<Materials />} />
                 <Route path="/objects" element={<Objects />} />
+                <Route path="/workflow" element={<Workflow />} />
               </Route>
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
