@@ -24,7 +24,7 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
   
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [manualMinutes, setManualMinutes] = useState("");
+  const [manualHours, setManualHours] = useState("");
   const [description, setDescription] = useState("");
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<Date | null>(null);
@@ -136,16 +136,17 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
   };
 
   const handleManualEntry = async () => {
-    const minutes = parseInt(manualMinutes);
-    if (isNaN(minutes) || minutes <= 0) return;
+    const hours = parseFloat(manualHours);
+    if (isNaN(hours) || hours <= 0) return;
 
+    const minutes = Math.round(hours * 60);
     await createTimeEntry.mutateAsync({
       duration_minutes: minutes,
       date: new Date().toISOString().split("T")[0],
       description: description || undefined,
     });
 
-    setManualMinutes("");
+    setManualHours("");
     setDescription("");
   };
 
@@ -331,23 +332,13 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
 
         {/* Manual Tab */}
         <TabsContent value="manual" className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Durée (minutes)</Label>
-              <Input
-                type="number"
-                value={manualMinutes}
-                onChange={(e) => setManualMinutes(e.target.value)}
-                placeholder="30"
-                min="1"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Heures équivalentes</Label>
-              <p className="text-2xl font-semibold pt-1">
-                {manualMinutes ? (parseInt(manualMinutes) / 60).toFixed(1) : "0"}h
-              </p>
-            </div>
+          <div className="space-y-2">
+            <Label>Durée</Label>
+            <DurationInput
+              value={manualHours}
+              onChange={setManualHours}
+              placeholder="Durée"
+            />
           </div>
 
           <div className="space-y-2">
@@ -361,7 +352,7 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
 
           <Button
             onClick={handleManualEntry}
-            disabled={!manualMinutes || parseInt(manualMinutes) <= 0}
+            disabled={!manualHours || parseFloat(manualHours) <= 0}
             className="w-full"
           >
             <Clock className="h-4 w-4 mr-2" />
