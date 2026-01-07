@@ -99,12 +99,16 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
 
       const { data: { user } } = await supabase.auth.getUser();
 
+      // Utiliser upsert pour éviter l'erreur de contrainte unique
       const { data, error } = await supabase
         .from("task_schedules")
-        .insert({
+        .upsert({
           ...schedule,
           workspace_id: activeWorkspace.id,
           created_by: user?.id,
+        }, {
+          onConflict: 'task_id,user_id',
+          ignoreDuplicates: false,
         })
         .select()
         .single();
