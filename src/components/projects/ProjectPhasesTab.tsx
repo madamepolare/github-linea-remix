@@ -60,7 +60,7 @@ interface ProjectPhasesTabProps {
 
 export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
   const { activeWorkspace } = useAuth();
-  const { phases, isLoading, createPhase, createManyPhases, updatePhase, deletePhase } = useProjectPhases(projectId);
+  const { phases, isLoading, createPhase, createManyPhases, updatePhase, deletePhase, reorderPhases } = useProjectPhases(projectId);
   const { dependencies, addDependency, removeDependency } = usePhaseDependencies(projectId);
   
   const [editingPhase, setEditingPhase] = useState<any | null>(null);
@@ -70,6 +70,39 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
   const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [formDependsOn, setFormDependsOn] = useState<string>("");
+  const [draggedPhaseId, setDraggedPhaseId] = useState<string | null>(null);
+
+  // Drag & drop handlers
+  const handleDragStart = (e: React.DragEvent, phaseId: string) => {
+    setDraggedPhaseId(phaseId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedPhaseId || draggedPhaseId === targetId) return;
+
+    const newOrder = [...phases];
+    const draggedIndex = newOrder.findIndex((p) => p.id === draggedPhaseId);
+    const targetIndex = newOrder.findIndex((p) => p.id === targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const [draggedPhase] = newOrder.splice(draggedIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedPhase);
+
+    reorderPhases.mutate(newOrder.map((p) => p.id));
+    setDraggedPhaseId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedPhaseId(null);
+  };
 
   const openEditDialog = (phase: any) => {
     setEditingPhase(phase);
@@ -283,16 +316,26 @@ export function ProjectPhasesTab({ projectId }: ProjectPhasesTabProps) {
           {phases.map((phase, index) => {
             const statusConfig = PHASE_STATUS_CONFIG[phase.status as PhaseStatus] || PHASE_STATUS_CONFIG.pending;
             const phaseDependencies = getPhaseDependencies(phase.id);
+            const isDragging = draggedPhaseId === phase.id;
 
             return (
-              <Card key={phase.id} className={cn(
-                "transition-all",
-                phase.status === "in_progress" && "border-primary"
-              )}>
+              <Card 
+                key={phase.id} 
+                draggable
+                onDragStart={(e) => handleDragStart(e, phase.id)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, phase.id)}
+                onDragEnd={handleDragEnd}
+                className={cn(
+                  "transition-all cursor-grab active:cursor-grabbing",
+                  phase.status === "in_progress" && "border-primary",
+                  isDragging && "opacity-50"
+                )}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div className="flex items-center gap-2 pt-1">
-                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                      <GripVertical className="h-4 w-4 text-muted-foreground" />
                       <div
                         className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium text-white"
                         style={{ backgroundColor: phase.color || "#3B82F6" }}

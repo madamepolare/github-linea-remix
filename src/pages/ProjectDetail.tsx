@@ -307,7 +307,7 @@ interface OverviewTabProps {
 
 function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary, onUpdateProject, isUpdatingProject, onOpenProjectEdit }: OverviewTabProps) {
   const completedPhases = phases.filter((p) => p.status === "completed").length;
-  const { updatePhase, createPhase, deletePhase, reorderPhases } = useProjectPhases(project.id);
+  const { updatePhase, createPhase, createManyPhases, deletePhase, reorderPhases } = useProjectPhases(project.id);
   const { activeWorkspace } = useAuth();
   const [phaseEditOpen, setPhaseEditOpen] = useState(false);
   const [confirmPhaseId, setConfirmPhaseId] = useState<string | null>(null);
@@ -670,6 +670,17 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
         onOpenChange={setPhaseEditOpen}
         phases={phases}
         onCreatePhase={createPhase.mutate}
+        onCreateManyPhases={activeWorkspace ? (phasesData) => {
+          createManyPhases.mutate(phasesData.map((p, index) => ({
+            project_id: project.id,
+            workspace_id: activeWorkspace.id,
+            name: p.name,
+            description: p.description,
+            status: p.status || "pending",
+            color: p.color,
+            sort_order: phases.length + index,
+          })));
+        } : undefined}
         onUpdatePhase={(id, updates) => updatePhase.mutate({ id, ...updates })}
         onDeletePhase={deletePhase.mutate}
         onReorderPhases={reorderPhases.mutate}
