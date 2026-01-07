@@ -125,10 +125,12 @@ function TaskCard({ task, onDragStart, onTaskSelect }: TaskCardProps) {
   const estimatedHours = task.estimated_hours || 0;
   const hasSchedule = scheduledHours > 0;
   
-  // Calculer le pourcentage de planification
+  // Calculer le pourcentage de planification (peut dépasser 100%)
   const planningProgress = estimatedHours > 0 
-    ? Math.min(100, Math.round((scheduledHours / estimatedHours) * 100))
+    ? Math.round((scheduledHours / estimatedHours) * 100)
     : null;
+  
+  const isOverPlanned = planningProgress !== null && planningProgress > 100;
 
   return (
     <div
@@ -174,19 +176,22 @@ function TaskCard({ task, onDragStart, onTaskSelect }: TaskCardProps) {
               <Badge 
                 variant="outline" 
                 className={cn(
-                  "text-[10px] px-1.5 py-0",
-                  hasSchedule && "border-primary/50 text-primary"
+                  "text-[10px] px-1.5 py-0 max-w-full",
+                  hasSchedule && !isOverPlanned && "border-primary/50 text-primary",
+                  isOverPlanned && "border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-950/30"
                 )}
               >
                 {hasSchedule ? (
-                  <>
-                    <CalendarCheck className="h-2.5 w-2.5 mr-0.5" />
-                    {scheduledHours}h
-                    {estimatedHours > 0 && ` / ${estimatedHours}h`}
+                  <span className="flex items-center gap-0.5">
+                    <CalendarCheck className="h-2.5 w-2.5 flex-shrink-0" />
+                    <span>{scheduledHours}h</span>
+                    {estimatedHours > 0 && <span>/ {estimatedHours}h</span>}
                     {planningProgress !== null && (
-                      <span className="ml-1 opacity-70">({planningProgress}%)</span>
+                      <span className={cn("opacity-70", isOverPlanned && "text-amber-600 font-medium opacity-100")}>
+                        ({planningProgress}%)
+                      </span>
                     )}
-                  </>
+                  </span>
                 ) : (
                   <>
                     <Clock className="h-2.5 w-2.5 mr-0.5" />
