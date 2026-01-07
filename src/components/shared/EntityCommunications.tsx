@@ -375,11 +375,39 @@ export function EntityCommunications({
 
               {/* Source indicator */}
               {isFromChildEntity && SourceIcon && (
-                <div className="flex items-center gap-1">
-                  <SourceIcon className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">
-                    via {getEntityTypeLabel(comm.entity_type).toLowerCase()}
-                  </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted/60">
+                    <SourceIcon className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      {comm.entity_type === "task" && comm.source_entity_name ? (
+                        <>
+                          <span className="font-medium text-foreground/80">
+                            {comm.source_entity_name}
+                          </span>
+                          {comm.source_entity_status && (
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                "ml-1.5 text-[9px] px-1 py-0 h-4",
+                                comm.source_entity_status === "done" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                                comm.source_entity_status === "in_progress" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+                                comm.source_entity_status === "todo" && "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+                                comm.source_entity_status === "blocked" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                              )}
+                            >
+                              {comm.source_entity_status === "done" ? "Terminée" :
+                               comm.source_entity_status === "in_progress" ? "En cours" :
+                               comm.source_entity_status === "todo" ? "À faire" :
+                               comm.source_entity_status === "blocked" ? "Bloquée" :
+                               comm.source_entity_status}
+                            </Badge>
+                          )}
+                        </>
+                      ) : (
+                        <>via {getEntityTypeLabel(comm.entity_type).toLowerCase()}</>
+                      )}
+                    </span>
+                  </div>
                   {comm.entity_type !== "task" && (
                     <Link
                       to={getEntityLink(comm.entity_type, comm.entity_id)}

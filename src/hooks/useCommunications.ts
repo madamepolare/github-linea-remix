@@ -29,8 +29,9 @@ export interface Communication {
   // Context fields for aggregation
   context_entity_type: EntityType | null;
   context_entity_id: string | null;
-  // Joined data for display
+  // Enriched data for display (populated after fetch)
   source_entity_name?: string;
+  source_entity_status?: string;
 }
 
 export interface CommunicationWithReplies extends Communication {
@@ -76,26 +77,60 @@ export function useCommunications(
     queryFn: async () => {
       if (!entityId) return [];
       
+      let data: Communication[];
+      
       if (includeContext) {
         // Fetch communications directly on this entity OR with this entity as context
-        const { data, error } = await supabase
+        const { data: rawData, error } = await supabase
           .from("communications")
           .select("*")
           .or(`and(entity_type.eq.${entityType},entity_id.eq.${entityId}),and(context_entity_type.eq.${entityType},context_entity_id.eq.${entityId})`)
           .order("created_at", { ascending: true });
         if (error) throw error;
-        return data as Communication[];
+        data = rawData as Communication[];
       } else {
         // Only fetch communications directly on this entity
-        const { data, error } = await supabase
+        const { data: rawData, error } = await supabase
           .from("communications")
           .select("*")
           .eq("entity_type", entityType)
           .eq("entity_id", entityId)
           .order("created_at", { ascending: true });
         if (error) throw error;
-        return data as Communication[];
+        data = rawData as Communication[];
       }
+
+      // Enrich communications from child entities with source info
+      const taskIds = data
+        .filter(c => c.entity_type === 'task' && c.entity_id)
+        .map(c => c.entity_id);
+      
+      if (taskIds.length > 0) {
+        const uniqueTaskIds = [...new Set(taskIds)];
+        const { data: tasks } = await supabase
+          .from("tasks")
+          .select("id, title, status")
+          .in("id", uniqueTaskIds);
+        
+        if (tasks) {
+          const taskMap = new Map(tasks.map(t => [t.id, t]));
+          data = data.map(comm => {
+            if (comm.entity_type === 'task') {
+              const task = taskMap.get(comm.entity_id);
+              if (task) {
+                return {
+                  ...comm,
+                  source_entity_name: task.title,
+                  source_entity_status: task.status,
+                };
+              }
+            }
+            return comm;
+          });
+        }
+      }
+
+      return data;
     },
     enabled: !!entityId && !!activeWorkspace?.id,
   });
