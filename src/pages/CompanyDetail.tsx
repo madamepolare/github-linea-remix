@@ -215,18 +215,16 @@ export default function CompanyDetail() {
 
   const handleSave = () => {
     if (company && editData) {
+      // Use selectedSpecialties as single source of truth for BET specialties
+      const finalBetSpecialties = selectedCategory === "bet" && selectedSpecialties.length > 0
+        ? selectedSpecialties
+        : null;
+
       updateCompany.mutate({
         id: company.id,
         ...editData,
-        industry:
-          selectedCategory === "bet"
-            ? "bet"
-            : (editData.industry as string | null | undefined) || null,
-        bet_specialties: (() => {
-          if (selectedCategory !== "bet") return null;
-          const specs = ((editData as any).bet_specialties as string[] | null | undefined) ?? selectedSpecialties;
-          return specs && specs.length > 0 ? specs : null;
-        })(),
+        industry: selectedCategory === "bet" ? "bet" : (editData.industry as string | null | undefined) || null,
+        bet_specialties: finalBetSpecialties,
       });
       setIsEditing(false);
     }
