@@ -52,6 +52,11 @@ interface TenderCalendarTabProps {
     title: string;
     location?: string | null;
     site_visit_date?: string | null;
+    site_visit_required?: boolean | null;
+    site_visit_contact_name?: string | null;
+    site_visit_contact_email?: string | null;
+    site_visit_contact_phone?: string | null;
+    site_visit_assigned_users?: string[] | null;
     submission_deadline?: string | null;
   };
 }
@@ -66,7 +71,11 @@ interface TenderEvent {
   end_datetime?: string | null;
   location?: string | null;
   attendees?: any[];
+  contact_name?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
   created_at: string;
+  isVirtual?: boolean; // For tender-based events
 }
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
@@ -101,6 +110,9 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
   const [formStartDate, setFormStartDate] = useState<Date | null>(null);
   const [formEndDate, setFormEndDate] = useState<Date | null>(null);
   const [formLocation, setFormLocation] = useState("");
+  const [formContactName, setFormContactName] = useState("");
+  const [formContactEmail, setFormContactEmail] = useState("");
+  const [formContactPhone, setFormContactPhone] = useState("");
 
   // Fetch tender events
   const { data: events = [], isLoading } = useQuery({
@@ -200,10 +212,28 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
     setFormStartDate(null);
     setFormEndDate(null);
     setFormLocation("");
+    setFormContactName("");
+    setFormContactEmail("");
+    setFormContactPhone("");
   };
 
   // Open edit dialog
   const openEditDialog = (event: TenderEvent) => {
+    if (event.isVirtual) {
+      // For virtual events (from tender data), open with pre-filled data
+      setFormTitle(event.title);
+      setFormDescription(event.description || "");
+      setFormEventType(event.event_type);
+      setFormStartDate(parseISO(event.start_datetime));
+      setFormEndDate(event.end_datetime ? parseISO(event.end_datetime) : null);
+      setFormLocation(event.location || "");
+      setFormContactName(event.contact_name || "");
+      setFormContactEmail(event.contact_email || "");
+      setFormContactPhone(event.contact_phone || "");
+      setEditingEvent(null);
+      setIsCreateOpen(true);
+      return;
+    }
     setEditingEvent(event);
     setFormTitle(event.title);
     setFormDescription(event.description || "");
@@ -211,6 +241,9 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
     setFormStartDate(parseISO(event.start_datetime));
     setFormEndDate(event.end_datetime ? parseISO(event.end_datetime) : null);
     setFormLocation(event.location || "");
+    setFormContactName(event.contact_name || "");
+    setFormContactEmail(event.contact_email || "");
+    setFormContactPhone(event.contact_phone || "");
   };
 
   // Handle create/update
@@ -224,6 +257,9 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
       start_datetime: formStartDate.toISOString(),
       end_datetime: formEndDate?.toISOString() || null,
       location: formLocation.trim() || null,
+      contact_name: formContactName.trim() || null,
+      contact_email: formContactEmail.trim() || null,
+      contact_phone: formContactPhone.trim() || null,
     };
 
     if (editingEvent) {
@@ -244,55 +280,87 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
     }
   };
 
-  // Add site visit from tender data
-  const addSiteVisitFromTender = () => {
-    if (!tender.site_visit_date) return;
+  // Build virtual events from tender data (site visit & deadline)
+  const virtualEvents: TenderEvent[] = useMemo(() => {
+    const virtualList: TenderEvent[] = [];
+    
+    // Site visit from tender
+    if (tender.site_visit_date) {
+      const startDate = parseISO(tender.site_visit_date);
+      const endDate = addHours(startDate, 2);
+      virtualList.push({
+        id: `virtual-site-visit-${tender.id}`,
+        tender_id: tender.id,
+        title: `🏗️ Visite de site${tender.site_visit_required ? " (obligatoire)" : ""}`,
+        description: tender.site_visit_required ? "Visite de site obligatoire" : "Visite de site",
+        event_type: "site_visit",
+        start_datetime: tender.site_visit_date,
+        end_datetime: endDate.toISOString(),
+        location: tender.location || null,
+        contact_name: tender.site_visit_contact_name || null,
+        contact_email: tender.site_visit_contact_email || null,
+        contact_phone: tender.site_visit_contact_phone || null,
+        attendees: tender.site_visit_assigned_users?.map(id => ({ user_id: id })) || [],
+        created_at: "",
+        isVirtual: true,
+      });
+    }
+    
+    // Deadline from tender
+    if (tender.submission_deadline) {
+      virtualList.push({
+        id: `virtual-deadline-${tender.id}`,
+        tender_id: tender.id,
+        title: `📅 Dépôt des offres`,
+        description: "Date limite de remise des offres",
+        event_type: "deadline",
+        start_datetime: tender.submission_deadline,
+        end_datetime: null,
+        location: null,
+        created_at: "",
+        isVirtual: true,
+      });
+    }
+    
+    return virtualList;
+  }, [tender]);
 
-    const startDate = parseISO(tender.site_visit_date);
-    const endDate = addHours(startDate, 2);
-
-    createEvent.mutate({
-      title: `Visite de site - ${tender.title}`,
-      description: "Visite de site obligatoire",
-      event_type: "site_visit",
-      start_datetime: startDate.toISOString(),
-      end_datetime: endDate.toISOString(),
-      location: tender.location || null,
+  // Combine virtual events with saved events
+  const allEvents = useMemo(() => {
+    // Filter out virtual events if there's already a saved event of the same type
+    const savedSiteVisit = events.some((e) => e.event_type === "site_visit");
+    const savedDeadline = events.some((e) => e.event_type === "deadline");
+    
+    const filteredVirtual = virtualEvents.filter((v) => {
+      if (v.event_type === "site_visit" && savedSiteVisit) return false;
+      if (v.event_type === "deadline" && savedDeadline) return false;
+      return true;
     });
-  };
-
-  // Add deadline from tender data
-  const addDeadlineFromTender = () => {
-    if (!tender.submission_deadline) return;
-
-    createEvent.mutate({
-      title: `Dépôt - ${tender.title}`,
-      description: "Date limite de remise des offres",
-      event_type: "deadline",
-      start_datetime: tender.submission_deadline,
-      end_datetime: null,
-      location: null,
-    });
-  };
+    
+    return [...filteredVirtual, ...events];
+  }, [events, virtualEvents]);
 
   // Convert events to FullCalendar format
   const calendarEvents = useMemo(() => {
-    return events.map((event) => ({
+    return allEvents.map((event) => ({
       id: event.id,
       title: event.title,
       start: event.start_datetime,
       end: event.end_datetime || undefined,
-      backgroundColor: EVENT_TYPE_COLORS[event.event_type] || "#6366f1",
+      backgroundColor: event.isVirtual 
+        ? `${EVENT_TYPE_COLORS[event.event_type]}80` 
+        : EVENT_TYPE_COLORS[event.event_type] || "#6366f1",
       borderColor: EVENT_TYPE_COLORS[event.event_type] || "#6366f1",
+      borderStyle: event.isVirtual ? "dashed" : "solid",
       extendedProps: {
         ...event,
       },
     }));
-  }, [events]);
+  }, [allEvents]);
 
   // Handle event click
   const handleEventClick = (info: any) => {
-    const event = events.find((e) => e.id === info.event.id);
+    const event = allEvents.find((e) => e.id === info.event.id);
     if (event) {
       openEditDialog(event);
     }
@@ -304,10 +372,6 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
     setFormEndDate(info.end);
     setIsCreateOpen(true);
   };
-
-  // Check if site visit or deadline already exists
-  const hasSiteVisitEvent = events.some((e) => e.event_type === "site_visit");
-  const hasDeadlineEvent = events.some((e) => e.event_type === "deadline");
 
   if (isLoading) {
     return (
@@ -323,17 +387,11 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
       {/* Actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {tender.site_visit_date && !hasSiteVisitEvent && (
-            <Button size="sm" variant="outline" onClick={addSiteVisitFromTender}>
-              <MapPin className="h-4 w-4 mr-1.5" />
-              Ajouter visite de site
-            </Button>
-          )}
-          {tender.submission_deadline && !hasDeadlineEvent && (
-            <Button size="sm" variant="outline" onClick={addDeadlineFromTender}>
-              <Clock className="h-4 w-4 mr-1.5" />
-              Ajouter échéance
-            </Button>
+          {/* Info about virtual events */}
+          {virtualEvents.length > 0 && (
+            <span className="text-xs text-muted-foreground">
+              Les événements en pointillé sont liés aux données du tender
+            </span>
           )}
         </div>
         <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
@@ -373,40 +431,69 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
       </Card>
 
       {/* Upcoming events list */}
-      {events.length > 0 && (
+      {allEvents.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Événements à venir
+              Événements
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {events
-                .filter((e) => new Date(e.start_datetime) >= new Date())
-                .slice(0, 5)
+              {allEvents
+                .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
                 .map((event) => (
                   <div
                     key={event.id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                    className={cn(
+                      "p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors",
+                      event.isVirtual && "border-dashed"
+                    )}
                     onClick={() => openEditDialog(event)}
                   >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: EVENT_TYPE_COLORS[event.event_type] }}
-                      />
-                      <div>
-                        <p className="font-medium text-sm">{event.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {format(parseISO(event.start_datetime), "EEEE d MMMM à HH:mm", { locale: fr })}
-                        </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: EVENT_TYPE_COLORS[event.event_type] }}
+                        />
+                        <div>
+                          <p className="font-medium text-sm">{event.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(parseISO(event.start_datetime), "EEEE d MMMM à HH:mm", { locale: fr })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {event.isVirtual && (
+                          <Badge variant="outline" className="text-xs">
+                            Auto
+                          </Badge>
+                        )}
+                        <Badge variant="secondary" className="text-xs">
+                          {EVENT_TYPE_LABELS[event.event_type]}
+                        </Badge>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {EVENT_TYPE_LABELS[event.event_type]}
-                    </Badge>
+                    {/* Contact info */}
+                    {(event.contact_name || event.location) && (
+                      <div className="mt-2 pl-5 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        {event.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {event.location}
+                          </span>
+                        )}
+                        {event.contact_name && (
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {event.contact_name}
+                            {event.contact_phone && ` • ${event.contact_phone}`}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
             </div>
@@ -481,6 +568,37 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
                 placeholder="Adresse ou lieu"
               />
             </div>
+
+            {/* Contact fields - shown for site visits and meetings */}
+            {(formEventType === "site_visit" || formEventType === "meeting") && (
+              <div className="p-3 rounded-lg border bg-muted/30 space-y-3">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Contact sur place
+                </Label>
+                <div className="grid grid-cols-1 gap-3">
+                  <Input
+                    value={formContactName}
+                    onChange={(e) => setFormContactName(e.target.value)}
+                    placeholder="Nom du contact"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      type="email"
+                      value={formContactEmail}
+                      onChange={(e) => setFormContactEmail(e.target.value)}
+                      placeholder="Email"
+                    />
+                    <Input
+                      type="tel"
+                      value={formContactPhone}
+                      onChange={(e) => setFormContactPhone(e.target.value)}
+                      placeholder="Téléphone"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Description</Label>
