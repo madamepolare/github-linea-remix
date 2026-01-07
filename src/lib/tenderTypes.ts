@@ -1,10 +1,39 @@
+// ============= TENDER TYPES =============
+
+// New Pipeline Status (3 colonnes)
+export type PipelineStatus = 'a_approuver' | 'en_cours' | 'deposes';
+
+export const PIPELINE_STATUS_LABELS: Record<PipelineStatus, string> = {
+  a_approuver: 'À approuver',
+  en_cours: 'En cours',
+  deposes: 'Déposés',
+};
+
+export const PIPELINE_STATUS_COLORS: Record<PipelineStatus, string> = {
+  a_approuver: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  en_cours: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  deposes: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+};
+
+// Tender Type (Architecture / Scénographie)
+export type TenderType = 'architecture' | 'scenographie';
+
+export const TENDER_TYPE_LABELS: Record<TenderType, string> = {
+  architecture: 'Architecture',
+  scenographie: 'Scénographie',
+};
+
+// Submission Type
+export type SubmissionType = 'candidature' | 'offre' | 'candidature_offre';
+
+export const SUBMISSION_TYPE_LABELS: Record<SubmissionType, string> = {
+  candidature: 'Candidature',
+  offre: 'Offre',
+  candidature_offre: 'Candidature + Offre',
+};
+
+// Legacy status (for backward compatibility)
 export type TenderStatus = 'repere' | 'en_analyse' | 'go' | 'no_go' | 'en_montage' | 'depose' | 'gagne' | 'perdu';
-export type ProcedureType = 'ouvert' | 'restreint' | 'adapte' | 'mapa' | 'concours' | 'dialogue' | 'partenariat' | 'ppp' | 'conception_realisation';
-export type TenderTeamRole = 'mandataire' | 'cotraitant' | 'sous_traitant';
-export type InvitationResponse = 'pending' | 'accepted' | 'declined';
-export type JointVentureType = 'conjoint' | 'solidaire';
-export type CriterionType = 'price' | 'technical' | 'delay' | 'environmental' | 'social';
-export type DocumentCategory = 'candidature' | 'offre';
 
 export const TENDER_STATUS_LABELS: Record<TenderStatus, string> = {
   repere: 'Repéré',
@@ -28,6 +57,28 @@ export const TENDER_STATUS_COLORS: Record<TenderStatus, string> = {
   perdu: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
 };
 
+// Map legacy status to pipeline status
+export function mapStatusToPipeline(status: TenderStatus): PipelineStatus {
+  switch (status) {
+    case 'repere':
+    case 'en_analyse':
+    case 'no_go':
+      return 'a_approuver';
+    case 'go':
+    case 'en_montage':
+      return 'en_cours';
+    case 'depose':
+    case 'gagne':
+    case 'perdu':
+      return 'deposes';
+    default:
+      return 'a_approuver';
+  }
+}
+
+// Procedure Types
+export type ProcedureType = 'ouvert' | 'restreint' | 'adapte' | 'mapa' | 'concours' | 'dialogue' | 'partenariat' | 'ppp' | 'conception_realisation' | 'autre';
+
 export const PROCEDURE_TYPE_LABELS: Record<ProcedureType, string> = {
   ouvert: 'Appel d\'offres ouvert',
   restreint: 'Appel d\'offres restreint',
@@ -38,7 +89,11 @@ export const PROCEDURE_TYPE_LABELS: Record<ProcedureType, string> = {
   partenariat: 'Partenariat d\'innovation',
   ppp: 'Partenariat Public-Privé',
   conception_realisation: 'Conception-Réalisation',
+  autre: 'Autre',
 };
+
+// Team Roles
+export type TenderTeamRole = 'mandataire' | 'cotraitant' | 'sous_traitant';
 
 export const TEAM_ROLE_LABELS: Record<TenderTeamRole, string> = {
   mandataire: 'Mandataire',
@@ -46,10 +101,19 @@ export const TEAM_ROLE_LABELS: Record<TenderTeamRole, string> = {
   sous_traitant: 'Sous-traitant',
 };
 
+// Invitation Response
+export type InvitationResponse = 'pending' | 'accepted' | 'declined';
+
+// Joint Venture Types
+export type JointVentureType = 'conjoint' | 'solidaire';
+
 export const JOINT_VENTURE_TYPE_LABELS: Record<JointVentureType, string> = {
   conjoint: 'Conjoint',
   solidaire: 'Solidaire',
 };
+
+// Criterion Types
+export type CriterionType = 'price' | 'technical' | 'delay' | 'environmental' | 'social';
 
 export const CRITERION_TYPE_LABELS: Record<CriterionType, string> = {
   price: 'Prix',
@@ -58,6 +122,9 @@ export const CRITERION_TYPE_LABELS: Record<CriterionType, string> = {
   environmental: 'Environnement',
   social: 'Social',
 };
+
+// Document Category
+export type DocumentCategory = 'candidature' | 'offre';
 
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   rc: 'Règlement de Consultation (RC)',
@@ -117,6 +184,29 @@ export const DELIVERABLE_TYPES = [
   { value: 'autre', label: 'Autre' },
 ];
 
+// MOE Specialties for team requirements
+export const MOE_SPECIALTIES = [
+  { value: 'architecte', label: 'Architecte' },
+  { value: 'bet_structure', label: 'BET Structure' },
+  { value: 'bet_fluides', label: 'BET Fluides' },
+  { value: 'bet_electricite', label: 'BET Électricité' },
+  { value: 'thermicien', label: 'Thermicien / RE2020' },
+  { value: 'economiste', label: 'Économiste' },
+  { value: 'acousticien', label: 'Acousticien' },
+  { value: 'paysagiste', label: 'Paysagiste' },
+  { value: 'vrd', label: 'VRD' },
+  { value: 'opc', label: 'OPC' },
+  { value: 'ssi', label: 'SSI' },
+  { value: 'cuisiniste', label: 'Cuisiniste' },
+  { value: 'bet_facade', label: 'BET Façade' },
+  { value: 'geometre', label: 'Géomètre' },
+  { value: 'geotechnicien', label: 'Géotechnicien' },
+  { value: 'scenographe', label: 'Scénographe' },
+  { value: 'eclairagiste', label: 'Éclairagiste' },
+  { value: 'signaletique', label: 'Signalétique' },
+  { value: 'autre', label: 'Autre' },
+] as const;
+
 export const SPECIALTIES = [
   { value: 'architecte', label: 'Architecte' },
   { value: 'bet_structure', label: 'BET Structure' },
@@ -137,6 +227,7 @@ export const SPECIALTIES = [
 ];
 
 export const CLIENT_TYPES = [
+  { value: 'client_public', label: 'MOA Public' },
   { value: 'bailleur_social', label: 'Bailleur social' },
   { value: 'collectivite', label: 'Collectivité territoriale' },
   { value: 'etat', label: 'État / Ministère' },
@@ -160,6 +251,8 @@ export const WORK_NATURE_TAGS = [
   'Toiture',
 ];
 
+// ============= INTERFACES =============
+
 export interface Tender {
   id: string;
   workspace_id: string;
@@ -167,6 +260,10 @@ export interface Tender {
   reference: string;
   title: string;
   description: string | null;
+  // Tender type
+  tender_type: TenderType;
+  submission_type: SubmissionType;
+  pipeline_status: PipelineStatus;
   // Market identification
   consultation_number: string | null;
   group_code: string | null;
@@ -180,6 +277,7 @@ export interface Tender {
   client_contact_phone: string | null;
   client_contact_email: string | null;
   contracting_authority: string | null;
+  moa_company_id: string | null;
   // Project info
   estimated_budget: number | null;
   budget_disclosed: boolean | null;
@@ -189,6 +287,7 @@ export interface Tender {
   work_nature_tags: string[] | null;
   // Procedure
   procedure_type: ProcedureType | null;
+  procedure_other: string | null;
   allows_negotiation: boolean | null;
   negotiation_candidates_count: number | null;
   negotiation_method: string | null;
@@ -209,6 +308,7 @@ export interface Tender {
   site_visit_contact_phone: string | null;
   site_visit_contact_email: string | null;
   site_visit_secondary_contact: Record<string, string> | null;
+  site_visit_assigned_user_id: string | null;
   // Key dates
   jury_date: string | null;
   results_date: string | null;
@@ -221,6 +321,7 @@ export interface Tender {
   source_platform: string | null;
   source_url: string | null;
   source_contact_email: string | null;
+  dce_link: string | null;
   // Timestamps
   created_at: string;
   updated_at: string;
@@ -305,7 +406,22 @@ export interface TenderCriterion {
   sub_criteria?: TenderCriterion[];
 }
 
+export interface TenderRequiredTeam {
+  id: string;
+  tender_id: string;
+  workspace_id: string;
+  specialty: string;
+  is_mandatory: boolean;
+  notes: string | null;
+  company_id: string | null;
+  created_at: string;
+}
+
 export interface ExtractedTenderData {
+  title?: string;
+  reference?: string;
+  tender_type?: TenderType;
+  submission_type?: SubmissionType;
   budget?: {
     amount?: number;
     disclosed?: boolean;
@@ -355,6 +471,7 @@ export interface ExtractedTenderData {
   };
   procedure?: {
     type?: string;
+    other?: string;
     lots?: boolean;
     lots_count?: number;
     allows_variants?: boolean;
@@ -385,4 +502,5 @@ export interface ExtractedTenderData {
     max_age_years?: number;
     specific_types?: string[];
   };
+  dce_link?: string;
 }

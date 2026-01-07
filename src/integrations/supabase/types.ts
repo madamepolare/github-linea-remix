@@ -6077,6 +6077,61 @@ export type Database = {
           },
         ]
       }
+      tender_required_team: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          id: string
+          is_mandatory: boolean | null
+          notes: string | null
+          specialty: string
+          tender_id: string
+          workspace_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_mandatory?: boolean | null
+          notes?: string | null
+          specialty: string
+          tender_id: string
+          workspace_id: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_mandatory?: boolean | null
+          notes?: string | null
+          specialty?: string
+          tender_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_required_team_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_required_team_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_required_team_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tender_requirements: {
         Row: {
           ai_confidence: number | null
@@ -6261,6 +6316,7 @@ export type Database = {
           created_by: string | null
           dce_delivery_deadline: string | null
           dce_delivery_duration_months: number | null
+          dce_link: string | null
           description: string | null
           estimated_budget: number | null
           go_decision_by: string | null
@@ -6274,15 +6330,19 @@ export type Database = {
           location: string | null
           mandataire_must_be_solidary: boolean | null
           market_object: string | null
+          moa_company_id: string | null
           negotiation_candidates_count: number | null
           negotiation_method: string | null
           offer_validity_days: number | null
+          pipeline_status: string | null
+          procedure_other: string | null
           procedure_type: Database["public"]["Enums"]["procedure_type"] | null
           project_id: string | null
           questions_deadline_days: number | null
           reference: string
           region: string | null
           results_date: string | null
+          site_visit_assigned_user_id: string | null
           site_visit_contact_email: string | null
           site_visit_contact_name: string | null
           site_visit_contact_phone: string | null
@@ -6294,7 +6354,9 @@ export type Database = {
           source_url: string | null
           status: Database["public"]["Enums"]["tender_status"] | null
           submission_deadline: string | null
+          submission_type: string | null
           surface_area: number | null
+          tender_type: string | null
           title: string
           updated_at: string | null
           work_nature_tags: string[] | null
@@ -6318,6 +6380,7 @@ export type Database = {
           created_by?: string | null
           dce_delivery_deadline?: string | null
           dce_delivery_duration_months?: number | null
+          dce_link?: string | null
           description?: string | null
           estimated_budget?: number | null
           go_decision_by?: string | null
@@ -6331,15 +6394,19 @@ export type Database = {
           location?: string | null
           mandataire_must_be_solidary?: boolean | null
           market_object?: string | null
+          moa_company_id?: string | null
           negotiation_candidates_count?: number | null
           negotiation_method?: string | null
           offer_validity_days?: number | null
+          pipeline_status?: string | null
+          procedure_other?: string | null
           procedure_type?: Database["public"]["Enums"]["procedure_type"] | null
           project_id?: string | null
           questions_deadline_days?: number | null
           reference: string
           region?: string | null
           results_date?: string | null
+          site_visit_assigned_user_id?: string | null
           site_visit_contact_email?: string | null
           site_visit_contact_name?: string | null
           site_visit_contact_phone?: string | null
@@ -6351,7 +6418,9 @@ export type Database = {
           source_url?: string | null
           status?: Database["public"]["Enums"]["tender_status"] | null
           submission_deadline?: string | null
+          submission_type?: string | null
           surface_area?: number | null
+          tender_type?: string | null
           title: string
           updated_at?: string | null
           work_nature_tags?: string[] | null
@@ -6375,6 +6444,7 @@ export type Database = {
           created_by?: string | null
           dce_delivery_deadline?: string | null
           dce_delivery_duration_months?: number | null
+          dce_link?: string | null
           description?: string | null
           estimated_budget?: number | null
           go_decision_by?: string | null
@@ -6388,15 +6458,19 @@ export type Database = {
           location?: string | null
           mandataire_must_be_solidary?: boolean | null
           market_object?: string | null
+          moa_company_id?: string | null
           negotiation_candidates_count?: number | null
           negotiation_method?: string | null
           offer_validity_days?: number | null
+          pipeline_status?: string | null
+          procedure_other?: string | null
           procedure_type?: Database["public"]["Enums"]["procedure_type"] | null
           project_id?: string | null
           questions_deadline_days?: number | null
           reference?: string
           region?: string | null
           results_date?: string | null
+          site_visit_assigned_user_id?: string | null
           site_visit_contact_email?: string | null
           site_visit_contact_name?: string | null
           site_visit_contact_phone?: string | null
@@ -6408,7 +6482,9 @@ export type Database = {
           source_url?: string | null
           status?: Database["public"]["Enums"]["tender_status"] | null
           submission_deadline?: string | null
+          submission_type?: string | null
           surface_area?: number | null
+          tender_type?: string | null
           title?: string
           updated_at?: string | null
           work_nature_tags?: string[] | null
@@ -6420,6 +6496,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenders_moa_company_id_fkey"
+            columns: ["moa_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
             referencedColumns: ["id"]
           },
           {
