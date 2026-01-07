@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay, setHours } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Users, Calendar, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
@@ -13,6 +13,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { Task } from "@/hooks/useTasks";
+import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 
 interface TeamPlanningGridProps {
   onEventClick?: (schedule: TaskSchedule) => void;
@@ -52,12 +55,27 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const [viewMode, setViewMode] = useState<ViewMode>("2weeks");
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const [showEvents, setShowEvents] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   
-  const { schedules, isLoading: schedulesLoading, createSchedule } = useTaskSchedules();
+  const { schedules, isLoading: schedulesLoading, createSchedule, deleteSchedule } = useTaskSchedules();
   const { data: members, isLoading: membersLoading } = useTeamMembers();
   const { data: events, isLoading: eventsLoading } = useWorkspaceEvents();
 
   const isLoading = schedulesLoading || membersLoading || eventsLoading;
+
+  // Handler pour voir les détails d'une tâche
+  const handleViewTask = useCallback((schedule: TaskSchedule) => {
+    if (schedule.task) {
+      setSelectedTask(schedule.task as Task);
+      setTaskSheetOpen(true);
+    }
+  }, []);
+
+  // Handler pour déplanifier une tâche
+  const handleUnschedule = useCallback((scheduleId: string) => {
+    deleteSchedule.mutate(scheduleId);
+  }, [deleteSchedule]);
 
   // Map des emails vers user_ids
   const emailToUserMap = useMemo(() => {
@@ -455,6 +473,8 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                     dragOverCell={dragOverCell}
                     cellWidth={CELL_WIDTH}
                     rowHeight={ROW_HEIGHT}
+                    onViewTask={handleViewTask}
+                    onUnschedule={handleUnschedule}
                   />
                 ))
               )}
@@ -463,6 +483,13 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </div>
+
+      {/* Task Detail Sheet */}
+      <TaskDetailSheet
+        task={selectedTask}
+        open={taskSheetOpen}
+        onOpenChange={setTaskSheetOpen}
+      />
     </div>
   );
 }
@@ -480,6 +507,8 @@ interface MemberRowProps {
   dragOverCell: string | null;
   cellWidth: number;
   rowHeight: number;
+  onViewTask: (schedule: TaskSchedule) => void;
+  onUnschedule: (scheduleId: string) => void;
 }
 
 function MemberRow({
@@ -495,6 +524,8 @@ function MemberRow({
   dragOverCell,
   cellWidth,
   rowHeight,
+  onViewTask,
+  onUnschedule,
 }: MemberRowProps) {
   const memberEmail = member.profile?.email || null;
   
@@ -525,6 +556,8 @@ function MemberRow({
             onDragLeave={onDragLeave}
             onDrop={onDrop}
             cellWidth={cellWidth}
+            onViewTask={onViewTask}
+            onUnschedule={onUnschedule}
           />
         );
       })}
@@ -547,6 +580,8 @@ interface DayCellProps {
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent, day: Date, member: TeamMember) => void;
   cellWidth: number;
+  onViewTask: (schedule: TaskSchedule) => void;
+  onUnschedule: (scheduleId: string) => void;
 }
 
 function DayCell({
@@ -564,6 +599,8 @@ function DayCell({
   onDragLeave,
   onDrop,
   cellWidth,
+  onViewTask,
+  onUnschedule,
 }: DayCellProps) {
   const getOccupancyColor = (rate: number) => {
     if (rate === 0) return "";
@@ -600,62 +637,90 @@ function DayCell({
       >
         {/* Items planifiés */}
         <div className="flex-1 space-y-1 overflow-hidden">
-          {items.slice(0, 4).map(item => (
-            <Tooltip key={item.id}>
-              <TooltipTrigger asChild>
-                <div
-                  className={cn(
-                    "rounded text-[10px] leading-tight px-1.5 py-1 truncate cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02] transition-all font-medium flex items-center gap-1",
-                    item.type === "event" && "border-l-2"
-                  )}
-                  style={{
-                    backgroundColor: item.color,
-                    color: "white",
-                    borderLeftColor: item.type === "event" ? "rgba(255,255,255,0.5)" : undefined,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (item.type === "task") {
-                      onEventClick?.(item.originalData as TaskSchedule);
-                    }
-                  }}
-                >
-                  {item.type === "event" && <Calendar className="h-2.5 w-2.5 flex-shrink-0" />}
-                  {item.type === "task" && <Clock className="h-2.5 w-2.5 flex-shrink-0" />}
-                  <span className="truncate">{item.title}</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs">
-                <div className="space-y-1">
-                  <div className="font-medium flex items-center gap-1.5">
-                    {item.type === "event" ? (
-                      <Calendar className="h-3.5 w-3.5" />
-                    ) : (
-                      <Clock className="h-3.5 w-3.5" />
-                    )}
-                    {item.title}
-                  </div>
-                  {item.projectName && (
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      <div 
-                        className="w-2 h-2 rounded-full" 
-                        style={{ backgroundColor: item.projectColor || "#6366f1" }}
-                      />
-                      {item.projectName}
-                    </div>
-                  )}
-                  <div className="text-xs text-muted-foreground">
-                    {format(item.start, "HH:mm")} {item.end && `- ${format(item.end, "HH:mm")}`}
-                  </div>
-                  {item.type === "event" && item.eventType && (
-                    <div className="text-xs text-muted-foreground capitalize">
-                      Type : {item.eventType === "meeting" ? "Réunion" : item.eventType === "milestone" ? "Jalon" : item.eventType === "rendu" ? "Rendu" : item.eventType}
-                    </div>
-                  )}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          ))}
+          {items.slice(0, 4).map(item => {
+            const schedule = item.type === "task" ? item.originalData as TaskSchedule : null;
+            
+            return (
+              <ContextMenu key={item.id}>
+                <ContextMenuTrigger asChild>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={cn(
+                          "rounded text-[10px] leading-tight px-1.5 py-1 truncate cursor-pointer shadow-sm hover:shadow-md hover:scale-[1.02] transition-all font-medium flex items-center gap-1",
+                          item.type === "event" && "border-l-2"
+                        )}
+                        style={{
+                          backgroundColor: item.color,
+                          color: "white",
+                          borderLeftColor: item.type === "event" ? "rgba(255,255,255,0.5)" : undefined,
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (item.type === "task" && schedule) {
+                            onViewTask(schedule);
+                          }
+                        }}
+                      >
+                        {item.type === "event" && <Calendar className="h-2.5 w-2.5 flex-shrink-0" />}
+                        {item.type === "task" && <Clock className="h-2.5 w-2.5 flex-shrink-0" />}
+                        <span className="truncate">{item.title}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <div className="space-y-1">
+                        <div className="font-medium flex items-center gap-1.5">
+                          {item.type === "event" ? (
+                            <Calendar className="h-3.5 w-3.5" />
+                          ) : (
+                            <Clock className="h-3.5 w-3.5" />
+                          )}
+                          {item.title}
+                        </div>
+                        {item.projectName && (
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            <div 
+                              className="w-2 h-2 rounded-full" 
+                              style={{ backgroundColor: item.projectColor || "#6366f1" }}
+                            />
+                            {item.projectName}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                          {format(item.start, "HH:mm")} {item.end && `- ${format(item.end, "HH:mm")}`}
+                        </div>
+                        {item.type === "event" && item.eventType && (
+                          <div className="text-xs text-muted-foreground capitalize">
+                            Type : {item.eventType === "meeting" ? "Réunion" : item.eventType === "milestone" ? "Jalon" : item.eventType === "rendu" ? "Rendu" : item.eventType}
+                          </div>
+                        )}
+                        {item.type === "task" && (
+                          <div className="text-xs text-muted-foreground mt-1 pt-1 border-t border-border/50">
+                            Clic droit pour plus d'options
+                          </div>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </ContextMenuTrigger>
+                {item.type === "task" && schedule && (
+                  <ContextMenuContent>
+                    <ContextMenuItem onClick={() => onViewTask(schedule)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Voir la tâche
+                    </ContextMenuItem>
+                    <ContextMenuItem 
+                      onClick={() => onUnschedule(schedule.id)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Déplanifier
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                )}
+              </ContextMenu>
+            );
+          })}
           {items.length > 4 && (
             <div className="text-[10px] text-muted-foreground text-center font-medium bg-muted/50 rounded px-1 py-0.5">
               +{items.length - 4} autres

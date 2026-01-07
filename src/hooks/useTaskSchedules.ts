@@ -110,7 +110,9 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task-schedules"] });
-      toast({ title: "Créneau créé" });
+      queryClient.invalidateQueries({ queryKey: ["unscheduled-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-task-ids"] });
+      toast({ title: "Tâche planifiée" });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -148,7 +150,9 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task-schedules"] });
-      toast({ title: "Créneau supprimé" });
+      queryClient.invalidateQueries({ queryKey: ["unscheduled-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-task-ids"] });
+      toast({ title: "Tâche déplanifiée" });
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
@@ -183,6 +187,8 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["task-schedules"] });
+      queryClient.invalidateQueries({ queryKey: ["unscheduled-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-task-ids"] });
       toast({ title: `${data?.length || 0} créneaux créés` });
     },
     onError: (error: any) => {

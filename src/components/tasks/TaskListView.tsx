@@ -4,6 +4,7 @@ import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjects } from "@/hooks/useProjects";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { useTaskCommunicationsCounts } from "@/hooks/useTaskCommunicationsCounts";
+import { useScheduledTaskIds } from "@/hooks/useScheduledTaskIds";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
 import { TextEditCell, StatusEditCell, PriorityEditCell, DateEditCell, AssigneeEditCell } from "./InlineTaskEditCell";
@@ -11,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronRight, 
@@ -24,7 +25,8 @@ import {
   ArrowUpDown,
   CheckCircle2,
   MessageCircle,
-  ChevronDown
+  ChevronDown,
+  CalendarClock
 } from "lucide-react";
 import { isPast, isToday } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -51,6 +53,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
   const { companies } = useCRMCompanies();
   const { projects } = useProjects();
   const { data: profiles } = useWorkspaceProfiles();
+  const { data: scheduledTaskIds } = useScheduledTaskIds();
   
   // Get all task IDs for fetching communication counts
   const taskIds = useMemo(() => tasks?.map(t => t.id) || [], [tasks]);
@@ -381,9 +384,13 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                       `border-l-4 ${colors.border}`
                     )}>
                       {/* Table header */}
-                      <div className="grid grid-cols-[40px_1fr_120px_100px_100px_80px_60px] gap-2 px-4 py-2 bg-muted/30 text-xs text-muted-foreground font-medium border-b">
+                      <div className="grid grid-cols-[40px_1fr_100px_100px_100px_100px_80px_60px] gap-2 px-4 py-2 bg-muted/30 text-xs text-muted-foreground font-medium border-b">
                         <div></div>
                         <SortableHeader column="title">Tâche</SortableHeader>
+                        <div className="flex items-center gap-1">
+                          <CalendarClock className="h-3 w-3" />
+                          Planning
+                        </div>
                         <SortableHeader column="relation">Relation</SortableHeader>
                         <SortableHeader column="due_date">Échéance</SortableHeader>
                         <SortableHeader column="priority">Priorité</SortableHeader>
@@ -402,6 +409,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                           const relation = getRelationDisplay(task);
                           const isJustCompleted = recentlyCompleted.has(task.id);
                           const commentCount = communicationsCounts?.[task.id] || 0;
+                          const isScheduled = scheduledTaskIds?.has(task.id) || false;
 
                           return (
                             <div key={task.id}>
@@ -415,7 +423,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                 exit={{ opacity: 0, height: 0 }}
                                 transition={{ duration: 0.2 }}
                                 className={cn(
-                                  "grid grid-cols-[40px_1fr_120px_100px_100px_80px_60px] gap-2 px-4 py-2.5 items-center cursor-pointer border-b last:border-b-0 transition-all duration-150 hover:bg-accent/50",
+                                  "grid grid-cols-[40px_1fr_100px_100px_100px_100px_80px_60px] gap-2 px-4 py-2.5 items-center cursor-pointer border-b last:border-b-0 transition-all duration-150 hover:bg-accent/50",
                                   task.status === "done" && "opacity-60"
                                 )}
                                 onClick={() => {
@@ -459,6 +467,27 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                     <Badge variant="outline" className="text-2xs px-1.5 py-0 h-5 flex-shrink-0">
                                       {completedSubtasks}/{task.subtasks!.length}
                                     </Badge>
+                                  )}
+                                </div>
+
+                                {/* Planning badge */}
+                                <div>
+                                  {isScheduled ? (
+                                    <TooltipProvider delayDuration={100}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge variant="secondary" className="text-2xs px-1.5 py-0.5 gap-1 font-normal bg-primary/10 text-primary border-primary/20">
+                                            <CalendarClock className="h-2.5 w-2.5" />
+                                            Planifiée
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Cette tâche est planifiée dans le workflow</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground/50">—</span>
                                   )}
                                 </div>
 
@@ -536,7 +565,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                         backgroundColor: isSubtaskCompleted ? "hsl(142 76% 36% / 0.1)" : "transparent"
                                       }}
                                       exit={{ opacity: 0, height: 0 }}
-                                      className="grid grid-cols-[40px_1fr_120px_100px_100px_80px_60px] gap-2 px-4 py-2 items-center bg-muted/20 hover:bg-muted/40 transition-colors border-b"
+                                      className="grid grid-cols-[40px_1fr_100px_100px_100px_100px_80px_60px] gap-2 px-4 py-2 items-center bg-muted/20 hover:bg-muted/40 transition-colors border-b"
                                     >
                                       <div onClick={(e) => handleToggleSubtask(e, subtask)} className="flex items-center justify-center pl-4">
                                         <motion.div
@@ -559,6 +588,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                           {subtask.title}
                                         </span>
                                       </div>
+                                      <div></div>
                                       <div></div>
                                       <div></div>
                                       <div></div>
