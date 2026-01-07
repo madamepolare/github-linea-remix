@@ -16,6 +16,8 @@
     "@fullcalendar/interaction": "^6.1.20",
     "@fullcalendar/list": "^6.1.20",
     "@fullcalendar/react": "^6.1.20",
+    "@fullcalendar/resource": "^6.1.20",
+    "@fullcalendar/resource-timeline": "^6.1.20",
     "@fullcalendar/timegrid": "^6.1.20",
     "@gsap/react": "^2.1.2",
     "@hello-pangea/dnd": "^18.0.1",

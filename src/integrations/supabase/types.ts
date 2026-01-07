@@ -5139,6 +5139,66 @@ export type Database = {
           },
         ]
       }
+      task_schedules: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          end_datetime: string
+          id: string
+          is_locked: boolean | null
+          notes: string | null
+          start_datetime: string
+          task_id: string
+          updated_at: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          end_datetime: string
+          id?: string
+          is_locked?: boolean | null
+          notes?: string | null
+          start_datetime: string
+          task_id: string
+          updated_at?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          end_datetime?: string
+          id?: string
+          is_locked?: boolean | null
+          notes?: string | null
+          start_datetime?: string
+          task_id?: string
+          updated_at?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_schedules_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_schedules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_time_entries: {
         Row: {
           created_at: string | null

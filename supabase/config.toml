@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.generate-pipeline-stages]
 verify_jwt = false
+
+[functions.ai-workflow-planning]
+verify_jwt = false
