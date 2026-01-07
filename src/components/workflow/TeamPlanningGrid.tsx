@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
+// Note: TeamMember.joined_at was renamed to created_at
 import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
