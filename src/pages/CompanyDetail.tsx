@@ -260,9 +260,9 @@ export default function CompanyDetail() {
           {/* Content based on activeTab */}
           {activeTab === "overview" && (
             <Card>
-              <CardContent className="p-6 grid md:grid-cols-2 gap-6">
+              <CardContent className="p-6 space-y-6">
                 {/* Type & Industry */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <h3 className="font-medium text-sm text-muted-foreground">Type d'entreprise</h3>
                   {isEditing ? (
                     <div className="space-y-3">
@@ -390,136 +390,9 @@ export default function CompanyDetail() {
                     </div>
                   )}
                 </div>
-                {/* Type & Industry */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-sm text-muted-foreground">Type d'entreprise</h3>
-                  {isEditing ? (
-                    <div className="space-y-3">
-                      <div className={selectedCategory === "bet" ? "space-y-2" : "grid grid-cols-2 gap-2"}>
-                        <div>
-                          <label className="text-xs text-muted-foreground">Catégorie</label>
-                          <Select
-                            value={selectedCategory}
-                            onValueChange={(v) => {
-                              setSelectedCategory(v as CompanyCategory);
-                              setEditData({ ...editData, industry: null });
-                              setSelectedSpecialties([]);
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {COMPANY_CATEGORIES.filter((c) => c.id !== "all").map((cat) => (
-                                <SelectItem key={cat.id} value={cat.id}>
-                                  {cat.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {selectedCategory !== "bet" && (
-                          <div>
-                            <label className="text-xs text-muted-foreground">Type</label>
-                            <Select
-                              value={(editData.industry as string) || ""}
-                              onValueChange={(v) => setEditData({ ...editData, industry: v })}
-                              disabled={!selectedCategory}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionner..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(selectedCategory
-                                  ? COMPANY_CATEGORIES.find((c) => c.id === selectedCategory)?.types || []
-                                  : []
-                                ).map((type) => {
-                                  const config = COMPANY_TYPE_CONFIG[type];
-                                  return (
-                                    <SelectItem key={type} value={type}>
-                                      {config.label}
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                      </div>
-
-                      {selectedCategory === "bet" && (
-                        <div className="space-y-1">
-                          <label className="text-xs text-muted-foreground">Spécialités BET</label>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" className="w-full justify-between h-auto min-h-10 py-2">
-                                {selectedSpecialties.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {selectedSpecialties.map((spec) => {
-                                      const specialty = BET_SPECIALTIES.find((s) => s.value === spec);
-                                      return (
-                                        <Badge key={spec} className={cn("text-white text-xs gap-1", specialty?.color)}>
-                                          {specialty?.label}
-                                          <X
-                                            className="h-3 w-3 cursor-pointer"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setSelectedSpecialties((prev) => prev.filter((s) => s !== spec));
-                                            }}
-                                          />
-                                        </Badge>
-                                      );
-                                    })}
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground">Sélectionnez une ou plusieurs spécialités</span>
-                                )}
-                                <span className="text-muted-foreground">▾</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width]">
-                              {BET_SPECIALTIES.map((spec) => (
-                                <DropdownMenuCheckboxItem
-                                  key={spec.value}
-                                  checked={selectedSpecialties.includes(spec.value)}
-                                  onSelect={(e) => e.preventDefault()}
-                                  onCheckedChange={() => {
-                                    setSelectedSpecialties((prev) =>
-                                      prev.includes(spec.value)
-                                        ? prev.filter((s) => s !== spec.value)
-                                        : [...prev, spec.value]
-                                    );
-                                  }}
-                                >
-                                  <Badge className={cn("text-white text-xs mr-2", spec.color)}>{spec.label}</Badge>
-                                </DropdownMenuCheckboxItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      )}
-
-                      <div>
-                        <label className="text-xs text-muted-foreground">URL du logo</label>
-                        <Input
-                          value={editData.logo_url || ""}
-                          onChange={(e) => setEditData({ ...editData, logo_url: e.target.value })}
-                          placeholder="https://..."
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="gap-1.5">
-                        <div className={cn("w-2 h-2 rounded-full", typeConfig.color)} />
-                        {typeConfig.label}
-                      </Badge>
-                    </div>
-                  )}
-                </div>
 
                 {/* Contact Info */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <h3 className="font-medium text-sm text-muted-foreground">Coordonnées</h3>
                   {isEditing ? (
                     <div className="space-y-3">
@@ -557,23 +430,23 @@ export default function CompanyDetail() {
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {company.email && (
                         <a
                           href={`mailto:${company.email}`}
-                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                          className="flex items-center gap-3 text-sm hover:text-primary transition-colors"
                         >
                           <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{company.email}</span>
+                          <span>{company.email}</span>
                         </a>
                       )}
                       {company.phone && (
                         <a
                           href={`tel:${company.phone}`}
-                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                          className="flex items-center gap-3 text-sm hover:text-primary transition-colors"
                         >
                           <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{company.phone}</span>
+                          <span>{company.phone}</span>
                         </a>
                       )}
                       {company.website && (
@@ -581,27 +454,28 @@ export default function CompanyDetail() {
                           href={company.website}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                          className="flex items-center gap-3 text-sm hover:text-primary transition-colors"
                         >
                           <Globe className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm truncate">{company.website}</span>
-                          <ExternalLink className="h-3 w-3 ml-auto text-muted-foreground" />
+                          <span className="truncate">{company.website}</span>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
                         </a>
                       )}
                       {company.billing_email && (
-                        <div className="flex items-center gap-3 p-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Facturation: {company.billing_email}</span>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                          <Mail className="h-4 w-4" />
+                          <span>Facturation: {company.billing_email}</span>
                         </div>
                       )}
                       {!company.email && !company.phone && !company.website && (
-                        <p className="text-sm text-muted-foreground">Aucune coordonnée</p>
+                        <p className="text-sm text-muted-foreground italic">Aucune coordonnée</p>
                       )}
                     </div>
                   )}
                 </div>
 
-                <div className="space-y-4">
+                {/* Address */}
+                <div className="space-y-3">
                   <h3 className="font-medium text-sm text-muted-foreground">Adresse</h3>
                   {isEditing ? (
                     <div className="space-y-3">
@@ -646,14 +520,15 @@ export default function CompanyDetail() {
                       )}
                       {company.country && <p>{company.country}</p>}
                       {!company.address && !company.city && (
-                        <p className="text-muted-foreground">Aucune adresse</p>
+                        <p className="text-muted-foreground italic">Aucune adresse</p>
                       )}
                     </div>
                   )}
                 </div>
 
+                {/* Notes */}
                 {(company.notes || isEditing) && (
-                  <div className="md:col-span-2 space-y-2">
+                  <div className="space-y-2">
                     <h3 className="font-medium text-sm text-muted-foreground">Notes</h3>
                     {isEditing ? (
                       <Textarea
@@ -667,7 +542,7 @@ export default function CompanyDetail() {
                   </div>
                 )}
 
-                <div className="md:col-span-2 pt-4 border-t text-xs text-muted-foreground">
+                <div className="pt-4 border-t text-xs text-muted-foreground">
                   Créé le {format(new Date(company.created_at), "d MMMM yyyy", { locale: fr })}
                 </div>
               </CardContent>
