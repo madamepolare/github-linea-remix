@@ -257,6 +257,7 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
           onToggleMemberComplete={handleToggleMemberComplete}
           onDelete={(id) => deleteDeliverable.mutate(id)}
           onUpdate={(id, updates) => updateDeliverable.mutate({ id, ...updates })}
+          onAddDeliverable={() => setShowAddDialog(true)}
         />
       )}
 
