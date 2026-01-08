@@ -45,6 +45,11 @@ const activityConfig: Record<ActivityType, { icon: React.ElementType; color: str
   comment_added: { icon: MessageSquare, color: 'text-gray-600', bgColor: 'bg-gray-100 dark:bg-gray-900/30' },
   assigned: { icon: UserPlus, color: 'text-violet-600', bgColor: 'bg-violet-100 dark:bg-violet-900/30' },
   completed: { icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-900/30' },
+  email_sent: { icon: Send, color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
+  email_received: { icon: MessageSquare, color: 'text-indigo-600', bgColor: 'bg-indigo-100 dark:bg-indigo-900/30' },
+  action_created: { icon: Plus, color: 'text-amber-600', bgColor: 'bg-amber-100 dark:bg-amber-900/30' },
+  action_completed: { icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-900/30' },
+  stage_changed: { icon: ArrowRight, color: 'text-purple-600', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
 };
 
 function ActivityItem({ 
