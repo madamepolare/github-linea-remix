@@ -1,10 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 import type { TenderTeamMember, TenderTeamRole, InvitationResponse } from "@/lib/tenderTypes";
 
 export function useTenderTeam(tenderId: string | undefined) {
   const queryClient = useQueryClient();
+  const { activeWorkspace } = useAuth();
 
   const { data: teamMembers = [], isLoading } = useQuery({
     queryKey: ["tender-team", tenderId],
@@ -26,6 +29,63 @@ export function useTenderTeam(tenderId: string | undefined) {
     },
     enabled: !!tenderId,
   });
+
+  // Auto-add "nous" (own company) as mandataire if team is empty
+  useEffect(() => {
+    const addOwnCompanyAsMandataire = async () => {
+      if (!tenderId || !activeWorkspace?.id || isLoading || teamMembers.length > 0) return;
+
+      // Check or create CRM company for our workspace
+      const { data: existingCompany } = await supabase
+        .from("crm_companies")
+        .select("id")
+        .eq("workspace_id", activeWorkspace.id)
+        .eq("name", activeWorkspace.name)
+        .maybeSingle();
+
+      let companyId = existingCompany?.id;
+
+      if (!companyId) {
+        // Create our own company in CRM
+        const { data: newCompany, error: createError } = await supabase
+          .from("crm_companies")
+          .insert({
+            workspace_id: activeWorkspace.id,
+            name: activeWorkspace.name,
+            industry: "architecture",
+          })
+          .select("id")
+          .single();
+
+        if (createError) {
+          console.error("Error creating own company:", createError);
+          return;
+        }
+        companyId = newCompany.id;
+      }
+
+      // Add as mandataire
+      const { error: addError } = await supabase
+        .from("tender_team_members")
+        .insert({
+          tender_id: tenderId,
+          role: "mandataire",
+          specialty: "architecte",
+          company_id: companyId,
+          status: "accepted",
+        } as any);
+
+      if (addError) {
+        console.error("Error adding mandataire:", addError);
+        return;
+      }
+
+      // Invalidate to refresh
+      queryClient.invalidateQueries({ queryKey: ["tender-team", tenderId] });
+    };
+
+    addOwnCompanyAsMandataire();
+  }, [tenderId, activeWorkspace, isLoading, teamMembers.length, queryClient]);
 
   const addTeamMember = useMutation({
     mutationFn: async (member: {
