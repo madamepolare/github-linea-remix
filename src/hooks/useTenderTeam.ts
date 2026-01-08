@@ -30,62 +30,108 @@ export function useTenderTeam(tenderId: string | undefined) {
     enabled: !!tenderId,
   });
 
-  // Auto-add "nous" (own company) as default team member if team is empty
-  useEffect(() => {
-    const addOwnCompanyToTeam = async () => {
-      if (!tenderId || !activeWorkspace?.id || isLoading || teamMembers.length > 0) return;
+  // Get or create the workspace's own company in CRM
+  const getOrCreateOwnCompany = async () => {
+    if (!activeWorkspace?.id) return null;
 
-      // Check or create CRM company for our workspace
-      const { data: existingCompany } = await supabase
-        .from("crm_companies")
-        .select("id")
-        .eq("workspace_id", activeWorkspace.id)
-        .eq("name", activeWorkspace.name)
-        .maybeSingle();
+    // Check if workspace company exists in CRM
+    const { data: existingCompany } = await supabase
+      .from("crm_companies")
+      .select("id, name")
+      .eq("workspace_id", activeWorkspace.id)
+      .eq("name", activeWorkspace.name)
+      .maybeSingle();
 
-      let companyId = existingCompany?.id;
+    if (existingCompany?.id) return existingCompany.id;
 
-      if (!companyId) {
-        // Create our own company in CRM
-        const { data: newCompany, error: createError } = await supabase
-          .from("crm_companies")
-          .insert({
-            workspace_id: activeWorkspace.id,
-            name: activeWorkspace.name,
-            industry: "architecture",
-          })
-          .select("id")
-          .single();
+    // Create our own company in CRM with full workspace info
+    const { data: newCompany, error: createError } = await supabase
+      .from("crm_companies")
+      .insert({
+        workspace_id: activeWorkspace.id,
+        name: activeWorkspace.name,
+        industry: "architecture",
+        address: (activeWorkspace as any).address || null,
+        city: (activeWorkspace as any).city || null,
+        postal_code: (activeWorkspace as any).postal_code || null,
+        phone: (activeWorkspace as any).phone || null,
+        email: (activeWorkspace as any).email || null,
+        website: (activeWorkspace as any).website || null,
+        siret: (activeWorkspace as any).siret || null,
+        siren: (activeWorkspace as any).siren || null,
+        vat_number: (activeWorkspace as any).vat_number || null,
+        capital_social: (activeWorkspace as any).capital_social || null,
+        forme_juridique: (activeWorkspace as any).forme_juridique || null,
+        rcs_city: (activeWorkspace as any).rcs_city || null,
+        code_naf: (activeWorkspace as any).code_naf || null,
+        logo_url: (activeWorkspace as any).logo_url || null,
+      })
+      .select("id")
+      .single();
 
-        if (createError) {
-          console.error("Error creating own company:", createError);
-          return;
+    if (createError) {
+      console.error("Error creating own company:", createError);
+      return null;
+    }
+    return newCompany.id;
+  };
+
+  // Add own company to team (callable manually or automatically)
+  const addOwnCompanyToTeam = useMutation({
+    mutationFn: async (role: TenderTeamRole = "mandataire") => {
+      if (!tenderId || !activeWorkspace?.id) throw new Error("Missing tender or workspace");
+
+      const companyId = await getOrCreateOwnCompany();
+      if (!companyId) throw new Error("Could not get or create company");
+
+      // Check if already in team
+      const existing = teamMembers.find(m => m.company?.id === companyId);
+      if (existing) {
+        // Update role if different
+        if (existing.role !== role) {
+          const { error: updateError } = await supabase
+            .from("tender_team_members")
+            .update({ role })
+            .eq("id", existing.id);
+          if (updateError) throw updateError;
         }
-        companyId = newCompany.id;
+        return { alreadyExists: true, updated: existing.role !== role };
       }
 
-      // Add as cotraitant by default (can be changed to mandataire later)
       const { error: addError } = await supabase
         .from("tender_team_members")
         .insert({
           tender_id: tenderId,
-          role: "cotraitant",
+          role,
           specialty: "architecte",
           company_id: companyId,
           status: "accepted",
         } as any);
 
-      if (addError) {
-        console.error("Error adding team member:", addError);
-        return;
-      }
-
-      // Invalidate to refresh
+      if (addError) throw addError;
+      return { alreadyExists: false };
+    },
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["tender-team", tenderId] });
-    };
+      if (result.alreadyExists) {
+        if (result.updated) {
+          toast.success("Rôle de notre entreprise mis à jour");
+        } else {
+          toast.info("Notre entreprise est déjà dans l'équipe");
+        }
+      } else {
+        toast.success("Notre entreprise ajoutée à l'équipe");
+      }
+    },
+    onError: (error) => {
+      toast.error("Erreur lors de l'ajout");
+      console.error(error);
+    },
+  });
 
-    addOwnCompanyToTeam();
-  }, [tenderId, activeWorkspace, isLoading, teamMembers.length, queryClient]);
+  // Check if own company is in team
+  const ownCompanyInTeam = teamMembers.find(m => m.company?.name === activeWorkspace?.name);
+  const isOwnCompanyMandataire = ownCompanyInTeam?.role === "mandataire";
 
   const addTeamMember = useMutation({
     mutationFn: async (member: {
@@ -222,5 +268,9 @@ export function useTenderTeam(tenderId: string | undefined) {
     updateTeamMember,
     removeTeamMember,
     sendInvitation,
+    addOwnCompanyToTeam,
+    ownCompanyInTeam,
+    isOwnCompanyMandataire,
+    workspaceName: activeWorkspace?.name,
   };
 }
