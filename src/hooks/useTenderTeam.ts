@@ -18,7 +18,7 @@ export function useTenderTeam(tenderId: string | undefined) {
         .from("tender_team_members")
         .select(`
           *,
-          company:crm_companies(id, name, logo_url),
+          company:crm_companies(id, name, logo_url, email),
           contact:contacts(id, name, email)
         `)
         .eq("tender_id", tenderId)
