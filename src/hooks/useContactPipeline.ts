@@ -195,6 +195,27 @@ export function useContactPipeline(pipelineId: string | undefined) {
     },
   });
 
+  const updateEntryNotes = useMutation({
+    mutationFn: async (input: { entryId: string; notes: string }) => {
+      const { data, error } = await supabase
+        .from("contact_pipeline_entries")
+        .update({ notes: input.notes })
+        .eq("id", input.entryId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      toast.success("Notes mises à jour");
+    },
+    onError: (error: Error) => {
+      toast.error("Erreur: " + error.message);
+    },
+  });
+
   const sendEmail = useMutation({
     mutationFn: async (input: {
       entryId: string;
@@ -247,6 +268,7 @@ export function useContactPipeline(pipelineId: string | undefined) {
     addBulkEntries,
     moveEntry,
     removeEntry,
+    updateEntryNotes,
     sendEmail,
   };
 }
