@@ -19,17 +19,26 @@ export function useTenderTeam(tenderId: string | undefined) {
         .select(`
           *,
           company:crm_companies(id, name, logo_url),
-          contact:contacts(id, name, email),
-          parent_member:tender_team_members!tender_team_members_parent_member_id_fkey(
-            id,
-            company:crm_companies(id, name)
-          )
+          contact:contacts(id, name, email)
         `)
         .eq("tender_id", tenderId)
         .order("created_at");
       
       if (error) throw error;
-      return data as TenderTeamMember[];
+      
+      // Manually resolve parent_member for sous-traitants
+      const membersWithParent = data.map(member => {
+        if (member.parent_member_id) {
+          const parent = data.find(m => m.id === member.parent_member_id);
+          return {
+            ...member,
+            parent_member: parent ? { id: parent.id, company: parent.company } : null,
+          };
+        }
+        return { ...member, parent_member: null };
+      });
+      
+      return membersWithParent as TenderTeamMember[];
     },
     enabled: !!tenderId,
   });
@@ -165,11 +174,7 @@ export function useTenderTeam(tenderId: string | undefined) {
         .select(`
           *,
           company:crm_companies(id, name, logo_url),
-          contact:contacts(id, name, email),
-          parent_member:tender_team_members!tender_team_members_parent_member_id_fkey(
-            id,
-            company:crm_companies(id, name)
-          )
+          contact:contacts(id, name, email)
         `)
         .single();
 
