@@ -13,11 +13,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Building2, Users, Target, Euro, ArrowRight, Search, Mail, Phone } from "lucide-react";
 import { motion } from "framer-motion";
 import { CRMCompanyEnriched, Contact } from "@/lib/crmTypes";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { cn } from "@/lib/utils";
+
 
 interface CRMOverviewProps {
   onNavigate: (view: string) => void;
@@ -43,7 +49,7 @@ export function CRMOverview({
   contacts,
 }: CRMOverviewProps) {
   const navigate = useNavigate();
-  const { getCompanyTypeShortLabel, getCompanyTypeColor, getContactTypeLabel, getContactTypeColor } = useCRMSettings();
+  const { getCompanyTypeLabel, getCompanyTypeShortLabel, getCompanyTypeColor, getContactTypeLabel, getContactTypeColor } = useCRMSettings();
 
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
@@ -168,7 +174,8 @@ export function CRMOverview({
                 ) : (
                   recentCompanies.map((company) => {
                     const typeColor = getCompanyTypeColor(company.industry || "");
-                    const typeLabel = getCompanyTypeShortLabel(company.industry || "");
+                    const typeShort = getCompanyTypeShortLabel(company.industry || "");
+                    const typeFull = getCompanyTypeLabel(company.industry || "");
                     return (
                       <TableRow
                         key={company.id}
@@ -176,13 +183,20 @@ export function CRMOverview({
                         onClick={() => navigate(`/crm/companies/${company.id}`)}
                       >
                         <TableCell>
-                          <Badge
-                            variant="secondary"
-                            className="text-white text-xs"
-                            style={{ backgroundColor: typeColor }}
-                          >
-                            {typeLabel}
-                          </Badge>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge
+                                variant="secondary"
+                                className="text-white text-xs font-mono cursor-help"
+                                style={{ backgroundColor: typeColor }}
+                              >
+                                {typeShort}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{typeFull}</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">

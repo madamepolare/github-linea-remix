@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Plus, Calendar, Loader2, X, Sparkles, Check, Zap } from "lucide-react";
+import { ChevronDown, Plus, Calendar, Loader2, X, Sparkles, Check, StickyNote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -60,10 +60,10 @@ export function QuickTasksSection() {
           <button className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-amber-100/30 dark:hover:bg-amber-900/20 transition-colors">
             <div className="flex items-center gap-2.5">
               <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm">
-                <Zap className="h-4 w-4" />
+                <StickyNote className="h-4 w-4" />
               </div>
               <div>
-                <span className="font-semibold text-sm text-amber-900 dark:text-amber-100">Tâches rapides</span>
+                <span className="font-semibold text-sm text-amber-900 dark:text-amber-100">Post-it</span>
                 {pendingTasks.length > 0 && (
                   <span className="ml-2 text-xs text-amber-600 dark:text-amber-400">
                     {pendingTasks.length} en attente
@@ -86,7 +86,7 @@ export function QuickTasksSection() {
                 <Input
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  placeholder="Ajouter une tâche rapide..."
+                  placeholder="Ajouter un post-it..."
                   className="h-10 pl-10 bg-white dark:bg-background border-amber-200 dark:border-amber-800/50 focus-visible:ring-amber-400"
                 />
                 <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-500" />
@@ -113,7 +113,7 @@ export function QuickTasksSection() {
             {/* Pending tasks list */}
             {pendingTasks.length === 0 ? (
               <p className="text-sm text-amber-600/70 dark:text-amber-400/70 text-center py-4">
-                Aucune tâche rapide. Ajoutez-en une ci-dessus !
+                Aucun post-it. Ajoutez-en un ci-dessus !
               </p>
             ) : (
               <div className="space-y-1">
