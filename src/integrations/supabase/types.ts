@@ -3439,6 +3439,95 @@ export type Database = {
           },
         ]
       }
+      pipeline_actions: {
+        Row: {
+          action_type: string
+          company_id: string | null
+          completed_at: string | null
+          completed_by: string | null
+          contact_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          entry_id: string
+          id: string
+          priority: string | null
+          reminder_date: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          action_type?: string
+          company_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          entry_id: string
+          id?: string
+          priority?: string | null
+          reminder_date?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          action_type?: string
+          company_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          entry_id?: string
+          id?: string
+          priority?: string | null
+          reminder_date?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_actions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_actions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_actions_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "contact_pipeline_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_actions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           created_at: string | null

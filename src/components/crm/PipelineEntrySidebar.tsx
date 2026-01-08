@@ -1,18 +1,23 @@
-import { useState } from "react";
-import { X, User, Building2, Mail, Phone, Calendar, Send, Clock, Plus, MessageSquare, FileText, ExternalLink, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, User, Building2, Mail, Phone, Calendar, Send, Clock, Plus, MessageSquare, FileText, ExternalLink, RefreshCw, Bell, AlertTriangle } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { PipelineEntry } from "@/hooks/useContactPipeline";
-import { useEntityEmails } from "@/hooks/useEntityEmails";
+import { useEntityEmails, Email } from "@/hooks/useEntityEmails";
+import { usePipelineActions } from "@/hooks/usePipelineActions";
+import { useEntityActivities, logEntityActivity } from "@/hooks/useEntityActivities";
+import { useAuth } from "@/contexts/AuthContext";
 import { ComposeEmailDialog } from "@/components/emails/ComposeEmailDialog";
-import { useLeadActivities } from "@/hooks/useLeadActivities";
+import { EmailThreadCard } from "@/components/crm/pipeline/EmailThreadCard";
+import { ActionFormDialog } from "@/components/crm/pipeline/ActionFormDialog";
+import { ActionsList } from "@/components/crm/pipeline/ActionsList";
 import { useNavigate } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -34,7 +39,13 @@ export function PipelineEntrySidebar({
   onUpdateNotes 
 }: PipelineEntrySidebarProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { currentWorkspace } = useWorkspace();
+  
   const [composeOpen, setComposeOpen] = useState(false);
+  const [actionFormOpen, setActionFormOpen] = useState(false);
+  const [replyToEmail, setReplyToEmail] = useState<Email | null>(null);
+  const [isFollowUp, setIsFollowUp] = useState(false);
   const [notes, setNotes] = useState(entry?.notes || "");
   const [isSyncing, setIsSyncing] = useState(false);
   
@@ -43,14 +54,28 @@ export function PipelineEntrySidebar({
   const entityId = isContact ? entry?.contact_id : entry?.company_id;
   const entity = entry?.contact || entry?.company;
   
-  const { threads, stats, isLoading: emailsLoading, gmailConnected } = useEntityEmails({
+  // Reset notes when entry changes
+  useEffect(() => {
+    setNotes(entry?.notes || "");
+  }, [entry?.id, entry?.notes]);
+  
+  const { threads, stats, isLoading: emailsLoading, gmailConnected, markAsRead } = useEntityEmails({
     entityType: entityType as any,
     entityId: entityId || '',
     enabled: open && !!entityId,
   });
 
-  // Placeholder for future activities integration
-  // Activities would need to be associated with contacts/companies, not just leads
+  const { 
+    actions, 
+    pendingCount, 
+    overdueCount,
+    createAction,
+    completeAction,
+    deleteAction,
+    isCreating 
+  } = usePipelineActions(entry?.id, currentWorkspace?.id);
+
+  const { activities } = useEntityActivities(entityType, entityId, currentWorkspace?.id);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -79,11 +104,123 @@ export function PipelineEntrySidebar({
     }
   };
 
+  const handleReplyEmail = (email: Email) => {
+    setReplyToEmail(email);
+    setIsFollowUp(false);
+    setComposeOpen(true);
+  };
+
+  const handleFollowUpEmail = (email: Email) => {
+    setReplyToEmail(email);
+    setIsFollowUp(true);
+    setComposeOpen(true);
+  };
+
+  const handleEmailSent = async () => {
+    // Log activity
+    if (currentWorkspace?.id && entityId) {
+      await logEntityActivity(
+        currentWorkspace.id,
+        user?.id,
+        {
+          entity_type: entityType,
+          entity_id: entityId,
+          activity_type: 'email_sent',
+          title: 'Email envoyé',
+          description: replyToEmail 
+            ? (isFollowUp ? 'Relance envoyée' : 'Réponse envoyée')
+            : 'Nouvel email envoyé',
+          metadata: {
+            entry_id: entry?.id,
+            subject: replyToEmail?.subject,
+          }
+        }
+      );
+    }
+    setReplyToEmail(null);
+    setIsFollowUp(false);
+  };
+
+  const handleActionCreated = async (input: any) => {
+    createAction(input);
+    
+    // Log activity
+    if (currentWorkspace?.id && entityId) {
+      await logEntityActivity(
+        currentWorkspace.id,
+        user?.id,
+        {
+          entity_type: entityType,
+          entity_id: entityId,
+          activity_type: 'action_created',
+          title: 'Action planifiée',
+          description: input.title,
+          metadata: {
+            entry_id: entry?.id,
+            action_type: input.action_type,
+            due_date: input.due_date,
+          }
+        }
+      );
+    }
+  };
+
+  const handleActionCompleted = async (actionId: string) => {
+    const action = actions.find(a => a.id === actionId);
+    completeAction(actionId);
+    
+    // Log activity
+    if (currentWorkspace?.id && entityId && action) {
+      await logEntityActivity(
+        currentWorkspace.id,
+        user?.id,
+        {
+          entity_type: entityType,
+          entity_id: entityId,
+          activity_type: 'action_completed',
+          title: 'Action terminée',
+          description: action.title,
+          metadata: {
+            entry_id: entry?.id,
+            action_type: action.action_type,
+          }
+        }
+      );
+    }
+  };
+
   if (!entry) return null;
 
   const name = entity?.name || "Sans nom";
   const email = isContact ? entry.contact?.email : entry.company?.email;
   const phone = isContact ? entry.contact?.phone : entry.company?.phone;
+
+  // Build default compose values based on context
+  const getComposeDefaults = () => {
+    if (replyToEmail) {
+      const replySubject = replyToEmail.subject.startsWith('Re:') 
+        ? replyToEmail.subject 
+        : `Re: ${replyToEmail.subject}`;
+      
+      const followUpSubject = replyToEmail.subject.startsWith('Re:')
+        ? replyToEmail.subject
+        : `Relance: ${replyToEmail.subject}`;
+
+      const replyBody = `\n\n---\nLe ${format(new Date(replyToEmail.sent_at || replyToEmail.created_at || new Date()), "d MMMM yyyy 'à' HH:mm", { locale: fr })}, ${replyToEmail.from_email} a écrit :\n\n${replyToEmail.body.replace(/<[^>]*>/g, '')}`;
+
+      return {
+        to: replyToEmail.from_email || email || undefined,
+        subject: isFollowUp ? followUpSubject : replySubject,
+        body: isFollowUp 
+          ? `Bonjour,\n\nJe me permets de revenir vers vous concernant mon email précédent.\n\nCordialement,`
+          : replyBody,
+        replyToEmailId: replyToEmail.id,
+      };
+    }
+    return { to: email || undefined };
+  };
+
+  const composeDefaults = getComposeDefaults();
 
   return (
     <>
@@ -133,6 +270,24 @@ export function PipelineEntrySidebar({
                 <ExternalLink className="h-4 w-4" />
               </Button>
             </div>
+
+            {/* Alert badges */}
+            {(overdueCount > 0 || stats.unread > 0) && (
+              <div className="flex gap-2 mt-3 pt-3 border-t">
+                {overdueCount > 0 && (
+                  <Badge variant="destructive" className="gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    {overdueCount} action{overdueCount > 1 ? 's' : ''} en retard
+                  </Badge>
+                )}
+                {stats.unread > 0 && (
+                  <Badge variant="default" className="gap-1">
+                    <Mail className="h-3 w-3" />
+                    {stats.unread} email{stats.unread > 1 ? 's' : ''} non lu{stats.unread > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
+            )}
           </SheetHeader>
 
           <Tabs defaultValue="emails" className="flex-1 flex flex-col overflow-hidden">
@@ -141,7 +296,7 @@ export function PipelineEntrySidebar({
                 <Mail className="h-3.5 w-3.5" />
                 Emails
                 {stats.total > 0 && (
-                  <Badge variant="secondary" className="h-5 text-[10px] px-1.5">
+                  <Badge variant={stats.unread > 0 ? "default" : "secondary"} className="h-5 text-[10px] px-1.5">
                     {stats.total}
                   </Badge>
                 )}
@@ -149,6 +304,11 @@ export function PipelineEntrySidebar({
               <TabsTrigger value="actions" className="gap-1">
                 <Clock className="h-3.5 w-3.5" />
                 Actions
+                {pendingCount > 0 && (
+                  <Badge variant={overdueCount > 0 ? "destructive" : "secondary"} className="h-5 text-[10px] px-1.5">
+                    {pendingCount}
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="notes" className="gap-1">
                 <FileText className="h-3.5 w-3.5" />
@@ -158,14 +318,7 @@ export function PipelineEntrySidebar({
 
             <TabsContent value="emails" className="flex-1 overflow-hidden m-0 px-6 pt-4">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-medium">Historique emails</h4>
-                  {stats.unread > 0 && (
-                    <Badge variant="default" className="text-[10px]">
-                      {stats.unread} non lu{stats.unread > 1 ? 's' : ''}
-                    </Badge>
-                  )}
-                </div>
+                <h4 className="text-sm font-medium">Historique emails</h4>
                 <div className="flex gap-1">
                   <Button 
                     variant="ghost" 
@@ -177,7 +330,11 @@ export function PipelineEntrySidebar({
                   </Button>
                   <Button 
                     size="sm" 
-                    onClick={() => setComposeOpen(true)}
+                    onClick={() => {
+                      setReplyToEmail(null);
+                      setIsFollowUp(false);
+                      setComposeOpen(true);
+                    }}
                     disabled={!gmailConnected}
                   >
                     <Plus className="h-3.5 w-3.5 mr-1" />
@@ -186,11 +343,11 @@ export function PipelineEntrySidebar({
                 </div>
               </div>
 
-              <ScrollArea className="h-[calc(100vh-380px)]">
+              <ScrollArea className="h-[calc(100vh-420px)]">
                 {emailsLoading ? (
                   <div className="space-y-3">
                     {[1, 2, 3].map(i => (
-                      <div key={i} className="h-16 bg-muted/50 rounded-lg animate-pulse" />
+                      <div key={i} className="h-20 bg-muted/50 rounded-lg animate-pulse" />
                     ))}
                   </div>
                 ) : threads.length === 0 ? (
@@ -209,50 +366,15 @@ export function PipelineEntrySidebar({
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {threads.map(thread => (
-                      <Card key={thread.threadId} className={cn(
-                        "transition-colors cursor-pointer hover:bg-muted/50",
-                        thread.unreadCount > 0 && "border-primary/50 bg-primary/5"
-                      )}>
-                        <CardContent className="p-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p className={cn(
-                                "text-sm truncate",
-                                thread.unreadCount > 0 && "font-semibold"
-                              )}>
-                                {thread.subject}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate mt-0.5">
-                                {thread.emails[thread.emails.length - 1]?.body
-                                  .replace(/<[^>]*>/g, '')
-                                  .slice(0, 80)}...
-                              </p>
-                            </div>
-                            <div className="flex flex-col items-end gap-1">
-                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                                {formatDistanceToNow(new Date(thread.lastEmailDate), { 
-                                  addSuffix: true, 
-                                  locale: fr 
-                                })}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                {thread.emails.length > 1 && (
-                                  <Badge variant="outline" className="text-[10px] h-4 px-1">
-                                    {thread.emails.length}
-                                  </Badge>
-                                )}
-                                {thread.unreadCount > 0 && (
-                                  <Badge className="text-[10px] h-4 px-1">
-                                    {thread.unreadCount}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      <EmailThreadCard
+                        key={thread.threadId}
+                        thread={thread}
+                        onReply={handleReplyEmail}
+                        onFollowUp={handleFollowUpEmail}
+                        onMarkAsRead={markAsRead}
+                      />
                     ))}
                   </div>
                 )}
@@ -262,63 +384,83 @@ export function PipelineEntrySidebar({
             <TabsContent value="actions" className="flex-1 overflow-hidden m-0 px-6 pt-4">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-sm font-medium">Actions à planifier</h4>
-                <Button size="sm">
+                <Button size="sm" onClick={() => setActionFormOpen(true)}>
                   <Plus className="h-3.5 w-3.5 mr-1" />
                   Action
                 </Button>
               </div>
 
-              <ScrollArea className="h-[calc(100vh-380px)]">
+              <ScrollArea className="h-[calc(100vh-420px)]">
+                <ActionsList
+                  actions={actions}
+                  onComplete={handleActionCompleted}
+                  onDelete={deleteAction}
+                />
+
+                {/* Entry timeline */}
+                <Separator className="my-4" />
+                
+                <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                  Historique
+                </h5>
+
                 <div className="space-y-3">
-                  {/* Placeholder for future actions */}
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <Clock className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Aucune action planifiée
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Les actions seront affichées ici
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  {/* Entry timeline */}
-                  <Separator className="my-4" />
-                  
-                  <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                    Historique
-                  </h5>
-
-                  <div className="space-y-3">
-                    {entry.last_email_sent_at && (
-                      <div className="flex items-start gap-3">
-                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  {/* Recent activities */}
+                  {activities.slice(0, 5).map(activity => (
+                    <div key={activity.id} className="flex items-start gap-3">
+                      <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                        {activity.activity_type === 'email_sent' ? (
                           <Send className="h-3 w-3 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-sm">Email envoyé</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(entry.last_email_sent_at), "dd MMM yyyy 'à' HH:mm", { locale: fr })}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {entry.entered_at && (
-                      <div className="flex items-start gap-3">
-                        <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                        ) : activity.activity_type === 'action_completed' ? (
+                          <Clock className="h-3 w-3 text-green-500" />
+                        ) : (
                           <Calendar className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-sm">Ajouté au pipeline</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(entry.entered_at), "dd MMM yyyy 'à' HH:mm", { locale: fr })}
-                          </p>
-                        </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                      <div>
+                        <p className="text-sm">{activity.title}</p>
+                        {activity.description && (
+                          <p className="text-xs text-muted-foreground">{activity.description}</p>
+                        )}
+                        <p className="text-[10px] text-muted-foreground">
+                          {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true, locale: fr })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Fallback timeline */}
+                  {activities.length === 0 && (
+                    <>
+                      {entry.last_email_sent_at && (
+                        <div className="flex items-start gap-3">
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Send className="h-3 w-3 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm">Email envoyé</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(entry.last_email_sent_at), "dd MMM yyyy 'à' HH:mm", { locale: fr })}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {entry.entered_at && (
+                        <div className="flex items-start gap-3">
+                          <div className="h-6 w-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                            <Calendar className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-sm">Ajouté au pipeline</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(entry.entered_at), "dd MMM yyyy 'à' HH:mm", { locale: fr })}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </ScrollArea>
             </TabsContent>
@@ -348,10 +490,31 @@ export function PipelineEntrySidebar({
       {/* Compose Email Dialog */}
       <ComposeEmailDialog
         open={composeOpen}
-        onOpenChange={setComposeOpen}
+        onOpenChange={(open) => {
+          setComposeOpen(open);
+          if (!open) {
+            setReplyToEmail(null);
+            setIsFollowUp(false);
+          }
+        }}
         entityType={entityType as any}
         entityId={entityId}
-        defaultTo={email || undefined}
+        defaultTo={composeDefaults.to}
+        defaultSubject={composeDefaults.subject}
+        defaultBody={composeDefaults.body}
+        replyToEmailId={composeDefaults.replyToEmailId}
+        onSuccess={handleEmailSent}
+      />
+
+      {/* Action Form Dialog */}
+      <ActionFormDialog
+        open={actionFormOpen}
+        onOpenChange={setActionFormOpen}
+        onSubmit={handleActionCreated}
+        entryId={entry?.id || ''}
+        contactId={entry?.contact_id}
+        companyId={entry?.company_id}
+        isLoading={isCreating}
       />
     </>
   );

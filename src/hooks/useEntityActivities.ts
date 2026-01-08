@@ -16,7 +16,12 @@ export type ActivityType =
   | 'invoice_paid'
   | 'comment_added'
   | 'assigned'
-  | 'completed';
+  | 'completed'
+  | 'email_sent'
+  | 'email_received'
+  | 'action_created'
+  | 'action_completed'
+  | 'stage_changed';
 
 export interface EntityActivity {
   id: string;
