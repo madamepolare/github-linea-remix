@@ -99,6 +99,36 @@ export function useTenderDeliverables(tenderId: string | undefined) {
     },
   });
 
+  const toggleMemberComplete = useMutation({
+    mutationFn: async ({ deliverableId, companyId, currentValue }: { 
+      deliverableId: string; 
+      companyId: string; 
+      currentValue: boolean;
+    }) => {
+      const deliverable = deliverables.find(d => d.id === deliverableId);
+      if (!deliverable) throw new Error("Deliverable not found");
+
+      const currentCompletion = (deliverable.member_completion || {}) as Record<string, boolean>;
+      const newCompletion = {
+        ...currentCompletion,
+        [companyId]: !currentValue,
+      };
+
+      const { data, error } = await supabase
+        .from("tender_deliverables")
+        .update({ member_completion: newCompletion } as any)
+        .eq("id", deliverableId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tender-deliverables", tenderId] });
+    },
+  });
+
   const deleteDeliverable = useMutation({
     mutationFn: async (deliverableId: string) => {
       const { error } = await supabase
@@ -126,6 +156,7 @@ export function useTenderDeliverables(tenderId: string | undefined) {
     addDeliverable,
     updateDeliverable,
     toggleComplete,
+    toggleMemberComplete,
     deleteDeliverable,
   };
 }

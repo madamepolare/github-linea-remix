@@ -378,6 +378,7 @@ export interface TenderDeliverable {
   due_date: string | null;
   file_urls: string[];
   sort_order: number;
+  member_completion: Record<string, boolean>;
   created_at: string;
 }
 
