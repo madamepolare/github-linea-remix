@@ -5,7 +5,9 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  Download,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +34,7 @@ import {
 } from "@/components/ui/collapsible";
 import { useTenderDeliverables } from "@/hooks/useTenderDeliverables";
 import { useTenderTeam } from "@/hooks/useTenderTeam";
+import { useTender } from "@/hooks/useTenders";
 import { DELIVERABLE_TYPES } from "@/lib/tenderTypes";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -53,6 +56,7 @@ const RESPONSIBLE_TYPES = [
 
 export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
   const { teamMembers } = useTenderTeam(tenderId);
+  const { data: tender } = useTender(tenderId);
   const { 
     deliverables, 
     isLoading, 
@@ -70,6 +74,96 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
     responsible_type: 'mandataire',
     due_date: '',
   });
+
+  // Get unique companies from team
+  const companies = teamMembers
+    .filter(m => m.company?.id)
+    .reduce((acc, m) => {
+      if (!acc.find(c => c.id === m.company?.id)) {
+        acc.push({
+          id: m.company!.id,
+          name: m.company!.name,
+          role: m.role,
+          isMandataire: m.role === "mandataire",
+        });
+      }
+      return acc;
+    }, [] as { id: string; name: string; role: string; isMandataire: boolean }[])
+    .sort((a, b) => (a.isMandataire ? -1 : b.isMandataire ? 1 : 0));
+
+  // Export to Excel
+  const handleExportExcel = () => {
+    if (deliverables.length === 0) {
+      toast.error("Aucun livrable à exporter");
+      return;
+    }
+
+    const CANDIDATURE_TYPES = ["dc1", "dc2", "dc4", "urssaf", "kbis", "attestation_fiscale", "attestation_assurance", "references", "cv", "habilitations"];
+
+    // Build data rows
+    const data = deliverables.map(d => {
+      const memberCompletion = (d.member_completion || {}) as Record<string, boolean>;
+      const isCandidature = CANDIDATURE_TYPES.includes(d.deliverable_type);
+      
+      // Check if deliverable is complete
+      const isComplete = companies.every(company => {
+        const shouldCheck = 
+          d.responsible_type === "tous" ||
+          (d.responsible_type === "mandataire" && company.isMandataire) ||
+          (d.responsible_type === "cotraitant" && !company.isMandataire) ||
+          (d.responsible_company_ids && d.responsible_company_ids.includes(company.id));
+        
+        if (!shouldCheck) return true;
+        return memberCompletion[company.id] === true;
+      });
+
+      const row: Record<string, string> = {
+        "Livrable": d.name,
+        "Type": isCandidature ? "Candidature" : "Offre",
+        "Responsable": RESPONSIBLE_TYPES.find(r => r.value === d.responsible_type)?.label || d.responsible_type,
+        "Statut global": isComplete ? "✓ Complet" : "○ En cours",
+      };
+
+      // Add column for each company
+      companies.forEach(company => {
+        const shouldCheck = 
+          d.responsible_type === "tous" ||
+          (d.responsible_type === "mandataire" && company.isMandataire) ||
+          (d.responsible_type === "cotraitant" && !company.isMandataire) ||
+          (d.responsible_company_ids && d.responsible_company_ids.includes(company.id));
+        
+        if (!shouldCheck) {
+          row[company.name] = "—";
+        } else {
+          row[company.name] = memberCompletion[company.id] ? "✓ Fait" : "○ À faire";
+        }
+      });
+
+      row["Échéance"] = d.due_date ? new Date(d.due_date).toLocaleDateString("fr-FR") : "";
+
+      return row;
+    });
+
+    // Create workbook
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Livrables");
+
+    // Auto-size columns
+    const colWidths = Object.keys(data[0] || {}).map(key => ({
+      wch: Math.max(key.length, ...data.map(row => String(row[key] || "").length)) + 2
+    }));
+    ws["!cols"] = colWidths;
+
+    // Generate filename
+    const tenderName = tender?.title?.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 30) || "AO";
+    const date = new Date().toISOString().split("T")[0];
+    const filename = `Livrables_${tenderName}_${date}.xlsx`;
+
+    // Download
+    XLSX.writeFile(wb, filename);
+    toast.success("Export Excel téléchargé");
+  };
 
   // Calculate overall progress based on member completion
   const calculateProgress = () => {
@@ -195,13 +289,25 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
           />
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>{deliverables.length} livrables</span>
-            <Button
-              size="sm"
-              onClick={() => setShowAddDialog(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter manuellement
-            </Button>
+            <div className="flex items-center gap-2">
+              {deliverables.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleExportExcel}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Excel
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={() => setShowAddDialog(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter manuellement
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
