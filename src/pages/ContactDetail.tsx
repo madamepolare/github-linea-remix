@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EntityEmailsTab } from "@/components/shared/EntityEmailsTab";
 import {
   Select,
   SelectContent,
@@ -349,6 +350,15 @@ export default function ContactDetail() {
               </div>
             </CardContent>
           </Card>
+        );
+      case "emails":
+        return (
+          <EntityEmailsTab 
+            entityType="contact" 
+            entityId={contact.id} 
+            defaultRecipientEmail={contact.email || undefined}
+            defaultRecipientName={contact.name}
+          />
         );
       case "tasks":
         return <EntityTasksList entityType="contact" entityId={contact.id} entityName={contact.name} />;

@@ -944,7 +944,10 @@ export type Database = {
       }
       crm_emails: {
         Row: {
+          attachments: Json | null
+          bcc: string[] | null
           body: string
+          cc: string[] | null
           company_id: string | null
           contact_id: string | null
           created_at: string | null
@@ -954,18 +957,26 @@ export type Database = {
           gmail_message_id: string | null
           gmail_thread_id: string | null
           id: string
+          is_read: boolean | null
+          labels: string[] | null
           lead_id: string | null
           opened_at: string | null
+          project_id: string | null
           received_at: string | null
+          reply_to_email_id: string | null
           sent_at: string | null
           status: string | null
           subject: string
           synced_from_gmail: boolean | null
+          tender_id: string | null
           to_email: string
           workspace_id: string
         }
         Insert: {
+          attachments?: Json | null
+          bcc?: string[] | null
           body: string
+          cc?: string[] | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string | null
@@ -975,18 +986,26 @@ export type Database = {
           gmail_message_id?: string | null
           gmail_thread_id?: string | null
           id?: string
+          is_read?: boolean | null
+          labels?: string[] | null
           lead_id?: string | null
           opened_at?: string | null
+          project_id?: string | null
           received_at?: string | null
+          reply_to_email_id?: string | null
           sent_at?: string | null
           status?: string | null
           subject: string
           synced_from_gmail?: boolean | null
+          tender_id?: string | null
           to_email: string
           workspace_id: string
         }
         Update: {
+          attachments?: Json | null
+          bcc?: string[] | null
           body?: string
+          cc?: string[] | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string | null
@@ -996,13 +1015,18 @@ export type Database = {
           gmail_message_id?: string | null
           gmail_thread_id?: string | null
           id?: string
+          is_read?: boolean | null
+          labels?: string[] | null
           lead_id?: string | null
           opened_at?: string | null
+          project_id?: string | null
           received_at?: string | null
+          reply_to_email_id?: string | null
           sent_at?: string | null
           status?: string | null
           subject?: string
           synced_from_gmail?: boolean | null
+          tender_id?: string | null
           to_email?: string
           workspace_id?: string
         }
@@ -1026,6 +1050,27 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_emails_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_emails_reply_to_email_id_fkey"
+            columns: ["reply_to_email_id"]
+            isOneToOne: false
+            referencedRelation: "crm_emails"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_emails_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
             referencedColumns: ["id"]
           },
           {

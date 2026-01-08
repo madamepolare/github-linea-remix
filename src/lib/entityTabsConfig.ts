@@ -23,6 +23,7 @@ import {
   HardHat,
   Shield,
   FileCheck,
+  Mail,
 } from "lucide-react";
 
 export interface EntityTab {
@@ -65,6 +66,7 @@ export const TENDER_TABS: EntityTab[] = [
   { key: "synthese", label: "Synthèse", icon: LayoutDashboard },
   { key: "calendrier", label: "Calendrier", icon: Calendar },
   { key: "analyse", label: "Analyse IA", icon: Brain },
+  { key: "emails", label: "Emails", icon: Mail },
   { key: "documents", label: "Documents", icon: FolderOpen },
   { key: "livrables", label: "Livrables", icon: CheckSquare },
   { key: "equipe", label: "Équipe", icon: Users },
@@ -74,6 +76,7 @@ export const TENDER_TABS: EntityTab[] = [
 // Contact detail tabs
 export const CONTACT_TABS: EntityTab[] = [
   { key: "info", label: "Informations", icon: LayoutDashboard },
+  { key: "emails", label: "Emails", icon: Mail },
   { key: "tasks", label: "Tâches", icon: CheckSquare },
   { key: "leads", label: "Opportunités", icon: Target },
 ];
@@ -81,7 +84,7 @@ export const CONTACT_TABS: EntityTab[] = [
 // Company detail tabs  
 export const COMPANY_TABS: EntityTab[] = [
   { key: "overview", label: "Informations", icon: LayoutDashboard },
-  { key: "communications", label: "Communications", icon: MessageSquare },
+  { key: "emails", label: "Emails", icon: Mail },
   { key: "contacts", label: "Contacts", icon: Users },
   { key: "leads", label: "Opportunités", icon: Target },
   { key: "tasks", label: "Tâches", icon: CheckSquare },
