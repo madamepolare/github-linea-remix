@@ -13,8 +13,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Loader2, Mail, Send } from "lucide-react";
+import { Loader2, Mail, Send, AlertCircle, Settings } from "lucide-react";
 import { EmailRecipient } from "./types";
+import { useGmailConnection } from "@/hooks/useGmailConnection";
+import { Link } from "react-router-dom";
 
 interface SendEmailDialogProps {
   open: boolean;
@@ -22,6 +24,7 @@ interface SendEmailDialogProps {
   recipients: EmailRecipient[];
   defaultSubject: string;
   projectName: string;
+  projectId?: string;
   onSend: (recipients: string[], subject: string, message: string) => Promise<void>;
 }
 
@@ -31,8 +34,10 @@ export function SendEmailDialog({
   recipients,
   defaultSubject,
   projectName,
+  projectId,
   onSend,
 }: SendEmailDialogProps) {
+  const gmailConnection = useGmailConnection();
   const [selectedRecipients, setSelectedRecipients] = useState<EmailRecipient[]>([]);
   const [subject, setSubject] = useState(defaultSubject);
   const [message, setMessage] = useState("");
@@ -60,7 +65,17 @@ export function SendEmailDialog({
 
     setIsSending(true);
     try {
-      await onSend(emails, subject, message);
+      // Try Gmail first if connected
+      if (gmailConnection.connected && projectId) {
+        await gmailConnection.sendEmail({
+          to: emails,
+          subject,
+          body: message.replace(/\n/g, "<br>"),
+          projectId,
+        });
+      } else {
+        await onSend(emails, subject, message);
+      }
       onOpenChange(false);
     } finally {
       setIsSending(false);
@@ -82,8 +97,25 @@ export function SendEmailDialog({
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
             Envoyer le compte rendu
+            {gmailConnection.connected && (
+              <Badge variant="outline" className="ml-2 text-xs">via Gmail</Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
+
+        {!gmailConnection.connected && (
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 text-sm">
+              <p className="text-amber-800 dark:text-amber-200">
+                Gmail non connecté - envoi via Resend
+              </p>
+              <Button asChild variant="link" size="sm" className="h-auto p-0 text-amber-700">
+                <Link to="/settings?tab=emails">Connecter Gmail</Link>
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">

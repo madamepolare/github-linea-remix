@@ -15,8 +15,10 @@ import { Badge } from "@/components/ui/badge";
 import { PipelineStage } from "@/hooks/useCRMPipelines";
 import { PipelineEntry, useContactPipeline } from "@/hooks/useContactPipeline";
 import { useEmailTemplates } from "@/hooks/useEmailTemplates";
-import { Send, SkipForward, Mail, AlertCircle } from "lucide-react";
+import { useGmailConnection } from "@/hooks/useGmailConnection";
+import { Send, SkipForward, Mail, AlertCircle, Settings } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 interface PipelineEmailModalProps {
   open: boolean;
@@ -39,6 +41,7 @@ export function PipelineEmailModal({
 }: PipelineEmailModalProps) {
   const { sendEmail } = useContactPipeline(pipelineId);
   const { templates } = useEmailTemplates();
+  const gmailConnection = useGmailConnection();
   
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -94,15 +97,27 @@ export function PipelineEmailModal({
 
     setIsSending(true);
     try {
-      await sendEmail.mutateAsync({
-        entryId: entry.id,
-        stageId: stage.id,
-        toEmail: recipientEmail,
-        subject,
-        bodyHtml: body.replace(/\n/g, "<br>"),
-        templateId: stage.email_template_id || undefined,
-      });
-      toast.success("Email envoyé");
+      // Try Gmail first, fall back to Resend
+      if (gmailConnection.connected) {
+        await gmailConnection.sendEmail({
+          to: recipientEmail,
+          subject,
+          body: body.replace(/\n/g, "<br>"),
+          contactId: entry.contact_id || undefined,
+          companyId: entry.company_id || undefined,
+        });
+        toast.success("Email envoyé via Gmail");
+      } else {
+        await sendEmail.mutateAsync({
+          entryId: entry.id,
+          stageId: stage.id,
+          toEmail: recipientEmail,
+          subject,
+          bodyHtml: body.replace(/\n/g, "<br>"),
+          templateId: stage.email_template_id || undefined,
+        });
+        toast.success("Email envoyé");
+      }
       onEmailSent();
     } catch (error) {
       console.error("Error sending email:", error);
@@ -119,6 +134,9 @@ export function PipelineEmailModal({
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
             Envoyer un email
+            {gmailConnection.connected && (
+              <Badge variant="outline" className="ml-2 text-xs">via Gmail</Badge>
+            )}
           </DialogTitle>
           <DialogDescription>
             L'étape "{stage?.name}" requiert l'envoi d'un email au contact.

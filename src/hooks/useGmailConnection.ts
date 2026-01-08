@@ -164,6 +164,8 @@ export function useGmailConnection() {
     contactId?: string;
     companyId?: string;
     leadId?: string;
+    projectId?: string;
+    tenderId?: string;
   }) => {
     if (!status.connected) {
       throw new Error('Gmail non connecté');
