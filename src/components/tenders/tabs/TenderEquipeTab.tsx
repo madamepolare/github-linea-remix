@@ -1611,21 +1611,30 @@ function CandidateRow({
       </div>
 
       {/* Direct email button */}
-      {(candidate.contact?.email || candidate.company?.email) && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={onSendInvite}
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Envoyer proposition avec honoraires</TooltipContent>
-        </Tooltip>
-      )}
+      {(() => {
+        const email = candidate.contact?.email || candidate.company?.email;
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                disabled={!email}
+                onClick={() => {
+                  if (!email) return;
+                  onSendInvite();
+                }}
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {email ? "Envoyer proposition avec honoraires" : "Aucun email (contact ou entreprise)"}
+            </TooltipContent>
+          </Tooltip>
+        );
+      })()}
 
       <Select value={candidate.status} onValueChange={onUpdateStatus}>
         <SelectTrigger className={cn("w-[130px] h-8", CANDIDATE_STATUS_COLORS[candidate.status])}>
@@ -1789,21 +1798,30 @@ function TeamView({
                 <StatusBadge status={member.status} />
 
                 {/* Direct email button for team members */}
-                {(member.contact?.email || member.company?.email) && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="h-7 w-7"
-                        onClick={() => onSendInvite(member)}
-                      >
-                        <Send className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Envoyer proposition</TooltipContent>
-                  </Tooltip>
-                )}
+                {(() => {
+                  const email = member.contact?.email || member.company?.email;
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          disabled={!email}
+                          onClick={() => {
+                            if (!email) return;
+                            onSendInvite(member);
+                          }}
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {email ? "Envoyer proposition" : "Aucun email (contact ou entreprise)"}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })()}
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
