@@ -949,13 +949,18 @@ export type Database = {
           contact_id: string | null
           created_at: string | null
           created_by: string | null
+          direction: string | null
           from_email: string | null
+          gmail_message_id: string | null
+          gmail_thread_id: string | null
           id: string
           lead_id: string | null
           opened_at: string | null
+          received_at: string | null
           sent_at: string | null
           status: string | null
           subject: string
+          synced_from_gmail: boolean | null
           to_email: string
           workspace_id: string
         }
@@ -965,13 +970,18 @@ export type Database = {
           contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          direction?: string | null
           from_email?: string | null
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
           id?: string
           lead_id?: string | null
           opened_at?: string | null
+          received_at?: string | null
           sent_at?: string | null
           status?: string | null
           subject: string
+          synced_from_gmail?: boolean | null
           to_email: string
           workspace_id: string
         }
@@ -981,13 +991,18 @@ export type Database = {
           contact_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          direction?: string | null
           from_email?: string | null
+          gmail_message_id?: string | null
+          gmail_thread_id?: string | null
           id?: string
           lead_id?: string | null
           opened_at?: string | null
+          received_at?: string | null
           sent_at?: string | null
           status?: string | null
           subject?: string
+          synced_from_gmail?: boolean | null
           to_email?: string
           workspace_id?: string
         }
@@ -1867,6 +1882,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "feedback_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gmail_connections: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          gmail_email: string
+          history_id: number | null
+          id: string
+          is_active: boolean | null
+          refresh_token: string
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+          watch_expiration: string | null
+          workspace_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          gmail_email: string
+          history_id?: number | null
+          id?: string
+          is_active?: boolean | null
+          refresh_token: string
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+          watch_expiration?: string | null
+          workspace_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          gmail_email?: string
+          history_id?: number | null
+          id?: string
+          is_active?: boolean | null
+          refresh_token?: string
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+          watch_expiration?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gmail_connections_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
