@@ -142,7 +142,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   const { contacts } = useContacts();
 
   // UI State
-  const [activeView, setActiveView] = useState<"pipeline" | "team">("pipeline");
+  const [activeView, setActiveView] = useState<"pipeline" | "team">("team");
   const [showAddCandidateDialog, setShowAddCandidateDialog] = useState(false);
   const [showAddTeamMemberDialog, setShowAddTeamMemberDialog] = useState(false);
   const [showBulkInviteDialog, setShowBulkInviteDialog] = useState(false);
@@ -358,18 +358,18 @@ Cordialement`);
       <div className="flex items-center justify-between">
         <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "pipeline" | "team")}>
           <TabsList>
-            <TabsTrigger value="pipeline" className="gap-2">
-              <UserPlus className="h-4 w-4" />
-              Équipe potentielle
-              {stats.total > 0 && (
-                <Badge variant="secondary" className="ml-1">{stats.total}</Badge>
-              )}
-            </TabsTrigger>
             <TabsTrigger value="team" className="gap-2">
               <Users className="h-4 w-4" />
               Équipe confirmée
               {teamMembers.length > 0 && (
                 <Badge variant="secondary" className="ml-1">{teamMembers.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="pipeline" className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              Équipe potentielle
+              {stats.total > 0 && (
+                <Badge variant="secondary" className="ml-1">{stats.total}</Badge>
               )}
             </TabsTrigger>
           </TabsList>
