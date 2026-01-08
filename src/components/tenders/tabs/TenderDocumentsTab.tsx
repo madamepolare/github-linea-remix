@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   FolderOpen,
   File,
+  Wand2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -41,6 +43,7 @@ import { toast } from "sonner";
 
 interface TenderDocumentsTabProps {
   tenderId: string;
+  onSuggestFill?: (data: any) => void;
 }
 
 // Group documents by type
@@ -74,13 +77,16 @@ function detectDocumentType(filename: string): string {
   return 'autre';
 }
 
-export function TenderDocumentsTab({ tenderId }: TenderDocumentsTabProps) {
-  const { documents, isLoading, uploadDocument, deleteDocument } = useTenderDocuments(tenderId);
+export function TenderDocumentsTab({ tenderId, onSuggestFill }: TenderDocumentsTabProps) {
+  const { documents, isLoading, uploadDocument, deleteDocument, analyzeDocument } = useTenderDocuments(tenderId);
   const [isDragging, setIsDragging] = useState(false);
   const [showQuestionDialog, setShowQuestionDialog] = useState(false);
+  const [showFillDialog, setShowFillDialog] = useState(false);
   const [question, setQuestion] = useState("");
   const [aiAnswer, setAiAnswer] = useState("");
   const [isAskingAI, setIsAskingAI] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [selectedDocType, setSelectedDocType] = useState<string>("all");
 
   const groupedDocs = groupDocumentsByType(documents);
@@ -136,6 +142,165 @@ export function TenderDocumentsTab({ tenderId }: TenderDocumentsTabProps) {
       toast.error("Erreur lors de la requête IA");
     } finally {
       setIsAskingAI(false);
+    }
+  };
+
+  // Analyze all documents and suggest filling tender fields
+  const handleAnalyzeAndFill = async () => {
+    if (documents.length === 0) return;
+    
+    setIsAnalyzing(true);
+    setAnalysisResult(null);
+    
+    try {
+      // First, analyze documents that haven't been analyzed yet
+      const rcDoc = documents.find(d => d.document_type === 'rc');
+      const docsToAnalyze = rcDoc ? [rcDoc] : documents.slice(0, 3);
+      
+      const results: any[] = [];
+      
+      for (const doc of docsToAnalyze) {
+        if (!doc.is_analyzed) {
+          const { data, error } = await supabase.functions.invoke('analyze-tender-documents', {
+            body: { 
+              documentUrl: doc.file_url,
+              documentType: doc.document_type,
+              tenderId,
+              fileName: doc.file_name,
+            }
+          });
+          
+          if (!error && data?.extractedData) {
+            results.push(data.extractedData);
+            
+            // Mark as analyzed
+            await supabase
+              .from("tender_documents")
+              .update({
+                is_analyzed: true,
+                analyzed_at: new Date().toISOString(),
+                extracted_data: data.extractedData,
+              })
+              .eq("id", doc.id);
+          }
+        } else if (doc.extracted_data) {
+          results.push(doc.extracted_data);
+        }
+      }
+      
+      // Merge all extracted data
+      const mergedData = results.reduce((acc, curr) => {
+        return { ...acc, ...curr };
+      }, {});
+      
+      setAnalysisResult(mergedData);
+      setShowFillDialog(true);
+      toast.success("Analyse terminée !");
+    } catch (error) {
+      console.error('Error analyzing documents:', error);
+      toast.error("Erreur lors de l'analyse");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Apply suggestions to tender
+  const handleApplySuggestions = async () => {
+    if (!analysisResult) return;
+    
+    try {
+      // Map extracted data to tender fields
+      const updates: any = {};
+      
+      if (analysisResult.consultation?.object) {
+        updates.title = analysisResult.consultation.object;
+      }
+      if (analysisResult.consultation?.number) {
+        updates.reference = analysisResult.consultation.number;
+      }
+      if (analysisResult.client?.name) {
+        updates.client_name = analysisResult.client.name;
+      }
+      if (analysisResult.project?.location) {
+        updates.location = analysisResult.project.location;
+      }
+      if (analysisResult.project?.surface) {
+        updates.surface_m2 = analysisResult.project.surface;
+      }
+      if (analysisResult.budget?.amount) {
+        updates.estimated_budget = analysisResult.budget.amount;
+      }
+      if (analysisResult.procedure?.type) {
+        updates.procedure_type = analysisResult.procedure.type;
+      }
+      if (analysisResult.deadlines?.submission) {
+        updates.submission_deadline = analysisResult.deadlines.submission;
+      }
+      if (analysisResult.site_visit?.date) {
+        updates.site_visit_date = analysisResult.site_visit.date;
+      }
+      if (analysisResult.site_visit?.required !== undefined) {
+        updates.site_visit_required = analysisResult.site_visit.required;
+      }
+      if (analysisResult.selection_criteria) {
+        updates.selection_criteria = analysisResult.selection_criteria;
+      }
+      if (analysisResult.required_competencies) {
+        updates.required_team = analysisResult.required_competencies;
+      }
+      if (analysisResult.required_documents) {
+        updates.required_documents = analysisResult.required_documents;
+      }
+      if (analysisResult.moe_phases) {
+        updates.moe_phases = analysisResult.moe_phases;
+      }
+      
+      // Add notes with all extracted info
+      const notes = [];
+      if (analysisResult.client?.contact_name) {
+        notes.push(`Contact MOA: ${analysisResult.client.contact_name}`);
+      }
+      if (analysisResult.client?.contact_email) {
+        notes.push(`Email: ${analysisResult.client.contact_email}`);
+      }
+      if (analysisResult.client?.contact_phone) {
+        notes.push(`Tel: ${analysisResult.client.contact_phone}`);
+      }
+      if (analysisResult.site_visit?.location) {
+        notes.push(`RDV visite: ${analysisResult.site_visit.location}`);
+      }
+      if (analysisResult.site_visit?.contact_name) {
+        notes.push(`Contact visite: ${analysisResult.site_visit.contact_name} ${analysisResult.site_visit.contact_phone || ''}`);
+      }
+      if (analysisResult.procedure?.offer_validity_days) {
+        notes.push(`Validité offres: ${analysisResult.procedure.offer_validity_days} jours`);
+      }
+      
+      if (notes.length > 0) {
+        updates.notes = notes.join('\n');
+      }
+      
+      // Update the tender
+      const { error } = await supabase
+        .from("tenders")
+        .update(updates)
+        .eq("id", tenderId);
+      
+      if (error) throw error;
+      
+      toast.success("Appel d'offre mis à jour avec les données du DCE");
+      setShowFillDialog(false);
+      
+      // Notify parent if callback provided
+      if (onSuggestFill) {
+        onSuggestFill(updates);
+      }
+      
+      // Force refresh
+      window.location.reload();
+    } catch (error) {
+      console.error('Error applying suggestions:', error);
+      toast.error("Erreur lors de la mise à jour");
     }
   };
 
@@ -215,6 +380,19 @@ export function TenderDocumentsTab({ tenderId }: TenderDocumentsTabProps) {
               >
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Question au DCE
+              </Button>
+              
+              <Button
+                onClick={handleAnalyzeAndFill}
+                disabled={documents.length === 0 || isAnalyzing}
+                className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white"
+              >
+                {isAnalyzing ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Wand2 className="h-4 w-4 mr-2" />
+                )}
+                Pré-remplir le concours
               </Button>
             </div>
           )}
@@ -354,6 +532,207 @@ export function TenderDocumentsTab({ tenderId }: TenderDocumentsTabProps) {
                 <Send className="h-4 w-4 mr-2" />
               )}
               Envoyer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fill suggestions Dialog */}
+      <Dialog open={showFillDialog} onOpenChange={setShowFillDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wand2 className="h-5 w-5 text-primary" />
+              Données extraites du DCE
+            </DialogTitle>
+            <DialogDescription>
+              L'IA a analysé les documents et propose de pré-remplir les champs suivants.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {analysisResult && (
+            <div className="space-y-4 py-4">
+              {/* Consultation info */}
+              {analysisResult.consultation && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Badge variant="outline">Identification</Badge>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm bg-muted/50 p-3 rounded-lg">
+                    {analysisResult.consultation.object && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Objet:</span> {analysisResult.consultation.object}
+                      </div>
+                    )}
+                    {analysisResult.consultation.number && (
+                      <div>
+                        <span className="text-muted-foreground">N° consultation:</span> {analysisResult.consultation.number}
+                      </div>
+                    )}
+                    {analysisResult.consultation.reference && (
+                      <div>
+                        <span className="text-muted-foreground">Référence:</span> {analysisResult.consultation.reference}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Client info */}
+              {analysisResult.client && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Badge variant="outline">Maître d'ouvrage</Badge>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm bg-muted/50 p-3 rounded-lg">
+                    {analysisResult.client.name && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Nom:</span> {analysisResult.client.name}
+                      </div>
+                    )}
+                    {analysisResult.client.contact_name && (
+                      <div>
+                        <span className="text-muted-foreground">Contact:</span> {analysisResult.client.contact_name}
+                      </div>
+                    )}
+                    {analysisResult.client.contact_email && (
+                      <div>
+                        <span className="text-muted-foreground">Email:</span> {analysisResult.client.contact_email}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Project info */}
+              {analysisResult.project && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Badge variant="outline">Projet</Badge>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm bg-muted/50 p-3 rounded-lg">
+                    {analysisResult.project.location && (
+                      <div>
+                        <span className="text-muted-foreground">Localisation:</span> {analysisResult.project.location}
+                      </div>
+                    )}
+                    {analysisResult.project.surface && (
+                      <div>
+                        <span className="text-muted-foreground">Surface:</span> {analysisResult.project.surface} m²
+                      </div>
+                    )}
+                    {analysisResult.project.description && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Description:</span> {analysisResult.project.description}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Budget */}
+              {analysisResult.budget?.amount && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Badge variant="outline">Budget</Badge>
+                  </h4>
+                  <div className="text-sm bg-muted/50 p-3 rounded-lg">
+                    <span className="text-muted-foreground">Montant estimé:</span> {(analysisResult.budget.amount / 1000000).toFixed(2)} M€ HT
+                  </div>
+                </div>
+              )}
+              
+              {/* Deadlines */}
+              {analysisResult.deadlines && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Badge variant="outline">Dates clés</Badge>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm bg-muted/50 p-3 rounded-lg">
+                    {analysisResult.deadlines.submission && (
+                      <div>
+                        <span className="text-muted-foreground">Date limite:</span> {analysisResult.deadlines.submission}
+                        {analysisResult.deadlines.submission_time && ` à ${analysisResult.deadlines.submission_time}`}
+                      </div>
+                    )}
+                    {analysisResult.deadlines.jury && (
+                      <div>
+                        <span className="text-muted-foreground">Jury:</span> {analysisResult.deadlines.jury}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Site visit */}
+              {analysisResult.site_visit && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Badge variant="outline">Visite de site</Badge>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm bg-muted/50 p-3 rounded-lg">
+                    {analysisResult.site_visit.required !== undefined && (
+                      <div>
+                        <span className="text-muted-foreground">Obligatoire:</span> {analysisResult.site_visit.required ? 'Oui' : 'Non'}
+                      </div>
+                    )}
+                    {analysisResult.site_visit.date && (
+                      <div>
+                        <span className="text-muted-foreground">Date:</span> {analysisResult.site_visit.date}
+                      </div>
+                    )}
+                    {analysisResult.site_visit.location && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Lieu RDV:</span> {analysisResult.site_visit.location}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Selection criteria */}
+              {analysisResult.selection_criteria?.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Badge variant="outline">Critères de jugement</Badge>
+                  </h4>
+                  <div className="space-y-1 text-sm bg-muted/50 p-3 rounded-lg">
+                    {analysisResult.selection_criteria.map((c: any, i: number) => (
+                      <div key={i} className="flex justify-between">
+                        <span>{c.name}</span>
+                        <span className="font-medium">{c.weight}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Required competencies */}
+              {analysisResult.required_competencies?.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Badge variant="outline">Compétences requises</Badge>
+                  </h4>
+                  <div className="flex flex-wrap gap-2 bg-muted/50 p-3 rounded-lg">
+                    {analysisResult.required_competencies.map((c: any, i: number) => (
+                      <Badge key={i} variant={c.mandatory ? "default" : "secondary"}>
+                        {c.specialty}
+                        {c.mandatory && " *"}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFillDialog(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleApplySuggestions}>
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Appliquer ces données
             </Button>
           </DialogFooter>
         </DialogContent>
