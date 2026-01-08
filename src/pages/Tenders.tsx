@@ -47,9 +47,10 @@ const PIPELINE_COLUMN_COLORS: Record<PipelineStatus, string> = {
 
 export default function Tenders() {
   const navigate = useNavigate();
-  const { view: urlView } = useParams();
+  const { "*": splat } = useParams();
   const { tenders, tendersByPipeline, stats, isLoading, deleteTender, updateTender } = useTenders();
-  const viewMode = urlView === "list" ? "list" : "kanban";
+  // Check if path ends with /list
+  const viewMode = window.location.pathname.endsWith("/list") ? "list" : "kanban";
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
