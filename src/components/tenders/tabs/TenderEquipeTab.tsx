@@ -527,6 +527,7 @@ Cordialement`);
         <TeamView
           teamMembers={teamMembers}
           teamByRole={teamByRole}
+          estimatedBudget={tender?.estimated_budget}
           onEditMember={setEditingTeamMember}
           onRemoveMember={(id, name) => setDeleteConfirm({ type: 'team', id, name })}
           onSendInvite={(member) => {
@@ -1737,6 +1738,7 @@ function CandidateRow({
 function TeamView({
   teamMembers,
   teamByRole,
+  estimatedBudget,
   onEditMember,
   onRemoveMember,
   onSendInvite,
@@ -1744,6 +1746,7 @@ function TeamView({
 }: {
   teamMembers: any[];
   teamByRole: Record<string, any[]>;
+  estimatedBudget?: number | null;
   onEditMember: (member: any) => void;
   onRemoveMember: (id: string, name: string) => void;
   onSendInvite: (member: any) => void;
@@ -1814,6 +1817,22 @@ function TeamView({
                       <p className="text-xs text-muted-foreground">
                         {SPECIALTIES.find(s => s.value === member.specialty)?.label || member.specialty}
                       </p>
+                    )}
+                    {/* Fee percentage and amount */}
+                    {member.fee_percentage && (
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Badge variant="outline" className="text-[10px] gap-1">
+                            <Euro className="h-3 w-3" />
+                            {member.fee_percentage}%
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {estimatedBudget 
+                            ? `≈ ${(estimatedBudget * member.fee_percentage / 100).toLocaleString('fr-FR')}€ HT`
+                            : 'Budget non défini'}
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                     {member.contact?.email && (
                       <span className="text-xs text-muted-foreground truncate max-w-[120px]">
