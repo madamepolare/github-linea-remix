@@ -52,7 +52,9 @@ function EmailMessage({
   return (
     <div className={cn(
       "py-3 px-3 rounded-lg",
-      isInbound ? "bg-muted/50" : "bg-primary/5 ml-4"
+      isInbound 
+        ? "bg-green-50 dark:bg-green-950/30 border-l-2 border-green-500" 
+        : "bg-muted/50 ml-4"
     )}>
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
