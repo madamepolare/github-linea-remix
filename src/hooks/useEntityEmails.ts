@@ -67,49 +67,222 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
   const { data: emails = [], isLoading, error } = useQuery({
     queryKey,
     queryFn: async () => {
-      let query = supabase
-        .from('crm_emails')
-        .select(`
-          *,
-          contact:contacts(id, name, email),
-          company:crm_companies(id, name)
-        `)
-        .order('created_at', { ascending: false });
-
-      // Build query based on entity type
+      // Cascade logic: fetch emails based on entity relationships
+      let allEmails: Email[] = [];
+      
       switch (entityType) {
-        case 'contact':
-          query = query.eq('contact_id', entityId);
+        case 'contact': {
+          // Get contact details for email matching
+          const { data: contact } = await supabase
+            .from('contacts')
+            .select('id, email, crm_company_id')
+            .eq('id', entityId)
+            .single();
+          
+          if (!contact) return [];
+          
+          // Fetch emails linked to contact OR matching contact's email address
+          let query = supabase
+            .from('crm_emails')
+            .select(`*, contact:contacts(id, name, email), company:crm_companies(id, name)`)
+            .order('created_at', { ascending: false });
+          
+          if (contact.email) {
+            // Match by contact_id OR by email address (from/to)
+            query = query.or(`contact_id.eq.${entityId},from_email.ilike.${contact.email},to_email.ilike.${contact.email}`);
+          } else {
+            query = query.eq('contact_id', entityId);
+          }
+          
+          const { data, error } = await query;
+          if (error) throw error;
+          allEmails = (data || []) as Email[];
           break;
-        case 'company':
-          // Get emails for company OR all contacts of the company
+        }
+        
+        case 'company': {
+          // Get all contacts of this company
           const { data: companyContacts } = await supabase
             .from('contacts')
-            .select('id')
+            .select('id, email')
             .eq('crm_company_id', entityId);
           
           const contactIds = companyContacts?.map(c => c.id) || [];
+          const contactEmails = companyContacts?.map(c => c.email).filter(Boolean) || [];
+          
+          let query = supabase
+            .from('crm_emails')
+            .select(`*, contact:contacts(id, name, email), company:crm_companies(id, name)`)
+            .order('created_at', { ascending: false });
+          
+          // Build OR conditions for company_id, contact_ids, and email addresses
+          const orConditions: string[] = [`company_id.eq.${entityId}`];
           if (contactIds.length > 0) {
-            query = query.or(`company_id.eq.${entityId},contact_id.in.(${contactIds.join(',')})`);
-          } else {
-            query = query.eq('company_id', entityId);
+            orConditions.push(`contact_id.in.(${contactIds.join(',')})`);
           }
+          contactEmails.forEach(email => {
+            if (email) {
+              orConditions.push(`from_email.ilike.${email}`);
+              orConditions.push(`to_email.ilike.${email}`);
+            }
+          });
+          
+          query = query.or(orConditions.join(','));
+          
+          const { data, error } = await query;
+          if (error) throw error;
+          allEmails = (data || []) as Email[];
           break;
-        case 'lead':
-          query = query.eq('lead_id', entityId);
+        }
+        
+        case 'project': {
+          // Get project with its related company
+          const { data: project } = await supabase
+            .from('projects')
+            .select('id, crm_company_id')
+            .eq('id', entityId)
+            .single();
+          
+          // Get project members (users, not contacts - so we skip email matching for now)
+          // We focus on company contacts for project emails
+          const companyId = project?.crm_company_id;
+          
+          let contactEmails: string[] = [];
+          let contactIds: string[] = [];
+          
+          if (companyId) {
+            const { data: companyContacts } = await supabase
+              .from('contacts')
+              .select('id, email')
+              .eq('crm_company_id', companyId);
+            
+            contactIds = companyContacts?.map(c => c.id) || [];
+            contactEmails = companyContacts?.map(c => c.email).filter(Boolean) as string[] || [];
+          }
+          
+          let query = supabase
+            .from('crm_emails')
+            .select(`*, contact:contacts(id, name, email), company:crm_companies(id, name)`)
+            .order('created_at', { ascending: false });
+          
+          // Build OR conditions
+          const orConditions: string[] = [`project_id.eq.${entityId}`];
+          if (companyId) {
+            orConditions.push(`company_id.eq.${companyId}`);
+          }
+          if (contactIds.length > 0) {
+            orConditions.push(`contact_id.in.(${contactIds.join(',')})`);
+          }
+          contactEmails.forEach(email => {
+            orConditions.push(`from_email.ilike.${email}`);
+            orConditions.push(`to_email.ilike.${email}`);
+          });
+          
+          query = query.or(orConditions.join(','));
+          
+          const { data, error } = await query;
+          if (error) throw error;
+          allEmails = (data || []) as Email[];
           break;
-        case 'project':
-          query = query.eq('project_id', entityId);
+        }
+        
+        case 'tender': {
+          // Get tender candidates (partners)
+          const { data: tenderCandidates } = await supabase
+            .from('tender_partner_candidates')
+            .select('contact_id, company_id')
+            .eq('tender_id', entityId);
+          
+          const candidateContactIds = tenderCandidates?.map(t => t.contact_id).filter(Boolean) as string[] || [];
+          const candidateCompanyIds = tenderCandidates?.map(t => t.company_id).filter(Boolean) as string[] || [];
+          
+          // Get emails of candidate contacts
+          let candidateEmails: string[] = [];
+          if (candidateContactIds.length > 0) {
+            const { data: contacts } = await supabase
+              .from('contacts')
+              .select('email')
+              .in('id', candidateContactIds);
+            candidateEmails = contacts?.map(c => c.email).filter(Boolean) as string[] || [];
+          }
+          
+          let query = supabase
+            .from('crm_emails')
+            .select(`*, contact:contacts(id, name, email), company:crm_companies(id, name)`)
+            .order('created_at', { ascending: false });
+          
+          // Build OR conditions
+          const orConditions: string[] = [`tender_id.eq.${entityId}`];
+          if (candidateContactIds.length > 0) {
+            orConditions.push(`contact_id.in.(${candidateContactIds.join(',')})`);
+          }
+          if (candidateCompanyIds.length > 0) {
+            orConditions.push(`company_id.in.(${candidateCompanyIds.join(',')})`);
+          }
+          candidateEmails.forEach(email => {
+            orConditions.push(`from_email.ilike.${email}`);
+            orConditions.push(`to_email.ilike.${email}`);
+          });
+          
+          query = query.or(orConditions.join(','));
+          
+          const { data, error } = await query;
+          if (error) throw error;
+          allEmails = (data || []) as Email[];
           break;
-        case 'tender':
-          query = query.eq('tender_id', entityId);
+        }
+        
+        case 'lead': {
+          // Get lead with contact/company info
+          const { data: lead } = await supabase
+            .from('leads')
+            .select('id, contact_id, crm_company_id')
+            .eq('id', entityId)
+            .single();
+          
+          // Get contact email if linked
+          let contactEmail: string | null = null;
+          if (lead?.contact_id) {
+            const { data: contact } = await supabase
+              .from('contacts')
+              .select('email')
+              .eq('id', lead.contact_id)
+              .single();
+            contactEmail = contact?.email || null;
+          }
+          
+          let query = supabase
+            .from('crm_emails')
+            .select(`*, contact:contacts(id, name, email), company:crm_companies(id, name)`)
+            .order('created_at', { ascending: false });
+          
+          const orConditions: string[] = [`lead_id.eq.${entityId}`];
+          if (lead?.contact_id) {
+            orConditions.push(`contact_id.eq.${lead.contact_id}`);
+          }
+          if (lead?.crm_company_id) {
+            orConditions.push(`company_id.eq.${lead.crm_company_id}`);
+          }
+          if (contactEmail) {
+            orConditions.push(`from_email.ilike.${contactEmail}`);
+            orConditions.push(`to_email.ilike.${contactEmail}`);
+          }
+          
+          query = query.or(orConditions.join(','));
+          
+          const { data, error } = await query;
+          if (error) throw error;
+          allEmails = (data || []) as Email[];
           break;
+        }
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
       
-      return (data || []) as Email[];
+      // Deduplicate by email id
+      const uniqueEmails = Array.from(
+        new Map(allEmails.map(e => [e.id, e])).values()
+      );
+      
+      return uniqueEmails;
     },
     enabled: enabled && !!entityId,
   });
