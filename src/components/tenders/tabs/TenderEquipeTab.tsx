@@ -167,6 +167,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
     company_id: "",
     contact_id: "",
     notes: "",
+    parent_member_id: "",
   });
 
   // Editing candidate
@@ -268,6 +269,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
       company_id: newTeamMember.company_id || undefined,
       contact_id: newTeamMember.contact_id || undefined,
       notes: newTeamMember.notes || undefined,
+      parent_member_id: newTeamMember.parent_member_id || undefined,
     });
     setShowAddTeamMemberDialog(false);
     resetNewTeamMember();
@@ -291,6 +293,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
       company_id: "",
       contact_id: "",
       notes: "",
+      parent_member_id: "",
     });
     setCompanySearch("");
   };
@@ -809,6 +812,33 @@ Cordialement`);
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {/* Parent member selection for subcontractors */}
+            {newTeamMember.role === 'sous_traitant' && (
+              <div className="space-y-2">
+                <Label>Sous-traitant de *</Label>
+                <Select
+                  value={newTeamMember.parent_member_id}
+                  onValueChange={(v) => setNewTeamMember({ ...newTeamMember, parent_member_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner le membre du groupement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamMembers
+                      .filter(m => m.role === 'mandataire' || m.role === 'cotraitant')
+                      .map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.company?.name || 'Sans nom'} ({TEAM_ROLE_LABELS[m.role]})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Indiquez de quel membre du groupement ce sous-traitant dépend
+                </p>
               </div>
             )}
 
@@ -1708,7 +1738,7 @@ function TeamView({
                       </Tooltip>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {member.specialty && (
                       <p className="text-xs text-muted-foreground">
                         {SPECIALTIES.find(s => s.value === member.specialty)?.label || member.specialty}
@@ -1718,6 +1748,13 @@ function TeamView({
                       <span className="text-xs text-muted-foreground truncate max-w-[120px]">
                         • {member.contact.email}
                       </span>
+                    )}
+                    {/* Show parent member for subcontractors */}
+                    {member.role === 'sous_traitant' && member.parent_member && member.parent_member[0] && (
+                      <Badge variant="outline" className="text-[10px] gap-1 bg-blue-50 dark:bg-blue-900/20 border-blue-200">
+                        <Building2 className="h-3 w-3" />
+                        ST de {member.parent_member[0].company?.name || 'N/A'}
+                      </Badge>
                     )}
                   </div>
                 </div>

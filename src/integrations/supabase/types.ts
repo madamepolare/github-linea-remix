@@ -6260,9 +6260,11 @@ export type Database = {
           company_id: string | null
           contact_id: string | null
           created_at: string | null
+          fee_percentage: number | null
           id: string
           invited_at: string | null
           notes: string | null
+          parent_member_id: string | null
           responded_at: string | null
           role: Database["public"]["Enums"]["tender_team_role"] | null
           specialty: string | null
@@ -6273,9 +6275,11 @@ export type Database = {
           company_id?: string | null
           contact_id?: string | null
           created_at?: string | null
+          fee_percentage?: number | null
           id?: string
           invited_at?: string | null
           notes?: string | null
+          parent_member_id?: string | null
           responded_at?: string | null
           role?: Database["public"]["Enums"]["tender_team_role"] | null
           specialty?: string | null
@@ -6286,9 +6290,11 @@ export type Database = {
           company_id?: string | null
           contact_id?: string | null
           created_at?: string | null
+          fee_percentage?: number | null
           id?: string
           invited_at?: string | null
           notes?: string | null
+          parent_member_id?: string | null
           responded_at?: string | null
           role?: Database["public"]["Enums"]["tender_team_role"] | null
           specialty?: string | null
@@ -6308,6 +6314,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_team_members_parent_member_id_fkey"
+            columns: ["parent_member_id"]
+            isOneToOne: false
+            referencedRelation: "tender_team_members"
             referencedColumns: ["id"]
           },
           {
