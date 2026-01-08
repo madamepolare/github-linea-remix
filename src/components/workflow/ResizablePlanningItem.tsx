@@ -192,15 +192,29 @@ export function ResizablePlanningItem({
                         value={editingDuration}
                         onChange={setEditingDuration}
                       />
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => setIsEditingDuration(false)}>
-                          <X className="h-3 w-3 mr-1" />
-                          Annuler
+                      <div className="flex justify-between items-center gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setIsEditingDuration(false);
+                            onUnschedule(schedule.id);
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Retirer
                         </Button>
-                        <Button size="sm" onClick={handleSaveDuration}>
-                          <Check className="h-3 w-3 mr-1" />
-                          OK
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="ghost" onClick={() => setIsEditingDuration(false)}>
+                            <X className="h-3 w-3 mr-1" />
+                            Annuler
+                          </Button>
+                          <Button size="sm" onClick={handleSaveDuration}>
+                            <Check className="h-3 w-3 mr-1" />
+                            OK
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </PopoverContent>
