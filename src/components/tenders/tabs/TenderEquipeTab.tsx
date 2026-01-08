@@ -110,7 +110,19 @@ interface TenderEquipeTabProps {
 
 export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderEquipeTabProps) {
   // Team (confirmed members)
-  const { teamMembers, teamByRole, isLoading: teamLoading, addTeamMember, updateTeamMember, removeTeamMember, sendInvitation } = useTenderTeam(tenderId);
+  const { 
+    teamMembers, 
+    teamByRole, 
+    isLoading: teamLoading, 
+    addTeamMember, 
+    updateTeamMember, 
+    removeTeamMember, 
+    sendInvitation,
+    addOwnCompanyToTeam,
+    ownCompanyInTeam,
+    isOwnCompanyMandataire,
+    workspaceName,
+  } = useTenderTeam(tenderId);
   
   // Candidates (pipeline)
   const { 
@@ -374,6 +386,27 @@ Cordialement`);
             <Button onClick={() => setShowBulkInviteDialog(true)}>
               <Send className="h-4 w-4 mr-2" />
               Inviter ({candidatesToInvite.length})
+            </Button>
+          )}
+          {activeView === "team" && !ownCompanyInTeam && (
+            <Button 
+              variant="secondary" 
+              onClick={() => addOwnCompanyToTeam.mutate("mandataire")}
+              disabled={addOwnCompanyToTeam.isPending}
+            >
+              <Building2 className="h-4 w-4 mr-2" />
+              Ajouter {workspaceName || "notre entreprise"}
+            </Button>
+          )}
+          {activeView === "team" && ownCompanyInTeam && !isOwnCompanyMandataire && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => addOwnCompanyToTeam.mutate("mandataire")}
+              disabled={addOwnCompanyToTeam.isPending}
+            >
+              <Star className="h-4 w-4 mr-2" />
+              Passer mandataire
             </Button>
           )}
           {activeView === "team" && (
