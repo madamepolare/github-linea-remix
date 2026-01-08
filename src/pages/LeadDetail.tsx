@@ -56,6 +56,7 @@ import { LinkedEntitiesPanel } from "@/components/shared/LinkedEntitiesPanel";
 import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 import { ConvertLeadToProjectDialog } from "@/components/shared/ConvertLeadToProjectDialog";
 import { EntityCommunications } from "@/components/shared/EntityCommunications";
+import { EntityEmailsTab } from "@/components/shared/EntityEmailsTab";
 import { useAuth } from "@/contexts/AuthContext";
 
 const activityTypeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -338,6 +339,10 @@ export default function LeadDetail() {
             <Tabs defaultValue="overview">
               <TabsList>
                 <TabsTrigger value="overview">Aperçu</TabsTrigger>
+                <TabsTrigger value="emails">
+                  <Mail className="h-3.5 w-3.5 mr-1.5" />
+                  Emails
+                </TabsTrigger>
                 <TabsTrigger value="communications">Communications</TabsTrigger>
                 <TabsTrigger value="activities">Activités ({activities.length})</TabsTrigger>
                 <TabsTrigger value="tasks">Tâches</TabsTrigger>
@@ -449,6 +454,15 @@ export default function LeadDetail() {
 
               <TabsContent value="communications" className="mt-4">
                 <EntityCommunications entityType="lead" entityId={lead.id} />
+              </TabsContent>
+
+              <TabsContent value="emails" className="mt-4">
+                <EntityEmailsTab 
+                  entityType="lead" 
+                  entityId={lead.id}
+                  defaultRecipientEmail={contact?.email || undefined}
+                  defaultRecipientName={contact?.name}
+                />
               </TabsContent>
 
               <TabsContent value="activities" className="mt-4">
