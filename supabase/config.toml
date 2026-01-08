@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.gmail-config]
 verify_jwt = false
+
+[functions.gmail-sync]
+verify_jwt = false

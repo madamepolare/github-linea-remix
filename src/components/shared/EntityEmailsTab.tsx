@@ -20,15 +20,17 @@ import {
   ChevronRight,
   ExternalLink,
   Reply,
-  Forward,
   MailOpen,
   Settings,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface EntityEmailsTabProps {
   entityType: EntityType;
@@ -56,8 +58,23 @@ export function EntityEmailsTab({
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<'all' | 'sent' | 'received'>('all');
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
-  const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [replyTo, setReplyTo] = useState<Email | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = async () => {
+    if (!gmailConnected) return;
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('gmail-sync');
+      if (error) throw error;
+      toast.success(`${data.synced || 0} email(s) synchronisé(s)`);
+    } catch (error: any) {
+      toast.error("Erreur de synchronisation");
+      console.error('Sync error:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Filter threads based on search and filter
   const filteredThreads = threads.filter(thread => {
@@ -165,10 +182,20 @@ export function EntityEmailsTab({
             </TabsList>
           </Tabs>
         </div>
-        <Button onClick={() => { setReplyTo(null); setComposeOpen(true); }} disabled={!gmailConnected}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvel email
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleSync} 
+            disabled={!gmailConnected || isSyncing}
+          >
+            <RefreshCw className={cn("h-4 w-4 mr-2", isSyncing && "animate-spin")} />
+            {isSyncing ? 'Sync...' : 'Sync'}
+          </Button>
+          <Button onClick={() => { setReplyTo(null); setComposeOpen(true); }} disabled={!gmailConnected}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nouvel email
+          </Button>
+        </div>
       </div>
 
       {/* Email list */}
