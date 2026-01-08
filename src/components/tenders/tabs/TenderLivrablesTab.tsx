@@ -52,14 +52,14 @@ const RESPONSIBLE_TYPES = [
 ];
 
 export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
+  const { teamMembers } = useTenderTeam(tenderId);
   const { 
     deliverables, 
     isLoading, 
     addDeliverable, 
     toggleMemberComplete,
     deleteDeliverable 
-  } = useTenderDeliverables(tenderId);
-  const { teamMembers } = useTenderTeam(tenderId);
+  } = useTenderDeliverables(tenderId, teamMembers);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showQuickAdd, setShowQuickAdd] = useState(true);
   const [showAIExtract, setShowAIExtract] = useState(false);

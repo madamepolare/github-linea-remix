@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { TenderDeliverable } from "@/lib/tenderTypes";
+import { useEffect, useRef } from "react";
+import type { TenderDeliverable, TenderTeamMember } from "@/lib/tenderTypes";
 
-export function useTenderDeliverables(tenderId: string | undefined) {
+export function useTenderDeliverables(tenderId: string | undefined, teamMembers: TenderTeamMember[] = []) {
   const queryClient = useQueryClient();
+  const hasAutoLoaded = useRef(false);
 
   const { data: deliverables = [], isLoading } = useQuery({
     queryKey: ["tender-deliverables", tenderId],
@@ -22,6 +24,73 @@ export function useTenderDeliverables(tenderId: string | undefined) {
     },
     enabled: !!tenderId,
   });
+
+  // Auto-load default deliverables (DC1 + DC2 per member) when deliverables are empty
+  useEffect(() => {
+    const loadDefaultDeliverables = async () => {
+      if (
+        !tenderId || 
+        isLoading || 
+        deliverables.length > 0 || 
+        teamMembers.length === 0 ||
+        hasAutoLoaded.current
+      ) return;
+
+      hasAutoLoaded.current = true;
+
+      const toInsert: any[] = [];
+      let sortOrder = 0;
+
+      // DC1 - only for mandataire
+      toInsert.push({
+        tender_id: tenderId,
+        deliverable_type: "dc1",
+        name: "DC1 - Lettre de candidature",
+        responsible_type: "mandataire",
+        responsible_company_ids: [],
+        sort_order: sortOrder++,
+      });
+
+      // DC2 - one per member of the groupement
+      const companies = teamMembers
+        .filter(m => m.company?.id)
+        .reduce((acc, m) => {
+          if (!acc.find(c => c.id === m.company?.id)) {
+            acc.push({
+              id: m.company!.id,
+              name: m.company!.name,
+            });
+          }
+          return acc;
+        }, [] as { id: string; name: string }[]);
+
+      for (const company of companies) {
+        toInsert.push({
+          tender_id: tenderId,
+          deliverable_type: "dc2",
+          name: `DC2 - ${company.name}`,
+          responsible_type: "tous",
+          responsible_company_ids: [company.id],
+          sort_order: sortOrder++,
+        });
+      }
+
+      if (toInsert.length > 0) {
+        const { error } = await supabase
+          .from("tender_deliverables")
+          .insert(toInsert);
+
+        if (error) {
+          console.error("Error loading default deliverables:", error);
+          return;
+        }
+
+        queryClient.invalidateQueries({ queryKey: ["tender-deliverables", tenderId] });
+      }
+    };
+
+    loadDefaultDeliverables();
+  }, [tenderId, isLoading, deliverables.length, teamMembers, queryClient]);
 
   const addDeliverable = useMutation({
     mutationFn: async (deliverable: {
