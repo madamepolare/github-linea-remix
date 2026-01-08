@@ -34,6 +34,7 @@ import { TenderLivrablesTab } from "@/components/tenders/tabs/TenderLivrablesTab
 import { TenderEquipeTab } from "@/components/tenders/tabs/TenderEquipeTab";
 import { TenderMemoireTab } from "@/components/tenders/tabs/TenderMemoireTab";
 import { TenderEditDialog } from "@/components/tenders/TenderEditDialog";
+import { EntityEmailsTab } from "@/components/shared/EntityEmailsTab";
 
 export default function TenderDetail() {
   const { id } = useParams();
@@ -151,6 +152,8 @@ export default function TenderDetail() {
         );
       case "documents":
         return <TenderDocumentsTab tenderId={tender.id} />;
+      case "emails":
+        return <EntityEmailsTab entityType="tender" entityId={tender.id} />;
       case "livrables":
         return <TenderLivrablesTab tenderId={tender.id} />;
       case "equipe":
