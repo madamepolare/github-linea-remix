@@ -145,6 +145,11 @@ export function useTenderDeliverables(tenderId: string | undefined, teamMembers:
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tender-deliverables", tenderId] });
+      toast.success("Livrable mis à jour");
+    },
+    onError: (error) => {
+      toast.error("Erreur lors de la mise à jour");
+      console.error(error);
     },
   });
 

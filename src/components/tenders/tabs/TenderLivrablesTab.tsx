@@ -57,6 +57,7 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
     deliverables, 
     isLoading, 
     addDeliverable, 
+    updateDeliverable,
     toggleMemberComplete,
     deleteDeliverable 
   } = useTenderDeliverables(tenderId, teamMembers);
@@ -255,6 +256,7 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
           teamMembers={teamMembers}
           onToggleMemberComplete={handleToggleMemberComplete}
           onDelete={(id) => deleteDeliverable.mutate(id)}
+          onUpdate={(id, updates) => updateDeliverable.mutate({ id, ...updates })}
         />
       )}
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Minus, Trash2, Calendar, Building2, CheckCircle2, Circle } from "lucide-react";
+import { Check, Minus, Trash2, Calendar, Building2, CheckCircle2, Circle, Pencil, X, Save, Users } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Card } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -21,16 +22,39 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import type { TenderDeliverable, TenderTeamMember } from "@/lib/tenderTypes";
+
+const RESPONSIBLE_TYPES = [
+  { value: 'mandataire', label: 'Mandataire' },
+  { value: 'tous', label: 'Tous les membres' },
+  { value: 'cotraitant', label: 'Cotraitants' },
+  { value: 'sous_traitant', label: 'Sous-traitant' },
+];
 
 interface DeliverableMemberGridProps {
   deliverables: TenderDeliverable[];
   teamMembers: TenderTeamMember[];
   onToggleMemberComplete: (deliverableId: string, companyId: string, currentValue: boolean) => void;
   onDelete: (deliverableId: string) => void;
+  onUpdate?: (id: string, updates: Partial<TenderDeliverable>) => void;
 }
 
 export function DeliverableMemberGrid({
@@ -38,8 +62,13 @@ export function DeliverableMemberGrid({
   teamMembers,
   onToggleMemberComplete,
   onDelete,
+  onUpdate,
 }: DeliverableMemberGridProps) {
   const [celebratedDeliverables, setCelebratedDeliverables] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   // Get unique companies from team (mandataire first, then cotraitants)
   const companies = teamMembers
@@ -59,6 +88,11 @@ export function DeliverableMemberGrid({
 
   // Calculate if a company should have a checkbox for this deliverable
   const shouldHaveCheckbox = (deliverable: TenderDeliverable, companyId: string, isMandataire: boolean) => {
+    // If specific companies are assigned, only show checkbox for them
+    if (deliverable.responsible_company_ids && deliverable.responsible_company_ids.length > 0) {
+      return deliverable.responsible_company_ids.includes(companyId);
+    }
+    
     switch (deliverable.responsible_type) {
       case "mandataire":
         return isMandataire;
@@ -150,6 +184,83 @@ export function DeliverableMemberGrid({
     );
   };
 
+  // Selection handlers
+  const toggleSelectAll = () => {
+    if (selectedIds.length === deliverables.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(deliverables.map(d => d.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  // Edit handlers
+  const startEdit = (deliverable: TenderDeliverable, field: string) => {
+    setEditingId(deliverable.id);
+    setEditingField(field);
+    if (field === "name") {
+      setEditValue(deliverable.name);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingField(null);
+    setEditValue("");
+  };
+
+  const saveEdit = (id: string) => {
+    if (onUpdate && editingField === "name" && editValue.trim()) {
+      onUpdate(id, { name: editValue.trim() });
+    }
+    cancelEdit();
+  };
+
+  const updateResponsibleType = (id: string, type: string) => {
+    if (onUpdate) {
+      onUpdate(id, { responsible_type: type, responsible_company_ids: [] });
+    }
+  };
+
+  const updateResponsibleCompanies = (id: string, companyIds: string[]) => {
+    if (onUpdate) {
+      onUpdate(id, { responsible_company_ids: companyIds });
+    }
+  };
+
+  // Bulk actions
+  const bulkUpdateResponsible = (type: string) => {
+    if (onUpdate) {
+      selectedIds.forEach(id => {
+        onUpdate(id, { responsible_type: type, responsible_company_ids: [] });
+      });
+    }
+    setSelectedIds([]);
+  };
+
+  const bulkDelete = () => {
+    selectedIds.forEach(id => onDelete(id));
+    setSelectedIds([]);
+  };
+
+  const getResponsibleDisplay = (deliverable: TenderDeliverable) => {
+    if (deliverable.responsible_company_ids && deliverable.responsible_company_ids.length > 0) {
+      const assignedCompanies = companies.filter(c => 
+        deliverable.responsible_company_ids?.includes(c.id)
+      );
+      if (assignedCompanies.length === 1) {
+        return assignedCompanies[0].name;
+      }
+      return `${assignedCompanies.length} entreprises`;
+    }
+    return RESPONSIBLE_TYPES.find(t => t.value === deliverable.responsible_type)?.label || deliverable.responsible_type;
+  };
+
   if (companies.length === 0) {
     return (
       <Card className="p-8 text-center">
@@ -161,6 +272,60 @@ export function DeliverableMemberGrid({
 
   return (
     <div className="space-y-4">
+      {/* Bulk actions bar */}
+      <AnimatePresence>
+        {selectedIds.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <Card className="p-3 bg-primary/5 border-primary/20">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm font-medium">
+                  {selectedIds.length} livrable{selectedIds.length > 1 ? 's' : ''} sélectionné{selectedIds.length > 1 ? 's' : ''}
+                </span>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        <Users className="h-4 w-4 mr-2" />
+                        Modifier responsable
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {RESPONSIBLE_TYPES.map(type => (
+                        <DropdownMenuItem 
+                          key={type.value}
+                          onClick={() => bulkUpdateResponsible(type.value)}
+                        >
+                          {type.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={bulkDelete}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Supprimer
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setSelectedIds([])}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Progress per member */}
       <Card className="p-4">
         <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(companies.length, 4)}, 1fr)` }}>
@@ -200,8 +365,15 @@ export function DeliverableMemberGrid({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox 
+                  checked={selectedIds.length === deliverables.length && deliverables.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+              </TableHead>
               <TableHead className="w-10">✓</TableHead>
               <TableHead className="min-w-[200px]">Livrable</TableHead>
+              <TableHead className="w-32">Responsable</TableHead>
               <TableHead className="w-16">Type</TableHead>
               {companies.map(company => (
                 <TableHead key={company.id} className="w-24 text-center">
@@ -236,6 +408,8 @@ export function DeliverableMemberGrid({
               {deliverables.map((deliverable) => {
                 const isComplete = isDeliverableComplete(deliverable);
                 const memberCompletion = (deliverable.member_completion || {}) as Record<string, boolean>;
+                const isEditing = editingId === deliverable.id;
+                const isSelected = selectedIds.includes(deliverable.id);
 
                 return (
                   <motion.tr
@@ -245,9 +419,16 @@ export function DeliverableMemberGrid({
                     exit={{ opacity: 0, x: -20 }}
                     className={cn(
                       "border-b transition-colors",
-                      isComplete && "bg-green-50/50 dark:bg-green-950/10"
+                      isComplete && "bg-green-50/50 dark:bg-green-950/10",
+                      isSelected && "bg-primary/5"
                     )}
                   >
+                    <TableCell>
+                      <Checkbox 
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelect(deliverable.id)}
+                      />
+                    </TableCell>
                     <TableCell>
                       {isComplete ? (
                         <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -256,12 +437,85 @@ export function DeliverableMemberGrid({
                       )}
                     </TableCell>
                     <TableCell>
-                      <span className={cn(
-                        "font-medium",
-                        isComplete && "text-green-700 dark:text-green-400"
-                      )}>
-                        {deliverable.name}
-                      </span>
+                      {isEditing && editingField === "name" ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            className="h-8"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveEdit(deliverable.id);
+                              if (e.key === "Escape") cancelEdit();
+                            }}
+                          />
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => saveEdit(deliverable.id)}>
+                            <Save className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={cancelEdit}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div 
+                          className={cn(
+                            "font-medium cursor-pointer hover:text-primary flex items-center gap-2 group",
+                            isComplete && "text-green-700 dark:text-green-400"
+                          )}
+                          onClick={() => onUpdate && startEdit(deliverable, "name")}
+                        >
+                          {deliverable.name}
+                          {onUpdate && (
+                            <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-50" />
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs font-normal">
+                            {getResponsibleDisplay(deliverable)}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-56">
+                          {RESPONSIBLE_TYPES.map(type => (
+                            <DropdownMenuItem 
+                              key={type.value}
+                              onClick={() => updateResponsibleType(deliverable.id, type.value)}
+                            >
+                              {deliverable.responsible_type === type.value && (
+                                <Check className="h-4 w-4 mr-2" />
+                              )}
+                              <span className={deliverable.responsible_type !== type.value ? "ml-6" : ""}>
+                                {type.label}
+                              </span>
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                            Attribuer à des entreprises
+                          </div>
+                          {companies.map(company => (
+                            <DropdownMenuCheckboxItem
+                              key={company.id}
+                              checked={deliverable.responsible_company_ids?.includes(company.id) || false}
+                              onCheckedChange={(checked) => {
+                                const current = deliverable.responsible_company_ids || [];
+                                const newIds = checked 
+                                  ? [...current, company.id]
+                                  : current.filter(id => id !== company.id);
+                                updateResponsibleCompanies(deliverable.id, newIds);
+                              }}
+                            >
+                              {company.name}
+                              {company.isMandataire && (
+                                <Badge variant="secondary" className="ml-2 h-4 text-[9px]">M</Badge>
+                              )}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                     <TableCell>
                       {getTypeBadge(deliverable.deliverable_type)}
