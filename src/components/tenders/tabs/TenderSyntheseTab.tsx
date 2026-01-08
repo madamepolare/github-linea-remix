@@ -462,7 +462,11 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
                         tenderId={tender.id}
                         tenderTitle={tender.title}
                         siteVisitDate={formData.site_visit_date}
+                        siteVisitRequired={formData.site_visit_required || false}
                         location={formData.location || tender.location}
+                        contactName={(tender as any).site_visit_contact_name || null}
+                        contactEmail={(tender as any).site_visit_contact_email || null}
+                        contactPhone={(tender as any).site_visit_contact_phone || null}
                         assignedUserIds={(tender as any).site_visit_assigned_users || []}
                         onAssignmentChange={(userIds) => {
                           handleSaveField('site_visit_assigned_users', userIds);

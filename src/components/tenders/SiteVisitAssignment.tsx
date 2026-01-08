@@ -18,7 +18,11 @@ interface SiteVisitAssignmentProps {
   tenderId: string;
   tenderTitle: string;
   siteVisitDate: string;
+  siteVisitRequired?: boolean;
   location?: string | null;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
   assignedUserIds: string[];
   onAssignmentChange: (userIds: string[]) => void;
 }
@@ -27,7 +31,11 @@ export function SiteVisitAssignment({
   tenderId,
   tenderTitle,
   siteVisitDate,
+  siteVisitRequired,
   location,
+  contactName,
+  contactEmail,
+  contactPhone,
   assignedUserIds,
   onAssignmentChange,
 }: SiteVisitAssignmentProps) {
@@ -68,7 +76,10 @@ export function SiteVisitAssignment({
         title: tenderTitle,
         location: location,
         site_visit_date: siteVisitDate,
-        site_visit_required: true,
+        site_visit_required: siteVisitRequired ?? false,
+        site_visit_contact_name: contactName,
+        site_visit_contact_email: contactEmail,
+        site_visit_contact_phone: contactPhone,
         site_visit_assigned_users: assignedUserIds,
       });
       setAddedToCalendar(true);
