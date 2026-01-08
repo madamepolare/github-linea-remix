@@ -17,6 +17,8 @@ interface SendEmailRequest {
   contactId?: string;
   companyId?: string;
   leadId?: string;
+  projectId?: string;
+  tenderId?: string;
 }
 
 async function refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
@@ -106,7 +108,7 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    const { to, subject, body, cc, bcc, replyTo, contactId, companyId, leadId }: SendEmailRequest = await req.json();
+    const { to, subject, body, cc, bcc, replyTo, contactId, companyId, leadId, projectId, tenderId }: SendEmailRequest = await req.json();
 
     if (!to || !subject || !body) {
       throw new Error('Missing required fields: to, subject, body');
@@ -204,6 +206,8 @@ serve(async (req) => {
         contact_id: contactId || null,
         company_id: companyId || null,
         lead_id: leadId || null,
+        project_id: projectId || null,
+        tender_id: tenderId || null,
         gmail_message_id: gmailResult.id,
         gmail_thread_id: gmailResult.threadId,
         direction: 'outbound',
