@@ -8,6 +8,7 @@ import {
   Send,
   UserCheck,
   UserX,
+  ClipboardList,
   Clock,
   AlertTriangle,
   CheckCircle2,
@@ -100,6 +101,8 @@ import { TEAM_ROLE_LABELS, SPECIALTIES, type TenderTeamRole } from "@/lib/tender
 import { BulkInvitationDialog } from "@/components/tenders/BulkInvitationDialog";
 import { PartnerPrefilterPanel } from "@/components/tenders/PartnerPrefilterPanel";
 import { PartnerProposalEmailDialog } from "@/components/tenders/PartnerProposalEmailDialog";
+import { TeamDeliverablesEmailDialog } from "@/components/tenders/TeamDeliverablesEmailDialog";
+import { useTenderDeliverables } from "@/hooks/useTenderDeliverables";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -140,12 +143,16 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   const { data: tender } = useTender(tenderId);
   const { companies } = useCRMCompanies();
   const { contacts } = useContacts();
+  
+  // Get deliverables for email dialog
+  const { deliverables } = useTenderDeliverables(tenderId, teamMembers);
 
   // UI State
   const [activeView, setActiveView] = useState<"pipeline" | "team">("team");
   const [showAddCandidateDialog, setShowAddCandidateDialog] = useState(false);
   const [showAddTeamMemberDialog, setShowAddTeamMemberDialog] = useState(false);
   const [showBulkInviteDialog, setShowBulkInviteDialog] = useState(false);
+  const [showDeliverablesEmailDialog, setShowDeliverablesEmailDialog] = useState(false);
   const [showPrefilterPanel, setShowPrefilterPanel] = useState(false);
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>("");
   const [companySearch, setCompanySearch] = useState("");
@@ -410,6 +417,15 @@ Cordialement`);
             >
               <Star className="h-4 w-4 mr-2" />
               Passer mandataire
+            </Button>
+          )}
+          {activeView === "team" && teamMembers.length > 0 && deliverables.length > 0 && (
+            <Button 
+              variant="outline"
+              onClick={() => setShowDeliverablesEmailDialog(true)}
+            >
+              <ClipboardList className="h-4 w-4 mr-2" />
+              Envoyer livrables
             </Button>
           )}
           {activeView === "team" && (
@@ -1188,6 +1204,17 @@ Cordialement`);
           tender={tender}
           partner={proposalEmailTarget}
           onSent={() => setProposalEmailTarget(null)}
+        />
+      )}
+
+      {/* Team Deliverables Email Dialog */}
+      {tender && (
+        <TeamDeliverablesEmailDialog
+          open={showDeliverablesEmailDialog}
+          onOpenChange={setShowDeliverablesEmailDialog}
+          tender={tender}
+          teamMembers={teamMembers}
+          deliverables={deliverables}
         />
       )}
     </div>
