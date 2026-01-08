@@ -372,7 +372,7 @@ export interface TenderTeamMember {
       id: string;
       name: string;
     } | null;
-  }[] | null;
+  } | null;
 }
 
 export interface TenderDeliverable {
