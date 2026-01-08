@@ -360,6 +360,7 @@ export interface TenderTeamMember {
     id: string;
     name: string;
     logo_url: string | null;
+    email?: string | null;
   };
   contact?: {
     id: string;

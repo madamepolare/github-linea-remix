@@ -530,16 +530,17 @@ Cordialement`);
           onEditMember={setEditingTeamMember}
           onRemoveMember={(id, name) => setDeleteConfirm({ type: 'team', id, name })}
           onSendInvite={(member) => {
-            if (member.contact?.email) {
+            const email = member.contact?.email || member.company?.email;
+            if (email) {
               setProposalEmailTarget({
                 id: member.id,
                 companyName: member.company?.name || member.contact?.name || "Partenaire",
-                contactEmail: member.contact.email,
+                contactEmail: email,
                 contactName: member.contact?.name,
                 specialty: member.specialty || "",
               });
             } else {
-              toast.error("Pas d'email pour ce contact");
+              toast.error("Pas d'email pour ce partenaire (contact ou entreprise)");
             }
           }}
           isLoading={isLoading}
@@ -1777,10 +1778,10 @@ function TeamView({
                       </span>
                     )}
                     {/* Show parent member for subcontractors */}
-                    {member.role === 'sous_traitant' && member.parent_member && member.parent_member[0] && (
+                    {member.role === 'sous_traitant' && member.parent_member?.company && (
                       <Badge variant="outline" className="text-[10px] gap-1 bg-blue-50 dark:bg-blue-900/20 border-blue-200">
                         <Building2 className="h-3 w-3" />
-                        ST de {member.parent_member[0].company?.name || 'N/A'}
+                        ST de {member.parent_member.company?.name || 'N/A'}
                       </Badge>
                     )}
                   </div>
@@ -1788,7 +1789,7 @@ function TeamView({
                 <StatusBadge status={member.status} />
 
                 {/* Direct email button for team members */}
-                {member.contact?.email && (
+                {(member.contact?.email || member.company?.email) && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button 
@@ -1819,14 +1820,14 @@ function TeamView({
                       <Edit2 className="h-4 w-4 mr-2" />
                       Modifier
                     </DropdownMenuItem>
-                    {member.contact?.email && (
+                    {(member.contact?.email || member.company?.email) && (
                       <>
                         <DropdownMenuItem onClick={() => onSendInvite(member)}>
                           <Mail className="h-4 w-4 mr-2" />
                           Envoyer une invitation
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <a href={`mailto:${member.contact.email}`}>
+                          <a href={`mailto:${member.contact?.email || member.company?.email}`}>
                             <ExternalLink className="h-4 w-4 mr-2" />
                             Ouvrir dans client mail
                           </a>
