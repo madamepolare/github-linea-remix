@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { addYears, isBefore, isAfter, startOfDay, addWeeks, addMonths } from "date-fns";
 
 export type EventType = "meeting" | "milestone" | "reminder" | "rendu";
+export type TenderEventType = "site_visit" | "meeting" | "milestone" | "reminder" | "deadline";
 export type RecurrenceRule = "weekly" | "monthly" | "quarterly" | "yearly" | null;
 
 export interface WorkspaceEvent {
@@ -21,7 +22,30 @@ export interface WorkspaceEvent {
   recurrence_rule: RecurrenceRule;
   parent_event_id: string | null;
   project?: { name: string; color: string | null };
+  // Discriminator for unified type
+  source: "project";
 }
+
+export interface TenderWorkspaceEvent {
+  id: string;
+  tender_id: string;
+  workspace_id: string;
+  title: string;
+  description: string | null;
+  event_type: TenderEventType;
+  start_datetime: string;
+  end_datetime: string | null;
+  location: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  attendees: Array<{ email?: string; name?: string; user_id?: string }>;
+  tender?: { title: string };
+  // Discriminator for unified type
+  source: "tender";
+}
+
+export type UnifiedWorkspaceEvent = WorkspaceEvent | TenderWorkspaceEvent;
 
 function getNextDate(date: Date, rule: RecurrenceRule): Date {
   switch (rule) {
@@ -72,10 +96,11 @@ export function useWorkspaceEvents() {
 
   return useQuery({
     queryKey: ["workspace-events", activeWorkspace?.id],
-    queryFn: async (): Promise<WorkspaceEvent[]> => {
+    queryFn: async (): Promise<UnifiedWorkspaceEvent[]> => {
       if (!activeWorkspace?.id) return [];
 
-      const { data, error } = await supabase
+      // Fetch project events
+      const { data: projectData, error: projectError } = await supabase
         .from("project_calendar_events")
         .select(`
           id,
@@ -96,26 +121,63 @@ export function useWorkspaceEvents() {
         .eq("workspace_id", activeWorkspace.id)
         .order("start_datetime", { ascending: true });
 
-      if (error) throw error;
+      if (projectError) throw projectError;
 
-      const typedEvents = (data || []).map(event => ({
+      // Fetch tender events
+      const { data: tenderData, error: tenderError } = await supabase
+        .from("tender_calendar_events")
+        .select(`
+          id,
+          tender_id,
+          workspace_id,
+          title,
+          description,
+          event_type,
+          start_datetime,
+          end_datetime,
+          location,
+          contact_name,
+          contact_email,
+          contact_phone,
+          attendees,
+          tender:tenders(title)
+        `)
+        .eq("workspace_id", activeWorkspace.id)
+        .order("start_datetime", { ascending: true });
+
+      if (tenderError) throw tenderError;
+
+      // Transform project events
+      const projectEvents = (projectData || []).map(event => ({
         ...event,
         attendees: (event.attendees || []) as Array<{ email: string; name?: string; user_id?: string }>,
         recurrence_rule: event.recurrence_rule as RecurrenceRule,
         project: event.project as { name: string; color: string | null } | undefined,
+        source: "project" as const,
       })) as WorkspaceEvent[];
 
-      // Generate recurring instances
+      // Transform tender events
+      const tenderEvents = (tenderData || []).map(event => ({
+        ...event,
+        attendees: (event.attendees || []) as Array<{ email?: string; name?: string; user_id?: string }>,
+        tender: event.tender as { title: string } | undefined,
+        source: "tender" as const,
+      })) as TenderWorkspaceEvent[];
+
+      // Generate recurring instances for project events
       const now = new Date();
       const endRange = addYears(now, 1);
-      const allEvents = [...typedEvents];
+      const allProjectEvents = [...projectEvents];
       
-      typedEvents.forEach(event => {
+      projectEvents.forEach(event => {
         if (event.recurrence_rule && !event.parent_event_id) {
           const instances = generateRecurringInstances(event, now, endRange);
-          allEvents.push(...instances);
+          allProjectEvents.push(...instances);
         }
       });
+
+      // Combine all events
+      const allEvents: UnifiedWorkspaceEvent[] = [...allProjectEvents, ...tenderEvents];
 
       return allEvents.sort((a, b) => 
         new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime()

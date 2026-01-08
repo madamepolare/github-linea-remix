@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
-import { useWorkspaceEvents, WorkspaceEvent } from "@/hooks/useWorkspaceEvents";
+import { useWorkspaceEvents, UnifiedWorkspaceEvent, WorkspaceEvent, TenderWorkspaceEvent } from "@/hooks/useWorkspaceEvents";
 import { useAllProjectMembers } from "@/hooks/useProjects";
 import { useTeamAbsences, TeamAbsence, absenceTypeLabels } from "@/hooks/useTeamAbsences";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,9 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   milestone: "#f59e0b", // amber
   reminder: "#8b5cf6", // violet
   rendu: "#10b981", // emerald
+  // Tender-specific event types
+  site_visit: "#f97316", // orange
+  deadline: "#ef4444", // red
 };
 
 export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: TeamPlanningGridProps) {
@@ -188,13 +191,16 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
       const memberProjectIds = userProjectsMap?.get(memberId) || new Set<string>();
 
       events.forEach(event => {
-        // Vérifier si le membre est dans les attendees OU si l'événement appartient à un projet assigné
-        const isAttendee = memberEmail && event.attendees?.some(a => 
-          a.email?.toLowerCase() === memberEmail.toLowerCase() ||
+        // Check if member is in attendees (works for both project and tender events)
+        const isAttendee = event.attendees?.some(a => 
+          (memberEmail && a.email?.toLowerCase() === memberEmail.toLowerCase()) ||
           a.user_id === memberId
         );
         
-        const isAssignedToProject = event.project_id && memberProjectIds.has(event.project_id);
+        // For project events, also check project assignment
+        const isAssignedToProject = event.source === "project" && 
+          (event as WorkspaceEvent).project_id && 
+          memberProjectIds.has((event as WorkspaceEvent).project_id);
         
         if (!isAttendee && !isAssignedToProject) return;
 
@@ -205,6 +211,15 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
           const durationMs = eventEnd.getTime() - eventStart.getTime();
           const durationHours = Math.max(1, Math.round((durationMs / (1000 * 60 * 60)) * 10) / 10);
           
+          // Determine display name based on event source
+          const displayName = event.source === "project" 
+            ? (event as WorkspaceEvent).project?.name
+            : (event as TenderWorkspaceEvent).tender?.title;
+          
+          const displayColor = event.source === "project"
+            ? (event as WorkspaceEvent).project?.color
+            : undefined; // Tender events use event type color
+          
           items.push({
             id: event.id,
             type: "event",
@@ -212,8 +227,8 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
             start: eventStart,
             end: eventEnd,
             color: EVENT_TYPE_COLORS[event.event_type] || "#6366f1",
-            projectName: event.project?.name,
-            projectColor: event.project?.color || undefined,
+            projectName: displayName,
+            projectColor: displayColor || undefined,
             eventType: event.event_type,
             durationHours,
             originalData: event,
