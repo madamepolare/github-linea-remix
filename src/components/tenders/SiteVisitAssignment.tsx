@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Users, CalendarPlus, Check, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Users, CalendarPlus, Check, Loader2, User, Mail, Phone, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -10,7 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
+import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useTenderCalendarEvents } from "@/hooks/useTenderCalendarEvents";
 import { cn } from "@/lib/utils";
 
@@ -20,11 +21,18 @@ interface SiteVisitAssignmentProps {
   siteVisitDate: string;
   siteVisitRequired?: boolean;
   location?: string | null;
+  projectAddress?: string | null;
   contactName?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
   assignedUserIds: string[];
   onAssignmentChange: (userIds: string[]) => void;
+  onContactChange?: (contact: {
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+    address: string | null;
+  }) => void;
 }
 
 export function SiteVisitAssignment({
@@ -33,17 +41,34 @@ export function SiteVisitAssignment({
   siteVisitDate,
   siteVisitRequired,
   location,
+  projectAddress,
   contactName,
   contactEmail,
   contactPhone,
   assignedUserIds,
   onAssignmentChange,
+  onContactChange,
 }: SiteVisitAssignmentProps) {
   const { data: teamMembers = [], isLoading } = useTeamMembers();
   const { syncSiteVisit } = useTenderCalendarEvents(tenderId);
   const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+
+  // Local state for contact fields
+  const [localContactName, setLocalContactName] = useState(contactName || "");
+  const [localContactEmail, setLocalContactEmail] = useState(contactEmail || "");
+  const [localContactPhone, setLocalContactPhone] = useState(contactPhone || "");
+  const [localAddress, setLocalAddress] = useState(location || "");
+  const [useProjectAddress, setUseProjectAddress] = useState(location === projectAddress && !!projectAddress);
+
+  // Sync local state with props
+  useEffect(() => {
+    setLocalContactName(contactName || "");
+    setLocalContactEmail(contactEmail || "");
+    setLocalContactPhone(contactPhone || "");
+    setLocalAddress(location || "");
+  }, [contactName, contactEmail, contactPhone, location]);
 
   const toggleUser = (userId: string) => {
     const newIds = assignedUserIds.includes(userId)
@@ -66,6 +91,28 @@ export function SiteVisitAssignment({
       .slice(0, 2);
   };
 
+  const handleUseProjectAddress = (checked: boolean) => {
+    setUseProjectAddress(checked);
+    if (checked && projectAddress) {
+      setLocalAddress(projectAddress);
+      onContactChange?.({
+        name: localContactName || null,
+        email: localContactEmail || null,
+        phone: localContactPhone || null,
+        address: projectAddress,
+      });
+    }
+  };
+
+  const handleContactBlur = () => {
+    onContactChange?.({
+      name: localContactName || null,
+      email: localContactEmail || null,
+      phone: localContactPhone || null,
+      address: localAddress || null,
+    });
+  };
+
   const handleAddToCalendar = async () => {
     if (!siteVisitDate) return;
 
@@ -74,12 +121,12 @@ export function SiteVisitAssignment({
       await syncSiteVisit({
         id: tenderId,
         title: tenderTitle,
-        location: location,
+        location: localAddress || location,
         site_visit_date: siteVisitDate,
         site_visit_required: siteVisitRequired ?? false,
-        site_visit_contact_name: contactName,
-        site_visit_contact_email: contactEmail,
-        site_visit_contact_phone: contactPhone,
+        site_visit_contact_name: localContactName || contactName,
+        site_visit_contact_email: localContactEmail || contactEmail,
+        site_visit_contact_phone: localContactPhone || contactPhone,
         site_visit_assigned_users: assignedUserIds,
       });
       setAddedToCalendar(true);
@@ -89,7 +136,84 @@ export function SiteVisitAssignment({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {/* Contact MOA Section */}
+      <div className="space-y-3">
+        <Label className="text-sm font-medium text-muted-foreground">
+          Contact MOA pour la visite
+        </Label>
+        
+        <div className="grid gap-3">
+          <div className="relative">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Nom du contact"
+              value={localContactName}
+              onChange={(e) => setLocalContactName(e.target.value)}
+              onBlur={handleContactBlur}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="email"
+              placeholder="Email du contact"
+              value={localContactEmail}
+              onChange={(e) => setLocalContactEmail(e.target.value)}
+              onBlur={handleContactBlur}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="tel"
+              placeholder="Téléphone du contact"
+              value={localContactPhone}
+              onChange={(e) => setLocalContactPhone(e.target.value)}
+              onBlur={handleContactBlur}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Adresse de la visite"
+                value={localAddress}
+                onChange={(e) => {
+                  setLocalAddress(e.target.value);
+                  setUseProjectAddress(false);
+                }}
+                onBlur={handleContactBlur}
+                className="pl-10"
+                disabled={useProjectAddress}
+              />
+            </div>
+            {projectAddress && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="use-project-address"
+                  checked={useProjectAddress}
+                  onCheckedChange={handleUseProjectAddress}
+                />
+                <label
+                  htmlFor="use-project-address"
+                  className="text-xs text-muted-foreground cursor-pointer"
+                >
+                  Utiliser l'adresse du projet
+                </label>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Participants Section */}
       <div className="flex items-center justify-between">
         <Label className="flex items-center gap-2">
           <Users className="h-4 w-4 text-muted-foreground" />
