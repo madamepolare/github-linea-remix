@@ -39,8 +39,7 @@ export function PipelineEntrySidebar({
   onUpdateNotes 
 }: PipelineEntrySidebarProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { currentWorkspace } = useWorkspace();
+  const { user, activeWorkspace } = useAuth();
   
   const [composeOpen, setComposeOpen] = useState(false);
   const [actionFormOpen, setActionFormOpen] = useState(false);
@@ -73,9 +72,9 @@ export function PipelineEntrySidebar({
     completeAction,
     deleteAction,
     isCreating 
-  } = usePipelineActions(entry?.id, currentWorkspace?.id);
+  } = usePipelineActions(entry?.id, activeWorkspace?.id);
 
-  const { activities } = useEntityActivities(entityType, entityId, currentWorkspace?.id);
+  const { activities } = useEntityActivities(entityType, entityId, activeWorkspace?.id);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -118,9 +117,9 @@ export function PipelineEntrySidebar({
 
   const handleEmailSent = async () => {
     // Log activity
-    if (currentWorkspace?.id && entityId) {
+    if (activeWorkspace?.id && entityId) {
       await logEntityActivity(
-        currentWorkspace.id,
+        activeWorkspace.id,
         user?.id,
         {
           entity_type: entityType,
@@ -145,9 +144,9 @@ export function PipelineEntrySidebar({
     createAction(input);
     
     // Log activity
-    if (currentWorkspace?.id && entityId) {
+    if (activeWorkspace?.id && entityId) {
       await logEntityActivity(
-        currentWorkspace.id,
+        activeWorkspace.id,
         user?.id,
         {
           entity_type: entityType,
@@ -170,9 +169,9 @@ export function PipelineEntrySidebar({
     completeAction(actionId);
     
     // Log activity
-    if (currentWorkspace?.id && entityId && action) {
+    if (activeWorkspace?.id && entityId && action) {
       await logEntityActivity(
-        currentWorkspace.id,
+        activeWorkspace.id,
         user?.id,
         {
           entity_type: entityType,
