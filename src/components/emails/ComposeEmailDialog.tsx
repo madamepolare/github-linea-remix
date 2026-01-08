@@ -40,8 +40,8 @@ export function ComposeEmailDialog({
   onSuccess,
 }: ComposeEmailDialogProps) {
   const gmailConnection = useGmailConnection();
-  const { templates } = useEmailTemplates();
-  const { contacts } = useContacts();
+  const { templates = [] } = useEmailTemplates();
+  const { contacts = [] } = useContacts();
 
   const gmailStatus = { connected: gmailConnection.connected, email: gmailConnection.email };
   const gmailLoading = gmailConnection.isLoading;
@@ -74,7 +74,7 @@ export function ComposeEmailDialog({
 
   // Contact autocomplete
   useEffect(() => {
-    if (toInput.length >= 2) {
+    if (toInput.length >= 2 && contacts) {
       const filtered = contacts.filter(c => 
         c.email && (
           c.email.toLowerCase().includes(toInput.toLowerCase()) ||
