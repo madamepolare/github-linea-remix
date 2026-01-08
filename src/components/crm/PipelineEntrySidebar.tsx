@@ -270,23 +270,89 @@ export function PipelineEntrySidebar({
               </Button>
             </div>
 
-            {/* Alert badges */}
-            {(overdueCount > 0 || stats.unread > 0) && (
-              <div className="flex gap-2 mt-3 pt-3 border-t">
-                {overdueCount > 0 && (
-                  <Badge variant="destructive" className="gap-1">
-                    <AlertTriangle className="h-3 w-3" />
-                    {overdueCount} action{overdueCount > 1 ? 's' : ''} en retard
-                  </Badge>
-                )}
-                {stats.unread > 0 && (
-                  <Badge variant="default" className="gap-1">
-                    <Mail className="h-3 w-3" />
-                    {stats.unread} email{stats.unread > 1 ? 's' : ''} non lu{stats.unread > 1 ? 's' : ''}
-                  </Badge>
-                )}
-              </div>
-            )}
+            {/* Alert section */}
+            <div className="mt-3 pt-3 border-t space-y-2">
+              {/* No actions planned alert */}
+              {pendingCount === 0 && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
+                      Aucune action prévue
+                    </p>
+                    <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                      Planifiez une relance pour ne pas perdre ce contact
+                    </p>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-7 text-xs border-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+                    onClick={() => setActionFormOpen(true)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Planifier
+                  </Button>
+                </div>
+              )}
+
+              {/* Overdue actions alert */}
+              {overdueCount > 0 && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
+                  <AlertTriangle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-red-800 dark:text-red-200">
+                      {overdueCount} action{overdueCount > 1 ? 's' : ''} en retard !
+                    </p>
+                    <p className="text-[10px] text-red-700 dark:text-red-300">
+                      À traiter immédiatement
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Urgent upcoming action alert */}
+              {pendingCount > 0 && overdueCount === 0 && (() => {
+                const upcomingUrgent = actions.find(a => {
+                  if (a.status !== 'pending' || !a.due_date) return false;
+                  const hoursUntil = (new Date(a.due_date).getTime() - Date.now()) / (1000 * 60 * 60);
+                  return hoursUntil > 0 && hoursUntil <= 24;
+                });
+                
+                if (!upcomingUrgent) return null;
+                
+                const hoursUntil = Math.round((new Date(upcomingUrgent.due_date!).getTime() - Date.now()) / (1000 * 60 * 60));
+                
+                return (
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
+                    <Clock className="h-4 w-4 text-orange-600 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-orange-800 dark:text-orange-200">
+                        Action urgente : {upcomingUrgent.title}
+                      </p>
+                      <p className="text-[10px] text-orange-700 dark:text-orange-300">
+                        Dans {hoursUntil}h - À faire aujourd'hui
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Unread emails badge */}
+              {stats.unread > 0 && (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+                  <Mail className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-green-800 dark:text-green-200">
+                      {stats.unread} réponse{stats.unread > 1 ? 's' : ''} client non lue{stats.unread > 1 ? 's' : ''}
+                    </p>
+                    <p className="text-[10px] text-green-700 dark:text-green-300">
+                      À consulter et répondre
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </SheetHeader>
 
           <Tabs defaultValue="emails" className="flex-1 flex flex-col overflow-hidden">

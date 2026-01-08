@@ -13,10 +13,15 @@ import {
   Plus, 
   MoreHorizontal,
   Calendar,
-  Send
+  Send,
+  AlertTriangle,
+  Clock,
+  CheckCircle
 } from "lucide-react";
 import { Pipeline, PipelineStage } from "@/hooks/useCRMPipelines";
 import { useContactPipeline, PipelineEntry } from "@/hooks/useContactPipeline";
+import { usePipelineActions } from "@/hooks/usePipelineActions";
+import { useAuth } from "@/contexts/AuthContext";
 import { PipelineEmailModal } from "./PipelineEmailModal";
 import { BulkAddToPipelineDialog } from "./BulkAddToPipelineDialog";
 import { PipelineEntrySidebar } from "./PipelineEntrySidebar";
@@ -26,8 +31,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { format } from "date-fns";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { format, differenceInHours, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export interface ContactPipelineProps {
   pipeline: Pipeline;
@@ -224,7 +235,7 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
   );
 }
 
-// Entry Card Component
+// Entry Card Component with action alerts
 function EntryCard({
   entry,
   onRemove,
@@ -234,13 +245,36 @@ function EntryCard({
   onRemove: () => void;
   onClick: () => void;
 }) {
+  const { activeWorkspace } = useAuth();
+  const { actions, pendingCount, overdueCount } = usePipelineActions(entry.id, activeWorkspace?.id);
+  
   const isContact = !!entry.contact;
   const entity = entry.contact || entry.company;
   const name = entity?.name || "Sans nom";
   const email = isContact ? entry.contact?.email : entry.company?.email;
 
+  // Check for urgent upcoming action (within 24h)
+  const urgentAction = actions.find(a => {
+    if (a.status !== 'pending' || !a.due_date) return false;
+    const hoursUntil = differenceInHours(new Date(a.due_date), new Date());
+    return hoursUntil > 0 && hoursUntil <= 24;
+  });
+
+  // Determine alert state
+  const hasOverdue = overdueCount > 0;
+  const hasNoActions = pendingCount === 0;
+  const hasUrgent = !!urgentAction && !hasOverdue;
+
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
+    <Card 
+      className={cn(
+        "shadow-sm hover:shadow-md transition-shadow cursor-pointer",
+        hasOverdue && "border-red-500 border-l-4",
+        hasNoActions && !hasOverdue && "border-amber-500 border-l-4",
+        hasUrgent && !hasOverdue && !hasNoActions && "border-orange-500 border-l-4"
+      )} 
+      onClick={onClick}
+    >
       <CardContent className="p-3">
         <div className="flex items-start gap-3">
           <Avatar className="h-9 w-9">
@@ -286,21 +320,80 @@ function EntryCard({
             )}
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={onRemove}
-              >
-                Retirer du pipeline
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Alert indicators */}
+          <div className="flex flex-col items-end gap-1">
+            {hasOverdue && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="destructive" className="h-5 px-1.5 gap-0.5">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span className="text-[10px]">{overdueCount}</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {overdueCount} action{overdueCount > 1 ? 's' : ''} en retard
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {hasNoActions && !hasOverdue && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="h-5 px-1.5 border-amber-500 text-amber-600">
+                    <Clock className="h-3 w-3" />
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Aucune action planifiée
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {hasUrgent && !hasOverdue && !hasNoActions && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="h-5 px-1.5 border-orange-500 text-orange-600">
+                    <AlertTriangle className="h-3 w-3" />
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Action urgente aujourd'hui
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {pendingCount > 0 && !hasOverdue && !hasUrgent && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="h-5 px-1.5 text-green-600 border-green-500">
+                    <CheckCircle className="h-3 w-3" />
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {pendingCount} action{pendingCount > 1 ? 's' : ''} planifiée{pendingCount > 1 ? 's' : ''}
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove();
+                  }}
+                >
+                  Retirer du pipeline
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
         
         {/* Notes preview */}
