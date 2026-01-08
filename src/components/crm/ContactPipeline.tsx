@@ -19,6 +19,7 @@ import { Pipeline, PipelineStage } from "@/hooks/useCRMPipelines";
 import { useContactPipeline, PipelineEntry } from "@/hooks/useContactPipeline";
 import { PipelineEmailModal } from "./PipelineEmailModal";
 import { BulkAddToPipelineDialog } from "./BulkAddToPipelineDialog";
+import { PipelineEntrySidebar } from "./PipelineEntrySidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,11 +35,13 @@ export interface ContactPipelineProps {
 }
 
 export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: ContactPipelineProps) {
-  const { entries, isLoading, moveEntry, removeEntry } = useContactPipeline(pipeline.id);
+  const { entries, isLoading, moveEntry, removeEntry, updateEntryNotes } = useContactPipeline(pipeline.id);
   const [selectedEntry, setSelectedEntry] = useState<PipelineEntry | null>(null);
   const [targetStage, setTargetStage] = useState<PipelineStage | null>(null);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
+  const [sidebarEntry, setSidebarEntry] = useState<PipelineEntry | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Group entries by stage
   const entriesByStage = useMemo(() => {
@@ -172,6 +175,10 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
                             <EntryCard
                               entry={entry}
                               onRemove={() => removeEntry.mutate(entry.id)}
+                              onClick={() => {
+                                setSidebarEntry(entry);
+                                setSidebarOpen(true);
+                              }}
                             />
                           </div>
                         )}
@@ -203,6 +210,16 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
         onOpenChange={setBulkAddOpen}
         pipeline={pipeline}
       />
+
+      {/* Entry Detail Sidebar */}
+      <PipelineEntrySidebar
+        entry={sidebarEntry}
+        open={sidebarOpen}
+        onOpenChange={setSidebarOpen}
+        onUpdateNotes={(entryId, notes) => {
+          updateEntryNotes?.mutate({ entryId, notes });
+        }}
+      />
     </div>
   );
 }
@@ -211,9 +228,11 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
 function EntryCard({
   entry,
   onRemove,
+  onClick,
 }: {
   entry: PipelineEntry;
   onRemove: () => void;
+  onClick: () => void;
 }) {
   const isContact = !!entry.contact;
   const entity = entry.contact || entry.company;
@@ -221,7 +240,7 @@ function EntryCard({
   const email = isContact ? entry.contact?.email : entry.company?.email;
 
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow">
+    <Card className="shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={onClick}>
       <CardContent className="p-3">
         <div className="flex items-start gap-3">
           <Avatar className="h-9 w-9">
