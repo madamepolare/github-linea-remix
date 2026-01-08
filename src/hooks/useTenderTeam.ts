@@ -19,7 +19,11 @@ export function useTenderTeam(tenderId: string | undefined) {
         .select(`
           *,
           company:crm_companies(id, name, logo_url),
-          contact:contacts(id, name, email)
+          contact:contacts(id, name, email),
+          parent_member:tender_team_members!tender_team_members_parent_member_id_fkey(
+            id,
+            company:crm_companies(id, name)
+          )
         `)
         .eq("tender_id", tenderId)
         .order("created_at");
@@ -140,6 +144,8 @@ export function useTenderTeam(tenderId: string | undefined) {
       company_id?: string;
       contact_id?: string;
       notes?: string;
+      parent_member_id?: string;
+      fee_percentage?: number;
     }) => {
       if (!tenderId) throw new Error("No tender ID");
 
@@ -152,12 +158,18 @@ export function useTenderTeam(tenderId: string | undefined) {
           company_id: member.company_id || null,
           contact_id: member.contact_id || null,
           notes: member.notes || null,
+          parent_member_id: member.parent_member_id || null,
+          fee_percentage: member.fee_percentage || null,
           status: "pending",
         } as any)
         .select(`
           *,
           company:crm_companies(id, name, logo_url),
-          contact:contacts(id, name, email)
+          contact:contacts(id, name, email),
+          parent_member:tender_team_members!tender_team_members_parent_member_id_fkey(
+            id,
+            company:crm_companies(id, name)
+          )
         `)
         .single();
 

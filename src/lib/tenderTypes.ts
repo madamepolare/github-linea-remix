@@ -354,6 +354,8 @@ export interface TenderTeamMember {
   responded_at: string | null;
   notes: string | null;
   created_at: string;
+  parent_member_id: string | null;
+  fee_percentage: number | null;
   company?: {
     id: string;
     name: string;
@@ -364,6 +366,13 @@ export interface TenderTeamMember {
     name: string;
     email: string | null;
   };
+  parent_member?: {
+    id: string;
+    company: {
+      id: string;
+      name: string;
+    } | null;
+  }[] | null;
 }
 
 export interface TenderDeliverable {
