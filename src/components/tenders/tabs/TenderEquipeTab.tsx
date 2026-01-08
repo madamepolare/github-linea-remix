@@ -878,7 +878,11 @@ Cordialement`);
             </Button>
             <Button 
               onClick={handleAddTeamMember} 
-              disabled={!newTeamMember.specialty || addTeamMember.isPending}
+              disabled={
+                !newTeamMember.specialty || 
+                addTeamMember.isPending ||
+                (newTeamMember.role === 'sous_traitant' && !newTeamMember.parent_member_id)
+              }
             >
               Ajouter à l'équipe
             </Button>
@@ -1049,6 +1053,33 @@ Cordialement`);
                 </div>
               </div>
 
+              {/* Parent member selection for subcontractors in edit dialog */}
+              {editingTeamMember.role === 'sous_traitant' && (
+                <div className="space-y-2">
+                  <Label>Sous-traitant de *</Label>
+                  <Select
+                    value={editingTeamMember.parent_member_id || ''}
+                    onValueChange={(v) => setEditingTeamMember({ ...editingTeamMember, parent_member_id: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner le membre du groupement" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teamMembers
+                        .filter(m => m.id !== editingTeamMember.id && (m.role === 'mandataire' || m.role === 'cotraitant'))
+                        .map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.company?.name || 'Sans nom'} ({TEAM_ROLE_LABELS[m.role]})
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Indiquez de quel membre du groupement ce sous-traitant dépend
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Notes</Label>
                 <Textarea
@@ -1064,13 +1095,16 @@ Cordialement`);
             <Button variant="outline" onClick={() => setEditingTeamMember(null)}>
               Annuler
             </Button>
-            <Button onClick={() => {
+            <Button 
+              disabled={editingTeamMember?.role === 'sous_traitant' && !editingTeamMember?.parent_member_id}
+              onClick={() => {
               if (editingTeamMember) {
                 updateTeamMember.mutate({
                   id: editingTeamMember.id,
                   specialty: editingTeamMember.specialty,
                   role: editingTeamMember.role,
                   notes: editingTeamMember.notes,
+                  parent_member_id: editingTeamMember.parent_member_id || null,
                 });
                 setEditingTeamMember(null);
               }
