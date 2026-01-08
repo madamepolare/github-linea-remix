@@ -67,7 +67,7 @@ export const TENDER_TABS: EntityTab[] = [
   { key: "calendrier", label: "Calendrier", icon: Calendar },
   { key: "analyse", label: "Analyse IA", icon: Brain },
   { key: "emails", label: "Emails", icon: Mail },
-  { key: "documents", label: "Documents", icon: FolderOpen },
+  { key: "documents", label: "DCE", icon: FolderOpen },
   { key: "livrables", label: "Livrables", icon: CheckSquare },
   { key: "equipe", label: "Équipe", icon: Users },
   { key: "memoire", label: "Mémoire", icon: PenTool },
