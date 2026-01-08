@@ -43,7 +43,7 @@ interface TenderTeamTabProps {
 }
 
 export function TenderTeamTab({ tenderId }: TenderTeamTabProps) {
-  const { teamMembers, teamByRole, isLoading, addTeamMember, removeTeamMember, sendInvitation } = useTenderTeam(tenderId);
+  const { teamMembers, teamByRole, isLoading, addTeamMember, updateTeamMember, removeTeamMember, sendInvitation } = useTenderTeam(tenderId);
   const { companies } = useCRMCompanies();
   const { contacts } = useContacts();
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -165,6 +165,26 @@ Cordialement`,
                     )}
                   </div>
                   <div className="flex items-center gap-1">
+                    <Select
+                      value={member.role}
+                      onValueChange={(newRole) => {
+                        updateTeamMember.mutate({ 
+                          id: member.id, 
+                          role: newRole as TenderTeamRole 
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="h-7 w-auto text-xs border-0 bg-transparent hover:bg-muted px-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(TEAM_ROLE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value} className="text-xs">
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <StatusBadge status={member.status} />
                     {member.contact?.email && member.status === 'pending' && (
                       <Button

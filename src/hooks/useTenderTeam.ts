@@ -30,9 +30,9 @@ export function useTenderTeam(tenderId: string | undefined) {
     enabled: !!tenderId,
   });
 
-  // Auto-add "nous" (own company) as mandataire if team is empty
+  // Auto-add "nous" (own company) as default team member if team is empty
   useEffect(() => {
-    const addOwnCompanyAsMandataire = async () => {
+    const addOwnCompanyToTeam = async () => {
       if (!tenderId || !activeWorkspace?.id || isLoading || teamMembers.length > 0) return;
 
       // Check or create CRM company for our workspace
@@ -64,19 +64,19 @@ export function useTenderTeam(tenderId: string | undefined) {
         companyId = newCompany.id;
       }
 
-      // Add as mandataire
+      // Add as cotraitant by default (can be changed to mandataire later)
       const { error: addError } = await supabase
         .from("tender_team_members")
         .insert({
           tender_id: tenderId,
-          role: "mandataire",
+          role: "cotraitant",
           specialty: "architecte",
           company_id: companyId,
           status: "accepted",
         } as any);
 
       if (addError) {
-        console.error("Error adding mandataire:", addError);
+        console.error("Error adding team member:", addError);
         return;
       }
 
@@ -84,7 +84,7 @@ export function useTenderTeam(tenderId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ["tender-team", tenderId] });
     };
 
-    addOwnCompanyAsMandataire();
+    addOwnCompanyToTeam();
   }, [tenderId, activeWorkspace, isLoading, teamMembers.length, queryClient]);
 
   const addTeamMember = useMutation({
