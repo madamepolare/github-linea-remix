@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.ai-workflow-planning]
 verify_jwt = false
+
+[functions.analyze-deliverables]
+verify_jwt = false

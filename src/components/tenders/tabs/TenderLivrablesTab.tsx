@@ -1,25 +1,16 @@
 import { useState } from "react";
 import {
   Plus,
-  Trash2,
-  CheckCircle2,
-  Circle,
-  AlertTriangle,
   FileCheck,
-  Calendar,
-  Users,
-  Download,
   Loader2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -35,18 +26,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useTenderDeliverables } from "@/hooks/useTenderDeliverables";
 import { useTenderTeam } from "@/hooks/useTenderTeam";
-import { DELIVERABLE_TYPES, REQUIRED_DOCUMENT_TYPES } from "@/lib/tenderTypes";
+import { DELIVERABLE_TYPES } from "@/lib/tenderTypes";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { DeliverableQuickAdd } from "../deliverables/DeliverableQuickAdd";
+import { DeliverableAIExtract } from "../deliverables/DeliverableAIExtract";
+import { DeliverableMemberGrid } from "../deliverables/DeliverableMemberGrid";
 
 interface TenderLivrablesTabProps {
   tenderId: string;
@@ -61,9 +52,17 @@ const RESPONSIBLE_TYPES = [
 ];
 
 export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
-  const { deliverables, isLoading, addDeliverable, updateDeliverable, deleteDeliverable } = useTenderDeliverables(tenderId);
+  const { 
+    deliverables, 
+    isLoading, 
+    addDeliverable, 
+    toggleMemberComplete,
+    deleteDeliverable 
+  } = useTenderDeliverables(tenderId);
   const { teamMembers } = useTenderTeam(tenderId);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(true);
+  const [showAIExtract, setShowAIExtract] = useState(false);
   const [newDeliverable, setNewDeliverable] = useState({
     deliverable_type: '',
     name: '',
@@ -71,18 +70,54 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
     due_date: '',
   });
 
-  // Calculate progress
-  const completedCount = deliverables.filter(d => d.is_completed).length;
-  const totalCount = deliverables.length;
-  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  // Calculate overall progress based on member completion
+  const calculateProgress = () => {
+    if (deliverables.length === 0) return 0;
+    
+    const companies = teamMembers
+      .filter(m => m.company?.id)
+      .reduce((acc, m) => {
+        if (!acc.find(c => c.id === m.company?.id)) {
+          acc.push({
+            id: m.company!.id,
+            isMandataire: m.role === "mandataire",
+          });
+        }
+        return acc;
+      }, [] as { id: string; isMandataire: boolean }[]);
 
-  // Check for missing mandatory documents
-  const allMandatoryTypes = [
-    ...REQUIRED_DOCUMENT_TYPES.candidature.filter(d => d.mandatory).map(d => d.value),
-    ...REQUIRED_DOCUMENT_TYPES.offre.filter(d => d.mandatory).map(d => d.value),
-  ];
+    if (companies.length === 0) {
+      // Fallback to is_completed if no team
+      const completed = deliverables.filter(d => d.is_completed).length;
+      return Math.round((completed / deliverables.length) * 100);
+    }
+
+    let totalChecks = 0;
+    let completedChecks = 0;
+
+    for (const d of deliverables) {
+      const memberCompletion = (d.member_completion || {}) as Record<string, boolean>;
+      
+      for (const company of companies) {
+        const shouldCheck = 
+          d.responsible_type === "tous" ||
+          (d.responsible_type === "mandataire" && company.isMandataire) ||
+          (d.responsible_type === "cotraitant" && !company.isMandataire);
+        
+        if (shouldCheck) {
+          totalChecks++;
+          if (memberCompletion[company.id]) {
+            completedChecks++;
+          }
+        }
+      }
+    }
+
+    return totalChecks > 0 ? Math.round((completedChecks / totalChecks) * 100) : 0;
+  };
+
+  const progressPercent = calculateProgress();
   const existingTypes = deliverables.map(d => d.deliverable_type);
-  const missingMandatory = allMandatoryTypes.filter(type => !existingTypes.includes(type));
 
   const handleAdd = () => {
     if (!newDeliverable.deliverable_type && !newDeliverable.name) {
@@ -108,218 +143,119 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
     });
   };
 
-  const handleToggleComplete = (id: string, currentValue: boolean) => {
-    updateDeliverable.mutate({ id, is_completed: !currentValue });
+  const handleQuickAdd = (item: { deliverable_type: string; name: string; responsible_type: string }) => {
+    addDeliverable.mutate(item);
   };
 
-  // Load default FR deliverables
-  const handleLoadDefaults = () => {
-    const allDefaults = [
-      ...REQUIRED_DOCUMENT_TYPES.candidature.map(d => ({
-        deliverable_type: d.value,
-        name: d.label,
-        responsible_type: 'mandataire',
-        is_mandatory: d.mandatory,
-      })),
-      ...REQUIRED_DOCUMENT_TYPES.offre.map(d => ({
-        deliverable_type: d.value,
-        name: d.label,
-        responsible_type: d.value === 'memoire_technique' ? 'tous' : 'mandataire',
-        is_mandatory: d.mandatory,
-      })),
-    ];
-
-    // Only add those not already present
-    const toAdd = allDefaults.filter(d => !existingTypes.includes(d.deliverable_type));
-    
-    if (toAdd.length === 0) {
-      toast.info("Tous les livrables par défaut sont déjà présents");
-      return;
-    }
-
-    toAdd.forEach(d => {
-      addDeliverable.mutate({
-        deliverable_type: d.deliverable_type,
-        name: d.name,
-        responsible_type: d.responsible_type,
-      });
+  const handleAIImport = (items: { deliverable_type: string; name: string; responsible_type: string }[]) => {
+    items.forEach(item => {
+      addDeliverable.mutate(item);
     });
-
-    toast.success(`${toAdd.length} livrable${toAdd.length > 1 ? 's' : ''} ajouté${toAdd.length > 1 ? 's' : ''}`);
+    toast.success(`${items.length} livrable${items.length > 1 ? 's' : ''} importé${items.length > 1 ? 's' : ''}`);
   };
 
-  const getResponsibleBadge = (type: string) => {
-    const config: Record<string, { label: string; className: string }> = {
-      mandataire: { label: 'Mandataire', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
-      tous: { label: 'Tous', className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
-      cotraitant: { label: 'Cotraitant', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
-      sous_traitant: { label: 'Sous-traitant', className: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400' },
-    };
-    const c = config[type] || config.mandataire;
-    return <Badge variant="outline" className={cn("text-xs", c.className)}>{c.label}</Badge>;
+  const handleToggleMemberComplete = (deliverableId: string, companyId: string, currentValue: boolean) => {
+    toggleMemberComplete.mutate({ deliverableId, companyId, currentValue });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Missing Mandatory Warning */}
-      {missingMandatory.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
-          <CardContent className="pt-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                  {missingMandatory.length} pièce{missingMandatory.length > 1 ? 's' : ''} réglementaire{missingMandatory.length > 1 ? 's' : ''} manquante{missingMandatory.length > 1 ? 's' : ''}
-                </p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {missingMandatory.slice(0, 5).map(type => {
-                    const docType = [...REQUIRED_DOCUMENT_TYPES.candidature, ...REQUIRED_DOCUMENT_TYPES.offre]
-                      .find(d => d.value === type);
-                    return (
-                      <Badge key={type} variant="outline" className="border-amber-400 text-amber-700 dark:text-amber-300">
-                        {docType?.label || type}
-                      </Badge>
-                    );
-                  })}
-                  {missingMandatory.length > 5 && (
-                    <Badge variant="outline" className="border-amber-400 text-amber-700">
-                      +{missingMandatory.length - 5} autres
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Progress Card */}
-      <Card>
+      <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
               <FileCheck className="h-5 w-5" />
               Progression des livrables
             </CardTitle>
-            <span className="text-2xl font-bold">{progressPercent}%</span>
+            <span className={cn(
+              "text-3xl font-bold tabular-nums",
+              progressPercent === 100 ? "text-green-600" : "text-foreground"
+            )}>
+              {progressPercent}%
+            </span>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Progress value={progressPercent} className="h-3" />
+          <Progress 
+            value={progressPercent} 
+            className={cn(
+              "h-4",
+              progressPercent === 100 && "[&>div]:bg-green-500"
+            )} 
+          />
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{completedCount} / {totalCount} livrables validés</span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLoadDefaults}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Charger liste FR
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => setShowAddDialog(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter
-              </Button>
-            </div>
+            <span>{deliverables.length} livrables</span>
+            <Button
+              size="sm"
+              onClick={() => setShowAddDialog(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter manuellement
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Deliverables Table */}
+      {/* Quick Add Section */}
+      <Collapsible open={showQuickAdd} onOpenChange={setShowQuickAdd}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" className="w-full justify-between px-4 py-2 h-auto">
+            <span className="text-sm font-medium">⚡ Ajout rapide</span>
+            {showQuickAdd ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2">
+          <DeliverableQuickAdd
+            existingTypes={existingTypes}
+            onAdd={handleQuickAdd}
+            isLoading={addDeliverable.isPending}
+          />
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* AI Extract Section */}
+      <Collapsible open={showAIExtract} onOpenChange={setShowAIExtract}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" className="w-full justify-between px-4 py-2 h-auto">
+            <span className="text-sm font-medium">🤖 Extraction IA depuis le RC</span>
+            {showAIExtract ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2">
+          <DeliverableAIExtract
+            existingTypes={existingTypes}
+            onImport={handleAIImport}
+          />
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Main Grid */}
       {deliverables.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <FileCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">Aucun livrable défini</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Ajoutez les pièces à fournir pour ce concours
+              Utilisez les boutons rapides ci-dessus ou importez depuis le RC
             </p>
-            <Button 
-              className="mt-4"
-              onClick={handleLoadDefaults}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Charger la liste marchés publics FR
-            </Button>
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">Fait</TableHead>
-                <TableHead>Livrable</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Responsable</TableHead>
-                <TableHead>Échéance</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {deliverables.map((deliverable) => (
-                <TableRow 
-                  key={deliverable.id}
-                  className={cn(deliverable.is_completed && "bg-green-50/50 dark:bg-green-950/10")}
-                >
-                  <TableCell>
-                    <Checkbox
-                      checked={deliverable.is_completed}
-                      onCheckedChange={() => handleToggleComplete(deliverable.id, deliverable.is_completed)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {deliverable.is_completed ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Circle className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      <span className={cn(
-                        "font-medium",
-                        deliverable.is_completed && "line-through text-muted-foreground"
-                      )}>
-                        {deliverable.name}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="text-xs">
-                      {DELIVERABLE_TYPES.find(t => t.value === deliverable.deliverable_type)?.label || deliverable.deliverable_type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {getResponsibleBadge(deliverable.responsible_type)}
-                  </TableCell>
-                  <TableCell>
-                    {deliverable.due_date ? (
-                      <span className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(deliverable.due_date), "d MMM", { locale: fr })}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => deleteDeliverable.mutate(deliverable.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+        <DeliverableMemberGrid
+          deliverables={deliverables}
+          teamMembers={teamMembers}
+          onToggleMemberComplete={handleToggleMemberComplete}
+          onDelete={(id) => deleteDeliverable.mutate(id)}
+        />
       )}
 
       {/* Add Deliverable Dialog */}

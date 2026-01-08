@@ -5824,6 +5824,7 @@ export type Database = {
           file_urls: string[] | null
           id: string
           is_completed: boolean | null
+          member_completion: Json | null
           name: string
           responsible_company_ids: string[] | null
           responsible_type: string | null
@@ -5838,6 +5839,7 @@ export type Database = {
           file_urls?: string[] | null
           id?: string
           is_completed?: boolean | null
+          member_completion?: Json | null
           name: string
           responsible_company_ids?: string[] | null
           responsible_type?: string | null
@@ -5852,6 +5854,7 @@ export type Database = {
           file_urls?: string[] | null
           id?: string
           is_completed?: boolean | null
+          member_completion?: Json | null
           name?: string
           responsible_company_ids?: string[] | null
           responsible_type?: string | null
