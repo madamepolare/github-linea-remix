@@ -11,6 +11,7 @@ import {
   Loader2,
   Users,
   AlertCircle,
+  Settings,
 } from "lucide-react";
 import {
   Dialog,
@@ -38,6 +39,9 @@ import {
 import type { PartnerCandidate } from "@/hooks/useTenderPartnerCandidates";
 import type { Tender } from "@/lib/tenderTypes";
 import { SPECIALTIES, PROCEDURE_TYPE_LABELS } from "@/lib/tenderTypes";
+import { useGmailConnection } from "@/hooks/useGmailConnection";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 interface BulkInvitationDialogProps {
   open: boolean;
@@ -61,6 +65,7 @@ export function BulkInvitationDialog({
   onSend,
   isSending = false,
 }: BulkInvitationDialogProps) {
+  const gmailConnection = useGmailConnection();
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [includeFeesProposal, setIncludeFeesProposal] = useState(true);
@@ -141,13 +146,56 @@ Cordialement`;
   };
 
   const handleSend = async () => {
-    await onSend({
-      candidateIds: selectedIds,
-      subject,
-      body,
-      includeFeesProposal,
-    });
-    onOpenChange(false);
+    // If Gmail is connected, send via Gmail for each candidate
+    if (gmailConnection.connected) {
+      const selectedCandidates = validCandidates.filter(c => selectedIds.includes(c.id));
+      let successCount = 0;
+      
+      for (const candidate of selectedCandidates) {
+        const email = candidate.contact?.email;
+        if (!email) continue;
+        
+        try {
+          let personalizedBody = body;
+          if (includeFeesProposal && candidate.fee_percentage) {
+            personalizedBody += `\n\n────────────────────────\n📊 PROPOSITION D'HONORAIRES\n────────────────────────\nVotre part proposée : ${candidate.fee_percentage}%`;
+            if (tender.estimated_budget) {
+              const amount = (tender.estimated_budget * candidate.fee_percentage / 100);
+              personalizedBody += `\nMontant estimé : ${amount.toLocaleString('fr-FR')}€ HT`;
+            }
+          }
+          
+          await gmailConnection.sendEmail({
+            to: email,
+            subject,
+            body: personalizedBody.replace(/\n/g, "<br>"),
+            tenderId: tender.id,
+            contactId: candidate.contact_id || undefined,
+            companyId: candidate.company_id || undefined,
+          });
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to send to ${email}:`, error);
+        }
+      }
+      
+      if (successCount > 0) {
+        toast.success(`${successCount} invitation(s) envoyée(s) via Gmail`);
+      }
+      if (successCount < selectedIds.length) {
+        toast.error(`${selectedIds.length - successCount} envoi(s) échoué(s)`);
+      }
+      onOpenChange(false);
+    } else {
+      // Fall back to original onSend
+      await onSend({
+        candidateIds: selectedIds,
+        subject,
+        body,
+        includeFeesProposal,
+      });
+      onOpenChange(false);
+    }
   };
 
   return (
@@ -157,8 +205,25 @@ Cordialement`;
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
             Envoyer les invitations
+            {gmailConnection.connected && (
+              <Badge variant="outline" className="ml-2 text-xs">via Gmail</Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
+
+        {!gmailConnection.connected && (
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex items-start gap-2 mx-6">
+            <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 text-sm">
+              <p className="text-amber-800 dark:text-amber-200">
+                Gmail non connecté - les emails seront envoyés via Resend
+              </p>
+              <Button asChild variant="link" size="sm" className="h-auto p-0 text-amber-700">
+                <Link to="/settings?tab=emails">Connecter Gmail</Link>
+              </Button>
+            </div>
+          </div>
+        )}
 
         <ScrollArea className="flex-1 -mx-6 px-6">
           <div className="space-y-6 py-4">

@@ -195,6 +195,8 @@ export function ComposeEmailDialog({
         contactId: entityContext.contactId,
         companyId: entityContext.companyId,
         leadId: entityContext.leadId,
+        projectId: entityContext.projectId,
+        tenderId: entityContext.tenderId,
       });
 
       toast.success("Email envoyé avec succès");
