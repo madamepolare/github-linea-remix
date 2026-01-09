@@ -20,15 +20,15 @@ import {
 } from "@/components/ui/select";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjectMembers } from "@/hooks/useProjects";
+import { useProjectTypeSettings, getDisciplineIcon } from "@/hooks/useProjectTypeSettings";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { MultiAssigneePicker } from "@/components/tasks/MultiAssigneePicker";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
-import { PROJECT_TYPES, ProjectType } from "@/lib/projectTypes";
+import { ProjectType } from "@/lib/projectTypes";
+import * as LucideIcons from "lucide-react";
 import {
   Building2,
-  Sofa,
-  Theater,
   Loader2,
   Users,
   Home,
@@ -70,10 +70,11 @@ const colors = [
   { value: "#000000", label: "Noir" },
 ];
 
-const iconMap: Record<string, React.ElementType> = {
-  Sofa: Sofa,
-  Building2: Building2,
-  Theater: Theater,
+// Helper to get icon component from name
+const getIconComponent = (iconName: string): React.ElementType => {
+  const icons = LucideIcons as unknown as Record<string, React.ElementType>;
+  const Icon = icons[iconName];
+  return Icon || Building2;
 };
 
 export function EditProjectDialog({ 
@@ -85,6 +86,7 @@ export function EditProjectDialog({
 }: EditProjectDialogProps) {
   const { companies } = useCRMCompanies();
   const { members, setMembers: setProjectMembers } = useProjectMembers(project.id);
+  const { projectTypes: disciplines, isLoading: isLoadingDisciplines } = useProjectTypeSettings();
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description || "");
   const [projectType, setProjectType] = useState<ProjectType | null>(project.project_type);
@@ -188,35 +190,46 @@ export function EditProjectDialog({
             />
           </div>
 
-          {/* Project Type */}
+          {/* Project Type from Settings */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Type de projet</Label>
-            <div className="grid grid-cols-3 gap-3">
-              {PROJECT_TYPES.map((type) => {
-                const Icon = iconMap[type.icon] || Building2;
-                return (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => setProjectType(type.value)}
-                    className={cn(
-                      "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
-                      projectType === type.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50 hover:bg-muted/50"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center",
-                      projectType === type.value ? "bg-primary text-primary-foreground" : "bg-muted"
-                    )}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <span className="font-medium text-xs">{type.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {isLoadingDisciplines ? (
+              <div className="flex items-center justify-center p-4">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : disciplines.length === 0 ? (
+              <p className="text-sm text-muted-foreground p-4 text-center border rounded-lg">
+                Aucun type de projet configuré. Configurez-les dans les paramètres.
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                {disciplines.map((discipline) => {
+                  const iconName = getDisciplineIcon(discipline.disciplineSlug);
+                  const Icon = getIconComponent(iconName);
+                  return (
+                    <button
+                      key={discipline.key}
+                      type="button"
+                      onClick={() => setProjectType(discipline.key as ProjectType)}
+                      className={cn(
+                        "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
+                        projectType === discipline.key
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50 hover:bg-muted/50"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center",
+                        projectType === discipline.key ? "bg-primary text-primary-foreground" : "bg-muted"
+                      )}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span className="font-medium text-xs">{discipline.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Name & Color */}
