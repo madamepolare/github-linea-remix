@@ -55,7 +55,7 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
             priority,
             estimated_hours,
             project_id,
-            project:projects(name, color)
+            project:projects(id, name, color)
           )
         `)
         .eq("workspace_id", activeWorkspace.id);

@@ -242,7 +242,9 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
   // Filter schedules for this project
   const projectSchedules = useMemo(() => {
     return (
-      schedules?.filter((s) => s.task?.project?.id === projectId) || []
+      schedules?.filter((s) => 
+        s.task?.project_id === projectId || s.task?.project?.id === projectId
+      ) || []
     );
   }, [schedules, projectId]);
 
