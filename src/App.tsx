@@ -47,6 +47,8 @@ const CGV = lazy(() => import("./pages/legal/CGV"));
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Legal = lazy(() => import("./pages/legal/Legal"));
 const Workflow = lazy(() => import("./pages/Workflow"));
+const Campaigns = lazy(() => import("./pages/Campaigns"));
+const MediaPlanning = lazy(() => import("./pages/MediaPlanning"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading fallback
@@ -132,6 +134,9 @@ const App = () => (
                 <Route path="/materials" element={<Materials />} />
                 <Route path="/objects" element={<Objects />} />
                 <Route path="/workflow" element={<Workflow />} />
+                <Route path="/campaigns" element={<Campaigns />} />
+                <Route path="/campaigns/:id" element={<Campaigns />} />
+                <Route path="/media-planning" element={<MediaPlanning />} />
               </Route>
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
