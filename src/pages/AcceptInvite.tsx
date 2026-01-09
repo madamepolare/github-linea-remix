@@ -42,6 +42,71 @@ export default function AcceptInvite() {
     }
   }, [token]);
 
+  // Auto-accept invitation when user is authenticated and invite is loaded
+  useEffect(() => {
+    const autoAccept = async () => {
+      if (user && invite && !isAccepting && !error) {
+        // Check if user email matches invite email (case insensitive)
+        const userEmail = user.email?.toLowerCase();
+        const inviteEmailLower = invite.email.toLowerCase();
+        
+        if (userEmail === inviteEmailLower) {
+          // Auto-accept the invitation
+          setIsAccepting(true);
+          try {
+            const { data, error: rpcError } = await supabase.rpc('accept_workspace_invite', {
+              invite_token: token
+            });
+
+            if (rpcError) throw rpcError;
+
+            const result = data as { success: boolean; error?: string; already_member?: boolean; workspace_name?: string; workspace_id?: string } | null;
+
+            // Clear pending invite from sessionStorage
+            sessionStorage.removeItem('pendingInviteToken');
+            sessionStorage.removeItem('pendingInviteEmail');
+            sessionStorage.removeItem('pendingInviteWorkspace');
+            sessionStorage.removeItem('pendingInviteRole');
+
+            // Refresh profile to get new workspace
+            await refreshProfile();
+
+            if (result?.already_member) {
+              toast({
+                title: "Déjà membre",
+                description: `Vous êtes déjà membre de ${result.workspace_name}`,
+              });
+              navigate("/");
+            } else if (result?.success) {
+              toast({
+                title: "Bienvenue dans l'équipe !",
+                description: `Vous avez rejoint ${result.workspace_name}`,
+              });
+              navigate("/onboarding");
+            } else {
+              toast({
+                variant: "destructive",
+                title: "Erreur",
+                description: result?.error || "Impossible d'accepter l'invitation",
+              });
+              setIsAccepting(false);
+            }
+          } catch (err: any) {
+            console.error("Error auto-accepting invite:", err);
+            toast({
+              variant: "destructive",
+              title: "Erreur",
+              description: err.message || "Une erreur est survenue",
+            });
+            setIsAccepting(false);
+          }
+        }
+      }
+    };
+    
+    autoAccept();
+  }, [user, invite, error]);
+
   const fetchInvite = async () => {
     try {
       // Use RPC function to bypass RLS - allows unauthenticated users to view invite by token
