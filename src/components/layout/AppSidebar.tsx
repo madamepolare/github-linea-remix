@@ -1,5 +1,6 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useState } from "react";
 import {
   Settings,
   ChevronLeft,
@@ -43,6 +44,7 @@ import {
   EXTENSION_MODULES,
   ModuleNavConfig 
 } from "@/lib/navigationConfig";
+import { QuickAccountSwitch, useCanQuickSwitch } from "@/components/auth/QuickAccountSwitch";
 
 interface NavItem {
   title: string;
@@ -61,6 +63,8 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, activeWorkspace, workspaces, signOut, setActiveWorkspace } = useAuth();
+  const [showQuickSwitch, setShowQuickSwitch] = useState(false);
+  const canQuickSwitch = useCanQuickSwitch(user?.email);
   
   // Get modules data
   const { data: modules = [] } = useModules();
@@ -125,9 +129,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     navigate("/auth");
   };
 
-  const handleSwitchAccount = async () => {
-    await signOut();
-    navigate("/auth?switch=true");
+  const handleSwitchAccount = () => {
+    if (canQuickSwitch) {
+      setShowQuickSwitch(true);
+    } else {
+      signOut().then(() => navigate("/auth?switch=true"));
+    }
   };
 
   const handleWorkspaceSwitch = async (workspaceId: string) => {
@@ -427,6 +434,13 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Quick Account Switch Modal */}
+      <QuickAccountSwitch
+        open={showQuickSwitch}
+        onOpenChange={setShowQuickSwitch}
+        currentEmail={user?.email}
+      />
     </motion.aside>
   );
 }
