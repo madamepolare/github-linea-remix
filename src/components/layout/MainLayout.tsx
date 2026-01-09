@@ -12,8 +12,11 @@ import { GlobalTimeTracker } from "@/components/time-tracking/GlobalTimeTracker"
 import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import { FeedbackSidebar } from "@/components/feedback/FeedbackSidebar";
 import { TerminologyProvider } from "@/contexts/TerminologyContext";
+import { useWorkspaceModuleGuard } from "@/hooks/useWorkspaceModuleGuard";
 
 export function MainLayout() {
+  // Guard: redirect to home if current module not enabled in new workspace
+  useWorkspaceModuleGuard();
   const { collapsed } = useSidebarStore();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

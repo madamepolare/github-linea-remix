@@ -71,23 +71,21 @@ const App = () => (
         <ScrollToTop />
         <AuthProvider>
           <CommandPalette />
-          <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public routes (no layout) */}
-              <Route path="/welcome" element={<Welcome />} />
-              <Route path="/modules/:slug" element={<ModuleDetail />} />
-              <Route path="/solutions/:slug" element={<SolutionDetail />} />
-              <Route path="/roadmap" element={<Roadmap />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/blog" element={<Blog />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/legal/cgv" element={<CGV />} />
-              <Route path="/legal/privacy" element={<Privacy />} />
-              <Route path="/legal/mentions" element={<Legal />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/invite" element={<AcceptInvite />} />
-              <Route path="/settings/workspace/new" element={<CreateWorkspace />} />
+              <Route path="/welcome" element={<Suspense fallback={<PageLoader />}><Welcome /></Suspense>} />
+              <Route path="/modules/:slug" element={<Suspense fallback={<PageLoader />}><ModuleDetail /></Suspense>} />
+              <Route path="/solutions/:slug" element={<Suspense fallback={<PageLoader />}><SolutionDetail /></Suspense>} />
+              <Route path="/roadmap" element={<Suspense fallback={<PageLoader />}><Roadmap /></Suspense>} />
+              <Route path="/about" element={<Suspense fallback={<PageLoader />}><About /></Suspense>} />
+              <Route path="/blog" element={<Suspense fallback={<PageLoader />}><Blog /></Suspense>} />
+              <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
+              <Route path="/legal/cgv" element={<Suspense fallback={<PageLoader />}><CGV /></Suspense>} />
+              <Route path="/legal/privacy" element={<Suspense fallback={<PageLoader />}><Privacy /></Suspense>} />
+              <Route path="/legal/mentions" element={<Suspense fallback={<PageLoader />}><Legal /></Suspense>} />
+              <Route path="/auth" element={<Suspense fallback={<PageLoader />}><Auth /></Suspense>} />
+              <Route path="/onboarding" element={<Suspense fallback={<PageLoader />}><Onboarding /></Suspense>} />
+              <Route path="/invite" element={<Suspense fallback={<PageLoader />}><AcceptInvite /></Suspense>} />
 
               {/* Protected routes with shared MainLayout */}
               <Route
@@ -99,53 +97,53 @@ const App = () => (
                   </ProtectedRoute>
                 }
               >
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/crm" element={<CRM />} />
-                <Route path="/crm/:section" element={<CRM />} />
-                <Route path="/crm/companies/:id" element={<CompanyDetail />} />
-                <Route path="/crm/contacts/:id" element={<ContactDetail />} />
-                <Route path="/crm/leads/:id" element={<LeadDetail />} />
-                <Route path="/tasks" element={<Tasks />} />
-                <Route path="/tasks/:view" element={<Tasks />} />
-                <Route path="/projects" element={<Projects />} />
-                <Route path="/projects/list" element={<Projects />} />
-                <Route path="/projects/board" element={<Projects />} />
-                <Route path="/projects/timeline" element={<Projects />} />
-                <Route path="/projects/:id" element={<ProjectDetail />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/commercial" element={<Commercial />} />
-                <Route path="/commercial/all" element={<Commercial />} />
-                <Route path="/commercial/quotes" element={<Commercial />} />
-                <Route path="/commercial/contracts" element={<Commercial />} />
-                <Route path="/commercial/proposals" element={<Commercial />} />
-                <Route path="/commercial/:id" element={<CommercialDocument />} />
-                <Route path="/invoicing" element={<Invoicing />} />
-                <Route path="/invoicing/:filter" element={<Invoicing />} />
-                <Route path="/tenders" element={<Tenders />} />
-                <Route path="/tenders/kanban" element={<Tenders />} />
-                <Route path="/tenders/list" element={<Tenders />} />
-                <Route path="/tenders/:id" element={<TenderDetail />} />
-                <Route path="/documents" element={<Documents />} />
-                <Route path="/documents/:section" element={<Documents />} />
-                <Route path="/team" element={<Team />} />
-                <Route path="/team/:section" element={<Team />} />
-                <Route path="/chantier" element={<Chantier />} />
-                <Route path="/chantier/:projectId" element={<Chantier />} />
-                <Route path="/chantier/:projectId/:section" element={<Chantier />} />
-                <Route path="/references" element={<References />} />
-                <Route path="/references/:id" element={<ReferenceDetail />} />
-                <Route path="/materials" element={<Materials />} />
-                <Route path="/objects" element={<Objects />} />
-                <Route path="/planning" element={<Workflow />} />
-                <Route path="/campaigns" element={<Campaigns />} />
-                <Route path="/campaigns/:id" element={<CampaignDetail />} />
-                <Route path="/media-planning" element={<MediaPlanning />} />
+                <Route path="/" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
+                <Route path="/crm" element={<Suspense fallback={<PageLoader />}><CRM /></Suspense>} />
+                <Route path="/crm/:section" element={<Suspense fallback={<PageLoader />}><CRM /></Suspense>} />
+                <Route path="/crm/companies/:id" element={<Suspense fallback={<PageLoader />}><CompanyDetail /></Suspense>} />
+                <Route path="/crm/contacts/:id" element={<Suspense fallback={<PageLoader />}><ContactDetail /></Suspense>} />
+                <Route path="/crm/leads/:id" element={<Suspense fallback={<PageLoader />}><LeadDetail /></Suspense>} />
+                <Route path="/tasks" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
+                <Route path="/tasks/:view" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
+                <Route path="/projects" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
+                <Route path="/projects/list" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
+                <Route path="/projects/board" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
+                <Route path="/projects/timeline" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
+                <Route path="/projects/:id" element={<Suspense fallback={<PageLoader />}><ProjectDetail /></Suspense>} />
+                <Route path="/settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
+                <Route path="/settings/workspace/new" element={<Suspense fallback={<PageLoader />}><CreateWorkspace /></Suspense>} />
+                <Route path="/commercial" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
+                <Route path="/commercial/all" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
+                <Route path="/commercial/quotes" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
+                <Route path="/commercial/contracts" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
+                <Route path="/commercial/proposals" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
+                <Route path="/commercial/:id" element={<Suspense fallback={<PageLoader />}><CommercialDocument /></Suspense>} />
+                <Route path="/invoicing" element={<Suspense fallback={<PageLoader />}><Invoicing /></Suspense>} />
+                <Route path="/invoicing/:filter" element={<Suspense fallback={<PageLoader />}><Invoicing /></Suspense>} />
+                <Route path="/tenders" element={<Suspense fallback={<PageLoader />}><Tenders /></Suspense>} />
+                <Route path="/tenders/kanban" element={<Suspense fallback={<PageLoader />}><Tenders /></Suspense>} />
+                <Route path="/tenders/list" element={<Suspense fallback={<PageLoader />}><Tenders /></Suspense>} />
+                <Route path="/tenders/:id" element={<Suspense fallback={<PageLoader />}><TenderDetail /></Suspense>} />
+                <Route path="/documents" element={<Suspense fallback={<PageLoader />}><Documents /></Suspense>} />
+                <Route path="/documents/:section" element={<Suspense fallback={<PageLoader />}><Documents /></Suspense>} />
+                <Route path="/team" element={<Suspense fallback={<PageLoader />}><Team /></Suspense>} />
+                <Route path="/team/:section" element={<Suspense fallback={<PageLoader />}><Team /></Suspense>} />
+                <Route path="/chantier" element={<Suspense fallback={<PageLoader />}><Chantier /></Suspense>} />
+                <Route path="/chantier/:projectId" element={<Suspense fallback={<PageLoader />}><Chantier /></Suspense>} />
+                <Route path="/chantier/:projectId/:section" element={<Suspense fallback={<PageLoader />}><Chantier /></Suspense>} />
+                <Route path="/references" element={<Suspense fallback={<PageLoader />}><References /></Suspense>} />
+                <Route path="/references/:id" element={<Suspense fallback={<PageLoader />}><ReferenceDetail /></Suspense>} />
+                <Route path="/materials" element={<Suspense fallback={<PageLoader />}><Materials /></Suspense>} />
+                <Route path="/objects" element={<Suspense fallback={<PageLoader />}><Objects /></Suspense>} />
+                <Route path="/planning" element={<Suspense fallback={<PageLoader />}><Workflow /></Suspense>} />
+                <Route path="/campaigns" element={<Suspense fallback={<PageLoader />}><Campaigns /></Suspense>} />
+                <Route path="/campaigns/:id" element={<Suspense fallback={<PageLoader />}><CampaignDetail /></Suspense>} />
+                <Route path="/media-planning" element={<Suspense fallback={<PageLoader />}><MediaPlanning /></Suspense>} />
               </Route>
 
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
+              <Route path="*" element={<Suspense fallback={<PageLoader />}><NotFound /></Suspense>} />
             </Routes>
-          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

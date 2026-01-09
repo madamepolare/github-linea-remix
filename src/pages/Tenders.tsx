@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { format, formatDistanceToNow, isPast, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
@@ -47,10 +47,11 @@ const PIPELINE_COLUMN_COLORS: Record<PipelineStatus, string> = {
 
 export default function Tenders() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { "*": splat } = useParams();
   const { tenders, tendersByPipeline, stats, isLoading, deleteTender, updateTender } = useTenders();
-  // Check if path ends with /list
-  const viewMode = window.location.pathname.endsWith("/list") ? "list" : "kanban";
+  // Check if path ends with /list - use React Router's location
+  const viewMode = location.pathname.endsWith("/list") ? "list" : "kanban";
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
