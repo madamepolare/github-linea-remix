@@ -21,6 +21,7 @@ import {
   Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -462,18 +463,21 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
 
               {/* What AI will do */}
               {!isAnalyzing && (
-                <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-                  <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                <div className="mt-6 p-4 bg-primary/5 border border-primary/10 rounded-lg">
+                  <p className="text-sm font-medium mb-3 flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary" />
-                    L'IA va automatiquement extraire :
+                    L'IA expert architecture va extraire automatiquement :
                   </p>
-                  <ul className="text-sm text-muted-foreground space-y-1 ml-6">
-                    <li>• Titre et référence du marché (depuis le RC)</li>
-                    <li>• Maître d'ouvrage et contacts</li>
-                    <li>• Budget, délais et dates clés</li>
-                    <li>• Critères de jugement et pondérations</li>
-                    <li>• Équipe MOE demandée (BET, économiste, OPC...)</li>
-                  </ul>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-muted-foreground ml-6">
+                    <li className="list-disc">Titre et référence du marché</li>
+                    <li className="list-disc">Maître d'ouvrage et contacts</li>
+                    <li className="list-disc">Budget et surface</li>
+                    <li className="list-disc">Date limite et visite de site</li>
+                    <li className="list-disc">Critères de jugement (pondérations)</li>
+                    <li className="list-disc">Équipe MOE requise</li>
+                    <li className="list-disc">Phases de mission demandées</li>
+                    <li className="list-disc">Pièces à remettre</li>
+                  </div>
                 </div>
               )}
 
@@ -510,11 +514,20 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
             <div className="space-y-6">
               {/* Success message if AI extracted data */}
               {formData.title && uploadedFiles.length > 0 && (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center gap-3">
-                  <Check className="h-5 w-5 text-emerald-600 shrink-0" />
-                  <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                    Informations pré-remplies par l'IA - Vérifiez et ajustez si nécessaire
-                  </p>
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-full bg-emerald-500/20">
+                      <Check className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-emerald-700 dark:text-emerald-400">
+                        Analyse IA terminée
+                      </p>
+                      <p className="text-sm text-emerald-600/80 dark:text-emerald-400/80">
+                        Les champs marqués <Badge variant="outline" className="h-5 px-1.5 mx-1 text-[10px] bg-primary/10 border-primary/20"><Sparkles className="h-3 w-3 mr-0.5" />IA</Badge> ont été pré-remplis. Vérifiez et ajustez si nécessaire.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
