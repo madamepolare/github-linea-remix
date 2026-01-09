@@ -9,6 +9,7 @@ import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
 import { useWorkspaceEvents, UnifiedWorkspaceEvent, WorkspaceEvent, TenderWorkspaceEvent } from "@/hooks/useWorkspaceEvents";
 import { useAllProjectMembers } from "@/hooks/useProjects";
 import { useTeamAbsences, TeamAbsence, absenceTypeLabels } from "@/hooks/useTeamAbsences";
+import { useTeamTimeEntries, TeamTimeEntry } from "@/hooks/useTeamTimeEntries";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -63,8 +64,9 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const { data: events, isLoading: eventsLoading } = useWorkspaceEvents();
   const { data: userProjectsMap, isLoading: projectMembersLoading } = useAllProjectMembers();
   const { data: absences, isLoading: absencesLoading } = useTeamAbsences({ status: "approved" });
+  const { data: timeEntries, isLoading: timeEntriesLoading } = useTeamTimeEntries();
 
-  const isLoading = schedulesLoading || membersLoading || eventsLoading || projectMembersLoading || absencesLoading;
+  const isLoading = schedulesLoading || membersLoading || eventsLoading || projectMembersLoading || absencesLoading || timeEntriesLoading;
 
   // Handler pour voir les détails d'une tâche
   const handleViewTask = useCallback((schedule: TaskSchedule) => {
@@ -243,8 +245,35 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
       });
     }
 
+    // Ajouter les temps manuels
+    timeEntries?.forEach(entry => {
+      if (entry.user_id !== memberId) return;
+      
+      const entryDate = parseISO(entry.date);
+      
+      if (isSameDay(entryDate, day)) {
+        const durationHours = entry.duration_minutes / 60;
+        // Use 9h as default start time for display
+        const entryStart = setHours(startOfDay(entryDate), 9);
+        const entryEnd = new Date(entryStart.getTime() + entry.duration_minutes * 60 * 1000);
+        
+        items.push({
+          id: entry.id,
+          type: "timeEntry",
+          title: entry.description || entry.task?.title || entry.project?.name || "Temps manuel",
+          start: entryStart,
+          end: entryEnd,
+          color: entry.is_billable ? "#10b981" : "#6b7280", // emerald for billable, gray for non-billable
+          projectName: entry.project?.name,
+          durationHours,
+          isBillable: entry.is_billable,
+          originalData: entry,
+        });
+      }
+    });
+
     return items.sort((a, b) => a.start.getTime() - b.start.getTime());
-  }, [schedules, events, showEvents, userProjectsMap, absences]);
+  }, [schedules, events, showEvents, userProjectsMap, absences, timeEntries]);
 
   const getOccupancyRate = useCallback((memberId: string, memberEmail: string | null, day: Date) => {
     const items = getItemsForMemberAndDay(memberId, memberEmail, day);
