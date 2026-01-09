@@ -444,7 +444,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                   type="file"
                   id="dce-upload"
                   multiple
-                  accept=".pdf,.doc,.docx,.xls,.xlsx"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
                   onChange={handleFileSelect}
                   className="hidden"
                   disabled={isAnalyzing}
@@ -478,7 +478,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                             Glissez vos fichiers DCE ici
                           </p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            ou cliquez pour sélectionner • PDF uniquement (Word/Excel non supportés)
+                            ou cliquez pour sélectionner • PDF, Word, Excel, PowerPoint
                           </p>
                         </>
                       )}
