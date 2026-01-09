@@ -128,16 +128,16 @@ export function CriteriaWeightEditor({ criteria, onChange }: CriteriaWeightEdito
                   step={1}
                   className="flex-1"
                 />
-                <div className="flex items-center gap-1 min-w-[60px]">
+                <div className="flex items-center gap-1.5 min-w-[80px]">
                   <Input
                     type="number"
                     value={criterion.weight}
                     onChange={(e) => updateCriterion(criterion.id, { weight: Number(e.target.value) })}
-                    className="h-7 w-14 text-center text-sm"
+                    className="h-8 w-20 text-center text-sm font-semibold"
                     min={0}
                     max={100}
                   />
-                  <span className="text-sm text-muted-foreground">%</span>
+                  <span className="text-sm font-medium text-muted-foreground">%</span>
                 </div>
               </div>
             </div>
