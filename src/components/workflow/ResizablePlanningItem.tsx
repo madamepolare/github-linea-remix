@@ -240,12 +240,12 @@ export function ResizablePlanningItem({
                 {isTimeEntry && <Clock className="h-3 w-3 flex-shrink-0 mt-0.5" />}
                 
                 <div className="flex-1 min-w-0 overflow-hidden">
-                  <span className="block truncate">{item.title}</span>
-                  {item.projectName && height > 40 && (
-                    <span className="block text-[9px] opacity-80 truncate mt-0.5">
+                  {item.projectName && (
+                    <span className="block text-[9px] opacity-70 truncate leading-tight">
                       {item.projectName}
                     </span>
                   )}
+                  <span className="block truncate leading-tight">{item.title}</span>
                 </div>
               </div>
               
