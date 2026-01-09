@@ -12,6 +12,7 @@ import {
   Plus,
   Check,
   Building2,
+  RefreshCw,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
@@ -122,6 +123,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const handleSignOut = async () => {
     await signOut();
     navigate("/auth");
+  };
+
+  const handleSwitchAccount = async () => {
+    await signOut();
+    navigate("/auth?switch=true");
   };
 
   const handleWorkspaceSwitch = async (workspaceId: string) => {
@@ -410,6 +416,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSwitchAccount}>
+              <RefreshCw className="h-4 w-4 mr-2" strokeWidth={THIN_STROKE} />
+              Changer de compte
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
               <LogOut className="h-4 w-4 mr-2" strokeWidth={THIN_STROKE} />
               Sign out
