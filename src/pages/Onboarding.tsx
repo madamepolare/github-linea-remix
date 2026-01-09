@@ -14,6 +14,9 @@ import {
   Check,
   Briefcase,
   MapPin,
+  Sofa,
+  Theater,
+  Megaphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,11 +24,14 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useDisciplines } from "@/hooks/useDiscipline";
+import { cn } from "@/lib/utils";
 
 const workspaceSchema = z.object({
   companyName: z.string().min(2, "Company name must be at least 2 characters").max(100),
   companySlug: z.string().min(2, "Slug must be at least 2 characters").max(50)
     .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens"),
+  disciplineId: z.string().min(1, "Veuillez choisir une discipline"),
 });
 
 const profileSchema = z.object({
@@ -35,6 +41,20 @@ const profileSchema = z.object({
 
 type WorkspaceFormData = z.infer<typeof workspaceSchema>;
 type ProfileFormData = z.infer<typeof profileSchema>;
+
+const DISCIPLINE_ICONS: Record<string, React.ElementType> = {
+  architecture: Building2,
+  interior: Sofa,
+  scenography: Theater,
+  communication: Megaphone,
+};
+
+const DISCIPLINE_COLORS: Record<string, string> = {
+  architecture: "from-blue-500 to-cyan-500",
+  interior: "from-amber-500 to-orange-500",
+  scenography: "from-purple-500 to-pink-500",
+  communication: "from-emerald-500 to-teal-500",
+};
 
 const steps = [
   { id: 1, title: "Espace de travail", description: "Configurez votre entreprise" },
@@ -50,16 +70,19 @@ export default function Onboarding() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, profile, loading, refreshProfile, workspaces } = useAuth();
+  const { data: disciplines, isLoading: isLoadingDisciplines } = useDisciplines();
 
   const workspaceForm = useForm<WorkspaceFormData>({
     resolver: zodResolver(workspaceSchema),
-    defaultValues: { companyName: "", companySlug: "" },
+    defaultValues: { companyName: "", companySlug: "", disciplineId: "" },
   });
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: { jobTitle: "", phone: "" },
   });
+
+  const selectedDisciplineId = workspaceForm.watch("disciplineId");
 
   // Auto-generate slug from company name
   const companyName = workspaceForm.watch("companyName");
@@ -105,13 +128,14 @@ export default function Onboarding() {
     setIsLoading(true);
 
     try {
-      // Create workspace
+      // Create workspace with discipline
       const { data: workspace, error: workspaceError } = await supabase
         .from("workspaces")
         .insert({
           name: data.companyName,
           slug: data.companySlug,
           created_by: user.id,
+          discipline_id: data.disciplineId,
         })
         .select()
         .single();
@@ -214,7 +238,7 @@ export default function Onboarding() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
               <Hexagon className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="font-display text-xl font-bold text-foreground">ARCHIMIND</span>
+            <span className="font-display text-xl font-bold text-foreground">LINEA</span>
           </div>
         </div>
       </header>
@@ -307,11 +331,11 @@ export default function Onboarding() {
                     <Label htmlFor="companySlug">URL de l'espace</Label>
                     <div className="flex items-center">
                       <span className="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-input bg-muted text-sm text-muted-foreground">
-                        archimind.app/
+                        linea.app/
                       </span>
                       <Input
                         id="companySlug"
-                        placeholder="studio-architecture"
+                        placeholder="mon-agence"
                         className="rounded-l-none"
                         {...workspaceForm.register("companySlug")}
                       />
@@ -323,7 +347,57 @@ export default function Onboarding() {
                     )}
                   </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  {/* Discipline Selection */}
+                  <div className="space-y-3">
+                    <Label>Votre discipline</Label>
+                    {isLoadingDisciplines ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        {disciplines?.filter(d => d.is_active).map((discipline) => {
+                          const Icon = DISCIPLINE_ICONS[discipline.slug] || Building2;
+                          const isSelected = selectedDisciplineId === discipline.id;
+                          const gradientClass = DISCIPLINE_COLORS[discipline.slug] || "from-gray-500 to-gray-600";
+                          
+                          return (
+                            <button
+                              key={discipline.id}
+                              type="button"
+                              onClick={() => workspaceForm.setValue("disciplineId", discipline.id)}
+                              className={cn(
+                                "relative flex items-center gap-3 p-3 rounded-lg border-2 transition-all text-left",
+                                isSelected
+                                  ? "border-primary bg-primary/5"
+                                  : "border-border hover:border-primary/50"
+                              )}
+                            >
+                              {isSelected && (
+                                <div className="absolute top-2 right-2">
+                                  <Check className="h-4 w-4 text-primary" />
+                                </div>
+                              )}
+                              <div className={cn(
+                                "flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br text-white shrink-0",
+                                gradientClass
+                              )}>
+                                <Icon className="h-5 w-5" />
+                              </div>
+                              <span className="text-sm font-medium">{discipline.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {workspaceForm.formState.errors.disciplineId && (
+                      <p className="text-sm text-destructive">
+                        {workspaceForm.formState.errors.disciplineId.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={isLoading || !selectedDisciplineId}>
                     {isLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : (

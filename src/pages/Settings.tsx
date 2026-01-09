@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Users, User, Hammer, FolderKanban, Target, CheckSquare, FileText, FileStack, Shield, CreditCard, Puzzle, Mail, Layers, MessageSquarePlus, Palette } from "lucide-react";
+import { Building2, Users, User, Hammer, FolderKanban, Target, CheckSquare, FileText, FileStack, Shield, CreditCard, Puzzle, Mail, Layers, MessageSquarePlus, Palette, Compass } from "lucide-react";
 import { WorkspaceSettings } from "@/components/settings/WorkspaceSettings";
 import { MembersSettings } from "@/components/settings/MembersSettings";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
@@ -18,6 +18,7 @@ import { ModulesSettings } from "@/components/settings/ModulesSettings";
 import { EmailTemplatesSettings } from "@/components/settings/EmailTemplatesSettings";
 import { FeedbackSettings } from "@/components/settings/FeedbackSettings";
 import { StyleSettings } from "@/components/settings/StyleSettings";
+import { DisciplineSettings } from "@/components/settings/DisciplineSettings";
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState("workspace");
@@ -28,6 +29,10 @@ export default function Settings() {
         <TabsTrigger value="workspace" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
           <Building2 className="h-3.5 w-3.5" strokeWidth={1.5} />
           <span className="hidden sm:inline">Workspace</span>
+        </TabsTrigger>
+        <TabsTrigger value="discipline" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
+          <Compass className="h-3.5 w-3.5" strokeWidth={1.5} />
+          <span className="hidden sm:inline">Discipline</span>
         </TabsTrigger>
         <TabsTrigger value="style" className="h-7 px-3 text-xs gap-1.5 data-[state=active]:bg-muted">
           <Palette className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -100,6 +105,7 @@ export default function Settings() {
       actions={settingsTabs}
     >
       {activeTab === "workspace" && <WorkspaceSettings />}
+      {activeTab === "discipline" && <DisciplineSettings />}
       {activeTab === "style" && <StyleSettings />}
       {activeTab === "plan" && <PlanSettings />}
       {activeTab === "modules" && <ModulesSettings />}

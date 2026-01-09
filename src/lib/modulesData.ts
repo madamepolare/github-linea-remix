@@ -1,4 +1,4 @@
-import { FolderKanban, Users, FileText, Trophy, Calendar, MessageSquare } from "lucide-react";
+import { FolderKanban, Users, FileText, Trophy, Calendar, MessageSquare, Megaphone } from "lucide-react";
 
 export interface ModuleFeature {
   title: string;
@@ -329,6 +329,100 @@ Les notifications en temps réel vous alertent des changements qui vous concerne
       author: "Claire Durand",
       role: "Responsable BIM",
       company: "Groupe ArchiTech",
+    },
+  },
+  campagnes: {
+    slug: "campagnes",
+    title: "Campagnes",
+    subtitle: "Gérez vos campagnes de communication",
+    description: "Pilotez vos campagnes de A à Z : brief, objectifs, planning média, budget et KPIs. Un hub central pour coordonner toutes vos actions de communication.",
+    longDescription: `Le module Campagnes de LINEA est conçu spécifiquement pour les agences de communication. Il vous permet de gérer l'ensemble de vos campagnes clients avec une vision à 360°.
+
+Chaque campagne dispose de son espace dédié regroupant le brief client, les objectifs, le planning des sorties, le budget alloué et le suivi des KPIs. Visualisez en un coup d'œil le statut de chaque campagne : en planification, en production, live ou terminée.
+
+Gérez les livrables associés à chaque campagne (visuels, vidéos, contenus) avec un workflow de validation intégré. Suivez les performances en temps réel et générez des rapports automatiques pour vos clients.`,
+    icon: Megaphone,
+    color: "from-emerald-500 to-teal-500",
+    features: [
+      { title: "Brief centralisé", description: "Stockez le brief client, les objectifs et les cibles dans un espace structuré." },
+      { title: "Planning média intégré", description: "Planifiez les sorties sur tous les canaux avec une vue calendrier unifiée." },
+      { title: "Suivi budget", description: "Suivez le budget alloué vs dépensé par canal et par campagne." },
+      { title: "Reporting automatique", description: "Générez des rapports de performance pour vos clients en un clic." },
+    ],
+    useCases: [
+      { title: "Campagne multi-canal", description: "Coordonnez les sorties TV, radio, print, digital et réseaux sociaux sur une même timeline.", icon: "layers" },
+      { title: "Validation créative", description: "Gérez le workflow de validation des visuels entre l'agence et le client.", icon: "check-circle" },
+      { title: "Suivi ROI", description: "Mesurez les performances de chaque canal pour optimiser les prochaines campagnes.", icon: "trending-up" },
+      { title: "Gestion multi-clients", description: "Pilotez simultanément plusieurs campagnes pour différents clients.", icon: "briefcase" },
+    ],
+    benefits: [
+      { title: "Visibilité", value: "100%", description: "sur l'ensemble de vos campagnes actives" },
+      { title: "Coordination", value: "3x", description: "plus efficace entre les équipes créa et média" },
+      { title: "Reporting", value: "-75%", description: "de temps passé à préparer les bilans clients" },
+    ],
+    integrations: [
+      { module: "CRM", description: "Liez les campagnes à vos clients et opportunités" },
+      { module: "Planning Média", description: "Synchronisez avec le planning des publications" },
+      { module: "Commercial", description: "Suivez la facturation liée à chaque campagne" },
+      { module: "Équipe", description: "Attribuez les tâches aux membres de l'équipe" },
+    ],
+    faq: [
+      { question: "Puis-je gérer des campagnes multi-clients ?", answer: "Oui, chaque campagne est liée à un client et vous pouvez filtrer la vue par client pour gérer facilement plusieurs comptes simultanément." },
+      { question: "Comment fonctionne le suivi des KPIs ?", answer: "Définissez vos KPIs cibles lors de la création de la campagne et mettez à jour les résultats réels. Le système calcule automatiquement les écarts et les taux de réalisation." },
+      { question: "Les rapports sont-ils personnalisables ?", answer: "Oui, vous pouvez configurer les sections à inclure, ajouter votre charte graphique et choisir le format d'export (PDF, PowerPoint)." },
+    ],
+    testimonial: {
+      quote: "La gestion centralisée de nos campagnes a transformé notre organisation. On gagne un temps précieux sur la coordination.",
+      author: "Julie Martin",
+      role: "Directrice de clientèle",
+      company: "Agence Média+",
+    },
+  },
+  "planning-media": {
+    slug: "planning-media",
+    title: "Planning Média",
+    subtitle: "Orchestrez vos sorties sur tous les canaux",
+    description: "Planifiez et suivez toutes vos publications et insertions média. Vue calendrier, rappels automatiques et suivi de production pour ne jamais manquer une deadline.",
+    longDescription: `Le Planning Média de LINEA centralise toutes vos publications sur une timeline unique. Réseaux sociaux, presse, TV, radio, affichage : visualisez l'ensemble de vos sorties prévues et passées.
+
+Chaque élément du planning est associé à une campagne et contient toutes les informations nécessaires : canal, format, date de publication, brief créatif et statut de production. Suivez l'avancement de chaque contenu de la création à la publication.
+
+Les rappels automatiques vous alertent des deadlines approchantes et le workflow de validation assure que chaque contenu est approuvé avant publication. Exportez votre planning pour le partager avec vos clients ou partenaires médias.`,
+    icon: Calendar,
+    color: "from-blue-500 to-indigo-500",
+    features: [
+      { title: "Vue calendrier", description: "Visualisez toutes vos sorties sur une timeline mensuelle ou hebdomadaire." },
+      { title: "Multi-canaux", description: "Gérez tous les canaux sur un seul planning : social, presse, TV, radio, digital." },
+      { title: "Rappels automatiques", description: "Recevez des alertes pour les deadlines de livraison et de publication." },
+      { title: "Export partageable", description: "Exportez le planning pour vos clients et partenaires médias." },
+    ],
+    useCases: [
+      { title: "Social media planning", description: "Planifiez vos posts Instagram, LinkedIn, Facebook et TikTok avec prévisualisation.", icon: "instagram" },
+      { title: "Plan média presse", description: "Gérez vos insertions presse avec dates de remise et parutions.", icon: "newspaper" },
+      { title: "Coordination multi-équipes", description: "Synchronisez création, production et achat média sur la même timeline.", icon: "users" },
+      { title: "Reporting client", description: "Partagez le planning avec vos clients pour validation et suivi.", icon: "share" },
+    ],
+    benefits: [
+      { title: "Organisation", value: "100%", description: "des sorties planifiées et suivies" },
+      { title: "Deadlines", value: "0", description: "deadline manquée grâce aux rappels" },
+      { title: "Efficacité", value: "2x", description: "plus rapide pour coordonner les sorties" },
+    ],
+    integrations: [
+      { module: "Campagnes", description: "Chaque publication est liée à sa campagne" },
+      { module: "CRM", description: "Accédez aux contacts médias et clients" },
+      { module: "Équipe", description: "Attribuez la production à vos créatifs" },
+      { module: "Commercial", description: "Suivez les coûts médias par placement" },
+    ],
+    faq: [
+      { question: "Puis-je intégrer mon calendrier Google ?", answer: "Oui, synchronisez votre planning LINEA avec Google Calendar ou Outlook pour retrouver vos deadlines dans votre agenda habituel." },
+      { question: "Comment gérer les formats différents par canal ?", answer: "Chaque canal a ses propres formats prédéfinis. Sélectionnez le format adapté et le système vous rappelle les spécifications techniques." },
+      { question: "Les publications sont-elles automatiques ?", answer: "Le module est un outil de planning et non de publication automatique. Vous pouvez cependant exporter vers des outils de scheduling comme Buffer ou Hootsuite." },
+    ],
+    testimonial: {
+      quote: "Finies les feuilles Excel pour gérer nos sorties. Tout est clair et l'équipe ne rate plus aucune deadline.",
+      author: "Marc Lefebvre",
+      role: "Responsable Social Media",
+      company: "Digital Factory",
     },
   },
 };
