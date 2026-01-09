@@ -252,6 +252,23 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               {/* Step 1: Project Type */}
               {step === 0 && (
                 <div className="space-y-4">
+                  {/* Internal Project Toggle - Visible at step 1 */}
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="is-internal" className="text-sm font-medium cursor-pointer">
+                        Projet interne
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Non facturable (admin, formation, commercial...)
+                      </p>
+                    </div>
+                    <Switch
+                      id="is-internal"
+                      checked={isInternal}
+                      onCheckedChange={setIsInternal}
+                    />
+                  </div>
+
                   <p className="text-sm text-muted-foreground">
                     Sélectionnez le type de projet pour générer automatiquement les phases adaptées.
                   </p>
@@ -286,22 +303,6 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               {/* Step 2: Project Info */}
               {step === 1 && (
                 <div className="space-y-4">
-                  {/* Internal Project Toggle */}
-                  <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="is-internal" className="text-sm font-medium cursor-pointer">
-                        Projet interne
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Non facturable (admin, formation, commercial...)
-                      </p>
-                    </div>
-                    <Switch
-                      id="is-internal"
-                      checked={isInternal}
-                      onCheckedChange={setIsInternal}
-                    />
-                  </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="name">Nom du projet *</Label>
