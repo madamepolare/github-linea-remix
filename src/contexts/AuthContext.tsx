@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { storeCurrentSession } from "@/components/auth/QuickAccountSwitch";
 
 interface Profile {
   id: string;
@@ -96,6 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+
+        // Store session for quick switch (only for allowed accounts)
+        if (session?.user?.email && session.refresh_token) {
+          storeCurrentSession(session.user.email, session.refresh_token);
+        }
 
         if (session?.user) {
           // Defer Supabase calls with setTimeout to avoid deadlock
