@@ -127,9 +127,9 @@ const features = [
     slug: "appels-offres",
   },
   {
-    title: "Planning chantier",
+    title: "Planning",
     description:
-      "Planifiez les interventions des entreprises et générez des comptes-rendus automatiques.",
+      "Planifiez chantiers, productions ou campagnes médias selon votre activité.",
     icon: <CalendarDays size={28} />,
     slug: "planning",
   },
@@ -148,7 +148,7 @@ const pricingPlans = {
       name: "Starter",
       price: "Gratuit",
       period: "",
-      description: "Pour découvrir Linea Suite",
+      description: "Pour découvrir LINEA",
       features: [
         "1 utilisateur",
         "3 projets actifs",
@@ -198,7 +198,7 @@ const pricingPlans = {
       name: "Starter",
       price: "Gratuit",
       period: "",
-      description: "Pour découvrir Linea Suite",
+      description: "Pour découvrir LINEA",
       features: [
         "1 utilisateur",
         "3 projets actifs",
@@ -319,9 +319,9 @@ const Welcome = () => {
   return (
     <>
       <SEOHead
-        title="Linea Suite | Logiciel de gestion pour architectes"
-        description="Linea Suite - La plateforme tout-en-un pour gérer vos projets d'architecture : CRM, devis, appels d'offres, planning chantier."
-        keywords="architecture, gestion projet, CRM architecte, devis architecture, logiciel architecte"
+        title="LINEA | Logiciel de gestion pour créatifs"
+        description="LINEA - La plateforme tout-en-un pour architectes, architectes d'intérieur, scénographes et agences de communication."
+        keywords="architecture, gestion projet, CRM, devis, logiciel architecte, scénographie, agence communication"
       />
     <div className="min-h-screen bg-background overflow-x-hidden">
       <LandingNav />
@@ -350,13 +350,13 @@ const Welcome = () => {
               <h1 className="hero-title text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-6">
                 L'outil tout-en-un pour{" "}
                 <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                  architectes
+                  les créatifs
                 </span>
               </h1>
 
               <p className="hero-subtitle text-lg md:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8">
-                Gérez vos projets, clients, devis et appels d'offres dans une
-                plateforme unique conçue pour les agences d'architecture.
+                Gérez vos projets, clients et documents dans une plateforme unique. 
+                Pour architectes, scénographes et agences de communication.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
@@ -446,7 +446,7 @@ const Welcome = () => {
               Tout ce dont vous avez besoin
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Une suite complète d'outils pour gérer votre agence d'architecture
+              Une suite complète d'outils pour gérer votre activité créative
               de manière efficace et professionnelle.
             </p>
           </div>
@@ -520,7 +520,7 @@ const Welcome = () => {
               Ils nous font confiance
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Découvrez ce que nos clients disent de Linea Suite.
+              Découvrez ce que nos clients disent de LINEA.
             </p>
           </div>
         </div>
@@ -532,11 +532,11 @@ const Welcome = () => {
         <div className="max-w-4xl mx-auto text-center">
           <div className="section-header">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Prêt à transformer votre agence ?
+              Prêt à transformer votre activité ?
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-              Rejoignez plus de 500 agences d'architecture qui utilisent
-              Linea Suite pour gérer leurs projets.
+              Rejoignez plus de 500 agences créatives qui utilisent
+              LINEA pour gérer leurs projets.
             </p>
             <Link to="/auth">
               <Button

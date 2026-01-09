@@ -128,6 +128,187 @@ export type Database = {
           },
         ]
       }
+      campaign_deliverables: {
+        Row: {
+          assigned_to: string | null
+          campaign_id: string
+          created_at: string | null
+          created_by: string | null
+          deliverable_type: string
+          description: string | null
+          due_date: string | null
+          files: Json | null
+          id: string
+          name: string
+          preview_url: string | null
+          sort_order: number | null
+          status: string | null
+          updated_at: string | null
+          validated_at: string | null
+          validated_by: string | null
+          validation_notes: string | null
+          workspace_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          campaign_id: string
+          created_at?: string | null
+          created_by?: string | null
+          deliverable_type: string
+          description?: string | null
+          due_date?: string | null
+          files?: Json | null
+          id?: string
+          name: string
+          preview_url?: string | null
+          sort_order?: number | null
+          status?: string | null
+          updated_at?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
+          workspace_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          campaign_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          deliverable_type?: string
+          description?: string | null
+          due_date?: string | null
+          files?: Json | null
+          id?: string
+          name?: string
+          preview_url?: string | null
+          sort_order?: number | null
+          status?: string | null
+          updated_at?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_deliverables_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_deliverables_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          actual_kpis: Json | null
+          brief_attachments: Json | null
+          brief_content: string | null
+          budget_spent: number | null
+          budget_total: number | null
+          campaign_type: string
+          client_company_id: string | null
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          launch_date: string | null
+          name: string
+          objectives: Json | null
+          project_id: string | null
+          start_date: string | null
+          status: string
+          tags: string[] | null
+          target_kpis: Json | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          actual_kpis?: Json | null
+          brief_attachments?: Json | null
+          brief_content?: string | null
+          budget_spent?: number | null
+          budget_total?: number | null
+          campaign_type?: string
+          client_company_id?: string | null
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          launch_date?: string | null
+          name: string
+          objectives?: Json | null
+          project_id?: string | null
+          start_date?: string | null
+          status?: string
+          tags?: string[] | null
+          target_kpis?: Json | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          actual_kpis?: Json | null
+          brief_attachments?: Json | null
+          brief_content?: string | null
+          budget_spent?: number | null
+          budget_total?: number | null
+          campaign_type?: string
+          client_company_id?: string | null
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          launch_date?: string | null
+          name?: string
+          objectives?: Json | null
+          project_id?: string | null
+          start_date?: string | null
+          status?: string
+          tags?: string[] | null
+          target_kpis?: Json | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_client_company_id_fkey"
+            columns: ["client_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_document_items: {
         Row: {
           amount: number | null
@@ -3031,6 +3212,144 @@ export type Database = {
           },
           {
             foreignKeyName: "materials_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_channels: {
+        Row: {
+          channel_type: string
+          color: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          platform: string | null
+          workspace_id: string
+        }
+        Insert: {
+          channel_type: string
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          platform?: string | null
+          workspace_id: string
+        }
+        Update: {
+          channel_type?: string
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          platform?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_channels_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_plan_items: {
+        Row: {
+          actual_cost: number | null
+          assigned_to: string | null
+          attachments: Json | null
+          budget: number | null
+          campaign_id: string
+          channel_id: string | null
+          content_brief: string | null
+          content_url: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          end_date: string | null
+          format: string | null
+          id: string
+          performance_data: Json | null
+          publish_date: string
+          publish_time: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          actual_cost?: number | null
+          assigned_to?: string | null
+          attachments?: Json | null
+          budget?: number | null
+          campaign_id: string
+          channel_id?: string | null
+          content_brief?: string | null
+          content_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          format?: string | null
+          id?: string
+          performance_data?: Json | null
+          publish_date: string
+          publish_time?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          actual_cost?: number | null
+          assigned_to?: string | null
+          attachments?: Json | null
+          budget?: number | null
+          campaign_id?: string
+          channel_id?: string | null
+          content_brief?: string | null
+          content_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string | null
+          format?: string | null
+          id?: string
+          performance_data?: Json | null
+          publish_date?: string
+          publish_time?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_plan_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_plan_items_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "media_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_plan_items_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
