@@ -12,7 +12,7 @@ import { DurationInput } from "@/components/tasks/DurationInput";
 // Types pour les items affichés dans le planning
 export type PlanningItem = {
   id: string;
-  type: "task" | "event" | "absence";
+  type: "task" | "event" | "absence" | "timeEntry";
   title: string;
   start: Date;
   end: Date | null;
@@ -21,6 +21,7 @@ export type PlanningItem = {
   projectColor?: string;
   eventType?: string;
   durationHours?: number;
+  isBillable?: boolean;
   originalData: TaskSchedule | any;
 };
 
@@ -47,6 +48,7 @@ export function ResizablePlanningItem({
 }: ResizablePlanningItemProps) {
   const schedule = item.type === "task" ? item.originalData as TaskSchedule : null;
   const isAbsence = item.type === "absence";
+  const isTimeEntry = item.type === "timeEntry";
   
   const hours = item.durationHours || 1;
   const initialHeight = Math.max(minHeight, hours * pixelsPerHour);
@@ -146,6 +148,7 @@ export function ResizablePlanningItem({
                 "rounded text-[11px] leading-tight px-2 py-1.5 shadow-sm hover:shadow-md transition-all font-medium flex flex-col relative group select-none",
                 item.type === "event" && "border-l-2",
                 isAbsence && "opacity-60 cursor-not-allowed",
+                isTimeEntry && "border-l-2 border-l-white/40",
                 item.type === "task" && "cursor-grab active:cursor-grabbing",
                 isResizing && "ring-2 ring-white/50 z-10"
               )}
@@ -234,6 +237,7 @@ export function ResizablePlanningItem({
                 {item.type === "event" && <Calendar className="h-3 w-3 flex-shrink-0 mt-0.5" />}
                 {item.type === "task" && <Clock className="h-3 w-3 flex-shrink-0 mt-0.5" />}
                 {isAbsence && <Users className="h-3 w-3 flex-shrink-0 mt-0.5" />}
+                {isTimeEntry && <Clock className="h-3 w-3 flex-shrink-0 mt-0.5" />}
                 
                 <div className="flex-1 min-w-0 overflow-hidden">
                   <span className="block truncate">{item.title}</span>
@@ -268,6 +272,8 @@ export function ResizablePlanningItem({
                   <Calendar className="h-3.5 w-3.5" />
                 ) : item.type === "task" ? (
                   <Clock className="h-3.5 w-3.5" />
+                ) : item.type === "timeEntry" ? (
+                  <Clock className="h-3.5 w-3.5" />
                 ) : (
                   <Users className="h-3.5 w-3.5" />
                 )}
@@ -289,6 +295,11 @@ export function ResizablePlanningItem({
               {item.type === "task" && (
                 <div className="text-xs text-muted-foreground mt-1 pt-1 border-t border-border/50">
                   ↕ Étirer pour modifier la durée
+                </div>
+              )}
+              {item.type === "timeEntry" && (
+                <div className="text-xs text-muted-foreground mt-1 pt-1 border-t border-border/50">
+                  {item.isBillable ? "✓ Facturable" : "Temps interne (non facturable)"}
                 </div>
               )}
             </div>
