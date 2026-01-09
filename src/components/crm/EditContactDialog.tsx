@@ -32,8 +32,16 @@ const getIndustryLabel = (industry: string | null) => {
   return labels[industry] || industry.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
+const GENDER_OPTIONS = [
+  { value: "male", label: "Monsieur" },
+  { value: "female", label: "Madame" },
+  { value: "other", label: "Autre" },
+] as const;
+
 const schema = z.object({
-  name: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
+  first_name: z.string().min(1, "Le prénom est requis"),
+  last_name: z.string().min(1, "Le nom est requis"),
+  gender: z.enum(["male", "female", "other"]).optional(),
   email: z.string().email("Email invalide").optional().or(z.literal("")),
   phone: z.string().optional(),
   role: z.string().optional(),
@@ -65,7 +73,9 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { 
-      name: "", 
+      first_name: "",
+      last_name: "",
+      gender: undefined,
       email: "", 
       phone: "", 
       role: "",
@@ -107,8 +117,20 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
       // Find matching role from CONTACT_ROLES or set as custom
       const matchingRole = CONTACT_ROLES.find(r => r.label === contact.role);
       
+      // Use first_name/last_name if available, otherwise parse from name
+      let firstName = contact.first_name || "";
+      let lastName = contact.last_name || "";
+      
+      if (!firstName && !lastName && contact.name) {
+        const nameParts = contact.name.split(" ");
+        firstName = nameParts[0] || "";
+        lastName = nameParts.slice(1).join(" ") || "";
+      }
+      
       form.reset({
-        name: contact.name || "",
+        first_name: firstName,
+        last_name: lastName,
+        gender: (contact.gender as "male" | "female" | "other") || undefined,
         email: contact.email || "",
         phone: contact.phone || "",
         role: matchingRole?.value || (contact.role ? "autre" : ""),
@@ -128,6 +150,9 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
   const onSubmit = async (data: FormData) => {
     if (!contact) return;
     
+    // Build full name from first_name and last_name
+    const fullName = `${data.first_name} ${data.last_name}`.trim();
+    
     // Determine the final role
     let finalRole = data.is_individual 
       ? undefined 
@@ -144,7 +169,10 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
 
     await updateContact.mutateAsync({
       id: contact.id,
-      name: data.name,
+      name: fullName,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      gender: data.gender || null,
       email: data.email || null,
       phone: data.phone || null,
       role: finalRole || null,
@@ -185,13 +213,42 @@ export function EditContactDialog({ contact, open, onOpenChange }: EditContactDi
             />
           </div>
 
-          {/* Nom */}
+          {/* Civilité */}
           <div className="space-y-2">
-            <Label>Nom *</Label>
-            <Input {...form.register("name")} placeholder="Jean Dupont" />
-            {form.formState.errors.name && (
-              <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>
-            )}
+            <Label>Civilité</Label>
+            <Select 
+              value={form.watch("gender")} 
+              onValueChange={(v) => form.setValue("gender", v as "male" | "female" | "other")}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner..." />
+              </SelectTrigger>
+              <SelectContent>
+                {GENDER_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Prénom & Nom */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Prénom *</Label>
+              <Input {...form.register("first_name")} placeholder="Jean" />
+              {form.formState.errors.first_name && (
+                <p className="text-sm text-destructive">{form.formState.errors.first_name.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Nom *</Label>
+              <Input {...form.register("last_name")} placeholder="Dupont" />
+              {form.formState.errors.last_name && (
+                <p className="text-sm text-destructive">{form.formState.errors.last_name.message}</p>
+              )}
+            </div>
           </div>
 
           {/* Email & Téléphone */}

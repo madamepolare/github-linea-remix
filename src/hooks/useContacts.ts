@@ -9,6 +9,9 @@ export type { Contact };
 
 export interface CreateContactInput {
   name: string;
+  first_name?: string;
+  last_name?: string;
+  gender?: 'male' | 'female' | 'other';
   crm_company_id?: string;
   email?: string;
   phone?: string;
