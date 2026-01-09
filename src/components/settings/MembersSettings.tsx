@@ -106,15 +106,32 @@ export function MembersSettings() {
     defaultValues: { email: "", role: "member" },
   });
 
-  const currentUserRole = members.find(m => m.user_id === user?.id)?.role;
+  const [currentUserRole, setCurrentUserRole] = useState<AppRole | null>(null);
   const canManageMembers = currentUserRole === "owner" || currentUserRole === "admin";
 
   useEffect(() => {
     if (activeWorkspace) {
+      fetchCurrentUserRole();
       fetchMembers();
       fetchInvites();
     }
   }, [activeWorkspace]);
+
+  // Fetch current user's role separately (including hidden members)
+  const fetchCurrentUserRole = async () => {
+    if (!activeWorkspace || !user) return;
+
+    const { data, error } = await supabase
+      .from("workspace_members")
+      .select("role")
+      .eq("workspace_id", activeWorkspace.id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (!error && data) {
+      setCurrentUserRole(data.role as AppRole);
+    }
+  };
 
   const fetchMembers = async () => {
     if (!activeWorkspace) return;
