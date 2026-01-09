@@ -134,7 +134,7 @@ const App = () => (
                 <Route path="/references/:id" element={<ReferenceDetail />} />
                 <Route path="/materials" element={<Materials />} />
                 <Route path="/objects" element={<Objects />} />
-                <Route path="/workflow" element={<Workflow />} />
+                <Route path="/planning" element={<Workflow />} />
                 <Route path="/campaigns" element={<Campaigns />} />
                 <Route path="/campaigns/:id" element={<CampaignDetail />} />
                 <Route path="/media-planning" element={<MediaPlanning />} />
