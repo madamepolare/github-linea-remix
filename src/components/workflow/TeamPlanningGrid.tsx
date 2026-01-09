@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay, setHours, parseISO, addHours } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye, GripVertical, CheckCircle2, ExternalLink, Copy, Move } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye, GripVertical, CheckCircle2, ExternalLink, Copy, Move, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Task } from "@/hooks/useTasks";
 import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 import { ResizablePlanningItem, PlanningItem } from "./ResizablePlanningItem";
+import { AddTimeEntryDialog } from "./AddTimeEntryDialog";
 
 interface TeamPlanningGridProps {
   onEventClick?: (schedule: TaskSchedule) => void;
@@ -51,6 +52,11 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const [showEvents, setShowEvents] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
+  
+  // Time entry dialog state
+  const [timeEntryDialogOpen, setTimeEntryDialogOpen] = useState(false);
+  const [selectedCellDate, setSelectedCellDate] = useState<Date | null>(null);
+  const [selectedCellMember, setSelectedCellMember] = useState<TeamMember | null>(null);
   
   const { schedules, isLoading: schedulesLoading, createSchedule, deleteSchedule, updateSchedule } = useTaskSchedules();
   const { data: members, isLoading: membersLoading } = useTeamMembers();
@@ -567,7 +573,12 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                     getItemsForMemberAndDay={getItemsForMemberAndDay}
                     getOccupancyRate={getOccupancyRate}
                     onEventClick={onEventClick}
-                    onCellClick={onCellClick}
+                    onCellClick={(date, member) => {
+                      setSelectedCellDate(date);
+                      setSelectedCellMember(member);
+                      setTimeEntryDialogOpen(true);
+                      onCellClick?.(date, member);
+                    }}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
@@ -592,6 +603,14 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
         task={selectedTask}
         open={taskSheetOpen}
         onOpenChange={setTaskSheetOpen}
+      />
+
+      {/* Add Time Entry Dialog */}
+      <AddTimeEntryDialog
+        open={timeEntryDialogOpen}
+        onOpenChange={setTimeEntryDialogOpen}
+        date={selectedCellDate}
+        member={selectedCellMember}
       />
     </div>
   );
