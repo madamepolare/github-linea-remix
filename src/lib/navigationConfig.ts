@@ -236,10 +236,10 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
     slug: "workflow",
     title: "Planning",
     icon: CalendarClock,
-    href: "/workflow",
+    href: "/planning",
     isExtension: true,
     subNav: [
-      { key: "planning", label: "Planning équipe", href: "/workflow" },
+      { key: "planning", label: "Planning équipe", href: "/planning" },
     ],
     quickActions: [
       { key: "ai-plan", label: "Planifier avec IA", event: "open-ai-planning" },
