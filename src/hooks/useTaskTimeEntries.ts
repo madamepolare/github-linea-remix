@@ -15,6 +15,10 @@ export interface TaskTimeEntry {
   ended_at: string | null;
   is_billable: boolean | null;
   created_at: string | null;
+  user?: {
+    full_name: string | null;
+    avatar_url: string | null;
+  };
 }
 
 export function useTaskTimeEntries(taskId: string | null) {
@@ -30,6 +34,26 @@ export function useTaskTimeEntries(taskId: string | null) {
         .eq("task_id", taskId!)
         .order("date", { ascending: false });
       if (error) throw error;
+      
+      // Fetch user profiles for entries
+      const userIds = [...new Set((data || []).map((e) => e.user_id).filter(Boolean))];
+      
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, avatar_url")
+          .in("user_id", userIds);
+        
+        const profilesMap = new Map(
+          (profiles || []).map((p) => [p.user_id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+        );
+        
+        return (data || []).map((entry) => ({
+          ...entry,
+          user: entry.user_id ? profilesMap.get(entry.user_id) || null : null,
+        })) as TaskTimeEntry[];
+      }
+      
       return data as TaskTimeEntry[];
     },
     enabled: !!taskId,
@@ -45,7 +69,9 @@ export function useTaskTimeEntries(taskId: string | null) {
           description: entry.description,
           task_id: taskId!,
           workspace_id: activeWorkspace!.id,
-          user_id: user?.id,
+          user_id: entry.user_id || user?.id,
+          started_at: entry.started_at,
+          ended_at: entry.ended_at,
         } as any)
         .select()
         .single();
@@ -54,10 +80,30 @@ export function useTaskTimeEntries(taskId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task-time-entries", taskId] });
-      toast.success("Time entry added");
+      toast.success("Temps enregistré");
     },
     onError: (error) => {
-      toast.error("Failed to add time entry: " + error.message);
+      toast.error("Erreur: " + error.message);
+    },
+  });
+
+  const updateTimeEntry = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<TaskTimeEntry> & { id: string }) => {
+      const { data, error } = await supabase
+        .from("task_time_entries")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-time-entries", taskId] });
+      toast.success("Temps mis à jour");
+    },
+    onError: (error) => {
+      toast.error("Erreur: " + error.message);
     },
   });
 
@@ -68,10 +114,10 @@ export function useTaskTimeEntries(taskId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task-time-entries", taskId] });
-      toast.success("Time entry deleted");
+      toast.success("Temps supprimé");
     },
     onError: (error) => {
-      toast.error("Failed to delete time entry: " + error.message);
+      toast.error("Erreur: " + error.message);
     },
   });
 
@@ -81,6 +127,7 @@ export function useTaskTimeEntries(taskId: string | null) {
     timeEntries,
     isLoading,
     createTimeEntry,
+    updateTimeEntry,
     deleteTimeEntry,
     totalMinutes,
     totalHours: Math.round((totalMinutes / 60) * 10) / 10,
