@@ -95,8 +95,28 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
       setAssignedTo(task.assigned_to || []);
       setTags(task.tags || []);
       setEstimatedHours(task.estimated_hours?.toString() || "");
-      setRelatedType((task.related_type as RelatedEntityType) || null);
-      setRelatedId(task.related_id || null);
+      
+      // Initialize related entity from task data
+      // Priority: related_type/related_id, then fallback to specific IDs
+      if (task.related_type && task.related_id) {
+        setRelatedType(task.related_type as RelatedEntityType);
+        setRelatedId(task.related_id);
+      } else if (task.project_id) {
+        setRelatedType("project");
+        setRelatedId(task.project_id);
+      } else if (task.lead_id) {
+        setRelatedType("lead");
+        setRelatedId(task.lead_id);
+      } else if (task.crm_company_id) {
+        setRelatedType("company");
+        setRelatedId(task.crm_company_id);
+      } else if (task.contact_id) {
+        setRelatedType("contact");
+        setRelatedId(task.contact_id);
+      } else {
+        setRelatedType(null);
+        setRelatedId(null);
+      }
     }
   }, [task]);
 

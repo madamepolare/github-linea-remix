@@ -54,6 +54,7 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
             status,
             priority,
             estimated_hours,
+            project_id,
             project:projects(name, color)
           )
         `)
