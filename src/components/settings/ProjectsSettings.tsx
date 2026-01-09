@@ -1,56 +1,51 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GenericSettingsManager } from "./GenericSettingsManager";
 import { FolderKanban, FileText } from "lucide-react";
-import { DISCIPLINE_CONFIGS, DisciplineSlug } from "@/lib/disciplinesConfig";
+import { useWorkspaceDiscipline } from "@/hooks/useDiscipline";
+import { useMemo } from "react";
 
-// Generate default project types from discipline configs
-const DEFAULT_PROJECT_TYPES = Object.entries(DISCIPLINE_CONFIGS).map(([slug, config]) => ({
-  key: slug,
-  label: config.name,
-  color: config.color.startsWith('hsl') 
-    ? hslToHex(config.color) 
-    : config.color,
-  description: config.description,
-  icon: config.icon.displayName || slug,
-}));
+// Project types by discipline
+const PROJECT_TYPES_BY_DISCIPLINE: Record<string, Array<{ key: string; label: string; color: string; description: string }>> = {
+  // Architecture agency - spatial design disciplines
+  architecture: [
+    { key: "architecture", label: "Architecture", color: "#3B82F6", description: "Construction neuve, extension, permis de construire" },
+    { key: "interior", label: "Intérieur", color: "#8B5CF6", description: "Aménagement intérieur, design d'espace" },
+    { key: "scenography", label: "Scénographie", color: "#F59E0B", description: "Exposition, événementiel, muséographie" },
+    { key: "urbanisme", label: "Urbanisme", color: "#10B981", description: "Aménagement urbain, master plan" },
+    { key: "paysage", label: "Paysage", color: "#22C55E", description: "Aménagement paysager, espaces verts" },
+  ],
+  // Interior design agency
+  interior: [
+    { key: "amenagement", label: "Aménagement", color: "#8B5CF6", description: "Aménagement intérieur complet" },
+    { key: "retail", label: "Retail", color: "#F59E0B", description: "Boutiques et espaces commerciaux" },
+    { key: "residential", label: "Résidentiel", color: "#3B82F6", description: "Appartements et maisons" },
+    { key: "hospitality", label: "Hospitality", color: "#EC4899", description: "Hôtels, restaurants, bars" },
+    { key: "workspace", label: "Bureaux", color: "#10B981", description: "Espaces de travail" },
+  ],
+  // Scenography agency
+  scenography: [
+    { key: "exposition", label: "Exposition", color: "#8B5CF6", description: "Exposition temporaire ou permanente" },
+    { key: "musee", label: "Muséographie", color: "#3B82F6", description: "Parcours muséographique" },
+    { key: "evenement", label: "Événement", color: "#F59E0B", description: "Scénographie événementielle" },
+    { key: "stand", label: "Stand", color: "#10B981", description: "Stand de salon professionnel" },
+    { key: "spectacle", label: "Spectacle", color: "#EC4899", description: "Décor de spectacle" },
+  ],
+  // Communication & design agency
+  communication: [
+    { key: "campagne", label: "Campagne", color: "#3B82F6", description: "Campagne de communication 360°" },
+    { key: "branding", label: "Branding", color: "#8B5CF6", description: "Identité visuelle et branding" },
+    { key: "supports", label: "Supports de com.", color: "#F59E0B", description: "Supports print et digital" },
+    { key: "video", label: "Vidéo", color: "#EF4444", description: "Production vidéo" },
+    { key: "photo", label: "Photo", color: "#EC4899", description: "Shooting photo et retouche" },
+    { key: "print", label: "Print", color: "#10B981", description: "Édition et impression" },
+    { key: "motion", label: "Motion Design", color: "#06B6D4", description: "Animation et motion graphics" },
+    { key: "web", label: "Web / Digital", color: "#6366F1", description: "Site web, UX/UI, applications" },
+    { key: "social", label: "Social Media", color: "#F97316", description: "Réseaux sociaux et community" },
+  ],
+};
 
-// Helper to convert HSL string to hex
-function hslToHex(hslString: string): string {
-  // Parse hsl(220, 70%, 50%) format
-  const match = hslString.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
-  if (!match) return "#3B82F6"; // fallback
-  
-  const h = parseInt(match[1]) / 360;
-  const s = parseInt(match[2]) / 100;
-  const l = parseInt(match[3]) / 100;
-  
-  const hue2rgb = (p: number, q: number, t: number) => {
-    if (t < 0) t += 1;
-    if (t > 1) t -= 1;
-    if (t < 1/6) return p + (q - p) * 6 * t;
-    if (t < 1/2) return q;
-    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-    return p;
-  };
-  
-  let r, g, b;
-  if (s === 0) {
-    r = g = b = l;
-  } else {
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1/3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1/3);
-  }
-  
-  const toHex = (x: number) => {
-    const hex = Math.round(x * 255).toString(16);
-    return hex.length === 1 ? '0' + hex : hex;
-  };
-  
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
+// Default fallback
+const DEFAULT_PROJECT_TYPES = PROJECT_TYPES_BY_DISCIPLINE.architecture;
 
 // Default deliverable types
 const DEFAULT_DELIVERABLE_TYPES = [
@@ -63,6 +58,13 @@ const DEFAULT_DELIVERABLE_TYPES = [
 ];
 
 export function ProjectsSettings() {
+  const { data: discipline } = useWorkspaceDiscipline();
+  
+  // Get project types based on current discipline
+  const projectTypes = useMemo(() => {
+    if (!discipline?.slug) return DEFAULT_PROJECT_TYPES;
+    return PROJECT_TYPES_BY_DISCIPLINE[discipline.slug] || DEFAULT_PROJECT_TYPES;
+  }, [discipline?.slug]);
   return (
     <div className="space-y-6">
       <div>
@@ -88,11 +90,11 @@ export function ProjectsSettings() {
           <GenericSettingsManager
             settingType="project_types"
             title="Types de projet"
-            description="Catégories de projets disponibles dans l'application"
+            description={`Catégories de projets pour ${discipline?.name || 'votre discipline'}`}
             icon={<FolderKanban className="h-5 w-5 text-primary" />}
             showColor
             showDescription
-            defaultItems={DEFAULT_PROJECT_TYPES}
+            defaultItems={projectTypes}
           />
         </TabsContent>
 
