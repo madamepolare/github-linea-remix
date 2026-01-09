@@ -1,18 +1,33 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTaskTimeEntries } from "@/hooks/useTaskTimeEntries";
 import { useTaskSchedules } from "@/hooks/useTaskSchedules";
+import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, Pause, Clock, Plus, Calendar, User, Pencil, Check, X, Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Play, Pause, Clock, Plus, Calendar as CalendarIcon, User, Pencil, Check, X, Trash2, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, parseISO, addHours } from "date-fns";
+import { format, parseISO, addHours, setHours, setMinutes, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DurationInput } from "./DurationInput";
+import { toast } from "sonner";
 
 interface TaskTimeTrackerProps {
   taskId: string;
@@ -20,8 +35,9 @@ interface TaskTimeTrackerProps {
 
 export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
   const { timeEntries, totalHours, createTimeEntry } = useTaskTimeEntries(taskId);
-  const { schedules, isLoading: schedulesLoading, updateSchedule, deleteSchedule } = useTaskSchedules({ taskId });
-  
+  const { schedules, isLoading: schedulesLoading, createSchedule, updateSchedule, deleteSchedule } = useTaskSchedules({ taskId });
+  const { data: profiles } = useWorkspaceProfiles();
+
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [manualHours, setManualHours] = useState("");
@@ -32,21 +48,31 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingDuration, setEditingDuration] = useState<string>("");
 
+  // New schedule form state
+  const [showNewScheduleForm, setShowNewScheduleForm] = useState(false);
+  const [newScheduleUserId, setNewScheduleUserId] = useState<string>("");
+  const [newScheduleDate, setNewScheduleDate] = useState<Date | undefined>(new Date());
+  const [newScheduleStartHour, setNewScheduleStartHour] = useState("09");
+  const [newScheduleStartMinute, setNewScheduleStartMinute] = useState("00");
+  const [newScheduleDuration, setNewScheduleDuration] = useState("2");
+  const [isCreatingSchedule, setIsCreatingSchedule] = useState(false);
+
   // Calculer le temps total planifié depuis les schedules
   const { scheduledHours, scheduledEntries } = useMemo(() => {
     if (!schedules || schedules.length === 0) {
       return { scheduledHours: 0, scheduledEntries: [] };
     }
-    
-    const entries = schedules.map(schedule => {
+
+    const entries = schedules.map((schedule) => {
       const start = new Date(schedule.start_datetime);
       const end = new Date(schedule.end_datetime);
       const durationMs = end.getTime() - start.getTime();
       const durationHours = Math.round((durationMs / (1000 * 60 * 60)) * 10) / 10;
-      
+
       return {
         id: schedule.id,
         startDatetime: schedule.start_datetime,
+        userId: schedule.user_id,
         date: start,
         durationHours,
         userName: schedule.user?.full_name || "Non assigné",
@@ -54,16 +80,16 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
         isLocked: schedule.is_locked,
       };
     });
-    
+
     const totalHours = entries.reduce((sum, e) => sum + e.durationHours, 0);
-    
-    return { 
-      scheduledHours: Math.round(totalHours * 10) / 10, 
-      scheduledEntries: entries.sort((a, b) => b.date.getTime() - a.date.getTime())
+
+    return {
+      scheduledHours: Math.round(totalHours * 10) / 10,
+      scheduledEntries: entries.sort((a, b) => b.date.getTime() - a.date.getTime()),
     };
   }, [schedules]);
 
-  const handleEditEntry = (entry: typeof scheduledEntries[0]) => {
+  const handleEditEntry = (entry: (typeof scheduledEntries)[0]) => {
     setEditingEntryId(entry.id);
     setEditingDuration(entry.durationHours.toString());
   };
@@ -71,15 +97,15 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
   const handleSaveEntry = async (entryId: string, startDatetime: string) => {
     const hours = parseFloat(editingDuration);
     if (isNaN(hours) || hours <= 0) return;
-    
+
     const startDate = new Date(startDatetime);
     const endDate = addHours(startDate, hours);
-    
+
     await updateSchedule.mutateAsync({
       id: entryId,
       end_datetime: endDate.toISOString(),
     });
-    
+
     setEditingEntryId(null);
     setEditingDuration("");
   };
@@ -89,8 +115,48 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
     setEditingDuration("");
   };
 
+  const handleCreateSchedule = async () => {
+    if (!newScheduleUserId || !newScheduleDate) {
+      toast.error("Veuillez sélectionner un membre et une date");
+      return;
+    }
+
+    setIsCreatingSchedule(true);
+    try {
+      const startDate = setMinutes(
+        setHours(startOfDay(newScheduleDate), parseInt(newScheduleStartHour)),
+        parseInt(newScheduleStartMinute)
+      );
+      const endDate = addHours(startDate, parseFloat(newScheduleDuration));
+
+      await createSchedule.mutateAsync({
+        task_id: taskId,
+        user_id: newScheduleUserId,
+        start_datetime: startDate.toISOString(),
+        end_datetime: endDate.toISOString(),
+      });
+
+      // Reset form
+      setShowNewScheduleForm(false);
+      setNewScheduleUserId("");
+      setNewScheduleDate(new Date());
+      setNewScheduleStartHour("09");
+      setNewScheduleStartMinute("00");
+      setNewScheduleDuration("2");
+    } catch (error) {
+      console.error("Error creating schedule:", error);
+    } finally {
+      setIsCreatingSchedule(false);
+    }
+  };
+
   const getInitials = (name: string) => {
-    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   // Temps total = temps manuel + temps planifié
@@ -157,19 +223,22 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
     return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const hourOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"));
+  const minuteOptions = ["00", "15", "30", "45"];
+
   return (
     <div className="space-y-4">
       {/* Total Time Display - Combined */}
       <div className="p-4 rounded-lg bg-muted/50 text-center space-y-2">
         <p className="text-3xl font-semibold tabular-nums">{combinedTotalHours}h</p>
         <p className="text-sm text-muted-foreground">Temps total</p>
-        
+
         {/* Breakdown */}
         {(scheduledHours > 0 || totalHours > 0) && (
           <div className="flex items-center justify-center gap-4 pt-2 text-xs">
             {scheduledHours > 0 && (
               <div className="flex items-center gap-1 text-primary">
-                <Calendar className="h-3 w-3" />
+                <CalendarIcon className="h-3 w-3" />
                 <span>{scheduledHours}h planifié</span>
               </div>
             )}
@@ -186,7 +255,7 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
       <Tabs defaultValue="planning" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="planning">
-            <Calendar className="h-3 w-3 mr-1" />
+            <CalendarIcon className="h-3 w-3 mr-1" />
             Planning
           </TabsTrigger>
           <TabsTrigger value="timer">
@@ -201,18 +270,152 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
 
         {/* Planning Tab - Shows scheduled time entries */}
         <TabsContent value="planning" className="space-y-4">
+          {/* Add Schedule Button */}
+          {!showNewScheduleForm && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setShowNewScheduleForm(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Planifier un créneau
+            </Button>
+          )}
+
+          {/* New Schedule Form */}
+          {showNewScheduleForm && (
+            <div className="p-4 rounded-lg border bg-card space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-sm">Nouveau créneau</h4>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => setShowNewScheduleForm(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Assignee Selection */}
+              <div className="space-y-2">
+                <Label className="text-xs">Assigné à</Label>
+                <Select value={newScheduleUserId} onValueChange={setNewScheduleUserId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir un membre..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profiles?.map((profile) => (
+                      <SelectItem key={profile.user_id} value={profile.user_id}>
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={profile.avatar_url || undefined} />
+                            <AvatarFallback className="text-[9px]">
+                              {getInitials(profile.full_name || "?")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{profile.full_name || "Utilisateur"}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Date Selection */}
+              <div className="space-y-2">
+                <Label className="text-xs">Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start">
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      {newScheduleDate ? format(newScheduleDate, "EEEE d MMMM", { locale: fr }) : "Sélectionner..."}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newScheduleDate}
+                      onSelect={setNewScheduleDate}
+                      locale={fr}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Time Selection */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label className="text-xs">Heure de début</Label>
+                  <div className="flex gap-1">
+                    <Select value={newScheduleStartHour} onValueChange={setNewScheduleStartHour}>
+                      <SelectTrigger className="w-16">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {hourOptions.map((h) => (
+                          <SelectItem key={h} value={h}>
+                            {h}h
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={newScheduleStartMinute} onValueChange={setNewScheduleStartMinute}>
+                      <SelectTrigger className="w-16">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {minuteOptions.map((m) => (
+                          <SelectItem key={m} value={m}>
+                            {m}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs">Durée</Label>
+                  <Select value={newScheduleDuration} onValueChange={setNewScheduleDuration}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["0.5", "1", "1.5", "2", "2.5", "3", "4", "5", "6", "7", "8"].map((d) => (
+                        <SelectItem key={d} value={d}>
+                          {d}h
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" size="sm" onClick={() => setShowNewScheduleForm(false)}>
+                  Annuler
+                </Button>
+                <Button size="sm" onClick={handleCreateSchedule} disabled={isCreatingSchedule}>
+                  {isCreatingSchedule ? "Création..." : "Planifier"}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {schedulesLoading ? (
             <div className="text-center py-4 text-muted-foreground text-sm">
               Chargement...
             </div>
-          ) : scheduledEntries.length === 0 ? (
+          ) : scheduledEntries.length === 0 && !showNewScheduleForm ? (
             <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <CalendarIcon className="h-8 w-8 mx-auto mb-2 opacity-40" />
               <p className="text-sm">Aucune planification</p>
-              <p className="text-xs mt-1">Planifiez cette tâche depuis le planning d'équipe</p>
+              <p className="text-xs mt-1">Cliquez sur le bouton ci-dessus pour planifier</p>
             </div>
           ) : (
-            <ScrollArea className="h-[280px]">
+            <ScrollArea className="h-[220px]">
               <div className="space-y-2 pr-2">
                 {scheduledEntries.map((entry) => (
                   <div
@@ -233,7 +436,8 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                         <div>
                           <div className="font-medium">{entry.userName}</div>
                           <div className="text-xs text-muted-foreground">
-                            {format(entry.date, "EEEE d MMMM", { locale: fr })}
+                            {format(entry.date, "EEEE d MMMM", { locale: fr })} à{" "}
+                            {format(entry.date, "HH:mm")}
                           </div>
                         </div>
                       </div>
@@ -263,23 +467,13 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                     </div>
                     {editingEntryId === entry.id && (
                       <div className="mt-3 pt-3 border-t space-y-3">
-                        <DurationInput
-                          value={editingDuration}
-                          onChange={setEditingDuration}
-                        />
+                        <DurationInput value={editingDuration} onChange={setEditingDuration} />
                         <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={handleCancelEdit}
-                          >
+                          <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
                             <X className="h-3 w-3 mr-1" />
                             Annuler
                           </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleSaveEntry(entry.id, entry.startDatetime)}
-                          >
+                          <Button size="sm" onClick={() => handleSaveEntry(entry.id, entry.startDatetime)}>
                             <Check className="h-3 w-3 mr-1" />
                             Enregistrer
                           </Button>
@@ -297,12 +491,7 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
         <TabsContent value="timer" className="space-y-4">
           {/* Timer Display */}
           <div className="text-center py-4">
-            <p
-              className={cn(
-                "text-4xl font-mono tabular-nums",
-                isRunning && "text-primary"
-              )}
-            >
+            <p className={cn("text-4xl font-mono tabular-nums", isRunning && "text-primary")}>
               {formatTime(elapsedSeconds)}
             </p>
           </div>
@@ -344,11 +533,7 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
         <TabsContent value="manual" className="space-y-4">
           <div className="space-y-2">
             <Label>Durée</Label>
-            <DurationInput
-              value={manualHours}
-              onChange={setManualHours}
-              placeholder="Durée"
-            />
+            <DurationInput value={manualHours} onChange={setManualHours} placeholder="Durée" />
           </div>
 
           <div className="space-y-2">
