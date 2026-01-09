@@ -48,6 +48,7 @@ const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Legal = lazy(() => import("./pages/legal/Legal"));
 const Workflow = lazy(() => import("./pages/Workflow"));
 const Campaigns = lazy(() => import("./pages/Campaigns"));
+const CampaignDetail = lazy(() => import("./pages/CampaignDetail"));
 const MediaPlanning = lazy(() => import("./pages/MediaPlanning"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -135,7 +136,7 @@ const App = () => (
                 <Route path="/objects" element={<Objects />} />
                 <Route path="/workflow" element={<Workflow />} />
                 <Route path="/campaigns" element={<Campaigns />} />
-                <Route path="/campaigns/:id" element={<Campaigns />} />
+                <Route path="/campaigns/:id" element={<CampaignDetail />} />
                 <Route path="/media-planning" element={<MediaPlanning />} />
               </Route>
 
