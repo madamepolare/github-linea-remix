@@ -41,6 +41,99 @@ Quand tu analyses un document, tu dois :
 
 Réponds UNIQUEMENT avec les données structurées demandées via l'outil de fonction fourni.`;
 
+// Parse PDF using LlamaParse
+async function parseWithLlamaParse(documentUrl: string, fileName: string): Promise<string> {
+  const LLAMA_PARSE_API_KEY = Deno.env.get('LLAMA_PARSE_API_KEY');
+  
+  if (!LLAMA_PARSE_API_KEY) {
+    console.log("LLAMA_PARSE_API_KEY not configured, skipping PDF parsing");
+    return "";
+  }
+
+  console.log(`Starting LlamaParse for: ${fileName}`);
+
+  try {
+    // Step 1: Download the file
+    console.log(`Downloading file from: ${documentUrl}`);
+    const fileResponse = await fetch(documentUrl);
+    if (!fileResponse.ok) {
+      throw new Error(`Failed to download file: ${fileResponse.status}`);
+    }
+    const fileBlob = await fileResponse.blob();
+    console.log(`File downloaded, size: ${fileBlob.size} bytes`);
+
+    // Step 2: Upload to LlamaParse
+    const formData = new FormData();
+    formData.append('file', fileBlob, fileName);
+
+    console.log("Uploading to LlamaParse...");
+    const uploadResponse = await fetch('https://api.cloud.llamaindex.ai/api/parsing/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LLAMA_PARSE_API_KEY}`,
+      },
+      body: formData,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      throw new Error(`LlamaParse upload failed: ${uploadResponse.status} - ${errorText}`);
+    }
+
+    const uploadResult = await uploadResponse.json();
+    const jobId = uploadResult.id;
+    console.log(`LlamaParse job created: ${jobId}`);
+
+    // Step 3: Poll for completion
+    let status = 'PENDING';
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutes max
+
+    while (status === 'PENDING' && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+      
+      const statusResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}`, {
+        headers: {
+          'Authorization': `Bearer ${LLAMA_PARSE_API_KEY}`,
+        },
+      });
+
+      if (!statusResponse.ok) {
+        throw new Error(`Failed to check job status: ${statusResponse.status}`);
+      }
+
+      const statusResult = await statusResponse.json();
+      status = statusResult.status;
+      console.log(`Job ${jobId} status: ${status} (attempt ${attempts + 1})`);
+      attempts++;
+    }
+
+    if (status !== 'SUCCESS') {
+      throw new Error(`LlamaParse job did not complete successfully: ${status}`);
+    }
+
+    // Step 4: Get the parsed content (markdown format)
+    const resultResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}/result/markdown`, {
+      headers: {
+        'Authorization': `Bearer ${LLAMA_PARSE_API_KEY}`,
+      },
+    });
+
+    if (!resultResponse.ok) {
+      throw new Error(`Failed to get parsed content: ${resultResponse.status}`);
+    }
+
+    const parsedContent = await resultResponse.json();
+    const markdown = parsedContent.markdown || "";
+    console.log(`LlamaParse completed, extracted ${markdown.length} characters`);
+    
+    return markdown;
+  } catch (error) {
+    console.error("LlamaParse error:", error);
+    return "";
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -56,16 +149,35 @@ serve(async (req) => {
 
     console.log(`Analyzing document for tender ${tenderId}, type: ${documentType}, file: ${fileName}`);
 
+    // Extract text content from the document using LlamaParse
+    let extractedContent = documentContent || "";
+    
+    if (!extractedContent && documentUrl) {
+      // Check if it's a PDF or other document that needs parsing
+      const isPDF = fileName?.toLowerCase().endsWith('.pdf') || documentUrl.toLowerCase().includes('.pdf');
+      const isDoc = fileName?.toLowerCase().match(/\.(docx?|xlsx?)$/i);
+      
+      if (isPDF || isDoc) {
+        console.log("Document needs parsing, using LlamaParse...");
+        extractedContent = await parseWithLlamaParse(documentUrl, fileName || "document.pdf");
+      }
+    }
+
     // Build the analysis prompt based on document type
     const extractionPrompt = getExtractionPrompt(documentType);
     
     // Build user message with available content
     let userMessage = `Analyse ce document DCE de type "${documentType}" (fichier: ${fileName}).\n\n${extractionPrompt}`;
     
-    if (documentContent) {
-      userMessage += `\n\n--- CONTENU DU DOCUMENT ---\n${documentContent.substring(0, 50000)}`;
+    if (extractedContent) {
+      // Limit content to avoid token limits but allow substantial text
+      const maxChars = 100000;
+      const content = extractedContent.length > maxChars 
+        ? extractedContent.substring(0, maxChars) + "\n\n[...Document tronqué...]"
+        : extractedContent;
+      userMessage += `\n\n--- CONTENU DU DOCUMENT ---\n${content}`;
     } else if (documentUrl) {
-      userMessage += `\n\nDocument disponible à l'URL: ${documentUrl}\n\nNote: Si tu ne peux pas accéder directement au contenu, analyse au mieux en fonction du nom de fichier et du type de document.`;
+      userMessage += `\n\nDocument disponible à l'URL: ${documentUrl}\n\nNote: Le parsing du document a échoué. Analyse au mieux en fonction du nom de fichier et du type de document.`;
     }
 
     userMessage += `\n\nExtrais TOUTES les informations pertinentes de manière exhaustive.`;
