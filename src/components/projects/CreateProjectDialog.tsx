@@ -32,7 +32,7 @@ import {
   ProjectType,
   PHASE_COLORS,
 } from "@/lib/projectTypes";
-import { DisciplineProjectType } from "@/lib/disciplinesConfig";
+import { getDefaultPhases, DisciplineSlug } from "@/lib/disciplinesConfig";
 import {
   Building2,
   Sofa,
@@ -116,6 +116,29 @@ function mapDisciplineToProjectType(disciplineKey: string): ProjectType | null {
   return mapping[normalized] || "interior"; // Default to interior if unknown
 }
 
+// Map project type key to discipline slug for phase defaults
+function mapProjectTypeToDiscipline(projectType: string): DisciplineSlug | null {
+  const mapping: Record<string, DisciplineSlug> = {
+    interior: "interior",
+    interieur: "interior",
+    architecture: "architecture",
+    scenography: "scenography",
+    scenographie: "scenography",
+    // Communication types
+    campagne: "communication",
+    branding: "communication",
+    supports: "communication",
+    video: "communication",
+    photo: "communication",
+    print: "communication",
+    motion: "communication",
+    web: "communication",
+    social: "communication",
+  };
+  const normalized = projectType.toLowerCase();
+  return mapping[normalized] || null;
+}
+
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
   const { createProject } = useProjects();
   const { companies, isLoading: companiesLoading } = useCRMCompanies();
@@ -148,10 +171,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     return disciplines.find(d => d.key === selectedDiscipline);
   }, [disciplines, selectedDiscipline]);
 
-  // Get subtypes for selected discipline
-  const availableSubTypes = useMemo<DisciplineProjectType[]>(() => {
-    return selectedDisciplineConfig?.subTypes || [];
-  }, [selectedDisciplineConfig]);
+  // Sub-types are now managed via workspace settings (project_subtypes)
+  // For now, we don't show subtypes in the creation flow - can be set after creation
 
   // When discipline changes, reset subtype and set projectType
   useEffect(() => {
@@ -188,13 +209,12 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
         }))
       );
     } else if (projectType) {
-      // Fallback: Use discipline default phases
-      const config = selectedDisciplineConfig;
-      if (config?.disciplineSlug) {
-        const { getDefaultPhases } = require("@/lib/disciplinesConfig");
-        const defaultPhases = getDefaultPhases(config.disciplineSlug);
+      // Fallback: Try to map to discipline default phases
+      const disciplineSlug = mapProjectTypeToDiscipline(projectType);
+      if (disciplineSlug) {
+        const defaultPhases = getDefaultPhases(disciplineSlug);
         setPhases(
-          defaultPhases.map((phase: { name: string; description?: string }, index: number) => ({
+          defaultPhases.map((phase, index) => ({
             name: phase.name,
             description: phase.description || '',
             color: PHASE_COLORS[index % PHASE_COLORS.length],
@@ -265,7 +285,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       case 0: // Discipline
         return !!selectedDiscipline;
       case 1: // Sub-type (optional but skippable if no subtypes)
-        return availableSubTypes.length === 0 || !!selectedSubType || true; // Always allow to proceed
+        return true; // Sub-type step is skipped
       case 2: // Info
         return !!name.trim();
       case 3: // Client
@@ -412,40 +432,10 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                     Précisez le type de projet (optionnel).
                   </p>
                   
-                  {availableSubTypes.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-3">
-                      {availableSubTypes.map((subType) => {
-                        const Icon = iconMap[subType.icon] || Building2;
-                        return (
-                          <button
-                            key={subType.value}
-                            onClick={() => setSelectedSubType(subType.value)}
-                            className={cn(
-                              "flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left",
-                              selectedSubType === subType.value
-                                ? "border-primary bg-primary/5"
-                                : "border-border hover:border-primary/50 hover:bg-muted/50"
-                            )}
-                          >
-                            <div className={cn(
-                              "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
-                              selectedSubType === subType.value ? "bg-primary text-primary-foreground" : "bg-muted"
-                            )}>
-                              <Icon className="h-5 w-5" />
-                            </div>
-                            <div className="min-w-0">
-                              <span className="font-medium text-sm block">{subType.label}</span>
-                              <span className="text-xs text-muted-foreground line-clamp-1">{subType.description}</span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      Aucun sous-type défini pour cette discipline. Vous pouvez continuer.
-                    </p>
-                  )}
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Les sous-types de projet sont gérés dans les paramètres.</p>
+                    <p className="text-sm mt-2">Vous pouvez passer à l'étape suivante.</p>
+                  </div>
                 </div>
               )}
 
@@ -681,7 +671,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                         <div className="flex justify-between">
                           <dt className="text-muted-foreground">Type</dt>
                           <dd className="font-medium">
-                            {availableSubTypes.find(t => t.value === selectedSubType)?.label || selectedSubType}
+                            {selectedSubType}
                           </dd>
                         </div>
                       )}
