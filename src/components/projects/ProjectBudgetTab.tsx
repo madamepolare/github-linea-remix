@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Euro,
   Briefcase,
+  Calculator,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -28,9 +29,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProject, useProjectMembers } from "@/hooks/useProjects";
 import { useTeamTimeEntries } from "@/hooks/useTeamTimeEntries";
 import { useTaskSchedules } from "@/hooks/useTaskSchedules";
+import { useAllMemberEmploymentInfo } from "@/hooks/useMemberEmploymentInfo";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+// Monthly hours based on 35h/week
+const MONTHLY_HOURS = 35 * 52 / 12; // ~151.67 hours/month
 
 interface ProjectBudgetTabProps {
   projectId: string;
@@ -46,6 +51,9 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
   const { schedules, isLoading: schedulesLoading } = useTaskSchedules({
     taskId: undefined,
   });
+  
+  // Get employment info for real cost calculation
+  const { data: employmentInfo, isLoading: employmentLoading } = useAllMemberEmploymentInfo();
 
   // Check if current user is admin/owner
   const { data: currentUserRole } = useQuery({
@@ -111,6 +119,19 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
   const isAdmin = currentUserRole === "admin" || currentUserRole === "owner";
   const dailyRate = workspaceData?.daily_rate || 0;
   const hourlyRate = dailyRate / 8;
+  
+  // Create a map of user_id -> hourly cost based on salary
+  const employmentCostMap = useMemo(() => {
+    const map = new Map<string, number>();
+    employmentInfo?.forEach((info) => {
+      if (info.salary_monthly) {
+        // Calculate hourly cost from monthly salary (35h/week)
+        const hourlyFromSalary = info.salary_monthly / MONTHLY_HOURS;
+        map.set(info.user_id, hourlyFromSalary);
+      }
+    });
+    return map;
+  }, [employmentInfo]);
 
   // Filter schedules for this project
   const projectSchedules = useMemo(() => {
@@ -228,12 +249,22 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
   }, [timeEntries, projectSchedules, projectMembers, profilesMap]);
 
   const totalHours = memberTimeSummary.reduce((sum, m) => sum + m.totalHours, 0);
-  const totalCost = totalHours * hourlyRate;
+  const totalClientCost = totalHours * hourlyRate;
+  
+  // Calculate total real cost based on salaries
+  const totalRealCost = memberTimeSummary.reduce((sum, member) => {
+    const realHourlyRate = employmentCostMap.get(member.userId);
+    if (realHourlyRate) {
+      return sum + (member.totalHours * realHourlyRate);
+    }
+    return sum; // Skip members without salary info
+  }, 0);
+  
   const projectBudget = project?.budget || 0;
   const budgetUsedPercent =
-    projectBudget > 0 ? Math.min(100, Math.round((totalCost / projectBudget) * 100)) : 0;
+    projectBudget > 0 ? Math.min(100, Math.round((totalClientCost / projectBudget) * 100)) : 0;
 
-  const isLoading = projectLoading || entriesLoading || schedulesLoading;
+  const isLoading = projectLoading || entriesLoading || schedulesLoading || employmentLoading;
 
   if (isLoading) {
     return (
@@ -276,10 +307,10 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
           </CardContent>
         </Card>
 
-        {/* Cost is now visible to everyone */}
+        {/* Client Cost */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Coût estimé</CardTitle>
+            <CardTitle className="text-sm font-medium">Coût client</CardTitle>
             <Euro className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -289,13 +320,36 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                 currency: "EUR",
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
-              }).format(totalCost)}
+              }).format(totalClientCost)}
             </div>
             <p className="text-xs text-muted-foreground">
               Base {dailyRate}€/jour
             </p>
           </CardContent>
         </Card>
+
+        {/* Real Cost (Admin only) */}
+        {isAdmin && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Coût réel</CardTitle>
+              <Calculator className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-emerald-600">
+                {new Intl.NumberFormat("fr-FR", {
+                  style: "currency",
+                  currency: "EUR",
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 0,
+                }).format(totalRealCost)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Basé sur salaires (35h/sem)
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Budget vs Actual (Admin only) */}
@@ -366,7 +420,7 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                     currency: "EUR",
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0,
-                  }).format(Math.max(0, projectBudget - totalCost))}
+                  }).format(Math.max(0, projectBudget - totalClientCost))}
                 </span>
               </div>
               <Badge
@@ -412,7 +466,8 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                   <TableHead>Membre</TableHead>
                   <TableHead>Travail réalisé</TableHead>
                   <TableHead className="text-right">Heures</TableHead>
-                  <TableHead className="text-right">Coût</TableHead>
+                  <TableHead className="text-right">Coût client</TableHead>
+                  {isAdmin && <TableHead className="text-right">Coût réel</TableHead>}
                   <TableHead className="text-right">Part</TableHead>
                 </TableRow>
               </TableHeader>
@@ -424,7 +479,9 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                       totalHours > 0
                         ? Math.round((member.totalHours / totalHours) * 100)
                         : 0;
-                    const memberCost = member.totalHours * hourlyRate;
+                    const memberClientCost = member.totalHours * hourlyRate;
+                    const realHourlyRate = employmentCostMap.get(member.userId);
+                    const memberRealCost = realHourlyRate ? member.totalHours * realHourlyRate : null;
 
                     return (
                       <TableRow key={member.userId}>
@@ -440,7 +497,7 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground max-w-[250px]">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground max-w-[200px]">
                             <Briefcase className="h-4 w-4 shrink-0" />
                             <span className="truncate">
                               {member.workDescription || "Travail sur le projet"}
@@ -456,8 +513,24 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                             currency: "EUR",
                             minimumFractionDigits: 0,
                             maximumFractionDigits: 0,
-                          }).format(memberCost)}
+                          }).format(memberClientCost)}
                         </TableCell>
+                        {isAdmin && (
+                          <TableCell className="text-right">
+                            {memberRealCost !== null ? (
+                              <span className="text-emerald-600 font-medium">
+                                {new Intl.NumberFormat("fr-FR", {
+                                  style: "currency",
+                                  currency: "EUR",
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0,
+                                }).format(memberRealCost)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Progress
