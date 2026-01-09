@@ -15,6 +15,7 @@ export interface RequiredTeamItem {
   is_mandatory: boolean;
   notes?: string;
   company_id?: string | null;
+  source?: string;
 }
 
 interface RequiredTeamEditorProps {
@@ -89,9 +90,16 @@ export function RequiredTeamEditor({ team, onChange, companies = [] }: RequiredT
                     <p className="font-medium text-sm">
                       {getSpecialtyLabel(member.specialty)}
                     </p>
-                    <Badge variant={member.is_mandatory ? "default" : "secondary"} className="text-xs">
-                      {member.is_mandatory ? "Obligatoire" : "Optionnel"}
-                    </Badge>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant={member.is_mandatory ? "default" : "secondary"} className="text-xs">
+                        {member.is_mandatory ? "Obligatoire" : "Optionnel"}
+                      </Badge>
+                      {member.source && (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          📄 {member.source}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
                 

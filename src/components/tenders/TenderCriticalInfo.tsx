@@ -62,6 +62,14 @@ export function TenderCriticalInfo({ tender }: TenderCriticalInfoProps) {
 
   const mandatoryTeam = requiredTeam.filter((t: any) => t.is_mandatory);
 
+  // Get critical alerts from tender
+  const criticalAlerts = useMemo(() => {
+    const extTender = tender as any;
+    if (!extTender.critical_alerts) return [];
+    if (Array.isArray(extTender.critical_alerts)) return extTender.critical_alerts;
+    return [];
+  }, [tender]);
+
   // Format budget
   const formatBudget = (amount: number | null) => {
     if (!amount) return null;
@@ -242,6 +250,53 @@ export function TenderCriticalInfo({ tender }: TenderCriticalInfoProps) {
                 <Mail className="h-3 w-3" />
                 {siteVisitContact.site_visit_contact_email}
               </span>
+            )}
+          </div>
+        )}
+
+        {/* Critical Alerts from AI Analysis */}
+        {criticalAlerts.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-primary/10 space-y-2">
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Points d'attention ({criticalAlerts.length})
+            </p>
+            <div className="grid gap-2 md:grid-cols-2">
+              {criticalAlerts.slice(0, 4).map((alert: any, i: number) => (
+                <div 
+                  key={i} 
+                  className={cn(
+                    "flex items-start gap-2 p-2 rounded-lg text-xs",
+                    alert.severity === 'critical' && "bg-red-100/80 dark:bg-red-950/40",
+                    alert.severity === 'warning' && "bg-amber-100/80 dark:bg-amber-950/40",
+                    alert.severity === 'info' && "bg-blue-100/80 dark:bg-blue-950/40"
+                  )}
+                >
+                  <span className="shrink-0 mt-0.5">
+                    {alert.severity === 'critical' ? '🔴' : alert.severity === 'warning' ? '🟠' : '🔵'}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className={cn(
+                      "font-medium",
+                      alert.severity === 'critical' && "text-red-700 dark:text-red-400",
+                      alert.severity === 'warning' && "text-amber-700 dark:text-amber-400",
+                      alert.severity === 'info' && "text-blue-700 dark:text-blue-400"
+                    )}>
+                      {alert.message}
+                    </span>
+                    {alert.source && (
+                      <span className="ml-1.5 text-muted-foreground bg-background/60 px-1.5 py-0.5 rounded">
+                        📄 {alert.source}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {criticalAlerts.length > 4 && (
+              <p className="text-xs text-muted-foreground text-center">
+                +{criticalAlerts.length - 4} autres alertes
+              </p>
             )}
           </div>
         )}

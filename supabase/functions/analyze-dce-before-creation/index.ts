@@ -448,10 +448,10 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
                     }
                   },
                   
-                  // Required team
+                  // Required team - WITH SOURCE REFERENCE
                   required_team: {
                     type: "array",
-                    description: "Compétences MOE requises dans l'équipe",
+                    description: "Compétences MOE requises dans l'équipe - TOUJOURS indiquer où tu as trouvé cette exigence",
                     items: {
                       type: "object",
                       properties: {
@@ -466,9 +466,13 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
                         notes: { 
                           type: "string", 
                           description: "Exigences particulières (qualifications, références, etc.)" 
+                        },
+                        source: {
+                          type: "string",
+                          description: "OBLIGATOIRE: Document et section où cette exigence est mentionnée (ex: 'RC article 4.2', 'CCAP page 8', 'Avis de publicité')"
                         }
                       },
-                      required: ["specialty", "is_mandatory"]
+                      required: ["specialty", "is_mandatory", "source"]
                     }
                   },
                   
@@ -538,10 +542,10 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
                     description: "Résumé synthétique de la mission en 2-3 phrases"
                   },
                   
-                  // Alerts and critical points
+                  // Alerts and critical points - WITH SOURCE REFERENCE
                   critical_alerts: {
                     type: "array",
-                    description: "Points critiques et alertes identifiés dans le DCE",
+                    description: "Points critiques et alertes identifiés dans le DCE - TOUJOURS citer la source",
                     items: {
                       type: "object",
                       properties: {
@@ -554,9 +558,13 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
                         severity: { 
                           type: "string", 
                           enum: ["info", "warning", "critical"] 
+                        },
+                        source: {
+                          type: "string",
+                          description: "OBLIGATOIRE: Document et localisation de cette information (ex: 'RC page 3', 'CCAP article 7', 'Programme p.12')"
                         }
                       },
-                      required: ["type", "message", "severity"]
+                      required: ["type", "message", "severity", "source"]
                     }
                   },
                   
