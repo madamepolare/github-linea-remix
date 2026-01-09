@@ -7,7 +7,7 @@ const corsHeaders = {
 
 const ARCHITECTURE_EXPERT_PROMPT = `Tu es un expert senior en marchés publics français, spécialisé dans les concours d'architecture et les missions de maîtrise d'œuvre (MOE).
 
-MISSION: Analyse en détail les documents DCE fournis (PDF) et extrais TOUTES les informations pertinentes pour constituer le dossier de candidature.
+MISSION: Analyse en détail les documents DCE fournis et extrais TOUTES les informations pertinentes pour constituer le dossier de candidature.
 
 EXPERTISE REQUISE:
 - Connaissance approfondie du Code de la Commande Publique
@@ -39,6 +39,89 @@ RÈGLES:
 - Si une information n'est pas trouvée, indique "Non précisé dans le DCE"
 - Pour les critères, extrait les VRAIS pourcentages du RC, pas des estimations`;
 
+// Parse a single document using LlamaParse
+async function parseDocument(file: { name: string; type: string; content: string }, apiKey: string): Promise<{ success: boolean; text?: string; error?: string }> {
+  try {
+    console.log(`[LlamaParse] Parsing: ${file.name}`);
+    
+    // Convert base64 to binary
+    const binaryContent = Uint8Array.from(atob(file.content), c => c.charCodeAt(0));
+    
+    // Create form data for LlamaParse
+    const formData = new FormData();
+    const blob = new Blob([binaryContent], { type: file.type || 'application/octet-stream' });
+    formData.append('file', blob, file.name);
+    
+    // Upload to LlamaParse
+    const uploadResponse = await fetch('https://api.cloud.llamaindex.ai/api/parsing/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: formData,
+    });
+    
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error(`[LlamaParse] Upload failed for ${file.name}:`, errorText);
+      return { success: false, error: `Upload failed: ${uploadResponse.status}` };
+    }
+    
+    const uploadResult = await uploadResponse.json();
+    const jobId = uploadResult.id;
+    
+    console.log(`[LlamaParse] Job started: ${jobId} for ${file.name}`);
+    
+    // Poll for completion (max 60 seconds)
+    const maxWait = 60000;
+    const pollInterval = 2000;
+    let elapsed = 0;
+    
+    while (elapsed < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+      elapsed += pollInterval;
+      
+      const statusResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+      });
+      
+      if (!statusResponse.ok) {
+        continue;
+      }
+      
+      const statusResult = await statusResponse.json();
+      
+      if (statusResult.status === 'SUCCESS') {
+        // Get the result
+        const resultResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}/result/markdown`, {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+          },
+        });
+        
+        if (resultResponse.ok) {
+          const resultData = await resultResponse.json();
+          const text = resultData.markdown || resultData.text || '';
+          console.log(`[LlamaParse] Successfully parsed ${file.name}: ${text.length} chars`);
+          return { success: true, text };
+        }
+      } else if (statusResult.status === 'ERROR') {
+        console.error(`[LlamaParse] Parsing failed for ${file.name}`);
+        return { success: false, error: 'Parsing failed' };
+      }
+      
+      console.log(`[LlamaParse] Status for ${file.name}: ${statusResult.status}, elapsed: ${elapsed}ms`);
+    }
+    
+    return { success: false, error: 'Timeout waiting for parsing' };
+  } catch (error) {
+    console.error(`[LlamaParse] Error parsing ${file.name}:`, error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -47,6 +130,7 @@ serve(async (req) => {
   try {
     const { files, tender_type } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const LLAMA_PARSE_API_KEY = Deno.env.get('LLAMA_PARSE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
@@ -56,78 +140,67 @@ serve(async (req) => {
       throw new Error("No files provided");
     }
 
-    console.log(`[DCE Analysis] Starting real content analysis of ${files.length} files`);
-
-    // Filter and prepare files for multimodal analysis
-    const supportedFiles = files.filter((f: { name: string; type: string; content: string }) => {
-      const isSupported = f.type === 'application/pdf' || 
-                          f.type.includes('image') ||
-                          f.name.toLowerCase().endsWith('.pdf');
-      if (!isSupported) {
-        console.log(`[DCE Analysis] Skipping unsupported file: ${f.name} (${f.type})`);
-      }
-      return isSupported;
-    });
-
-    // Check file sizes (limit to ~10MB per file for API constraints)
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in base64 is ~13.3MB
-    const validFiles = supportedFiles.filter((f: { name: string; content: string }) => {
-      const sizeBytes = (f.content.length * 3) / 4; // Approximate base64 to bytes
-      if (sizeBytes > MAX_FILE_SIZE) {
-        console.log(`[DCE Analysis] File too large, skipping: ${f.name}`);
-        return false;
-      }
-      return true;
-    });
-
-    console.log(`[DCE Analysis] Processing ${validFiles.length} valid files out of ${files.length}`);
-
-    // Build multimodal message parts with actual file content
-    const fileParts: Array<{ type: string; text?: string; inline_data?: { mime_type: string; data: string } }> = [];
+    console.log(`[DCE Analysis] Starting analysis of ${files.length} files`);
     
-    // Add instruction text
-    fileParts.push({
-      type: "text",
-      text: `Analyse ces ${validFiles.length} documents DCE et extrais TOUTES les informations pour créer le dossier de concours.
+    // Parse documents with LlamaParse if available
+    let parsedTexts: string[] = [];
+    let parsingStats = { success: 0, failed: 0 };
+    
+    if (LLAMA_PARSE_API_KEY) {
+      console.log('[DCE Analysis] LlamaParse API key found - using multi-format parsing');
+      
+      // Parse all documents in parallel (with limit)
+      const parsePromises = files.slice(0, 10).map(async (file: { name: string; type: string; content: string }) => {
+        const result = await parseDocument(file, LLAMA_PARSE_API_KEY);
+        return { file: file.name, ...result };
+      });
+      
+      const parseResults = await Promise.all(parsePromises);
+      
+      for (const result of parseResults) {
+        if (result.success && result.text) {
+          parsedTexts.push(`\n\n=== DOCUMENT: ${result.file} ===\n\n${result.text}`);
+          parsingStats.success++;
+        } else {
+          console.log(`[DCE Analysis] Failed to parse ${result.file}: ${result.error}`);
+          parsingStats.failed++;
+        }
+      }
+      
+      console.log(`[DCE Analysis] Parsing complete: ${parsingStats.success} success, ${parsingStats.failed} failed`);
+    } else {
+      console.log('[DCE Analysis] No LlamaParse API key - falling back to filename analysis');
+    }
+    
+    // Build the content for AI analysis
+    let analysisContent: string;
+    
+    if (parsedTexts.length > 0) {
+      // We have parsed document content
+      analysisContent = `CONTENU DES DOCUMENTS DCE:
+${parsedTexts.join('\n\n')}
+
+FICHIERS ANALYSÉS: ${files.map((f: { name: string }) => f.name).join(', ')}
+
+Analyse ces documents DCE et extrais TOUTES les informations pour créer le dossier de concours.
+Utilise la fonction extract_tender_info pour retourner les données structurées.`;
+    } else {
+      // Fallback to filename analysis
+      const fileAnalyses = files.map((f: { name: string; type: string }) => {
+        const docType = detectDocumentType(f.name);
+        return `- ${f.name} (${formatDocType(docType)})`;
+      }).join('\n');
+      
+      analysisContent = `LISTE DES FICHIERS DCE (contenu non accessible):
+${fileAnalyses}
 
 TYPE DE MARCHÉ: ${tender_type || 'architecture'}
 
-FICHIERS FOURNIS:
-${validFiles.map((f: { name: string }, i: number) => `${i + 1}. ${f.name}`).join('\n')}
-
-INSTRUCTIONS:
-1. Lis ATTENTIVEMENT chaque document PDF
-2. Extrais les informations EXACTES (pas d'approximations)
-3. Pour les critères de jugement, copie les pondérations EXACTES du RC
-4. Pour l'équipe requise, distingue les compétences OBLIGATOIRES des optionnelles
-5. Identifie les pièces à remettre pour chaque phase (candidature / offre)
-6. Note les points critiques et alertes
-
-Utilise la fonction extract_tender_info pour retourner les données structurées.`
-    });
-
-    // Add each file as inline data for Gemini to read
-    for (const file of validFiles) {
-      // Determine correct MIME type
-      let mimeType = file.type;
-      if (!mimeType || mimeType === 'application/octet-stream') {
-        if (file.name.toLowerCase().endsWith('.pdf')) {
-          mimeType = 'application/pdf';
-        }
-      }
-
-      fileParts.push({
-        type: "image_url",
-        // @ts-ignore - Gemini accepts inline_data in this format
-        image_url: {
-          url: `data:${mimeType};base64,${file.content}`
-        }
-      });
-      
-      console.log(`[DCE Analysis] Added file for analysis: ${file.name} (${mimeType})`);
+Déduis les informations possibles à partir des NOMS DE FICHIERS.
+Utilise la fonction extract_tender_info pour retourner les données structurées.`;
     }
 
-    // Call Gemini with multimodal content
+    // Call AI for structured extraction
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -143,7 +216,7 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
           },
           {
             role: "user",
-            content: fileParts
+            content: analysisContent
           }
         ],
         tools: [
@@ -499,7 +572,7 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
       try {
         const parsed = JSON.parse(data.choices[0].message.tool_calls[0].function.arguments);
         extractedData = parsed;
-        console.log("[DCE Analysis] Extracted data:", JSON.stringify(extractedData, null, 2));
+        console.log("[DCE Analysis] Extracted data keys:", Object.keys(extractedData));
       } catch (e) {
         console.error("[DCE Analysis] Failed to parse tool call arguments:", e);
       }
@@ -507,7 +580,7 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
 
     // Ensure detected_documents includes all processed files
     if (!extractedData.detected_documents) {
-      extractedData.detected_documents = validFiles.map((f: { name: string; type: string }) => ({
+      extractedData.detected_documents = files.map((f: { name: string; type: string }) => ({
         filename: f.name,
         type: detectDocumentType(f.name)
       }));
@@ -515,11 +588,12 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
 
     // Count what was extracted for feedback
     const extractionStats = {
-      files_analyzed: validFiles.length,
-      files_skipped: files.length - validFiles.length,
+      files_analyzed: parsingStats.success > 0 ? parsingStats.success : files.length,
+      files_skipped: parsingStats.failed,
       criteria_found: Array.isArray(extractedData.criteria) ? extractedData.criteria.length : 0,
       team_requirements: Array.isArray(extractedData.required_team) ? extractedData.required_team.length : 0,
       alerts_found: Array.isArray(extractedData.critical_alerts) ? extractedData.critical_alerts.length : 0,
+      parsing_method: LLAMA_PARSE_API_KEY ? 'llamaparse' : 'filename_only',
     };
 
     console.log("[DCE Analysis] Extraction stats:", extractionStats);
@@ -576,4 +650,20 @@ function detectDocumentType(fileName: string): string {
   }
   
   return 'autre';
+}
+
+function formatDocType(type: string): string {
+  const labels: Record<string, string> = {
+    'rc': 'Règlement de Consultation',
+    'ccap': 'CCAP - Clauses Administratives',
+    'cctp': 'CCTP - Clauses Techniques',
+    'programme': 'Programme',
+    'avis_publicite': 'Avis de Publicité',
+    'attestation_visite': 'Attestation de Visite',
+    'acte_engagement': 'Acte d\'Engagement',
+    'dpgf': 'DPGF - Bordereau des Prix',
+    'plans': 'Plans',
+    'autre': 'Autre document'
+  };
+  return labels[type] || type;
 }
