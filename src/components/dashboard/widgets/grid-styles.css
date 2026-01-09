@@ -3,6 +3,13 @@
   position: relative;
 }
 
+/* Dotted grid background like whiteboard */
+.bg-dotted-grid {
+  background-image: radial-gradient(circle, hsl(var(--muted-foreground) / 0.2) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: 10px 10px;
+}
+
 .react-grid-item {
   transition: all 200ms ease;
   transition-property: left, top, width, height;
@@ -98,6 +105,19 @@
 
 .react-resizable-handle-w {
   left: 0;
+}
+
+.react-resizable-handle-w::after,
+.react-resizable-handle-e::after {
+  width: 4px;
+  height: 16px;
+  border: none;
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 2px;
+  right: 8px;
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .react-resizable-handle-e {
