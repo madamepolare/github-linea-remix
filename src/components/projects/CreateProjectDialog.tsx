@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,9 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useProjects, CreateProjectInput } from "@/hooks/useProjects";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { usePhaseTemplates } from "@/hooks/usePhaseTemplates";
+import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 import { AIRewriteButton } from "@/components/projects/meeting-report/AIRewriteButton";
@@ -27,21 +29,38 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  PROJECT_TYPES,
   ProjectType,
-  DEFAULT_PHASES,
   PHASE_COLORS,
 } from "@/lib/projectTypes";
+import { DisciplineProjectType } from "@/lib/disciplinesConfig";
 import {
   Building2,
   Sofa,
   Theater,
+  Megaphone,
   ChevronLeft,
   ChevronRight,
   Check,
   MapPin,
   Calendar,
   Wallet,
+  Hammer,
+  Maximize2,
+  FileCheck,
+  Map,
+  LayoutGrid,
+  Store,
+  Home,
+  UtensilsCrossed,
+  Building,
+  Frame,
+  Landmark,
+  PartyPopper,
+  Box,
+  Sparkles,
+  Palette,
+  Globe,
+  FileVideo,
 } from "lucide-react";
 
 interface CreateProjectDialogProps {
@@ -49,8 +68,8 @@ interface CreateProjectDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-
 const STEPS = [
+  { id: "discipline", label: "Discipline" },
   { id: "type", label: "Type" },
   { id: "info", label: "Informations" },
   { id: "client", label: "Client" },
@@ -58,18 +77,58 @@ const STEPS = [
   { id: "dates", label: "Dates & Budget" },
 ];
 
+// Map icon names to components
 const iconMap: Record<string, React.ElementType> = {
   Sofa: Sofa,
   Building2: Building2,
   Theater: Theater,
+  Megaphone: Megaphone,
+  Hammer: Hammer,
+  Maximize2: Maximize2,
+  FileCheck: FileCheck,
+  Map: Map,
+  LayoutGrid: LayoutGrid,
+  Store: Store,
+  Home: Home,
+  UtensilsCrossed: UtensilsCrossed,
+  Building: Building,
+  Frame: Frame,
+  Landmark: Landmark,
+  PartyPopper: PartyPopper,
+  Box: Box,
+  Sparkles: Sparkles,
+  Palette: Palette,
+  Globe: Globe,
+  Calendar: Calendar,
+  FileVideo: FileVideo,
 };
+
+// Map discipline key to legacy ProjectType
+function mapDisciplineToProjectType(disciplineKey: string): ProjectType | null {
+  const mapping: Record<string, ProjectType> = {
+    interior: "interior",
+    interieur: "interior",
+    architecture: "architecture",
+    scenography: "scenography",
+    scenographie: "scenography",
+  };
+  const normalized = disciplineKey.toLowerCase();
+  return mapping[normalized] || "interior"; // Default to interior if unknown
+}
 
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
   const { createProject } = useProjects();
   const { companies, isLoading: companiesLoading } = useCRMCompanies();
+  const { projectTypes: disciplines, isLoading: disciplinesLoading } = useProjectTypeSettings();
   
   const [step, setStep] = useState(0);
+  // Step 0: Selected discipline (from workspace settings)
+  const [selectedDiscipline, setSelectedDiscipline] = useState<string | null>(null);
+  // Step 1: Selected sub-type within discipline
+  const [selectedSubType, setSelectedSubType] = useState<string | null>(null);
+  // projectType for database (maps to legacy ProjectType)
   const [projectType, setProjectType] = useState<ProjectType | null>(null);
+  
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
@@ -83,6 +142,26 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [budget, setBudget] = useState("");
   const [phases, setPhases] = useState<{ name: string; description: string; color: string; code?: string; deliverables?: string[]; percentage_fee?: number }[]>([]);
+
+  // Get selected discipline config
+  const selectedDisciplineConfig = useMemo(() => {
+    return disciplines.find(d => d.key === selectedDiscipline);
+  }, [disciplines, selectedDiscipline]);
+
+  // Get subtypes for selected discipline
+  const availableSubTypes = useMemo<DisciplineProjectType[]>(() => {
+    return selectedDisciplineConfig?.subTypes || [];
+  }, [selectedDisciplineConfig]);
+
+  // When discipline changes, reset subtype and set projectType
+  useEffect(() => {
+    if (selectedDiscipline) {
+      setSelectedSubType(null);
+      // Map discipline to legacy ProjectType
+      const legacyType = mapDisciplineToProjectType(selectedDiscipline);
+      setProjectType(legacyType);
+    }
+  }, [selectedDiscipline]);
 
   // Fetch phase templates from database
   const { templates: phaseTemplates, initializeDefaultsIfEmpty } = usePhaseTemplates(projectType || undefined);
@@ -109,23 +188,27 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
         }))
       );
     } else if (projectType) {
-      // Fallback to hardcoded defaults
-      const defaultPhases = DEFAULT_PHASES[projectType] || [];
-      setPhases(
-        defaultPhases.map((phase, index) => ({
-          name: phase.name,
-          description: phase.description,
-          color: PHASE_COLORS[index % PHASE_COLORS.length],
-        }))
-      );
+      // Fallback: Use discipline default phases
+      const config = selectedDisciplineConfig;
+      if (config?.disciplineSlug) {
+        const { getDefaultPhases } = require("@/lib/disciplinesConfig");
+        const defaultPhases = getDefaultPhases(config.disciplineSlug);
+        setPhases(
+          defaultPhases.map((phase: { name: string; description?: string }, index: number) => ({
+            name: phase.name,
+            description: phase.description || '',
+            color: PHASE_COLORS[index % PHASE_COLORS.length],
+          }))
+        );
+      }
     }
-  }, [projectType, phaseTemplates]);
+  }, [projectType, phaseTemplates, selectedDisciplineConfig]);
 
   const handleCreate = () => {
     if (!name.trim() || !projectType) return;
     
-    // Use project type color as the project color
-    const projectTypeConfig = PROJECT_TYPES.find(t => t.value === projectType);
+    // Use discipline color as the project color
+    const color = selectedDisciplineConfig?.color || "#3B82F6";
     
     const input: CreateProjectInput = {
       name: name.trim(),
@@ -135,7 +218,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       address: address.trim() || null,
       city: city.trim() || null,
       surface_area: surfaceArea ? parseFloat(surfaceArea) : null,
-      color: projectTypeConfig?.color || "#3B82F6",
+      color,
       start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
       end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
       budget: isInternal ? null : (budget ? parseFloat(budget) : null),
@@ -149,6 +232,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
 
   const resetForm = () => {
     setStep(0);
+    setSelectedDiscipline(null);
+    setSelectedSubType(null);
     setProjectType(null);
     setName("");
     setDescription("");
@@ -177,16 +262,18 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
 
   const canProceed = () => {
     switch (step) {
-      case 0:
-        return !!projectType;
-      case 1:
+      case 0: // Discipline
+        return !!selectedDiscipline;
+      case 1: // Sub-type (optional but skippable if no subtypes)
+        return availableSubTypes.length === 0 || !!selectedSubType || true; // Always allow to proceed
+      case 2: // Info
         return !!name.trim();
-      case 2:
+      case 3: // Client
         return true; // Client is optional
-      case 3:
+      case 4: // Phases
         return phases.length > 0;
-      case 4:
-        return !!startDate && !!endDate; // Dates are now required
+      case 5: // Dates
+        return !!startDate && !!endDate;
       default:
         return false;
     }
@@ -249,10 +336,10 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              {/* Step 1: Project Type */}
+              {/* Step 0: Discipline Selection */}
               {step === 0 && (
                 <div className="space-y-4">
-                  {/* Internal Project Toggle - Visible at step 1 */}
+                  {/* Internal Project Toggle */}
                   <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
                     <div className="space-y-0.5">
                       <Label htmlFor="is-internal" className="text-sm font-medium cursor-pointer">
@@ -270,38 +357,100 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                   </div>
 
                   <p className="text-sm text-muted-foreground">
-                    Sélectionnez le type de projet pour générer automatiquement les phases adaptées.
+                    Sélectionnez la discipline pour ce projet.
                   </p>
-                  <div className="grid grid-cols-3 gap-3">
-                    {PROJECT_TYPES.map((type) => {
-                      const Icon = iconMap[type.icon] || Building2;
-                      return (
-                        <button
-                          key={type.value}
-                          onClick={() => setProjectType(type.value)}
-                          className={cn(
-                            "flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all",
-                            projectType === type.value
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/50 hover:bg-muted/50"
-                          )}
-                        >
-                          <div className={cn(
-                            "w-12 h-12 rounded-full flex items-center justify-center",
-                            projectType === type.value ? "bg-primary text-primary-foreground" : "bg-muted"
-                          )}>
-                            <Icon className="h-6 w-6" />
-                          </div>
-                          <span className="font-medium text-sm">{type.label}</span>
-                        </button>
-                      );
-                    })}
+                  
+                  {disciplinesLoading ? (
+                    <div className="grid grid-cols-3 gap-3">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="h-32 rounded-xl border-2 border-border bg-muted/30 animate-pulse" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-3">
+                      {disciplines.map((discipline) => {
+                        const Icon = iconMap[discipline.icon || "Building2"] || Building2;
+                        return (
+                          <button
+                            key={discipline.key}
+                            onClick={() => setSelectedDiscipline(discipline.key)}
+                            className={cn(
+                              "flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all",
+                              selectedDiscipline === discipline.key
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50 hover:bg-muted/50"
+                            )}
+                          >
+                            <div 
+                              className={cn(
+                                "w-12 h-12 rounded-full flex items-center justify-center",
+                                selectedDiscipline === discipline.key ? "bg-primary text-primary-foreground" : "bg-muted"
+                              )}
+                              style={selectedDiscipline === discipline.key ? {} : { backgroundColor: `${discipline.color}20` }}
+                            >
+                              <Icon className="h-6 w-6" style={{ color: selectedDiscipline === discipline.key ? undefined : discipline.color }} />
+                            </div>
+                            <span className="font-medium text-sm">{discipline.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 1: Project Sub-Type Selection */}
+              {step === 1 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" style={{ borderColor: selectedDisciplineConfig?.color, color: selectedDisciplineConfig?.color }}>
+                      {selectedDisciplineConfig?.label}
+                    </Badge>
                   </div>
+                  
+                  <p className="text-sm text-muted-foreground">
+                    Précisez le type de projet (optionnel).
+                  </p>
+                  
+                  {availableSubTypes.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {availableSubTypes.map((subType) => {
+                        const Icon = iconMap[subType.icon] || Building2;
+                        return (
+                          <button
+                            key={subType.value}
+                            onClick={() => setSelectedSubType(subType.value)}
+                            className={cn(
+                              "flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left",
+                              selectedSubType === subType.value
+                                ? "border-primary bg-primary/5"
+                                : "border-border hover:border-primary/50 hover:bg-muted/50"
+                            )}
+                          >
+                            <div className={cn(
+                              "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                              selectedSubType === subType.value ? "bg-primary text-primary-foreground" : "bg-muted"
+                            )}>
+                              <Icon className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-medium text-sm block">{subType.label}</span>
+                              <span className="text-xs text-muted-foreground line-clamp-1">{subType.description}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">
+                      Aucun sous-type défini pour cette discipline. Vous pouvez continuer.
+                    </p>
+                  )}
                 </div>
               )}
 
               {/* Step 2: Project Info */}
-              {step === 1 && (
+              {step === 2 && (
                 <div className="space-y-4">
 
                   <div className="space-y-2">
@@ -384,7 +533,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               )}
 
               {/* Step 3: Client Selection */}
-              {step === 2 && (
+              {step === 3 && (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
                     Sélectionnez un client depuis le CRM ou passez cette étape.
@@ -431,7 +580,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               )}
 
               {/* Step 4: Phases Preview */}
-              {step === 3 && (
+              {step === 4 && (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
                     Les phases suivantes seront créées automatiquement. Vous pourrez les modifier après création.
@@ -463,7 +612,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               )}
 
               {/* Step 5: Dates & Budget */}
-              {step === 4 && (
+              {step === 5 && (
                 <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -523,11 +672,19 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                     <h4 className="font-medium mb-3">Récapitulatif</h4>
                     <dl className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Type</dt>
+                        <dt className="text-muted-foreground">Discipline</dt>
                         <dd className="font-medium">
-                          {PROJECT_TYPES.find(t => t.value === projectType)?.label}
+                          {selectedDisciplineConfig?.label || "-"}
                         </dd>
                       </div>
+                      {selectedSubType && (
+                        <div className="flex justify-between">
+                          <dt className="text-muted-foreground">Type</dt>
+                          <dd className="font-medium">
+                            {availableSubTypes.find(t => t.value === selectedSubType)?.label || selectedSubType}
+                          </dd>
+                        </div>
+                      )}
                       <div className="flex justify-between">
                         <dt className="text-muted-foreground">Nom</dt>
                         <dd className="font-medium truncate max-w-48">{name}</dd>
