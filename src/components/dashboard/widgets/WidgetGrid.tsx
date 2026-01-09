@@ -1,17 +1,30 @@
-import { useState, useCallback } from "react";
-import GridLayout, { WidthProvider, Layout as RGLLayout } from "react-grid-layout";
+import { useState, useCallback, useRef, useEffect } from "react";
+import ReactGridLayout from "react-grid-layout";
 import { Plus, Settings2, RotateCcw, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WidgetRenderer } from "./WidgetRenderer";
 import { WidgetPicker } from "./WidgetPicker";
-import { getWidgetById, getSizeDefaults, WIDGET_REGISTRY } from "./registry";
+import { getWidgetById, getSizeDefaults } from "./registry";
 import { cn } from "@/lib/utils";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "./grid-styles.css";
 
-const ResponsiveGridLayout = WidthProvider(GridLayout);
+// Cast GridLayout to any to avoid type mismatch issues
+const GridLayout = ReactGridLayout as any;
+
+interface RGLLayout {
+  i: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  minW?: number;
+  minH?: number;
+  maxW?: number;
+  maxH?: number;
+}
 
 const STORAGE_KEY = "linea-dashboard-layout";
 
@@ -80,9 +93,22 @@ function saveLayout(widgets: string[], layout: RGLLayout[]) {
 }
 
 export function WidgetGrid() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(1200);
   const [isEditing, setIsEditing] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [{ widgets, layout }, setState] = useState(loadLayout);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, []);
 
   const handleLayoutChange = useCallback(
     (newLayout: RGLLayout[]) => {
@@ -139,7 +165,7 @@ export function WidgetGrid() {
   }, []);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <div className="flex items-center justify-end gap-2 mb-4">
         {isEditing && (
           <>
@@ -163,11 +189,12 @@ export function WidgetGrid() {
         </Button>
       </div>
 
-      <ResponsiveGridLayout
+      <GridLayout
         className="layout"
         layout={layout}
         cols={4}
         rowHeight={120}
+        width={containerWidth}
         margin={[16, 16]}
         containerPadding={[0, 0]}
         isDraggable={isEditing}
@@ -181,7 +208,7 @@ export function WidgetGrid() {
             <WidgetRenderer widgetId={widgetId} isEditing={isEditing} onRemove={() => handleRemoveWidget(widgetId)} />
           </div>
         ))}
-      </ResponsiveGridLayout>
+      </GridLayout>
 
       {showPicker && (
         <WidgetPicker open={showPicker} onClose={() => setShowPicker(false)} onSelect={handleAddWidget} activeWidgets={widgets} />
