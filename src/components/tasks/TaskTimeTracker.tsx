@@ -352,8 +352,8 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
 
           {/* New Schedule Form */}
           {showNewScheduleForm && (
-            <div className="p-4 rounded-lg border bg-card space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="p-4 rounded-lg border bg-card space-y-3">
+              <div className="flex items-center justify-between mb-1">
                 <h4 className="font-medium text-sm">Nouveau créneau</h4>
                 <Button
                   variant="ghost"
@@ -366,10 +366,10 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
               </div>
 
               {/* Assignee Selection */}
-              <div className="space-y-2">
-                <Label className="text-xs">Assigné à</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Assigné à</Label>
                 <Select value={newScheduleUserId} onValueChange={setNewScheduleUserId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue placeholder="Choisir un membre..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -391,12 +391,12 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
               </div>
 
               {/* Date Selection */}
-              <div className="space-y-2">
-                <Label className="text-xs">Date</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start">
-                      <CalendarIcon className="h-4 w-4 mr-2" />
+                    <Button variant="outline" className="w-full h-9 justify-start font-normal">
+                      <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
                       {newScheduleDate ? format(newScheduleDate, "EEEE d MMMM", { locale: fr }) : "Sélectionner..."}
                     </Button>
                   </PopoverTrigger>
@@ -412,48 +412,42 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
               </div>
 
               {/* Time Selection */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <Label className="text-xs">Heure de début</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Heure de début</Label>
                   <div className="flex gap-1">
                     <Select value={newScheduleStartHour} onValueChange={setNewScheduleStartHour}>
-                      <SelectTrigger className="w-16">
+                      <SelectTrigger className="h-9 flex-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {hourOptions.map((h) => (
-                          <SelectItem key={h} value={h}>
-                            {h}h
-                          </SelectItem>
+                          <SelectItem key={h} value={h}>{h}h</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                     <Select value={newScheduleStartMinute} onValueChange={setNewScheduleStartMinute}>
-                      <SelectTrigger className="w-16">
+                      <SelectTrigger className="h-9 w-16">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {minuteOptions.map((m) => (
-                          <SelectItem key={m} value={m}>
-                            {m}
-                          </SelectItem>
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs">Durée</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Durée</Label>
                   <Select value={newScheduleDuration} onValueChange={setNewScheduleDuration}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-9">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {["0.5", "1", "1.5", "2", "2.5", "3", "4", "5", "6", "7", "8"].map((d) => (
-                        <SelectItem key={d} value={d}>
-                          {d}h
-                        </SelectItem>
+                        <SelectItem key={d} value={d}>{d}h</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -493,10 +487,10 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                     {editingScheduleId === entry.id ? (
                       <div className="space-y-3">
                         {/* Editing mode for schedule */}
-                        <div className="space-y-2">
-                          <Label className="text-xs">Assigné à</Label>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Assigné à</Label>
                           <Select value={editScheduleUserId} onValueChange={setEditScheduleUserId}>
-                            <SelectTrigger>
+                            <SelectTrigger className="h-9">
                               <SelectValue placeholder="Choisir..." />
                             </SelectTrigger>
                             <SelectContent>
@@ -517,12 +511,12 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                           </Select>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label className="text-xs">Date</Label>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Date</Label>
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-start">
-                                <CalendarIcon className="h-4 w-4 mr-2" />
+                              <Button variant="outline" className="w-full h-9 justify-start font-normal">
+                                <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
                                 {editScheduleDate ? format(editScheduleDate, "EEEE d MMMM", { locale: fr }) : "Sélectionner..."}
                               </Button>
                             </PopoverTrigger>
@@ -537,12 +531,12 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                           </Popover>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-2">
-                            <Label className="text-xs">Heure de début</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Heure de début</Label>
                             <div className="flex gap-1">
                               <Select value={editScheduleStartHour} onValueChange={setEditScheduleStartHour}>
-                                <SelectTrigger className="w-16">
+                                <SelectTrigger className="h-9 flex-1">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -552,7 +546,7 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                                 </SelectContent>
                               </Select>
                               <Select value={editScheduleStartMinute} onValueChange={setEditScheduleStartMinute}>
-                                <SelectTrigger className="w-16">
+                                <SelectTrigger className="h-9 w-16">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -564,10 +558,10 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                             </div>
                           </div>
 
-                          <div className="space-y-2">
-                            <Label className="text-xs">Durée</Label>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Durée</Label>
                             <Select value={editScheduleDuration} onValueChange={setEditScheduleDuration}>
-                              <SelectTrigger>
+                              <SelectTrigger className="h-9">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -581,11 +575,9 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
 
                         <div className="flex justify-end gap-2 pt-2">
                           <Button size="sm" variant="ghost" onClick={handleCancelScheduleEdit}>
-                            <X className="h-3 w-3 mr-1" />
                             Annuler
                           </Button>
                           <Button size="sm" onClick={handleSaveScheduleEntry}>
-                            <Check className="h-3 w-3 mr-1" />
                             Enregistrer
                           </Button>
                         </div>
@@ -679,12 +671,11 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
           )}
         </TabsContent>
 
-        {/* Manual Tab */}
-        <TabsContent value="manual" className="space-y-4">
-          <div className="space-y-2">
-            <Label>Assigné à</Label>
+        <TabsContent value="manual" className="space-y-3 pt-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Assigné à</Label>
             <Select value={manualUserId} onValueChange={setManualUserId}>
-              <SelectTrigger>
+              <SelectTrigger className="h-9">
                 <SelectValue placeholder="Choisir un membre..." />
               </SelectTrigger>
               <SelectContent>
@@ -705,12 +696,12 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Date</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Date</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
+                <Button variant="outline" className="w-full h-9 justify-start font-normal">
+                  <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
                   {manualDate ? format(manualDate, "EEEE d MMMM", { locale: fr }) : "Sélectionner..."}
                 </Button>
               </PopoverTrigger>
@@ -725,17 +716,18 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
             </Popover>
           </div>
 
-          <div className="space-y-2">
-            <Label>Durée</Label>
-            <DurationInput value={manualHours} onChange={setManualHours} placeholder="Durée" />
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Durée</Label>
+            <DurationInput value={manualHours} onChange={setManualHours} placeholder="Ex: 2h30" />
           </div>
 
-          <div className="space-y-2">
-            <Label>Description (optionnel)</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Description (optionnel)</Label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Travail effectué..."
+              className="h-9"
             />
           </div>
 
@@ -743,9 +735,10 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
             onClick={handleManualEntry}
             disabled={!manualHours || parseFloat(manualHours) <= 0}
             className="w-full"
+            size="sm"
           >
             <Clock className="h-4 w-4 mr-2" />
-            Enregistrer
+            Enregistrer le temps
           </Button>
         </TabsContent>
       </Tabs>
@@ -767,10 +760,10 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                   {editingTimeEntryId === entry.id ? (
                     <div className="space-y-3">
                       {/* Editing mode for time entry */}
-                      <div className="space-y-2">
-                        <Label className="text-xs">Assigné à</Label>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Assigné à</Label>
                         <Select value={editTimeEntryUserId} onValueChange={setEditTimeEntryUserId}>
-                          <SelectTrigger>
+                          <SelectTrigger className="h-9">
                             <SelectValue placeholder="Choisir..." />
                           </SelectTrigger>
                           <SelectContent>
@@ -791,12 +784,12 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                         </Select>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs">Date</Label>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Date</Label>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start">
-                              <CalendarIcon className="h-4 w-4 mr-2" />
+                            <Button variant="outline" className="w-full h-9 justify-start font-normal">
+                              <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
                               {editTimeEntryDate ? format(editTimeEntryDate, "EEEE d MMMM", { locale: fr }) : "Sélectionner..."}
                             </Button>
                           </PopoverTrigger>
@@ -811,18 +804,16 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                         </Popover>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label className="text-xs">Durée</Label>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Durée</Label>
                         <DurationInput value={editTimeEntryDuration} onChange={setEditTimeEntryDuration} />
                       </div>
 
                       <div className="flex justify-end gap-2 pt-2">
                         <Button size="sm" variant="ghost" onClick={handleCancelTimeEntryEdit}>
-                          <X className="h-3 w-3 mr-1" />
                           Annuler
                         </Button>
                         <Button size="sm" onClick={handleSaveTimeEntry}>
-                          <Check className="h-3 w-3 mr-1" />
                           Enregistrer
                         </Button>
                       </div>

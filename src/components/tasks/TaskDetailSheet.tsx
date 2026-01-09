@@ -16,6 +16,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,6 +82,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
   const [estimatedHours, setEstimatedHours] = useState("");
   const [relatedType, setRelatedType] = useState<RelatedEntityType | null>(null);
   const [relatedId, setRelatedId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -145,7 +156,9 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
   const handleDelete = () => {
     if (!task) return;
     deleteTask.mutate(task.id);
+    setShowDeleteConfirm(false);
     onOpenChange(false);
+    toast.success("Tâche supprimée");
   };
 
   const handleNavigateToEntity = () => {
@@ -309,7 +322,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
               <Button variant="outline" size="icon" onClick={handleArchive} title="Archiver">
                 <Archive className="h-4 w-4" />
               </Button>
-              <Button variant="destructive" size="icon" onClick={handleDelete} title="Supprimer">
+              <Button variant="destructive" size="icon" onClick={() => setShowDeleteConfirm(true)} title="Supprimer">
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
@@ -346,6 +359,27 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
           </TabsContent>
         </Tabs>
       </SheetContent>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette tâche ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. La tâche "{task.title}" sera définitivement supprimée ainsi que toutes ses sous-tâches et entrées de temps associées.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }
