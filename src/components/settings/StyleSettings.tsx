@@ -1,27 +1,25 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Palette, 
-  Type, 
-  Upload, 
-  Sun, 
-  Moon, 
-  Monitor, 
-  Check, 
-  Trash2,
-  RotateCcw,
+import {
+  Check,
   Eye,
-  Sparkles
+  Monitor,
+  Moon,
+  Palette,
+  RotateCcw,
+  Sparkles,
+  Sun,
+  Trash2,
+  Type,
+  Upload,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -100,23 +98,57 @@ export function StyleSettings() {
     if (saved === "light") return "light";
     return "system";
   });
-  const [selectedColorTheme, setSelectedColorTheme] = useState("default");
-  
-  // Typography state
-  const [headingFont, setHeadingFont] = useState("inter");
-  const [bodyFont, setBodyFont] = useState("inter");
-  const [baseFontSize, setBaseFontSize] = useState([14]);
-  const [fontWeight, setFontWeight] = useState("400");
+  const [selectedColorTheme, setSelectedColorTheme] = useState(() => localStorage.getItem("color-theme") || "default");
+
+  // Typography state (persisted)
+  const savedTypography = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("typography-settings") || "null");
+    } catch {
+      return null;
+    }
+  })();
+
+  const [headingFont, setHeadingFont] = useState(savedTypography?.headingFont || "inter");
+  const [bodyFont, setBodyFont] = useState(savedTypography?.bodyFont || "inter");
+  const [baseFontSize, setBaseFontSize] = useState([savedTypography?.baseFontSize || 14]);
+  const [headingWeight, setHeadingWeight] = useState(savedTypography?.headingWeight || "600");
+  const [bodyWeight, setBodyWeight] = useState(savedTypography?.bodyWeight || "400");
   
   // Custom fonts state
   const [customFonts, setCustomFonts] = useState<CustomFont[]>([]);
   const [isUploadingFont, setIsUploadingFont] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // UI options
   const [enableAnimations, setEnableAnimations] = useState(true);
   const [compactMode, setCompactMode] = useState(false);
-  const [borderRadius, setBorderRadius] = useState([8]);
+  const [borderRadius, setBorderRadius] = useState([savedTypography?.borderRadius || 8]);
+
+  // Apply persisted settings on mount
+  useEffect(() => {
+    // Apply saved color theme
+    const theme = COLOR_THEMES.find((t) => t.id === selectedColorTheme);
+    if (theme) {
+      document.documentElement.style.setProperty("--primary", theme.primary);
+      document.documentElement.style.setProperty("--accent", theme.accent);
+    }
+
+    // Apply typography immediately
+    document.documentElement.style.setProperty("--font-size-base", `${baseFontSize[0]}px`);
+    document.documentElement.style.setProperty("--font-weight-heading", headingWeight);
+    document.documentElement.style.setProperty("--font-weight-body", bodyWeight);
+    document.documentElement.style.setProperty("--radius", `${borderRadius[0]}px`);
+
+    // Load + apply chosen Google fonts (custom fonts cannot be rehydrated)
+    const h = FONT_OPTIONS.find((f) => f.id === headingFont);
+    const b = FONT_OPTIONS.find((f) => f.id === bodyFont);
+    if (h) loadGoogleFont(h);
+    if (b) loadGoogleFont(b);
+    if (h) document.documentElement.style.setProperty("--font-heading", h.family);
+    if (b) document.documentElement.style.setProperty("--font-body", b.family);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle theme mode change
   const handleThemeModeChange = (mode: ThemeMode) => {
@@ -160,7 +192,7 @@ export function StyleSettings() {
 
     const validExtensions = [".otf", ".ttf", ".woff", ".woff2"];
     const extension = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
-    
+
     if (!validExtensions.includes(extension)) {
       toast.error("Format non supporté. Utilisez OTF, TTF, WOFF ou WOFF2.");
       return;
@@ -171,23 +203,39 @@ export function StyleSettings() {
     try {
       const fontName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9]/g, "-");
       const fontFamily = `custom-${fontName}`;
-      
+
+      const format = (() => {
+        switch (extension) {
+          case ".otf":
+            return "opentype";
+          case ".ttf":
+            return "truetype";
+          case ".woff":
+            return "woff";
+          case ".woff2":
+            return "woff2";
+          default:
+            return undefined;
+        }
+      })();
+
       // Create a blob URL for the font
       const fontUrl = URL.createObjectURL(file);
-      
+
       // Create and load the font face
-      const fontFace = new FontFace(fontFamily, `url(${fontUrl})`);
+      const src = format ? `url(${fontUrl}) format('${format}')` : `url(${fontUrl})`;
+      const fontFace = new FontFace(fontFamily, src, { style: "normal", weight: "100 900" });
       await fontFace.load();
       document.fonts.add(fontFace);
-      
+
       const newFont: CustomFont = {
         id: crypto.randomUUID(),
         name: fontName.replace(/-/g, " "),
         fileName: file.name,
         fontFamily: fontFamily,
       };
-      
-      setCustomFonts(prev => [...prev, newFont]);
+
+      setCustomFonts((prev) => [...prev, newFont]);
       toast.success(`Police "${newFont.name}" ajoutée avec succès`);
     } catch (error) {
       console.error("Font upload error:", error);
@@ -206,12 +254,18 @@ export function StyleSettings() {
     toast.success("Police supprimée");
   };
 
+  const fontStack = (family: string, fallback: string) => {
+    // Ensure quotes + fallback (important for custom font families)
+    const normalized = family.startsWith("'") || family.startsWith('"') ? family : `'${family}'`;
+    return `${normalized}, ${fallback}`;
+  };
+
   // Load Google Font dynamically
-  const loadGoogleFont = (fontData: typeof FONT_OPTIONS[0]) => {
+  const loadGoogleFont = (fontData: (typeof FONT_OPTIONS)[number]) => {
     const existingLink = document.querySelector(`link[href="${fontData.googleUrl}"]`);
     if (!existingLink) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
       link.href = fontData.googleUrl;
       document.head.appendChild(link);
     }
@@ -219,37 +273,48 @@ export function StyleSettings() {
 
   // Apply font changes
   const applyFontChanges = () => {
-    const headingFontData = FONT_OPTIONS.find(f => f.id === headingFont);
-    const bodyFontData = FONT_OPTIONS.find(f => f.id === bodyFont);
-    const customHeadingFont = customFonts.find(f => f.id === headingFont);
-    const customBodyFont = customFonts.find(f => f.id === bodyFont);
+    const headingFontData = FONT_OPTIONS.find((f) => f.id === headingFont);
+    const bodyFontData = FONT_OPTIONS.find((f) => f.id === bodyFont);
+    const customHeadingFont = customFonts.find((f) => f.id === headingFont);
+    const customBodyFont = customFonts.find((f) => f.id === bodyFont);
 
-    // Load Google Fonts if needed
     if (headingFontData) {
       loadGoogleFont(headingFontData);
       document.documentElement.style.setProperty("--font-heading", headingFontData.family);
     } else if (customHeadingFont) {
-      document.documentElement.style.setProperty("--font-heading", customHeadingFont.fontFamily);
+      document.documentElement.style.setProperty(
+        "--font-heading",
+        fontStack(customHeadingFont.fontFamily, "sans-serif")
+      );
     }
 
     if (bodyFontData) {
       loadGoogleFont(bodyFontData);
       document.documentElement.style.setProperty("--font-body", bodyFontData.family);
     } else if (customBodyFont) {
-      document.documentElement.style.setProperty("--font-body", customBodyFont.fontFamily);
+      document.documentElement.style.setProperty(
+        "--font-body",
+        fontStack(customBodyFont.fontFamily, "sans-serif")
+      );
     }
 
     document.documentElement.style.setProperty("--font-size-base", `${baseFontSize[0]}px`);
+    document.documentElement.style.setProperty("--font-weight-heading", headingWeight);
+    document.documentElement.style.setProperty("--font-weight-body", bodyWeight);
     document.documentElement.style.setProperty("--radius", `${borderRadius[0]}px`);
-    
-    // Save to localStorage
-    localStorage.setItem("typography-settings", JSON.stringify({
-      headingFont,
-      bodyFont,
-      baseFontSize: baseFontSize[0],
-      borderRadius: borderRadius[0]
-    }));
-    
+
+    localStorage.setItem(
+      "typography-settings",
+      JSON.stringify({
+        headingFont,
+        bodyFont,
+        baseFontSize: baseFontSize[0],
+        headingWeight,
+        bodyWeight,
+        borderRadius: borderRadius[0],
+      })
+    );
+
     toast.success("Typographie mise à jour");
   };
 
@@ -260,35 +325,39 @@ export function StyleSettings() {
     setHeadingFont("inter");
     setBodyFont("inter");
     setBaseFontSize([14]);
-    setFontWeight("400");
+    setHeadingWeight("600");
+    setBodyWeight("400");
     setEnableAnimations(true);
     setCompactMode(false);
     setBorderRadius([8]);
-    
+
     document.documentElement.style.removeProperty("--primary");
     document.documentElement.style.removeProperty("--accent");
     document.documentElement.style.removeProperty("--font-heading");
     document.documentElement.style.removeProperty("--font-body");
     document.documentElement.style.removeProperty("--font-size-base");
+    document.documentElement.style.removeProperty("--font-weight-heading");
+    document.documentElement.style.removeProperty("--font-weight-body");
     document.documentElement.style.setProperty("--radius", "0.5rem");
-    
+
     localStorage.removeItem("color-theme");
     localStorage.removeItem("theme");
-    
+    localStorage.removeItem("typography-settings");
+
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     if (prefersDark) {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
-    
+
     toast.success("Paramètres réinitialisés");
   };
 
   // Combined font options for selects
   const allFontOptions = [
     ...FONT_OPTIONS,
-    ...customFonts.map(f => ({ id: f.id, name: f.name, family: f.fontFamily, style: "Custom" }))
+    ...customFonts.map((f) => ({ id: f.id, name: f.name, family: fontStack(f.fontFamily, "sans-serif"), style: "Custom" })),
   ];
 
   return (
@@ -416,9 +485,9 @@ export function StyleSettings() {
                     <SelectItem key={font.id} value={font.id}>
                       <div className="flex items-center justify-between gap-4 w-full">
                         <span style={{ fontFamily: font.family }}>{font.name}</span>
-                        <Badge variant="secondary" className="text-2xs">
+                        <span className="text-2xs rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
                           {font.style}
-                        </Badge>
+                        </span>
                       </div>
                     </SelectItem>
                   ))}
@@ -437,10 +506,45 @@ export function StyleSettings() {
                     <SelectItem key={font.id} value={font.id}>
                       <div className="flex items-center justify-between gap-4 w-full">
                         <span style={{ fontFamily: font.family }}>{font.name}</span>
-                        <Badge variant="secondary" className="text-2xs">
+                        <span className="text-2xs rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
                           {font.style}
-                        </Badge>
+                        </span>
                       </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Font weights */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Graisse des titres</Label>
+              <Select value={headingWeight} onValueChange={setHeadingWeight}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir une graisse" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["300", "400", "500", "600", "700", "800"].map((w) => (
+                    <SelectItem key={w} value={w}>
+                      <span style={{ fontWeight: Number(w) }}>{w}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Graisse du corps</Label>
+              <Select value={bodyWeight} onValueChange={setBodyWeight}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir une graisse" />
+                </SelectTrigger>
+                <SelectContent>
+                  {["300", "400", "500", "600"].map((w) => (
+                    <SelectItem key={w} value={w}>
+                      <span style={{ fontWeight: Number(w) }}>{w}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
