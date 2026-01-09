@@ -114,6 +114,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Store session for quick switch (only for allowed accounts)
         if (session?.user?.email && session.refresh_token) {
           storeCurrentSession(session.user.email, session.refresh_token);
+        } else if (import.meta.env.DEV) {
+          console.info("[founderSwitch] session missing email/refresh_token", {
+            hasSession: !!session,
+            email: session?.user?.email,
+            hasRefreshToken: !!session?.refresh_token,
+            event,
+          });
         }
 
         if (session?.user) {
