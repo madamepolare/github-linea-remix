@@ -1,4 +1,4 @@
-import { Building2, Palette, Theater, LucideIcon } from "lucide-react";
+import { Building2, Palette, Theater, Megaphone, LucideIcon } from "lucide-react";
 
 export interface SolutionChallenge {
   title: string;
@@ -33,10 +33,10 @@ export interface SolutionData {
 export const SOLUTIONS_DATA: Record<string, SolutionData> = {
   architectes: {
     slug: "architectes",
-    title: "Linea Suite pour les Architectes",
+    title: "LINEA pour les Architectes",
     subtitle: "La plateforme pensée pour les architectes DPLG/DE/HMONP",
     description:
-      "Simplifiez la gestion de vos projets d'architecture, de l'esquisse à la réception des travaux. Linea Suite vous accompagne dans toutes les phases de la loi MOP avec des outils adaptés à votre métier.",
+      "Simplifiez la gestion de vos projets d'architecture, de l'esquisse à la réception des travaux. LINEA vous accompagne dans toutes les phases de la loi MOP avec des outils adaptés à votre métier.",
     icon: Building2,
     color: "from-blue-500 to-indigo-600",
     challenges: [
@@ -95,7 +95,7 @@ export const SOLUTIONS_DATA: Record<string, SolutionData> = {
     ],
     testimonial: {
       quote:
-        "Linea Suite a transformé notre façon de travailler. Nous avons enfin une vision claire de tous nos projets et le suivi de chantier n'a jamais été aussi simple.",
+        "LINEA a transformé notre façon de travailler. Nous avons enfin une vision claire de tous nos projets et le suivi de chantier n'a jamais été aussi simple.",
       author: "Marie Dubois",
       role: "Architecte DPLG, Directrice associée",
       company: "Studio 42 Architecture",
@@ -103,7 +103,7 @@ export const SOLUTIONS_DATA: Record<string, SolutionData> = {
   },
   "architectes-interieur": {
     slug: "architectes-interieur",
-    title: "Linea Suite pour les Architectes d'intérieur",
+    title: "LINEA pour les Architectes d'intérieur",
     subtitle: "Sublimez chaque espace avec une gestion optimisée",
     description:
       "De la conception à la livraison, gérez vos projets de décoration et d'aménagement intérieur avec des outils pensés pour votre créativité et votre exigence.",
@@ -165,7 +165,7 @@ export const SOLUTIONS_DATA: Record<string, SolutionData> = {
     ],
     testimonial: {
       quote:
-        "Grâce à Linea Suite, je peux enfin me concentrer sur la créativité plutôt que sur l'administratif. Mes clients adorent le suivi en temps réel de leur projet.",
+        "Grâce à LINEA, je peux enfin me concentrer sur la créativité plutôt que sur l'administratif. Mes clients adorent le suivi en temps réel de leur projet.",
       author: "Sophie Leroux",
       role: "Architecte d'intérieur, Fondatrice",
       company: "Archi+ Design Studio",
@@ -173,7 +173,7 @@ export const SOLUTIONS_DATA: Record<string, SolutionData> = {
   },
   scenographes: {
     slug: "scenographes",
-    title: "Linea Suite pour les Scénographes",
+    title: "LINEA pour les Scénographes",
     subtitle: "Du concept à l'installation, maîtrisez chaque projet",
     description:
       "Que ce soit pour des expositions, des événements ou des espaces commerciaux, gérez vos projets scénographiques avec des outils adaptés aux contraintes du secteur.",
@@ -235,10 +235,80 @@ export const SOLUTIONS_DATA: Record<string, SolutionData> = {
     ],
     testimonial: {
       quote:
-        "Dans notre métier, le timing est crucial. Linea Suite nous permet de coordonner nos équipes sur plusieurs sites simultanément sans perdre une minute.",
+        "Dans notre métier, le timing est crucial. LINEA nous permet de coordonner nos équipes sur plusieurs sites simultanément sans perdre une minute.",
       author: "Jean-Pierre Blanc",
       role: "Directeur de production",
       company: "Cabinet BPM Scénographie",
+    },
+  },
+  "agences-communication": {
+    slug: "agences-communication",
+    title: "LINEA pour les Agences de Communication",
+    subtitle: "Orchestrez vos campagnes avec précision",
+    description:
+      "Gérez vos projets de communication, du brief à la diffusion, avec des outils pensés pour les agences créatives : suivi de campagnes, planning média, production et reporting.",
+    icon: Megaphone,
+    color: "from-orange-500 to-amber-600",
+    challenges: [
+      {
+        title: "Gestion multi-clients",
+        description:
+          "Jongler entre plusieurs clients avec des identités, des deadlines et des exigences différentes demande une organisation sans faille.",
+      },
+      {
+        title: "Deadlines créatives serrées",
+        description:
+          "Les campagnes ont des dates de sortie non négociables. Coordonner création, production et validation dans les temps est crucial.",
+      },
+      {
+        title: "Suivi de production complexe",
+        description:
+          "Shooting photo, montage vidéo, création graphique, rédaction... Suivre tous les livrables et leurs validations est un défi quotidien.",
+      },
+      {
+        title: "Reporting client",
+        description:
+          "Vos clients attendent des bilans de campagne détaillés avec KPIs et analyses de performance.",
+      },
+    ],
+    features: [
+      {
+        module: "Campagnes",
+        description:
+          "Créez des fiches campagne complètes avec brief, objectifs, KPIs cibles et timeline de diffusion.",
+      },
+      {
+        module: "Planning Média",
+        description:
+          "Planifiez vos sorties par canal (réseaux sociaux, presse, TV, affichage) avec des rappels automatiques.",
+      },
+      {
+        module: "Projets",
+        description:
+          "Suivez chaque projet client avec des phases adaptées : brief, stratégie, création, production, diffusion, bilan.",
+      },
+      {
+        module: "Time Tracking",
+        description:
+          "Mesurez le temps passé par projet et par client pour optimiser votre rentabilité.",
+      },
+      {
+        module: "CRM",
+        description:
+          "Centralisez vos contacts clients, médias et partenaires avec un historique complet des échanges.",
+      },
+    ],
+    benefits: [
+      { value: "-30%", label: "de temps en coordination" },
+      { value: "4x", label: "plus de campagnes simultanées" },
+      { value: "100%", label: "des deadlines respectées" },
+    ],
+    testimonial: {
+      quote:
+        "LINEA a révolutionné notre workflow. Le planning média intégré nous permet de visualiser toutes nos sorties et de ne jamais rater une deadline.",
+      author: "Camille Martin",
+      role: "Directrice de production",
+      company: "Agence Créative 360",
     },
   },
 };

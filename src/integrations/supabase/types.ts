@@ -1317,6 +1317,92 @@ export type Database = {
           },
         ]
       }
+      discipline_modules: {
+        Row: {
+          created_at: string | null
+          custom_description: string | null
+          custom_name: string | null
+          discipline_id: string
+          id: string
+          is_available: boolean | null
+          is_default_enabled: boolean | null
+          is_recommended: boolean | null
+          module_key: string
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_description?: string | null
+          custom_name?: string | null
+          discipline_id: string
+          id?: string
+          is_available?: boolean | null
+          is_default_enabled?: boolean | null
+          is_recommended?: boolean | null
+          module_key: string
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_description?: string | null
+          custom_name?: string | null
+          discipline_id?: string
+          id?: string
+          is_available?: boolean | null
+          is_default_enabled?: boolean | null
+          is_recommended?: boolean | null
+          module_key?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discipline_modules_discipline_id_fkey"
+            columns: ["discipline_id"]
+            isOneToOne: false
+            referencedRelation: "disciplines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      disciplines: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          slug: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slug: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       document_approval_instances: {
         Row: {
           completed_at: string | null
@@ -7080,6 +7166,7 @@ export type Database = {
           code_naf: string | null
           created_at: string
           created_by: string | null
+          discipline_id: string | null
           email: string | null
           footer_text: string | null
           forme_juridique: string | null
@@ -7109,6 +7196,7 @@ export type Database = {
           code_naf?: string | null
           created_at?: string
           created_by?: string | null
+          discipline_id?: string | null
           email?: string | null
           footer_text?: string | null
           forme_juridique?: string | null
@@ -7138,6 +7226,7 @@ export type Database = {
           code_naf?: string | null
           created_at?: string
           created_by?: string | null
+          discipline_id?: string | null
           email?: string | null
           footer_text?: string | null
           forme_juridique?: string | null
@@ -7159,7 +7248,15 @@ export type Database = {
           vat_number?: string | null
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_discipline_id_fkey"
+            columns: ["discipline_id"]
+            isOneToOne: false
+            referencedRelation: "disciplines"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
