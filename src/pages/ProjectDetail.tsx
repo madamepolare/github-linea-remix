@@ -5,6 +5,7 @@ import { useProject, useProjects, useProjectMembers } from "@/hooks/useProjects"
 import { useProjectPhases } from "@/hooks/useProjectPhases";
 import { useTopBar } from "@/contexts/TopBarContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspaceDiscipline } from "@/hooks/useDiscipline";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,6 +86,9 @@ const PROJECT_TABS = [
   { key: "commercial", label: "Commercial", icon: Briefcase },
 ];
 
+// Tabs to hide for communication/creative agencies (construction-specific)
+const CONSTRUCTION_ONLY_TABS = ["permits", "insurances", "chantier"];
+
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -93,9 +97,19 @@ export default function ProjectDetail() {
   const { data: project, isLoading } = useProject(id || null);
   const { members: projectMembers } = useProjectMembers(id || null);
   const { updateProject } = useProjects();
+  const { data: discipline } = useWorkspaceDiscipline();
   const [activeTab, setActiveTab] = useState("overview");
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [projectEditOpen, setProjectEditOpen] = useState(false);
+
+  // Filter tabs based on discipline (hide construction tabs for communication agencies)
+  const filteredTabs = useMemo(() => {
+    const isConstructionDiscipline = !discipline?.slug || ["architecture", "interior", "scenography"].includes(discipline.slug);
+    if (isConstructionDiscipline) {
+      return PROJECT_TABS;
+    }
+    return PROJECT_TABS.filter(tab => !CONSTRUCTION_ONLY_TABS.includes(tab.key));
+  }, [discipline?.slug]);
 
   // Build entity config for TopBar
   const projectType = project ? PROJECT_TYPES.find((t) => t.value === project.project_type) : null;
@@ -185,7 +199,7 @@ export default function ProjectDetail() {
         title: project.name,
         badges,
         metadata,
-        tabs: PROJECT_TABS,
+        tabs: filteredTabs,
         activeTab,
         onTabChange: setActiveTab,
         actions: teamMembersDisplay,
@@ -195,7 +209,7 @@ export default function ProjectDetail() {
     return () => {
       setEntityConfig(null);
     };
-  }, [project, projectType, currentPhase, activeTab, setEntityConfig, projectMembers]);
+  }, [project, projectType, currentPhase, activeTab, setEntityConfig, projectMembers, filteredTabs]);
 
   const handleGenerateSummary = async () => {
     if (!id) return;
