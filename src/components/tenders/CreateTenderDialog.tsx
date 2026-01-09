@@ -100,7 +100,7 @@ interface ExtractedInfo {
   moe_phases?: string[];
   criteria?: CriterionItem[];
   required_team?: RequiredTeamItem[];
-  critical_alerts?: Array<{ type: string; message: string; severity: string }>;
+  critical_alerts?: Array<{ type: string; message: string; severity: string; source?: string }>;
   detected_documents?: { filename: string; type: string }[];
 }
 
@@ -781,18 +781,29 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                   <p className="font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2">
                     ⚠️ Points d'attention identifiés par l'IA
                   </p>
-                  <ul className="space-y-1 text-sm">
+                  <ul className="space-y-2 text-sm">
                     {formData.critical_alerts.map((alert, i) => (
                       <li key={i} className={cn(
-                        "flex items-start gap-2",
-                        alert.severity === 'critical' && "text-red-600 dark:text-red-400",
-                        alert.severity === 'warning' && "text-amber-600 dark:text-amber-400",
-                        alert.severity === 'info' && "text-muted-foreground"
+                        "flex items-start gap-2 p-2 rounded-lg",
+                        alert.severity === 'critical' && "bg-red-100/50 dark:bg-red-900/20",
+                        alert.severity === 'warning' && "bg-amber-100/50 dark:bg-amber-900/20",
+                        alert.severity === 'info' && "bg-blue-100/50 dark:bg-blue-900/20"
                       )}>
-                        <span className="shrink-0">
+                        <span className="shrink-0 mt-0.5">
                           {alert.severity === 'critical' ? '🔴' : alert.severity === 'warning' ? '🟠' : '🔵'}
                         </span>
-                        <span>{alert.message}</span>
+                        <div className="flex-1 min-w-0">
+                          <span className={cn(
+                            alert.severity === 'critical' && "text-red-700 dark:text-red-400",
+                            alert.severity === 'warning' && "text-amber-700 dark:text-amber-400",
+                            alert.severity === 'info' && "text-blue-700 dark:text-blue-400"
+                          )}>{alert.message}</span>
+                          {alert.source && (
+                            <span className="ml-2 text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                              📄 {alert.source}
+                            </span>
+                          )}
+                        </div>
                       </li>
                     ))}
                   </ul>
