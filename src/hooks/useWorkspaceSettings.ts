@@ -17,6 +17,7 @@ export type SettingType =
   | "task_statuses"
   | "task_priorities"
   | "project_types"
+  | "project_subtypes"
   | "lot_categories";
 
 export interface WorkspaceSetting {
