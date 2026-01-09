@@ -93,8 +93,7 @@ export function TenderCriteriaSection({
     if (!newCriterion.name.trim()) return;
     
     await addCriterion.mutateAsync({
-      tender_id: tenderId,
-      criterion_name: newCriterion.name,
+      name: newCriterion.name,
       weight: newCriterion.weight,
       criterion_type: newCriterion.type as any,
     });

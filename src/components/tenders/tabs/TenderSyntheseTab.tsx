@@ -17,9 +17,10 @@ import {
   Clock,
   CalendarDays,
   ExternalLink,
-  CalendarPlus,
-  Check,
   Users,
+  Link2,
+  Hash,
+  Globe,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,6 @@ import { Separator } from "@/components/ui/separator";
 import { useTenders } from "@/hooks/useTenders";
 import { useTenderCalendarEvents } from "@/hooks/useTenderCalendarEvents";
 import { 
-  PROCEDURE_TYPE_LABELS, 
   CLIENT_TYPES,
   type Tender,
   type TenderStatus,
@@ -57,6 +57,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { RequiredTeamEditor } from "@/components/tenders/RequiredTeamEditor";
 import { SiteVisitAssignment } from "@/components/tenders/SiteVisitAssignment";
+import { TenderCriticalInfo } from "@/components/tenders/TenderCriticalInfo";
+import { TenderCriteriaSection } from "@/components/tenders/TenderCriteriaSection";
+import { TenderDeliverablesSection } from "@/components/tenders/TenderDeliverablesSection";
 
 interface TenderSyntheseTabProps {
   tender: Tender;
@@ -85,12 +88,11 @@ const MARKET_TYPES = [
 
 export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTabProps) {
   const { updateTender, updateStatus } = useTenders();
-  const { syncSiteVisit, createTenderEvent } = useTenderCalendarEvents(tender.id);
+  const { syncSiteVisit } = useTenderCalendarEvents(tender.id);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [showGoDialog, setShowGoDialog] = useState(false);
   const [goDecisionNotes, setGoDecisionNotes] = useState("");
   const [pendingDecision, setPendingDecision] = useState<'go' | 'no_go' | null>(null);
-  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
   const [addedToCalendar, setAddedToCalendar] = useState(false);
   
   // Local form state for inline editing
@@ -107,6 +109,9 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
     description: tender.description,
   });
 
+  // Extended tender fields
+  const extendedTender = tender as any;
+
   // Auto-sync to calendar when site visit date changes
   useEffect(() => {
     if (formData.site_visit_date && !addedToCalendar) {
@@ -118,10 +123,10 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
             location: formData.location || tender.location,
             site_visit_date: formData.site_visit_date!,
             site_visit_required: formData.site_visit_required,
-            site_visit_contact_name: (tender as any).site_visit_contact_name,
-            site_visit_contact_email: (tender as any).site_visit_contact_email,
-            site_visit_contact_phone: (tender as any).site_visit_contact_phone,
-            site_visit_assigned_users: (tender as any).site_visit_assigned_users,
+            site_visit_contact_name: extendedTender.site_visit_contact_name,
+            site_visit_contact_email: extendedTender.site_visit_contact_email,
+            site_visit_contact_phone: extendedTender.site_visit_contact_phone,
+            site_visit_assigned_users: extendedTender.site_visit_assigned_users,
           });
           setAddedToCalendar(true);
         } catch (error) {
@@ -129,7 +134,6 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
         }
       };
       
-      // Debounce to avoid multiple calls during typing
       const timeout = setTimeout(autoSync, 1500);
       return () => clearTimeout(timeout);
     }
@@ -234,62 +238,101 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
 
   return (
     <div className="space-y-6">
-      {/* Missing Fields Alert - Sticky */}
+      {/* Critical Info Banner */}
+      <TenderCriticalInfo tender={tender} />
+
+      {/* Missing Fields Alert */}
       {missingFields.length > 0 && (
-        <div className="sticky top-0 z-10">
-          <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
-            <CardContent className="py-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                    {missingFields.length} champ{missingFields.length > 1 ? 's' : ''} obligatoire{missingFields.length > 1 ? 's' : ''} manquant{missingFields.length > 1 ? 's' : ''}
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {missingFields.map(field => (
-                      <Badge 
-                        key={field.key} 
-                        variant="outline" 
-                        className="border-amber-400 text-amber-700 dark:text-amber-300 cursor-pointer hover:bg-amber-100"
-                        onClick={() => {
-                          // Scroll to field
-                          const el = document.getElementById(`field-${field.key}`);
-                          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                          const input = el?.querySelector('input, select, textarea') as HTMLElement | null;
-                          input?.focus();
-                        }}
-                      >
-                        <field.icon className="h-3 w-3 mr-1" />
-                        {field.label}
-                      </Badge>
-                    ))}
-                  </div>
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  {missingFields.length} champ{missingFields.length > 1 ? 's' : ''} obligatoire{missingFields.length > 1 ? 's' : ''} manquant{missingFields.length > 1 ? 's' : ''}
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {missingFields.map(field => (
+                    <Badge 
+                      key={field.key} 
+                      variant="outline" 
+                      className="border-amber-400 text-amber-700 dark:text-amber-300 cursor-pointer hover:bg-amber-100"
+                      onClick={() => {
+                        const el = document.getElementById(`field-${field.key}`);
+                        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        const input = el?.querySelector('input, select, textarea') as HTMLElement | null;
+                        input?.focus();
+                      }}
+                    >
+                      <field.icon className="h-3 w-3 mr-1" />
+                      {field.label}
+                    </Badge>
+                  ))}
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="border-amber-400 text-amber-700 hover:bg-amber-100"
-                  onClick={() => onNavigateToTab('analyse')}
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Analyser le DCE
-                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="border-amber-400 text-amber-700 hover:bg-amber-100"
+                onClick={() => onNavigateToTab('analyse')}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Analyser le DCE
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Main Form Grid */}
+      {/* Main Grid Layout */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column - Core Info */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Client & Market Info */}
+          {/* Market Info Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Informations du marché</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                Informations du marché
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Reference & Consultation Number */}
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Hash className="h-3 w-3" />
+                    Référence
+                  </Label>
+                  <Input
+                    value={tender.reference || ""}
+                    disabled
+                    className="h-8 text-sm bg-muted/50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">N° consultation</Label>
+                  <Input
+                    value={extendedTender.consultation_number || ""}
+                    onChange={(e) => handleSaveField('consultation_number', e.target.value)}
+                    placeholder="Ex: 2024-AO-001"
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Code groupe</Label>
+                  <Input
+                    value={extendedTender.group_code || ""}
+                    onChange={(e) => handleSaveField('group_code', e.target.value)}
+                    placeholder="Ex: OP-2024-123"
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Client Info */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div id="field-client_name" className="space-y-2">
                   <Label className="flex items-center gap-2">
@@ -326,6 +369,7 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
                 </div>
               </div>
 
+              {/* Procedure & Location */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div id="field-procedure_type" className="space-y-2">
                   <Label className="flex items-center gap-2">
@@ -365,6 +409,7 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
                 </div>
               </div>
 
+              {/* Budget & Surface */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div id="field-estimated_budget" className="space-y-2">
                   <Label className="flex items-center gap-2">
@@ -395,29 +440,57 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
                   />
                 </div>
               </div>
+
+              {/* Source Links */}
+              {(tender.source_url || tender.dce_link) && (
+                <>
+                  <Separator />
+                  <div className="flex flex-wrap gap-3">
+                    {tender.source_url && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={tender.source_url} target="_blank" rel="noopener noreferrer">
+                          <Globe className="h-4 w-4 mr-2" />
+                          Source
+                          <ExternalLink className="h-3 w-3 ml-2" />
+                        </a>
+                      </Button>
+                    )}
+                    {tender.dce_link && (
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={tender.dce_link} target="_blank" rel="noopener noreferrer">
+                          <Link2 className="h-4 w-4 mr-2" />
+                          DCE
+                          <ExternalLink className="h-3 w-3 ml-2" />
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
-          {/* Dates & Visit */}
+          {/* Dates & Site Visit */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Échéances</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                Échéances
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div id="field-submission_deadline" className="space-y-2">
                 <Label className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Clock className="h-4 w-4 text-muted-foreground" />
                   Date et heure de dépôt *
                 </Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="datetime-local"
-                    value={formData.submission_deadline?.slice(0, 16) || ""}
-                    onChange={(e) => setFormData({ ...formData, submission_deadline: e.target.value })}
-                    onBlur={(e) => handleSaveField('submission_deadline', e.target.value || null)}
-                    className={cn("flex-1", !formData.submission_deadline && "border-amber-300")}
-                  />
-                </div>
+                <Input
+                  type="datetime-local"
+                  value={formData.submission_deadline?.slice(0, 16) || ""}
+                  onChange={(e) => setFormData({ ...formData, submission_deadline: e.target.value })}
+                  onBlur={(e) => handleSaveField('submission_deadline', e.target.value || null)}
+                  className={cn("max-w-xs", !formData.submission_deadline && "border-amber-300")}
+                />
                 {formData.submission_deadline && (
                   <p className={cn(
                     "text-sm",
@@ -431,11 +504,12 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
 
               <Separator />
 
+              {/* Site Visit */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label className="flex items-center gap-2">
                     <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                    Visite obligatoire
+                    Visite de site obligatoire
                   </Label>
                   <Switch
                     checked={formData.site_visit_required || false}
@@ -455,6 +529,7 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
                         value={formData.site_visit_date?.slice(0, 16) || ""}
                         onChange={(e) => setFormData({ ...formData, site_visit_date: e.target.value })}
                         onBlur={(e) => handleSaveField('site_visit_date', e.target.value || null)}
+                        className="max-w-xs"
                       />
                     </div>
                     {formData.site_visit_date && (
@@ -463,12 +538,12 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
                         tenderTitle={tender.title}
                         siteVisitDate={formData.site_visit_date}
                         siteVisitRequired={formData.site_visit_required || false}
-                        location={(tender as any).site_visit_location || formData.location || tender.location}
+                        location={extendedTender.site_visit_location || formData.location || tender.location}
                         projectAddress={formData.location || tender.location}
-                        contactName={(tender as any).site_visit_contact_name || null}
-                        contactEmail={(tender as any).site_visit_contact_email || null}
-                        contactPhone={(tender as any).site_visit_contact_phone || null}
-                        assignedUserIds={(tender as any).site_visit_assigned_users || []}
+                        contactName={extendedTender.site_visit_contact_name || null}
+                        contactEmail={extendedTender.site_visit_contact_email || null}
+                        contactPhone={extendedTender.site_visit_contact_phone || null}
+                        assignedUserIds={extendedTender.site_visit_assigned_users || []}
                         onAssignmentChange={(userIds) => {
                           handleSaveField('site_visit_assigned_users', userIds);
                         }}
@@ -513,17 +588,17 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   onBlur={(e) => handleSaveField('description', e.target.value)}
                   placeholder="Description du projet, enjeux, contexte..."
-                  rows={6}
+                  rows={5}
                   className={cn(!formData.description && "border-amber-300")}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Ce résumé sera utilisé dans le mémoire technique et les présentations.
-                </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Required Team / Competencies */}
+          {/* Criteria Section */}
+          <TenderCriteriaSection tenderId={tender.id} />
+
+          {/* Required Team */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -541,13 +616,16 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
               />
             </CardContent>
           </Card>
+
+          {/* Documents / Deliverables */}
+          <TenderDeliverablesSection tenderId={tender.id} />
         </div>
 
         {/* Right Column - Decision & Status */}
         <div className="space-y-6">
           {/* Go / No-Go Decision Card */}
           <Card className={cn(
-            "border-2",
+            "border-2 sticky top-4",
             tender.status === 'go' && "border-green-300 bg-green-50/50 dark:bg-green-950/20",
             tender.status === 'no_go' && "border-red-300 bg-red-50/50 dark:bg-red-950/20"
           )}>
@@ -644,18 +722,6 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
                 <Building2 className="h-4 w-4 mr-2" />
                 Constituer l'équipe
               </Button>
-              {tender.source_url && (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  asChild
-                >
-                  <a href={tender.source_url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Voir la source
-                  </a>
-                </Button>
-              )}
             </CardContent>
           </Card>
 
