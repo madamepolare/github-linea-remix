@@ -39,16 +39,24 @@ interface StoredSession {
 // Stocke la session actuelle pour un compte lié
 export function storeCurrentSession(email: string, refreshToken: string) {
   if (!isFounderEmail(email)) return;
-  
+
   const stored = getStoredSessions();
-  const updated = stored.filter(s => s.email.toLowerCase() !== email.toLowerCase());
+  const updated = stored.filter((s) => s.email.toLowerCase() !== email.toLowerCase());
   updated.push({
     email: email.toLowerCase(),
     refresh_token: refreshToken,
     stored_at: Date.now(),
   });
-  
+
   localStorage.setItem(LINKED_SESSIONS_KEY, JSON.stringify(updated));
+
+  if (import.meta.env.DEV) {
+    console.info("[founderSwitch] stored session", {
+      email: email.toLowerCase(),
+      total: updated.length,
+      emails: updated.map((s) => s.email),
+    });
+  }
 }
 
 function getStoredSessions(): StoredSession[] {
@@ -103,7 +111,13 @@ export async function instantSwitchToEmail(email: string): Promise<SwitchResult>
 
 // Vérifie si on a un token stocké pour un email
 export function hasStoredSessionFor(email: string): boolean {
-  return !!getStoredSessionForEmail(email);
+  const found = !!getStoredSessionForEmail(email);
+  if (import.meta.env.DEV && !found) {
+    console.info("[founderSwitch] no stored session for", email, {
+      storedEmails: getStoredSessions().map((s) => s.email),
+    });
+  }
+  return found;
 }
 
 // ============== MODAL COMPONENT ==============
