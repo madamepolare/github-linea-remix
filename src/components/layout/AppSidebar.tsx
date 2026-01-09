@@ -1,4 +1,5 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import {
@@ -73,11 +74,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { collapsed, toggle } = useSidebarStore();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, activeWorkspace, workspaces, signOut, setActiveWorkspace } = useAuth();
+  const { user, profile, activeWorkspace, workspaces, signOut, setActiveWorkspace, refreshProfile } = useAuth();
   const [showQuickSwitch, setShowQuickSwitch] = useState(false);
   const [switchingWorkspace, setSwitchingWorkspace] = useState<string | null>(null);
   const canQuickSwitch = useCanQuickSwitch(user?.email);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Get modules data
   const { data: modules = [] } = useModules();
@@ -207,8 +209,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       return;
     }
 
-    // Reload pour appliquer le changement complet (le pending workspace sera appliqué au load)
-    window.location.href = "/";
+    // Transition douce : invalider les caches et rafraîchir le profil
+    // Le onAuthStateChange a déjà mis à jour la session
+    setSwitchingWorkspace(null);
+    await queryClient.invalidateQueries();
+    await refreshProfile();
+    navigate("/");
   };
 
   const userInitials = profile?.full_name
