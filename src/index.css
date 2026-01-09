@@ -83,6 +83,11 @@
     /* Sidebar dimensions */
     --sidebar-width: 260px;
     --sidebar-width-collapsed: 72px;
+
+    /* Typography - Custom font variables */
+    --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-size-base: 14px;
   }
 
   .dark {
@@ -136,16 +141,17 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--font-body);
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     line-height: 1.5;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply tracking-tight font-semibold;
+    font-family: var(--font-heading);
     letter-spacing: -0.02em;
   }
 
