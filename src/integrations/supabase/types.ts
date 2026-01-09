@@ -973,7 +973,10 @@ export type Database = {
           created_by: string | null
           crm_company_id: string | null
           email: string | null
+          first_name: string | null
+          gender: string | null
           id: string
+          last_name: string | null
           location: string | null
           name: string
           notes: string | null
@@ -989,7 +992,10 @@ export type Database = {
           created_by?: string | null
           crm_company_id?: string | null
           email?: string | null
+          first_name?: string | null
+          gender?: string | null
           id?: string
+          last_name?: string | null
           location?: string | null
           name: string
           notes?: string | null
@@ -1005,7 +1011,10 @@ export type Database = {
           created_by?: string | null
           crm_company_id?: string | null
           email?: string | null
+          first_name?: string | null
+          gender?: string | null
           id?: string
+          last_name?: string | null
           location?: string | null
           name?: string
           notes?: string | null

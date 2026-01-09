@@ -238,9 +238,14 @@ export interface CRMCompanyEnriched extends CRMCompany {
   } | null;
 }
 
+export type ContactGender = 'male' | 'female' | 'other';
+
 export interface Contact {
   id: string;
   name: string;
+  first_name: string | null;
+  last_name: string | null;
+  gender: ContactGender | null;
   email: string | null;
   phone: string | null;
   role: string | null;
