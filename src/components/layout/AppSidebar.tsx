@@ -209,12 +209,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       return;
     }
 
-    // Transition douce : invalider les caches et rafraîchir le profil
-    // Le onAuthStateChange a déjà mis à jour la session
-    setSwitchingWorkspace(null);
-    await queryClient.invalidateQueries();
-    await refreshProfile();
-    navigate("/");
+    // Petit délai pour laisser onAuthStateChange traiter le pending workspace
+    setTimeout(() => {
+      setSwitchingWorkspace(null);
+      window.location.href = "/";
+    }, 100);
   };
 
   const userInitials = profile?.full_name
