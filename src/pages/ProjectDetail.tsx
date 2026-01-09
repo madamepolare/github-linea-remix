@@ -63,6 +63,7 @@ import { EntityCommunications } from "@/components/shared/EntityCommunications";
 import { EntityEmailsTab } from "@/components/shared/EntityEmailsTab";
 import { ProjectElementsTab } from "@/components/projects/elements/ProjectElementsTab";
 import { ProjectPhasesTab } from "@/components/projects/ProjectPhasesTab";
+import { ProjectBudgetTab } from "@/components/projects/ProjectBudgetTab";
 import { MessageCircle, Mail } from "lucide-react";
 
 // Tab configuration for project detail
@@ -71,6 +72,7 @@ const PROJECT_TABS = [
   { key: "planning", label: "Calendrier", icon: Calendar },
   { key: "phases", label: "Phases", icon: Layers },
   { key: "tasks", label: "Tâches", icon: ListTodo },
+  { key: "budget", label: "Budget", icon: Receipt },
   { key: "emails", label: "Emails", icon: Mail },
   { key: "communications", label: "Communications", icon: MessageCircle },
   { key: "elements", label: "Éléments", icon: FolderKanban },
@@ -264,6 +266,9 @@ export default function ProjectDetail() {
           {activeTab === "phases" && <ProjectPhasesTab projectId={project.id} />}
           {activeTab === "tasks" && (
             <ProjectTasksTab projectId={project.id} />
+          )}
+          {activeTab === "budget" && (
+            <ProjectBudgetTab projectId={project.id} />
           )}
           {activeTab === "emails" && (
             <EntityEmailsTab entityType="project" entityId={project.id} />
