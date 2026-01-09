@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -28,7 +28,6 @@ import { cn } from "@/lib/utils";
 // Tab components
 import { TenderSyntheseTab } from "@/components/tenders/tabs/TenderSyntheseTab";
 import { TenderCalendarTab } from "@/components/tenders/tabs/TenderCalendarTab";
-import { TenderAnalyseTab } from "@/components/tenders/tabs/TenderAnalyseTab";
 import { TenderDocumentsTab } from "@/components/tenders/tabs/TenderDocumentsTab";
 import { TenderLivrablesTab } from "@/components/tenders/tabs/TenderLivrablesTab";
 import { TenderEquipeTab } from "@/components/tenders/tabs/TenderEquipeTab";
@@ -39,13 +38,11 @@ import { EntityEmailsTab } from "@/components/shared/EntityEmailsTab";
 export default function TenderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { data: tender, isLoading } = useTender(id);
   const { updateTender, updateStatus } = useTenders();
   const { setEntityConfig } = useTopBar();
   const [activeTab, setActiveTab] = useState("synthese");
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [pendingFiles, setPendingFiles] = useState<Array<{ name: string; type: string; data: string }> | null>(null);
 
   // Configure TopBar for entity view
   useEffect(() => {
@@ -97,23 +94,12 @@ export default function TenderDetail() {
     return () => setEntityConfig(null);
   }, [tender, activeTab, setEntityConfig]);
 
-  // Check for auto-upload mode (from creation dialog)
+  // Clean up any stored files from creation (no auto-upload anymore)
   useEffect(() => {
-    if (id && searchParams.get('autoUpload') === 'true') {
-      const storedFiles = sessionStorage.getItem(`tender-files-${id}`);
-      if (storedFiles) {
-        try {
-          const files = JSON.parse(storedFiles);
-          setPendingFiles(files);
-          sessionStorage.removeItem(`tender-files-${id}`);
-          setActiveTab("analyse");
-        } catch (e) {
-          console.error('Failed to parse stored files:', e);
-        }
-      }
-      setSearchParams({}, { replace: true });
+    if (id) {
+      sessionStorage.removeItem(`tender-files-${id}`);
     }
-  }, [id, searchParams, setSearchParams]);
+  }, [id]);
 
   if (isLoading) {
     return (
@@ -141,15 +127,6 @@ export default function TenderDetail() {
         return <TenderSyntheseTab tender={tender} onNavigateToTab={setActiveTab} />;
       case "calendrier":
         return <TenderCalendarTab tenderId={tender.id} tender={tender} />;
-      case "analyse":
-        return (
-          <TenderAnalyseTab 
-            tender={tender} 
-            onNavigateToTab={setActiveTab}
-            pendingFiles={pendingFiles}
-            onFilesPending={(files) => setPendingFiles(files)}
-          />
-        );
       case "documents":
         return <TenderDocumentsTab tenderId={tender.id} />;
       case "emails":

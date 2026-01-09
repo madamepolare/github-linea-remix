@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -136,6 +137,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState<string>("");
+  const [analysisPercent, setAnalysisPercent] = useState(0);
   
   // Form state (pre-filled by AI)
   const [formData, setFormData] = useState<ExtractedInfo>({
@@ -331,13 +333,16 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
 
     setIsAnalyzing(true);
     setAnalysisProgress("Préparation des fichiers...");
+    setAnalysisPercent(5);
 
     try {
       // Prepare files with progress feedback
       setAnalysisProgress(`Lecture de ${uploadedFiles.length} fichier(s)...`);
+      setAnalysisPercent(10);
       
       const { kept, skipped } = safeFileList(uploadedFiles);
-      setAnalysisProgress(`Lecture de ${kept.length} fichier(s)...${formatSkipped(skipped)}`);
+      setAnalysisProgress(`Encodage de ${kept.length} fichier(s)...${formatSkipped(skipped)}`);
+      setAnalysisPercent(15);
 
       const filesData = await Promise.all(kept.map(async (file) => ({
         name: file.name,
@@ -345,11 +350,29 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         content: await fileToBase64(file),
       })));
 
+      setAnalysisProgress("Envoi des fichiers au serveur...");
+      setAnalysisPercent(25);
+
+      // Start a progress simulation for the AI analysis phase
+      const progressInterval = setInterval(() => {
+        setAnalysisPercent(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 5;
+        });
+      }, 2000);
+
       setAnalysisProgress("Analyse IA en cours... Lecture des documents PDF");
 
       const { data, error } = await supabase.functions.invoke('analyze-dce-before-creation', {
         body: { files: filesData, tender_type: tenderType }
       });
+
+      clearInterval(progressInterval);
+      setAnalysisPercent(95);
+      setAnalysisProgress("Traitement des résultats...");
 
       if (error) throw error;
 
@@ -434,6 +457,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
     } finally {
       setIsAnalyzing(false);
       setAnalysisProgress("");
+      setAnalysisPercent(0);
     }
   };
 
@@ -485,17 +509,6 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         description: formData.project_description || undefined,
       });
 
-      // Store files and criteria for upload on detail page
-      if (uploadedFiles.length > 0) {
-        const fileData = await Promise.all(uploadedFiles.map(async (file) => ({
-          name: file.name,
-          type: safeMimeType(file),
-          size: file.size,
-          data: await fileToBase64(file),
-        })));
-        sessionStorage.setItem(`tender-files-${result.id}`, JSON.stringify(fileData));
-      }
-
       // Store criteria to be created on detail page
       if (formData.criteria && formData.criteria.length > 0) {
         sessionStorage.setItem(`tender-criteria-${result.id}`, JSON.stringify(formData.criteria));
@@ -507,7 +520,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       }
 
       handleClose();
-      navigate(`/tenders/${result.id}?autoUpload=true`);
+      navigate(`/tenders/${result.id}`);
       toast.success("Appel d'offre créé avec succès");
     } catch (error) {
       console.error('Create error:', error);
@@ -631,12 +644,16 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                     </div>
                     <div>
                       {isAnalyzing ? (
-                        <>
+                        <div className="space-y-3">
                           <p className="font-medium text-primary">Analyse IA en cours...</p>
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <Progress value={analysisPercent} className="h-2 w-64 mx-auto" />
+                          <p className="text-sm text-muted-foreground">
                             {analysisProgress || "Lecture et compréhension des documents PDF"}
                           </p>
-                        </>
+                          <p className="text-xs text-muted-foreground">
+                            Temps estimé : ~{Math.max(1, Math.ceil((100 - analysisPercent) / 10))} min restante(s)
+                          </p>
+                        </div>
                       ) : (
                         <>
                           <p className="font-medium">

@@ -457,7 +457,7 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
                       properties: {
                         specialty: { 
                           type: "string", 
-                          description: "Spécialité: architecte, bet_structure, bet_fluides, bet_electricite, economiste, paysagiste, acousticien, bet_vrd, opc, etc." 
+                          description: "Spécialité EXACTE requise. Options: architecte, bet_structure, bet_thermique (études thermiques/RT/RE2020), bet_fluides (plomberie/CVC/chauffage), bet_electricite, economiste, paysagiste, acousticien, bet_vrd, opc, cuisiniste, ssi, bet_facade, etc. ATTENTION: 'bet_thermique' pour études thermiques/RT2012/RE2020, 'bet_fluides' pour plomberie/CVC uniquement si chauffage/climatisation mentionné séparément de thermique"
                         },
                         is_mandatory: { 
                           type: "boolean", 
