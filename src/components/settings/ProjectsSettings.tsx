@@ -1,15 +1,56 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GenericSettingsManager } from "./GenericSettingsManager";
 import { FolderKanban, FileText } from "lucide-react";
+import { DISCIPLINE_CONFIGS, DisciplineSlug } from "@/lib/disciplinesConfig";
 
-// Default project types
-const DEFAULT_PROJECT_TYPES = [
-  { key: "interior", label: "Intérieur", color: "#8B5CF6", description: "Aménagement intérieur, design d'espace" },
-  { key: "architecture", label: "Architecture", color: "#3B82F6", description: "Construction, rénovation, extension" },
-  { key: "scenography", label: "Scénographie", color: "#F59E0B", description: "Exposition, événementiel, muséographie" },
-  { key: "urbanisme", label: "Urbanisme", color: "#10B981", description: "Aménagement urbain, master plan" },
-  { key: "paysage", label: "Paysage", color: "#22C55E", description: "Aménagement paysager, espaces verts" },
-];
+// Generate default project types from discipline configs
+const DEFAULT_PROJECT_TYPES = Object.entries(DISCIPLINE_CONFIGS).map(([slug, config]) => ({
+  key: slug,
+  label: config.name,
+  color: config.color.startsWith('hsl') 
+    ? hslToHex(config.color) 
+    : config.color,
+  description: config.description,
+  icon: config.icon.displayName || slug,
+}));
+
+// Helper to convert HSL string to hex
+function hslToHex(hslString: string): string {
+  // Parse hsl(220, 70%, 50%) format
+  const match = hslString.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+  if (!match) return "#3B82F6"; // fallback
+  
+  const h = parseInt(match[1]) / 360;
+  const s = parseInt(match[2]) / 100;
+  const l = parseInt(match[3]) / 100;
+  
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+  };
+  
+  let r, g, b;
+  if (s === 0) {
+    r = g = b = l;
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  
+  const toHex = (x: number) => {
+    const hex = Math.round(x * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
 
 // Default deliverable types
 const DEFAULT_DELIVERABLE_TYPES = [
