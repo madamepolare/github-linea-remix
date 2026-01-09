@@ -146,7 +146,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     }
   };
 
-  // Smart workspace switch: pour le fondateur, switch aussi le compte si nécessaire
+  // Smart workspace switch: pour le fondateur, TOUJOURS switch au bon compte
   const handleWorkspaceSwitch = async (workspaceId: string) => {
     const targetWorkspace = workspaces.find(w => w.id === workspaceId);
     if (!targetWorkspace) return;
@@ -157,17 +157,22 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       return;
     }
 
-    // Cherche l'email associé à ce workspace (par slug ou name)
-    const targetEmail = getEmailForWorkspace(targetWorkspace.slug) || 
-                        getEmailForWorkspace(targetWorkspace.name);
+    // Cherche l'email IMPOSÉ pour ce workspace (par slug)
+    const targetEmail = getEmailForWorkspace(targetWorkspace.slug);
 
-    // Si même email ou pas de mapping, juste changer le workspace
-    if (!targetEmail || targetEmail.toLowerCase() === user?.email?.toLowerCase()) {
+    // Si pas de mapping pour ce workspace, juste changer le workspace
+    if (!targetEmail) {
       await setActiveWorkspace(workspaceId);
       return;
     }
 
-    // Vérifie si on a un token pour cet email
+    // Si déjà sur le bon compte, juste changer le workspace actif
+    if (targetEmail.toLowerCase() === user?.email?.toLowerCase()) {
+      await setActiveWorkspace(workspaceId);
+      return;
+    }
+
+    // On doit changer de compte - vérifie si on a un token
     if (!hasStoredSessionFor(targetEmail)) {
       toast({
         variant: "destructive",
@@ -202,12 +207,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       return;
     }
 
-    toast({
-      title: `${targetWorkspace.name} ✓`,
-      description: `Connecté en tant que ${targetEmail}`,
-    });
-
-    // Reload pour appliquer le changement complet
+    // Reload pour appliquer le changement complet (le pending workspace sera appliqué au load)
     window.location.href = "/";
   };
 
