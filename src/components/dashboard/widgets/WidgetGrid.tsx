@@ -37,6 +37,16 @@ const DEFAULT_WIDGETS: string[] = [
   "activity-feed",
 ];
 
+// Width constraints: 1 = 25%, 2 = 50%, 4 = 100% of grid
+const ALLOWED_WIDTHS = [1, 2, 4];
+
+function snapToAllowedWidth(w: number): number {
+  // Find the closest allowed width
+  if (w <= 1) return 1;
+  if (w <= 2) return 2;
+  return 4;
+}
+
 function getDefaultLayout(widgets: string[]): RGLLayout[] {
   let x = 0;
   let y = 0;
@@ -44,8 +54,9 @@ function getDefaultLayout(widgets: string[]): RGLLayout[] {
   return widgets.map((widgetId) => {
     const config = getWidgetById(widgetId);
     const size = config ? getSizeDefaults(config.defaultSize) : { w: 2, h: 2 };
+    const snappedW = snapToAllowedWidth(size.w);
 
-    if (x + size.w > 4) {
+    if (x + snappedW > 4) {
       x = 0;
       y += 2;
     }
@@ -54,13 +65,14 @@ function getDefaultLayout(widgets: string[]): RGLLayout[] {
       i: widgetId,
       x,
       y,
-      w: size.w,
+      w: snappedW,
       h: size.h,
-      minW: config?.minW || 1,
+      minW: 1,
+      maxW: 4,
       minH: config?.minH || 1,
     };
 
-    x += size.w;
+    x += snappedW;
     return layout;
   });
 }
@@ -113,8 +125,13 @@ export function WidgetGrid() {
   const handleLayoutChange = useCallback(
     (newLayout: RGLLayout[]) => {
       if (isEditing) {
-        setState((prev) => ({ ...prev, layout: newLayout }));
-        saveLayout(widgets, newLayout);
+        // Snap widths to allowed values (1, 2, or 4)
+        const snappedLayout = newLayout.map((item) => ({
+          ...item,
+          w: snapToAllowedWidth(item.w),
+        }));
+        setState((prev) => ({ ...prev, layout: snappedLayout }));
+        saveLayout(widgets, snappedLayout);
       }
     },
     [isEditing, widgets]
@@ -126,15 +143,17 @@ export function WidgetGrid() {
 
       const config = getWidgetById(widgetId);
       const size = config ? getSizeDefaults(config.defaultSize) : { w: 2, h: 2 };
+      const snappedW = snapToAllowedWidth(size.w);
       const maxY = Math.max(0, ...prev.layout.map((l) => l.y + l.h));
 
       const newLayout: RGLLayout = {
         i: widgetId,
         x: 0,
         y: maxY,
-        w: size.w,
+        w: snappedW,
         h: size.h,
-        minW: config?.minW || 1,
+        minW: 1,
+        maxW: 4,
         minH: config?.minH || 1,
       };
 
@@ -189,26 +208,34 @@ export function WidgetGrid() {
         </Button>
       </div>
 
-      <GridLayout
-        className="layout"
-        layout={layout}
-        cols={4}
-        rowHeight={120}
-        width={containerWidth}
-        margin={[16, 16]}
-        containerPadding={[0, 0]}
-        isDraggable={isEditing}
-        isResizable={isEditing}
-        draggableHandle=".widget-drag-handle"
-        onLayoutChange={handleLayoutChange}
-        useCSSTransforms
+      <div 
+        className={cn(
+          "rounded-xl transition-colors",
+          isEditing && "bg-dotted-grid"
+        )}
       >
-        {widgets.map((widgetId) => (
-          <div key={widgetId} className={cn(isEditing && "transition-shadow")}>
-            <WidgetRenderer widgetId={widgetId} isEditing={isEditing} onRemove={() => handleRemoveWidget(widgetId)} />
-          </div>
-        ))}
-      </GridLayout>
+        <GridLayout
+          className="layout"
+          layout={layout}
+          cols={4}
+          rowHeight={120}
+          width={containerWidth}
+          margin={[16, 16]}
+          containerPadding={[8, 8]}
+          isDraggable={isEditing}
+          isResizable={isEditing}
+          draggableHandle=".widget-drag-handle"
+          onLayoutChange={handleLayoutChange}
+          useCSSTransforms
+          resizeHandles={["e", "w", "se"]}
+        >
+          {widgets.map((widgetId) => (
+            <div key={widgetId} className={cn(isEditing && "transition-shadow")}>
+              <WidgetRenderer widgetId={widgetId} isEditing={isEditing} onRemove={() => handleRemoveWidget(widgetId)} />
+            </div>
+          ))}
+        </GridLayout>
+      </div>
 
       {showPicker && (
         <WidgetPicker open={showPicker} onClose={() => setShowPicker(false)} onSelect={handleAddWidget} activeWidgets={widgets} />
