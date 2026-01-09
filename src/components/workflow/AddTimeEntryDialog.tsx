@@ -170,15 +170,15 @@ export function AddTimeEntryDialog({
               {/* Project filter for tasks */}
               <div className="space-y-2">
                 <Label>Filtrer par projet (optionnel)</Label>
-                <Select value={projectId} onValueChange={(v) => {
-                  setProjectId(v);
+                <Select value={projectId || "all"} onValueChange={(v) => {
+                  setProjectId(v === "all" ? "" : v);
                   setTaskId(""); // Reset task when project changes
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="Tous les projets" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tous les projets</SelectItem>
+                    <SelectItem value="all">Tous les projets</SelectItem>
                     {internalProjects.length > 0 && (
                       <SelectGroup>
                         <SelectLabel className="text-xs">Internes</SelectLabel>
