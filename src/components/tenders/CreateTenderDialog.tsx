@@ -138,6 +138,70 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
   const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
   const [isCreating, setIsCreating] = useState(false);
 
+  const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000; // 32KB
+    let binary = "";
+
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, i + chunkSize);
+      binary += String.fromCharCode(...chunk);
+    }
+
+    return btoa(binary);
+  };
+
+  const fileToBase64 = async (file: File): Promise<string> => {
+    const buf = await file.arrayBuffer();
+    return arrayBufferToBase64(buf);
+  };
+
+  const safeMimeType = (file: File): string => {
+    if (file.type && file.type !== "application/octet-stream") return file.type;
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.pdf')) return 'application/pdf';
+    if (name.endsWith('.doc')) return 'application/msword';
+    if (name.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    if (name.endsWith('.xls')) return 'application/vnd.ms-excel';
+    if (name.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    if (name.endsWith('.ppt')) return 'application/vnd.ms-powerpoint';
+    if (name.endsWith('.pptx')) return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+    return 'application/octet-stream';
+  };
+
+  const safeFileList = (files: File[]) => {
+    const MAX_FILES = 10;
+    const MAX_FILE_SIZE_MB = 20;
+    const selected = files.slice(0, MAX_FILES);
+
+    const kept: File[] = [];
+    const skipped: Array<{ name: string; reason: string }> = [];
+
+    for (const f of selected) {
+      if (f.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        skipped.push({ name: f.name, reason: `Fichier > ${MAX_FILE_SIZE_MB}MB` });
+        continue;
+      }
+      kept.push(f);
+    }
+
+    return { kept, skipped };
+  };
+
+  const formatSkipped = (skipped: Array<{ name: string; reason: string }>) => {
+    if (skipped.length === 0) return "";
+    return ` (ignorés: ${skipped.map(s => `${s.name} - ${s.reason}`).join(', ')})`;
+  };
+
+  const markManualField = (field: keyof ExtractedInfo) => {
+    setAiFilledFields(prev => {
+      if (!prev.has(field as string)) return prev;
+      const next = new Set(prev);
+      next.delete(field as string);
+      return next;
+    });
+  };
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -188,12 +252,13 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       // Prepare files with progress feedback
       setAnalysisProgress(`Lecture de ${uploadedFiles.length} fichier(s)...`);
       
-      const filesData = await Promise.all(uploadedFiles.map(async (file) => ({
+      const { kept, skipped } = safeFileList(uploadedFiles);
+      setAnalysisProgress(`Lecture de ${kept.length} fichier(s)...${formatSkipped(skipped)}`);
+
+      const filesData = await Promise.all(kept.map(async (file) => ({
         name: file.name,
-        type: file.type,
-        content: await file.arrayBuffer().then(buf =>
-          btoa(String.fromCharCode(...new Uint8Array(buf)))
-        ),
+        type: safeMimeType(file),
+        content: await fileToBase64(file),
       })));
 
       setAnalysisProgress("Analyse IA en cours... Lecture des documents PDF");
@@ -323,11 +388,9 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       if (uploadedFiles.length > 0) {
         const fileData = await Promise.all(uploadedFiles.map(async (file) => ({
           name: file.name,
-          type: file.type,
+          type: safeMimeType(file),
           size: file.size,
-          data: await file.arrayBuffer().then(buf =>
-            btoa(String.fromCharCode(...new Uint8Array(buf)))
-          ),
+          data: await fileToBase64(file),
         })));
         sessionStorage.setItem(`tender-files-${result.id}`, JSON.stringify(fileData));
       }
@@ -370,6 +433,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
   };
 
   const updateFormField = (field: keyof ExtractedInfo, value: any) => {
+    markManualField(field);
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
