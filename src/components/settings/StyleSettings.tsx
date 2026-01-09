@@ -71,16 +71,16 @@ const COLOR_THEMES = [
   },
 ];
 
-// Predefined font options
+// Predefined font options with Google Fonts URL
 const FONT_OPTIONS = [
-  { id: "inter", name: "Inter", family: "'Inter', sans-serif", style: "Moderne" },
-  { id: "roboto", name: "Roboto", family: "'Roboto', sans-serif", style: "Clean" },
-  { id: "poppins", name: "Poppins", family: "'Poppins', sans-serif", style: "Géométrique" },
-  { id: "nunito", name: "Nunito", family: "'Nunito', sans-serif", style: "Arrondi" },
-  { id: "playfair", name: "Playfair Display", family: "'Playfair Display', serif", style: "Élégant" },
-  { id: "source-sans", name: "Source Sans Pro", family: "'Source Sans Pro', sans-serif", style: "Pro" },
-  { id: "dm-sans", name: "DM Sans", family: "'DM Sans', sans-serif", style: "Sharp" },
-  { id: "space-grotesk", name: "Space Grotesk", family: "'Space Grotesk', sans-serif", style: "Tech" },
+  { id: "inter", name: "Inter", family: "'Inter', sans-serif", style: "Moderne", googleUrl: "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" },
+  { id: "roboto", name: "Roboto", family: "'Roboto', sans-serif", style: "Clean", googleUrl: "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" },
+  { id: "poppins", name: "Poppins", family: "'Poppins', sans-serif", style: "Géométrique", googleUrl: "https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" },
+  { id: "nunito", name: "Nunito", family: "'Nunito', sans-serif", style: "Arrondi", googleUrl: "https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&display=swap" },
+  { id: "playfair", name: "Playfair Display", family: "'Playfair Display', serif", style: "Élégant", googleUrl: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" },
+  { id: "source-sans", name: "Source Sans 3", family: "'Source Sans 3', sans-serif", style: "Pro", googleUrl: "https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600;700&display=swap" },
+  { id: "dm-sans", name: "DM Sans", family: "'DM Sans', sans-serif", style: "Sharp", googleUrl: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" },
+  { id: "space-grotesk", name: "Space Grotesk", family: "'Space Grotesk', sans-serif", style: "Tech", googleUrl: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" },
 ];
 
 interface CustomFont {
@@ -206,23 +206,49 @@ export function StyleSettings() {
     toast.success("Police supprimée");
   };
 
+  // Load Google Font dynamically
+  const loadGoogleFont = (fontData: typeof FONT_OPTIONS[0]) => {
+    const existingLink = document.querySelector(`link[href="${fontData.googleUrl}"]`);
+    if (!existingLink) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = fontData.googleUrl;
+      document.head.appendChild(link);
+    }
+  };
+
   // Apply font changes
   const applyFontChanges = () => {
-    const headingFontData = FONT_OPTIONS.find(f => f.id === headingFont) || 
-                           customFonts.find(f => f.id === headingFont);
-    const bodyFontData = FONT_OPTIONS.find(f => f.id === bodyFont) || 
-                        customFonts.find(f => f.id === bodyFont);
+    const headingFontData = FONT_OPTIONS.find(f => f.id === headingFont);
+    const bodyFontData = FONT_OPTIONS.find(f => f.id === bodyFont);
+    const customHeadingFont = customFonts.find(f => f.id === headingFont);
+    const customBodyFont = customFonts.find(f => f.id === bodyFont);
 
+    // Load Google Fonts if needed
     if (headingFontData) {
-      const family = 'fontFamily' in headingFontData ? headingFontData.fontFamily : headingFontData.family;
-      document.documentElement.style.setProperty("--font-heading", family);
+      loadGoogleFont(headingFontData);
+      document.documentElement.style.setProperty("--font-heading", headingFontData.family);
+    } else if (customHeadingFont) {
+      document.documentElement.style.setProperty("--font-heading", customHeadingFont.fontFamily);
     }
+
     if (bodyFontData) {
-      const family = 'fontFamily' in bodyFontData ? bodyFontData.fontFamily : bodyFontData.family;
-      document.documentElement.style.setProperty("--font-body", family);
+      loadGoogleFont(bodyFontData);
+      document.documentElement.style.setProperty("--font-body", bodyFontData.family);
+    } else if (customBodyFont) {
+      document.documentElement.style.setProperty("--font-body", customBodyFont.fontFamily);
     }
+
     document.documentElement.style.setProperty("--font-size-base", `${baseFontSize[0]}px`);
     document.documentElement.style.setProperty("--radius", `${borderRadius[0]}px`);
+    
+    // Save to localStorage
+    localStorage.setItem("typography-settings", JSON.stringify({
+      headingFont,
+      bodyFont,
+      baseFontSize: baseFontSize[0],
+      borderRadius: borderRadius[0]
+    }));
     
     toast.success("Typographie mise à jour");
   };
