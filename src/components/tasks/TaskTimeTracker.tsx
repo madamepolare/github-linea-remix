@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useTaskTimeEntries } from "@/hooks/useTaskTimeEntries";
-import { useTaskSchedules } from "@/hooks/useTaskSchedules";
+import { useTaskTimeEntries, TaskTimeEntry } from "@/hooks/useTaskTimeEntries";
+import { useTaskSchedules, TaskSchedule } from "@/hooks/useTaskSchedules";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,19 +35,33 @@ interface TaskTimeTrackerProps {
 }
 
 export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
-  const { timeEntries, totalHours, createTimeEntry } = useTaskTimeEntries(taskId);
+  const { timeEntries, totalHours, createTimeEntry, updateTimeEntry, deleteTimeEntry } = useTaskTimeEntries(taskId);
   const { schedules, isLoading: schedulesLoading, createSchedule, updateSchedule, deleteSchedule } = useTaskSchedules({ taskId });
   const { data: profiles } = useWorkspaceProfiles();
+  const { user } = useAuth();
 
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [manualHours, setManualHours] = useState("");
+  const [manualDate, setManualDate] = useState<Date | undefined>(new Date());
+  const [manualUserId, setManualUserId] = useState<string>("");
   const [description, setDescription] = useState("");
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<Date | null>(null);
 
-  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
-  const [editingDuration, setEditingDuration] = useState<string>("");
+  // Editing state for schedule entries
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [editScheduleUserId, setEditScheduleUserId] = useState<string>("");
+  const [editScheduleDate, setEditScheduleDate] = useState<Date | undefined>();
+  const [editScheduleStartHour, setEditScheduleStartHour] = useState("09");
+  const [editScheduleStartMinute, setEditScheduleStartMinute] = useState("00");
+  const [editScheduleDuration, setEditScheduleDuration] = useState("");
+
+  // Editing state for manual time entries
+  const [editingTimeEntryId, setEditingTimeEntryId] = useState<string | null>(null);
+  const [editTimeEntryUserId, setEditTimeEntryUserId] = useState<string>("");
+  const [editTimeEntryDate, setEditTimeEntryDate] = useState<Date | undefined>();
+  const [editTimeEntryDuration, setEditTimeEntryDuration] = useState("");
 
   // New schedule form state
   const [showNewScheduleForm, setShowNewScheduleForm] = useState(false);
@@ -56,6 +71,13 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
   const [newScheduleStartMinute, setNewScheduleStartMinute] = useState("00");
   const [newScheduleDuration, setNewScheduleDuration] = useState("2");
   const [isCreatingSchedule, setIsCreatingSchedule] = useState(false);
+
+  // Set default manual user to current user
+  useEffect(() => {
+    if (user?.id && !manualUserId) {
+      setManualUserId(user.id);
+    }
+  }, [user?.id, manualUserId]);
 
   // Calculer le temps total planifié depuis les schedules
   const { scheduledHours, scheduledEntries } = useMemo(() => {
@@ -89,30 +111,74 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
     };
   }, [schedules]);
 
-  const handleEditEntry = (entry: (typeof scheduledEntries)[0]) => {
-    setEditingEntryId(entry.id);
-    setEditingDuration(entry.durationHours.toString());
+  const handleEditScheduleEntry = (entry: (typeof scheduledEntries)[0]) => {
+    setEditingScheduleId(entry.id);
+    setEditScheduleUserId(entry.userId);
+    setEditScheduleDate(entry.date);
+    setEditScheduleStartHour(format(entry.date, "HH"));
+    setEditScheduleStartMinute(format(entry.date, "mm"));
+    setEditScheduleDuration(entry.durationHours.toString());
   };
 
-  const handleSaveEntry = async (entryId: string, startDatetime: string) => {
-    const hours = parseFloat(editingDuration);
+  const handleSaveScheduleEntry = async () => {
+    if (!editingScheduleId || !editScheduleDate) return;
+
+    const hours = parseFloat(editScheduleDuration);
     if (isNaN(hours) || hours <= 0) return;
 
-    const startDate = new Date(startDatetime);
+    const startDate = setMinutes(
+      setHours(startOfDay(editScheduleDate), parseInt(editScheduleStartHour)),
+      parseInt(editScheduleStartMinute)
+    );
     const endDate = addHours(startDate, hours);
 
     await updateSchedule.mutateAsync({
-      id: entryId,
+      id: editingScheduleId,
+      user_id: editScheduleUserId,
+      start_datetime: startDate.toISOString(),
       end_datetime: endDate.toISOString(),
     });
 
-    setEditingEntryId(null);
-    setEditingDuration("");
+    handleCancelScheduleEdit();
   };
 
-  const handleCancelEdit = () => {
-    setEditingEntryId(null);
-    setEditingDuration("");
+  const handleCancelScheduleEdit = () => {
+    setEditingScheduleId(null);
+    setEditScheduleUserId("");
+    setEditScheduleDate(undefined);
+    setEditScheduleStartHour("09");
+    setEditScheduleStartMinute("00");
+    setEditScheduleDuration("");
+  };
+
+  const handleEditTimeEntry = (entry: TaskTimeEntry) => {
+    setEditingTimeEntryId(entry.id);
+    setEditTimeEntryUserId(entry.user_id || "");
+    setEditTimeEntryDate(new Date(entry.date));
+    setEditTimeEntryDuration((entry.duration_minutes / 60).toString());
+  };
+
+  const handleSaveTimeEntry = async () => {
+    if (!editingTimeEntryId || !editTimeEntryDate) return;
+
+    const hours = parseFloat(editTimeEntryDuration);
+    if (isNaN(hours) || hours <= 0) return;
+
+    await updateTimeEntry.mutateAsync({
+      id: editingTimeEntryId,
+      user_id: editTimeEntryUserId || null,
+      date: format(editTimeEntryDate, "yyyy-MM-dd"),
+      duration_minutes: Math.round(hours * 60),
+    });
+
+    handleCancelTimeEntryEdit();
+  };
+
+  const handleCancelTimeEntryEdit = () => {
+    setEditingTimeEntryId(null);
+    setEditTimeEntryUserId("");
+    setEditTimeEntryDate(undefined);
+    setEditTimeEntryDuration("");
   };
 
   const handleCreateSchedule = async () => {
@@ -193,6 +259,7 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
         description: description || undefined,
         started_at: startTimeRef.current?.toISOString(),
         ended_at: new Date().toISOString(),
+        user_id: user?.id,
       });
       setDescription("");
     }
@@ -208,8 +275,9 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
     const minutes = Math.round(hours * 60);
     await createTimeEntry.mutateAsync({
       duration_minutes: minutes,
-      date: new Date().toISOString().split("T")[0],
+      date: manualDate ? format(manualDate, "yyyy-MM-dd") : new Date().toISOString().split("T")[0],
       description: description || undefined,
+      user_id: manualUserId || user?.id,
     });
 
     setManualHours("");
@@ -420,28 +488,125 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                 {scheduledEntries.map((entry) => (
                   <div
                     key={entry.id}
-                    className={cn(
-                      "rounded-lg bg-card border text-sm group",
-                      editingEntryId === entry.id ? "p-3" : "p-3"
-                    )}
+                    className="rounded-lg bg-card border text-sm group p-3"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={entry.userAvatar || undefined} />
-                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                            {getInitials(entry.userName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{entry.userName}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {format(entry.date, "EEEE d MMMM", { locale: fr })} à{" "}
-                            {format(entry.date, "HH:mm")}
+                    {editingScheduleId === entry.id ? (
+                      <div className="space-y-3">
+                        {/* Editing mode for schedule */}
+                        <div className="space-y-2">
+                          <Label className="text-xs">Assigné à</Label>
+                          <Select value={editScheduleUserId} onValueChange={setEditScheduleUserId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choisir..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {profiles?.map((profile) => (
+                                <SelectItem key={profile.user_id} value={profile.user_id}>
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-5 w-5">
+                                      <AvatarImage src={profile.avatar_url || undefined} />
+                                      <AvatarFallback className="text-[9px]">
+                                        {getInitials(profile.full_name || "?")}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span>{profile.full_name || "Utilisateur"}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs">Date</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-start">
+                                <CalendarIcon className="h-4 w-4 mr-2" />
+                                {editScheduleDate ? format(editScheduleDate, "EEEE d MMMM", { locale: fr }) : "Sélectionner..."}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={editScheduleDate}
+                                onSelect={setEditScheduleDate}
+                                locale={fr}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-2">
+                            <Label className="text-xs">Heure de début</Label>
+                            <div className="flex gap-1">
+                              <Select value={editScheduleStartHour} onValueChange={setEditScheduleStartHour}>
+                                <SelectTrigger className="w-16">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {hourOptions.map((h) => (
+                                    <SelectItem key={h} value={h}>{h}h</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Select value={editScheduleStartMinute} onValueChange={setEditScheduleStartMinute}>
+                                <SelectTrigger className="w-16">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {minuteOptions.map((m) => (
+                                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label className="text-xs">Durée</Label>
+                            <Select value={editScheduleDuration} onValueChange={setEditScheduleDuration}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {["0.5", "1", "1.5", "2", "2.5", "3", "4", "5", "6", "7", "8"].map((d) => (
+                                  <SelectItem key={d} value={d}>{d}h</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
+
+                        <div className="flex justify-end gap-2 pt-2">
+                          <Button size="sm" variant="ghost" onClick={handleCancelScheduleEdit}>
+                            <X className="h-3 w-3 mr-1" />
+                            Annuler
+                          </Button>
+                          <Button size="sm" onClick={handleSaveScheduleEntry}>
+                            <Check className="h-3 w-3 mr-1" />
+                            Enregistrer
+                          </Button>
+                        </div>
                       </div>
-                      {editingEntryId !== entry.id && (
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={entry.userAvatar || undefined} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              {getInitials(entry.userName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{entry.userName}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {format(entry.date, "EEEE d MMMM", { locale: fr })} à{" "}
+                              {format(entry.date, "HH:mm")}
+                            </div>
+                          </div>
+                        </div>
                         <div className="flex items-center gap-1">
                           <Badge variant="secondary" className="text-sm font-semibold">
                             {entry.durationHours}h
@@ -450,7 +615,7 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                             size="icon"
                             variant="ghost"
                             className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleEditEntry(entry)}
+                            onClick={() => handleEditScheduleEntry(entry)}
                           >
                             <Pencil className="h-3 w-3" />
                           </Button>
@@ -461,21 +626,6 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
                             onClick={() => deleteSchedule.mutate(entry.id)}
                           >
                             <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                    {editingEntryId === entry.id && (
-                      <div className="mt-3 pt-3 border-t space-y-3">
-                        <DurationInput value={editingDuration} onChange={setEditingDuration} />
-                        <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
-                            <X className="h-3 w-3 mr-1" />
-                            Annuler
-                          </Button>
-                          <Button size="sm" onClick={() => handleSaveEntry(entry.id, entry.startDatetime)}>
-                            <Check className="h-3 w-3 mr-1" />
-                            Enregistrer
                           </Button>
                         </div>
                       </div>
@@ -532,6 +682,50 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
         {/* Manual Tab */}
         <TabsContent value="manual" className="space-y-4">
           <div className="space-y-2">
+            <Label>Assigné à</Label>
+            <Select value={manualUserId} onValueChange={setManualUserId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir un membre..." />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles?.map((profile) => (
+                  <SelectItem key={profile.user_id} value={profile.user_id}>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={profile.avatar_url || undefined} />
+                        <AvatarFallback className="text-[9px]">
+                          {getInitials(profile.full_name || "?")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{profile.full_name || "Utilisateur"}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start">
+                  <CalendarIcon className="h-4 w-4 mr-2" />
+                  {manualDate ? format(manualDate, "EEEE d MMMM", { locale: fr }) : "Sélectionner..."}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={manualDate}
+                  onSelect={setManualDate}
+                  locale={fr}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="space-y-2">
             <Label>Durée</Label>
             <DurationInput value={manualHours} onChange={setManualHours} placeholder="Durée" />
           </div>
@@ -563,24 +757,120 @@ export function TaskTimeTracker({ taskId }: TaskTimeTrackerProps) {
             <Clock className="h-3.5 w-3.5" />
             Entrées manuelles
           </h4>
-          <div className="space-y-1 max-h-32 overflow-y-auto">
-            {timeEntries.slice(0, 5).map((entry) => (
-              <div
-                key={entry.id}
-                className="flex items-center justify-between p-2 rounded bg-muted/30 text-sm"
-              >
-                <div>
-                  <span className="font-medium">
-                    {Math.floor(entry.duration_minutes / 60)}h {entry.duration_minutes % 60}min
-                  </span>
-                  {entry.description && (
-                    <span className="text-muted-foreground ml-2">- {entry.description}</span>
+          <ScrollArea className="h-[150px]">
+            <div className="space-y-2 pr-2">
+              {timeEntries.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="rounded-lg bg-card border text-sm group p-3"
+                >
+                  {editingTimeEntryId === entry.id ? (
+                    <div className="space-y-3">
+                      {/* Editing mode for time entry */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">Assigné à</Label>
+                        <Select value={editTimeEntryUserId} onValueChange={setEditTimeEntryUserId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choisir..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {profiles?.map((profile) => (
+                              <SelectItem key={profile.user_id} value={profile.user_id}>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarImage src={profile.avatar_url || undefined} />
+                                    <AvatarFallback className="text-[9px]">
+                                      {getInitials(profile.full_name || "?")}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span>{profile.full_name || "Utilisateur"}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs">Date</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start">
+                              <CalendarIcon className="h-4 w-4 mr-2" />
+                              {editTimeEntryDate ? format(editTimeEntryDate, "EEEE d MMMM", { locale: fr }) : "Sélectionner..."}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={editTimeEntryDate}
+                              onSelect={setEditTimeEntryDate}
+                              locale={fr}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs">Durée</Label>
+                        <DurationInput value={editTimeEntryDuration} onChange={setEditTimeEntryDuration} />
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button size="sm" variant="ghost" onClick={handleCancelTimeEntryEdit}>
+                          <X className="h-3 w-3 mr-1" />
+                          Annuler
+                        </Button>
+                        <Button size="sm" onClick={handleSaveTimeEntry}>
+                          <Check className="h-3 w-3 mr-1" />
+                          Enregistrer
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={entry.user?.avatar_url || undefined} />
+                          <AvatarFallback className="bg-emerald-500/10 text-emerald-600 text-xs">
+                            {getInitials(entry.user?.full_name || "?")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">{entry.user?.full_name || "Non assigné"}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(entry.date), "EEEE d MMMM", { locale: fr })}
+                            {entry.description && ` • ${entry.description}`}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className="text-sm font-semibold text-emerald-600 border-emerald-200">
+                          {Math.floor(entry.duration_minutes / 60)}h{entry.duration_minutes % 60 > 0 ? ` ${entry.duration_minutes % 60}m` : ""}
+                        </Badge>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleEditTimeEntry(entry)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                          onClick={() => deleteTimeEntry.mutate(entry.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
                   )}
                 </div>
-                <span className="text-muted-foreground text-xs">{entry.date}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
       )}
     </div>
