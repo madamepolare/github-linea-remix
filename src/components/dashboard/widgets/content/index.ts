@@ -1,0 +1,14 @@
+export { WelcomeWidget } from "./WelcomeWidget";
+export { QuickActionsWidget } from "./QuickActionsWidget";
+export { StatsWidget } from "./StatsWidget";
+export { ActivityWidget } from "./ActivityWidget";
+export { ProjectsStatsWidget } from "./ProjectsStatsWidget";
+export { TasksWidget } from "./TasksWidget";
+export { ProjectsPipelineWidget } from "./ProjectsPipelineWidget";
+export { ActiveProjectsWidget } from "./ActiveProjectsWidget";
+export { InvoicingStatsWidget } from "./InvoicingStatsWidget";
+export { TendersStatsWidget } from "./TendersStatsWidget";
+export { CRMStatsWidget } from "./CRMStatsWidget";
+export { CampaignsStatsWidget } from "./CampaignsStatsWidget";
+export { TeamStatsWidget } from "./TeamStatsWidget";
+export { PlaceholderWidget } from "./PlaceholderWidget";
