@@ -122,7 +122,8 @@ export function MembersSettings() {
     const { data, error } = await supabase
       .from("workspace_members")
       .select("id, user_id, role")
-      .eq("workspace_id", activeWorkspace.id);
+      .eq("workspace_id", activeWorkspace.id)
+      .neq("is_hidden", true);
 
     if (error) {
       console.error("Error fetching members:", error);
