@@ -4785,6 +4785,7 @@ export type Database = {
       }
       project_members: {
         Row: {
+          client_daily_rate: number | null
           created_at: string | null
           id: string
           project_id: string
@@ -4792,6 +4793,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_daily_rate?: number | null
           created_at?: string | null
           id?: string
           project_id: string
@@ -4799,6 +4801,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_daily_rate?: number | null
           created_at?: string | null
           id?: string
           project_id?: string

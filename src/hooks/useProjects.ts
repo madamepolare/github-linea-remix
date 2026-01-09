@@ -67,6 +67,7 @@ export interface ProjectMember {
   project_id: string;
   user_id: string;
   role: string;
+  client_daily_rate: number | null;
   created_at: string;
   profile?: {
     full_name: string | null;
