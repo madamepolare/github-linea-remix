@@ -535,15 +535,6 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
     </Button>
   );
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6 p-4">
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
   // Prepare contributors list for stacked avatars
   const contributors = useMemo(() => {
     return memberTimeSummary.map(m => ({
@@ -574,6 +565,15 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-4">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
