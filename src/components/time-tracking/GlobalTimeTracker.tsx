@@ -10,6 +10,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
@@ -84,6 +86,10 @@ export function GlobalTimeTracker() {
 
     if (elapsedSeconds >= 60) {
       const minutes = Math.round(elapsedSeconds / 60);
+      // Check if selected project is internal (non-billable)
+      const selectedProject = projects?.find(p => p.id === projectId);
+      const isBillable = selectedProject ? !selectedProject.is_internal : true;
+      
       try {
         await createEntry.mutateAsync({
           duration_minutes: minutes,
@@ -91,6 +97,7 @@ export function GlobalTimeTracker() {
           description: description || "Temps enregistré",
           project_id: projectId,
           status: "draft",
+          is_billable: isBillable,
         });
         toast.success(
           `${Math.floor(minutes / 60)}h${minutes % 60}min enregistrées`
@@ -233,11 +240,31 @@ export function GlobalTimeTracker() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Aucun projet</SelectItem>
-                    {projects?.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
+                    {/* Internal projects first */}
+                    {projects?.filter(p => p.is_internal).length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel className="text-xs text-muted-foreground">Internes (non-facturable)</SelectLabel>
+                        {projects?.filter(p => p.is_internal).map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-muted-foreground/50" />
+                              {p.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {/* Client projects */}
+                    {projects?.filter(p => !p.is_internal).length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel className="text-xs text-muted-foreground">Projets clients</SelectLabel>
+                        {projects?.filter(p => !p.is_internal).map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
                   </SelectContent>
                 </Select>
 

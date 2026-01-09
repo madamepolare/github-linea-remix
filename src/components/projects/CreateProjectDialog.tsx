@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -75,6 +76,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const [city, setCity] = useState("");
   const [region, setRegion] = useState("");
   const [surfaceArea, setSurfaceArea] = useState("");
+  const [isInternal, setIsInternal] = useState(false);
   
   const [crmCompanyId, setCrmCompanyId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -129,14 +131,15 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       name: name.trim(),
       project_type: projectType,
       description: description.trim() || null,
-      crm_company_id: crmCompanyId,
+      crm_company_id: isInternal ? null : crmCompanyId,
       address: address.trim() || null,
       city: city.trim() || null,
       surface_area: surfaceArea ? parseFloat(surfaceArea) : null,
       color: projectTypeConfig?.color || "#3B82F6",
       start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
       end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
-      budget: budget ? parseFloat(budget) : null,
+      budget: isInternal ? null : (budget ? parseFloat(budget) : null),
+      is_internal: isInternal,
     };
     
     createProject.mutate(input);
@@ -153,6 +156,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     setCity("");
     setRegion("");
     setSurfaceArea("");
+    setIsInternal(false);
     
     setCrmCompanyId(null);
     setStartDate(null);
@@ -282,60 +286,81 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               {/* Step 2: Project Info */}
               {step === 1 && (
                 <div className="space-y-4">
+                  {/* Internal Project Toggle */}
+                  <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="is-internal" className="text-sm font-medium cursor-pointer">
+                        Projet interne
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Non facturable (admin, formation, commercial...)
+                      </p>
+                    </div>
+                    <Switch
+                      id="is-internal"
+                      checked={isInternal}
+                      onCheckedChange={setIsInternal}
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="name">Nom du projet *</Label>
                     <Input
                       id="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Ex: Rénovation appartement Haussmannien"
+                      placeholder={isInternal ? "Ex: Administration, Formation équipe" : "Ex: Rénovation appartement Haussmannien"}
                       autoFocus
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="address">
-                      <MapPin className="h-3.5 w-3.5 inline mr-1" />
-                      Adresse
-                    </Label>
-                    <AddressAutocomplete
-                      value={address}
-                      onChange={setAddress}
-                      onAddressSelect={handleAddressSelect}
-                      placeholder="Rechercher une adresse..."
-                    />
-                  </div>
+                  {!isInternal && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="address">
+                          <MapPin className="h-3.5 w-3.5 inline mr-1" />
+                          Adresse
+                        </Label>
+                        <AddressAutocomplete
+                          value={address}
+                          onChange={setAddress}
+                          onAddressSelect={handleAddressSelect}
+                          placeholder="Rechercher une adresse..."
+                        />
+                      </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="city">Ville</Label>
-                      <Input
-                        id="city"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="Paris"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="region">Région</Label>
-                      <Input
-                        id="region"
-                        value={region}
-                        onChange={(e) => setRegion(e.target.value)}
-                        placeholder="Île-de-France"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="surface">Surface (m²)</Label>
-                      <Input
-                        id="surface"
-                        type="number"
-                        value={surfaceArea}
-                        onChange={(e) => setSurfaceArea(e.target.value)}
-                        placeholder="150"
-                      />
-                    </div>
-                  </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="city">Ville</Label>
+                          <Input
+                            id="city"
+                            value={city}
+                            onChange={(e) => setCity(e.target.value)}
+                            placeholder="Paris"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="region">Région</Label>
+                          <Input
+                            id="region"
+                            value={region}
+                            onChange={(e) => setRegion(e.target.value)}
+                            placeholder="Île-de-France"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="surface">Surface (m²)</Label>
+                          <Input
+                            id="surface"
+                            type="number"
+                            value={surfaceArea}
+                            onChange={(e) => setSurfaceArea(e.target.value)}
+                            placeholder="150"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">

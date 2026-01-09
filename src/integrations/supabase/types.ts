@@ -5362,6 +5362,7 @@ export type Database = {
           fee_calculation: Json | null
           id: string
           is_archived: boolean | null
+          is_internal: boolean
           lead_id: string | null
           name: string
           phase: string | null
@@ -5389,6 +5390,7 @@ export type Database = {
           fee_calculation?: Json | null
           id?: string
           is_archived?: boolean | null
+          is_internal?: boolean
           lead_id?: string | null
           name: string
           phase?: string | null
@@ -5416,6 +5418,7 @@ export type Database = {
           fee_calculation?: Json | null
           id?: string
           is_archived?: boolean | null
+          is_internal?: boolean
           lead_id?: string | null
           name?: string
           phase?: string | null

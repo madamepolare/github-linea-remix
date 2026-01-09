@@ -20,6 +20,7 @@ export interface Project {
   created_at: string;
   updated_at: string;
   is_archived: boolean;
+  is_internal: boolean;
   // New fields
   project_type: ProjectType | null;
   crm_company_id: string | null;
@@ -86,6 +87,7 @@ export interface CreateProjectInput {
   start_date?: string | null;
   end_date?: string | null;
   budget?: number | null;
+  is_internal?: boolean;
 }
 
 export function useProjects(options?: { includeArchived?: boolean }) {
@@ -166,6 +168,7 @@ export function useProjects(options?: { includeArchived?: boolean }) {
           budget: input.budget || null,
           phase: "planning",
           status: "active",
+          is_internal: input.is_internal || false,
         })
         .select()
         .single();
