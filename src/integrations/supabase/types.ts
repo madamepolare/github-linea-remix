@@ -5812,6 +5812,7 @@ export type Database = {
           task_id: string
           updated_at: string | null
           user_id: string
+          work_description: string | null
           workspace_id: string
         }
         Insert: {
@@ -5826,6 +5827,7 @@ export type Database = {
           task_id: string
           updated_at?: string | null
           user_id: string
+          work_description?: string | null
           workspace_id: string
         }
         Update: {
@@ -5840,6 +5842,7 @@ export type Database = {
           task_id?: string
           updated_at?: string | null
           user_id?: string
+          work_description?: string | null
           workspace_id?: string
         }
         Relationships: [
