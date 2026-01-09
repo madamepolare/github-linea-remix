@@ -14,6 +14,7 @@ import {
   Check,
   Building2,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
@@ -42,9 +43,19 @@ import {
   MODULE_CONFIG, 
   CORE_MODULES, 
   EXTENSION_MODULES,
-  ModuleNavConfig 
 } from "@/lib/navigationConfig";
-import { QuickAccountSwitch, useCanQuickSwitch } from "@/components/auth/QuickAccountSwitch";
+import { 
+  QuickAccountSwitch, 
+  useCanQuickSwitch, 
+  instantSwitchToEmail,
+  hasStoredSessionFor,
+} from "@/components/auth/QuickAccountSwitch";
+import {
+  isFounderEmail,
+  getEmailForWorkspace,
+  setPendingWorkspace,
+} from "@/lib/founderSwitch";
+import { useToast } from "@/hooks/use-toast";
 
 interface NavItem {
   title: string;
@@ -64,7 +75,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const navigate = useNavigate();
   const { user, profile, activeWorkspace, workspaces, signOut, setActiveWorkspace } = useAuth();
   const [showQuickSwitch, setShowQuickSwitch] = useState(false);
+  const [switchingWorkspace, setSwitchingWorkspace] = useState<string | null>(null);
   const canQuickSwitch = useCanQuickSwitch(user?.email);
+  const { toast } = useToast();
   
   // Get modules data
   const { data: modules = [] } = useModules();
@@ -73,20 +86,17 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   // Check if a module is enabled
   const isModuleEnabled = (slug: string) => {
     const module = modules.find((m) => m.slug === slug);
-    // Core modules are always enabled
     if (module?.is_core) return true;
-    // Check if module is in workspace_modules
     return workspaceModules.some((wm) => wm.module?.slug === slug);
   };
 
-  // Build navigation based on enabled modules - now without children!
+  // Build navigation based on enabled modules
   const { coreNavigation, extensionNavigation } = useMemo(() => {
     const core: NavItem[] = [
       { title: "Dashboard", icon: LayoutDashboard, href: "/" },
     ];
     const extensions: NavItem[] = [];
 
-    // Add core modules
     CORE_MODULES.forEach((slug) => {
       const config = MODULE_CONFIG[slug];
       if (config && isModuleEnabled(slug)) {
@@ -99,7 +109,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       }
     });
 
-    // Add extension modules
     EXTENSION_MODULES.forEach((slug) => {
       const config = MODULE_CONFIG[slug];
       if (config && isModuleEnabled(slug)) {
@@ -137,8 +146,69 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     }
   };
 
+  // Smart workspace switch: pour le fondateur, switch aussi le compte si nécessaire
   const handleWorkspaceSwitch = async (workspaceId: string) => {
-    await setActiveWorkspace(workspaceId);
+    const targetWorkspace = workspaces.find(w => w.id === workspaceId);
+    if (!targetWorkspace) return;
+
+    // Si pas fondateur, comportement normal
+    if (!isFounderEmail(user?.email)) {
+      await setActiveWorkspace(workspaceId);
+      return;
+    }
+
+    // Cherche l'email associé à ce workspace (par slug ou name)
+    const targetEmail = getEmailForWorkspace(targetWorkspace.slug) || 
+                        getEmailForWorkspace(targetWorkspace.name);
+
+    // Si même email ou pas de mapping, juste changer le workspace
+    if (!targetEmail || targetEmail.toLowerCase() === user?.email?.toLowerCase()) {
+      await setActiveWorkspace(workspaceId);
+      return;
+    }
+
+    // Vérifie si on a un token pour cet email
+    if (!hasStoredSessionFor(targetEmail)) {
+      toast({
+        variant: "destructive",
+        title: "Session non disponible",
+        description: `Connecte-toi d'abord manuellement à ${targetEmail} pour activer le switch seamless.`,
+      });
+      setShowQuickSwitch(true);
+      return;
+    }
+
+    // Switch instantané vers l'autre compte
+    setSwitchingWorkspace(workspaceId);
+    
+    // Stocke le workspace cible pour l'appliquer après le switch d'auth
+    setPendingWorkspace(workspaceId);
+
+    const result = await instantSwitchToEmail(targetEmail);
+
+    if (!result.ok) {
+      setSwitchingWorkspace(null);
+      const reason = result.reason;
+      const messages: Record<string, string> = {
+        no_token: "Connecte-toi d'abord manuellement à ce compte.",
+        expired: "Session expirée, reconnecte-toi manuellement.",
+        error: "Impossible de changer de compte.",
+      };
+      toast({
+        variant: "destructive",
+        title: "Erreur de switch",
+        description: messages[reason],
+      });
+      return;
+    }
+
+    toast({
+      title: `${targetWorkspace.name} ✓`,
+      description: `Connecté en tant que ${targetEmail}`,
+    });
+
+    // Reload pour appliquer le changement complet
+    window.location.href = "/";
   };
 
   const userInitials = profile?.full_name
@@ -209,7 +279,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       className="fixed left-0 top-0 z-40 flex h-screen flex-col bg-background border-r border-border"
     >
-      {/* Workspace Switcher (top) - h-14 aligns with TopBar */}
+      {/* Workspace Switcher (top) */}
       <div className="flex items-center justify-between h-14 px-3">
         {activeWorkspace ? (
           <DropdownMenu>
@@ -240,6 +310,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 <DropdownMenuItem
                   key={workspace.id}
                   onClick={() => handleWorkspaceSwitch(workspace.id)}
+                  disabled={switchingWorkspace === workspace.id}
                   className={cn(
                     "flex items-center justify-between",
                     workspace.id === activeWorkspace.id && "bg-muted"
@@ -262,9 +333,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                       <span className="text-[10px] text-muted-foreground capitalize">{workspace.role}</span>
                     </div>
                   </div>
-                  {workspace.id === activeWorkspace.id && (
+                  {switchingWorkspace === workspace.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                  ) : workspace.id === activeWorkspace.id ? (
                     <Check className="h-4 w-4 text-primary shrink-0" />
-                  )}
+                  ) : null}
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
@@ -321,14 +394,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-3 scrollbar-thin">
-        {/* Core navigation */}
         <div className="space-y-1">
           {coreNavigation.map((item) => (
             <NavItemComponent key={item.title} item={item} onClick={onNavigate} />
           ))}
         </div>
         
-        {/* Extensions section */}
         {extensionNavigation.length > 0 && (
           <div className="mt-4 pt-4 border-t border-border">
             {!collapsed && (

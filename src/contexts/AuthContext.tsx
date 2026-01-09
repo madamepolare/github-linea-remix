@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { storeCurrentSession } from "@/components/auth/QuickAccountSwitch";
+import { consumePendingWorkspace } from "@/lib/founderSwitch";
 
 interface Profile {
   id: string;
@@ -91,6 +92,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setWorkspaces(workspacesData);
   };
 
+  const setActiveWorkspaceInternal = async (workspaceId: string, userId: string) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ active_workspace_id: workspaceId })
+      .eq("user_id", userId);
+
+    if (!error) {
+      setProfile((prev) => prev ? { ...prev, active_workspace_id: workspaceId } : null);
+    }
+    return !error;
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -112,6 +125,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ]).then(([profileData, workspacesData]) => {
               setProfile(profileData);
               setWorkspaces(workspacesData);
+              
+              // Check for pending workspace switch (founder seamless switch)
+              const pendingWorkspaceId = consumePendingWorkspace();
+              if (pendingWorkspaceId) {
+                // Vérifie que le workspace existe pour ce user
+                const workspaceExists = workspacesData.some(w => w.id === pendingWorkspaceId);
+                if (workspaceExists && profileData?.active_workspace_id !== pendingWorkspaceId) {
+                  setActiveWorkspaceInternal(pendingWorkspaceId, session.user.id);
+                }
+              }
             });
           }, 0);
         } else {
@@ -133,6 +156,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ]).then(([profileData, workspacesData]) => {
           setProfile(profileData);
           setWorkspaces(workspacesData);
+          
+          // Check for pending workspace switch on initial load too
+          const pendingWorkspaceId = consumePendingWorkspace();
+          if (pendingWorkspaceId) {
+            const workspaceExists = workspacesData.some(w => w.id === pendingWorkspaceId);
+            if (workspaceExists && profileData?.active_workspace_id !== pendingWorkspaceId) {
+              setActiveWorkspaceInternal(pendingWorkspaceId, session.user.id);
+            }
+          }
+          
           setLoading(false);
           setIsInitialized(true);
         });
@@ -179,15 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setActiveWorkspace = async (workspaceId: string) => {
     if (!user) return;
-    
-    const { error } = await supabase
-      .from("profiles")
-      .update({ active_workspace_id: workspaceId })
-      .eq("user_id", user.id);
-
-    if (!error) {
-      setProfile((prev) => prev ? { ...prev, active_workspace_id: workspaceId } : null);
-    }
+    await setActiveWorkspaceInternal(workspaceId, user.id);
   };
 
   const activeWorkspace = workspaces.find(

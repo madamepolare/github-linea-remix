@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, Building2, ArrowRightLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +10,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  ALLOWED_FOUNDER_EMAILS,
+  LINKED_SESSIONS_KEY,
+  isFounderEmail,
+} from "@/lib/founderSwitch";
 
 // Comptes liés pour le quick switch (hardcoded pour le fondateur uniquement)
 const LINKED_ACCOUNTS = [
@@ -26,11 +30,6 @@ const LINKED_ACCOUNTS = [
   },
 ];
 
-// Emails autorisés pour le quick switch
-const ALLOWED_EMAILS = LINKED_ACCOUNTS.map((a) => a.email.toLowerCase());
-
-const STORAGE_KEY = "linea_linked_sessions";
-
 interface StoredSession {
   email: string;
   refresh_token: string;
@@ -39,7 +38,7 @@ interface StoredSession {
 
 // Stocke la session actuelle pour un compte lié
 export function storeCurrentSession(email: string, refreshToken: string) {
-  if (!ALLOWED_EMAILS.includes(email.toLowerCase())) return;
+  if (!isFounderEmail(email)) return;
   
   const stored = getStoredSessions();
   const updated = stored.filter(s => s.email.toLowerCase() !== email.toLowerCase());
@@ -49,12 +48,12 @@ export function storeCurrentSession(email: string, refreshToken: string) {
     stored_at: Date.now(),
   });
   
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  localStorage.setItem(LINKED_SESSIONS_KEY, JSON.stringify(updated));
 }
 
 function getStoredSessions(): StoredSession[] {
   try {
-    const data = localStorage.getItem(STORAGE_KEY);
+    const data = localStorage.getItem(LINKED_SESSIONS_KEY);
     return data ? JSON.parse(data) : [];
   } catch {
     return [];
@@ -66,6 +65,48 @@ function getStoredSessionForEmail(email: string): StoredSession | null {
   return sessions.find(s => s.email.toLowerCase() === email.toLowerCase()) || null;
 }
 
+function removeStoredSession(email: string): void {
+  const stored = getStoredSessions().filter(
+    s => s.email.toLowerCase() !== email.toLowerCase()
+  );
+  localStorage.setItem(LINKED_SESSIONS_KEY, JSON.stringify(stored));
+}
+
+export type SwitchResult = 
+  | { ok: true; reason?: never } 
+  | { ok: false; reason: "no_token" | "expired" | "error" };
+
+export async function instantSwitchToEmail(email: string): Promise<SwitchResult> {
+  const storedSession = getStoredSessionForEmail(email);
+  
+  if (!storedSession) {
+    return { ok: false, reason: "no_token" };
+  }
+
+  try {
+    const { data, error } = await supabase.auth.refreshSession({
+      refresh_token: storedSession.refresh_token,
+    });
+
+    if (error || !data.session) {
+      removeStoredSession(email);
+      return { ok: false, reason: "expired" };
+    }
+
+    // Met à jour le token stocké avec le nouveau
+    storeCurrentSession(email, data.session.refresh_token);
+    return { ok: true };
+  } catch {
+    return { ok: false, reason: "error" };
+  }
+}
+
+// Vérifie si on a un token stocké pour un email
+export function hasStoredSessionFor(email: string): boolean {
+  return !!getStoredSessionForEmail(email);
+}
+
+// ============== MODAL COMPONENT ==============
 interface QuickAccountSwitchProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -85,72 +126,41 @@ export function QuickAccountSwitch({
     (a) => a.email.toLowerCase() !== currentEmail?.toLowerCase()
   );
 
-  // Vérifie quels comptes ont une session stockée
   const accountsWithStatus = otherAccounts.map(account => ({
     ...account,
-    hasStoredSession: !!getStoredSessionForEmail(account.email),
+    hasStoredSession: hasStoredSessionFor(account.email),
   }));
 
   const handleInstantSwitch = async (email: string) => {
-    const storedSession = getStoredSessionForEmail(email);
-    
-    if (!storedSession) {
-      toast({
-        variant: "destructive",
-        title: "Session non disponible",
-        description: "Connecte-toi d'abord manuellement à ce compte pour activer le switch instantané.",
-      });
-      return;
-    }
-
     setIsLoading(true);
     setSwitchingTo(email);
 
-    try {
-      // Utilise le refresh token stocké pour restaurer la session
-      const { data, error } = await supabase.auth.refreshSession({
-        refresh_token: storedSession.refresh_token,
-      });
+    const result = await instantSwitchToEmail(email);
 
-      if (error || !data.session) {
-        // Le refresh token a expiré, on le supprime
-        const stored = getStoredSessions().filter(
-          s => s.email.toLowerCase() !== email.toLowerCase()
-        );
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
-        
-        toast({
-          variant: "destructive",
-          title: "Session expirée",
-          description: "Reconnecte-toi manuellement à ce compte.",
-        });
-        setIsLoading(false);
-        setSwitchingTo(null);
-        return;
-      }
-
-      // Met à jour le token stocké avec le nouveau
-      storeCurrentSession(email, data.session.refresh_token);
-
-      toast({
-        title: "Compte changé ✓",
-        description: `Connecté en tant que ${email}`,
-      });
-
-      onOpenChange(false);
-      
-      // Force reload pour réinitialiser tout le state
-      window.location.href = "/";
-    } catch (err) {
+    if (!result.ok) {
+      const reason = result.reason;
+      const messages: Record<string, string> = {
+        no_token: "Connecte-toi d'abord manuellement à ce compte pour activer le switch instantané.",
+        expired: "Session expirée, reconnecte-toi manuellement à ce compte.",
+        error: "Impossible de changer de compte.",
+      };
       toast({
         variant: "destructive",
-        title: "Erreur",
-        description: "Impossible de changer de compte.",
+        title: reason === "expired" ? "Session expirée" : "Session non disponible",
+        description: messages[reason],
       });
-    } finally {
       setIsLoading(false);
       setSwitchingTo(null);
+      return;
     }
+
+    toast({
+      title: "Compte changé ✓",
+      description: `Connecté en tant que ${email}`,
+    });
+
+    onOpenChange(false);
+    window.location.href = "/";
   };
 
   return (
@@ -222,6 +232,5 @@ export function QuickAccountSwitch({
 
 // Hook pour vérifier si l'utilisateur peut utiliser le quick switch
 export function useCanQuickSwitch(email?: string | null) {
-  if (!email) return false;
-  return ALLOWED_EMAILS.includes(email.toLowerCase());
+  return isFounderEmail(email);
 }
