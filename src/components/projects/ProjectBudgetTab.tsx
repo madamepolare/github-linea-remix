@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Euro,
+  Briefcase,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -79,6 +80,34 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
     enabled: !!activeWorkspace,
   });
 
+  // Get all profiles for users who have time entries
+  const userIds = useMemo(() => {
+    const ids = new Set<string>();
+    timeEntries?.forEach((e) => ids.add(e.user_id));
+    schedules?.forEach((s) => ids.add(s.user_id));
+    return Array.from(ids);
+  }, [timeEntries, schedules]);
+
+  const { data: profiles } = useQuery({
+    queryKey: ["profiles-for-budget", userIds],
+    queryFn: async () => {
+      if (userIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, avatar_url")
+        .in("user_id", userIds);
+      if (error) return [];
+      return data;
+    },
+    enabled: userIds.length > 0,
+  });
+
+  const profilesMap = useMemo(() => {
+    const map = new Map<string, { full_name: string | null; avatar_url: string | null }>();
+    profiles?.forEach((p) => map.set(p.user_id, p));
+    return map;
+  }, [profiles]);
+
   const isAdmin = currentUserRole === "admin" || currentUserRole === "owner";
   const dailyRate = workspaceData?.daily_rate || 0;
   const hourlyRate = dailyRate / 8;
@@ -90,7 +119,7 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
     );
   }, [schedules, projectId]);
 
-  // Calculate time by member
+  // Calculate time by member with work descriptions
   const memberTimeSummary = useMemo(() => {
     const memberMap = new Map<
       string,
@@ -101,25 +130,46 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
         timeEntryMinutes: number;
         scheduledMinutes: number;
         totalHours: number;
+        workDescriptions: string[];
+        tasksWorkedOn: Set<string>;
       }
     >();
 
     // Add time entries
     timeEntries?.forEach((entry) => {
+      const profile = profilesMap.get(entry.user_id);
       const existing = memberMap.get(entry.user_id) || {
         userId: entry.user_id,
-        name: "Membre",
-        avatarUrl: null,
+        name: profile?.full_name || "Membre",
+        avatarUrl: profile?.avatar_url || null,
         timeEntryMinutes: 0,
         scheduledMinutes: 0,
         totalHours: 0,
+        workDescriptions: [],
+        tasksWorkedOn: new Set<string>(),
       };
       existing.timeEntryMinutes += entry.duration_minutes;
+      
+      // Add work description
+      if (entry.description && !existing.workDescriptions.includes(entry.description)) {
+        existing.workDescriptions.push(entry.description);
+      }
+      if (entry.task?.title) {
+        existing.tasksWorkedOn.add(entry.task.title);
+      }
+      
+      // Update name from profile
+      if (profile?.full_name) {
+        existing.name = profile.full_name;
+        existing.avatarUrl = profile.avatar_url;
+      }
+      
       memberMap.set(entry.user_id, existing);
     });
 
     // Add scheduled time
     projectSchedules.forEach((schedule) => {
+      const profile = profilesMap.get(schedule.user_id);
       const durationMs =
         new Date(schedule.end_datetime).getTime() -
         new Date(schedule.start_datetime).getTime();
@@ -127,17 +177,30 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
 
       const existing = memberMap.get(schedule.user_id) || {
         userId: schedule.user_id,
-        name: schedule.user?.full_name || "Membre",
-        avatarUrl: schedule.user?.avatar_url || null,
+        name: profile?.full_name || schedule.user?.full_name || "Membre",
+        avatarUrl: profile?.avatar_url || schedule.user?.avatar_url || null,
         timeEntryMinutes: 0,
         scheduledMinutes: 0,
         totalHours: 0,
+        workDescriptions: [],
+        tasksWorkedOn: new Set<string>(),
       };
       existing.scheduledMinutes += durationMinutes;
-      if (schedule.user?.full_name) {
+      
+      // Add task name to worked on
+      if (schedule.task?.title) {
+        existing.tasksWorkedOn.add(schedule.task.title);
+      }
+      
+      // Update from profile
+      if (profile?.full_name) {
+        existing.name = profile.full_name;
+        existing.avatarUrl = profile.avatar_url;
+      } else if (schedule.user?.full_name) {
         existing.name = schedule.user.full_name;
         existing.avatarUrl = schedule.user.avatar_url;
       }
+      
       memberMap.set(schedule.user_id, existing);
     });
 
@@ -145,17 +208,24 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
     projectMembers.forEach((m) => {
       const existing = memberMap.get(m.user_id);
       if (existing) {
-        existing.name = m.profile?.full_name || existing.name;
-        existing.avatarUrl = m.profile?.avatar_url || existing.avatarUrl;
+        if (m.profile?.full_name) {
+          existing.name = m.profile.full_name;
+        }
+        if (m.profile?.avatar_url) {
+          existing.avatarUrl = m.profile.avatar_url;
+        }
       }
     });
 
-    // Calculate total hours
+    // Calculate total hours and format work description
     return Array.from(memberMap.values()).map((m) => ({
       ...m,
       totalHours: (m.timeEntryMinutes + m.scheduledMinutes) / 60,
+      workDescription: m.workDescriptions.length > 0 
+        ? m.workDescriptions.slice(0, 3).join(", ") + (m.workDescriptions.length > 3 ? "..." : "")
+        : Array.from(m.tasksWorkedOn).slice(0, 3).join(", ") + (m.tasksWorkedOn.size > 3 ? "..." : ""),
     }));
-  }, [timeEntries, projectSchedules, projectMembers]);
+  }, [timeEntries, projectSchedules, projectMembers, profilesMap]);
 
   const totalHours = memberTimeSummary.reduce((sum, m) => sum + m.totalHours, 0);
   const totalCost = totalHours * hourlyRate;
@@ -176,7 +246,7 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
+      {/* KPI Cards - Visible to all */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -206,27 +276,26 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
           </CardContent>
         </Card>
 
-        {isAdmin && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Coût estimé</CardTitle>
-              <Euro className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {new Intl.NumberFormat("fr-FR", {
-                  style: "currency",
-                  currency: "EUR",
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                }).format(totalCost)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Base {dailyRate}€/jour
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Cost is now visible to everyone */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Coût estimé</CardTitle>
+            <Euro className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {new Intl.NumberFormat("fr-FR", {
+                style: "currency",
+                currency: "EUR",
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              }).format(totalCost)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Base {dailyRate}€/jour
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Budget vs Actual (Admin only) */}
@@ -260,7 +329,7 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                   className={cn(
                     "text-2xl font-bold",
                     budgetUsedPercent > 90
-                      ? "text-red-600"
+                      ? "text-destructive"
                       : budgetUsedPercent > 70
                       ? "text-amber-600"
                       : "text-emerald-600"
@@ -276,7 +345,7 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
               className={cn(
                 "h-3",
                 budgetUsedPercent > 90
-                  ? "[&>div]:bg-red-500"
+                  ? "[&>div]:bg-destructive"
                   : budgetUsedPercent > 70
                   ? "[&>div]:bg-amber-500"
                   : "[&>div]:bg-emerald-500"
@@ -286,7 +355,7 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
                 {budgetUsedPercent > 90 ? (
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
                 ) : (
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 )}
@@ -320,7 +389,7 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
         </Card>
       )}
 
-      {/* Time by member */}
+      {/* Time by member - Fully public with descriptions */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -341,8 +410,9 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Membre</TableHead>
+                  <TableHead>Travail réalisé</TableHead>
                   <TableHead className="text-right">Heures</TableHead>
-                  {isAdmin && <TableHead className="text-right">Coût</TableHead>}
+                  <TableHead className="text-right">Coût</TableHead>
                   <TableHead className="text-right">Part</TableHead>
                 </TableRow>
               </TableHeader>
@@ -360,28 +430,34 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                       <TableRow key={member.userId}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
+                            <Avatar className="h-10 w-10">
                               <AvatarImage src={member.avatarUrl || undefined} />
-                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              <AvatarFallback className="bg-primary/10 text-primary text-sm">
                                 {member.name.charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
                             <span className="font-medium">{member.name}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground max-w-[250px]">
+                            <Briefcase className="h-4 w-4 shrink-0" />
+                            <span className="truncate">
+                              {member.workDescription || "Travail sur le projet"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
                           {Math.round(member.totalHours * 10) / 10}h
                         </TableCell>
-                        {isAdmin && (
-                          <TableCell className="text-right">
-                            {new Intl.NumberFormat("fr-FR", {
-                              style: "currency",
-                              currency: "EUR",
-                              minimumFractionDigits: 0,
-                              maximumFractionDigits: 0,
-                            }).format(memberCost)}
-                          </TableCell>
-                        )}
+                        <TableCell className="text-right">
+                          {new Intl.NumberFormat("fr-FR", {
+                            style: "currency",
+                            currency: "EUR",
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          }).format(memberCost)}
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Progress
