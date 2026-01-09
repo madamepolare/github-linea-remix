@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Clock,
@@ -12,6 +12,11 @@ import {
   Briefcase,
   Calculator,
   Pencil,
+  ArrowUpDown,
+  Filter,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -19,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -26,12 +32,25 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from "@/components/ui/table";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProject, useProjectMembers } from "@/hooks/useProjects";
 import { useTeamTimeEntries } from "@/hooks/useTeamTimeEntries";
@@ -48,6 +67,9 @@ const MONTHLY_HOURS = 35 * 52 / 12; // ~151.67 hours/month
 interface ProjectBudgetTabProps {
   projectId: string;
 }
+
+type SortField = "date" | "member" | "hours" | "description";
+type SortDirection = "asc" | "desc";
 
 export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
   const { activeWorkspace, user } = useAuth();
@@ -68,6 +90,12 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
     userId: string;
   } | null>(null);
 
+  // Detail view state
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [sortField, setSortField] = useState<SortField>("date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [filterMember, setFilterMember] = useState<string>("all");
+  const [filterSearch, setFilterSearch] = useState("");
 
   // Get employment info for real cost calculation
   const { data: employmentInfo, isLoading: employmentLoading } = useAllMemberEmploymentInfo();
@@ -171,6 +199,140 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
       schedules?.filter((s) => s.task?.project?.id === projectId) || []
     );
   }, [schedules, projectId]);
+
+  // Detailed time entries with all info
+  const detailedEntries = useMemo(() => {
+    const entries: Array<{
+      id: string;
+      userId: string;
+      memberName: string;
+      avatarUrl: string | null;
+      date: string;
+      startedAt: string | null;
+      endedAt: string | null;
+      durationMinutes: number;
+      description: string;
+      taskName: string | null;
+      type: "entry" | "schedule";
+    }> = [];
+
+    // Add time entries
+    timeEntries?.forEach((entry) => {
+      const profile = profilesMap.get(entry.user_id);
+      entries.push({
+        id: entry.id,
+        userId: entry.user_id,
+        memberName: profile?.full_name || "Membre",
+        avatarUrl: profile?.avatar_url || null,
+        date: entry.date,
+        startedAt: entry.started_at,
+        endedAt: entry.ended_at,
+        durationMinutes: entry.duration_minutes,
+        description: entry.description || "",
+        taskName: entry.task?.title || null,
+        type: "entry",
+      });
+    });
+
+    // Add scheduled time
+    projectSchedules.forEach((schedule) => {
+      const profile = profilesMap.get(schedule.user_id);
+      const startDate = new Date(schedule.start_datetime);
+      const endDate = new Date(schedule.end_datetime);
+      const durationMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60);
+
+      entries.push({
+        id: schedule.id,
+        userId: schedule.user_id,
+        memberName: profile?.full_name || schedule.user?.full_name || "Membre",
+        avatarUrl: profile?.avatar_url || schedule.user?.avatar_url || null,
+        date: format(startDate, "yyyy-MM-dd"),
+        startedAt: schedule.start_datetime,
+        endedAt: schedule.end_datetime,
+        durationMinutes,
+        description: schedule.task?.title || "Temps planifié",
+        taskName: schedule.task?.title || null,
+        type: "schedule",
+      });
+    });
+
+    return entries;
+  }, [timeEntries, projectSchedules, profilesMap]);
+
+  // Filtered and sorted entries
+  const filteredSortedEntries = useMemo(() => {
+    let result = [...detailedEntries];
+
+    // Filter by member
+    if (filterMember !== "all") {
+      result = result.filter((e) => e.userId === filterMember);
+    }
+
+    // Filter by search
+    if (filterSearch.trim()) {
+      const search = filterSearch.toLowerCase();
+      result = result.filter(
+        (e) =>
+          e.description.toLowerCase().includes(search) ||
+          e.taskName?.toLowerCase().includes(search) ||
+          e.memberName.toLowerCase().includes(search)
+      );
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case "date":
+          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case "member":
+          comparison = a.memberName.localeCompare(b.memberName);
+          break;
+        case "hours":
+          comparison = a.durationMinutes - b.durationMinutes;
+          break;
+        case "description":
+          comparison = (a.description || "").localeCompare(b.description || "");
+          break;
+      }
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+
+    return result;
+  }, [detailedEntries, filterMember, filterSearch, sortField, sortDirection]);
+
+  // Filtered totals
+  const filteredTotals = useMemo(() => {
+    const totalMinutes = filteredSortedEntries.reduce((sum, e) => sum + e.durationMinutes, 0);
+    const totalHours = totalMinutes / 60;
+    
+    const totalClientCost = filteredSortedEntries.reduce((sum, entry) => {
+      const memberHourlyRate = getMemberHourlyRate(entry.userId);
+      return sum + ((entry.durationMinutes / 60) * memberHourlyRate);
+    }, 0);
+
+    const totalRealCost = filteredSortedEntries.reduce((sum, entry) => {
+      const realHourlyRate = employmentCostMap.get(entry.userId);
+      if (realHourlyRate) {
+        return sum + ((entry.durationMinutes / 60) * realHourlyRate);
+      }
+      return sum;
+    }, 0);
+
+    return { totalHours, totalClientCost, totalRealCost };
+  }, [filteredSortedEntries, getMemberHourlyRate, employmentCostMap]);
+
+  // Unique members for filter
+  const uniqueMembers = useMemo(() => {
+    const members = new Map<string, string>();
+    detailedEntries.forEach((e) => {
+      if (!members.has(e.userId)) {
+        members.set(e.userId, e.memberName);
+      }
+    });
+    return Array.from(members.entries()).map(([id, name]) => ({ id, name }));
+  }, [detailedEntries]);
 
   // Calculate time by member with work descriptions
   const memberTimeSummary = useMemo(() => {
@@ -302,6 +464,30 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
     projectBudget > 0 ? Math.min(100, Math.round((totalClientCost / projectBudget) * 100)) : 0;
 
   const isLoading = projectLoading || entriesLoading || schedulesLoading || employmentLoading;
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+
+  const SortButton = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-8 px-2 -ml-2 hover:bg-transparent"
+      onClick={() => toggleSort(field)}
+    >
+      {children}
+      <ArrowUpDown className={cn(
+        "h-3 w-3 ml-1",
+        sortField === field && "text-primary"
+      )} />
+    </Button>
+  );
 
   if (isLoading) {
     return (
@@ -480,7 +666,7 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
         </Card>
       )}
 
-      {/* Time by member - Fully public with descriptions */}
+      {/* Time by member - Summary */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -624,10 +810,227 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                     );
                   })}
               </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={2} className="font-semibold">Total</TableCell>
+                  <TableCell className="text-right font-semibold">
+                    {Math.round(totalHours * 10) / 10}h
+                  </TableCell>
+                  {isAdmin && <TableCell />}
+                  <TableCell className="text-right font-semibold">
+                    {new Intl.NumberFormat("fr-FR", {
+                      style: "currency",
+                      currency: "EUR",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(totalClientCost)}
+                  </TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-right font-semibold text-emerald-600">
+                      {new Intl.NumberFormat("fr-FR", {
+                        style: "currency",
+                        currency: "EUR",
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      }).format(totalRealCost)}
+                    </TableCell>
+                  )}
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
             </Table>
           )}
         </CardContent>
       </Card>
+
+      {/* Detailed time entries */}
+      {detailedEntries.length > 0 && (
+        <Card>
+          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+            <CardHeader className="pb-3">
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-primary" />
+                      Détail des temps
+                    </CardTitle>
+                    <CardDescription>
+                      {detailedEntries.length} entrées de temps
+                    </CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm">
+                    {detailsOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </CollapsibleTrigger>
+            </CardHeader>
+            
+            <CollapsibleContent>
+              <CardContent className="space-y-4">
+                {/* Filters */}
+                <div className="flex flex-wrap gap-3 items-center">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <Select value={filterMember} onValueChange={setFilterMember}>
+                      <SelectTrigger className="w-[180px] h-8">
+                        <SelectValue placeholder="Tous les membres" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous les membres</SelectItem>
+                        {uniqueMembers.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Input
+                    placeholder="Rechercher..."
+                    value={filterSearch}
+                    onChange={(e) => setFilterSearch(e.target.value)}
+                    className="w-[200px] h-8"
+                  />
+                  {(filterMember !== "all" || filterSearch) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setFilterMember("all");
+                        setFilterSearch("");
+                      }}
+                    >
+                      Réinitialiser
+                    </Button>
+                  )}
+                </div>
+
+                {/* Table */}
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>
+                          <SortButton field="date">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            Date
+                          </SortButton>
+                        </TableHead>
+                        <TableHead>
+                          <SortButton field="member">Membre</SortButton>
+                        </TableHead>
+                        <TableHead>
+                          <SortButton field="description">Description</SortButton>
+                        </TableHead>
+                        <TableHead className="text-right">Horaires</TableHead>
+                        <TableHead className="text-right">
+                          <SortButton field="hours">Durée</SortButton>
+                        </TableHead>
+                        <TableHead className="text-right">Coût</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSortedEntries.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            Aucun temps correspondant aux filtres
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredSortedEntries.map((entry) => {
+                          const hourlyRate = getMemberHourlyRate(entry.userId);
+                          const cost = (entry.durationMinutes / 60) * hourlyRate;
+                          
+                          return (
+                            <TableRow key={`${entry.type}-${entry.id}`}>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {format(parseISO(entry.date), "dd MMM yyyy", { locale: fr })}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(parseISO(entry.date), "EEEE", { locale: fr })}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={entry.avatarUrl || undefined} />
+                                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                      {entry.memberName.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm">{entry.memberName}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-[250px]">
+                                  <span className="truncate block text-sm">
+                                    {entry.description || entry.taskName || "—"}
+                                  </span>
+                                  {entry.taskName && entry.description && entry.taskName !== entry.description && (
+                                    <Badge variant="secondary" className="mt-1 text-xs">
+                                      {entry.taskName}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {entry.startedAt && entry.endedAt ? (
+                                  <span className="text-sm text-muted-foreground">
+                                    {format(parseISO(entry.startedAt), "HH:mm")} - {format(parseISO(entry.endedAt), "HH:mm")}
+                                  </span>
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right font-medium">
+                                {Math.round(entry.durationMinutes / 60 * 10) / 10}h
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {new Intl.NumberFormat("fr-FR", {
+                                  style: "currency",
+                                  currency: "EUR",
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 0,
+                                }).format(cost)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                    <TableFooter>
+                      <TableRow>
+                        <TableCell colSpan={4} className="font-semibold">
+                          Total {filterMember !== "all" || filterSearch ? "(filtré)" : ""}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {Math.round(filteredTotals.totalHours * 10) / 10}h
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {new Intl.NumberFormat("fr-FR", {
+                            style: "currency",
+                            currency: "EUR",
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          }).format(filteredTotals.totalClientCost)}
+                        </TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </Card>
+      )}
 
       {/* Dialog for editing member client rate */}
       {editingMember && (
