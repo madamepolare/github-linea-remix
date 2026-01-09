@@ -15,6 +15,7 @@ import {
   Crown,
   User,
   Copy,
+  Briefcase,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { MemberEmploymentDialog } from "./MemberEmploymentDialog";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -100,6 +102,8 @@ export function MembersSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isInviting, setIsInviting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [employmentDialogOpen, setEmploymentDialogOpen] = useState(false);
+  const [selectedMemberForEmployment, setSelectedMemberForEmployment] = useState<Member | null>(null);
 
   const form = useForm<InviteFormData>({
     resolver: zodResolver(inviteSchema),
@@ -482,6 +486,19 @@ export function MembersSettings() {
                         <RoleIcon className="h-3 w-3 mr-1" />
                         {member.role}
                       </Badge>
+                      {canManageMembers && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedMemberForEmployment(member);
+                            setEmploymentDialogOpen(true);
+                          }}
+                        >
+                          <Briefcase className="h-3.5 w-3.5 mr-1" />
+                          Gérer
+                        </Button>
+                      )}
                       {canModify && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -584,6 +601,13 @@ export function MembersSettings() {
           </CardContent>
         </Card>
       )}
+
+      {/* Member Employment Dialog */}
+      <MemberEmploymentDialog
+        open={employmentDialogOpen}
+        onOpenChange={setEmploymentDialogOpen}
+        member={selectedMemberForEmployment}
+      />
     </motion.div>
   );
 }

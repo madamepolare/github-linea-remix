@@ -34,8 +34,17 @@ export function WorkspaceSettings() {
   const [formData, setFormData] = useState<UpdateAgencyInfoInput>({});
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isUploadingSignature, setIsUploadingSignature] = useState(false);
+  const [dailyRate, setDailyRate] = useState<string>("");
   const logoInputRef = useRef<HTMLInputElement>(null);
   const signatureInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch daily rate
+  useEffect(() => {
+    if (activeWorkspace) {
+      supabase.from("workspaces").select("daily_rate").eq("id", activeWorkspace.id).single()
+        .then(({ data }) => setDailyRate(data?.daily_rate?.toString() || ""));
+    }
+  }, [activeWorkspace]);
 
   const form = useForm<WorkspaceFormData>({
     resolver: zodResolver(workspaceSchema),
@@ -276,6 +285,29 @@ export function WorkspaceSettings() {
                   </Button>
                 </div>
               </form>
+
+              <div className="border-t pt-6 space-y-4">
+                <h4 className="font-medium">Tarification</h4>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="daily_rate">Tarif journalier (€/jour)</Label>
+                    <Input
+                      id="daily_rate"
+                      type="number"
+                      value={dailyRate}
+                      onChange={(e) => setDailyRate(e.target.value)}
+                      onBlur={async () => {
+                        if (!activeWorkspace) return;
+                        const value = dailyRate ? parseFloat(dailyRate) : 0;
+                        await supabase.from("workspaces").update({ daily_rate: value }).eq("id", activeWorkspace.id);
+                        toast({ title: "Tarif mis à jour" });
+                      }}
+                      placeholder="500"
+                    />
+                    <p className="text-xs text-muted-foreground">Utilisé pour calculer les coûts dans l'onglet Budget</p>
+                  </div>
+                </div>
+              </div>
 
               <div className="border-t pt-6 space-y-4">
                 <h4 className="font-medium">Coordonnées de l'agence</h4>

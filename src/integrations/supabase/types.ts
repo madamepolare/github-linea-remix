@@ -3547,6 +3547,56 @@ export type Database = {
           },
         ]
       }
+      member_employment_info: {
+        Row: {
+          contract_type: string | null
+          created_at: string | null
+          end_date: string | null
+          id: string
+          notes: string | null
+          salary_monthly: number | null
+          start_date: string | null
+          trial_end_date: string | null
+          updated_at: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          contract_type?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          salary_monthly?: number | null
+          start_date?: string | null
+          trial_end_date?: string | null
+          updated_at?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          contract_type?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          salary_monthly?: number | null
+          start_date?: string | null
+          trial_end_date?: string | null
+          updated_at?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_employment_info_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modules: {
         Row: {
           category: string | null
@@ -7494,6 +7544,7 @@ export type Database = {
           code_naf: string | null
           created_at: string
           created_by: string | null
+          daily_rate: number | null
           discipline_id: string | null
           email: string | null
           footer_text: string | null
@@ -7524,6 +7575,7 @@ export type Database = {
           code_naf?: string | null
           created_at?: string
           created_by?: string | null
+          daily_rate?: number | null
           discipline_id?: string | null
           email?: string | null
           footer_text?: string | null
@@ -7554,6 +7606,7 @@ export type Database = {
           code_naf?: string | null
           created_at?: string
           created_by?: string | null
+          daily_rate?: number | null
           discipline_id?: string | null
           email?: string | null
           footer_text?: string | null
@@ -7659,6 +7712,10 @@ export type Database = {
           _user_id: string
           _workspace_id: string
         }
+        Returns: boolean
+      }
+      is_workspace_admin: {
+        Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
       is_workspace_member: {
