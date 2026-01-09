@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, FolderKanban, Users, FileText, Trophy, CalendarDays, UsersRound, Building2, Palette, Theater } from "lucide-react";
+import { ChevronDown, FolderKanban, Users, FileText, Trophy, CalendarDays, UsersRound, Building2, Palette, Theater, Megaphone } from "lucide-react";
 import gsap from "gsap";
 
 const modules = [
@@ -30,8 +30,8 @@ const modules = [
   },
   {
     slug: "planning",
-    title: "Planning chantier",
-    description: "Interventions et CR",
+    title: "Planning",
+    description: "Chantier, production & médias",
     icon: CalendarDays,
   },
   {
@@ -60,6 +60,12 @@ const solutions = [
     title: "Scénographes",
     icon: Theater,
     color: "from-purple-500 to-violet-600",
+  },
+  {
+    slug: "agences-communication",
+    title: "Agences de Communication",
+    icon: Megaphone,
+    color: "from-orange-500 to-amber-600",
   },
 ];
 

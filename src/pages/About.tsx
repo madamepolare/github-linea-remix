@@ -13,8 +13,8 @@ gsap.registerPlugin(ScrollTrigger);
 const values = [
   {
     icon: Target,
-    title: "Focalisés sur le métier",
-    description: "Nous comprenons les défis spécifiques des agences d'architecture car nous travaillons main dans la main avec elles.",
+    title: "Focalisés sur les métiers créatifs",
+    description: "Nous comprenons les défis spécifiques des architectes, scénographes et agences car nous travaillons main dans la main avec eux.",
   },
   {
     icon: Zap,
@@ -77,9 +77,9 @@ export default function About() {
   return (
     <>
       <SEOHead
-        title="À propos | Linea Suite - Notre mission et notre équipe"
-        description="Découvrez l'équipe derrière Linea Suite et notre mission : simplifier la gestion des agences d'architecture avec des outils modernes et intuitifs."
-        keywords="à propos, équipe, mission, Linea Suite, architecture, logiciel"
+        title="À propos | LINEA - Notre mission et notre équipe"
+        description="Découvrez l'équipe derrière LINEA et notre mission : simplifier la gestion des agences créatives avec des outils modernes et intuitifs."
+        keywords="à propos, équipe, mission, LINEA, architecture, scénographie, communication, logiciel"
       />
 
       <div className="min-h-screen bg-background">
@@ -91,12 +91,12 @@ export default function About() {
             <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
               Construire le futur de la gestion <br />
               <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                d'agences d'architecture
+                pour les créatifs
               </span>
             </h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Linea Suite est né d'une conviction : les architectes méritent des outils 
-              aussi bien conçus que les bâtiments qu'ils créent.
+              LINEA est né d'une conviction : architectes, scénographes et agences méritent des outils 
+              aussi bien conçus que les projets qu'ils créent.
             </p>
           </div>
         </section>
@@ -110,8 +110,8 @@ export default function About() {
                 <div className="space-y-4 text-muted-foreground">
                   <p>
                     Tout a commencé en 2023, lorsque nos fondateurs, issus du monde de 
-                    l'architecture et du développement logiciel, ont constaté un problème 
-                    récurrent : les agences utilisaient des dizaines d'outils déconnectés 
+                    l'architecture, de la scénographie et du développement logiciel, ont constaté un problème 
+                    récurrent : les agences créatives utilisaient des dizaines d'outils déconnectés 
                     pour gérer leurs projets.
                   </p>
                   <p>
@@ -119,8 +119,8 @@ export default function About() {
                     comptes-rendus... Le temps perdu à naviguer entre ces outils était colossal.
                   </p>
                   <p>
-                    Linea Suite est la réponse à ce défi : une plateforme unique, pensée 
-                    par et pour les architectes, qui centralise tous les aspects de la 
+                    LINEA est la réponse à ce défi : une plateforme unique, pensée 
+                    par et pour les professionnels de la création, qui centralise tous les aspects de la 
                     gestion d'agence.
                   </p>
                 </div>
@@ -210,7 +210,7 @@ export default function About() {
               </Link>
               <Link to="/auth">
                 <Button variant="outline" size="lg">
-                  Essayer Linea Suite
+                  Essayer LINEA
                 </Button>
               </Link>
             </div>
