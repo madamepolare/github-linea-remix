@@ -13,6 +13,7 @@ export interface TaskSchedule {
   end_datetime: string;
   is_locked: boolean;
   notes: string | null;
+  work_description: string | null;
   color: string | null;
   created_by: string | null;
   created_at: string;

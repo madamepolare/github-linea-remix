@@ -45,6 +45,7 @@ export function ScheduleDetailSheet({ schedule, open, onOpenChange }: ScheduleDe
   const [startTime, setStartTime] = useState("");
   const [durationHours, setDurationHours] = useState("");
   const [notes, setNotes] = useState("");
+  const [workDescription, setWorkDescription] = useState("");
   const [isLocked, setIsLocked] = useState(false);
 
   useEffect(() => {
@@ -58,6 +59,7 @@ export function ScheduleDetailSheet({ schedule, open, onOpenChange }: ScheduleDe
       setStartTime(format(start, "HH:mm"));
       setDurationHours(durationH.toString());
       setNotes(schedule.notes || "");
+      setWorkDescription(schedule.work_description || "");
       setIsLocked(schedule.is_locked);
     }
   }, [schedule]);
@@ -74,6 +76,7 @@ export function ScheduleDetailSheet({ schedule, open, onOpenChange }: ScheduleDe
       start_datetime: startDatetime.toISOString(),
       end_datetime: endDatetime.toISOString(),
       notes: notes || null,
+      work_description: workDescription || null,
       is_locked: isLocked,
     });
 
@@ -179,14 +182,28 @@ export function ScheduleDetailSheet({ schedule, open, onOpenChange }: ScheduleDe
             />
           </div>
 
+          {/* Work Description - What was actually done */}
+          <div className="space-y-2">
+            <Label>Travail réalisé</Label>
+            <Textarea
+              value={workDescription}
+              onChange={(e) => setWorkDescription(e.target.value)}
+              placeholder="Décrivez le travail effectué durant ce créneau..."
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Ce champ permet de documenter ce qui a été fait
+            </p>
+          </div>
+
           {/* Notes */}
           <div className="space-y-2">
-            <Label>Notes</Label>
+            <Label>Notes internes</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notes sur ce créneau..."
-              rows={3}
+              placeholder="Notes internes sur ce créneau..."
+              rows={2}
             />
           </div>
 
