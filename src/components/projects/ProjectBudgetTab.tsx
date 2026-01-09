@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -11,12 +11,14 @@ import {
   Euro,
   Briefcase,
   Calculator,
+  Pencil,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -25,6 +27,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProject, useProjectMembers } from "@/hooks/useProjects";
 import { useTeamTimeEntries } from "@/hooks/useTeamTimeEntries";
@@ -33,6 +40,7 @@ import { useAllMemberEmploymentInfo } from "@/hooks/useMemberEmploymentInfo";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { MemberClientRateDialog } from "./MemberClientRateDialog";
 
 // Monthly hours based on 35h/week
 const MONTHLY_HOURS = 35 * 52 / 12; // ~151.67 hours/month
@@ -51,7 +59,16 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
   const { schedules, isLoading: schedulesLoading } = useTaskSchedules({
     taskId: undefined,
   });
-  
+
+  // State for editing member rates
+  const [editingMember, setEditingMember] = useState<{
+    id: string;
+    name: string;
+    rate: number | null;
+    userId: string;
+  } | null>(null);
+
+
   // Get employment info for real cost calculation
   const { data: employmentInfo, isLoading: employmentLoading } = useAllMemberEmploymentInfo();
 
@@ -132,6 +149,21 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
     });
     return map;
   }, [employmentInfo]);
+
+  // Create a map of user_id -> custom client daily rate
+  const memberClientRatesMap = useMemo(() => {
+    const map = new Map<string, { memberId: string; rate: number | null }>();
+    projectMembers.forEach((m) => {
+      map.set(m.user_id, { memberId: m.id, rate: m.client_daily_rate });
+    });
+    return map;
+  }, [projectMembers]);
+
+  // Helper to get hourly rate for a member (custom or default)
+  const getMemberHourlyRate = (userId: string) => {
+    const customRate = memberClientRatesMap.get(userId)?.rate;
+    return (customRate ?? dailyRate) / 8;
+  };
 
   // Filter schedules for this project
   const projectSchedules = useMemo(() => {
@@ -249,7 +281,12 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
   }, [timeEntries, projectSchedules, projectMembers, profilesMap]);
 
   const totalHours = memberTimeSummary.reduce((sum, m) => sum + m.totalHours, 0);
-  const totalClientCost = totalHours * hourlyRate;
+  
+  // Calculate total client cost based on custom rates per member
+  const totalClientCost = memberTimeSummary.reduce((sum, member) => {
+    const memberHourlyRate = getMemberHourlyRate(member.userId);
+    return sum + (member.totalHours * memberHourlyRate);
+  }, 0);
   
   // Calculate total real cost based on salaries
   const totalRealCost = memberTimeSummary.reduce((sum, member) => {
@@ -466,6 +503,7 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                   <TableHead>Membre</TableHead>
                   <TableHead>Travail réalisé</TableHead>
                   <TableHead className="text-right">Heures</TableHead>
+                  {isAdmin && <TableHead className="text-right">Tarif/jour</TableHead>}
                   <TableHead className="text-right">Coût client</TableHead>
                   {isAdmin && <TableHead className="text-right">Coût réel</TableHead>}
                   <TableHead className="text-right">Part</TableHead>
@@ -479,9 +517,12 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                       totalHours > 0
                         ? Math.round((member.totalHours / totalHours) * 100)
                         : 0;
-                    const memberClientCost = member.totalHours * hourlyRate;
+                    const memberHourlyRate = getMemberHourlyRate(member.userId);
+                    const memberClientCost = member.totalHours * memberHourlyRate;
                     const realHourlyRate = employmentCostMap.get(member.userId);
                     const memberRealCost = realHourlyRate ? member.totalHours * realHourlyRate : null;
+                    const memberRateInfo = memberClientRatesMap.get(member.userId);
+                    const hasCustomRate = memberRateInfo?.rate !== null && memberRateInfo?.rate !== undefined;
 
                     return (
                       <TableRow key={member.userId}>
@@ -507,6 +548,43 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                         <TableCell className="text-right font-medium">
                           {Math.round(member.totalHours * 10) / 10}h
                         </TableCell>
+                        {isAdmin && (
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className={cn(
+                                    "font-medium",
+                                    hasCustomRate && "text-primary"
+                                  )}>
+                                    {memberHourlyRate * 8}€
+                                    {hasCustomRate && " *"}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {hasCustomRate 
+                                    ? `Tarif personnalisé (défaut: ${dailyRate}€/jour)`
+                                    : `Tarif par défaut de l'agence`}
+                                </TooltipContent>
+                              </Tooltip>
+                              {memberRateInfo?.memberId && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => setEditingMember({
+                                    id: memberRateInfo.memberId,
+                                    name: member.name,
+                                    rate: memberRateInfo.rate,
+                                    userId: member.userId,
+                                  })}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        )}
                         <TableCell className="text-right">
                           {new Intl.NumberFormat("fr-FR", {
                             style: "currency",
@@ -550,6 +628,19 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog for editing member client rate */}
+      {editingMember && (
+        <MemberClientRateDialog
+          open={!!editingMember}
+          onOpenChange={(open) => !open && setEditingMember(null)}
+          memberId={editingMember.id}
+          memberName={editingMember.name}
+          currentRate={editingMember.rate}
+          defaultRate={dailyRate}
+          projectId={projectId}
+        />
+      )}
     </div>
   );
 }
