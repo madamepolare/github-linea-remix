@@ -51,6 +51,7 @@ export const LandingNav = () => {
     { slug: "architectes", label: "Architectes" },
     { slug: "architectes-interieur", label: "Architectes d'intérieur" },
     { slug: "scenographes", label: "Scénographes" },
+    { slug: "agences-communication", label: "Agences de Communication" },
   ];
 
   return (
@@ -69,7 +70,7 @@ export const LandingNav = () => {
               <span className="text-primary-foreground font-bold text-xl">L</span>
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              LINEA SUITE
+              LINEA
             </span>
           </Link>
 

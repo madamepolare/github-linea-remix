@@ -12,6 +12,7 @@ const footerLinks = {
     { label: "Architectes", href: "/solutions/architectes" },
     { label: "Architectes d'intérieur", href: "/solutions/architectes-interieur" },
     { label: "Scénographes", href: "/solutions/scenographes" },
+    { label: "Agences de Communication", href: "/solutions/agences-communication" },
   ],
   entreprise: [
     { label: "À propos", href: "/about" },
@@ -36,11 +37,11 @@ export const Footer = memo(() => {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-xl">L</span>
               </div>
-              <span className="text-xl font-bold text-foreground">LINEA SUITE</span>
+              <span className="text-xl font-bold text-foreground">LINEA</span>
             </Link>
             <p className="text-muted-foreground max-w-md mb-6">
-              La plateforme tout-en-un pour les agences d'architecture modernes.
-              Gérez vos projets, clients et documents en un seul endroit.
+              La plateforme tout-en-un pour les professionnels de la création.
+              Architectes, architectes d'intérieur, scénographes et agences de communication.
             </p>
             <div className="flex items-center gap-4">
               <a
@@ -141,10 +142,10 @@ export const Footer = memo(() => {
 
         <div className="border-t border-border pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-muted-foreground text-sm">
-            © {new Date().getFullYear()} Linea Suite. Tous droits réservés.
+            © {new Date().getFullYear()} LINEA. Tous droits réservés.
           </p>
           <p className="text-muted-foreground text-sm">
-            Conçu avec ❤️ pour les architectes
+            Conçu avec ❤️ pour les créatifs
           </p>
         </div>
       </div>
