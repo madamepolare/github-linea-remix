@@ -33,7 +33,7 @@ type ViewMode = "week" | "2weeks" | "month";
 const CELL_WIDTH = 110;
 const ROW_HEIGHT = 160;
 const HOURS_PER_DAY = 8;
-const MIN_ITEM_HEIGHT = 28;
+const MIN_ITEM_HEIGHT = 38;
 const PIXELS_PER_HOUR = 16;
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
