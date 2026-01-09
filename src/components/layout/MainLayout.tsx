@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { GlobalTimeTracker } from "@/components/time-tracking/GlobalTimeTracker";
 import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import { FeedbackSidebar } from "@/components/feedback/FeedbackSidebar";
+import { TerminologyProvider } from "@/contexts/TerminologyContext";
 
 export function MainLayout() {
   const { collapsed } = useSidebarStore();
@@ -78,13 +79,15 @@ export function MainLayout() {
         
         {/* Page content */}
         <main className="flex-1 flex flex-col">
-          <AnimatePresence mode="wait">
-            <PageTransition key={location.pathname}>
-              <div className="flex-1 flex flex-col">
-                <Outlet />
-              </div>
-            </PageTransition>
-          </AnimatePresence>
+          <TerminologyProvider>
+            <AnimatePresence mode="wait">
+              <PageTransition key={location.pathname}>
+                <div className="flex-1 flex flex-col">
+                  <Outlet />
+                </div>
+              </PageTransition>
+            </AnimatePresence>
+          </TerminologyProvider>
         </main>
       </div>
 

@@ -14,6 +14,8 @@ import {
   Package,
   Armchair,
   CalendarClock,
+  Megaphone,
+  Calendar,
   LucideIcon,
 } from "lucide-react";
 
@@ -243,11 +245,40 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
       { key: "ai-plan", label: "Planifier avec IA", event: "open-ai-planning" },
     ],
   },
+  campaigns: {
+    slug: "campaigns",
+    title: "Campagnes",
+    icon: Megaphone,
+    href: "/campaigns",
+    isExtension: true,
+    subNav: [
+      { key: "all", label: "Toutes", href: "/campaigns" },
+      { key: "active", label: "En cours", href: "/campaigns?status=active" },
+      { key: "draft", label: "Brouillons", href: "/campaigns?status=draft" },
+    ],
+    quickActions: [
+      { key: "create-campaign", label: "Nouvelle campagne", event: "open-create-campaign" },
+    ],
+  },
+  "media-planning": {
+    slug: "media-planning",
+    title: "Planning Média",
+    icon: Calendar,
+    href: "/media-planning",
+    isExtension: true,
+    subNav: [
+      { key: "calendar", label: "Calendrier", href: "/media-planning" },
+      { key: "list", label: "Liste", href: "/media-planning?view=list" },
+    ],
+    quickActions: [
+      { key: "create-media-item", label: "Nouveau placement", event: "open-create-media-item" },
+    ],
+  },
 };
 
 // Module display order
 export const CORE_MODULES = ["workflow", "projects", "tasks", "crm", "commercial"];
-export const EXTENSION_MODULES = ["documents", "team", "chantier", "tenders", "invoicing", "references", "materials", "objects"];
+export const EXTENSION_MODULES = ["documents", "team", "chantier", "tenders", "invoicing", "references", "materials", "objects", "campaigns", "media-planning"];
 
 // Helper to get module config from current path
 export function getModuleFromPath(pathname: string): ModuleNavConfig | null {
