@@ -3,13 +3,11 @@ import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   Clock,
-  DollarSign,
   TrendingUp,
   Users,
   AlertTriangle,
   CheckCircle2,
   Euro,
-  Briefcase,
   Calculator,
   Pencil,
   ArrowUpDown,
@@ -17,6 +15,7 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -59,6 +58,53 @@ import { useAllMemberEmploymentInfo } from "@/hooks/useMemberEmploymentInfo";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+// Stacked Avatars Component
+function StackedAvatars({ 
+  members, 
+  max = 4 
+}: { 
+  members: Array<{ userId: string; name: string; avatarUrl: string | null }>; 
+  max?: number;
+}) {
+  const displayMembers = members.slice(0, max);
+  const remaining = members.length - max;
+
+  return (
+    <div className="flex -space-x-2">
+      {displayMembers.map((member, idx) => (
+        <Tooltip key={member.userId}>
+          <TooltipTrigger asChild>
+            <Avatar 
+              className="h-7 w-7 border-2 border-background ring-0"
+              style={{ zIndex: displayMembers.length - idx }}
+            >
+              <AvatarImage src={member.avatarUrl || undefined} />
+              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                {member.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">{member.name}</TooltipContent>
+        </Tooltip>
+      ))}
+      {remaining > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Avatar className="h-7 w-7 border-2 border-background">
+              <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                +{remaining}
+              </AvatarFallback>
+            </Avatar>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            {members.slice(max).map(m => m.name).join(", ")}
+          </TooltipContent>
+        </Tooltip>
+      )}
+    </div>
+  );
+}
 import { MemberClientRateDialog } from "./MemberClientRateDialog";
 
 // Monthly hours based on 35h/week
@@ -498,347 +544,399 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
     );
   }
 
+  // Prepare contributors list for stacked avatars
+  const contributors = useMemo(() => {
+    return memberTimeSummary.map(m => ({
+      userId: m.userId,
+      name: m.name,
+      avatarUrl: m.avatarUrl,
+    }));
+  }, [memberTimeSummary]);
+
+  // State for expanded member details
+  const [expandedMember, setExpandedMember] = useState<string | null>(null);
+
+  // Get entries by member
+  const entriesByMember = useMemo(() => {
+    const map = new Map<string, typeof detailedEntries>();
+    detailedEntries.forEach(entry => {
+      const existing = map.get(entry.userId) || [];
+      existing.push(entry);
+      map.set(entry.userId, existing);
+    });
+    return map;
+  }, [detailedEntries]);
+
+  const formatCurrency = (value: number) => 
+    new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+
   return (
-    <div className="space-y-6">
-      {/* KPI Cards - Visible to all */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Heures totales</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
+    <div className="space-y-4">
+      {/* Bento Grid - Compact KPIs */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {/* Hours & Contributors */}
+        <Card className="col-span-1">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Temps</span>
+            </div>
             <div className="text-2xl font-bold">
               {Math.round(totalHours * 10) / 10}h
             </div>
-            <p className="text-xs text-muted-foreground">
-              Temps passé sur le projet
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Contributeurs</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{memberTimeSummary.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Membres ayant contribué
-            </p>
+            <div className="flex items-center justify-between mt-2">
+              <StackedAvatars members={contributors} max={4} />
+              <span className="text-xs text-muted-foreground">
+                {memberTimeSummary.length} contrib.
+              </span>
+            </div>
           </CardContent>
         </Card>
 
         {/* Client Cost */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Coût client</CardTitle>
-            <Euro className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {new Intl.NumberFormat("fr-FR", {
-                style: "currency",
-                currency: "EUR",
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0,
-              }).format(totalClientCost)}
+        <Card className="col-span-1">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <Euro className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Client</span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Base {dailyRate}€/jour
+            <div className="text-2xl font-bold">
+              {formatCurrency(totalClientCost)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {dailyRate}€/jour
             </p>
           </CardContent>
         </Card>
 
         {/* Real Cost (Admin only) */}
         {isAdmin && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Coût réel</CardTitle>
-              <Calculator className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">
-                {new Intl.NumberFormat("fr-FR", {
-                  style: "currency",
-                  currency: "EUR",
-                  minimumFractionDigits: 0,
-                  maximumFractionDigits: 0,
-                }).format(totalRealCost)}
+          <Card className="col-span-1">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <Calculator className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Réel</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Basé sur salaires (35h/sem)
+              <div className="text-2xl font-bold text-emerald-600">
+                {formatCurrency(totalRealCost)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Salaires 35h/sem
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Budget Progress (Admin only) */}
+        {isAdmin && projectBudget > 0 && (
+          <Card className="col-span-1">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <Badge
+                  variant={
+                    budgetUsedPercent > 90
+                      ? "destructive"
+                      : budgetUsedPercent > 70
+                      ? "secondary"
+                      : "default"
+                  }
+                  className="text-xs px-1.5 py-0"
+                >
+                  {budgetUsedPercent}%
+                </Badge>
+              </div>
+              <div className="text-2xl font-bold">
+                {formatCurrency(projectBudget)}
+              </div>
+              <Progress
+                value={budgetUsedPercent}
+                className={cn(
+                  "h-1.5 mt-2",
+                  budgetUsedPercent > 90
+                    ? "[&>div]:bg-destructive"
+                    : budgetUsedPercent > 70
+                    ? "[&>div]:bg-amber-500"
+                    : "[&>div]:bg-emerald-500"
+                )}
+              />
+              <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
+                <span>Restant</span>
+                <span className="font-medium">
+                  {formatCurrency(Math.max(0, projectBudget - totalClientCost))}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Marge (Admin only) */}
+        {isAdmin && totalRealCost > 0 && (
+          <Card className="col-span-1">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                {totalClientCost - totalRealCost > 0 ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                )}
+                <span className="text-xs text-muted-foreground">Marge</span>
+              </div>
+              <div className={cn(
+                "text-2xl font-bold",
+                totalClientCost - totalRealCost > 0 ? "text-emerald-600" : "text-destructive"
+              )}>
+                {formatCurrency(totalClientCost - totalRealCost)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {totalClientCost > 0 
+                  ? `${Math.round(((totalClientCost - totalRealCost) / totalClientCost) * 100)}% de marge`
+                  : "—"}
               </p>
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* Budget vs Actual (Admin only) */}
-      {isAdmin && projectBudget > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Budget vs Réalisé
-            </CardTitle>
-            <CardDescription>
-              Comparaison entre le budget projet et le coût réalisé
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Budget projet</p>
-                <p className="text-2xl font-bold">
-                  {new Intl.NumberFormat("fr-FR", {
-                    style: "currency",
-                    currency: "EUR",
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(projectBudget)}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Consommé</p>
-                <p
-                  className={cn(
-                    "text-2xl font-bold",
-                    budgetUsedPercent > 90
-                      ? "text-destructive"
-                      : budgetUsedPercent > 70
-                      ? "text-amber-600"
-                      : "text-emerald-600"
-                  )}
-                >
-                  {budgetUsedPercent}%
-                </p>
-              </div>
-            </div>
-
-            <Progress
-              value={budgetUsedPercent}
-              className={cn(
-                "h-3",
-                budgetUsedPercent > 90
-                  ? "[&>div]:bg-destructive"
-                  : budgetUsedPercent > 70
-                  ? "[&>div]:bg-amber-500"
-                  : "[&>div]:bg-emerald-500"
-              )}
-            />
-
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                {budgetUsedPercent > 90 ? (
-                  <AlertTriangle className="h-4 w-4 text-destructive" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                )}
-                <span>
-                  Restant:{" "}
-                  {new Intl.NumberFormat("fr-FR", {
-                    style: "currency",
-                    currency: "EUR",
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(Math.max(0, projectBudget - totalClientCost))}
-                </span>
-              </div>
-              <Badge
-                variant={
-                  budgetUsedPercent > 90
-                    ? "destructive"
-                    : budgetUsedPercent > 70
-                    ? "secondary"
-                    : "default"
-                }
-              >
-                {budgetUsedPercent > 100
-                  ? "Dépassement"
-                  : budgetUsedPercent > 90
-                  ? "Attention"
-                  : "Dans le budget"}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Time by member - Summary */}
+      {/* Unified Time by Member with Details */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Users className="h-4 w-4 text-primary" />
             Temps par membre
           </CardTitle>
-          <CardDescription>
-            Répartition du temps passé sur le projet
-          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {memberTimeSummary.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Aucun temps enregistré sur ce projet
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Membre</TableHead>
-                  <TableHead>Travail réalisé</TableHead>
-                  <TableHead className="text-right">Heures</TableHead>
-                  {isAdmin && <TableHead className="text-right">Tarif/jour</TableHead>}
-                  <TableHead className="text-right">Coût client</TableHead>
-                  {isAdmin && <TableHead className="text-right">Coût réel</TableHead>}
-                  <TableHead className="text-right">Part</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {memberTimeSummary
-                  .sort((a, b) => b.totalHours - a.totalHours)
-                  .map((member) => {
-                    const memberPercent =
-                      totalHours > 0
-                        ? Math.round((member.totalHours / totalHours) * 100)
-                        : 0;
-                    const memberHourlyRate = getMemberHourlyRate(member.userId);
-                    const memberClientCost = member.totalHours * memberHourlyRate;
-                    const realHourlyRate = employmentCostMap.get(member.userId);
-                    const memberRealCost = realHourlyRate ? member.totalHours * realHourlyRate : null;
-                    const memberRateInfo = memberClientRatesMap.get(member.userId);
-                    const hasCustomRate = memberRateInfo?.rate !== null && memberRateInfo?.rate !== undefined;
+            <div className="divide-y">
+              {memberTimeSummary
+                .sort((a, b) => b.totalHours - a.totalHours)
+                .map((member) => {
+                  const memberPercent =
+                    totalHours > 0
+                      ? Math.round((member.totalHours / totalHours) * 100)
+                      : 0;
+                  const memberHourlyRate = getMemberHourlyRate(member.userId);
+                  const memberClientCost = member.totalHours * memberHourlyRate;
+                  const realHourlyRate = employmentCostMap.get(member.userId);
+                  const memberRealCost = realHourlyRate ? member.totalHours * realHourlyRate : null;
+                  const memberRateInfo = memberClientRatesMap.get(member.userId);
+                  const hasCustomRate = memberRateInfo?.rate !== null && memberRateInfo?.rate !== undefined;
+                  const isExpanded = expandedMember === member.userId;
+                  const memberEntries = entriesByMember.get(member.userId) || [];
 
-                    return (
-                      <TableRow key={member.userId}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={member.avatarUrl || undefined} />
-                              <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                                {member.name.charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{member.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground max-w-[200px]">
-                            <Briefcase className="h-4 w-4 shrink-0" />
-                            <span className="truncate">
+                  return (
+                    <div key={member.userId}>
+                      {/* Member Summary Row */}
+                      <div 
+                        className={cn(
+                          "flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors",
+                          isExpanded && "bg-muted/30"
+                        )}
+                        onClick={() => setExpandedMember(isExpanded ? null : member.userId)}
+                      >
+                        {/* Avatar & Name */}
+                        <div className="flex items-center gap-3 min-w-[180px]">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={member.avatarUrl || undefined} />
+                            <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                              {member.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{member.name}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[140px]">
                               {member.workDescription || "Travail sur le projet"}
-                            </span>
+                            </p>
                           </div>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {Math.round(member.totalHours * 10) / 10}h
-                        </TableCell>
-                        {isAdmin && (
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className={cn(
-                                    "font-medium",
-                                    hasCustomRate && "text-primary"
-                                  )}>
-                                    {memberHourlyRate * 8}€
-                                    {hasCustomRate && " *"}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {hasCustomRate 
-                                    ? `Tarif personnalisé (défaut: ${dailyRate}€/jour)`
-                                    : `Tarif par défaut de l'agence`}
-                                </TooltipContent>
-                              </Tooltip>
+                        </div>
+
+                        {/* Hours */}
+                        <div className="flex items-center gap-2 min-w-[80px]">
+                          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="font-medium text-sm">
+                            {Math.round(member.totalHours * 10) / 10}h
+                          </span>
+                        </div>
+
+                        {/* Progress */}
+                        <div className="hidden md:flex items-center gap-2 min-w-[100px]">
+                          <Progress value={memberPercent} className="w-14 h-1.5" />
+                          <span className="text-xs text-muted-foreground w-8">
+                            {memberPercent}%
+                          </span>
+                        </div>
+
+                        {/* Costs */}
+                        <div className="flex items-center gap-4 ml-auto">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="text-right min-w-[70px]">
+                                <p className={cn(
+                                  "text-sm font-medium",
+                                  hasCustomRate && "text-primary"
+                                )}>
+                                  {formatCurrency(memberClientCost)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {memberHourlyRate * 8}€/j{hasCustomRate && " *"}
+                                </p>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {hasCustomRate 
+                                ? `Tarif personnalisé (défaut: ${dailyRate}€/jour)`
+                                : "Tarif par défaut"}
+                            </TooltipContent>
+                          </Tooltip>
+
+                          {isAdmin && (
+                            <>
+                              {memberRealCost !== null ? (
+                                <div className="text-right min-w-[70px]">
+                                  <p className="text-sm font-medium text-emerald-600">
+                                    {formatCurrency(memberRealCost)}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">réel</p>
+                                </div>
+                              ) : (
+                                <div className="min-w-[70px]" />
+                              )}
                               {memberRateInfo?.memberId && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-6 w-6"
-                                  onClick={() => setEditingMember({
-                                    id: memberRateInfo.memberId,
-                                    name: member.name,
-                                    rate: memberRateInfo.rate,
-                                    userId: member.userId,
-                                  })}
+                                  className="h-7 w-7"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingMember({
+                                      id: memberRateInfo.memberId,
+                                      name: member.name,
+                                      rate: memberRateInfo.rate,
+                                      userId: member.userId,
+                                    });
+                                  }}
                                 >
                                   <Pencil className="h-3 w-3" />
                                 </Button>
                               )}
-                            </div>
-                          </TableCell>
-                        )}
-                        <TableCell className="text-right">
-                          {new Intl.NumberFormat("fr-FR", {
-                            style: "currency",
-                            currency: "EUR",
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0,
-                          }).format(memberClientCost)}
-                        </TableCell>
-                        {isAdmin && (
-                          <TableCell className="text-right">
-                            {memberRealCost !== null ? (
-                              <span className="text-emerald-600 font-medium">
-                                {new Intl.NumberFormat("fr-FR", {
-                                  style: "currency",
-                                  currency: "EUR",
-                                  minimumFractionDigits: 0,
-                                  maximumFractionDigits: 0,
-                                }).format(memberRealCost)}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">—</span>
-                            )}
-                          </TableCell>
-                        )}
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Progress
-                              value={memberPercent}
-                              className="w-16 h-2"
-                            />
-                            <span className="text-sm text-muted-foreground w-10 text-right">
-                              {memberPercent}%
-                            </span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-              </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={2} className="font-semibold">Total</TableCell>
-                  <TableCell className="text-right font-semibold">
-                    {Math.round(totalHours * 10) / 10}h
-                  </TableCell>
-                  {isAdmin && <TableCell />}
-                  <TableCell className="text-right font-semibold">
-                    {new Intl.NumberFormat("fr-FR", {
-                      style: "currency",
-                      currency: "EUR",
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 0,
-                    }).format(totalClientCost)}
-                  </TableCell>
+                            </>
+                          )}
+
+                          <ChevronRight 
+                            className={cn(
+                              "h-4 w-4 text-muted-foreground transition-transform",
+                              isExpanded && "rotate-90"
+                            )} 
+                          />
+                        </div>
+                      </div>
+
+                      {/* Expanded Details */}
+                      {isExpanded && memberEntries.length > 0 && (
+                        <div className="bg-muted/20 border-t">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="hover:bg-transparent">
+                                <TableHead className="text-xs h-8 pl-16">Date</TableHead>
+                                <TableHead className="text-xs h-8">Description</TableHead>
+                                <TableHead className="text-xs h-8 text-right">Horaires</TableHead>
+                                <TableHead className="text-xs h-8 text-right">Durée</TableHead>
+                                <TableHead className="text-xs h-8 text-right pr-4">Coût</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {memberEntries
+                                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                .slice(0, 10)
+                                .map((entry) => {
+                                  const cost = (entry.durationMinutes / 60) * memberHourlyRate;
+                                  return (
+                                    <TableRow key={`${entry.type}-${entry.id}`} className="hover:bg-muted/30">
+                                      <TableCell className="py-2 pl-16">
+                                        <span className="text-xs">
+                                          {format(parseISO(entry.date), "dd MMM", { locale: fr })}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground ml-1">
+                                          {format(parseISO(entry.date), "EEE", { locale: fr })}
+                                        </span>
+                                      </TableCell>
+                                      <TableCell className="py-2">
+                                        <span className="text-xs truncate block max-w-[200px]">
+                                          {entry.description || entry.taskName || "—"}
+                                        </span>
+                                      </TableCell>
+                                      <TableCell className="py-2 text-right">
+                                        {entry.startedAt && entry.endedAt ? (
+                                          <span className="text-xs text-muted-foreground">
+                                            {format(parseISO(entry.startedAt), "HH:mm")}–{format(parseISO(entry.endedAt), "HH:mm")}
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground">—</span>
+                                        )}
+                                      </TableCell>
+                                      <TableCell className="py-2 text-right">
+                                        <span className="text-xs font-medium">
+                                          {Math.round(entry.durationMinutes / 60 * 10) / 10}h
+                                        </span>
+                                      </TableCell>
+                                      <TableCell className="py-2 text-right pr-4">
+                                        <span className="text-xs">
+                                          {formatCurrency(cost)}
+                                        </span>
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              {memberEntries.length > 10 && (
+                                <TableRow className="hover:bg-transparent">
+                                  <TableCell colSpan={5} className="py-2 text-center">
+                                    <span className="text-xs text-muted-foreground">
+                                      +{memberEntries.length - 10} autres entrées
+                                    </span>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+              {/* Total Row */}
+              <div className="flex items-center gap-4 px-4 py-3 bg-muted/40 font-medium">
+                <div className="min-w-[180px] text-sm">Total</div>
+                <div className="min-w-[80px] text-sm">
+                  {Math.round(totalHours * 10) / 10}h
+                </div>
+                <div className="hidden md:block min-w-[100px]" />
+                <div className="flex items-center gap-4 ml-auto">
+                  <div className="text-right min-w-[70px]">
+                    <p className="text-sm">{formatCurrency(totalClientCost)}</p>
+                  </div>
                   {isAdmin && (
-                    <TableCell className="text-right font-semibold text-emerald-600">
-                      {new Intl.NumberFormat("fr-FR", {
-                        style: "currency",
-                        currency: "EUR",
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      }).format(totalRealCost)}
-                    </TableCell>
+                    <>
+                      <div className="text-right min-w-[70px]">
+                        <p className="text-sm text-emerald-600">{formatCurrency(totalRealCost)}</p>
+                      </div>
+                      <div className="w-7" />
+                    </>
                   )}
-                  <TableCell />
-                </TableRow>
-              </TableFooter>
-            </Table>
+                  <div className="w-4" />
+                </div>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
