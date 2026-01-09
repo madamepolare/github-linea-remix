@@ -95,17 +95,19 @@ export function useDashboardStats() {
           .in("status", ["repere", "en_analyse", "en_montage", "go"])
           .lt("created_at", thirtyDaysAgo.toISOString()),
 
-        // Current team members
-        supabase
-          .from("workspace_members")
-          .select("id", { count: "exact", head: true })
-          .eq("workspace_id", workspaceId),
-
-        // Previous team members
+        // Current team members (exclude hidden)
         supabase
           .from("workspace_members")
           .select("id", { count: "exact", head: true })
           .eq("workspace_id", workspaceId)
+          .neq("is_hidden", true),
+
+        // Previous team members (exclude hidden)
+        supabase
+          .from("workspace_members")
+          .select("id", { count: "exact", head: true })
+          .eq("workspace_id", workspaceId)
+          .neq("is_hidden", true)
           .lt("created_at", thirtyDaysAgo.toISOString()),
       ]);
 

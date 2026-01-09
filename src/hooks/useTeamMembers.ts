@@ -26,11 +26,12 @@ export function useTeamMembers() {
     queryFn: async (): Promise<TeamMember[]> => {
       if (!activeWorkspace) return [];
 
-      // Fetch workspace members
+      // Fetch workspace members (exclude hidden ones)
       const { data: members, error: membersError } = await supabase
         .from("workspace_members")
         .select("id, user_id, role, created_at")
-        .eq("workspace_id", activeWorkspace.id);
+        .eq("workspace_id", activeWorkspace.id)
+        .neq("is_hidden", true);
 
       if (membersError) throw membersError;
       if (!members || members.length === 0) return [];
