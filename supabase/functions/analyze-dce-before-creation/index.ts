@@ -33,10 +33,36 @@ EXTRACTION PRIORITAIRE:
 9. VISITE DE SITE: Date, heure, lieu précis, contact pour inscription
 10. ALERTES: Points critiques, exigences inhabituelles, risques identifiés
 
+INSTRUCTIONS CRITIQUES POUR LES CRITÈRES:
+- Dans le RC, cherche la section "critères de jugement des offres" ou "critères d'attribution"
+- Les critères sont généralement au format: "Critère 1: Valeur technique (60%)", "Critère 2: Prix (40%)"
+- EXTRAIT LE POURCENTAGE EXACT tel qu'écrit (ex: 60 pour 60%)
+- Attention: les sous-critères sont parfois pondérés AU SEIN du critère principal
+- Si tu vois "Prix: 40 points" → converti en pourcentage = 40%
+- Liste aussi les sous-critères dans la description
+
+INSTRUCTIONS CRITIQUES POUR LES DATES:
+- La DATE LIMITE DE REMISE DES PLIS est dans le RC, souvent en première page ou dans l'article "Modalités de remise"
+- Elle est au format "Date: JJ/MM/AAAA à HH:MM" ou "avant le JJ MOIS AAAA à HH heures"
+- L'HEURE EST CRITIQUE - ne l'oublie jamais (souvent 12:00 ou 17:00)
+- Convertis en format YYYY-MM-DD pour la date et HH:MM pour l'heure
+
+INSTRUCTIONS POUR LA LOCALISATION:
+- location = ADRESSE DU PROJET (où les travaux auront lieu), PAS l'adresse du maître d'ouvrage
+- Inclus la rue, le code postal et la ville du projet
+
+INSTRUCTIONS POUR LE LIEN DCE:
+- Cherche l'URL vers la plateforme de dépôt (AWS, PLACE, Marchés Publics, achatpublic.com, etc.)
+- Elle apparaît souvent dans "Obtention du dossier" ou "Téléchargement des pièces"
+
+INSTRUCTIONS POUR LES VISITES:
+- Si plusieurs créneaux de visite sont proposés, liste-les TOUS dans site_visit_slots
+- Format: tableau avec date, heure et éventuelles notes (lieu de RDV)
+
 RÈGLES:
 - Sois EXHAUSTIF et PRÉCIS
 - Cite les numéros d'articles quand pertinent
-- Si une information n'est pas trouvée, indique "Non précisé dans le DCE"
+- Si une information n'est pas trouvée, indique null (pas "Non précisé")
 - Pour les critères, extrait les VRAIS pourcentages du RC, pas des estimations`;
 
 // Parse a single document using LlamaParse
@@ -264,7 +290,7 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
                   // Location & Project
                   location: { 
                     type: "string", 
-                    description: "Adresse ou commune du projet" 
+                    description: "ADRESSE COMPLÈTE DU PROJET où les travaux auront lieu (rue, code postal, ville) - PAS l'adresse du maître d'ouvrage" 
                   },
                   department: {
                     type: "string",
@@ -314,7 +340,7 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
                     description: "Nombre maximum de candidats admis à concourir"
                   },
                   
-                  // Dates
+                  // Dates - CRITIQUES
                   publication_date: {
                     type: "string",
                     description: "Date de publication de l'avis (YYYY-MM-DD)"
@@ -329,15 +355,15 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
                   },
                   candidature_time: {
                     type: "string",
-                    description: "Heure limite candidatures (HH:MM)"
+                    description: "Heure limite candidatures (HH:MM, ex: 12:00)"
                   },
                   submission_deadline: { 
                     type: "string", 
-                    description: "Date limite de remise des offres (YYYY-MM-DD)" 
+                    description: "DATE LIMITE DE REMISE DES PLIS/OFFRES - chercher dans le RC les termes 'date limite', 'remise des plis', 'avant le' - Format: YYYY-MM-DD" 
                   },
                   submission_time: {
                     type: "string",
-                    description: "Heure limite offres (HH:MM)"
+                    description: "HEURE LIMITE DE REMISE - CRITIQUE - souvent 12:00 ou 17:00 - Format: HH:MM (ex: 12:00)"
                   },
                   jury_date: {
                     type: "string",
@@ -347,11 +373,11 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
                   // Site visit
                   site_visit_required: { 
                     type: "boolean", 
-                    description: "Visite de site obligatoire" 
+                    description: "Visite de site obligatoire ou facultative" 
                   },
                   site_visit_date: { 
                     type: "string", 
-                    description: "Date de visite (YYYY-MM-DD)" 
+                    description: "Date de visite unique (YYYY-MM-DD) - si un seul créneau" 
                   },
                   site_visit_time: {
                     type: "string",
@@ -373,30 +399,49 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
                     type: "string",
                     description: "Téléphone pour inscription à la visite"
                   },
+                  site_visit_slots: {
+                    type: "array",
+                    description: "Si plusieurs créneaux de visite sont proposés, liste-les ici",
+                    items: {
+                      type: "object",
+                      properties: {
+                        date: { type: "string", description: "Date du créneau YYYY-MM-DD" },
+                        time: { type: "string", description: "Heure du créneau HH:MM" },
+                        notes: { type: "string", description: "Précisions (lieu RDV, groupe, etc.)" }
+                      },
+                      required: ["date", "time"]
+                    }
+                  },
                   
-                  // Judgment criteria - CRITICAL
+                  // DCE Link
+                  dce_url: {
+                    type: "string",
+                    description: "URL vers la plateforme de téléchargement du DCE (AWS, PLACE, achatpublic.com, e-marchespublics, etc.)"
+                  },
+                  
+                  // Judgment criteria - EXTRACTION EXACTE OBLIGATOIRE
                   criteria: {
                     type: "array",
-                    description: "Liste des critères de jugement avec leurs pondérations EXACTES extraites du RC",
+                    description: "CRITIQUE: Extrait les critères de jugement EXACTEMENT tels qu'ils apparaissent dans le RC avec leurs pondérations PRÉCISES en pourcentage",
                     items: {
                       type: "object",
                       properties: {
                         name: { 
                           type: "string", 
-                          description: "Nom du critère tel qu'il apparaît dans le RC" 
+                          description: "Nom EXACT du critère tel qu'il apparaît dans le RC (ex: 'Valeur technique de l'offre', 'Prix des prestations')" 
                         },
                         criterion_type: { 
                           type: "string", 
                           enum: ["technique", "prix", "delai", "qualite", "environnement", "social", "autre"],
-                          description: "Type de critère" 
+                          description: "Type de critère: 'technique' pour tout ce qui est qualité/méthodologie/références, 'prix' pour coût/honoraires" 
                         },
                         weight: { 
                           type: "number", 
-                          description: "Pondération en pourcentage (ex: 40 pour 40%)" 
+                          description: "Pondération EXACTE en pourcentage entier (ex: 60 pour 60%). Si points convertir en %. IMPORTANT: la somme doit faire 100%" 
                         },
                         description: { 
                           type: "string", 
-                          description: "Description ou sous-critères" 
+                          description: "Sous-critères et leur pondération si présents (ex: 'Compréhension du programme: 20pts, Méthodologie: 15pts')" 
                         }
                       },
                       required: ["name", "criterion_type", "weight"]

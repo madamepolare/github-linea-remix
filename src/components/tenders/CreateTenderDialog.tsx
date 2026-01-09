@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import JSZip from "jszip";
 import {
   Upload,
   FileText,
@@ -19,6 +20,7 @@ import {
   Link,
   Users,
   Clock,
+  Archive,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +61,12 @@ import { RequiredTeamEditor, type RequiredTeamItem } from "./RequiredTeamEditor"
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 
+interface SiteVisitSlot {
+  date: string;
+  time: string;
+  notes?: string;
+}
+
 interface ExtractedInfo {
   title?: string;
   reference?: string;
@@ -83,7 +91,9 @@ interface ExtractedInfo {
   site_visit_contact_name?: string;
   site_visit_contact_email?: string;
   site_visit_assigned_user_id?: string | null;
+  site_visit_slots?: SiteVisitSlot[];
   dce_link?: string;
+  dce_url?: string;
   project_description?: string;
   ai_summary?: string;
   surface_area?: number;
@@ -166,7 +176,44 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
     if (name.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     if (name.endsWith('.ppt')) return 'application/vnd.ms-powerpoint';
     if (name.endsWith('.pptx')) return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+    if (name.endsWith('.zip')) return 'application/zip';
     return 'application/octet-stream';
+  };
+
+  // Extract files from ZIP archive
+  const extractZipFiles = async (zipFile: File): Promise<File[]> => {
+    try {
+      const zip = await JSZip.loadAsync(zipFile);
+      const extractedFiles: File[] = [];
+      const supportedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+      
+      const entries = Object.entries(zip.files);
+      for (const [path, entry] of entries) {
+        if (entry.dir) continue;
+        
+        const ext = path.split('.').pop()?.toLowerCase();
+        if (!ext || !supportedExtensions.includes(ext)) continue;
+        
+        // Skip hidden/system files
+        const fileName = path.split('/').pop() || path;
+        if (fileName.startsWith('.') || fileName.startsWith('__')) continue;
+        
+        try {
+          const blob = await entry.async('blob');
+          const file = new File([blob], fileName, {
+            type: safeMimeType({ name: fileName } as File)
+          });
+          extractedFiles.push(file);
+        } catch (e) {
+          console.warn(`Failed to extract ${path}:`, e);
+        }
+      }
+      
+      return extractedFiles;
+    } catch (e) {
+      console.error('Failed to extract ZIP:', e);
+      return [];
+    }
   };
 
   const safeFileList = (files: File[]) => {
@@ -212,25 +259,62 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
     setIsDragging(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files);
-    const validFiles = files.filter(f =>
+    
+    // Handle ZIP files
+    const zipFiles = files.filter(f => f.name.toLowerCase().endsWith('.zip'));
+    const regularFiles = files.filter(f => !f.name.toLowerCase().endsWith('.zip'));
+    
+    // Extract files from ZIPs
+    let extractedFromZip: File[] = [];
+    for (const zipFile of zipFiles) {
+      const extracted = await extractZipFiles(zipFile);
+      extractedFromZip = [...extractedFromZip, ...extracted];
+    }
+    
+    if (extractedFromZip.length > 0) {
+      toast.success(`${extractedFromZip.length} fichier(s) extrait(s) du ZIP`);
+    }
+    
+    const validFiles = regularFiles.filter(f =>
       f.type === 'application/pdf' ||
       f.type.includes('word') ||
       f.type.includes('excel') ||
-      f.type.includes('spreadsheet')
+      f.type.includes('spreadsheet') ||
+      f.type.includes('powerpoint') ||
+      f.type.includes('presentation')
     );
-    if (validFiles.length > 0) {
-      setUploadedFiles(prev => [...prev, ...validFiles]);
+    
+    const allFiles = [...validFiles, ...extractedFromZip];
+    if (allFiles.length > 0) {
+      setUploadedFiles(prev => [...prev, ...allFiles]);
     }
   }, []);
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      setUploadedFiles(prev => [...prev, ...files]);
+      
+      // Handle ZIP files
+      const zipFiles = files.filter(f => f.name.toLowerCase().endsWith('.zip'));
+      const regularFiles = files.filter(f => !f.name.toLowerCase().endsWith('.zip'));
+      
+      // Extract files from ZIPs
+      let extractedFromZip: File[] = [];
+      for (const zipFile of zipFiles) {
+        const extracted = await extractZipFiles(zipFile);
+        extractedFromZip = [...extractedFromZip, ...extracted];
+      }
+      
+      if (extractedFromZip.length > 0) {
+        toast.success(`${extractedFromZip.length} fichier(s) extrait(s) du ZIP`);
+      }
+      
+      const allFiles = [...regularFiles, ...extractedFromZip];
+      setUploadedFiles(prev => [...prev, ...allFiles]);
     }
   }, []);
 
@@ -274,6 +358,21 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         const filledFields = new Set<string>();
         const extracted = data.extractedData;
         
+        // Combine date and time for submission deadline
+        if (extracted.submission_deadline && extracted.submission_time) {
+          extracted.submission_deadline = `${extracted.submission_deadline}T${extracted.submission_time}`;
+        }
+        
+        // Combine date and time for site visit
+        if (extracted.site_visit_date && extracted.site_visit_time) {
+          extracted.site_visit_date = `${extracted.site_visit_date}T${extracted.site_visit_time}`;
+        }
+        
+        // Map dce_url to dce_link if present
+        if (extracted.dce_url && !extracted.dce_link) {
+          extracted.dce_link = extracted.dce_url;
+        }
+        
         if (extracted.title) filledFields.add('title');
         if (extracted.reference) filledFields.add('reference');
         if (extracted.client_name) filledFields.add('client_name');
@@ -288,6 +387,8 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         if (extracted.surface_area) filledFields.add('surface_area');
         if (extracted.criteria?.length > 0) filledFields.add('criteria');
         if (extracted.required_team?.length > 0) filledFields.add('required_team');
+        if (extracted.dce_link || extracted.dce_url) filledFields.add('dce_link');
+        if (extracted.site_visit_slots?.length > 0) filledFields.add('site_visit_slots');
         
         setAiFilledFields(filledFields);
         setExtractionStats(data.stats || null);
@@ -508,7 +609,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                   type="file"
                   id="dce-upload"
                   multiple
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip"
                   onChange={handleFileSelect}
                   className="hidden"
                   disabled={isAnalyzing}
@@ -541,8 +642,12 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                           <p className="font-medium">
                             Glissez vos fichiers DCE ici
                           </p>
-                          <p className="text-sm text-muted-foreground mt-1">
+                          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1 justify-center">
                             ou cliquez pour sélectionner • PDF, Word, Excel, PowerPoint
+                            <span className="inline-flex items-center gap-1 text-primary font-medium">
+                              <Archive className="h-3.5 w-3.5" />
+                              ou ZIP
+                            </span>
                           </p>
                         </>
                       )}
@@ -853,19 +958,29 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                     <Label htmlFor="deadline" className="flex items-center gap-1.5">
                       <Calendar className="h-3.5 w-3.5" />
                       Date/heure limite dépôt
+                      {aiFilledFields.has('submission_deadline') && (
+                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20 ml-1">
+                          <Sparkles className="h-3 w-3 mr-0.5" />IA
+                        </Badge>
+                      )}
                     </Label>
                     <Input
                       id="deadline"
                       type="datetime-local"
                       value={formData.submission_deadline || ''}
                       onChange={(e) => updateFormField('submission_deadline', e.target.value)}
-                      className="mt-1"
+                      className={cn("mt-1", aiFilledFields.has('submission_deadline') && "border-primary/30")}
                     />
                   </div>
                   <div>
                     <Label htmlFor="dce_link" className="flex items-center gap-1.5">
                       <Link className="h-3.5 w-3.5" />
                       Lien DCE
+                      {aiFilledFields.has('dce_link') && (
+                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20 ml-1">
+                          <Sparkles className="h-3 w-3 mr-0.5" />IA
+                        </Badge>
+                      )}
                     </Label>
                     <Input
                       id="dce_link"
@@ -873,7 +988,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                       value={formData.dce_link || ''}
                       onChange={(e) => updateFormField('dce_link', e.target.value)}
                       placeholder="https://..."
-                      className="mt-1"
+                      className={cn("mt-1", aiFilledFields.has('dce_link') && "border-primary/30")}
                     />
                   </div>
                 </div>
@@ -881,8 +996,13 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                 {/* Site Visit */}
                 <div className="p-4 rounded-lg border bg-muted/30 space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="site_visit" className="font-medium">
+                    <Label htmlFor="site_visit" className="font-medium flex items-center gap-2">
                       Visite obligatoire
+                      {aiFilledFields.has('site_visit_required') && (
+                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20">
+                          <Sparkles className="h-3 w-3 mr-0.5" />IA
+                        </Badge>
+                      )}
                     </Label>
                     <Switch
                       id="site_visit"
@@ -891,16 +1011,56 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                     />
                   </div>
                   
+                  {/* Site Visit Slots - Quick selection */}
+                  {formData.site_visit_required && formData.site_visit_slots && formData.site_visit_slots.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm flex items-center gap-2">
+                        Créneaux proposés
+                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20">
+                          <Sparkles className="h-3 w-3 mr-0.5" />IA
+                        </Badge>
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {formData.site_visit_slots.map((slot, index) => (
+                          <Button
+                            key={index}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className={cn(
+                              "text-xs",
+                              formData.site_visit_date === `${slot.date}T${slot.time}` && "bg-primary/10 border-primary"
+                            )}
+                            onClick={() => {
+                              updateFormField('site_visit_date', `${slot.date}T${slot.time}`);
+                            }}
+                          >
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {slot.date} à {slot.time}
+                            {slot.notes && <span className="ml-1 text-muted-foreground">({slot.notes})</span>}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
                   {formData.site_visit_required && (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="visit_date">Date de visite</Label>
+                        <Label htmlFor="visit_date" className="flex items-center gap-1.5">
+                          Date de visite
+                          {aiFilledFields.has('site_visit_date') && (
+                            <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20">
+                              <Sparkles className="h-3 w-3 mr-0.5" />IA
+                            </Badge>
+                          )}
+                        </Label>
                         <Input
                           id="visit_date"
                           type="datetime-local"
                           value={formData.site_visit_date || ''}
                           onChange={(e) => updateFormField('site_visit_date', e.target.value)}
-                          className="mt-1"
+                          className={cn("mt-1", aiFilledFields.has('site_visit_date') && "border-primary/30")}
                         />
                       </div>
                       <div>
