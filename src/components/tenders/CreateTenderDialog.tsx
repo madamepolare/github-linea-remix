@@ -68,21 +68,38 @@ interface ExtractedInfo {
   client_type?: string;
   moa_company_id?: string | null;
   location?: string;
+  department?: string;
   estimated_budget?: number;
   procedure_type?: string;
   procedure_other?: string;
   submission_deadline?: string;
   submission_time?: string;
+  candidature_deadline?: string;
+  candidature_time?: string;
   site_visit_date?: string;
   site_visit_time?: string;
   site_visit_required?: boolean;
+  site_visit_location?: string;
+  site_visit_contact_name?: string;
+  site_visit_contact_email?: string;
   site_visit_assigned_user_id?: string | null;
   dce_link?: string;
   project_description?: string;
   ai_summary?: string;
+  surface_area?: number;
+  moe_phases?: string[];
   criteria?: CriterionItem[];
   required_team?: RequiredTeamItem[];
+  critical_alerts?: Array<{ type: string; message: string; severity: string }>;
   detected_documents?: { filename: string; type: string }[];
+}
+
+interface ExtractionStats {
+  files_analyzed: number;
+  files_skipped: number;
+  criteria_found: number;
+  team_requirements: number;
+  alerts_found: number;
 }
 
 interface CreateTenderDialogProps {
@@ -108,6 +125,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState<string>("");
   
   // Form state (pre-filled by AI)
   const [formData, setFormData] = useState<ExtractedInfo>({
@@ -116,6 +134,8 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
     criteria: [],
     required_team: [],
   });
+  const [extractionStats, setExtractionStats] = useState<ExtractionStats | null>(null);
+  const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
   const [isCreating, setIsCreating] = useState(false);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -162,8 +182,12 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
     }
 
     setIsAnalyzing(true);
+    setAnalysisProgress("Préparation des fichiers...");
 
     try {
+      // Prepare files with progress feedback
+      setAnalysisProgress(`Lecture de ${uploadedFiles.length} fichier(s)...`);
+      
       const filesData = await Promise.all(uploadedFiles.map(async (file) => ({
         name: file.name,
         type: file.type,
@@ -172,6 +196,8 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         ),
       })));
 
+      setAnalysisProgress("Analyse IA en cours... Lecture des documents PDF");
+
       const { data, error } = await supabase.functions.invoke('analyze-dce-before-creation', {
         body: { files: filesData, tender_type: tenderType }
       });
@@ -179,14 +205,40 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       if (error) throw error;
 
       if (data?.extractedData) {
+        // Track which fields were filled by AI
+        const filledFields = new Set<string>();
+        const extracted = data.extractedData;
+        
+        if (extracted.title) filledFields.add('title');
+        if (extracted.reference) filledFields.add('reference');
+        if (extracted.client_name) filledFields.add('client_name');
+        if (extracted.client_type) filledFields.add('client_type');
+        if (extracted.location) filledFields.add('location');
+        if (extracted.estimated_budget) filledFields.add('estimated_budget');
+        if (extracted.procedure_type) filledFields.add('procedure_type');
+        if (extracted.submission_deadline) filledFields.add('submission_deadline');
+        if (extracted.site_visit_date) filledFields.add('site_visit_date');
+        if (extracted.site_visit_required !== undefined) filledFields.add('site_visit_required');
+        if (extracted.project_description) filledFields.add('project_description');
+        if (extracted.surface_area) filledFields.add('surface_area');
+        if (extracted.criteria?.length > 0) filledFields.add('criteria');
+        if (extracted.required_team?.length > 0) filledFields.add('required_team');
+        
+        setAiFilledFields(filledFields);
+        setExtractionStats(data.stats || null);
+        
         setFormData({
-          ...data.extractedData,
+          ...extracted,
           tender_type: tenderType,
-          submission_type: data.extractedData.submission_type || 'candidature_offre',
-          criteria: data.extractedData.criteria || [],
-          required_team: data.extractedData.required_team || [],
+          submission_type: extracted.submission_type || 'candidature_offre',
+          criteria: extracted.criteria || [],
+          required_team: extracted.required_team || [],
         });
-        toast.success("Analyse terminée !");
+        
+        const statsMsg = data.stats 
+          ? `${data.stats.files_analyzed} fichiers analysés, ${data.stats.criteria_found} critères extraits`
+          : "Données extraites";
+        toast.success(`Analyse terminée ! ${statsMsg}`);
       } else {
         setFormData({ 
           title: "Nouvel appel d'offre",
@@ -195,6 +247,8 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
           criteria: [],
           required_team: [],
         });
+        setAiFilledFields(new Set());
+        setExtractionStats(null);
       }
       
       setStep('form');
@@ -208,9 +262,12 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         criteria: [],
         required_team: [],
       });
+      setAiFilledFields(new Set());
+      setExtractionStats(null);
       setStep('form');
     } finally {
       setIsAnalyzing(false);
+      setAnalysisProgress("");
     }
   };
 
@@ -223,6 +280,8 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       criteria: [],
       required_team: [],
     });
+    setAiFilledFields(new Set());
+    setExtractionStats(null);
     setStep('form');
   };
 
@@ -410,7 +469,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                         <>
                           <p className="font-medium text-primary">Analyse IA en cours...</p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            Extraction des informations du DCE
+                            {analysisProgress || "Lecture et compréhension des documents PDF"}
                           </p>
                         </>
                       ) : (
@@ -419,7 +478,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                             Glissez vos fichiers DCE ici
                           </p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            ou cliquez pour sélectionner • PDF, Word, Excel
+                            ou cliquez pour sélectionner • PDF uniquement (Word/Excel non supportés)
                           </p>
                         </>
                       )}
@@ -513,21 +572,61 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
           {step === 'form' && (
             <div className="space-y-6">
               {/* Success message if AI extracted data */}
-              {formData.title && uploadedFiles.length > 0 && (
+              {aiFilledFields.size > 0 && uploadedFiles.length > 0 && (
                 <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-full bg-emerald-500/20">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-full bg-emerald-500/20 shrink-0">
                       <Check className="h-5 w-5 text-emerald-600" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium text-emerald-700 dark:text-emerald-400">
-                        Analyse IA terminée
+                        Analyse IA terminée - Documents lus et analysés
                       </p>
-                      <p className="text-sm text-emerald-600/80 dark:text-emerald-400/80">
-                        Les champs marqués <Badge variant="outline" className="h-5 px-1.5 mx-1 text-[10px] bg-primary/10 border-primary/20"><Sparkles className="h-3 w-3 mr-0.5" />IA</Badge> ont été pré-remplis. Vérifiez et ajustez si nécessaire.
-                      </p>
+                      <div className="text-sm text-emerald-600/80 dark:text-emerald-400/80 mt-1">
+                        {extractionStats && (
+                          <div className="flex flex-wrap gap-x-4 gap-y-1">
+                            <span>📄 {extractionStats.files_analyzed} fichier(s) analysé(s)</span>
+                            {extractionStats.criteria_found > 0 && (
+                              <span>⚖️ {extractionStats.criteria_found} critère(s) extrait(s)</span>
+                            )}
+                            {extractionStats.team_requirements > 0 && (
+                              <span>👥 {extractionStats.team_requirements} compétence(s) requise(s)</span>
+                            )}
+                            {extractionStats.alerts_found > 0 && (
+                              <span>⚠️ {extractionStats.alerts_found} alerte(s)</span>
+                            )}
+                          </div>
+                        )}
+                        <p className="mt-1">
+                          {aiFilledFields.size} champ(s) pré-remplis par l'IA. Vérifiez et ajustez si nécessaire.
+                        </p>
+                      </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Critical alerts from AI */}
+              {formData.critical_alerts && formData.critical_alerts.length > 0 && (
+                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg space-y-2">
+                  <p className="font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                    ⚠️ Points d'attention identifiés par l'IA
+                  </p>
+                  <ul className="space-y-1 text-sm">
+                    {formData.critical_alerts.map((alert, i) => (
+                      <li key={i} className={cn(
+                        "flex items-start gap-2",
+                        alert.severity === 'critical' && "text-red-600 dark:text-red-400",
+                        alert.severity === 'warning' && "text-amber-600 dark:text-amber-400",
+                        alert.severity === 'info' && "text-muted-foreground"
+                      )}>
+                        <span className="shrink-0">
+                          {alert.severity === 'critical' ? '🔴' : alert.severity === 'warning' ? '🟠' : '🔵'}
+                        </span>
+                        <span>{alert.message}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
 
@@ -538,13 +637,20 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                 </h3>
                 
                 <div>
-                  <Label htmlFor="title">Titre du marché *</Label>
+                  <Label htmlFor="title" className="flex items-center gap-2">
+                    Titre du marché *
+                    {aiFilledFields.has('title') && (
+                      <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20">
+                        <Sparkles className="h-3 w-3 mr-0.5" />IA
+                      </Badge>
+                    )}
+                  </Label>
                   <Input
                     id="title"
                     value={formData.title || ''}
                     onChange={(e) => updateFormField('title', e.target.value)}
                     placeholder="Ex: Construction d'un groupe scolaire"
-                    className="mt-1"
+                    className={cn("mt-1", aiFilledFields.has('title') && "border-primary/30")}
                   />
                 </div>
 
@@ -634,20 +740,30 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                   <div>
                     <Label htmlFor="location" className="flex items-center gap-1.5">
                       <MapPin className="h-3.5 w-3.5" />
-                      Localisation du projet (code postal)
+                      Localisation du projet
+                      {aiFilledFields.has('location') && (
+                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20 ml-1">
+                          <Sparkles className="h-3 w-3 mr-0.5" />IA
+                        </Badge>
+                      )}
                     </Label>
                     <Input
                       id="location"
                       value={formData.location || ''}
                       onChange={(e) => updateFormField('location', e.target.value)}
-                      placeholder="Ex: 75001"
-                      className="mt-1"
+                      placeholder="Ex: Paris 75001"
+                      className={cn("mt-1", aiFilledFields.has('location') && "border-primary/30")}
                     />
                   </div>
                   <div>
                     <Label htmlFor="budget" className="flex items-center gap-1.5">
                       <Euro className="h-3.5 w-3.5" />
                       Budget estimé (€ HT)
+                      {aiFilledFields.has('estimated_budget') && (
+                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20 ml-1">
+                          <Sparkles className="h-3 w-3 mr-0.5" />IA
+                        </Badge>
+                      )}
                     </Label>
                     <Input
                       id="budget"
@@ -655,7 +771,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                       value={formData.estimated_budget || ''}
                       onChange={(e) => updateFormField('estimated_budget', e.target.value ? Number(e.target.value) : undefined)}
                       placeholder="Ex: 5000000"
-                      className="mt-1"
+                      className={cn("mt-1", aiFilledFields.has('estimated_budget') && "border-primary/30")}
                     />
                   </div>
                 </div>
