@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjectMembers } from "@/hooks/useProjects";
-import { useProjectTypeSettings, getDisciplineIcon } from "@/hooks/useProjectTypeSettings";
+import { useProjectTypeSettings, getProjectTypeIcon } from "@/hooks/useProjectTypeSettings";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { MultiAssigneePicker } from "@/components/tasks/MultiAssigneePicker";
 import { format, parseISO } from "date-fns";
@@ -204,7 +204,7 @@ export function EditProjectDialog({
             ) : (
               <div className="grid grid-cols-3 gap-3">
                 {disciplines.map((discipline) => {
-                  const iconName = getDisciplineIcon(discipline.disciplineSlug);
+                  const iconName = discipline.icon || getProjectTypeIcon(discipline.key);
                   const Icon = getIconComponent(iconName);
                   return (
                     <button
