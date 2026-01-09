@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -99,8 +100,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           // Defer Supabase calls with setTimeout to avoid deadlock
           setTimeout(() => {
-            fetchProfile(session.user.id).then(setProfile);
-            fetchWorkspaces(session.user.id).then(setWorkspaces);
+            Promise.all([
+              fetchProfile(session.user.id),
+              fetchWorkspaces(session.user.id)
+            ]).then(([profileData, workspacesData]) => {
+              setProfile(profileData);
+              setWorkspaces(workspacesData);
+            });
           }, 0);
         } else {
           setProfile(null);
@@ -115,10 +121,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        fetchProfile(session.user.id).then(setProfile);
-        fetchWorkspaces(session.user.id).then(setWorkspaces);
+        Promise.all([
+          fetchProfile(session.user.id),
+          fetchWorkspaces(session.user.id)
+        ]).then(([profileData, workspacesData]) => {
+          setProfile(profileData);
+          setWorkspaces(workspacesData);
+          setLoading(false);
+          setIsInitialized(true);
+        });
+      } else {
+        setLoading(false);
+        setIsInitialized(true);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
