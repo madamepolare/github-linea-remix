@@ -35,6 +35,8 @@ interface ResizablePlanningItemProps {
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
   onResize?: (scheduleId: string, newDurationHours: number) => void;
   onResizeTimeEntry?: (entryId: string, newDurationMinutes: number) => void;
+  onViewEvent?: (event: any) => void;
+  onViewTimeEntry?: (entry: any) => void;
 }
 
 export function ResizablePlanningItem({
@@ -47,6 +49,8 @@ export function ResizablePlanningItem({
   onScheduleDragStart,
   onResize,
   onResizeTimeEntry,
+  onViewEvent,
+  onViewTimeEntry,
 }: ResizablePlanningItemProps) {
   const schedule = item.type === "task" ? item.originalData as TaskSchedule : null;
   const isAbsence = item.type === "absence";
@@ -145,6 +149,22 @@ export function ResizablePlanningItem({
     }
   }, [isResizing, handleResizeMove, handleResizeEnd]);
 
+  // Handler for clicking items
+  const handleItemClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    if (isResizing) return;
+    
+    if (item.type === "task" && schedule) {
+      onViewTask(schedule);
+    } else if (item.type === "event" && onViewEvent) {
+      onViewEvent(item.originalData);
+    } else if (item.type === "timeEntry" && onViewTimeEntry) {
+      onViewTimeEntry(item.originalData);
+    }
+  }, [item, schedule, isResizing, onViewTask, onViewEvent, onViewTimeEntry]);
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
@@ -153,13 +173,13 @@ export function ResizablePlanningItem({
             <div
               ref={containerRef}
               className={cn(
-                "rounded-lg text-[11px] leading-tight px-2 py-1.5 shadow-sm hover:shadow-lg transition-all duration-200 font-medium flex flex-col relative group select-none backdrop-blur-sm",
-                item.type === "event" && "border-l-2",
+                "rounded-lg text-[11px] leading-tight px-2 py-1.5 shadow-sm hover:shadow-lg transition-all duration-200 font-medium flex flex-col relative group select-none backdrop-blur-sm z-10",
+                item.type === "event" && "border-l-2 cursor-pointer",
                 isAbsence && "opacity-60 cursor-not-allowed",
-                isTimeEntry && "border-l-2 border-l-white/30",
+                isTimeEntry && "border-l-2 border-l-white/30 cursor-pointer",
                 item.type === "task" && "cursor-grab active:cursor-grabbing",
                 canResize && "cursor-ns-resize",
-                isResizing && "ring-2 ring-white/60 z-10 scale-[1.02]"
+                isResizing && "ring-2 ring-white/60 z-20 scale-[1.02]"
               )}
               style={{
                 backgroundColor: item.color,
@@ -175,12 +195,7 @@ export function ResizablePlanningItem({
                   onScheduleDragStart(e, schedule.id, item.title);
                 }
               }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (item.type === "task" && schedule && !isResizing) {
-                  onViewTask(schedule);
-                }
-              }}
+              onClick={handleItemClick}
             >
               {/* Badge durée avec bouton d'édition */}
               {item.type === "task" && schedule ? (

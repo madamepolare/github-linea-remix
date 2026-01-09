@@ -20,6 +20,7 @@ import { Task } from "@/hooks/useTasks";
 import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 import { ResizablePlanningItem, PlanningItem } from "./ResizablePlanningItem";
 import { AddTimeEntryDialog } from "./AddTimeEntryDialog";
+import { EditTimeEntryDialog } from "./EditTimeEntryDialog";
 
 interface TeamPlanningGridProps {
   onEventClick?: (schedule: TaskSchedule) => void;
@@ -54,10 +55,14 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   
-  // Time entry dialog state
+  // Time entry dialog state (add)
   const [timeEntryDialogOpen, setTimeEntryDialogOpen] = useState(false);
   const [selectedCellDate, setSelectedCellDate] = useState<Date | null>(null);
   const [selectedCellMember, setSelectedCellMember] = useState<TeamMember | null>(null);
+  
+  // Time entry edit dialog state
+  const [editTimeEntryDialogOpen, setEditTimeEntryDialogOpen] = useState(false);
+  const [selectedTimeEntry, setSelectedTimeEntry] = useState<TeamTimeEntry | null>(null);
   
   const { schedules, isLoading: schedulesLoading, createSchedule, deleteSchedule, updateSchedule } = useTaskSchedules();
   const { data: members, isLoading: membersLoading } = useTeamMembers();
@@ -81,6 +86,12 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const handleUnschedule = useCallback((scheduleId: string) => {
     deleteSchedule.mutate(scheduleId);
   }, [deleteSchedule]);
+
+  // Handler pour voir/éditer un temps manuel
+  const handleViewTimeEntry = useCallback((entry: TeamTimeEntry) => {
+    setSelectedTimeEntry(entry);
+    setEditTimeEntryDialogOpen(true);
+  }, []);
 
   // Handler pour démarrer le drag d'une tâche planifiée
   const handleScheduleDragStart = useCallback((e: React.DragEvent, scheduleId: string, taskTitle: string) => {
@@ -639,6 +650,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                     onScheduleDragStart={handleScheduleDragStart}
                     onResizeSchedule={handleResizeSchedule}
                     onResizeTimeEntry={handleResizeTimeEntry}
+                    onViewTimeEntry={handleViewTimeEntry}
                   />
                 ))
               )}
@@ -662,6 +674,13 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
         date={selectedCellDate}
         member={selectedCellMember}
       />
+
+      {/* Edit Time Entry Dialog */}
+      <EditTimeEntryDialog
+        open={editTimeEntryDialogOpen}
+        onOpenChange={setEditTimeEntryDialogOpen}
+        entry={selectedTimeEntry}
+      />
     </div>
   );
 }
@@ -684,6 +703,7 @@ interface MemberRowProps {
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
   onResizeSchedule: (scheduleId: string, newDurationHours: number) => void;
   onResizeTimeEntry: (entryId: string, newDurationMinutes: number) => void;
+  onViewTimeEntry: (entry: TeamTimeEntry) => void;
 }
 
 function MemberRow({
@@ -704,6 +724,7 @@ function MemberRow({
   onScheduleDragStart,
   onResizeSchedule,
   onResizeTimeEntry,
+  onViewTimeEntry,
 }: MemberRowProps) {
   const memberEmail = member.profile?.email || null;
   
@@ -739,6 +760,7 @@ function MemberRow({
             onScheduleDragStart={onScheduleDragStart}
             onResizeSchedule={onResizeSchedule}
             onResizeTimeEntry={onResizeTimeEntry}
+            onViewTimeEntry={onViewTimeEntry}
           />
         );
       })}
@@ -766,6 +788,7 @@ interface DayCellProps {
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
   onResizeSchedule: (scheduleId: string, newDurationHours: number) => void;
   onResizeTimeEntry: (entryId: string, newDurationMinutes: number) => void;
+  onViewTimeEntry: (entry: TeamTimeEntry) => void;
 }
 
 function DayCell({
@@ -788,6 +811,7 @@ function DayCell({
   onScheduleDragStart,
   onResizeSchedule,
   onResizeTimeEntry,
+  onViewTimeEntry,
 }: DayCellProps) {
   const getOccupancyColor = (rate: number) => {
     if (rate === 0) return "";
@@ -805,19 +829,25 @@ function DayCell({
     return "bg-red-50 dark:bg-red-950/20";
   };
 
+  // Handler for cell background click (add time entry)
+  const handleCellBackgroundClick = useCallback((e: React.MouseEvent) => {
+    // Only trigger if clicking the cell background directly, not items
+    if (e.target === e.currentTarget || (e.target as HTMLElement).closest('[data-cell-background]')) {
+      onCellClick?.(day, member);
+    }
+  }, [day, member, onCellClick]);
+
   return (
     <TooltipProvider delayDuration={200}>
       <div
         className={cn(
-          "relative border-r p-1 flex flex-col cursor-pointer transition-all duration-200 ease-out",
-          "hover:bg-accent/40 hover:shadow-inner",
+          "relative border-r p-1 flex flex-col transition-all duration-200 ease-out",
           isWeekend && "bg-muted/20",
           isToday && "bg-primary/5 ring-1 ring-inset ring-primary/20",
           occupancy > 0 && getOccupancyBg(occupancy),
           isDragOver && "bg-primary/15 ring-2 ring-inset ring-primary/50 shadow-lg scale-[1.02]"
         )}
         style={{ width: cellWidth }}
-        onClick={() => onCellClick?.(day, member)}
         onDragOver={(e) => onDragOver(e, cellKey)}
         onDragLeave={onDragLeave}
         onDrop={(e) => onDrop(e, day, member)}
@@ -836,6 +866,7 @@ function DayCell({
               onScheduleDragStart={onScheduleDragStart}
               onResize={onResizeSchedule}
               onResizeTimeEntry={onResizeTimeEntry}
+              onViewTimeEntry={onViewTimeEntry}
             />
           ))}
           {items.length > 5 && (
@@ -845,9 +876,16 @@ function DayCell({
           )}
         </div>
 
+        {/* Clickable background zone for adding time entry */}
+        <div 
+          data-cell-background
+          className="absolute inset-0 cursor-pointer hover:bg-accent/30 transition-colors -z-0"
+          onClick={handleCellBackgroundClick}
+        />
+
         {/* Indicateur de drop zone */}
         {isDragOver && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-pulse">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-pulse z-20">
             <div className="text-xs font-medium text-primary bg-background/95 rounded-lg px-3 py-1.5 shadow-lg border border-primary/20">
               Déposer ici
             </div>
@@ -857,7 +895,7 @@ function DayCell({
         {/* Taux d'occupation */}
         {occupancy > 0 && !isDragOver && (
           <div className={cn(
-            "text-[10px] font-semibold text-center mt-auto opacity-80",
+            "text-[10px] font-semibold text-center mt-auto opacity-80 pointer-events-none z-10",
             getOccupancyColor(occupancy)
           )}>
             {occupancy}%
