@@ -9,6 +9,9 @@ import {
   LockOpen,
   LayoutDashboard,
   LucideIcon,
+  Plus,
+  Check,
+  Building2,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
@@ -214,25 +217,51 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 )}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-52">
-              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal uppercase tracking-wider">Workspaces</DropdownMenuLabel>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuLabel className="flex items-center gap-2 text-xs text-muted-foreground font-normal uppercase tracking-wider">
+                <Building2 className="h-3 w-3" />
+                Mes Workspaces ({workspaces.length})
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               {workspaces.map((workspace) => (
                 <DropdownMenuItem
                   key={workspace.id}
                   onClick={() => handleWorkspaceSwitch(workspace.id)}
                   className={cn(
+                    "flex items-center justify-between",
                     workspace.id === activeWorkspace.id && "bg-muted"
                   )}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded bg-foreground text-background text-xs font-medium">
-                      {workspace.name.slice(0, 2).toUpperCase()}
+                  <div className="flex items-center gap-3">
+                    {workspace.logo_url ? (
+                      <img 
+                        src={workspace.logo_url} 
+                        alt={workspace.name} 
+                        className="h-7 w-7 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground text-background text-xs font-semibold">
+                        {workspace.name.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{workspace.name}</span>
+                      <span className="text-[10px] text-muted-foreground capitalize">{workspace.role}</span>
                     </div>
-                    <span className="text-sm">{workspace.name}</span>
                   </div>
+                  {workspace.id === activeWorkspace.id && (
+                    <Check className="h-4 w-4 text-primary shrink-0" />
+                  )}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => navigate("/settings/workspace/new")}
+                className="text-muted-foreground"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Créer un workspace
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (

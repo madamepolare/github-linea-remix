@@ -50,6 +50,7 @@ const Workflow = lazy(() => import("./pages/Workflow"));
 const Campaigns = lazy(() => import("./pages/Campaigns"));
 const CampaignDetail = lazy(() => import("./pages/CampaignDetail"));
 const MediaPlanning = lazy(() => import("./pages/MediaPlanning"));
+const CreateWorkspace = lazy(() => import("./pages/CreateWorkspace"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading fallback
@@ -86,6 +87,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/onboarding" element={<Onboarding />} />
               <Route path="/invite" element={<AcceptInvite />} />
+              <Route path="/settings/workspace/new" element={<CreateWorkspace />} />
 
               {/* Protected routes with shared MainLayout */}
               <Route
