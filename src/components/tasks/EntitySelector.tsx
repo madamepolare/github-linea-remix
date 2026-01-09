@@ -10,9 +10,11 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { FolderKanban, Target, Building2, User } from "lucide-react";
+import { FolderKanban, Target, Building2, User, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const entityIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -44,16 +46,20 @@ export function EntitySelector({
   const { allCompanies } = useCRMCompanies();
   const { allContacts } = useContacts();
 
+  // Separate internal and client projects
+  const internalProjects = projects.filter(p => p.is_internal);
+  const clientProjects = projects.filter(p => !p.is_internal);
+
   const getEntitiesForType = (type: RelatedEntityType | null) => {
     switch (type) {
       case "project":
-        return projects.map((p) => ({ id: p.id, name: p.name }));
+        return projects.map((p) => ({ id: p.id, name: p.name, isInternal: p.is_internal }));
       case "lead":
-        return leads.map((l) => ({ id: l.id, name: l.title }));
+        return leads.map((l) => ({ id: l.id, name: l.title, isInternal: false }));
       case "company":
-        return allCompanies.map((c) => ({ id: c.id, name: c.name }));
+        return allCompanies.map((c) => ({ id: c.id, name: c.name, isInternal: false }));
       case "contact":
-        return allContacts.map((c) => ({ id: c.id, name: c.name }));
+        return allContacts.map((c) => ({ id: c.id, name: c.name, isInternal: false }));
       default:
         return [];
     }
@@ -118,11 +124,45 @@ export function EntitySelector({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Aucun</SelectItem>
-              {entities.map((entity) => (
-                <SelectItem key={entity.id} value={entity.id}>
-                  {entity.name}
-                </SelectItem>
-              ))}
+              {entityType === "project" ? (
+                <>
+                  {internalProjects.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel className="flex items-center gap-1.5 text-xs">
+                        <Home className="h-3 w-3" />
+                        Projets internes
+                      </SelectLabel>
+                      {internalProjects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-muted-foreground/50" />
+                            {p.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {clientProjects.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel className="flex items-center gap-1.5 text-xs">
+                        <FolderKanban className="h-3 w-3" />
+                        Projets clients
+                      </SelectLabel>
+                      {clientProjects.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                </>
+              ) : (
+                entities.map((entity) => (
+                  <SelectItem key={entity.id} value={entity.id}>
+                    {entity.name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>

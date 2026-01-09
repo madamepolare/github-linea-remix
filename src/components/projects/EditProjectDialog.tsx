@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,7 @@ import {
   Theater,
   Loader2,
   Users,
+  Home,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +48,7 @@ interface Project {
   start_date: string | null;
   end_date: string | null;
   budget: number | null;
+  is_internal?: boolean;
 }
 
 interface EditProjectDialogProps {
@@ -97,6 +100,7 @@ export function EditProjectDialog({
     project.end_date ? parseISO(project.end_date) : null
   );
   const [budget, setBudget] = useState(project.budget?.toString() || "");
+  const [isInternal, setIsInternal] = useState(project.is_internal || false);
   const [assignedMembers, setAssignedMembers] = useState<string[]>(
     members?.map(m => m.user_id) || []
   );
@@ -121,6 +125,7 @@ export function EditProjectDialog({
     setStartDate(project.start_date ? parseISO(project.start_date) : null);
     setEndDate(project.end_date ? parseISO(project.end_date) : null);
     setBudget(project.budget?.toString() || "");
+    setIsInternal(project.is_internal || false);
   }, [project]);
 
   const handleSave = async () => {
@@ -143,10 +148,11 @@ export function EditProjectDialog({
         city: city.trim() || null,
         surface_area: surfaceArea ? parseFloat(surfaceArea) : null,
         color,
-        crm_company_id: crmCompanyId,
+        crm_company_id: isInternal ? null : crmCompanyId,
         start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
         end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
-        budget: budget ? parseFloat(budget) : null,
+        budget: isInternal ? null : (budget ? parseFloat(budget) : null),
+        is_internal: isInternal,
       });
     } catch (error) {
       console.error("Error saving project:", error);
@@ -162,6 +168,26 @@ export function EditProjectDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Internal Project Toggle */}
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+            <div className="flex items-center gap-2">
+              <Home className="h-4 w-4 text-muted-foreground" />
+              <div className="space-y-0.5">
+                <Label htmlFor="edit-is-internal" className="text-sm font-medium cursor-pointer">
+                  Projet interne
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Non facturable (admin, formation, commercial...)
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="edit-is-internal"
+              checked={isInternal}
+              onCheckedChange={setIsInternal}
+            />
+          </div>
+
           {/* Project Type */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Type de projet</Label>
@@ -224,28 +250,30 @@ export function EditProjectDialog({
             </div>
           </div>
 
-          {/* Client */}
-          <div className="space-y-2">
-            <Label>Client</Label>
-            <Select 
-              value={crmCompanyId || "none"} 
-              onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner un client..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Aucun client</SelectItem>
-                {companies
-                  .filter(c => c.industry === "client_particulier" || c.industry === "client_professionnel" || c.industry === "promoteur" || c.industry === "investisseur")
-                  .map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Client - hidden for internal projects */}
+          {!isInternal && (
+            <div className="space-y-2">
+              <Label>Client</Label>
+              <Select 
+                value={crmCompanyId || "none"} 
+                onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un client..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucun client</SelectItem>
+                  {companies
+                    .filter(c => c.industry === "client_particulier" || c.industry === "client_professionnel" || c.industry === "promoteur" || c.industry === "investisseur")
+                    .map((company) => (
+                      <SelectItem key={company.id} value={company.id}>
+                        {company.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Location */}
           <div className="grid grid-cols-2 gap-4">
