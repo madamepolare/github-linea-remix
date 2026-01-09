@@ -34,6 +34,7 @@ interface ResizablePlanningItemProps {
   onUnschedule: (scheduleId: string) => void;
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
   onResize?: (scheduleId: string, newDurationHours: number) => void;
+  onResizeTimeEntry?: (entryId: string, newDurationMinutes: number) => void;
 }
 
 export function ResizablePlanningItem({
@@ -45,6 +46,7 @@ export function ResizablePlanningItem({
   onUnschedule,
   onScheduleDragStart,
   onResize,
+  onResizeTimeEntry,
 }: ResizablePlanningItemProps) {
   const schedule = item.type === "task" ? item.originalData as TaskSchedule : null;
   const isAbsence = item.type === "absence";
@@ -87,15 +89,17 @@ export function ResizablePlanningItem({
     setIsEditingDuration(false);
   }, [editingDuration, schedule, onResize]);
 
+  const canResize = item.type === "task" || item.type === "timeEntry";
+
   const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (item.type !== "task" || !schedule) return;
+    if (!canResize) return;
     e.stopPropagation();
     e.preventDefault();
     
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     resizeRef.current = { startY: clientY, startHeight: height };
     setIsResizing(true);
-  }, [item.type, schedule, height]);
+  }, [canResize, height]);
 
   const handleResizeMove = useCallback((e: MouseEvent | TouchEvent) => {
     if (!resizeRef.current || !isResizing) return;
@@ -107,7 +111,7 @@ export function ResizablePlanningItem({
   }, [isResizing, minHeight, maxHeight]);
 
   const handleResizeEnd = useCallback(() => {
-    if (!isResizing || !schedule) return;
+    if (!isResizing) return;
     
     setIsResizing(false);
     resizeRef.current = null;
@@ -115,10 +119,14 @@ export function ResizablePlanningItem({
     // Calculer la nouvelle durée (arrondi à 0.25h pour permettre 15min)
     const newDurationHours = Math.max(0.25, Math.round((height / pixelsPerHour) * 4) / 4);
     
-    if (newDurationHours !== hours && onResize) {
-      onResize(schedule.id, newDurationHours);
+    if (newDurationHours !== hours) {
+      if (item.type === "task" && schedule && onResize) {
+        onResize(schedule.id, newDurationHours);
+      } else if (item.type === "timeEntry" && onResizeTimeEntry) {
+        onResizeTimeEntry(item.id, Math.round(newDurationHours * 60));
+      }
     }
-  }, [isResizing, schedule, height, pixelsPerHour, hours, onResize]);
+  }, [isResizing, height, pixelsPerHour, hours, item.type, item.id, schedule, onResize, onResizeTimeEntry]);
 
   // Listeners globaux pour le resize
   useEffect(() => {
@@ -145,12 +153,13 @@ export function ResizablePlanningItem({
             <div
               ref={containerRef}
               className={cn(
-                "rounded text-[11px] leading-tight px-2 py-1.5 shadow-sm hover:shadow-md transition-all font-medium flex flex-col relative group select-none",
+                "rounded-lg text-[11px] leading-tight px-2 py-1.5 shadow-sm hover:shadow-lg transition-all duration-200 font-medium flex flex-col relative group select-none backdrop-blur-sm",
                 item.type === "event" && "border-l-2",
                 isAbsence && "opacity-60 cursor-not-allowed",
-                isTimeEntry && "border-l-2 border-l-white/40",
+                isTimeEntry && "border-l-2 border-l-white/30",
                 item.type === "task" && "cursor-grab active:cursor-grabbing",
-                isResizing && "ring-2 ring-white/50 z-10"
+                canResize && "cursor-ns-resize",
+                isResizing && "ring-2 ring-white/60 z-10 scale-[1.02]"
               )}
               style={{
                 backgroundColor: item.color,
@@ -249,18 +258,18 @@ export function ResizablePlanningItem({
                 </div>
               </div>
               
-              {/* Resize handle - uniquement pour les tâches */}
-              {item.type === "task" && schedule && (
+              {/* Resize handle - pour tâches et temps manuels */}
+              {canResize && (
                 <div
                   className={cn(
-                    "absolute bottom-0 left-0 right-0 h-2 flex items-center justify-center cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity",
+                    "absolute bottom-0 left-0 right-0 h-3 flex items-center justify-center cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity",
                     isResizing && "opacity-100"
                   )}
                   onMouseDown={handleResizeStart}
                   onTouchStart={handleResizeStart}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="w-8 h-1 bg-white/60 rounded-full" />
+                  <div className="w-10 h-1 bg-white/70 rounded-full shadow-sm" />
                 </div>
               )}
             </div>

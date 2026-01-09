@@ -9,7 +9,7 @@ import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
 import { useWorkspaceEvents, UnifiedWorkspaceEvent, WorkspaceEvent, TenderWorkspaceEvent } from "@/hooks/useWorkspaceEvents";
 import { useAllProjectMembers } from "@/hooks/useProjects";
 import { useTeamAbsences, TeamAbsence, absenceTypeLabels } from "@/hooks/useTeamAbsences";
-import { useTeamTimeEntries, TeamTimeEntry } from "@/hooks/useTeamTimeEntries";
+import { useTeamTimeEntries, useUpdateTimeEntry, TeamTimeEntry } from "@/hooks/useTeamTimeEntries";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -65,6 +65,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const { data: userProjectsMap, isLoading: projectMembersLoading } = useAllProjectMembers();
   const { data: absences, isLoading: absencesLoading } = useTeamAbsences({ status: "approved" });
   const { data: timeEntries, isLoading: timeEntriesLoading } = useTeamTimeEntries();
+  const updateTimeEntry = useUpdateTimeEntry();
 
   const isLoading = schedulesLoading || membersLoading || eventsLoading || projectMembersLoading || absencesLoading || timeEntriesLoading;
 
@@ -328,6 +329,14 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     });
   }, [schedules, updateSchedule]);
 
+  // Handler pour redimensionner un temps manuel
+  const handleResizeTimeEntry = useCallback((entryId: string, newDurationMinutes: number) => {
+    updateTimeEntry.mutate({
+      id: entryId,
+      duration_minutes: newDurationMinutes,
+    });
+  }, [updateTimeEntry]);
+
   // Gestion du drag & drop
   const handleDragOver = useCallback((e: React.DragEvent, cellKey: string) => {
     e.preventDefault();
@@ -461,31 +470,42 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
       </div>
 
       {/* Légende */}
-      {showEvents && (
-        <div className="flex items-center gap-4 px-4 py-2 border-b bg-muted/30 text-xs">
-          <span className="text-muted-foreground">Légende :</span>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: EVENT_TYPE_COLORS.meeting }} />
-            <span>Réunion</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: EVENT_TYPE_COLORS.milestone }} />
-            <span>Jalon</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: EVENT_TYPE_COLORS.rendu }} />
-            <span>Rendu</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: "#6366f1" }} />
-            <span>Tâche</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-muted-foreground/50" />
-            <span>Absence</span>
-          </div>
+      <div className="flex items-center gap-3 px-4 py-1.5 border-b bg-muted/20 text-xs flex-wrap">
+        <span className="text-muted-foreground font-medium">Légende :</span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "#6366f1" }} />
+          <span className="text-muted-foreground">Tâche planifiée</span>
         </div>
-      )}
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "#10b981" }} />
+          <span className="text-muted-foreground">Temps (facturable)</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "#6b7280" }} />
+          <span className="text-muted-foreground">Temps (interne)</span>
+        </div>
+        {showEvents && (
+          <>
+            <div className="w-px h-3 bg-border mx-1" />
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: EVENT_TYPE_COLORS.meeting }} />
+              <span className="text-muted-foreground">Réunion</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: EVENT_TYPE_COLORS.milestone }} />
+              <span className="text-muted-foreground">Jalon</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: EVENT_TYPE_COLORS.rendu }} />
+              <span className="text-muted-foreground">Rendu</span>
+            </div>
+          </>
+        )}
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/40" />
+          <span className="text-muted-foreground">Absence</span>
+        </div>
+      </div>
 
       {/* Grille principale */}
       <div className="flex-1 overflow-hidden flex">
@@ -618,6 +638,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                     onUnschedule={handleUnschedule}
                     onScheduleDragStart={handleScheduleDragStart}
                     onResizeSchedule={handleResizeSchedule}
+                    onResizeTimeEntry={handleResizeTimeEntry}
                   />
                 ))
               )}
@@ -662,6 +683,7 @@ interface MemberRowProps {
   onUnschedule: (scheduleId: string) => void;
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
   onResizeSchedule: (scheduleId: string, newDurationHours: number) => void;
+  onResizeTimeEntry: (entryId: string, newDurationMinutes: number) => void;
 }
 
 function MemberRow({
@@ -681,6 +703,7 @@ function MemberRow({
   onUnschedule,
   onScheduleDragStart,
   onResizeSchedule,
+  onResizeTimeEntry,
 }: MemberRowProps) {
   const memberEmail = member.profile?.email || null;
   
@@ -715,6 +738,7 @@ function MemberRow({
             onUnschedule={onUnschedule}
             onScheduleDragStart={onScheduleDragStart}
             onResizeSchedule={onResizeSchedule}
+            onResizeTimeEntry={onResizeTimeEntry}
           />
         );
       })}
@@ -741,6 +765,7 @@ interface DayCellProps {
   onUnschedule: (scheduleId: string) => void;
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
   onResizeSchedule: (scheduleId: string, newDurationHours: number) => void;
+  onResizeTimeEntry: (entryId: string, newDurationMinutes: number) => void;
 }
 
 function DayCell({
@@ -762,6 +787,7 @@ function DayCell({
   onUnschedule,
   onScheduleDragStart,
   onResizeSchedule,
+  onResizeTimeEntry,
 }: DayCellProps) {
   const getOccupancyColor = (rate: number) => {
     if (rate === 0) return "";
@@ -783,12 +809,12 @@ function DayCell({
     <TooltipProvider delayDuration={200}>
       <div
         className={cn(
-          "relative border-r p-1.5 flex flex-col cursor-pointer transition-all duration-150",
-          "hover:bg-accent/50",
-          isWeekend && "bg-muted/30",
-          isToday && "bg-primary/5 ring-1 ring-inset ring-primary/30",
+          "relative border-r p-1 flex flex-col cursor-pointer transition-all duration-200 ease-out",
+          "hover:bg-accent/40 hover:shadow-inner",
+          isWeekend && "bg-muted/20",
+          isToday && "bg-primary/5 ring-1 ring-inset ring-primary/20",
           occupancy > 0 && getOccupancyBg(occupancy),
-          isDragOver && "bg-primary/20 ring-2 ring-inset ring-primary shadow-inner"
+          isDragOver && "bg-primary/15 ring-2 ring-inset ring-primary/50 shadow-lg scale-[1.02]"
         )}
         style={{ width: cellWidth }}
         onClick={() => onCellClick?.(day, member)}
@@ -797,7 +823,7 @@ function DayCell({
         onDrop={(e) => onDrop(e, day, member)}
       >
         {/* Items planifiés avec hauteur proportionnelle et resize */}
-        <div className="flex-1 space-y-1 overflow-hidden">
+        <div className="flex-1 space-y-0.5 overflow-hidden">
           {items.slice(0, 5).map(item => (
             <ResizablePlanningItem
               key={item.id}
@@ -809,6 +835,7 @@ function DayCell({
               onUnschedule={onUnschedule}
               onScheduleDragStart={onScheduleDragStart}
               onResize={onResizeSchedule}
+              onResizeTimeEntry={onResizeTimeEntry}
             />
           ))}
           {items.length > 5 && (
@@ -820,8 +847,8 @@ function DayCell({
 
         {/* Indicateur de drop zone */}
         {isDragOver && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-xs font-medium text-primary bg-background/90 rounded px-2 py-1 shadow">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-pulse">
+            <div className="text-xs font-medium text-primary bg-background/95 rounded-lg px-3 py-1.5 shadow-lg border border-primary/20">
               Déposer ici
             </div>
           </div>
@@ -830,7 +857,7 @@ function DayCell({
         {/* Taux d'occupation */}
         {occupancy > 0 && !isDragOver && (
           <div className={cn(
-            "text-[11px] font-semibold text-center mt-auto pt-0.5",
+            "text-[10px] font-semibold text-center mt-auto opacity-80",
             getOccupancyColor(occupancy)
           )}>
             {occupancy}%
