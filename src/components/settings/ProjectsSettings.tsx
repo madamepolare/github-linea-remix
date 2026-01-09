@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GenericSettingsManager } from "./GenericSettingsManager";
-import { FolderKanban, FileText } from "lucide-react";
+import { FolderKanban, FileText, Layers } from "lucide-react";
 import { useWorkspaceDiscipline } from "@/hooks/useDiscipline";
 import { useMemo } from "react";
 
@@ -44,8 +44,50 @@ const PROJECT_TYPES_BY_DISCIPLINE: Record<string, Array<{ key: string; label: st
   ],
 };
 
+// Project sub-types by discipline
+const PROJECT_SUBTYPES_BY_DISCIPLINE: Record<string, Array<{ key: string; label: string; color: string; description: string }>> = {
+  // Architecture agency sub-types
+  architecture: [
+    { key: "construction_neuve", label: "Construction neuve", color: "#3B82F6", description: "Bâtiment neuf" },
+    { key: "renovation", label: "Rénovation", color: "#F59E0B", description: "Réhabilitation et rénovation" },
+    { key: "extension", label: "Extension", color: "#8B5CF6", description: "Extension de bâtiment existant" },
+    { key: "permis", label: "Permis de construire", color: "#10B981", description: "Dépôt de permis uniquement" },
+    { key: "restructuration", label: "Restructuration", color: "#EC4899", description: "Restructuration lourde" },
+    { key: "surelevation", label: "Surélévation", color: "#06B6D4", description: "Surélévation de bâtiment" },
+  ],
+  // Interior design agency sub-types
+  interior: [
+    { key: "conception", label: "Conception", color: "#3B82F6", description: "Conception complète" },
+    { key: "decoration", label: "Décoration", color: "#EC4899", description: "Décoration et stylisme" },
+    { key: "mobilier", label: "Mobilier sur-mesure", color: "#F59E0B", description: "Design et fabrication mobilier" },
+    { key: "renovation_interieur", label: "Rénovation", color: "#8B5CF6", description: "Rénovation intérieure" },
+    { key: "home_staging", label: "Home staging", color: "#10B981", description: "Mise en valeur pour vente" },
+  ],
+  // Scenography agency sub-types
+  scenography: [
+    { key: "permanente", label: "Expo permanente", color: "#3B82F6", description: "Scénographie permanente" },
+    { key: "temporaire", label: "Expo temporaire", color: "#F59E0B", description: "Scénographie temporaire" },
+    { key: "itinerante", label: "Expo itinérante", color: "#8B5CF6", description: "Exposition itinérante" },
+    { key: "parcours", label: "Parcours", color: "#10B981", description: "Parcours de visite" },
+    { key: "installation", label: "Installation", color: "#EC4899", description: "Installation artistique" },
+  ],
+  // Communication agency sub-types
+  communication: [
+    { key: "360", label: "Campagne 360°", color: "#3B82F6", description: "Campagne multi-canal" },
+    { key: "lancement", label: "Lancement produit", color: "#F59E0B", description: "Lancement de produit/service" },
+    { key: "notoriete", label: "Notoriété", color: "#8B5CF6", description: "Campagne de notoriété" },
+    { key: "influence", label: "Influence", color: "#EC4899", description: "Marketing d'influence" },
+    { key: "evenementiel", label: "Événementiel", color: "#10B981", description: "Activation événementielle" },
+    { key: "contenu", label: "Contenu éditorial", color: "#06B6D4", description: "Production de contenus" },
+    { key: "spot_pub", label: "Spot publicitaire", color: "#EF4444", description: "Film publicitaire" },
+    { key: "packshot", label: "Packshot", color: "#F97316", description: "Photo produit" },
+    { key: "corporate", label: "Corporate", color: "#6366F1", description: "Communication corporate" },
+  ],
+};
+
 // Default fallback
 const DEFAULT_PROJECT_TYPES = PROJECT_TYPES_BY_DISCIPLINE.architecture;
+const DEFAULT_PROJECT_SUBTYPES = PROJECT_SUBTYPES_BY_DISCIPLINE.architecture;
 
 // Default deliverable types
 const DEFAULT_DELIVERABLE_TYPES = [
@@ -65,12 +107,19 @@ export function ProjectsSettings() {
     if (!discipline?.slug) return DEFAULT_PROJECT_TYPES;
     return PROJECT_TYPES_BY_DISCIPLINE[discipline.slug] || DEFAULT_PROJECT_TYPES;
   }, [discipline?.slug]);
+
+  // Get project sub-types based on current discipline
+  const projectSubtypes = useMemo(() => {
+    if (!discipline?.slug) return DEFAULT_PROJECT_SUBTYPES;
+    return PROJECT_SUBTYPES_BY_DISCIPLINE[discipline.slug] || DEFAULT_PROJECT_SUBTYPES;
+  }, [discipline?.slug]);
+
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium">Configuration des projets</h3>
         <p className="text-sm text-muted-foreground">
-          Gérez les types de projets et catégories de livrables
+          Gérez les types de projets, sous-types et catégories de livrables
         </p>
       </div>
 
@@ -79,6 +128,10 @@ export function ProjectsSettings() {
           <TabsTrigger value="types" className="gap-1.5 text-xs">
             <FolderKanban className="h-4 w-4" />
             Types de projet
+          </TabsTrigger>
+          <TabsTrigger value="subtypes" className="gap-1.5 text-xs">
+            <Layers className="h-4 w-4" />
+            Sous-types
           </TabsTrigger>
           <TabsTrigger value="deliverables" className="gap-1.5 text-xs">
             <FileText className="h-4 w-4" />
@@ -95,6 +148,18 @@ export function ProjectsSettings() {
             showColor
             showDescription
             defaultItems={projectTypes}
+          />
+        </TabsContent>
+
+        <TabsContent value="subtypes" className="mt-6">
+          <GenericSettingsManager
+            settingType="project_subtypes"
+            title="Sous-types de projet"
+            description="Sous-catégories pour affiner vos types de projets"
+            icon={<Layers className="h-5 w-5 text-primary" />}
+            showColor
+            showDescription
+            defaultItems={projectSubtypes}
           />
         </TabsContent>
 
