@@ -7,6 +7,12 @@ export type DocumentType = 'quote' | 'contract' | 'proposal';
 export type DocumentStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'signed';
 export type FeeMode = 'fixed' | 'percentage' | 'hourly' | 'mixed';
 
+export interface QuoteLineGroup {
+  id: string;
+  name: string;
+  sort_order: number;
+}
+
 export interface QuoteLine {
   id: string;
   document_id?: string;
@@ -17,7 +23,10 @@ export interface QuoteLine {
   phase_description?: string;
   
   // Type and category
-  line_type: 'phase' | 'service' | 'option' | 'expense' | 'discount';
+  line_type: 'phase' | 'service' | 'option' | 'expense' | 'discount' | 'group';
+  
+  // Group reference
+  group_id?: string;
   
   // Reference (for BPU)
   pricing_ref?: string;
@@ -141,7 +150,8 @@ export const LINE_TYPE_LABELS: Record<QuoteLine['line_type'], string> = {
   service: 'Prestation',
   option: 'Option',
   expense: 'Frais',
-  discount: 'Remise'
+  discount: 'Remise',
+  group: 'Groupe'
 };
 
 export const LINE_TYPE_COLORS: Record<QuoteLine['line_type'], string> = {
@@ -149,7 +159,8 @@ export const LINE_TYPE_COLORS: Record<QuoteLine['line_type'], string> = {
   service: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
   option: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
   expense: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  discount: 'bg-red-500/10 text-red-600 border-red-500/20'
+  discount: 'bg-red-500/10 text-red-600 border-red-500/20',
+  group: 'bg-slate-500/10 text-slate-600 border-slate-500/20'
 };
 
 // Helper to convert old phases to new QuoteLine format
@@ -161,6 +172,7 @@ export function phaseToQuoteLine(phase: any, index: number): QuoteLine {
     phase_name: phase.phase_name,
     phase_description: phase.phase_description,
     line_type: phase.line_type || 'phase',
+    group_id: phase.group_id,
     pricing_ref: phase.pricing_ref,
     quantity: phase.quantity || 1,
     unit: phase.unit || 'forfait',
