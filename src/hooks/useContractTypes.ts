@@ -12,6 +12,9 @@ export interface ContractTypeFields {
   [key: string]: boolean | undefined;
 }
 
+// Available tabs in the quote builder
+export type BuilderTab = 'general' | 'fees' | 'lines' | 'production' | 'planning' | 'terms';
+
 export interface ContractType {
   id: string;
   workspace_id: string;
@@ -22,6 +25,7 @@ export interface ContractType {
   color?: string;
   default_fields: ContractTypeFields;
   default_clauses: Record<string, string>;
+  builder_tabs: BuilderTab[];
   sort_order: number;
   is_default: boolean;
   is_active: boolean;
@@ -56,6 +60,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     color: '#3B82F6',
     default_fields: { surface: true, construction_budget: true, address: true, city: true },
     default_clauses: {},
+    builder_tabs: ['general', 'fees', 'planning', 'terms'],
     sort_order: 0,
     is_default: true,
     is_active: true
@@ -68,6 +73,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     color: '#8B5CF6',
     default_fields: { surface: true, address: true, city: true, budget: true },
     default_clauses: {},
+    builder_tabs: ['general', 'fees', 'lines', 'terms'],
     sort_order: 1,
     is_default: false,
     is_active: true
@@ -80,6 +86,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     color: '#EC4899',
     default_fields: { surface: true, budget: true },
     default_clauses: {},
+    builder_tabs: ['general', 'lines', 'production', 'planning', 'terms'],
     sort_order: 2,
     is_default: false,
     is_active: true
@@ -92,6 +99,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     color: '#F59E0B',
     default_fields: { budget: true },
     default_clauses: {},
+    builder_tabs: ['general', 'lines', 'production', 'terms'],
     sort_order: 3,
     is_default: false,
     is_active: true
@@ -104,6 +112,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     color: '#10B981',
     default_fields: { budget: true },
     default_clauses: {},
+    builder_tabs: ['general', 'lines', 'production', 'terms'],
     sort_order: 4,
     is_default: false,
     is_active: true
@@ -116,6 +125,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     color: '#06B6D4',
     default_fields: { budget: true },
     default_clauses: {},
+    builder_tabs: ['general', 'lines', 'production', 'terms'],
     sort_order: 5,
     is_default: false,
     is_active: true
@@ -138,7 +148,12 @@ export function useContractTypes() {
         .order('sort_order');
 
       if (error) throw error;
-      return (data || []) as ContractType[];
+      return (data || []).map(item => ({
+        ...item,
+        builder_tabs: Array.isArray(item.builder_tabs) 
+          ? item.builder_tabs as BuilderTab[]
+          : ['general', 'lines', 'terms'] as BuilderTab[]
+      })) as ContractType[];
     },
     enabled: !!activeWorkspace?.id
   });

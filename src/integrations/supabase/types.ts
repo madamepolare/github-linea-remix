@@ -1082,6 +1082,7 @@ export type Database = {
       }
       contract_types: {
         Row: {
+          builder_tabs: Json | null
           code: string
           color: string | null
           created_at: string | null
@@ -1098,6 +1099,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          builder_tabs?: Json | null
           code: string
           color?: string | null
           created_at?: string | null
@@ -1114,6 +1116,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          builder_tabs?: Json | null
           code?: string
           color?: string | null
           created_at?: string | null
