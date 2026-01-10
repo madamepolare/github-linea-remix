@@ -94,7 +94,7 @@ const Commercial = () => {
 
   return (
     <PageLayout
-      title="Commercial"
+      title={activeWorkspace ? `Commercial · ${activeWorkspace.name}` : 'Commercial'}
       description="Gérez vos devis, contrats et propositions commerciales"
       actions={
         <div className="flex items-center gap-2">

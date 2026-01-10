@@ -164,6 +164,8 @@ export const useCommercialDocuments = () => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) throw new Error('Session expirée — reconnectez-vous');
 
+      console.info('[createDocument] Inserting into workspace', activeWorkspace.id);
+
       const { data, error } = await supabase
         .from('commercial_documents')
         .insert({
@@ -175,17 +177,22 @@ export const useCommercialDocuments = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[createDocument] Insert error', error);
+        throw error;
+      }
+
+      console.info('[createDocument] Created document', data.id, data.document_number);
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['commercial-documents'] });
-      toast.success('Document créé');
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['commercial-documents', activeWorkspace?.id] });
+      toast.success(`Devis ${data.document_number || data.id.slice(0, 8)} créé`);
     },
     onError: (error) => {
       const msg = error instanceof Error ? error.message : 'Erreur lors de la création';
       toast.error(msg);
-      console.error(error);
+      console.error('[createDocument] onError', error);
     }
   });
 

@@ -126,11 +126,13 @@ export default function QuoteBuilder() {
       toast.error("Aucun workspace actif — reconnectez-vous si besoin.");
       return;
     }
+
+    console.info('[QuoteBuilder] handleSave start, workspace:', activeWorkspace.id);
     
     setIsSaving(true);
     try {
       let documentId = id;
-      let isNewDoc = isNew;
+      let createdDocNumber: string | undefined;
       
       if (isNew) {
         // Create new document
@@ -152,7 +154,8 @@ export default function QuoteBuilder() {
           project_budget: document.project_budget,
         });
         documentId = newDoc.id;
-        isNewDoc = false;
+        createdDocNumber = newDoc.document_number;
+        console.info('[QuoteBuilder] Created new doc', documentId, createdDocNumber);
       } else if (id) {
         // Update existing document
         await updateDocument.mutateAsync({
@@ -203,18 +206,17 @@ export default function QuoteBuilder() {
         }
       }
       
+      setHasChanges(false);
+      
       // Navigate after saving everything for new documents
       if (isNew && documentId) {
+        toast.success(`Devis ${createdDocNumber || ''} enregistré dans ${activeWorkspace.name}`);
         navigate(`/commercial/quote/${documentId}`, { replace: true });
+      } else {
+        toast.success('Devis enregistré');
       }
-      
-      setHasChanges(false);
-      toast.success('Devis enregistré');
-
-      // Ensure lists refresh immediately after save
-      // (the list is scoped by workspace, so we rely on react-query invalidations from the mutations)
     } catch (error) {
-      console.error('Error saving quote:', error);
+      console.error('[QuoteBuilder] Error saving quote:', error);
       const msg = error instanceof Error ? error.message : 'Erreur lors de l\'enregistrement';
       toast.error(msg);
     } finally {
