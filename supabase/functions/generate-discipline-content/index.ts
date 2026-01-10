@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface GenerateRequest {
-  type: 'skills' | 'pricing_grid' | 'quote_template';
+  type: 'skills' | 'pricing_grid' | 'quote_template' | 'contract_types';
   discipline_name: string;
   discipline_description?: string;
   contract_type_name?: string;
@@ -34,13 +34,14 @@ Réponds UNIQUEMENT avec un JSON valide, sans markdown, sans explication.`;
       prompt = `Génère une liste de 8-12 compétences/métiers professionnels pour une discipline "${discipline_name}"${discipline_description ? ` (${discipline_description})` : ''}.
 
 Pour chaque compétence, inclus:
-- name: Nom du métier/compétence en français
-- code: Code court (3-5 lettres majuscules)
+- label: Nom du métier/compétence en français
+- daily_rate: Taux journalier de vente en EUR (entre 400 et 1200 selon le niveau)
+- cost_daily_rate: Taux journalier de coût en EUR (environ 50-60% du taux de vente)
 - description: Description courte (1 phrase)
-- category: Catégorie parmi 'creative', 'technical', 'management', 'production'
+- color: Couleur hexadécimale parmi #3b82f6, #22c55e, #f59e0b, #ef4444, #8b5cf6, #ec4899, #06b6d4, #84cc16, #f97316, #6366f1
 
 Réponds avec un JSON array:
-[{"name": "...", "code": "...", "description": "...", "category": "..."}]`;
+[{"label": "...", "daily_rate": number, "cost_daily_rate": number, "description": "...", "color": "..."}]`;
     } 
     else if (type === 'pricing_grid') {
       systemPrompt = `Tu es un expert en tarification d'agences et bureaux d'études français. Tu connais les tarifs du marché.
@@ -84,6 +85,32 @@ Réponds avec un JSON object:
   "default_phases": [{"phase_name": "...", "phase_code": "...", "description": "...", "percentage": number}],
   "default_terms": "..."
 }`;
+    }
+    else if (type === 'contract_types') {
+      systemPrompt = `Tu es un expert en gestion d'agences créatives et de bureaux d'études. Tu génères des types de contrats professionnels adaptés à chaque discipline.
+Réponds UNIQUEMENT avec un JSON valide, sans markdown, sans explication.`;
+      
+      prompt = `Génère une liste de 4-6 types de contrats professionnels adaptés à la discipline "${discipline_name}"${discipline_description ? ` (${discipline_description})` : ''}.
+
+Pour chaque type de contrat, inclus:
+- name: Nom du type de contrat en français
+- code: Code court (3-6 lettres majuscules, ex: ARCHI, PUB, BRAND)
+- description: Description courte (1 phrase)
+- icon: Icône parmi 'FileText', 'Building2', 'Sofa', 'Theater', 'Megaphone', 'Palette', 'Globe'
+- color: Couleur hexadécimale parmi #3B82F6, #8B5CF6, #EC4899, #F59E0B, #10B981, #06B6D4, #EF4444, #6366F1
+- default_fields: Objet avec les champs à afficher {surface: boolean, construction_budget: boolean, address: boolean, city: boolean, budget: boolean}
+- builder_tabs: Array des onglets du builder parmi ['general', 'fees', 'lines', 'production', 'planning', 'terms'] (toujours inclure 'general')
+
+Réponds avec un JSON array:
+[{
+  "name": "...",
+  "code": "...",
+  "description": "...",
+  "icon": "...",
+  "color": "...",
+  "default_fields": {"surface": true, "budget": true, ...},
+  "builder_tabs": ["general", "lines", "terms"]
+}]`;
     }
 
     // Call Lovable AI Gateway (Gemini)

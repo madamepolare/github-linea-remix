@@ -25,8 +25,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Edit, UserCog, Euro } from 'lucide-react';
+import { Plus, Trash2, Edit, UserCog, Euro, Sparkles, Loader2 } from 'lucide-react';
 import { useSkills, Skill, CreateSkillInput } from '@/hooks/useSkills';
+import { useAIGeneration } from '@/hooks/useAIGeneration';
+import { useWorkspaceDiscipline } from '@/hooks/useDiscipline';
+import { toast } from 'sonner';
 
 const PRESET_COLORS = [
   '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -35,6 +38,8 @@ const PRESET_COLORS = [
 
 export function SkillsSettings() {
   const { skills, isLoading, createSkill, updateSkill, deleteSkill } = useSkills();
+  const { isGenerating, generateSkills } = useAIGeneration();
+  const { data: currentDiscipline } = useWorkspaceDiscipline();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
   const [newSkill, setNewSkill] = useState<CreateSkillInput>({
@@ -44,6 +49,35 @@ export function SkillsSettings() {
     color: PRESET_COLORS[0],
     description: '',
   });
+
+  const handleGenerateWithAI = async () => {
+    if (!currentDiscipline) {
+      toast.error('Veuillez d\'abord sélectionner une discipline dans les paramètres');
+      return;
+    }
+
+    try {
+      const generatedSkills = await generateSkills(
+        currentDiscipline.name,
+        currentDiscipline.description || undefined
+      );
+
+      // Create each generated skill
+      for (const skill of generatedSkills) {
+        await createSkill.mutateAsync({
+          label: skill.label,
+          daily_rate: skill.daily_rate,
+          cost_daily_rate: skill.cost_daily_rate,
+          description: skill.description,
+          color: skill.color,
+        });
+      }
+
+      toast.success(`${generatedSkills.length} compétences générées avec succès`);
+    } catch (error) {
+      console.error('Error generating skills:', error);
+    }
+  };
 
   const handleCreate = async () => {
     if (!newSkill.label) return;
@@ -92,13 +126,27 @@ export function SkillsSettings() {
             Définissez les compétences avec leurs taux de vente et de coût pour calculer la marge automatiquement
           </p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle compétence
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGenerateWithAI}
+            disabled={isGenerating || !currentDiscipline}
+          >
+            {isGenerating ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            Générer par IA
+          </Button>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Nouvelle compétence
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Nouvelle compétence</DialogTitle>
@@ -188,6 +236,7 @@ export function SkillsSettings() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {skills.length === 0 ? (

@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export type GenerationType = 'skills' | 'pricing_grid' | 'quote_template';
+export type GenerationType = 'skills' | 'pricing_grid' | 'quote_template' | 'contract_types';
 
 export interface GeneratedSkill {
-  name: string;
-  code: string;
+  label: string;
+  daily_rate: number;
+  cost_daily_rate: number;
   description: string;
-  category: 'creative' | 'technical' | 'management' | 'production';
+  color: string;
 }
 
 export interface GeneratedPricingItem {
@@ -28,6 +29,22 @@ export interface GeneratedQuoteTemplate {
     percentage: number;
   }[];
   default_terms: string;
+}
+
+export interface GeneratedContractType {
+  name: string;
+  code: string;
+  description: string;
+  icon: string;
+  color: string;
+  default_fields: {
+    surface?: boolean;
+    construction_budget?: boolean;
+    address?: boolean;
+    city?: boolean;
+    budget?: boolean;
+  };
+  builder_tabs: string[];
 }
 
 export function useAIGeneration() {
@@ -114,10 +131,38 @@ export function useAIGeneration() {
     }
   };
 
+  const generateContractTypes = async (
+    disciplineName: string,
+    disciplineDescription?: string
+  ): Promise<GeneratedContractType[]> => {
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-discipline-content', {
+        body: {
+          type: 'contract_types',
+          discipline_name: disciplineName,
+          discipline_description: disciplineDescription,
+        },
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      return data.data as GeneratedContractType[];
+    } catch (error) {
+      console.error('Error generating contract types:', error);
+      toast.error('Erreur lors de la génération des types de contrat');
+      throw error;
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return {
     isGenerating,
     generateSkills,
     generatePricingGrid,
     generateQuoteTemplate,
+    generateContractTypes,
   };
 }
