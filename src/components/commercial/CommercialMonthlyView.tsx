@@ -1,16 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, parseISO } from 'date-fns';
+import { format, parseISO, startOfYear, addMonths, isSameMonth, subYears, addYears } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, FileText, FileSignature, FileCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { 
   CommercialDocument,
   DocumentType,
@@ -25,43 +20,49 @@ interface CommercialMonthlyViewProps {
 
 export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps) => {
   const navigate = useNavigate();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  // Generate 12 months for the year
+  const months = useMemo(() => {
+    const yearStart = startOfYear(new Date(currentYear, 0, 1));
+    return Array.from({ length: 12 }, (_, i) => addMonths(yearStart, i));
+  }, [currentYear]);
 
-  // Get first day of week offset (Monday = 0)
-  const startDayOffset = (monthStart.getDay() + 6) % 7;
-  const emptyDays = Array(startDayOffset).fill(null);
-
-  // Group documents by date
-  const documentsByDate = useMemo(() => {
+  // Group documents by month
+  const documentsByMonth = useMemo(() => {
     const map = new Map<string, CommercialDocument[]>();
+    
     documents.forEach(doc => {
-      const dateKey = format(parseISO(doc.created_at), 'yyyy-MM-dd');
-      if (!map.has(dateKey)) {
-        map.set(dateKey, []);
+      const docDate = parseISO(doc.created_at);
+      const monthKey = format(docDate, 'yyyy-MM');
+      if (!map.has(monthKey)) {
+        map.set(monthKey, []);
       }
-      map.get(dateKey)!.push(doc);
+      map.get(monthKey)!.push(doc);
     });
+
+    // Sort documents within each month by date (newest first)
+    map.forEach((docs, key) => {
+      docs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    });
+
     return map;
   }, [documents]);
 
-  // Calculate monthly totals
-  const monthlyStats = useMemo(() => {
-    const monthDocs = documents.filter(doc => {
+  // Calculate yearly totals
+  const yearlyStats = useMemo(() => {
+    const yearDocs = documents.filter(doc => {
       const docDate = parseISO(doc.created_at);
-      return isSameMonth(docDate, currentMonth);
+      return docDate.getFullYear() === currentYear;
     });
 
     return {
-      count: monthDocs.length,
-      total: monthDocs.reduce((sum, d) => sum + (d.total_amount || 0), 0),
-      accepted: monthDocs.filter(d => d.status === 'accepted' || d.status === 'signed')
+      count: yearDocs.length,
+      total: yearDocs.reduce((sum, d) => sum + (d.total_amount || 0), 0),
+      accepted: yearDocs.filter(d => d.status === 'accepted' || d.status === 'signed')
         .reduce((sum, d) => sum + (d.total_amount || 0), 0),
     };
-  }, [documents, currentMonth]);
+  }, [documents, currentYear]);
 
   const getDocumentIcon = (type: DocumentType) => {
     switch (type) {
@@ -72,13 +73,18 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
   };
 
   const formatCurrency = (value: number) => {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(1)}M€`;
+    }
     if (value >= 1000) {
       return `${(value / 1000).toFixed(0)}k€`;
     }
     return `${value}€`;
   };
 
-  const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+  const isCurrentMonth = (date: Date) => {
+    return isSameMonth(date, new Date());
+  };
 
   return (
     <div className="space-y-4">
@@ -89,150 +95,169 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
             variant="outline" 
             size="icon" 
             className="h-8 w-8"
-            onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+            onClick={() => setCurrentYear(currentYear - 1)}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h2 className="text-lg font-semibold capitalize min-w-[160px] text-center">
-            {format(currentMonth, 'MMMM yyyy', { locale: fr })}
+          <h2 className="text-lg font-semibold min-w-[80px] text-center">
+            {currentYear}
           </h2>
           <Button 
             variant="outline" 
             size="icon" 
             className="h-8 w-8"
-            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            onClick={() => setCurrentYear(currentYear + 1)}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button 
             variant="ghost" 
             size="sm"
-            onClick={() => setCurrentMonth(new Date())}
+            onClick={() => setCurrentYear(new Date().getFullYear())}
           >
-            Aujourd'hui
+            Cette année
           </Button>
         </div>
 
-        {/* Monthly stats */}
+        {/* Yearly stats */}
         <div className="flex items-center gap-3 text-sm">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50">
-            <span className="text-muted-foreground">{monthlyStats.count}</span>
-            <span className="font-medium">docs</span>
+            <span className="text-muted-foreground">{yearlyStats.count}</span>
+            <span className="font-medium">documents</span>
           </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50">
             <span className="font-semibold">
-              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(monthlyStats.total)}
+              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(yearlyStats.total)}
             </span>
           </div>
-          {monthlyStats.accepted > 0 && (
+          {yearlyStats.accepted > 0 && (
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-emerald-500/10 text-emerald-600">
               <span className="text-xs">✓</span>
               <span className="font-medium">
-                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(monthlyStats.accepted)}
+                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(yearlyStats.accepted)}
               </span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Calendar grid */}
-      <div className="border rounded-lg overflow-hidden">
-        {/* Week day headers */}
-        <div className="grid grid-cols-7 bg-muted/30 border-b">
-          {weekDays.map(day => (
-            <div key={day} className="px-2 py-2 text-xs font-medium text-muted-foreground text-center">
-              {day}
-            </div>
-          ))}
-        </div>
-
-        {/* Days grid */}
-        <div className="grid grid-cols-7">
-          {/* Empty cells for offset */}
-          {emptyDays.map((_, i) => (
-            <div key={`empty-${i}`} className="min-h-[100px] border-b border-r bg-muted/10" />
-          ))}
-
-          {/* Day cells */}
-          {days.map((day, i) => {
-            const dateKey = format(day, 'yyyy-MM-dd');
-            const dayDocs = documentsByDate.get(dateKey) || [];
-            const isCurrentDay = isToday(day);
-            const dayTotal = dayDocs.reduce((sum, d) => sum + (d.total_amount || 0), 0);
+      {/* Monthly columns */}
+      <ScrollArea className="w-full">
+        <div className="flex gap-3 pb-4" style={{ minWidth: 'max-content' }}>
+          {months.map((month) => {
+            const monthKey = format(month, 'yyyy-MM');
+            const monthDocs = documentsByMonth.get(monthKey) || [];
+            const monthTotal = monthDocs.reduce((sum, d) => sum + (d.total_amount || 0), 0);
+            const monthAccepted = monthDocs.filter(d => d.status === 'accepted' || d.status === 'signed')
+              .reduce((sum, d) => sum + (d.total_amount || 0), 0);
+            const isCurrent = isCurrentMonth(month);
 
             return (
               <div 
-                key={dateKey}
+                key={monthKey}
                 className={cn(
-                  "min-h-[100px] border-b border-r p-1.5 relative",
-                  isCurrentDay && "bg-primary/5"
+                  "flex flex-col w-[220px] shrink-0 border rounded-lg overflow-hidden",
+                  isCurrent && "ring-2 ring-primary/50"
                 )}
               >
-                {/* Day number */}
+                {/* Month header */}
                 <div className={cn(
-                  "absolute top-1 right-1 h-6 w-6 flex items-center justify-center text-xs font-medium rounded-full",
-                  isCurrentDay ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  "px-3 py-2 border-b",
+                  isCurrent ? "bg-primary/10" : "bg-muted/30"
                 )}>
-                  {format(day, 'd')}
+                  <div className="flex items-center justify-between">
+                    <span className={cn(
+                      "font-medium capitalize",
+                      isCurrent && "text-primary"
+                    )}>
+                      {format(month, 'MMMM', { locale: fr })}
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {monthDocs.length}
+                    </Badge>
+                  </div>
+                  {monthTotal > 0 && (
+                    <div className="flex items-center gap-2 mt-1 text-xs">
+                      <span className="text-muted-foreground">
+                        {formatCurrency(monthTotal)}
+                      </span>
+                      {monthAccepted > 0 && (
+                        <span className="text-emerald-600">
+                          ✓ {formatCurrency(monthAccepted)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                {/* Documents */}
-                <div className="mt-6 space-y-1">
-                  <TooltipProvider>
-                    {dayDocs.slice(0, 3).map(doc => {
+                {/* Documents list */}
+                <div className="flex-1 p-2 space-y-1.5 max-h-[calc(100vh-280px)] overflow-y-auto bg-background">
+                  {monthDocs.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      Aucun document
+                    </p>
+                  ) : (
+                    monthDocs.map(doc => {
                       const Icon = getDocumentIcon(doc.document_type);
                       return (
-                        <Tooltip key={doc.id}>
-                          <TooltipTrigger asChild>
-                            <div 
-                              className={cn(
-                                "flex items-center gap-1 px-1.5 py-0.5 rounded text-xs cursor-pointer hover:opacity-80 transition-opacity",
-                                doc.status === 'accepted' || doc.status === 'signed' 
-                                  ? "bg-emerald-500/10 text-emerald-700" 
-                                  : doc.status === 'sent'
-                                  ? "bg-blue-500/10 text-blue-700"
-                                  : "bg-muted text-muted-foreground"
-                              )}
-                              onClick={() => navigate(`/commercial/quote/${doc.id}`)}
+                        <div 
+                          key={doc.id}
+                          className={cn(
+                            "p-2 rounded-md border cursor-pointer hover:border-primary/50 transition-colors",
+                            doc.status === 'accepted' || doc.status === 'signed' 
+                              ? "bg-emerald-500/5 border-emerald-500/20" 
+                              : doc.status === 'sent'
+                              ? "bg-blue-500/5 border-blue-500/20"
+                              : doc.status === 'rejected'
+                              ? "bg-red-500/5 border-red-500/20"
+                              : "bg-muted/20"
+                          )}
+                          onClick={() => navigate(`/commercial/quote/${doc.id}`)}
+                        >
+                          {/* Header row */}
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <span className="text-xs font-medium truncate flex-1">
+                              {doc.document_number}
+                            </span>
+                            <Badge 
+                              variant="outline" 
+                              className={cn("text-[10px] px-1 py-0 h-4", STATUS_COLORS[doc.status])}
                             >
-                              <Icon className="h-3 w-3 shrink-0" />
-                              <span className="truncate flex-1">{doc.document_number}</span>
-                              <span className="font-medium shrink-0">{formatCurrency(doc.total_amount || 0)}</span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent side="right" className="max-w-[200px]">
-                            <div className="space-y-1">
-                              <p className="font-medium">{doc.title}</p>
-                              {doc.client_company && (
-                                <p className="text-xs text-muted-foreground">{doc.client_company.name}</p>
-                              )}
-                              <Badge variant="outline" className={cn("text-xs", STATUS_COLORS[doc.status])}>
-                                {STATUS_LABELS[doc.status]}
-                              </Badge>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
-                    {dayDocs.length > 3 && (
-                      <div className="text-xs text-muted-foreground px-1.5">
-                        +{dayDocs.length - 3} autres
-                      </div>
-                    )}
-                  </TooltipProvider>
-                </div>
+                              {STATUS_LABELS[doc.status]}
+                            </Badge>
+                          </div>
 
-                {/* Day total */}
-                {dayTotal > 0 && dayDocs.length > 1 && (
-                  <div className="absolute bottom-1 left-1 text-[10px] text-muted-foreground">
-                    Σ {formatCurrency(dayTotal)}
-                  </div>
-                )}
+                          {/* Title */}
+                          <p className="text-xs truncate mb-1" title={doc.title}>
+                            {doc.title}
+                          </p>
+
+                          {/* Client + Amount */}
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground truncate max-w-[100px]">
+                              {doc.client_company?.name || '—'}
+                            </span>
+                            <span className="font-semibold shrink-0">
+                              {formatCurrency(doc.total_amount || 0)}
+                            </span>
+                          </div>
+
+                          {/* Date */}
+                          <div className="text-[10px] text-muted-foreground mt-1">
+                            {format(parseISO(doc.created_at), 'dd MMM', { locale: fr })}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
-      </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
     </div>
   );
 };
