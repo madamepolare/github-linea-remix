@@ -19,11 +19,15 @@ import {
   Hash,
   Euro,
   Ruler,
+  X,
+  Edit2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useTenders } from "@/hooks/useTenders";
+import { toast } from "sonner";
 import type { Tender } from "@/lib/tenderTypes";
 
 interface TenderInfoAccordionProps {
@@ -41,11 +45,27 @@ interface AccordionSection {
 
 export function TenderInfoAccordion({ tender, onNavigateToTab }: TenderInfoAccordionProps) {
   const [expandedSections, setExpandedSections] = useState<string[]>(["moa"]);
+  const [isEditingTeam, setIsEditingTeam] = useState(false);
+  const { updateTender } = useTenders();
 
   const toggleSection = (id: string) => {
     setExpandedSections((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
     );
+  };
+
+  const handleRemoveSpecialty = (memberId: string) => {
+    const requiredTeam = Array.isArray(tender.required_team) ? tender.required_team : [];
+    const updatedTeam = requiredTeam.filter((m: any) => m.id !== memberId);
+    
+    updateTender.mutate({
+      id: tender.id,
+      required_team: updatedTeam,
+    }, {
+      onSuccess: () => {
+        toast.success("Spécialité retirée");
+      },
+    });
   };
 
   const extendedTender = tender as any;
@@ -193,15 +213,30 @@ export function TenderInfoAccordion({ tender, onNavigateToTab }: TenderInfoAccor
       badge: mandatoryTeam.length > 0 ? `${mandatoryTeam.length} obligatoire${mandatoryTeam.length > 1 ? "s" : ""}` : undefined,
       content: (
         <div className="space-y-3">
-          {requiredTeam.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aucune équipe définie</p>
-          ) : (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {requiredTeam.length > 0 ? `${requiredTeam.length} spécialité(s)` : "Aucune équipe définie"}
+            </span>
+            {requiredTeam.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={() => setIsEditingTeam(!isEditingTeam)}
+              >
+                <Edit2 className="h-3 w-3" />
+                {isEditingTeam ? "Terminé" : "Modifier"}
+              </Button>
+            )}
+          </div>
+          
+          {requiredTeam.length > 0 && (
             <div className="space-y-2">
               {requiredTeam.map((member: any, index: number) => (
                 <div
                   key={member.id || index}
                   className={cn(
-                    "flex items-center justify-between p-2 rounded-lg",
+                    "flex items-center justify-between p-2 rounded-lg group",
                     member.is_mandatory ? "bg-primary/5" : "bg-muted/50"
                   )}
                 >
@@ -215,13 +250,26 @@ export function TenderInfoAccordion({ tender, onNavigateToTab }: TenderInfoAccor
                       </span>
                     )}
                   </div>
-                  {member.is_mandatory && (
-                    <span className="text-xs text-primary font-medium">Obligatoire</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {member.is_mandatory && !isEditingTeam && (
+                      <span className="text-xs text-primary font-medium">Obligatoire</span>
+                    )}
+                    {isEditingTeam && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleRemoveSpecialty(member.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           )}
+          
           <Button
             variant="outline"
             size="sm"
