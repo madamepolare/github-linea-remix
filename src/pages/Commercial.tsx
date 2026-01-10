@@ -25,11 +25,9 @@ import {
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { useAuth } from '@/contexts/AuthContext';
 import { CommercialPipeline } from '@/components/commercial/CommercialPipeline';
-import { useQueryClient } from '@tanstack/react-query';
 import { 
   DocumentType, 
   DocumentStatus,
-  DOCUMENT_TYPE_LABELS, 
   STATUS_LABELS, 
   STATUS_COLORS,
   PROJECT_TYPE_LABELS
@@ -38,21 +36,11 @@ import {
 const Commercial = () => {
   const navigate = useNavigate();
   const { view } = useParams();
-  const { activeWorkspace, workspaces, setActiveWorkspace } = useAuth();
-  const queryClient = useQueryClient();
-  const { documents, isLoading, documentsError, refetchDocuments, deleteDocument, duplicateDocument, updateDocument } = useCommercialDocuments();
+  const { activeWorkspace } = useAuth();
+  const { documents, isLoading, deleteDocument, duplicateDocument, updateDocument } = useCommercialDocuments();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
-
-  const debugInfo = {
-    routeView: view ?? null,
-    workspace: activeWorkspace ? { id: activeWorkspace.id, name: activeWorkspace.name } : null,
-    documentsCount: documents.length,
-    filteredCount: 0,
-    isLoading,
-    error: documentsError ? String(documentsError) : null,
-  };
   const typeFilter: DocumentType | 'all' = 
     view === 'quotes' ? 'quote' : 
     view === 'contracts' ? 'contract' : 
@@ -68,8 +56,6 @@ const Commercial = () => {
 
     return matchesSearch && matchesType && matchesStatus;
   });
-
-  debugInfo.filteredCount = filteredDocuments.length;
 
   // KPIs
   const totalDraft = documents.filter(d => d.status === 'draft').length;
@@ -149,32 +135,7 @@ const Commercial = () => {
           </DropdownMenu>
         </div>
       }
-> 
-      {/* Debug banner (helps diagnose missing documents) */}
-      <div className="mb-4">
-        <div className="rounded-lg border bg-card p-3 text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            <span><span className="font-medium">Workspace:</span> {debugInfo.workspace?.name || '—'} ({debugInfo.workspace?.id?.slice(0, 8) || '—'})</span>
-            <span><span className="font-medium">Docs:</span> {debugInfo.documentsCount}</span>
-            <span><span className="font-medium">Filtrés:</span> {debugInfo.filteredCount}</span>
-            <span><span className="font-medium">Vue:</span> {typeFilter}</span>
-            {debugInfo.error && <span className="text-destructive"><span className="font-medium">Erreur:</span> {debugInfo.error}</span>}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                await queryClient.invalidateQueries({ queryKey: ['commercial-documents', activeWorkspace?.id] });
-                await queryClient.invalidateQueries({ queryKey: ['commercial-documents'] });
-                await refetchDocuments();
-              }}
-            >
-              Rafraîchir
-            </Button>
-          </div>
-        </div>
-      </div>
+>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
@@ -268,47 +229,14 @@ const Commercial = () => {
       ) : filteredDocuments.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center space-y-4">
-            <div>
-              <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">Aucun document trouvé</p>
-              {activeWorkspace && workspaces.length > 1 && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Workspace actif : <span className="font-medium">{activeWorkspace.name}</span>
-                </p>
-              )}
-            </div>
-
-            {activeWorkspace && workspaces.length > 1 && (
-              <div className="max-w-sm mx-auto">
-                <Select
-                  value={activeWorkspace.id}
-                  onValueChange={(workspaceId) => {
-                    setActiveWorkspace(workspaceId);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Changer de workspace" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {workspaces.map((w) => (
-                      <SelectItem key={w.id} value={w.id}>
-                        {w.name}{w.is_hidden ? ' (masqué)' : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Si votre devis a « disparu », il est probablement dans un autre workspace.
-                </p>
-              </div>
-            )}
-
-            <div>
-              <Button className="mt-2" onClick={() => handleNewDocument('quote')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Créer un devis
-              </Button>
-            </div>
+            <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+            <p className="text-muted-foreground">
+              Aucun document dans {activeWorkspace?.name || 'ce workspace'}
+            </p>
+            <Button onClick={() => handleNewDocument('quote')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Créer un devis
+            </Button>
           </CardContent>
         </Card>
       ) : (

@@ -28,7 +28,6 @@ import { QuoteLinesEditor } from '@/components/commercial/quote-builder/QuoteLin
 import { QuoteTermsTab } from '@/components/commercial/quote-builder/QuoteTermsTab';
 import { QuotePreviewPanel } from '@/components/commercial/quote-builder/QuotePreviewPanel';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
-import { useDocumentById } from '@/hooks/useDocumentById';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -51,13 +50,13 @@ export default function QuoteBuilder() {
   const projectId = searchParams.get('project');
   const documentType = searchParams.get('type') || 'quote';
   
-  const { createDocument, updateDocument, getDocumentPhases, createPhase, updatePhase, deletePhase } = useCommercialDocuments();
+  const { createDocument, updateDocument, getDocument, getDocumentPhases, createPhase, updatePhase, deletePhase } = useCommercialDocuments();
   
-  // Use direct document fetch for existing documents (robust, doesn't depend on list)
-  const documentQuery = useDocumentById(isNew ? undefined : id);
-  const existingDoc = documentQuery.data;
-  const isLoadingDoc = documentQuery.isLoading;
-  const docError = documentQuery.error;
+  // Use getDocument from the hook for existing documents
+  const documentQuery = getDocument(isNew ? '' : (id || ''));
+  const existingDoc = isNew ? null : documentQuery.data;
+  const isLoadingDoc = isNew ? false : documentQuery.isLoading;
+  const docError = isNew ? null : documentQuery.error;
   
   // Get phases for existing documents
   const phasesQuery = getDocumentPhases(isNew ? '' : (id || ''));
@@ -226,10 +225,10 @@ export default function QuoteBuilder() {
       
       setHasChanges(false);
       
-      // Navigate after saving everything for new documents
+      // Navigate to list after creating new document (forces list refresh)
       if (isNew && documentId) {
-        toast.success(`Devis ${createdDocNumber || ''} enregistré dans ${activeWorkspace.name}`);
-        navigate(`/commercial/quote/${documentId}`, { replace: true });
+        toast.success(`Devis ${createdDocNumber || ''} créé dans ${activeWorkspace.name}`);
+        navigate('/commercial/quotes', { replace: true });
       } else {
         toast.success('Devis enregistré');
       }

@@ -212,9 +212,7 @@ export const useCommercialDocuments = () => {
       return data;
     },
     onSuccess: (data) => {
-      // Invalidate both the workspace-scoped list and the individual doc
       queryClient.invalidateQueries({ queryKey: ['commercial-documents', activeWorkspace?.id] });
-      queryClient.invalidateQueries({ queryKey: ['commercial-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commercial-document', data.id] });
       toast.success('Document mis à jour');
     },
@@ -236,7 +234,6 @@ export const useCommercialDocuments = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['commercial-documents', activeWorkspace?.id] });
-      queryClient.invalidateQueries({ queryKey: ['commercial-documents'] });
       toast.success('Document supprimé');
     },
     onError: (error) => {
@@ -587,8 +584,6 @@ export const useCommercialDocuments = () => {
   return {
     documents: documentsQuery.data || [],
     isLoading: documentsQuery.isLoading,
-    documentsError: documentsQuery.error,
-    refetchDocuments: documentsQuery.refetch,
     getDocument,
     getDocumentPhases,
     getDocumentItems,
