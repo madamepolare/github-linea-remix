@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -27,12 +28,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, Megaphone, Palette, Globe, FileText, Percent, List, Package, Calendar, FileCheck, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, Megaphone, Palette, Globe, FileText, Percent, List, Package, Calendar, FileCheck, Sparkles, Loader2, LayoutTemplate, Settings2 } from 'lucide-react';
 import { useContractTypes, ContractType, CreateContractTypeInput, ContractTypeFields, BuilderTab } from '@/hooks/useContractTypes';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useWorkspaceDiscipline } from '@/hooks/useDiscipline';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { PDFBlocksConfigurator } from './PDFBlocksConfigurator';
+import { type PDFDocumentConfig } from '@/lib/pdfBlockTypes';
 
 const TAB_OPTIONS: { key: BuilderTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: 'general', label: 'Général', icon: FileText },
@@ -174,11 +177,17 @@ export function ContractTypesSettings() {
       color: editingType.color,
       default_fields: editingType.default_fields,
       builder_tabs: editingType.builder_tabs,
+      pdf_config: editingType.pdf_config as any,
       is_default: editingType.is_default,
       is_active: editingType.is_active
     });
     
     setEditingType(null);
+  };
+
+  const handlePDFConfigSave = (pdfConfig: PDFDocumentConfig) => {
+    if (!editingType) return;
+    setEditingType({ ...editingType, pdf_config: pdfConfig });
   };
 
   const toggleField = (fields: ContractTypeFields, key: keyof ContractTypeFields): ContractTypeFields => {
@@ -456,135 +465,156 @@ export function ContractTypesSettings() {
       {/* Edit Dialog */}
       {editingType && (
         <Dialog open onOpenChange={() => setEditingType(null)}>
-          <DialogContent>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>Modifier le type de contrat</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Nom</Label>
-                  <Input
-                    value={editingType.name}
-                    onChange={(e) => setEditingType({ ...editingType, name: e.target.value })}
-                  />
+            <Tabs defaultValue="general" className="flex-1 flex flex-col min-h-0">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="general" className="gap-2">
+                  <Settings2 className="h-4 w-4" />
+                  Paramètres généraux
+                </TabsTrigger>
+                <TabsTrigger value="pdf" className="gap-2">
+                  <LayoutTemplate className="h-4 w-4" />
+                  Blocs PDF
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="general" className="flex-1 overflow-y-auto space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nom</Label>
+                    <Input
+                      value={editingType.name}
+                      onChange={(e) => setEditingType({ ...editingType, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Code</Label>
+                    <Input
+                      value={editingType.code}
+                      onChange={(e) => setEditingType({ ...editingType, code: e.target.value.toUpperCase() })}
+                      maxLength={10}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Code</Label>
-                  <Input
-                    value={editingType.code}
-                    onChange={(e) => setEditingType({ ...editingType, code: e.target.value.toUpperCase() })}
-                    maxLength={10}
+                  <Label>Description</Label>
+                  <Textarea
+                    value={editingType.description || ''}
+                    onChange={(e) => setEditingType({ ...editingType, description: e.target.value })}
+                    rows={2}
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  value={editingType.description || ''}
-                  onChange={(e) => setEditingType({ ...editingType, description: e.target.value })}
-                  rows={2}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Icône</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {ICON_OPTIONS.map(option => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setEditingType({ ...editingType, icon: option.value })}
+                          className={`p-2 rounded border transition-colors ${
+                            editingType.icon === option.value 
+                              ? 'border-primary bg-primary/10' 
+                              : 'border-border hover:border-muted-foreground'
+                          }`}
+                        >
+                          <option.icon className="h-4 w-4" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Couleur</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {COLOR_OPTIONS.map(color => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setEditingType({ ...editingType, color })}
+                          className={`w-8 h-8 rounded-full border-2 transition-all ${
+                            editingType.color === color 
+                              ? 'border-foreground scale-110' 
+                              : 'border-transparent'
+                          }`}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Champs à afficher</Label>
+                  <div className="flex flex-wrap gap-3">
+                    {FIELD_OPTIONS.map(field => (
+                      <label key={field.key} className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={editingType.default_fields?.[field.key] || false}
+                          onCheckedChange={() => setEditingType({ 
+                            ...editingType, 
+                            default_fields: toggleField(editingType.default_fields, field.key)
+                          })}
+                        />
+                        {field.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Onglets du builder</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {TAB_OPTIONS.map(tab => {
+                      const Icon = tab.icon;
+                      const isActive = editingType.builder_tabs?.includes(tab.key);
+                      const isGeneral = tab.key === 'general';
+                      return (
+                        <Badge
+                          key={tab.key}
+                          variant={isActive ? 'default' : 'outline'}
+                          className={`cursor-pointer gap-1 ${isGeneral ? 'opacity-70' : ''}`}
+                          onClick={() => !isGeneral && setEditingType({
+                            ...editingType,
+                            builder_tabs: toggleBuilderTab(editingType.builder_tabs || ['general', 'lines', 'terms'], tab.key)
+                          })}
+                        >
+                          <Icon className="h-3 w-3" />
+                          {tab.label}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">L'onglet "Général" est obligatoire</p>
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <Switch
+                      checked={editingType.is_active}
+                      onCheckedChange={(checked) => setEditingType({ ...editingType, is_active: checked })}
+                    />
+                    Actif
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Switch
+                      checked={editingType.is_default}
+                      onCheckedChange={(checked) => setEditingType({ ...editingType, is_default: checked })}
+                    />
+                    Par défaut
+                  </label>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="pdf" className="flex-1 overflow-y-auto mt-4">
+                <PDFBlocksConfigurator
+                  contractType={editingType}
+                  onSave={handlePDFConfigSave}
+                  isLoading={updateContractType.isPending}
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Icône</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {ICON_OPTIONS.map(option => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setEditingType({ ...editingType, icon: option.value })}
-                        className={`p-2 rounded border transition-colors ${
-                          editingType.icon === option.value 
-                            ? 'border-primary bg-primary/10' 
-                            : 'border-border hover:border-muted-foreground'
-                        }`}
-                      >
-                        <option.icon className="h-4 w-4" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Couleur</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {COLOR_OPTIONS.map(color => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => setEditingType({ ...editingType, color })}
-                        className={`w-8 h-8 rounded-full border-2 transition-all ${
-                          editingType.color === color 
-                            ? 'border-foreground scale-110' 
-                            : 'border-transparent'
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Champs à afficher</Label>
-                <div className="flex flex-wrap gap-3">
-                  {FIELD_OPTIONS.map(field => (
-                    <label key={field.key} className="flex items-center gap-2 text-sm">
-                      <Checkbox
-                        checked={editingType.default_fields?.[field.key] || false}
-                        onCheckedChange={() => setEditingType({ 
-                          ...editingType, 
-                          default_fields: toggleField(editingType.default_fields, field.key)
-                        })}
-                      />
-                      {field.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Onglets du builder</Label>
-                <div className="flex flex-wrap gap-2">
-                  {TAB_OPTIONS.map(tab => {
-                    const Icon = tab.icon;
-                    const isActive = editingType.builder_tabs?.includes(tab.key);
-                    const isGeneral = tab.key === 'general';
-                    return (
-                      <Badge
-                        key={tab.key}
-                        variant={isActive ? 'default' : 'outline'}
-                        className={`cursor-pointer gap-1 ${isGeneral ? 'opacity-70' : ''}`}
-                        onClick={() => !isGeneral && setEditingType({
-                          ...editingType,
-                          builder_tabs: toggleBuilderTab(editingType.builder_tabs || ['general', 'lines', 'terms'], tab.key)
-                        })}
-                      >
-                        <Icon className="h-3 w-3" />
-                        {tab.label}
-                      </Badge>
-                    );
-                  })}
-                </div>
-                <p className="text-xs text-muted-foreground">L'onglet "Général" est obligatoire</p>
-              </div>
-              <div className="flex items-center justify-between pt-2">
-                <label className="flex items-center gap-2 text-sm">
-                  <Switch
-                    checked={editingType.is_active}
-                    onCheckedChange={(checked) => setEditingType({ ...editingType, is_active: checked })}
-                  />
-                  Actif
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <Switch
-                    checked={editingType.is_default}
-                    onCheckedChange={(checked) => setEditingType({ ...editingType, is_default: checked })}
-                  />
-                  Par défaut
-                </label>
-              </div>
-            </div>
-            <DialogFooter>
+              </TabsContent>
+            </Tabs>
+            <DialogFooter className="mt-4">
               <Button variant="outline" onClick={() => setEditingType(null)}>
                 Annuler
               </Button>
