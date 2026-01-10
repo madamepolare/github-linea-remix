@@ -261,10 +261,10 @@ export default function QuoteBuilder() {
       
       setHasChanges(false);
       
-      // Navigate to list after creating new document (forces list refresh)
+      // For new documents, navigate to the created document page (not list)
       if (isNew && documentId) {
-        toast.success(`Devis ${createdDocNumber || ''} créé dans ${activeWorkspace.name}`);
-        navigate('/commercial/quotes', { replace: true });
+        toast.success(`Devis ${createdDocNumber || ''} créé`);
+        navigate(`/commercial/quote/${documentId}`, { replace: true });
       } else {
         toast.success('Devis enregistré');
       }
