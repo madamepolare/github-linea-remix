@@ -5,6 +5,7 @@ import {
   Briefcase,
   Calendar,
   DollarSign,
+  Euro,
   FileText,
   Loader2,
   Save,
@@ -70,6 +71,7 @@ export function MemberEmploymentDialog({
 
   const [formData, setFormData] = useState({
     salary_monthly: "",
+    client_daily_rate: "",
     contract_type: "",
     start_date: "",
     end_date: "",
@@ -81,6 +83,7 @@ export function MemberEmploymentDialog({
     if (employmentInfo) {
       setFormData({
         salary_monthly: employmentInfo.salary_monthly?.toString() || "",
+        client_daily_rate: employmentInfo.client_daily_rate?.toString() || "",
         contract_type: employmentInfo.contract_type || "",
         start_date: employmentInfo.start_date || "",
         end_date: employmentInfo.end_date || "",
@@ -90,6 +93,7 @@ export function MemberEmploymentDialog({
     } else {
       setFormData({
         salary_monthly: "",
+        client_daily_rate: "",
         contract_type: "",
         start_date: "",
         end_date: "",
@@ -107,6 +111,9 @@ export function MemberEmploymentDialog({
       user_id: member.user_id,
       salary_monthly: formData.salary_monthly
         ? parseFloat(formData.salary_monthly)
+        : null,
+      client_daily_rate: formData.client_daily_rate
+        ? parseFloat(formData.client_daily_rate)
         : null,
       contract_type: formData.contract_type || null,
       start_date: formData.start_date || null,
@@ -201,6 +208,30 @@ export function MemberEmploymentDialog({
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Client Daily Rate */}
+            <div className="space-y-2">
+              <Label htmlFor="client_daily_rate">Tarif journalier client (€)</Label>
+              <div className="relative">
+                <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="client_daily_rate"
+                  type="number"
+                  value={formData.client_daily_rate}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      client_daily_rate: e.target.value,
+                    }))
+                  }
+                  placeholder="500"
+                  className="pl-10"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Tarif par défaut pour ce membre (peut être personnalisé par projet)
+              </p>
             </div>
 
             {/* Dates */}

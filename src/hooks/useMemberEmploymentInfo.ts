@@ -8,6 +8,7 @@ export interface MemberEmploymentInfo {
   workspace_id: string;
   user_id: string;
   salary_monthly: number | null;
+  client_daily_rate: number | null;
   contract_type: string | null;
   start_date: string | null;
   end_date: string | null;
@@ -89,6 +90,7 @@ export function useUpsertMemberEmploymentInfo() {
           .from("member_employment_info")
           .update({
             salary_monthly: data.salary_monthly,
+            client_daily_rate: data.client_daily_rate,
             contract_type: data.contract_type,
             start_date: data.start_date,
             end_date: data.end_date,
@@ -110,6 +112,7 @@ export function useUpsertMemberEmploymentInfo() {
             workspace_id: activeWorkspace.id,
             user_id: data.user_id,
             salary_monthly: data.salary_monthly,
+            client_daily_rate: data.client_daily_rate,
             contract_type: data.contract_type,
             start_date: data.start_date,
             end_date: data.end_date,

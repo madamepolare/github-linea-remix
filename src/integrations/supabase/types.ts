@@ -3558,6 +3558,7 @@ export type Database = {
       }
       member_employment_info: {
         Row: {
+          client_daily_rate: number | null
           contract_type: string | null
           created_at: string | null
           end_date: string | null
@@ -3571,6 +3572,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          client_daily_rate?: number | null
           contract_type?: string | null
           created_at?: string | null
           end_date?: string | null
@@ -3584,6 +3586,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          client_daily_rate?: number | null
           contract_type?: string | null
           created_at?: string | null
           end_date?: string | null
@@ -3599,6 +3602,63 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "member_employment_info_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_rate_history: {
+        Row: {
+          change_type: string
+          changed_by: string | null
+          created_at: string
+          effective_date: string
+          id: string
+          new_value: number | null
+          notes: string | null
+          old_value: number | null
+          project_id: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          change_type: string
+          changed_by?: string | null
+          created_at?: string
+          effective_date?: string
+          id?: string
+          new_value?: number | null
+          notes?: string | null
+          old_value?: number | null
+          project_id?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          change_type?: string
+          changed_by?: string | null
+          created_at?: string
+          effective_date?: string
+          id?: string
+          new_value?: number | null
+          notes?: string | null
+          old_value?: number | null
+          project_id?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_rate_history_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_rate_history_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
