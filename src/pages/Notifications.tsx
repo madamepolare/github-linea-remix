@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Bell, 
@@ -18,15 +19,15 @@ import {
   Settings,
   Users,
   Inbox,
-  Archive,
   Trash2,
   MoreHorizontal,
-  ChevronDown
+  ChevronDown,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -37,129 +38,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow, format, isToday, isYesterday, isThisWeek } from "date-fns";
+import { formatDistanceToNow, isToday, isYesterday, isThisWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { THIN_STROKE } from "@/components/ui/icon";
-import { useNotifications } from "@/hooks/useNotifications";
+import { useNotifications, Notification } from "@/hooks/useNotifications";
 
-type NotificationType = "task" | "project" | "mention" | "invite" | "document" | "alert" | "calendar" | "team";
-type NotificationCategory = "all" | "unread" | "mentions" | "tasks" | "projects" | "documents" | "archived";
+type NotificationCategory = "all" | "unread" | "mentions" | "tasks" | "projects" | "documents";
 
-interface NotificationItem {
-  id: string;
-  type: NotificationType;
-  title: string;
-  description?: string;
-  read: boolean;
-  archived: boolean;
-  createdAt: Date;
-  actionUrl?: string;
-  actor?: {
-    name: string;
-    avatar?: string;
-  };
-  relatedEntity?: {
-    type: string;
-    name: string;
-    id: string;
-  };
-}
-
-// Mock notifications with more variety
-const mockNotifications: NotificationItem[] = [
-  {
-    id: "1",
-    type: "mention",
-    title: "Nouvelle mention",
-    description: "Alex vous a mentionné dans un commentaire sur 'Refonte Site Web'",
-    read: false,
-    archived: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 2),
-    actor: { name: "Alex Martin" },
-    relatedEntity: { type: "project", name: "Refonte Site Web", id: "proj-1" },
-  },
-  {
-    id: "2",
-    type: "task",
-    title: "Tâche assignée",
-    description: "Vous avez été assigné à 'Revue documentation API'",
-    read: false,
-    archived: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 30),
-    actor: { name: "Marie Dupont" },
-    relatedEntity: { type: "task", name: "Revue documentation API", id: "task-1" },
-  },
-  {
-    id: "3",
-    type: "document",
-    title: "Document à signer",
-    description: "Un devis attend votre signature - Client Durand",
-    read: false,
-    archived: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60),
-    relatedEntity: { type: "quote", name: "Devis #2024-042", id: "quote-1" },
-  },
-  {
-    id: "4",
-    type: "project",
-    title: "Projet mis à jour",
-    description: "Mobile App v2 est passé en phase 'En cours'",
-    read: true,
-    archived: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    relatedEntity: { type: "project", name: "Mobile App v2", id: "proj-2" },
-  },
-  {
-    id: "5",
-    type: "calendar",
-    title: "Réunion dans 1 heure",
-    description: "Point hebdo équipe Design - 14h00",
-    read: true,
-    archived: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3),
-  },
-  {
-    id: "6",
-    type: "alert",
-    title: "Échéance proche",
-    description: "La tâche 'Livraison maquettes' arrive à échéance demain",
-    read: false,
-    archived: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5),
-    relatedEntity: { type: "task", name: "Livraison maquettes", id: "task-2" },
-  },
-  {
-    id: "7",
-    type: "team",
-    title: "Nouveau membre",
-    description: "Sophie Bernard a rejoint l'équipe 'Design'",
-    read: true,
-    archived: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    actor: { name: "Sophie Bernard" },
-  },
-  {
-    id: "8",
-    type: "invite",
-    title: "Invitation workspace",
-    description: "Vous avez été invité à rejoindre 'Agence Créative'",
-    read: true,
-    archived: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48),
-  },
-  {
-    id: "9",
-    type: "document",
-    title: "Contrat validé",
-    description: "Le contrat pour le projet Villa Moderne a été signé",
-    read: true,
-    archived: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72),
-    relatedEntity: { type: "contract", name: "Contrat Villa Moderne", id: "contract-1" },
-  },
-];
-
-const iconMap: Record<NotificationType, typeof Bell> = {
+const iconMap: Record<string, typeof Bell> = {
   task: CheckSquare,
   project: FolderKanban,
   mention: MessageSquare,
@@ -168,6 +54,7 @@ const iconMap: Record<NotificationType, typeof Bell> = {
   alert: AlertCircle,
   calendar: Calendar,
   team: Users,
+  system: Bell,
 };
 
 const categoryConfig: Record<NotificationCategory, { label: string; icon: typeof Bell }> = {
@@ -177,22 +64,22 @@ const categoryConfig: Record<NotificationCategory, { label: string; icon: typeof
   tasks: { label: "Tâches", icon: CheckSquare },
   projects: { label: "Projets", icon: FolderKanban },
   documents: { label: "Documents", icon: FileText },
-  archived: { label: "Archivées", icon: Archive },
 };
 
-function groupNotificationsByDate(notifications: NotificationItem[]) {
-  const groups: { label: string; notifications: NotificationItem[] }[] = [];
-  const today: NotificationItem[] = [];
-  const yesterday: NotificationItem[] = [];
-  const thisWeek: NotificationItem[] = [];
-  const older: NotificationItem[] = [];
+function groupNotificationsByDate(notifications: Notification[]) {
+  const groups: { label: string; notifications: Notification[] }[] = [];
+  const today: Notification[] = [];
+  const yesterday: Notification[] = [];
+  const thisWeek: Notification[] = [];
+  const older: Notification[] = [];
 
   notifications.forEach((n) => {
-    if (isToday(n.createdAt)) {
+    const date = new Date(n.created_at);
+    if (isToday(date)) {
       today.push(n);
-    } else if (isYesterday(n.createdAt)) {
+    } else if (isYesterday(date)) {
       yesterday.push(n);
-    } else if (isThisWeek(n.createdAt)) {
+    } else if (isThisWeek(date)) {
       thisWeek.push(n);
     } else {
       older.push(n);
@@ -207,8 +94,17 @@ function groupNotificationsByDate(notifications: NotificationItem[]) {
   return groups;
 }
 
-export default function Notifications() {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(mockNotifications);
+export default function NotificationsPage() {
+  const navigate = useNavigate();
+  const { 
+    notifications, 
+    isLoading, 
+    unreadCount, 
+    markAsRead, 
+    markAllAsRead, 
+    deleteNotification 
+  } = useNotifications();
+  
   const [selectedCategory, setSelectedCategory] = useState<NotificationCategory>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -216,30 +112,25 @@ export default function Notifications() {
 
   // Filter notifications based on category and search
   const filteredNotifications = useMemo(() => {
-    let result = notifications;
+    let result = [...notifications];
 
     // Filter by category
     switch (selectedCategory) {
       case "unread":
-        result = result.filter((n) => !n.read && !n.archived);
+        result = result.filter((n) => !n.is_read);
         break;
       case "mentions":
-        result = result.filter((n) => n.type === "mention" && !n.archived);
+        result = result.filter((n) => n.type === "mention");
         break;
       case "tasks":
-        result = result.filter((n) => n.type === "task" && !n.archived);
+        result = result.filter((n) => n.type === "task");
         break;
       case "projects":
-        result = result.filter((n) => n.type === "project" && !n.archived);
+        result = result.filter((n) => n.type === "project");
         break;
       case "documents":
-        result = result.filter((n) => n.type === "document" && !n.archived);
+        result = result.filter((n) => n.type === "document");
         break;
-      case "archived":
-        result = result.filter((n) => n.archived);
-        break;
-      default:
-        result = result.filter((n) => !n.archived);
     }
 
     // Filter by search
@@ -248,9 +139,7 @@ export default function Notifications() {
       result = result.filter(
         (n) =>
           n.title.toLowerCase().includes(query) ||
-          n.description?.toLowerCase().includes(query) ||
-          n.actor?.name.toLowerCase().includes(query) ||
-          n.relatedEntity?.name.toLowerCase().includes(query)
+          n.message?.toLowerCase().includes(query)
       );
     }
 
@@ -261,26 +150,23 @@ export default function Notifications() {
     return groupNotificationsByDate(filteredNotifications);
   }, [filteredNotifications]);
 
-  const unreadCount = notifications.filter((n) => !n.read && !n.archived).length;
-
-  const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+  const handleMarkAsRead = (id: string) => {
+    markAsRead.mutate(id);
   };
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const handleMarkAllAsRead = () => {
+    markAllAsRead.mutate();
   };
 
-  const archiveNotification = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, archived: true, read: true } : n))
-    );
+  const handleDelete = (id: string) => {
+    deleteNotification.mutate(id);
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const handleNotificationClick = (notification: Notification) => {
+    handleMarkAsRead(notification.id);
+    if (notification.action_url) {
+      navigate(notification.action_url);
+    }
   };
 
   const toggleSelection = (id: string) => {
@@ -305,23 +191,22 @@ export default function Notifications() {
   };
 
   const bulkMarkAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((n) => (selectedIds.has(n.id) ? { ...n, read: true } : n))
-    );
-    clearSelection();
-  };
-
-  const bulkArchive = () => {
-    setNotifications((prev) =>
-      prev.map((n) => (selectedIds.has(n.id) ? { ...n, archived: true, read: true } : n))
-    );
+    selectedIds.forEach((id) => markAsRead.mutate(id));
     clearSelection();
   };
 
   const bulkDelete = () => {
-    setNotifications((prev) => prev.filter((n) => !selectedIds.has(n.id)));
+    selectedIds.forEach((id) => deleteNotification.mutate(id));
     clearSelection();
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -342,7 +227,7 @@ export default function Notifications() {
             </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
-                <Button variant="outline" size="sm" onClick={markAllAsRead}>
+                <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
                   <CheckCheck className="h-4 w-4 mr-2" />
                   Tout marquer comme lu
                 </Button>
@@ -397,7 +282,7 @@ export default function Notifications() {
         <div className="px-6 border-t border-border">
           <Tabs value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as NotificationCategory)}>
             <TabsList className="h-12 bg-transparent border-0 p-0 gap-1">
-              {Object.entries(categoryConfig).slice(0, 6).map(([key, { label, icon: Icon }]) => (
+              {Object.entries(categoryConfig).map(([key, { label, icon: Icon }]) => (
                 <TabsTrigger
                   key={key}
                   value={key}
@@ -437,10 +322,6 @@ export default function Notifications() {
                   <Check className="h-4 w-4 mr-1" />
                   Marquer comme lu
                 </Button>
-                <Button variant="ghost" size="sm" onClick={bulkArchive}>
-                  <Archive className="h-4 w-4 mr-1" />
-                  Archiver
-                </Button>
                 <Button variant="ghost" size="sm" onClick={bulkDelete} className="text-destructive hover:text-destructive">
                   <Trash2 className="h-4 w-4 mr-1" />
                   Supprimer
@@ -466,8 +347,6 @@ export default function Notifications() {
               <p className="text-sm text-muted-foreground max-w-sm">
                 {selectedCategory === "unread"
                   ? "Vous êtes à jour ! Toutes vos notifications ont été lues."
-                  : selectedCategory === "archived"
-                  ? "Aucune notification archivée."
                   : "Vous n'avez aucune notification pour le moment."}
               </p>
             </div>
@@ -481,7 +360,7 @@ export default function Notifications() {
                   <div className="space-y-1">
                     <AnimatePresence mode="popLayout">
                       {group.notifications.map((notification) => {
-                        const Icon = iconMap[notification.type];
+                        const Icon = iconMap[notification.type] || Bell;
                         const isSelected = selectedIds.has(notification.id);
 
                         return (
@@ -494,7 +373,7 @@ export default function Notifications() {
                             transition={{ duration: 0.2 }}
                             className={cn(
                               "group relative flex items-start gap-4 rounded-lg p-4 transition-colors cursor-pointer",
-                              !notification.read && "bg-primary/5",
+                              !notification.is_read && "bg-primary/5",
                               isSelected && "bg-primary/10 ring-1 ring-primary/20",
                               "hover:bg-muted/50"
                             )}
@@ -502,7 +381,7 @@ export default function Notifications() {
                               if (isSelectionMode) {
                                 toggleSelection(notification.id);
                               } else {
-                                markAsRead(notification.id);
+                                handleNotificationClick(notification);
                               }
                             }}
                           >
@@ -522,7 +401,7 @@ export default function Notifications() {
                             </div>
 
                             {/* Unread indicator */}
-                            {!notification.read && (
+                            {!notification.is_read && (
                               <div className="absolute left-1 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-primary" />
                             )}
 
@@ -548,41 +427,33 @@ export default function Notifications() {
                                 <div>
                                   <p className={cn(
                                     "text-sm",
-                                    !notification.read && "font-medium"
+                                    !notification.is_read && "font-medium"
                                   )}>
                                     {notification.title}
                                   </p>
-                                  {notification.description && (
+                                  {notification.message && (
                                     <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-                                      {notification.description}
+                                      {notification.message}
                                     </p>
                                   )}
                                   <div className="flex items-center gap-2 mt-2">
                                     <Clock className="h-3 w-3 text-muted-foreground" />
                                     <span className="text-xs text-muted-foreground">
-                                      {formatDistanceToNow(notification.createdAt, { addSuffix: true, locale: fr })}
+                                      {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: fr })}
                                     </span>
-                                    {notification.relatedEntity && (
-                                      <>
-                                        <span className="text-muted-foreground">•</span>
-                                        <Badge variant="secondary" className="text-xs font-normal">
-                                          {notification.relatedEntity.name}
-                                        </Badge>
-                                      </>
-                                    )}
                                   </div>
                                 </div>
 
                                 {/* Actions */}
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {!notification.read && (
+                                  {!notification.is_read && (
                                     <Button
                                       variant="ghost"
                                       size="icon"
                                       className="h-8 w-8"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        markAsRead(notification.id);
+                                        handleMarkAsRead(notification.id);
                                       }}
                                     >
                                       <Check className="h-4 w-4" />
@@ -600,19 +471,15 @@ export default function Notifications() {
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                      {!notification.read && (
-                                        <DropdownMenuItem onClick={() => markAsRead(notification.id)}>
+                                      {!notification.is_read && (
+                                        <DropdownMenuItem onClick={() => handleMarkAsRead(notification.id)}>
                                           <Check className="h-4 w-4 mr-2" />
                                           Marquer comme lu
                                         </DropdownMenuItem>
                                       )}
-                                      <DropdownMenuItem onClick={() => archiveNotification(notification.id)}>
-                                        <Archive className="h-4 w-4 mr-2" />
-                                        Archiver
-                                      </DropdownMenuItem>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem
-                                        onClick={() => deleteNotification(notification.id)}
+                                        onClick={() => handleDelete(notification.id)}
                                         className="text-destructive focus:text-destructive"
                                       >
                                         <Trash2 className="h-4 w-4 mr-2" />

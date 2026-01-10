@@ -2,6 +2,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
   Settings,
   ChevronLeft,
@@ -227,8 +228,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
   // Notifications nav item with unread count
   const NotificationsNavItem = ({ collapsed: isCollapsed, onClick }: { collapsed: boolean; onClick?: () => void }) => {
-    // TODO: Get real unread count from useNotifications hook
-    const unreadCount = 3; // Mock for now
+    const { unreadCount } = useNotifications();
     const active = location.pathname === "/notifications";
 
     const content = (
