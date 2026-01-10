@@ -103,11 +103,28 @@ export function AIPlanningPanel() {
       setSelectedSuggestions(new Set(suggestions.map((s: Suggestion) => s.task_id)));
     } catch (error: any) {
       console.error("AI Planning error:", error);
-      toast({
-        title: "Erreur",
-        description: error.message || "Impossible de générer le planning",
-        variant: "destructive",
-      });
+      const errorMessage = error?.message || "Impossible de générer le planning";
+      
+      // Handle specific error cases
+      if (errorMessage.includes("429") || errorMessage.includes("rate")) {
+        toast({
+          title: "Limite atteinte",
+          description: "Trop de requêtes, réessaie dans quelques instants.",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes("402") || errorMessage.includes("credits")) {
+        toast({
+          title: "Crédits IA épuisés",
+          description: "Ajoute des crédits pour utiliser la planification IA.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erreur",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsGenerating(false);
     }

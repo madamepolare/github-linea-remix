@@ -28,7 +28,8 @@ interface TeamPlanningGridProps {
   onTaskDrop?: (taskId: string, userId: string, date: Date) => void;
 }
 
-type ViewMode = "week" | "2weeks" | "month";
+// Infinite scroll - always show 21 days (3 weeks) from start
+const DAYS_TO_SHOW = 21;
 
 // Configuration des dimensions - colonnes plus larges
 const CELL_WIDTH = 110;
@@ -49,12 +50,12 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
 
 export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: TeamPlanningGridProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>("2weeks");
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const [showEvents, setShowEvents] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   const [teamColumnCollapsed, setTeamColumnCollapsed] = useState(false);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
   
   // Time entry dialog state (add)
   const [timeEntryDialogOpen, setTimeEntryDialogOpen] = useState(false);
@@ -113,20 +114,33 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     return map;
   }, [members]);
 
-  // Calculer les jours à afficher
+  // Calculer les jours à afficher - toujours 21 jours (scroll infini)
   const days = useMemo(() => {
     const start = startOfWeek(currentDate, { weekStartsOn: 1 });
-    
-    if (viewMode === "week") {
-      return Array.from({ length: 7 }, (_, i) => addDays(start, i));
-    } else if (viewMode === "2weeks") {
-      return Array.from({ length: 14 }, (_, i) => addDays(start, i));
-    } else {
-      const monthStart = startOfWeek(startOfMonth(currentDate), { weekStartsOn: 1 });
-      const monthEnd = addDays(endOfMonth(currentDate), 7);
-      return eachDayOfInterval({ start: monthStart, end: monthEnd });
-    }
-  }, [currentDate, viewMode]);
+    return Array.from({ length: DAYS_TO_SHOW }, (_, i) => addDays(start, i));
+  }, [currentDate]);
+
+  // Filter members based on selection
+  const filteredMembers = useMemo(() => {
+    if (selectedMemberIds.size === 0) return members || [];
+    return (members || []).filter(m => selectedMemberIds.has(m.user_id));
+  }, [members, selectedMemberIds]);
+
+  const toggleMemberFilter = useCallback((userId: string) => {
+    setSelectedMemberIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const clearMemberFilter = useCallback(() => {
+    setSelectedMemberIds(new Set());
+  }, []);
 
   // Grouper les jours par mois
   const monthGroups = useMemo(() => {
@@ -147,8 +161,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   }, [days]);
 
   const navigate = (direction: "prev" | "next") => {
-    const weeks = viewMode === "week" ? 1 : viewMode === "2weeks" ? 2 : 4;
-    setCurrentDate(prev => direction === "prev" ? subWeeks(prev, weeks) : addWeeks(prev, weeks));
+    setCurrentDate(prev => direction === "prev" ? subWeeks(prev, 1) : addWeeks(prev, 1));
   };
 
   const goToToday = () => setCurrentDate(new Date());
@@ -443,6 +456,45 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Filtres par membre */}
+          {(members?.length || 0) > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Filtrer :</span>
+              <div className="flex items-center gap-1 flex-wrap max-w-md">
+                {members?.slice(0, 5).map(member => (
+                  <button
+                    key={member.user_id}
+                    onClick={() => toggleMemberFilter(member.user_id)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition-colors",
+                      selectedMemberIds.has(member.user_id)
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                    )}
+                  >
+                    <Avatar className="h-4 w-4">
+                      <AvatarImage src={member.profile?.avatar_url || ""} />
+                      <AvatarFallback className="text-[8px]">
+                        {(member.profile?.full_name || "?").charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden sm:inline">{member.profile?.full_name?.split(' ')[0]}</span>
+                  </button>
+                ))}
+                {selectedMemberIds.size > 0 && (
+                  <button
+                    onClick={clearMemberFilter}
+                    className="text-xs text-muted-foreground hover:text-foreground underline ml-1"
+                  >
+                    Tous
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="h-6 w-px bg-border" />
+
           {/* Toggle événements */}
           <div className="flex items-center gap-2">
             <Switch
@@ -454,29 +506,6 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
               <Calendar className="h-3.5 w-3.5" />
               Événements
             </Label>
-          </div>
-
-          <div className="h-6 w-px bg-border" />
-
-          <div className="flex bg-muted rounded-lg p-0.5">
-            {[
-              { key: "week", label: "7 jours" },
-              { key: "2weeks", label: "14 jours" },
-              { key: "month", label: "Mois" },
-            ].map(({ key, label }) => (
-              <Button
-                key={key}
-                variant={viewMode === key ? "secondary" : "ghost"}
-                size="sm"
-                className={cn(
-                  "h-7 px-3 text-xs rounded-md",
-                  viewMode === key && "shadow-sm"
-                )}
-                onClick={() => setViewMode(key as ViewMode)}
-              >
-                {label}
-              </Button>
-            ))}
           </div>
         </div>
       </div>
@@ -532,13 +561,13 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                   <Users className="h-4 w-4" />
                   <span className="text-xs font-medium uppercase tracking-wider">Équipe</span>
                   <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
-                    {members?.length || 0}
+                    {filteredMembers.length}{selectedMemberIds.size > 0 ? `/${members?.length || 0}` : ''}
                   </span>
                 </div>
               ) : (
                 <div className="flex items-center justify-center w-full">
                   <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
-                    {members?.length || 0}
+                    {filteredMembers.length}
                   </span>
                 </div>
               )}
@@ -556,12 +585,12 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
             {/* Liste des membres - overflow hidden, sync via same container */}
             <div className="flex-1 overflow-hidden">
               <div id="members-scroll-content">
-                {(!members || members.length === 0) ? (
+                {filteredMembers.length === 0 ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
                     {teamColumnCollapsed ? '' : 'Aucun membre'}
                   </div>
                 ) : (
-                  members.map(member => (
+                  filteredMembers.map(member => (
                     <div
                       key={member.user_id}
                       className={`flex items-center border-b hover:bg-muted/30 transition-colors ${teamColumnCollapsed ? 'justify-center px-2' : 'px-4 gap-3'}`}
@@ -652,14 +681,13 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                 </div>
               </div>
 
-              {/* Corps de la grille */}
               <div>
-                {(!members || members.length === 0) ? (
+                {filteredMembers.length === 0 ? (
                   <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
-                    Ajoutez des membres à votre équipe pour voir le planning
+                    {selectedMemberIds.size > 0 ? 'Aucun membre sélectionné' : 'Ajoutez des membres à votre équipe pour voir le planning'}
                   </div>
                 ) : (
-                  members.map(member => (
+                  filteredMembers.map(member => (
                     <MemberRow
                       key={member.user_id}
                       member={member}

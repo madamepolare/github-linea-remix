@@ -220,6 +220,11 @@ export const CommercialListView = ({
                         placeholder="Ajouter des notes..."
                         className="min-h-[80px] text-sm resize-none"
                       />
+                      {doc.updated_at && (
+                        <p className="text-[10px] text-muted-foreground">
+                          Modifié le {format(new Date(doc.updated_at), 'dd/MM/yy à HH:mm', { locale: fr })}
+                        </p>
+                      )}
                     </div>
                   </PopoverContent>
                 </Popover>

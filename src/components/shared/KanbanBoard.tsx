@@ -170,29 +170,21 @@ export function KanbanBoard<T>({
                 const isDragging = draggedItem?.id === itemId;
 
                 return (
-                  <motion.div
+                  <div
                     key={itemId}
-                    layoutId={`kanban-item-${itemId}`}
-                    layout={!isDraggingRef.current}
-                    initial={false}
-                    animate={{ 
-                      opacity: isDragging ? 0.5 : 1, 
-                      scale: isDragging ? 0.98 : 1,
-                    }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.15, layout: { duration: 0.2 } }}
-                    draggable={true}
-                    onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, itemId, column.id)}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, itemId, column.id)}
                     onDragEnd={handleDragEnd}
                     className="cursor-grab active:cursor-grabbing"
                     style={{ 
-                      WebkitUserDrag: 'element',
-                      WebkitTouchCallout: 'none',
                       userSelect: 'none',
-                    } as React.CSSProperties}
+                      opacity: isDragging ? 0.5 : 1,
+                      transform: isDragging ? 'scale(0.98)' : 'scale(1)',
+                      transition: 'opacity 0.15s, transform 0.15s',
+                    }}
                   >
                     {renderCard(item, isDragging)}
-                  </motion.div>
+                  </div>
                 );
               })}
             </AnimatePresence>
