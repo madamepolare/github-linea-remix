@@ -102,7 +102,7 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
   },
   commercial: {
     slug: "commercial",
-    title: "Commercial",
+    title: "Business",
     icon: FileText,
     href: "/commercial",
     subNav: [
