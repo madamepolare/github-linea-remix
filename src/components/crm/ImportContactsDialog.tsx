@@ -70,6 +70,8 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
   const [summary, setSummary] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [importProgress, setImportProgress] = useState(0);
+  const [analyzeProgress, setAnalyzeProgress] = useState(0);
+  const [importStatusText, setImportStatusText] = useState("");
 
   const { createContact } = useContacts();
   const { createCompany } = useCRMCompanies();
@@ -83,6 +85,8 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     setSummary("");
     setError(null);
     setImportProgress(0);
+    setAnalyzeProgress(0);
+    setImportStatusText("");
   }, []);
 
   const handleClose = useCallback(() => {
@@ -156,9 +160,19 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     setFile(selectedFile);
     setError(null);
     setStep("analyzing");
+    setAnalyzeProgress(0);
+
+    // Simulate progress during analysis
+    const progressInterval = setInterval(() => {
+      setAnalyzeProgress((prev) => {
+        if (prev >= 90) return prev;
+        return prev + Math.random() * 15;
+      });
+    }, 500);
 
     try {
       const content = await readFileContent(selectedFile);
+      setAnalyzeProgress(30);
       
       const { data, error: fnError } = await supabase.functions.invoke("parse-contacts-import", {
         body: {
@@ -168,14 +182,22 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         },
       });
 
+      clearInterval(progressInterval);
+
       if (fnError) throw fnError;
       if (data.error) throw new Error(data.error);
+
+      setAnalyzeProgress(100);
+      
+      // Small delay to show 100% before switching
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       setCompanies((data.companies || []).map((c: ParsedCompany) => ({ ...c, selected: true })));
       setContacts((data.contacts || []).map((c: ParsedContact) => ({ ...c, selected: true })));
       setSummary(data.summary || "");
       setStep("review");
     } catch (err) {
+      clearInterval(progressInterval);
       console.error("Error parsing file:", err);
       setError(err instanceof Error ? err.message : "Erreur lors de l'analyse du fichier");
       setStep("upload");
@@ -207,11 +229,14 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
   const handleImport = async () => {
     setStep("importing");
     setImportProgress(0);
+    setImportStatusText("");
 
     const selectedCompanies = companies.filter((c) => c.selected);
     const selectedContacts = contacts.filter((c) => c.selected);
     const total = selectedCompanies.length + selectedContacts.length;
     let processed = 0;
+    let successCompanies = 0;
+    let successContacts = 0;
 
     try {
       // Create a map of temp_id to real company ID
@@ -219,6 +244,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
       // First, create companies
       for (const company of selectedCompanies) {
+        setImportStatusText(`Création entreprise: ${company.name}`);
         try {
           const result = await createCompany.mutateAsync({
             name: company.name,
@@ -231,6 +257,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
             postal_code: company.postal_code,
           });
           companyIdMap.set(company.temp_id, result.id);
+          successCompanies++;
         } catch (err) {
           console.error("Error creating company:", company.name, err);
         }
@@ -240,6 +267,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
       // Then, create contacts with company links
       for (const contact of selectedContacts) {
+        setImportStatusText(`Création contact: ${contact.first_name} ${contact.last_name}`);
         try {
           const companyId = contact.company_temp_id
             ? companyIdMap.get(contact.company_temp_id)
@@ -256,6 +284,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
             crm_company_id: companyId,
             notes: contact.notes,
           });
+          successContacts++;
         } catch (err) {
           console.error("Error creating contact:", contact.first_name, contact.last_name, err);
         }
@@ -263,10 +292,11 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
         setImportProgress(Math.round((processed / total) * 100));
       }
 
+      setImportStatusText("Import terminé !");
       setStep("done");
       toast({
         title: "Import terminé",
-        description: `${selectedCompanies.length} entreprise(s) et ${selectedContacts.length} contact(s) importé(s)`,
+        description: `${successCompanies} entreprise(s) et ${successContacts} contact(s) importé(s)`,
       });
     } catch (err) {
       console.error("Import error:", err);
@@ -341,7 +371,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
           {/* Analyzing Step */}
           {step === "analyzing" && (
-            <div className="py-12 flex flex-col items-center gap-4">
+            <div className="py-12 flex flex-col items-center gap-6">
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <Loader2 className="h-8 w-8 text-primary animate-spin" />
               </div>
@@ -349,6 +379,12 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
                 <p className="font-medium">Analyse en cours...</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   L'IA extrait les contacts et entreprises de votre fichier
+                </p>
+              </div>
+              <div className="w-full max-w-sm space-y-2">
+                <Progress value={analyzeProgress} className="h-2" />
+                <p className="text-xs text-center text-muted-foreground">
+                  {Math.round(analyzeProgress)}% - Extraction des données...
                 </p>
               </div>
               {file && (
@@ -484,7 +520,7 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
 
           {/* Importing Step */}
           {step === "importing" && (
-            <div className="py-12 flex flex-col items-center gap-4">
+            <div className="py-12 flex flex-col items-center gap-6">
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <Loader2 className="h-8 w-8 text-primary animate-spin" />
               </div>
@@ -494,9 +530,22 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
                   Création des contacts et entreprises
                 </p>
               </div>
-              <div className="w-full max-w-xs">
-                <Progress value={importProgress} className="h-2" />
-                <p className="text-xs text-muted-foreground text-center mt-2">{importProgress}%</p>
+              <div className="w-full max-w-sm space-y-2">
+                <Progress value={importProgress} className="h-3" />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span className="truncate max-w-[200px]">{importStatusText}</span>
+                  <span className="font-medium">{importProgress}%</span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Badge variant="outline" className="gap-1">
+                  <Building2 className="h-3 w-3" />
+                  {companies.filter((c) => c.selected).length} entreprises
+                </Badge>
+                <Badge variant="outline" className="gap-1">
+                  <User className="h-3 w-3" />
+                  {contacts.filter((c) => c.selected).length} contacts
+                </Badge>
               </div>
             </div>
           )}
