@@ -58,6 +58,7 @@ import {
   setPendingWorkspace,
 } from "@/lib/founderSwitch";
 import { useToast } from "@/hooks/use-toast";
+import { SupportChatDrawer } from "@/components/support/SupportChatDrawer";
 
 interface NavItem {
   title: string;
@@ -78,6 +79,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { user, profile, activeWorkspace, workspaces, signOut, setActiveWorkspace, refreshProfile } = useAuth();
   const [showQuickSwitch, setShowQuickSwitch] = useState(false);
   const [switchingWorkspace, setSwitchingWorkspace] = useState<string | null>(null);
+  const [showSupportChat, setShowSupportChat] = useState(false);
   const canQuickSwitch = useCanQuickSwitch(user?.email);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -491,11 +493,26 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           onClick={onNavigate} 
         />
         
-        {!collapsed && (
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+        {!collapsed ? (
+          <button 
+            onClick={() => setShowSupportChat(true)}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
             <HelpCircle className="h-[18px] w-[18px]" strokeWidth={THIN_STROKE} />
             <span>Help & Support</span>
           </button>
+        ) : (
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <button 
+                onClick={() => setShowSupportChat(true)}
+                className="flex w-full items-center justify-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <HelpCircle className="h-[18px] w-[18px]" strokeWidth={THIN_STROKE} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Help & Support</TooltipContent>
+          </Tooltip>
         )}
       </div>
 
@@ -575,6 +592,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         open={showQuickSwitch}
         onOpenChange={setShowQuickSwitch}
         currentEmail={user?.email}
+      />
+
+      {/* Support Chat Drawer */}
+      <SupportChatDrawer
+        open={showSupportChat}
+        onClose={() => setShowSupportChat(false)}
       />
     </motion.aside>
   );
