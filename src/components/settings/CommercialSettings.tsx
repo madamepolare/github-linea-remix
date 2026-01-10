@@ -45,12 +45,13 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Edit, Copy, GripVertical, FileText, Euro, Download, Sparkles, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Edit, Copy, GripVertical, FileText, Euro, Download, Sparkles, ChevronDown, FolderKanban } from 'lucide-react';
 import { useQuoteTemplates, QuoteTemplate, QuoteTemplatePhase, PricingGrid, PricingGridItem } from '@/hooks/useQuoteTemplates';
 import { ProjectType, PROJECT_TYPE_LABELS, PHASES_BY_PROJECT_TYPE } from '@/lib/commercialTypes';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ALL_MISSION_TEMPLATES, getMissionCategories, MissionTemplate } from '@/lib/defaultMissionTemplates';
 import { toast } from 'sonner';
+import { ContractTypesSettings } from './ContractTypesSettings';
 
 const GRID_TYPE_LABELS = {
   hourly: 'Horaire',
@@ -60,19 +61,23 @@ const GRID_TYPE_LABELS = {
 };
 
 export function CommercialSettings() {
-  const [activeTab, setActiveTab] = useState('templates');
+  const [activeTab, setActiveTab] = useState('contracts');
 
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium">Paramètres Finance</h3>
         <p className="text-sm text-muted-foreground">
-          Gérez vos templates de devis et grilles tarifaires. Les phases sont gérées dans l'onglet "Phases" des paramètres.
+          Gérez vos types de contrats, templates de devis et grilles tarifaires.
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
+          <TabsTrigger value="contracts" className="gap-2">
+            <FolderKanban className="h-4 w-4" />
+            Types de contrats
+          </TabsTrigger>
           <TabsTrigger value="templates" className="gap-2">
             <FileText className="h-4 w-4" />
             Templates de devis
@@ -82,6 +87,10 @@ export function CommercialSettings() {
             Grilles tarifaires
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="contracts" className="mt-6">
+          <ContractTypesSettings />
+        </TabsContent>
 
         <TabsContent value="templates" className="mt-6">
           <QuoteTemplatesSection />
