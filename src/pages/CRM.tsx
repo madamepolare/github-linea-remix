@@ -10,6 +10,7 @@ import { ContactPipeline } from "@/components/crm/ContactPipeline";
 import { CreateContactDialog } from "@/components/crm/CreateContactDialog";
 import { CreateCompanyDialog } from "@/components/crm/CreateCompanyDialog";
 import { CreateLeadDialog } from "@/components/crm/CreateLeadDialog";
+import { ImportContactsDialog } from "@/components/crm/ImportContactsDialog";
 import { CRMOverview } from "@/components/crm/CRMOverview";
 import { useLeads } from "@/hooks/useLeads";
 import { useCRMPipelines } from "@/hooks/useCRMPipelines";
@@ -43,6 +44,7 @@ export default function CRM() {
   const [createContactOpen, setCreateContactOpen] = useState(false);
   const [createCompanyOpen, setCreateCompanyOpen] = useState(false);
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
+  const [importContactsOpen, setImportContactsOpen] = useState(false);
   const [preselectedStageId, setPreselectedStageId] = useState<string | undefined>();
 
   const prospectionAutoCreatedRef = useRef(false);
@@ -243,7 +245,11 @@ export default function CRM() {
 
       case "contacts":
         return (
-          <CRMContactsTable search={searchQuery} onCreateContact={() => setCreateContactOpen(true)} />
+          <CRMContactsTable 
+            search={searchQuery} 
+            onCreateContact={() => setCreateContactOpen(true)} 
+            onImportContacts={() => setImportContactsOpen(true)}
+          />
         );
 
       case "prospection":
@@ -433,6 +439,7 @@ export default function CRM() {
 
       <CreateContactDialog open={createContactOpen} onOpenChange={setCreateContactOpen} />
       <CreateCompanyDialog open={createCompanyOpen} onOpenChange={setCreateCompanyOpen} />
+      <ImportContactsDialog open={importContactsOpen} onOpenChange={setImportContactsOpen} />
       <CreateLeadDialog
         open={createLeadOpen}
         onOpenChange={(open) => {
