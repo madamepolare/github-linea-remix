@@ -51,7 +51,8 @@ import {
   FolderPlus,
   Briefcase,
   PenTool,
-  Info
+  Info,
+  Calculator
 } from 'lucide-react';
 import { QuoteLine, QuoteDocument, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { UNIT_OPTIONS, BILLING_TYPE_LABELS, BillingType } from '@/hooks/useQuoteLineTemplates';
@@ -73,6 +74,7 @@ const COST_SOURCE_CONFIG = {
   manual: { label: 'Prix manuel', icon: PenTool, color: 'text-slate-600' },
   skill: { label: 'Compétence assignée', icon: Briefcase, color: 'text-blue-600' },
   member: { label: 'Membre assigné', icon: User, color: 'text-purple-600' },
+  average: { label: 'Estimé (TJM moyen)', icon: Calculator, color: 'text-amber-600' },
   none: { label: 'Non calculé', icon: null, color: 'text-muted-foreground' },
 };
 
