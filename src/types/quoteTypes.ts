@@ -95,6 +95,10 @@ export interface QuoteDocument {
   hourly_rate?: number;
   total_amount: number;
   
+  // VAT
+  vat_type?: string;
+  vat_rate?: number;
+  
   // Terms
   currency: string;
   validity_days: number;

@@ -42,6 +42,7 @@ import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
 import { useQuoteTemplates } from '@/hooks/useQuoteTemplates';
 import { AIQuoteGenerator } from './AIQuoteGenerator';
 import { QuoteLineItem } from './QuoteLineItem';
+import { QuoteLineItemCompact } from './QuoteLineItemCompact';
 import { QuoteMarginSummary } from './QuoteMarginSummary';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useLineFeatures } from '@/contexts/LineFeatureContext';
@@ -251,7 +252,7 @@ export function QuoteLinesEditor({
                   <CollapsibleContent>
                     <div className="p-2 space-y-2">
                       {groupLines.length === 0 ? <div className="text-center py-4 text-sm text-muted-foreground">Aucune ligne</div> : groupLines.map((line, index) => (
-                        <QuoteLineItem key={line.id} line={line} index={index} isInGroup={true} groups={groups} isExpanded={expandedLines.has(line.id)} draggedIndex={draggedIndex} teamMembers={teamMembers} document={document} toggleExpanded={toggleExpanded} updateLine={updateLine} duplicateLine={duplicateLine} deleteLine={deleteLine} assignToGroup={assignToGroup} handleDragStart={handleDragStart} handleDragOver={handleDragOver} handleDragEnd={handleDragEnd} formatCurrency={formatCurrency} />
+                        <QuoteLineItemCompact key={line.id} line={line} index={index} isInGroup={true} groups={groups} isExpanded={expandedLines.has(line.id)} draggedIndex={draggedIndex} teamMembers={teamMembers} document={document} toggleExpanded={toggleExpanded} updateLine={updateLine} duplicateLine={duplicateLine} deleteLine={deleteLine} assignToGroup={assignToGroup} handleDragStart={handleDragStart} handleDragOver={handleDragOver} handleDragEnd={handleDragEnd} formatCurrency={formatCurrency} />
                       ))}
                       <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => addLine('service', group.id)}><Plus className="h-4 w-4 mr-2" />Ajouter une ligne</Button>
                       {groupLines.length > 0 && <Card className="bg-slate-50 border-slate-200"><CardContent className="py-2 px-4"><div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Sous-total {group.phase_name}</span><span className="font-semibold">{formatCurrency(getGroupSubtotal(group.id))}</span></div></CardContent></Card>}
@@ -262,7 +263,7 @@ export function QuoteLinesEditor({
             );
           })}
           {ungroupedLines.map((line, index) => (
-            <QuoteLineItem key={line.id} line={line} index={index} isInGroup={false} groups={groups} isExpanded={expandedLines.has(line.id)} draggedIndex={draggedIndex} teamMembers={teamMembers} document={document} toggleExpanded={toggleExpanded} updateLine={updateLine} duplicateLine={duplicateLine} deleteLine={deleteLine} assignToGroup={assignToGroup} handleDragStart={handleDragStart} handleDragOver={handleDragOver} handleDragEnd={handleDragEnd} formatCurrency={formatCurrency} />
+            <QuoteLineItemCompact key={line.id} line={line} index={index} isInGroup={false} groups={groups} isExpanded={expandedLines.has(line.id)} draggedIndex={draggedIndex} teamMembers={teamMembers} document={document} toggleExpanded={toggleExpanded} updateLine={updateLine} duplicateLine={duplicateLine} deleteLine={deleteLine} assignToGroup={assignToGroup} handleDragStart={handleDragStart} handleDragOver={handleDragOver} handleDragEnd={handleDragEnd} formatCurrency={formatCurrency} />
           ))}
         </div>
       )}

@@ -558,6 +558,8 @@ export type Database = {
           updated_at: string | null
           valid_until: string | null
           validity_days: number | null
+          vat_rate: number | null
+          vat_type: string | null
           workspace_id: string
         }
         Insert: {
@@ -598,6 +600,8 @@ export type Database = {
           updated_at?: string | null
           valid_until?: string | null
           validity_days?: number | null
+          vat_rate?: number | null
+          vat_type?: string | null
           workspace_id: string
         }
         Update: {
@@ -638,6 +642,8 @@ export type Database = {
           updated_at?: string | null
           valid_until?: string | null
           validity_days?: number | null
+          vat_rate?: number | null
+          vat_type?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -1190,6 +1196,8 @@ export type Database = {
           siret: string | null
           updated_at: string | null
           vat_number: string | null
+          vat_rate: number | null
+          vat_type: string | null
           website: string | null
           workspace_id: string
         }
@@ -1217,6 +1225,8 @@ export type Database = {
           siret?: string | null
           updated_at?: string | null
           vat_number?: string | null
+          vat_rate?: number | null
+          vat_type?: string | null
           website?: string | null
           workspace_id: string
         }
@@ -1244,6 +1254,8 @@ export type Database = {
           siret?: string | null
           updated_at?: string | null
           vat_number?: string | null
+          vat_rate?: number | null
+          vat_type?: string | null
           website?: string | null
           workspace_id?: string
         }
