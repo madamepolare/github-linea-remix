@@ -52,9 +52,9 @@ import { fr } from "date-fns/locale";
 import { THIN_STROKE } from "@/components/ui/icon";
 
 export default function DocumentationPage() {
-  const { pageId } = useParams<{ pageId: string }>();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { page, isLoading, updatePage } = useDocumentationPage(pageId);
+  const { page, isLoading, updatePage } = useDocumentationPage(id);
   const { deletePage } = useDocumentationPages();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -89,9 +89,9 @@ export default function DocumentationPage() {
   };
 
   const handleDelete = async () => {
-    if (!pageId) return;
+    if (!id) return;
     try {
-      await deletePage.mutateAsync(pageId);
+      await deletePage.mutateAsync(id);
       navigate("/documentation");
     } catch (error) {
       toast.error("Erreur lors de la suppression");
