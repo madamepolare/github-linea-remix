@@ -210,9 +210,13 @@ export default function QuoteBuilder() {
       
       setHasChanges(false);
       toast.success('Devis enregistré');
+
+      // Ensure lists refresh immediately after save
+      // (the list is scoped by workspace, so we rely on react-query invalidations from the mutations)
     } catch (error) {
       console.error('Error saving quote:', error);
-      toast.error('Erreur lors de l\'enregistrement');
+      const msg = error instanceof Error ? error.message : 'Erreur lors de l\'enregistrement';
+      toast.error(msg);
     } finally {
       setIsSaving(false);
     }
