@@ -122,7 +122,10 @@ export default function QuoteBuilder() {
   };
 
   const handleSave = async () => {
-    if (!activeWorkspace) return;
+    if (!activeWorkspace) {
+      toast.error("Aucun workspace actif — reconnectez-vous si besoin.");
+      return;
+    }
     
     setIsSaving(true);
     try {

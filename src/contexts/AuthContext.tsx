@@ -160,7 +160,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      // If the locally stored session is corrupted (e.g. bad_jwt / missing sub), purge it.
+      if (session) {
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData?.user) {
+          console.warn("Invalid session detected, signing out", userError);
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setWorkspaces([]);
+          setLoading(false);
+          setIsInitialized(true);
+          return;
+        }
+      }
+
       setSession(session);
       setUser(session?.user ?? null);
 
