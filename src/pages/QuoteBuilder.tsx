@@ -25,6 +25,9 @@ import {
 import { QuoteDocument, QuoteLine, phaseToQuoteLine, quoteLineToPhase, DOCUMENT_STATUS_LABELS } from '@/types/quoteTypes';
 import { QuoteGeneralTab } from '@/components/commercial/quote-builder/QuoteGeneralTab';
 import { QuoteLinesEditor } from '@/components/commercial/quote-builder/QuoteLinesEditor';
+import { QuoteFeesTab } from '@/components/commercial/quote-builder/QuoteFeesTab';
+import { QuoteProductionTab } from '@/components/commercial/quote-builder/QuoteProductionTab';
+import { QuotePlanningTab } from '@/components/commercial/quote-builder/QuotePlanningTab';
 import { QuoteTermsTab } from '@/components/commercial/quote-builder/QuoteTermsTab';
 import { QuotePreviewPanel } from '@/components/commercial/quote-builder/QuotePreviewPanel';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
@@ -32,6 +35,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { ensureValidProjectType } from '@/lib/projectTypeMapping';
+import { useContractTypes, BuilderTab } from '@/hooks/useContractTypes';
 import {
   DropdownMenu,
   DropdownMenuContent,
