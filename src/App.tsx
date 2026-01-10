@@ -52,6 +52,8 @@ const Workflow = lazy(() => import("./pages/Workflow"));
 const Campaigns = lazy(() => import("./pages/Campaigns"));
 const CampaignDetail = lazy(() => import("./pages/CampaignDetail"));
 const MediaPlanning = lazy(() => import("./pages/MediaPlanning"));
+const Documentation = lazy(() => import("./pages/Documentation"));
+const DocumentationPage = lazy(() => import("./pages/DocumentationPage"));
 const CreateWorkspace = lazy(() => import("./pages/CreateWorkspace"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -144,6 +146,8 @@ const App = () => (
                   <Route path="/campaigns" element={<Suspense fallback={<PageLoader />}><Campaigns /></Suspense>} />
                   <Route path="/campaigns/:id" element={<Suspense fallback={<PageLoader />}><CampaignDetail /></Suspense>} />
                   <Route path="/media-planning" element={<Suspense fallback={<PageLoader />}><MediaPlanning /></Suspense>} />
+                  <Route path="/documentation" element={<Suspense fallback={<PageLoader />}><Documentation /></Suspense>} />
+                  <Route path="/documentation/:id" element={<Suspense fallback={<PageLoader />}><DocumentationPage /></Suspense>} />
                 </Route>
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
