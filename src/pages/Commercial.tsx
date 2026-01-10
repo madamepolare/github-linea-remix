@@ -25,6 +25,7 @@ import {
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { useAuth } from '@/contexts/AuthContext';
 import { CommercialPipeline } from '@/components/commercial/CommercialPipeline';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   DocumentType, 
   DocumentStatus,
@@ -38,22 +39,20 @@ const Commercial = () => {
   const navigate = useNavigate();
   const { view } = useParams();
   const { activeWorkspace, workspaces, setActiveWorkspace } = useAuth();
-  const { documents, isLoading, deleteDocument, duplicateDocument, updateDocument } = useCommercialDocuments();
+  const queryClient = useQueryClient();
+  const { documents, isLoading, documentsError, refetchDocuments, deleteDocument, duplicateDocument, updateDocument } = useCommercialDocuments();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
 
-  // Debug: help diagnose "documents not showing" issues
-  console.info('[Commercial] render', {
-    routeView: view,
+  const debugInfo = {
+    routeView: view ?? null,
     workspace: activeWorkspace ? { id: activeWorkspace.id, name: activeWorkspace.name } : null,
     documentsCount: documents.length,
+    filteredCount: 0,
     isLoading,
-    statusFilter,
-    searchQuery
-  });
-
-  // Derive type filter from URL
+    error: documentsError ? String(documentsError) : null,
+  };
   const typeFilter: DocumentType | 'all' = 
     view === 'quotes' ? 'quote' : 
     view === 'contracts' ? 'contract' : 
@@ -70,10 +69,7 @@ const Commercial = () => {
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  console.info('[Commercial] filteredDocuments', {
-    typeFilter,
-    filteredCount: filteredDocuments.length,
-  });
+  debugInfo.filteredCount = filteredDocuments.length;
 
   // KPIs
   const totalDraft = documents.filter(d => d.status === 'draft').length;
@@ -153,7 +149,33 @@ const Commercial = () => {
           </DropdownMenu>
         </div>
       }
-    >
+> 
+      {/* Debug banner (helps diagnose missing documents) */}
+      <div className="mb-4">
+        <div className="rounded-lg border bg-card p-3 text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            <span><span className="font-medium">Workspace:</span> {debugInfo.workspace?.name || '—'} ({debugInfo.workspace?.id?.slice(0, 8) || '—'})</span>
+            <span><span className="font-medium">Docs:</span> {debugInfo.documentsCount}</span>
+            <span><span className="font-medium">Filtrés:</span> {debugInfo.filteredCount}</span>
+            <span><span className="font-medium">Vue:</span> {typeFilter}</span>
+            {debugInfo.error && <span className="text-destructive"><span className="font-medium">Erreur:</span> {debugInfo.error}</span>}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                await queryClient.invalidateQueries({ queryKey: ['commercial-documents', activeWorkspace?.id] });
+                await queryClient.invalidateQueries({ queryKey: ['commercial-documents'] });
+                await refetchDocuments();
+              }}
+            >
+              Rafraîchir
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <Card>
