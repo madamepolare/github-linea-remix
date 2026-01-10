@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTasks, Task } from "@/hooks/useTasks";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjects } from "@/hooks/useProjects";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { useScheduledTaskIds } from "@/hooks/useScheduledTaskIds";
+import { useTaskCommunicationsCounts } from "@/hooks/useTaskCommunicationsCounts";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,7 +12,7 @@ import { KanbanBoard, KanbanColumn, KanbanCard } from "@/components/shared/Kanba
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { CheckSquare, Calendar, FolderKanban, Building2, FileText, Target, CheckCircle2, CalendarClock } from "lucide-react";
+import { CheckSquare, Calendar, FolderKanban, Building2, FileText, Target, CheckCircle2, CalendarClock, MessageCircle } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -37,7 +38,13 @@ export function TaskBoard({ statusFilter, priorityFilter, projectId, onCreateTas
   const { projects } = useProjects();
   const { data: profiles } = useWorkspaceProfiles();
   const { data: scheduledTaskIds } = useScheduledTaskIds();
+  
+  // Get all task IDs for fetching communication counts
+  const taskIds = useMemo(() => tasks?.map(t => t.id) || [], [tasks]);
+  const { data: communicationsCounts } = useTaskCommunicationsCounts(taskIds);
+  
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTaskTab, setSelectedTaskTab] = useState<string>("details");
   const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(new Set());
 
   const handleDrop = (taskId: string, _fromColumn: string, toColumn: string) => {
@@ -122,18 +129,30 @@ export function TaskBoard({ statusFilter, priorityFilter, projectId, onCreateTas
         isLoading={isLoading}
         onDrop={handleDrop}
         getItemId={(task) => task.id}
-        renderCard={(task, isDragging) => (
-          <TaskKanbanCard
-            task={task}
-            companyName={getCompanyName(task.crm_company_id)}
-            projectName={getProjectName(task.project_id)}
-            profiles={profiles || []}
-            onClick={() => setSelectedTask(task)}
-            isDragging={isDragging}
-            isJustCompleted={recentlyCompleted.has(task.id)}
-            isScheduled={scheduledTaskIds?.has(task.id) || false}
-          />
-        )}
+        renderCard={(task, isDragging) => {
+          const commData = communicationsCounts?.[task.id];
+          return (
+            <TaskKanbanCard
+              task={task}
+              companyName={getCompanyName(task.crm_company_id)}
+              projectName={getProjectName(task.project_id)}
+              profiles={profiles || []}
+              onClick={() => {
+                setSelectedTaskTab("details");
+                setSelectedTask(task);
+              }}
+              onCommentsClick={() => {
+                setSelectedTaskTab("comments");
+                setSelectedTask(task);
+              }}
+              isDragging={isDragging}
+              isJustCompleted={recentlyCompleted.has(task.id)}
+              isScheduled={scheduledTaskIds?.has(task.id) || false}
+              commentCount={commData?.count || 0}
+              hasRecentComment={commData?.hasRecent || false}
+            />
+          );
+        }}
         renderQuickAdd={(columnId) => (
           <QuickTaskRow defaultStatus={columnId as Task["status"]} />
         )}
@@ -144,6 +163,7 @@ export function TaskBoard({ statusFilter, priorityFilter, projectId, onCreateTas
         task={selectedTask}
         open={!!selectedTask}
         onOpenChange={(open) => !open && setSelectedTask(null)}
+        defaultTab={selectedTaskTab}
       />
     </>
   );
@@ -155,12 +175,15 @@ interface TaskKanbanCardProps {
   projectName: string | null;
   profiles: WorkspaceProfile[];
   onClick: () => void;
+  onCommentsClick: () => void;
   isDragging: boolean;
   isJustCompleted?: boolean;
   isScheduled?: boolean;
+  commentCount?: number;
+  hasRecentComment?: boolean;
 }
 
-function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, isDragging, isJustCompleted, isScheduled }: TaskKanbanCardProps) {
+function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, onCommentsClick, isDragging, isJustCompleted, isScheduled, commentCount = 0, hasRecentComment = false }: TaskKanbanCardProps) {
   const completedSubtasks = task.subtasks?.filter((s) => s.status === "done").length || 0;
   const totalSubtasks = task.subtasks?.length || 0;
   const progress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
@@ -281,7 +304,7 @@ function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, isD
             </div>
           )}
 
-          {/* Footer: Assignees, Due Date */}
+          {/* Footer: Assignees, Comments, Due Date */}
           <div className="flex items-center justify-between gap-2 pt-1">
             <div className="flex items-center gap-2">
               {/* Assignees with profile pictures */}
@@ -308,6 +331,36 @@ function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, isD
                   )}
                 </div>
               )}
+
+              {/* Comments bubble */}
+              <motion.div 
+                className={cn(
+                  "relative flex items-center justify-center cursor-pointer transition-colors",
+                  commentCount > 0 ? "text-foreground" : "text-muted-foreground/40 hover:text-muted-foreground"
+                )}
+                animate={hasRecentComment ? { scale: [1, 1.15, 1] } : {}}
+                transition={{ repeat: hasRecentComment ? Infinity : 0, duration: 1.5 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCommentsClick();
+                }}
+              >
+                <MessageCircle className={cn(
+                  "h-3.5 w-3.5",
+                  hasRecentComment && "text-primary",
+                  commentCount > 0 && !hasRecentComment && "text-muted-foreground"
+                )} />
+                {commentCount > 0 && (
+                  <span className={cn(
+                    "absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 flex items-center justify-center rounded-full text-[9px] font-bold px-0.5",
+                    hasRecentComment 
+                      ? "bg-primary text-primary-foreground animate-pulse" 
+                      : "bg-muted-foreground/80 text-background"
+                  )}>
+                    {commentCount}
+                  </span>
+                )}
+              </motion.div>
             </div>
 
             {/* Due date */}
