@@ -337,14 +337,14 @@ export function QuoteLineItem({
                   Membre assigné
                 </Label>
                 <Select
-                  value={line.assigned_member_id || ''}
-                  onValueChange={(v) => updateLine(line.id, { assigned_member_id: v || undefined })}
+                  value={line.assigned_member_id || 'none'}
+                  onValueChange={(v) => updateLine(line.id, { assigned_member_id: v === 'none' ? undefined : v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Non assigné</SelectItem>
+                    <SelectItem value="none">Non assigné</SelectItem>
                     {teamMembers?.map(member => (
                       <SelectItem key={member.user_id} value={member.user_id}>
                         <div className="flex items-center gap-2">
