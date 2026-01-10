@@ -41,12 +41,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function QuoteBuilder() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{ id?: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { activeWorkspace, loading: authLoading } = useAuth();
   
-  const isNew = id === 'new';
+  // Route "/commercial/quote/new" has no :id param, so treat missing id as a new document.
+  const isNew = !id || id === 'new';
   const projectId = searchParams.get('project');
   const documentType = searchParams.get('type') || 'quote';
   
@@ -295,8 +296,8 @@ export default function QuoteBuilder() {
     );
   }
 
-  // Disable save if auth is still loading
-  const canSave = !authLoading && !!activeWorkspace;
+  // Allow clicking Save even if auth/workspace still loading so we can show a clear message.
+  const canClickSave = !isSaving;
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -322,6 +323,13 @@ export default function QuoteBuilder() {
             <p className="text-sm text-muted-foreground">
               {document.document_number || 'Brouillon'}
             </p>
+            {(authLoading || !activeWorkspace) && (
+              <p className="text-xs text-muted-foreground">
+                {authLoading
+                  ? 'Session en cours de chargement…'
+                  : 'Aucun workspace actif — veuillez vous reconnecter.'}
+              </p>
+            )}
           </div>
         </div>
         
@@ -350,7 +358,8 @@ export default function QuoteBuilder() {
           <Button 
             size="sm"
             onClick={handleSave}
-            disabled={isSaving || !canSave}
+            disabled={!canClickSave}
+            title={!activeWorkspace ? 'Aucun workspace actif' : authLoading ? 'Chargement de session…' : undefined}
           >
             <Save className="h-4 w-4 mr-2" />
             {isSaving ? 'Enregistrement...' : 'Enregistrer'}
