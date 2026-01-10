@@ -114,13 +114,13 @@ Réponds avec un JSON array:
     }
 
     // Call Lovable AI Gateway (Gemini)
-    const gatewayUrl = Deno.env.get('AI_GATEWAY_URL') || 'https://ai-gateway.lovable.dev';
+    const gatewayUrl = 'https://gateway.lovable.ai';
     
     const response = await fetch(`${gatewayUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${req.headers.get('authorization')?.replace('Bearer ', '')}`,
+        'Authorization': req.headers.get('authorization') || '',
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
