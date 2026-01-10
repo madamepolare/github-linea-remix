@@ -267,13 +267,17 @@ export function ProfileSettings() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="profile-email">Email</Label>
                 <Input
-                  id="email"
+                  id="profile-email"
                   type="email"
                   value={user?.email || ""}
                   disabled
                   className="bg-muted"
+                  autoComplete="off"
+                  data-1p-ignore
+                  data-lpignore="true"
+                  data-form-type="other"
                 />
                 <p className="text-xs text-muted-foreground">
                   L'email ne peut pas être modifié

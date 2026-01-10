@@ -340,13 +340,17 @@ export function WorkspaceSettings() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="workspace-email">Email</Label>
                     <Input
-                      id="email"
+                      id="workspace-email"
                       type="email"
                       value={formData.email || ''}
                       onChange={(e) => handleChange('email', e.target.value)}
                       placeholder="contact@domini.fr"
+                      autoComplete="off"
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-form-type="other"
                     />
                   </div>
                 </div>
