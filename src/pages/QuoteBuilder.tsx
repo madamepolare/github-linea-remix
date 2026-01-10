@@ -18,7 +18,9 @@ import {
   MoreHorizontal,
   Send,
   Copy,
-  Trash2
+  Trash2,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, phaseToQuoteLine, quoteLineToPhase, DOCUMENT_STATUS_LABELS } from '@/types/quoteTypes';
 import { QuoteGeneralTab } from '@/components/commercial/quote-builder/QuoteGeneralTab';
@@ -26,9 +28,11 @@ import { QuoteLinesEditor } from '@/components/commercial/quote-builder/QuoteLin
 import { QuoteTermsTab } from '@/components/commercial/quote-builder/QuoteTermsTab';
 import { QuotePreviewPanel } from '@/components/commercial/quote-builder/QuotePreviewPanel';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
+import { useDocumentById } from '@/hooks/useDocumentById';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { ensureValidProjectType } from '@/lib/projectTypeMapping';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,13 +45,19 @@ export default function QuoteBuilder() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { activeWorkspace } = useAuth();
+  const { activeWorkspace, loading: authLoading } = useAuth();
   
   const isNew = id === 'new';
   const projectId = searchParams.get('project');
   const documentType = searchParams.get('type') || 'quote';
   
-  const { documents, createDocument, updateDocument, getDocumentPhases, createPhase, updatePhase, deletePhase } = useCommercialDocuments();
+  const { createDocument, updateDocument, getDocumentPhases, createPhase, updatePhase, deletePhase } = useCommercialDocuments();
+  
+  // Use direct document fetch for existing documents (robust, doesn't depend on list)
+  const documentQuery = useDocumentById(isNew ? undefined : id);
+  const existingDoc = documentQuery.data;
+  const isLoadingDoc = documentQuery.isLoading;
+  const docError = documentQuery.error;
   
   // Get phases for existing documents
   const phasesQuery = getDocumentPhases(isNew ? '' : (id || ''));
@@ -67,7 +77,7 @@ export default function QuoteBuilder() {
     currency: 'EUR',
     validity_days: 30,
     total_amount: 0,
-    project_type: 'general'
+    project_type: 'interior' // Valid default
   });
   
   const [lines, setLines] = useState<QuoteLine[]>([]);
@@ -75,21 +85,20 @@ export default function QuoteBuilder() {
   // Store project_id separately for the save operation
   const [linkedProjectId, setLinkedProjectId] = useState<string | undefined>(projectId || undefined);
 
-  // Load existing document
+  // Load existing document from direct fetch (not from list)
   useEffect(() => {
-    if (!isNew && id && documents) {
-      const existingDoc = documents.find(d => d.id === id);
-      if (existingDoc) {
-        setDocument({
-          ...existingDoc,
-          document_type: existingDoc.document_type as 'quote' | 'contract' | 'proposal'
-        });
-        if (existingDoc.project?.id) {
-          setLinkedProjectId(existingDoc.project.id);
-        }
+    if (!isNew && existingDoc) {
+      setDocument({
+        ...existingDoc,
+        document_type: existingDoc.document_type as 'quote' | 'contract' | 'proposal',
+        // Ensure valid project_type
+        project_type: ensureValidProjectType(existingDoc.project_type)
+      });
+      if (existingDoc.project?.id) {
+        setLinkedProjectId(existingDoc.project.id);
       }
     }
-  }, [id, isNew, documents]);
+  }, [existingDoc, isNew]);
 
   // Load existing phases as lines
   useEffect(() => {
@@ -122,24 +131,33 @@ export default function QuoteBuilder() {
   };
 
   const handleSave = async () => {
+    // Wait for auth to be ready
+    if (authLoading) {
+      toast.error("Chargement en cours, veuillez patienter...");
+      return;
+    }
+    
     if (!activeWorkspace) {
       toast.error("Aucun workspace actif — reconnectez-vous si besoin.");
       return;
     }
 
-    console.info('[QuoteBuilder] handleSave start, workspace:', activeWorkspace.id);
+    console.info('[QuoteBuilder] handleSave start, workspace:', activeWorkspace.id, activeWorkspace.name);
     
     setIsSaving(true);
     try {
       let documentId = id;
       let createdDocNumber: string | undefined;
       
+      // Ensure valid project_type
+      const projectType = ensureValidProjectType(document.project_type);
+      
       if (isNew) {
         // Create new document
         const newDoc = await createDocument.mutateAsync({
           document_type: document.document_type || 'quote',
           title: document.title || 'Nouveau devis',
-          project_type: (document.project_type || 'general') as any,
+          project_type: projectType,
           fee_mode: document.fee_mode || 'fixed',
           description: document.description,
           client_company_id: document.client_company_id,
@@ -225,7 +243,6 @@ export default function QuoteBuilder() {
   };
 
   const handleDownloadPDF = () => {
-    // TODO: Implement PDF generation
     toast.info('Génération PDF à venir');
   };
 
@@ -239,6 +256,48 @@ export default function QuoteBuilder() {
   const statusVariant = document.status === 'accepted' ? 'default' : 
                         document.status === 'sent' ? 'secondary' : 
                         document.status === 'rejected' ? 'destructive' : 'outline';
+
+  // Show loading state for existing documents
+  if (!isNew && isLoadingDoc) {
+    return (
+      <div className="h-full flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Chargement du document...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if document not found
+  if (!isNew && docError) {
+    return (
+      <div className="h-full flex items-center justify-center bg-background p-4">
+        <div className="max-w-md text-center space-y-4">
+          <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+            <AlertCircle className="h-6 w-6 text-destructive" />
+          </div>
+          <h2 className="text-lg font-semibold">Document introuvable</h2>
+          <p className="text-muted-foreground text-sm">
+            Ce document n'existe pas ou n'est pas accessible depuis votre workspace actuel.
+          </p>
+          <div className="flex gap-2 justify-center">
+            <Button variant="outline" onClick={() => navigate('/commercial/quotes')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Retour à la liste
+            </Button>
+            <Button onClick={() => documentQuery.refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Réessayer
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Disable save if auth is still loading
+  const canSave = !authLoading && !!activeWorkspace;
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -292,7 +351,7 @@ export default function QuoteBuilder() {
           <Button 
             size="sm"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || !canSave}
           >
             <Save className="h-4 w-4 mr-2" />
             {isSaving ? 'Enregistrement...' : 'Enregistrer'}
