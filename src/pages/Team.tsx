@@ -6,13 +6,12 @@ import { TimeTrackingTab } from "@/components/team/TimeTrackingTab";
 import { TimeValidationTab } from "@/components/team/TimeValidationTab";
 import { RecruitmentTab } from "@/components/team/RecruitmentTab";
 import { AbsencesTab } from "@/components/team/AbsencesTab";
-import { AlternantsTab } from "@/components/team/AlternantsTab";
 import { TeamRequestsTab } from "@/components/team/TeamRequestsTab";
 import { EvaluationsTab } from "@/components/team/EvaluationsTab";
 import { DirectoryTab } from "@/components/team/DirectoryTab";
 import { SEOHead } from "@/components/seo/SEOHead";
 
-type TeamSection = "users" | "time-tracking" | "time-validation" | "recruitment" | "absences" | "alternants" | "requests" | "evaluations" | "directory";
+type TeamSection = "users" | "time-tracking" | "time-validation" | "recruitment" | "absences" | "requests" | "evaluations" | "directory";
 
 const sectionDescriptions: Record<TeamSection, string> = {
   users: "Gérez les membres de votre équipe",
@@ -20,7 +19,6 @@ const sectionDescriptions: Record<TeamSection, string> = {
   "time-validation": "Validation des heures",
   recruitment: "Gestion des candidatures",
   absences: "Congés et absences",
-  alternants: "Gestion des alternants",
   requests: "Demandes de l'équipe",
   evaluations: "Évaluations et objectifs",
   directory: "Annuaire de l'équipe",
@@ -42,8 +40,6 @@ export default function Team() {
         return <RecruitmentTab />;
       case "absences":
         return <AbsencesTab />;
-      case "alternants":
-        return <AlternantsTab />;
       case "requests":
         return <TeamRequestsTab />;
       case "evaluations":
