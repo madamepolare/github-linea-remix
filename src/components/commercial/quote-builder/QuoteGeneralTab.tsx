@@ -15,6 +15,7 @@ import { Building2, User, MapPin, Ruler, Euro, FileText } from 'lucide-react';
 import { QuoteDocument, DOCUMENT_TYPE_LABELS } from '@/types/quoteTypes';
 import { useContractTypes, ContractType } from '@/hooks/useContractTypes';
 import { ClientSelector } from '../ClientSelector';
+import { getProjectTypeFromCode } from '@/lib/projectTypeMapping';
 
 interface QuoteGeneralTabProps {
   document: Partial<QuoteDocument>;
@@ -28,15 +29,17 @@ export function QuoteGeneralTab({ document, onDocumentChange }: QuoteGeneralTabP
   const currentContractType = activeContractTypes.find(t => t.id === document.contract_type_id);
   const fields = currentContractType?.default_fields || {};
 
-  // When contract type changes, update project_type for backward compatibility
+  // When contract type changes, update project_type using centralized mapping
   const handleContractTypeChange = (typeId: string) => {
     const contractType = activeContractTypes.find(t => t.id === typeId);
+    // Use centralized mapping for consistent project_type
+    const mappedProjectType = getProjectTypeFromCode(contractType?.code);
+    
     onDocumentChange({
       ...document,
       contract_type_id: typeId,
       contract_type: contractType,
-      // Map to legacy project_type if possible
-      project_type: contractType?.code?.toLowerCase() || 'interior'
+      project_type: mappedProjectType
     });
   };
 
