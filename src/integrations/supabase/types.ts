@@ -602,6 +602,7 @@ export type Database = {
           header_text: string | null
           hourly_rate: number | null
           id: string
+          notes: string | null
           payment_terms: string | null
           pdf_url: string | null
           project_address: string | null
@@ -644,6 +645,7 @@ export type Database = {
           header_text?: string | null
           hourly_rate?: number | null
           id?: string
+          notes?: string | null
           payment_terms?: string | null
           pdf_url?: string | null
           project_address?: string | null
@@ -686,6 +688,7 @@ export type Database = {
           header_text?: string | null
           hourly_rate?: number | null
           id?: string
+          notes?: string | null
           payment_terms?: string | null
           pdf_url?: string | null
           project_address?: string | null

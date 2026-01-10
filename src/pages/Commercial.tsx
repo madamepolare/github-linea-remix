@@ -76,6 +76,10 @@ const Commercial = () => {
     updateDocument.mutate({ id, status });
   };
 
+  const handleUpdateNotes = (id: string, notes: string) => {
+    updateDocument.mutate({ id, notes } as any);
+  };
+
   const getDocumentIcon = (type: DocumentType) => {
     switch (type) {
       case 'quote': return FileText;
@@ -252,6 +256,7 @@ const Commercial = () => {
           documents={filteredDocuments}
           onDelete={handleDelete}
           onDuplicate={handleDuplicate}
+          onUpdateNotes={handleUpdateNotes}
         />
       )}
     </PageLayout>

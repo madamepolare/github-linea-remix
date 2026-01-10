@@ -134,6 +134,8 @@ function TaskCard({ task, onDragStart, onTaskSelect }: TaskCardProps) {
     : null;
   
   const isOverPlanned = planningProgress !== null && planningProgress > 100;
+  const isUnderPlanned = planningProgress !== null && planningProgress < 100 && hasSchedule;
+  const isFullyPlanned = planningProgress !== null && planningProgress === 100;
 
   return (
     <div
@@ -174,13 +176,24 @@ function TaskCard({ task, onDragStart, onTaskSelect }: TaskCardProps) {
               </Badge>
             )}
             
-            {/* Icône calendrier vert si planifié, sinon afficher estimation */}
+            {/* Afficher heures planifiées vs estimées */}
             {hasSchedule ? (
-              <CalendarCheck className="h-3.5 w-3.5 text-green-500" />
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  "text-[10px] px-1.5 py-0",
+                  isFullyPlanned && "border-green-500 text-green-600",
+                  isOverPlanned && "border-red-500 text-red-600",
+                  isUnderPlanned && "border-amber-500 text-amber-600"
+                )}
+              >
+                <Clock className="h-2.5 w-2.5 mr-0.5" />
+                {scheduledHours}h / {estimatedHours}h
+              </Badge>
             ) : estimatedHours > 0 && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                 <Clock className="h-2.5 w-2.5 mr-0.5" />
-                {estimatedHours}h
+                0h / {estimatedHours}h
               </Badge>
             )}
 
