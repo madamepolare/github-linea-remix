@@ -10,6 +10,7 @@ import { useProjectMOE } from "@/hooks/useProjectMOE";
 import { useProjectDeliverables } from "@/hooks/useProjectDeliverables";
 import { useTasks } from "@/hooks/useTasks";
 import { useTaskSchedules } from "@/hooks/useTaskSchedules";
+import { useTeamTimeEntries } from "@/hooks/useTeamTimeEntries";
 import { useQuickTasksDB, QuickTask } from "@/hooks/useQuickTasksDB";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,9 +48,10 @@ import {
   Zap,
   Sparkles,
   Repeat,
+  History,
 } from "lucide-react";
 import { AIPhasePlannerDialog } from "./AIPhasePlannerDialog";
-import { format, parseISO, addHours, addDays, differenceInDays } from "date-fns";
+import { format, parseISO, addHours, addDays, differenceInDays, isBefore, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import frLocale from "@fullcalendar/core/locales/fr";
@@ -76,7 +78,7 @@ interface FCEvent {
   editable?: boolean;
   durationEditable?: boolean;
   extendedProps: {
-    type: "phase" | "event" | "task" | "deliverable" | "quicktask" | "schedule";
+    type: "phase" | "event" | "task" | "deliverable" | "quicktask" | "schedule" | "timeEntry";
     originalData: any;
   };
 }
@@ -88,6 +90,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const { moeTeam } = useProjectMOE(projectId);
   const { deliverables, createDeliverable, updateDeliverable, deleteDeliverable } = useProjectDeliverables(projectId);
   const { tasks, createTask, updateTask, deleteTask } = useTasks();
+  const { data: timeEntries } = useTeamTimeEntries({ projectId });
   const { schedules } = useTaskSchedules();
   const { quickTasks, pendingTasks, createQuickTask } = useQuickTasksDB();
 
@@ -164,6 +167,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const [showTasks, setShowTasks] = useState(true);
   const [showQuickTasks, setShowQuickTasks] = useState(true);
   const [showDeliverables, setShowDeliverables] = useState(true);
+  const [showTimeEntries, setShowTimeEntries] = useState(true);
   const [showSchedules, setShowSchedules] = useState(true);
 
   // AI Planner
@@ -174,12 +178,23 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
     return (tasks || []).filter(t => t.project_id === projectId && t.due_date);
   }, [tasks, projectId]);
 
-  // Project-specific schedules (future planned time slots)
+  // Project-specific schedules (future planned time slots only)
+  const now = startOfDay(new Date());
   const projectSchedules = useMemo(() => {
-    return (schedules || []).filter(s => 
-      s.task?.project_id === projectId || s.task?.project?.id === projectId
-    );
+    return (schedules || []).filter(s => {
+      const isProjectMatch = s.task?.project_id === projectId || s.task?.project?.id === projectId;
+      return isProjectMatch;
+    });
   }, [schedules, projectId]);
+
+  // Separate future schedules from past ones
+  const futureSchedules = useMemo(() => {
+    return projectSchedules.filter(s => new Date(s.end_datetime) >= now);
+  }, [projectSchedules, now]);
+
+  const pastSchedules = useMemo(() => {
+    return projectSchedules.filter(s => new Date(s.end_datetime) < now);
+  }, [projectSchedules, now]);
 
   // Quick tasks with due dates
   const quickTasksWithDates = useMemo(() => {
@@ -321,16 +336,16 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       });
     }
 
-    // Scheduled time slots (planned work)
+    // Scheduled time slots (future planned work) - Sky blue
     if (showSchedules) {
-      projectSchedules.forEach(schedule => {
+      futureSchedules.forEach(schedule => {
         fcEvents.push({
           id: `schedule-${schedule.id}`,
           title: `🕐 ${schedule.task?.title || "Temps planifié"}`,
           start: schedule.start_datetime,
           end: schedule.end_datetime,
           allDay: false,
-          backgroundColor: "#0EA5E9",
+          backgroundColor: "#0EA5E9", // Sky-500 for future
           borderColor: "transparent",
           textColor: "#FFFFFF",
           editable: false,
@@ -343,8 +358,57 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       });
     }
 
+    // Past scheduled time (logged work from schedules) - Emerald
+    if (showTimeEntries) {
+      pastSchedules.forEach(schedule => {
+        fcEvents.push({
+          id: `past-schedule-${schedule.id}`,
+          title: `⏱️ ${schedule.task?.title || "Temps passé"}`,
+          start: schedule.start_datetime,
+          end: schedule.end_datetime,
+          allDay: false,
+          backgroundColor: "#10B981", // Emerald for past
+          borderColor: "transparent",
+          textColor: "#FFFFFF",
+          editable: false,
+          durationEditable: false,
+          extendedProps: {
+            type: "timeEntry",
+            originalData: schedule,
+          },
+        });
+      });
+
+      // Also show team time entries
+      timeEntries?.forEach(entry => {
+        const entryDate = parseISO(entry.date);
+        const durationHours = entry.duration_minutes / 60;
+        // Display at 9h by default
+        const startTime = new Date(entryDate);
+        startTime.setHours(9, 0, 0, 0);
+        const endTime = new Date(startTime.getTime() + entry.duration_minutes * 60 * 1000);
+        
+        fcEvents.push({
+          id: `timeentry-${entry.id}`,
+          title: `⏱️ ${entry.description || entry.task?.title || "Temps passé"}`,
+          start: startTime.toISOString(),
+          end: endTime.toISOString(),
+          allDay: false,
+          backgroundColor: entry.is_billable ? "#10B981" : "#6B7280", // Emerald for billable, gray for internal
+          borderColor: "transparent",
+          textColor: "#FFFFFF",
+          editable: false,
+          durationEditable: false,
+          extendedProps: {
+            type: "timeEntry",
+            originalData: entry,
+          },
+        });
+      });
+    }
+
     return fcEvents;
-  }, [phases, events, deliverables, projectTasks, quickTasksWithDates, projectSchedules, showPhases, showEvents, showTasks, showQuickTasks, showDeliverables, showSchedules]);
+  }, [phases, events, deliverables, projectTasks, quickTasksWithDates, futureSchedules, pastSchedules, timeEntries, showPhases, showEvents, showTasks, showQuickTasks, showDeliverables, showSchedules, showTimeEntries]);
 
   const resetForm = () => {
     setFormTitle("");
@@ -756,6 +820,16 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
               <div className="w-2.5 h-2.5 rounded bg-sky-500" />
               <span>Planifiés</span>
             </button>
+            <button
+              onClick={() => setShowTimeEntries(!showTimeEntries)}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-full border transition-colors",
+                showTimeEntries ? "bg-emerald-500/10 border-emerald-500/30" : "bg-muted/50 border-border opacity-50"
+              )}
+            >
+              <History className="w-3 h-3" />
+              <span>Temps passés</span>
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -831,6 +905,8 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
                   return <FileText className="h-3 w-3 shrink-0" />;
                 case "schedule":
                   return <Clock className="h-3 w-3 shrink-0" />;
+                case "timeEntry":
+                  return <History className="h-3 w-3 shrink-0" />;
                 default:
                   return null;
               }
@@ -842,7 +918,8 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
               .replace(/^📦\s*/, "")
               .replace(/^✓\s*/, "")
               .replace(/^⚡\s*/, "")
-              .replace(/^🕐\s*/, "");
+              .replace(/^🕐\s*/, "")
+              .replace(/^⏱️\s*/, "");
             
             return (
               <div className={cn(

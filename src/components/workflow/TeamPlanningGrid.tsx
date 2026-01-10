@@ -1,13 +1,16 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay, setHours, parseISO, addHours } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye, GripVertical, CheckCircle2, ExternalLink, Copy, Move, Plus, PanelLeftClose, PanelLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye, GripVertical, CheckCircle2, ExternalLink, Copy, Move, Plus, PanelLeftClose, PanelLeft, FolderKanban, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
 import { useWorkspaceEvents, UnifiedWorkspaceEvent, WorkspaceEvent, TenderWorkspaceEvent } from "@/hooks/useWorkspaceEvents";
-import { useAllProjectMembers } from "@/hooks/useProjects";
+import { useAllProjectMembers, useProjects } from "@/hooks/useProjects";
 import { useTeamAbsences, TeamAbsence, absenceTypeLabels } from "@/hooks/useTeamAbsences";
 import { useTeamTimeEntries, useUpdateTimeEntry, TeamTimeEntry } from "@/hooks/useTeamTimeEntries";
 import { cn } from "@/lib/utils";
@@ -56,6 +59,9 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   const [teamColumnCollapsed, setTeamColumnCollapsed] = useState(false);
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
+  const [memberFilterOpen, setMemberFilterOpen] = useState(false);
+  const [projectFilterOpen, setProjectFilterOpen] = useState(false);
   
   // Time entry dialog state (add)
   const [timeEntryDialogOpen, setTimeEntryDialogOpen] = useState(false);
@@ -72,9 +78,10 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const { data: userProjectsMap, isLoading: projectMembersLoading } = useAllProjectMembers();
   const { data: absences, isLoading: absencesLoading } = useTeamAbsences({ status: "approved" });
   const { data: timeEntries, isLoading: timeEntriesLoading } = useTeamTimeEntries();
+  const { projects, isLoading: projectsLoading } = useProjects();
   const updateTimeEntry = useUpdateTimeEntry();
 
-  const isLoading = schedulesLoading || membersLoading || eventsLoading || projectMembersLoading || absencesLoading || timeEntriesLoading;
+  const isLoading = schedulesLoading || membersLoading || eventsLoading || projectMembersLoading || absencesLoading || timeEntriesLoading || projectsLoading;
 
   // Handler pour voir les détails d'une tâche
   const handleViewTask = useCallback((schedule: TaskSchedule) => {
@@ -142,6 +149,22 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     setSelectedMemberIds(new Set());
   }, []);
 
+  const toggleProjectFilter = useCallback((projectId: string) => {
+    setSelectedProjectIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId);
+      } else {
+        newSet.add(projectId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const clearProjectFilter = useCallback(() => {
+    setSelectedProjectIds(new Set());
+  }, []);
+
   // Grouper les jours par mois
   const monthGroups = useMemo(() => {
     const groups: { month: string; year: number; days: Date[] }[] = [];
@@ -196,6 +219,12 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     // Ajouter les tâches planifiées
     schedules?.forEach(schedule => {
       if (schedule.user_id !== memberId) return;
+      
+      // Filter by project if any project is selected
+      if (selectedProjectIds.size > 0) {
+        const taskProjectId = schedule.task?.project_id || schedule.task?.project?.id;
+        if (!taskProjectId || !selectedProjectIds.has(taskProjectId)) return;
+      }
       
       const scheduleStart = new Date(schedule.start_datetime);
       const scheduleEnd = new Date(schedule.end_datetime);
@@ -299,7 +328,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     });
 
     return items.sort((a, b) => a.start.getTime() - b.start.getTime());
-  }, [schedules, events, showEvents, userProjectsMap, absences, timeEntries]);
+  }, [schedules, events, showEvents, userProjectsMap, absences, timeEntries, selectedProjectIds]);
 
   const getOccupancyRate = useCallback((memberId: string, memberEmail: string | null, day: Date) => {
     const items = getItemsForMemberAndDay(memberId, memberEmail, day);
@@ -455,43 +484,122 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
           </span>
         </div>
 
-        <div className="flex items-center gap-4">
-          {/* Filtres par membre */}
-          {(members?.length || 0) > 1 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Filtrer :</span>
-              <div className="flex items-center gap-1 flex-wrap max-w-md">
-                {members?.slice(0, 5).map(member => (
-                  <button
-                    key={member.user_id}
-                    onClick={() => toggleMemberFilter(member.user_id)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition-colors",
-                      selectedMemberIds.has(member.user_id)
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                    )}
-                  >
-                    <Avatar className="h-4 w-4">
-                      <AvatarImage src={member.profile?.avatar_url || ""} />
-                      <AvatarFallback className="text-[8px]">
-                        {(member.profile?.full_name || "?").charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="hidden sm:inline">{member.profile?.full_name?.split(' ')[0]}</span>
-                  </button>
-                ))}
+        <div className="flex items-center gap-3">
+          {/* Filtre par membre - Dropdown multiselect */}
+          <Popover open={memberFilterOpen} onOpenChange={setMemberFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-2">
+                <Users className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Membres</span>
                 {selectedMemberIds.size > 0 && (
-                  <button
-                    onClick={clearMemberFilter}
-                    className="text-xs text-muted-foreground hover:text-foreground underline ml-1"
-                  >
-                    Tous
-                  </button>
+                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                    {selectedMemberIds.size}
+                  </Badge>
                 )}
-              </div>
-            </div>
-          )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0" align="end">
+              <Command>
+                <CommandInput placeholder="Rechercher un membre..." />
+                <CommandList>
+                  <CommandEmpty>Aucun membre trouvé</CommandEmpty>
+                  <CommandGroup>
+                    {members?.map(member => (
+                      <CommandItem
+                        key={member.user_id}
+                        onSelect={() => toggleMemberFilter(member.user_id)}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <div className={cn(
+                          "flex h-4 w-4 items-center justify-center rounded-sm border",
+                          selectedMemberIds.has(member.user_id)
+                            ? "bg-primary border-primary text-primary-foreground"
+                            : "border-muted-foreground/30"
+                        )}>
+                          {selectedMemberIds.has(member.user_id) && <Check className="h-3 w-3" />}
+                        </div>
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={member.profile?.avatar_url || ""} />
+                          <AvatarFallback className="text-[8px]">
+                            {(member.profile?.full_name || "?").charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm truncate">{member.profile?.full_name || "Sans nom"}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  {selectedMemberIds.size > 0 && (
+                    <>
+                      <CommandSeparator />
+                      <CommandGroup>
+                        <CommandItem onSelect={clearMemberFilter} className="justify-center text-center text-muted-foreground">
+                          <X className="h-3 w-3 mr-1" />
+                          Effacer les filtres
+                        </CommandItem>
+                      </CommandGroup>
+                    </>
+                  )}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
+          {/* Filtre par projet - Dropdown multiselect */}
+          <Popover open={projectFilterOpen} onOpenChange={setProjectFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-2">
+                <FolderKanban className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Projets</span>
+                {selectedProjectIds.size > 0 && (
+                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                    {selectedProjectIds.size}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-0" align="end">
+              <Command>
+                <CommandInput placeholder="Rechercher un projet..." />
+                <CommandList>
+                  <CommandEmpty>Aucun projet trouvé</CommandEmpty>
+                  <CommandGroup>
+                    {projects?.map(project => (
+                      <CommandItem
+                        key={project.id}
+                        onSelect={() => toggleProjectFilter(project.id)}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <div className={cn(
+                          "flex h-4 w-4 items-center justify-center rounded-sm border",
+                          selectedProjectIds.has(project.id)
+                            ? "bg-primary border-primary text-primary-foreground"
+                            : "border-muted-foreground/30"
+                        )}>
+                          {selectedProjectIds.has(project.id) && <Check className="h-3 w-3" />}
+                        </div>
+                        <div 
+                          className="h-3 w-3 rounded-full shrink-0" 
+                          style={{ backgroundColor: project.color || "#6366f1" }}
+                        />
+                        <span className="text-sm truncate">{project.name}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  {selectedProjectIds.size > 0 && (
+                    <>
+                      <CommandSeparator />
+                      <CommandGroup>
+                        <CommandItem onSelect={clearProjectFilter} className="justify-center text-center text-muted-foreground">
+                          <X className="h-3 w-3 mr-1" />
+                          Effacer les filtres
+                        </CommandItem>
+                      </CommandGroup>
+                    </>
+                  )}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
 
           <div className="h-6 w-px bg-border" />
 
