@@ -18,46 +18,28 @@ export function useTaskCommunicationsCounts(taskIds: string[]) {
 
       const now = new Date();
 
-      // Fetch comment counts with created_at
-      const { data: commentsData, error: commentsError } = await supabase
-        .from("task_comments")
-        .select("task_id, created_at")
-        .in("task_id", taskIds);
+      // Unified communications table (used by EntityCommunications)
+      const { data, error } = await supabase
+        .from("communications")
+        .select("entity_id, created_at")
+        .eq("entity_type", "task")
+        .in("entity_id", taskIds);
 
-      if (commentsError) throw commentsError;
-
-      // Fetch exchange counts with created_at
-      const { data: exchangesData, error: exchangesError } = await supabase
-        .from("task_exchanges")
-        .select("task_id, created_at")
-        .in("task_id", taskIds);
-
-      if (exchangesError) throw exchangesError;
+      if (error) throw error;
 
       // Count per task and check for recent messages
       const counts: Record<string, TaskCommunicationData> = {};
-      
-      taskIds.forEach(id => {
+
+      taskIds.forEach((id) => {
         counts[id] = { count: 0, hasRecent: false };
       });
 
-      commentsData?.forEach(c => {
-        if (!counts[c.task_id]) {
-          counts[c.task_id] = { count: 0, hasRecent: false };
-        }
-        counts[c.task_id].count += 1;
-        if (c.created_at && differenceInMinutes(now, new Date(c.created_at)) < 5) {
-          counts[c.task_id].hasRecent = true;
-        }
-      });
-
-      exchangesData?.forEach(e => {
-        if (!counts[e.task_id]) {
-          counts[e.task_id] = { count: 0, hasRecent: false };
-        }
-        counts[e.task_id].count += 1;
-        if (e.created_at && differenceInMinutes(now, new Date(e.created_at)) < 5) {
-          counts[e.task_id].hasRecent = true;
+      data?.forEach((row) => {
+        const taskId = row.entity_id as string;
+        if (!counts[taskId]) counts[taskId] = { count: 0, hasRecent: false };
+        counts[taskId].count += 1;
+        if (row.created_at && differenceInMinutes(now, new Date(row.created_at)) < 5) {
+          counts[taskId].hasRecent = true;
         }
       });
 
