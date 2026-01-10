@@ -9,6 +9,7 @@ import { useProjectPhases, ProjectPhase } from "@/hooks/useProjectPhases";
 import { useProjectMOE } from "@/hooks/useProjectMOE";
 import { useProjectDeliverables } from "@/hooks/useProjectDeliverables";
 import { useTasks } from "@/hooks/useTasks";
+import { useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { useQuickTasksDB, QuickTask } from "@/hooks/useQuickTasksDB";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -75,7 +76,7 @@ interface FCEvent {
   editable?: boolean;
   durationEditable?: boolean;
   extendedProps: {
-    type: "phase" | "event" | "task" | "deliverable" | "quicktask";
+    type: "phase" | "event" | "task" | "deliverable" | "quicktask" | "schedule";
     originalData: any;
   };
 }
@@ -87,6 +88,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const { moeTeam } = useProjectMOE(projectId);
   const { deliverables, createDeliverable, updateDeliverable, deleteDeliverable } = useProjectDeliverables(projectId);
   const { tasks, createTask, updateTask, deleteTask } = useTasks();
+  const { schedules } = useTaskSchedules();
   const { quickTasks, pendingTasks, createQuickTask } = useQuickTasksDB();
 
   // Pre-compute available attendees from MOE team
@@ -162,6 +164,7 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const [showTasks, setShowTasks] = useState(true);
   const [showQuickTasks, setShowQuickTasks] = useState(true);
   const [showDeliverables, setShowDeliverables] = useState(true);
+  const [showSchedules, setShowSchedules] = useState(true);
 
   // AI Planner
   const [isAIPlannerOpen, setIsAIPlannerOpen] = useState(false);
@@ -170,6 +173,13 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
   const projectTasks = useMemo(() => {
     return (tasks || []).filter(t => t.project_id === projectId && t.due_date);
   }, [tasks, projectId]);
+
+  // Project-specific schedules (future planned time slots)
+  const projectSchedules = useMemo(() => {
+    return (schedules || []).filter(s => 
+      s.task?.project_id === projectId || s.task?.project?.id === projectId
+    );
+  }, [schedules, projectId]);
 
   // Quick tasks with due dates
   const quickTasksWithDates = useMemo(() => {
@@ -311,8 +321,30 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
       });
     }
 
+    // Scheduled time slots (planned work)
+    if (showSchedules) {
+      projectSchedules.forEach(schedule => {
+        fcEvents.push({
+          id: `schedule-${schedule.id}`,
+          title: `🕐 ${schedule.task?.title || "Temps planifié"}`,
+          start: schedule.start_datetime,
+          end: schedule.end_datetime,
+          allDay: false,
+          backgroundColor: "#0EA5E9",
+          borderColor: "transparent",
+          textColor: "#FFFFFF",
+          editable: false,
+          durationEditable: false,
+          extendedProps: {
+            type: "schedule",
+            originalData: schedule,
+          },
+        });
+      });
+    }
+
     return fcEvents;
-  }, [phases, events, deliverables, projectTasks, quickTasksWithDates, showPhases, showEvents, showTasks, showQuickTasks, showDeliverables]);
+  }, [phases, events, deliverables, projectTasks, quickTasksWithDates, projectSchedules, showPhases, showEvents, showTasks, showQuickTasks, showDeliverables, showSchedules]);
 
   const resetForm = () => {
     setFormTitle("");
@@ -714,6 +746,16 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
               <div className="w-2.5 h-2.5 rounded bg-red-500" />
               <span>Livrables</span>
             </button>
+            <button
+              onClick={() => setShowSchedules(!showSchedules)}
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1 rounded-full border transition-colors",
+                showSchedules ? "bg-sky-500/10 border-sky-500/30" : "bg-muted/50 border-border opacity-50"
+              )}
+            >
+              <div className="w-2.5 h-2.5 rounded bg-sky-500" />
+              <span>Planifiés</span>
+            </button>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -787,6 +829,8 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
                   return <Zap className="h-3 w-3 shrink-0" />;
                 case "deliverable":
                   return <FileText className="h-3 w-3 shrink-0" />;
+                case "schedule":
+                  return <Clock className="h-3 w-3 shrink-0" />;
                 default:
                   return null;
               }
@@ -797,7 +841,8 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
               .replace(/^📋\s*/, "")
               .replace(/^📦\s*/, "")
               .replace(/^✓\s*/, "")
-              .replace(/^⚡\s*/, "");
+              .replace(/^⚡\s*/, "")
+              .replace(/^🕐\s*/, "");
             
             return (
               <div className={cn(
