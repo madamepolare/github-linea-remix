@@ -49,13 +49,44 @@ export function useQuickTasksDB() {
         .select()
         .single();
       if (error) throw error;
-      return data;
+      return data as QuickTask;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["quick_tasks"] });
+    onMutate: async ({ title, due_date }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["quick_tasks", activeWorkspace?.id] });
+      
+      // Snapshot previous value
+      const previousTasks = queryClient.getQueryData<QuickTask[]>(["quick_tasks", activeWorkspace?.id]);
+      
+      // Optimistically add the new task
+      const optimisticTask: QuickTask = {
+        id: `temp-${Date.now()}`,
+        workspace_id: activeWorkspace!.id,
+        title,
+        due_date: due_date || null,
+        status: 'pending',
+        created_by: user?.id || null,
+        completed_at: null,
+        created_at: new Date().toISOString(),
+      };
+      
+      queryClient.setQueryData<QuickTask[]>(
+        ["quick_tasks", activeWorkspace?.id],
+        (old) => [optimisticTask, ...(old || [])]
+      );
+      
+      return { previousTasks };
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      // Rollback on error
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["quick_tasks", activeWorkspace?.id], context.previousTasks);
+      }
       toast.error("Erreur: " + error.message);
+    },
+    onSettled: () => {
+      // Always refetch after error or success
+      queryClient.invalidateQueries({ queryKey: ["quick_tasks", activeWorkspace?.id] });
     },
   });
 

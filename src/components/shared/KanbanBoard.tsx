@@ -44,9 +44,14 @@ export function KanbanBoard<T>({
     isDraggingRef.current = true;
     setDraggedItem({ id: itemId, fromColumn: columnId });
     e.dataTransfer.effectAllowed = "move";
+    // Safari requires setting data for drag to work
+    e.dataTransfer.setData("text/plain", itemId);
+    e.dataTransfer.setData("application/x-kanban-item", JSON.stringify({ id: itemId, fromColumn: columnId }));
     // Set a transparent drag image
     const dragImage = document.createElement("div");
     dragImage.style.opacity = "0";
+    dragImage.style.position = "absolute";
+    dragImage.style.top = "-1000px";
     document.body.appendChild(dragImage);
     e.dataTransfer.setDragImage(dragImage, 0, 0);
     setTimeout(() => document.body.removeChild(dragImage), 0);
@@ -64,8 +69,23 @@ export function KanbanBoard<T>({
 
   const handleDrop = (e: React.DragEvent, columnId: string) => {
     e.preventDefault();
-    if (draggedItem && draggedItem.fromColumn !== columnId) {
-      onDrop?.(draggedItem.id, draggedItem.fromColumn, columnId);
+    e.stopPropagation();
+    
+    // Try to get data from state first, then fallback to dataTransfer (Safari)
+    let itemData = draggedItem;
+    if (!itemData) {
+      try {
+        const data = e.dataTransfer.getData("application/x-kanban-item");
+        if (data) {
+          itemData = JSON.parse(data);
+        }
+      } catch {
+        // Ignore parsing errors
+      }
+    }
+    
+    if (itemData && itemData.fromColumn !== columnId) {
+      onDrop?.(itemData.id, itemData.fromColumn, columnId);
     }
     isDraggingRef.current = false;
     setDraggedItem(null);
@@ -161,11 +181,15 @@ export function KanbanBoard<T>({
                     }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.15, layout: { duration: 0.2 } }}
-                    draggable="true"
-                    onDragStart={(e) => handleDragStart(e as any, itemId, column.id)}
+                    draggable={true}
+                    onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, itemId, column.id)}
                     onDragEnd={handleDragEnd}
-                    className="cursor-grab active:cursor-grabbing touch-none"
-                    style={{ WebkitUserDrag: 'element' } as React.CSSProperties}
+                    className="cursor-grab active:cursor-grabbing"
+                    style={{ 
+                      WebkitUserDrag: 'element',
+                      WebkitTouchCallout: 'none',
+                      userSelect: 'none',
+                    } as React.CSSProperties}
                   >
                     {renderCard(item, isDragging)}
                   </motion.div>
