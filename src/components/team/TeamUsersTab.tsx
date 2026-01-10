@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -22,6 +23,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -32,8 +34,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, MoreHorizontal, Mail, Shield, Trash2, Search } from "lucide-react";
+import { UserPlus, MoreHorizontal, Mail, Shield, Trash2, Search, GraduationCap, Calendar } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/permissions";
+import { ApprenticeScheduleDialog } from "./ApprenticeScheduleDialog";
 
 const roleColors: Record<string, string> = {
   owner: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
@@ -53,6 +56,24 @@ export function TeamUsersTab() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
+  const [apprenticeDialogUser, setApprenticeDialogUser] = useState<{ id: string; name: string } | null>(null);
+
+  // Fetch all apprentice schedules to show badges
+  const { data: apprenticeSchedules } = useQuery({
+    queryKey: ["apprentice-schedules", activeWorkspace?.id],
+    queryFn: async () => {
+      if (!activeWorkspace) return [];
+      const { data, error } = await supabase
+        .from("apprentice_schedules")
+        .select("user_id, schedule_name, custom_pattern")
+        .eq("workspace_id", activeWorkspace.id);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!activeWorkspace,
+  });
+
+  const apprenticeUserIds = new Set(apprenticeSchedules?.map((s) => s.user_id) || []);
 
   const canInvite = can("team.invite");
   const canManageRoles = can("team.manage_roles");
@@ -201,9 +222,11 @@ export function TeamUsersTab() {
           <MemberCard
             key={member.id}
             member={member}
+            isApprentice={apprenticeUserIds.has(member.user_id)}
             canManage={canManageRoles && member.user_id !== user?.id && member.role !== "owner"}
             onUpdateRole={(role) => handleUpdateRole(member.id, role)}
             onRemove={() => handleRemoveMember(member.id)}
+            onManageApprentice={() => setApprenticeDialogUser({ id: member.user_id, name: member.profile?.full_name || "Sans nom" })}
           />
         ))}
       </div>
@@ -253,20 +276,34 @@ export function TeamUsersTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Apprentice Schedule Dialog */}
+      {apprenticeDialogUser && (
+        <ApprenticeScheduleDialog
+          open={!!apprenticeDialogUser}
+          onOpenChange={(open) => !open && setApprenticeDialogUser(null)}
+          userId={apprenticeDialogUser.id}
+          userName={apprenticeDialogUser.name}
+        />
+      )}
     </div>
   );
 }
 
 function MemberCard({
   member,
+  isApprentice,
   canManage,
   onUpdateRole,
   onRemove,
+  onManageApprentice,
 }: {
   member: TeamMember;
+  isApprentice: boolean;
   canManage: boolean;
   onUpdateRole: (role: "admin" | "member" | "viewer") => void;
   onRemove: () => void;
+  onManageApprentice: () => void;
 }) {
   const initials = member.profile?.full_name
     ?.split(" ")
@@ -284,7 +321,15 @@ function MemberCard({
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="font-medium">{member.profile?.full_name || "Sans nom"}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium">{member.profile?.full_name || "Sans nom"}</h3>
+                {isApprentice && (
+                  <Badge variant="secondary" className="text-xs">
+                    <GraduationCap className="h-3 w-3 mr-1" />
+                    Alternant
+                  </Badge>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">{member.profile?.job_title || "—"}</p>
             </div>
           </div>
@@ -296,6 +341,11 @@ function MemberCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onManageApprentice}>
+                  <GraduationCap className="h-4 w-4 mr-2" />
+                  {isApprentice ? "Modifier planning alternance" : "Configurer alternance"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onUpdateRole("admin")}>
                   <Shield className="h-4 w-4 mr-2" />
                   Passer admin
@@ -308,6 +358,7 @@ function MemberCard({
                   <Shield className="h-4 w-4 mr-2" />
                   Passer lecteur
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive" onClick={onRemove}>
                   <Trash2 className="h-4 w-4 mr-2" />
                   Retirer

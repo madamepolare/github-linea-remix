@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isWithinInterval, parseISO, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isWithinInterval, parseISO, addMonths, subMonths, getDay } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useTeamAbsences, useCreateAbsence, useUpdateAbsence, useDeleteAbsence, useApproveAbsence, absenceTypeLabels, TeamAbsence } from "@/hooks/useTeamAbsences";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,8 +46,26 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { CalendarOff, Plus, ChevronLeft, ChevronRight, Check, X, Pencil, Trash2 } from "lucide-react";
+import { CalendarOff, Plus, ChevronLeft, ChevronRight, Check, X, Pencil, Trash2, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Map day names to getDay() values (0 = Sunday, 1 = Monday, etc.)
+const DAY_NAME_TO_NUMBER: Record<string, number> = {
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+  sunday: 0,
+};
+
+interface ApprenticeSchedule {
+  user_id: string;
+  start_date: string;
+  end_date: string;
+  custom_pattern: { school_days?: string[] } | null;
+}
 
 export function AbsencesTab() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -72,6 +92,21 @@ export function AbsencesTab() {
   const deleteAbsence = useDeleteAbsence();
   const approveAbsence = useApproveAbsence();
 
+  // Fetch apprentice schedules
+  const { data: apprenticeSchedules } = useQuery({
+    queryKey: ["apprentice-schedules-absences", activeWorkspace?.id],
+    queryFn: async (): Promise<ApprenticeSchedule[]> => {
+      if (!activeWorkspace) return [];
+      const { data, error } = await supabase
+        .from("apprentice_schedules")
+        .select("user_id, start_date, end_date, custom_pattern")
+        .eq("workspace_id", activeWorkspace.id);
+      if (error) throw error;
+      return (data || []) as ApprenticeSchedule[];
+    },
+    enabled: !!activeWorkspace,
+  });
+
   const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role;
   const canApprove = currentUserRole === "owner" || currentUserRole === "admin";
 
@@ -87,6 +122,38 @@ export function AbsencesTab() {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  // Get school days for apprentices on a given date
+  const getSchoolDaysForDate = (date: Date) => {
+    const dayOfWeek = getDay(date);
+    const schoolDays: { userId: string; memberName: string }[] = [];
+
+    apprenticeSchedules?.forEach((schedule) => {
+      const start = parseISO(schedule.start_date);
+      const end = parseISO(schedule.end_date);
+      
+      // Check if date is within schedule period
+      if (date >= start && date <= end) {
+        const pattern = schedule.custom_pattern as { school_days?: string[] } | null;
+        const schoolDaysPattern = pattern?.school_days || [];
+        
+        // Check if this day of week is a school day
+        const isSchoolDay = schoolDaysPattern.some(
+          (dayName) => DAY_NAME_TO_NUMBER[dayName] === dayOfWeek
+        );
+        
+        if (isSchoolDay) {
+          const member = memberMap?.[schedule.user_id];
+          schoolDays.push({
+            userId: schedule.user_id,
+            memberName: member?.profile?.full_name?.split(" ")[0] || "?",
+          });
+        }
+      }
+    });
+
+    return schoolDays;
+  };
 
   const getAbsencesForDay = (date: Date) => {
     return absences?.filter((a) => {
@@ -202,24 +269,40 @@ export function AbsencesTab() {
                 ))}
                 {days.map((day) => {
                   const dayAbsences = getAbsencesForDay(day);
+                  const schoolDays = getSchoolDaysForDate(day);
                   const isToday = format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+                  const isWeekend = getDay(day) === 0 || getDay(day) === 6;
 
                   return (
                     <div
                       key={day.toISOString()}
                       className={cn(
                         "bg-background p-2 min-h-[80px]",
-                        isToday && "bg-primary/5"
+                        isToday && "bg-primary/5",
+                        isWeekend && "bg-muted/30"
                       )}
                     >
                       <span className={cn(
                         "text-sm",
-                        isToday && "font-bold text-primary"
+                        isToday && "font-bold text-primary",
+                        isWeekend && "text-muted-foreground"
                       )}>
                         {format(day, "d")}
                       </span>
                       <div className="mt-1 space-y-1">
-                        {dayAbsences.slice(0, 3).map((absence) => {
+                        {/* School days for apprentices */}
+                        {schoolDays.slice(0, 2).map((sd, idx) => (
+                          <div
+                            key={`school-${sd.userId}-${idx}`}
+                            className="text-xs p-1 rounded bg-purple-100 dark:bg-purple-900/30 truncate flex items-center gap-1"
+                            title={`${sd.memberName} - École`}
+                          >
+                            <GraduationCap className="h-3 w-3 shrink-0" />
+                            {sd.memberName}
+                          </div>
+                        ))}
+                        {/* Regular absences */}
+                        {dayAbsences.slice(0, 3 - Math.min(schoolDays.length, 2)).map((absence) => {
                           const member = memberMap?.[absence.user_id];
                           return (
                             <div
@@ -231,9 +314,9 @@ export function AbsencesTab() {
                             </div>
                           );
                         })}
-                        {dayAbsences.length > 3 && (
+                        {(dayAbsences.length + schoolDays.length) > 3 && (
                           <div className="text-xs text-muted-foreground">
-                            +{dayAbsences.length - 3}
+                            +{dayAbsences.length + schoolDays.length - 3}
                           </div>
                         )}
                       </div>
