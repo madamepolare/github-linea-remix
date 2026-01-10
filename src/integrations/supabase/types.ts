@@ -390,6 +390,7 @@ export type Database = {
           purchase_price: number | null
           quantity: number | null
           recurrence_months: number | null
+          skill_id: string | null
           sort_order: number | null
           start_date: string | null
           unit: string | null
@@ -416,6 +417,7 @@ export type Database = {
           purchase_price?: number | null
           quantity?: number | null
           recurrence_months?: number | null
+          skill_id?: string | null
           sort_order?: number | null
           start_date?: string | null
           unit?: string | null
@@ -442,6 +444,7 @@ export type Database = {
           purchase_price?: number | null
           quantity?: number | null
           recurrence_months?: number | null
+          skill_id?: string | null
           sort_order?: number | null
           start_date?: string | null
           unit?: string | null
@@ -454,6 +457,13 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "commercial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_document_phases_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
             referencedColumns: ["id"]
           },
         ]
@@ -4256,12 +4266,18 @@ export type Database = {
           contract_type_id: string | null
           created_at: string
           created_by: string | null
+          currency: string | null
+          daily_rate: number | null
           description: string | null
+          discipline_id: string | null
+          experience_level: string | null
           grid_type: string
+          hourly_rate: number | null
           id: string
           is_active: boolean | null
           items: Json
           name: string
+          skill_id: string | null
           sort_order: number | null
           updated_at: string
           workspace_id: string
@@ -4271,12 +4287,18 @@ export type Database = {
           contract_type_id?: string | null
           created_at?: string
           created_by?: string | null
+          currency?: string | null
+          daily_rate?: number | null
           description?: string | null
+          discipline_id?: string | null
+          experience_level?: string | null
           grid_type?: string
+          hourly_rate?: number | null
           id?: string
           is_active?: boolean | null
           items?: Json
           name: string
+          skill_id?: string | null
           sort_order?: number | null
           updated_at?: string
           workspace_id: string
@@ -4286,12 +4308,18 @@ export type Database = {
           contract_type_id?: string | null
           created_at?: string
           created_by?: string | null
+          currency?: string | null
+          daily_rate?: number | null
           description?: string | null
+          discipline_id?: string | null
+          experience_level?: string | null
           grid_type?: string
+          hourly_rate?: number | null
           id?: string
           is_active?: boolean | null
           items?: Json
           name?: string
+          skill_id?: string | null
           sort_order?: number | null
           updated_at?: string
           workspace_id?: string
@@ -4302,6 +4330,20 @@ export type Database = {
             columns: ["contract_type_id"]
             isOneToOne: false
             referencedRelation: "contract_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pricing_grids_discipline_id_fkey"
+            columns: ["discipline_id"]
+            isOneToOne: false
+            referencedRelation: "disciplines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pricing_grids_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
             referencedColumns: ["id"]
           },
           {
@@ -5852,10 +5894,13 @@ export type Database = {
       }
       quote_templates: {
         Row: {
+          contract_type_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
+          discipline_id: string | null
           id: string
+          is_ai_generated: boolean | null
           is_default: boolean | null
           name: string
           phases: Json
@@ -5865,10 +5910,13 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          contract_type_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          discipline_id?: string | null
           id?: string
+          is_ai_generated?: boolean | null
           is_default?: boolean | null
           name: string
           phases?: Json
@@ -5878,10 +5926,13 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          contract_type_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          discipline_id?: string | null
           id?: string
+          is_ai_generated?: boolean | null
           is_default?: boolean | null
           name?: string
           phases?: Json
@@ -5891,6 +5942,20 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "quote_templates_contract_type_id_fkey"
+            columns: ["contract_type_id"]
+            isOneToOne: false
+            referencedRelation: "contract_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_templates_discipline_id_fkey"
+            columns: ["discipline_id"]
+            isOneToOne: false
+            referencedRelation: "disciplines"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quote_templates_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -5988,6 +6053,63 @@ export type Database = {
             columns: ["reference_id"]
             isOneToOne: false
             referencedRelation: "project_references"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skills: {
+        Row: {
+          category: string | null
+          code: string
+          created_at: string
+          description: string | null
+          discipline_id: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          category?: string | null
+          code: string
+          created_at?: string
+          description?: string | null
+          discipline_id?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          category?: string | null
+          code?: string
+          created_at?: string
+          description?: string | null
+          discipline_id?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skills_discipline_id_fkey"
+            columns: ["discipline_id"]
+            isOneToOne: false
+            referencedRelation: "disciplines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skills_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
