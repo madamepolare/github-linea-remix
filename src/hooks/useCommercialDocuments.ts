@@ -30,6 +30,7 @@ export interface CreateDocumentInput {
   payment_terms?: string;
   special_conditions?: string;
   general_conditions?: string;
+  contract_type_id?: string;
 }
 
 export interface UpdateDocumentInput extends Partial<CreateDocumentInput> {

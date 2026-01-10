@@ -203,6 +203,7 @@ export default function QuoteBuilder() {
           project_city: document.project_city,
           project_surface: document.project_surface,
           project_budget: document.project_budget,
+          contract_type_id: document.contract_type_id,
         });
         documentId = newDoc.id;
         createdDocNumber = newDoc.document_number;
@@ -226,6 +227,7 @@ export default function QuoteBuilder() {
           project_city: document.project_city,
           project_surface: document.project_surface,
           project_budget: document.project_budget,
+          contract_type_id: document.contract_type_id,
         });
       }
       
