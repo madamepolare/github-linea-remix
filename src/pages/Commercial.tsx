@@ -69,7 +69,11 @@ const Commercial = () => {
     .reduce((sum, d) => sum + (d.total_amount || 0), 0);
 
   const handleNewDocument = (type: DocumentType) => {
-    navigate(`/commercial/quote/new?type=${type}`);
+    const workspaceId = activeWorkspace?.id;
+    const qs = new URLSearchParams();
+    qs.set('type', type);
+    if (workspaceId) qs.set('workspace', workspaceId);
+    navigate(`/commercial/quote/new?${qs.toString()}`);
   };
 
   const handleDuplicate = (id: string) => {
@@ -282,7 +286,12 @@ const Commercial = () => {
               <Card 
                 key={doc.id} 
                 className="hover:border-primary/50 transition-colors cursor-pointer"
-                onClick={() => navigate(`/commercial/quote/${doc.id}`)}
+                onClick={async () => {
+                  if (doc.workspace_id && activeWorkspace?.id && doc.workspace_id !== activeWorkspace.id) {
+                    await setActiveWorkspace(doc.workspace_id);
+                  }
+                  navigate(`/commercial/quote/${doc.id}`);
+                }}
               >
                 <CardContent className="py-3 sm:py-4 px-3 sm:px-6">
                   <div className="flex items-start sm:items-center justify-between gap-3">
@@ -336,7 +345,13 @@ const Commercial = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/commercial/quote/${doc.id}`); }}>
+                          <DropdownMenuItem onClick={async (e) => { 
+                            e.stopPropagation(); 
+                            if (doc.workspace_id && activeWorkspace?.id && doc.workspace_id !== activeWorkspace.id) {
+                              await setActiveWorkspace(doc.workspace_id);
+                            }
+                            navigate(`/commercial/quote/${doc.id}`); 
+                          }}>
                             <Eye className="h-4 w-4 mr-2" />
                             Voir / Modifier
                           </DropdownMenuItem>
