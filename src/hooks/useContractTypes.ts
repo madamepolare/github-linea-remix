@@ -41,6 +41,7 @@ export interface CreateContractTypeInput {
   color?: string;
   default_fields?: ContractTypeFields;
   default_clauses?: Record<string, string>;
+  builder_tabs?: BuilderTab[];
   sort_order?: number;
   is_default?: boolean;
 }
@@ -48,6 +49,7 @@ export interface CreateContractTypeInput {
 export interface UpdateContractTypeInput extends Partial<CreateContractTypeInput> {
   id: string;
   is_active?: boolean;
+  builder_tabs?: BuilderTab[];
 }
 
 // Default contract types to initialize workspaces with

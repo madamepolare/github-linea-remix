@@ -27,9 +27,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, Megaphone, Palette, Globe, FileText } from 'lucide-react';
-import { useContractTypes, ContractType, CreateContractTypeInput, ContractTypeFields } from '@/hooks/useContractTypes';
+import { Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, Megaphone, Palette, Globe, FileText, Percent, List, Package, Calendar, FileCheck } from 'lucide-react';
+import { useContractTypes, ContractType, CreateContractTypeInput, ContractTypeFields, BuilderTab } from '@/hooks/useContractTypes';
 import { Checkbox } from '@/components/ui/checkbox';
+
+const TAB_OPTIONS: { key: BuilderTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: 'general', label: 'Général', icon: FileText },
+  { key: 'fees', label: 'Honoraires', icon: Percent },
+  { key: 'lines', label: 'Lignes', icon: List },
+  { key: 'production', label: 'Production', icon: Package },
+  { key: 'planning', label: 'Planning', icon: Calendar },
+  { key: 'terms', label: 'Conditions', icon: FileCheck },
+];
 
 const ICON_OPTIONS = [
   { value: 'FileText', label: 'Document', icon: FileText },
@@ -73,8 +82,18 @@ export function ContractTypesSettings() {
     icon: 'FileText',
     color: '#3B82F6',
     default_fields: {},
-    is_default: false
+    is_default: false,
+    builder_tabs: ['general', 'lines', 'terms']
   });
+
+  const toggleBuilderTab = (tabs: BuilderTab[], tab: BuilderTab): BuilderTab[] => {
+    if (tabs.includes(tab)) {
+      // Don't allow removing 'general' - it's required
+      if (tab === 'general') return tabs;
+      return tabs.filter(t => t !== tab);
+    }
+    return [...tabs, tab];
+  };
 
   const handleCreate = async () => {
     if (!newType.name || !newType.code) return;
@@ -86,6 +105,7 @@ export function ContractTypesSettings() {
       icon: newType.icon,
       color: newType.color,
       default_fields: newType.default_fields,
+      builder_tabs: newType.builder_tabs,
       is_default: newType.is_default,
       sort_order: contractTypes.length
     });
@@ -98,7 +118,8 @@ export function ContractTypesSettings() {
       icon: 'FileText',
       color: '#3B82F6',
       default_fields: {},
-      is_default: false
+      is_default: false,
+      builder_tabs: ['general', 'lines', 'terms']
     });
   };
 
@@ -113,6 +134,7 @@ export function ContractTypesSettings() {
       icon: editingType.icon,
       color: editingType.color,
       default_fields: editingType.default_fields,
+      builder_tabs: editingType.builder_tabs,
       is_default: editingType.is_default,
       is_active: editingType.is_active
     });
@@ -253,6 +275,31 @@ export function ContractTypesSettings() {
                       </label>
                     ))}
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Onglets du builder</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {TAB_OPTIONS.map(tab => {
+                      const Icon = tab.icon;
+                      const isActive = newType.builder_tabs?.includes(tab.key);
+                      const isGeneral = tab.key === 'general';
+                      return (
+                        <Badge
+                          key={tab.key}
+                          variant={isActive ? 'default' : 'outline'}
+                          className={`cursor-pointer gap-1 ${isGeneral ? 'opacity-70' : ''}`}
+                          onClick={() => !isGeneral && setNewType({
+                            ...newType,
+                            builder_tabs: toggleBuilderTab(newType.builder_tabs || ['general', 'lines', 'terms'], tab.key)
+                          })}
+                        >
+                          <Icon className="h-3 w-3" />
+                          {tab.label}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">L'onglet "Général" est obligatoire</p>
                 </div>
               </div>
               <DialogFooter>
@@ -442,6 +489,31 @@ export function ContractTypesSettings() {
                     </label>
                   ))}
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Onglets du builder</Label>
+                <div className="flex flex-wrap gap-2">
+                  {TAB_OPTIONS.map(tab => {
+                    const Icon = tab.icon;
+                    const isActive = editingType.builder_tabs?.includes(tab.key);
+                    const isGeneral = tab.key === 'general';
+                    return (
+                      <Badge
+                        key={tab.key}
+                        variant={isActive ? 'default' : 'outline'}
+                        className={`cursor-pointer gap-1 ${isGeneral ? 'opacity-70' : ''}`}
+                        onClick={() => !isGeneral && setEditingType({
+                          ...editingType,
+                          builder_tabs: toggleBuilderTab(editingType.builder_tabs || ['general', 'lines', 'terms'], tab.key)
+                        })}
+                      >
+                        <Icon className="h-3 w-3" />
+                        {tab.label}
+                      </Badge>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">L'onglet "Général" est obligatoire</p>
               </div>
               <div className="flex items-center justify-between pt-2">
                 <label className="flex items-center gap-2 text-sm">
