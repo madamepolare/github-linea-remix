@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
+import { useAuth } from '@/contexts/AuthContext';
 import { CommercialPipeline } from '@/components/commercial/CommercialPipeline';
 import { 
   DocumentType, 
@@ -36,6 +37,7 @@ import {
 const Commercial = () => {
   const navigate = useNavigate();
   const { view } = useParams();
+  const { activeWorkspace, workspaces, setActiveWorkspace } = useAuth();
   const { documents, isLoading, deleteDocument, duplicateDocument, updateDocument } = useCommercialDocuments();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all');
@@ -228,13 +230,48 @@ const Commercial = () => {
         />
       ) : filteredDocuments.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
-            <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">Aucun document trouvé</p>
-            <Button className="mt-4" onClick={() => handleNewDocument('quote')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Créer un devis
-            </Button>
+          <CardContent className="py-12 text-center space-y-4">
+            <div>
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground">Aucun document trouvé</p>
+              {activeWorkspace && workspaces.length > 1 && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Workspace actif : <span className="font-medium">{activeWorkspace.name}</span>
+                </p>
+              )}
+            </div>
+
+            {activeWorkspace && workspaces.length > 1 && (
+              <div className="max-w-sm mx-auto">
+                <Select
+                  value={activeWorkspace.id}
+                  onValueChange={(workspaceId) => {
+                    setActiveWorkspace(workspaceId);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Changer de workspace" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workspaces.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Si votre devis a « disparu », il est probablement dans un autre workspace.
+                </p>
+              </div>
+            )}
+
+            <div>
+              <Button className="mt-2" onClick={() => handleNewDocument('quote')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Créer un devis
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
