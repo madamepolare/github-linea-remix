@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay, setHours, parseISO, addHours } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye, GripVertical, CheckCircle2, ExternalLink, Copy, Move, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye, GripVertical, CheckCircle2, ExternalLink, Copy, Move, Plus, PanelLeftClose, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
@@ -54,6 +54,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const [showEvents, setShowEvents] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
+  const [teamColumnCollapsed, setTeamColumnCollapsed] = useState(false);
   
   // Time entry dialog state (add)
   const [timeEntryDialogOpen, setTimeEntryDialogOpen] = useState(false);
@@ -523,16 +524,33 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
         {/* Colonne des membres (fixe) + grille synchronisée */}
         <div className="flex flex-1 overflow-hidden">
           {/* Colonne des membres (fixe) */}
-          <div className="flex-shrink-0 w-60 border-r bg-card/30 flex flex-col">
+          <div className={`flex-shrink-0 ${teamColumnCollapsed ? 'w-16' : 'w-60'} border-r bg-card/30 flex flex-col transition-all duration-200`}>
             {/* Header aligné */}
-            <div className="h-[72px] border-b flex items-center px-4 shrink-0">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span className="text-xs font-medium uppercase tracking-wider">Équipe</span>
-                <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
-                  {members?.length || 0}
-                </span>
-              </div>
+            <div className="h-[72px] border-b flex items-center justify-between px-2 shrink-0">
+              {!teamColumnCollapsed ? (
+                <div className="flex items-center gap-2 text-muted-foreground px-2">
+                  <Users className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase tracking-wider">Équipe</span>
+                  <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
+                    {members?.length || 0}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center w-full">
+                  <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
+                    {members?.length || 0}
+                  </span>
+                </div>
+              )}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 shrink-0"
+                onClick={() => setTeamColumnCollapsed(!teamColumnCollapsed)}
+                title={teamColumnCollapsed ? "Développer" : "Réduire"}
+              >
+                {teamColumnCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+              </Button>
             </div>
             
             {/* Liste des membres - overflow hidden, sync via same container */}
@@ -540,29 +558,31 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
               <div id="members-scroll-content">
                 {(!members || members.length === 0) ? (
                   <div className="p-4 text-center text-sm text-muted-foreground">
-                    Aucun membre dans l'équipe
+                    {teamColumnCollapsed ? '' : 'Aucun membre'}
                   </div>
                 ) : (
                   members.map(member => (
                     <div
                       key={member.user_id}
-                      className="px-4 flex items-center gap-3 border-b hover:bg-muted/30 transition-colors"
+                      className={`flex items-center border-b hover:bg-muted/30 transition-colors ${teamColumnCollapsed ? 'justify-center px-2' : 'px-4 gap-3'}`}
                       style={{ height: ROW_HEIGHT }}
                     >
-                      <Avatar className="h-11 w-11 ring-2 ring-background shadow-md shrink-0">
+                      <Avatar className={`${teamColumnCollapsed ? 'h-10 w-10' : 'h-11 w-11'} ring-2 ring-background shadow-md shrink-0`}>
                         <AvatarImage src={member.profile?.avatar_url || ""} />
                         <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-sm font-medium">
                           {(member.profile?.full_name || "?").charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">
-                          {member.profile?.full_name || "Membre"}
+                      {!teamColumnCollapsed && (
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">
+                            {member.profile?.full_name || "Membre"}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {member.profile?.job_title || member.role}
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {member.profile?.job_title || member.role}
-                        </div>
-                      </div>
+                      )}
                     </div>
                   ))
                 )}

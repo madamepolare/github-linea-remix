@@ -1,3 +1,4 @@
+import React from 'react';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { QuoteDocument, QuoteLine, LINE_TYPE_LABELS } from '@/types/quoteTypes';
 import { format } from 'date-fns';
@@ -24,8 +25,16 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
     }
   };
 
+  // Get groups and organize lines
+  const groups = lines.filter(l => l.line_type === 'group');
+  const getGroupLines = (groupId: string) => lines.filter(l => l.group_id === groupId && l.line_type !== 'group');
+  const ungroupedLines = lines.filter(l => !l.group_id && l.line_type !== 'group');
+  const getGroupSubtotal = (groupId: string) => {
+    return getGroupLines(groupId).filter(l => l.is_included && l.line_type !== 'discount').reduce((sum, l) => sum + (l.amount || 0), 0);
+  };
+
   // Calculate totals
-  const includedLines = lines.filter(l => l.is_included && l.line_type !== 'discount');
+  const includedLines = lines.filter(l => l.is_included && l.line_type !== 'discount' && l.line_type !== 'group');
   const discountLines = lines.filter(l => l.line_type === 'discount');
   const subtotal = includedLines.reduce((sum, l) => sum + (l.amount || 0), 0);
   const totalDiscount = discountLines.reduce((sum, l) => sum + Math.abs(l.amount || 0), 0);
@@ -112,7 +121,7 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
           </div>
         </div>
 
-        {/* Lines table */}
+        {/* Lines table with groups */}
         <table className="w-full mb-6" style={{ fontSize: '11px' }}>
           <thead>
             <tr className="border-b-2 border-gray-200">
@@ -123,7 +132,65 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
             </tr>
           </thead>
           <tbody>
-            {lines.filter(l => l.is_included).map((line, index) => (
+            {/* Render groups first */}
+            {groups.map(group => {
+              const groupLines = getGroupLines(group.id).filter(l => l.is_included);
+              const groupSubtotal = getGroupSubtotal(group.id);
+              
+              return (
+                <React.Fragment key={group.id}>
+                  {/* Group header */}
+                  <tr className="bg-gray-100">
+                    <td colSpan={4} className="py-2 px-2 font-semibold text-gray-700">
+                      {group.phase_name || 'Groupe'}
+                    </td>
+                  </tr>
+                  {/* Group lines */}
+                  {groupLines.map(line => (
+                    <tr key={line.id} className="border-b border-gray-100">
+                      <td className="py-2 pl-4">
+                        <div className="flex items-start gap-2">
+                          {line.phase_code && (
+                            <span className="text-xs bg-gray-100 px-1.5 py-0.5 rounded font-medium">
+                              {line.phase_code}
+                            </span>
+                          )}
+                          <div>
+                            <div className="font-medium">{line.phase_name || 'Ligne sans titre'}</div>
+                            {line.phase_description && (
+                              <div className="text-xs text-gray-500 mt-0.5">{line.phase_description}</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="text-right py-2 align-top">
+                        {line.quantity} {line.unit !== 'forfait' && line.unit}
+                      </td>
+                      <td className="text-right py-2 align-top">
+                        {line.unit_price ? formatCurrency(line.unit_price) : '-'}
+                      </td>
+                      <td className="text-right py-2 align-top font-medium">
+                        {formatCurrency(line.amount || 0)}
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Group subtotal */}
+                  {groupLines.length > 0 && (
+                    <tr className="bg-gray-50 border-b border-gray-200">
+                      <td colSpan={3} className="py-1.5 px-2 text-right text-xs font-medium text-gray-600">
+                        Sous-total {group.phase_name}
+                      </td>
+                      <td className="text-right py-1.5 font-semibold">
+                        {formatCurrency(groupSubtotal)}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+            
+            {/* Ungrouped lines */}
+            {ungroupedLines.filter(l => l.is_included).map((line) => (
               <tr key={line.id} className="border-b border-gray-100">
                 <td className="py-2">
                   <div className="flex items-start gap-2">
