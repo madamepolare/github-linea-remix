@@ -69,11 +69,7 @@ const Commercial = () => {
     .reduce((sum, d) => sum + (d.total_amount || 0), 0);
 
   const handleNewDocument = (type: DocumentType) => {
-    const workspaceId = activeWorkspace?.id;
-    const qs = new URLSearchParams();
-    qs.set('type', type);
-    if (workspaceId) qs.set('workspace', workspaceId);
-    navigate(`/commercial/quote/new?${qs.toString()}`);
+    navigate(`/commercial/quote/new?type=${type}`);
   };
 
   const handleDuplicate = (id: string) => {
@@ -286,12 +282,7 @@ const Commercial = () => {
               <Card 
                 key={doc.id} 
                 className="hover:border-primary/50 transition-colors cursor-pointer"
-                onClick={async () => {
-                  if (doc.workspace_id && activeWorkspace?.id && doc.workspace_id !== activeWorkspace.id) {
-                    await setActiveWorkspace(doc.workspace_id);
-                  }
-                  navigate(`/commercial/quote/${doc.id}`);
-                }}
+                onClick={() => navigate(`/commercial/quote/${doc.id}`)}
               >
                 <CardContent className="py-3 sm:py-4 px-3 sm:px-6">
                   <div className="flex items-start sm:items-center justify-between gap-3">
@@ -345,11 +336,8 @@ const Commercial = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={async (e) => { 
+                          <DropdownMenuItem onClick={(e) => { 
                             e.stopPropagation(); 
-                            if (doc.workspace_id && activeWorkspace?.id && doc.workspace_id !== activeWorkspace.id) {
-                              await setActiveWorkspace(doc.workspace_id);
-                            }
                             navigate(`/commercial/quote/${doc.id}`); 
                           }}>
                             <Eye className="h-4 w-4 mr-2" />
