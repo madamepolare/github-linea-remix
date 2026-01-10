@@ -57,6 +57,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AIQuoteGenerator } from './AIQuoteGenerator';
 import { AIDescriptionButton } from './AIDescriptionButton';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface QuoteLinesEditorProps {
   lines: QuoteLine[];
@@ -86,10 +88,13 @@ export function QuoteLinesEditor({
   const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-  // Load templates
+  // Load templates and team members
   const projectType = document.project_type as 'interior' | 'architecture' | 'scenography' | undefined;
   const { templates: phaseTemplates } = usePhaseTemplates(projectType);
   const { pricingGrids } = useQuoteTemplates(projectType);
+  
+  // Import useTeamMembers
+  const { data: teamMembers } = useTeamMembers();
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -579,11 +584,41 @@ export function QuoteLinesEditor({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-4 gap-4">
                       <div className="space-y-2">
                         <Label className="text-xs text-muted-foreground flex items-center gap-1">
                           <User className="h-3 w-3" />
-                          Membre / Compétence
+                          Membre assigné
+                        </Label>
+                        <Select
+                          value={line.assigned_member_id || ''}
+                          onValueChange={(v) => updateLine(line.id, { assigned_member_id: v || undefined })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Non assigné</SelectItem>
+                            {teamMembers?.map(member => (
+                              <SelectItem key={member.user_id} value={member.user_id}>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarImage src={member.profile?.avatar_url || ''} />
+                                    <AvatarFallback className="text-[10px]">
+                                      {(member.profile?.full_name || '?').charAt(0)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span>{member.profile?.full_name || 'Membre'}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">
+                          Compétence / Rôle
                         </Label>
                         <Input
                           value={line.assigned_skill || ''}
@@ -617,7 +652,19 @@ export function QuoteLinesEditor({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">
+                          Réf. tarif (BPU)
+                        </Label>
+                        <Input
+                          value={line.pricing_ref || ''}
+                          onChange={(e) => updateLine(line.id, { pricing_ref: e.target.value })}
+                          placeholder="Ex: ARCHI-001"
+                          className="font-mono text-sm"
+                        />
+                      </div>
+
                       <div className="space-y-2">
                         <Label className="text-xs text-muted-foreground flex items-center gap-1">
                           <Euro className="h-3 w-3" />

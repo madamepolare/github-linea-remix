@@ -901,6 +901,12 @@ function PricingGridEditDialog({ grid, onClose, onSave }: PricingGridEditDialogP
               {editedGrid.items.map((item, index) => (
                 <div key={item.id} className="flex items-center gap-2 p-3 border rounded-lg bg-muted/30">
                   <Input
+                    value={item.pricing_ref || ''}
+                    onChange={(e) => updateItem(index, { pricing_ref: e.target.value })}
+                    className="w-24 font-mono text-xs"
+                    placeholder="Réf."
+                  />
+                  <Input
                     value={item.name}
                     onChange={(e) => updateItem(index, { name: e.target.value })}
                     className="flex-1"

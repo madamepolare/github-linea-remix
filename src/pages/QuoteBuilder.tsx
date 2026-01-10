@@ -127,6 +127,7 @@ export default function QuoteBuilder() {
     setIsSaving(true);
     try {
       let documentId = id;
+      let isNewDoc = isNew;
       
       if (isNew) {
         // Create new document
@@ -148,9 +149,7 @@ export default function QuoteBuilder() {
           project_budget: document.project_budget,
         });
         documentId = newDoc.id;
-        
-        // Navigate to the new document URL
-        navigate(`/commercial/quote/${documentId}`, { replace: true });
+        isNewDoc = false;
       } else if (id) {
         // Update existing document
         await updateDocument.mutateAsync({
@@ -173,25 +172,37 @@ export default function QuoteBuilder() {
         });
       }
       
-      // Save lines/phases
-      if (documentId && !isNew) {
+      // Save lines/phases for both new and existing documents
+      if (documentId && lines.length > 0) {
         for (const line of lines) {
           const phaseData = quoteLineToPhase(line);
           phaseData.document_id = documentId;
           
-          if (line.id && phases?.some(p => p.id === line.id)) {
+          // Check if this line already exists in the database
+          const existsInDb = phases?.some(p => p.id === line.id);
+          
+          if (existsInDb) {
             await updatePhase.mutateAsync({ id: line.id, ...phaseData });
           } else {
-            await createPhase.mutateAsync(phaseData);
+            // Create new line (remove id to let DB generate)
+            const { id: _lineId, ...phaseDataWithoutId } = phaseData;
+            await createPhase.mutateAsync(phaseDataWithoutId);
           }
         }
         
-        // Delete removed lines
-        const currentLineIds = lines.map(l => l.id).filter(Boolean);
-        const linesToDelete = phases?.filter(p => !currentLineIds.includes(p.id)) || [];
-        for (const line of linesToDelete) {
-          await deletePhase.mutateAsync({ id: line.id, documentId });
+        // Delete removed lines (only for existing documents)
+        if (!isNew && phases) {
+          const currentLineIds = lines.map(l => l.id).filter(Boolean);
+          const linesToDelete = phases.filter(p => !currentLineIds.includes(p.id));
+          for (const line of linesToDelete) {
+            await deletePhase.mutateAsync({ id: line.id, documentId });
+          }
         }
+      }
+      
+      // Navigate after saving everything for new documents
+      if (isNew && documentId) {
+        navigate(`/commercial/quote/${documentId}`, { replace: true });
       }
       
       setHasChanges(false);
