@@ -34,11 +34,27 @@ function calculateDailyCostFromSalary(salaryMonthly: number | null): number {
 }
 
 /**
+ * Check if a line is an external/production line (subcontracting, purchases, etc.)
+ * These lines should use purchase_price directly instead of calculating from salaries
+ */
+function isExternalLine(line: QuoteLine): boolean {
+  // Production lines types
+  if (line.line_type === 'expense') return true;
+  // Lines with PROD- prefix in pricing ref
+  if (line.pricing_ref?.startsWith('PROD-')) return true;
+  // Lines with explicit purchase_price and no member/skill assignment
+  if (line.purchase_price && line.purchase_price > 0 && !line.assigned_member_id && !line.assigned_skill) return true;
+  return false;
+}
+
+/**
  * Hook to calculate purchase price for a quote line based on priority:
- * 1. If member assigned + day unit → use member's real cost (TJM) × quantity
- * 2. If member assigned + other unit → use average agency TJM to estimate days
- * 3. Assigned skill cost (cost_daily_rate × quantity)
- * 4. Manual purchase price (only if no member/skill)
+ * - For external/production lines: use purchase_price directly (100% external cost)
+ * - For internal lines:
+ *   1. If member assigned + day unit → use member's real cost (TJM) × quantity
+ *   2. If member assigned + other unit → use average agency TJM to estimate days
+ *   3. Assigned skill cost (cost_daily_rate × quantity)
+ *   4. Manual purchase price (only if no member/skill)
  */
 export function useLineCostCalculation(line: QuoteLine): CostCalculationResult {
   const { skills } = useSkills();
@@ -49,6 +65,29 @@ export function useLineCostCalculation(line: QuoteLine): CostCalculationResult {
     let calculatedPurchasePrice: number | undefined = undefined;
     let costSource: 'manual' | 'skill' | 'member' | 'average' | 'none' = 'none';
     let estimatedDays: number | undefined = undefined;
+
+    // For external/production lines, use purchase_price directly
+    if (isExternalLine(line)) {
+      if (line.purchase_price && line.purchase_price > 0) {
+        calculatedPurchasePrice = line.purchase_price;
+        costSource = 'manual'; // Will be displayed as 'external' in UI
+      }
+      
+      const effectivePurchasePrice = calculatedPurchasePrice || 0;
+      const margin = (line.amount || 0) - effectivePurchasePrice;
+      const marginPercentage = (line.amount && line.amount > 0) 
+        ? ((margin / line.amount) * 100) 
+        : 0;
+
+      return {
+        calculatedPurchasePrice,
+        costSource,
+        effectivePurchasePrice,
+        margin,
+        marginPercentage,
+        estimatedDays: undefined,
+      };
+    }
 
     // Calculate average agency sell rate from skills (TJM)
     const skillsWithRates = skills.filter(s => s.setting_value?.daily_rate > 0);
@@ -67,19 +106,16 @@ export function useLineCostCalculation(line: QuoteLine): CostCalculationResult {
       const memberEmployment = (allEmploymentInfo || []).find(e => e.user_id === line.assigned_member_id);
       const memberCostRate = calculateDailyCostFromSalary(memberEmployment?.salary_monthly || null);
       
-      // Get sell rate from member skills
       const memberSkill = memberSkills[0];
       const skillDef = memberSkill ? skills.find(s => s.id === memberSkill.skill_id) : null;
       const memberSellRate = skillDef?.setting_value?.daily_rate || 0;
 
       if (memberCostRate > 0) {
         if (isDayUnit(line.unit)) {
-          // Day-based: member CJM × quantity
           calculatedPurchasePrice = memberCostRate * (line.quantity || 1);
           costSource = 'member';
           estimatedDays = line.quantity || 1;
         } else {
-          // Forfait: estimate days from amount / sell rate, then cost = days × CJM
           const rateForEstimate = memberSellRate > 0 ? memberSellRate : averageAgencySellRate;
           if (rateForEstimate > 0 && (line.amount || 0) > 0) {
             estimatedDays = (line.amount || 0) / rateForEstimate;
@@ -89,7 +125,7 @@ export function useLineCostCalculation(line: QuoteLine): CostCalculationResult {
         }
       }
     }
-    // Priority 2: Assigned skill - use average CJM
+    // Priority 2: Assigned skill
     else if (line.assigned_skill) {
       const skillIds = parseSkillIds(line.assigned_skill);
       if (skillIds.length > 0) {
@@ -102,7 +138,6 @@ export function useLineCostCalculation(line: QuoteLine): CostCalculationResult {
             costSource = 'skill';
             estimatedDays = line.quantity || 1;
           } else {
-            // Forfait: estimate days from amount / sell rate, then cost = days × average CJM
             const rateForEstimate = skillSellRate > 0 ? skillSellRate : averageAgencySellRate;
             if (rateForEstimate > 0 && (line.amount || 0) > 0) {
               estimatedDays = (line.amount || 0) / rateForEstimate;
@@ -113,13 +148,13 @@ export function useLineCostCalculation(line: QuoteLine): CostCalculationResult {
         }
       }
     }
-    // Priority 3: No member/skill - estimate days from TJM, cost from CJM
+    // Priority 3: Average estimate
     else if (averageAgencySellRate > 0 && averageAgencyCostRate > 0 && (line.amount || 0) > 0) {
       estimatedDays = (line.amount || 0) / averageAgencySellRate;
       calculatedPurchasePrice = averageAgencyCostRate * estimatedDays;
       costSource = 'average';
     }
-    // Priority 4: Manual purchase price (fallback only if nothing else)
+    // Priority 4: Manual
     else if (line.purchase_price !== undefined && line.purchase_price > 0) {
       calculatedPurchasePrice = line.purchase_price;
       costSource = 'manual';
