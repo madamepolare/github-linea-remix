@@ -164,7 +164,7 @@ Réponds avec un JSON array:
           { role: 'user', content: prompt }
         ],
         temperature: 0.7,
-        max_tokens: 2000,
+        max_tokens: 4000,
       }),
     });
 
@@ -203,14 +203,26 @@ Réponds avec un JSON array:
     let result;
     try {
       // Remove markdown code blocks if present
-      const cleanedText = generatedText
+      let cleanedText = generatedText
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
+      
+      // Try to fix truncated JSON arrays
+      if (cleanedText.startsWith('[') && !cleanedText.endsWith(']')) {
+        console.log('[generate-discipline-content] JSON appears truncated, attempting to fix...');
+        // Find the last complete object
+        const lastCompleteIndex = cleanedText.lastIndexOf('},');
+        if (lastCompleteIndex > 0) {
+          cleanedText = cleanedText.substring(0, lastCompleteIndex + 1) + ']';
+          console.log('[generate-discipline-content] Fixed truncated array');
+        }
+      }
+      
       result = JSON.parse(cleanedText);
     } catch (parseError) {
       console.error('[generate-discipline-content] JSON parse error:', parseError);
-      console.error('[generate-discipline-content] Raw text was:', generatedText);
+      console.error('[generate-discipline-content] Raw text was:', generatedText.substring(0, 500));
       throw new Error('Failed to parse AI response as JSON');
     }
 
