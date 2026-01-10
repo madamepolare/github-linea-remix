@@ -35,6 +35,7 @@ export interface PricingGridItem {
   unit: string;
   unit_price: number;
   category?: string;
+  pricing_ref?: string;
 }
 
 export interface PricingGrid {

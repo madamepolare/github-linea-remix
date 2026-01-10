@@ -19,6 +19,9 @@ export interface QuoteLine {
   // Type and category
   line_type: 'phase' | 'service' | 'option' | 'expense' | 'discount';
   
+  // Reference (for BPU)
+  pricing_ref?: string;
+  
   // Pricing
   quantity: number;
   unit: string;
@@ -158,6 +161,7 @@ export function phaseToQuoteLine(phase: any, index: number): QuoteLine {
     phase_name: phase.phase_name,
     phase_description: phase.phase_description,
     line_type: phase.line_type || 'phase',
+    pricing_ref: phase.pricing_ref,
     quantity: phase.quantity || 1,
     unit: phase.unit || 'forfait',
     unit_price: phase.unit_price || phase.amount || 0,
@@ -187,6 +191,7 @@ export function quoteLineToPhase(line: QuoteLine): any {
     phase_name: line.phase_name,
     phase_description: line.phase_description,
     line_type: line.line_type,
+    pricing_ref: line.pricing_ref,
     percentage_fee: line.percentage_fee,
     amount: line.amount,
     is_included: line.is_included,

@@ -520,144 +520,159 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
 
       {/* Grille principale */}
       <div className="flex-1 overflow-hidden flex">
-        {/* Colonne des membres (fixe) */}
-        <div className="flex-shrink-0 w-60 border-r bg-card/30">
-          {/* Header aligné */}
-          <div className="h-[72px] border-b flex items-center px-4">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Users className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase tracking-wider">Équipe</span>
-              <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
-                {members?.length || 0}
-              </span>
+        {/* Colonne des membres (fixe) + grille synchronisée */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Colonne des membres (fixe) */}
+          <div className="flex-shrink-0 w-60 border-r bg-card/30 flex flex-col">
+            {/* Header aligné */}
+            <div className="h-[72px] border-b flex items-center px-4 shrink-0">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Users className="h-4 w-4" />
+                <span className="text-xs font-medium uppercase tracking-wider">Équipe</span>
+                <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
+                  {members?.length || 0}
+                </span>
+              </div>
+            </div>
+            
+            {/* Liste des membres - overflow hidden, sync via same container */}
+            <div className="flex-1 overflow-hidden">
+              <div id="members-scroll-content">
+                {(!members || members.length === 0) ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    Aucun membre dans l'équipe
+                  </div>
+                ) : (
+                  members.map(member => (
+                    <div
+                      key={member.user_id}
+                      className="px-4 flex items-center gap-3 border-b hover:bg-muted/30 transition-colors"
+                      style={{ height: ROW_HEIGHT }}
+                    >
+                      <Avatar className="h-11 w-11 ring-2 ring-background shadow-md shrink-0">
+                        <AvatarImage src={member.profile?.avatar_url || ""} />
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-sm font-medium">
+                          {(member.profile?.full_name || "?").charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {member.profile?.full_name || "Membre"}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {member.profile?.job_title || member.role}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-          
-          {/* Liste des membres */}
-          <ScrollArea className="h-[calc(100%-72px)]">
-            {(!members || members.length === 0) ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                Aucun membre dans l'équipe
-              </div>
-            ) : (
-              members.map(member => (
-                <div
-                  key={member.user_id}
-                  className="px-4 flex items-center gap-3 border-b hover:bg-muted/30 transition-colors"
-                  style={{ height: ROW_HEIGHT }}
-                >
-                  <Avatar className="h-11 w-11 ring-2 ring-background shadow-md">
-                    <AvatarImage src={member.profile?.avatar_url || ""} />
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-sm font-medium">
-                      {(member.profile?.full_name || "?").charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">
-                      {member.profile?.full_name || "Membre"}
+
+          {/* Grille des jours (scrollable) */}
+          <ScrollArea 
+            className="flex-1"
+            onScrollCapture={(e) => {
+              // Sync vertical scroll with members column
+              const scrollTop = (e.target as HTMLElement).scrollTop;
+              const membersContent = document.getElementById('members-scroll-content');
+              if (membersContent) {
+                membersContent.style.transform = `translateY(-${scrollTop}px)`;
+              }
+            }}
+          >
+            <div className="min-w-max">
+              {/* Header des mois et jours */}
+              <div className="sticky top-0 bg-background z-10 border-b">
+                {/* Ligne des mois */}
+                <div className="flex h-9 border-b">
+                  {monthGroups.map((group, idx) => (
+                    <div
+                      key={`${group.month}-${group.year}-${idx}`}
+                      className="flex items-center justify-center text-xs font-semibold capitalize bg-muted/30"
+                      style={{ width: group.days.length * CELL_WIDTH }}
+                    >
+                      {group.month} {group.year}
                     </div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {member.profile?.job_title || member.role}
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))
-            )}
+                
+                {/* Ligne des jours */}
+                <div className="flex h-9">
+                  {days.map((day) => {
+                    const isToday = isSameDay(day, new Date());
+                    const weekend = isWeekend(day);
+                    
+                    return (
+                      <div
+                        key={day.toISOString()}
+                        className={cn(
+                          "flex items-center justify-center gap-1.5 border-r text-xs transition-colors",
+                          weekend && "bg-muted/40",
+                          isToday && "bg-primary/10"
+                        )}
+                        style={{ width: CELL_WIDTH }}
+                      >
+                        <span className={cn(
+                          "uppercase text-[11px]",
+                          weekend ? "text-muted-foreground" : "text-muted-foreground"
+                        )}>
+                          {format(day, "EEE", { locale: fr }).slice(0, 3)}
+                        </span>
+                        <span className={cn(
+                          "font-semibold text-sm",
+                          isToday && "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                        )}>
+                          {format(day, "d")}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Corps de la grille */}
+              <div>
+                {(!members || members.length === 0) ? (
+                  <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
+                    Ajoutez des membres à votre équipe pour voir le planning
+                  </div>
+                ) : (
+                  members.map(member => (
+                    <MemberRow
+                      key={member.user_id}
+                      member={member}
+                      days={days}
+                      getItemsForMemberAndDay={getItemsForMemberAndDay}
+                      getOccupancyRate={getOccupancyRate}
+                      onEventClick={onEventClick}
+                      onCellClick={(date, member) => {
+                        setSelectedCellDate(date);
+                        setSelectedCellMember(member);
+                        setTimeEntryDialogOpen(true);
+                        onCellClick?.(date, member);
+                      }}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      dragOverCell={dragOverCell}
+                      cellWidth={CELL_WIDTH}
+                      rowHeight={ROW_HEIGHT}
+                      onViewTask={handleViewTask}
+                      onUnschedule={handleUnschedule}
+                      onScheduleDragStart={handleScheduleDragStart}
+                      onResizeSchedule={handleResizeSchedule}
+                      onResizeTimeEntry={handleResizeTimeEntry}
+                      onViewTimeEntry={handleViewTimeEntry}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </div>
-
-        {/* Grille des jours (scrollable) */}
-        <ScrollArea className="flex-1">
-          <div className="min-w-max">
-            {/* Header des mois et jours */}
-            <div className="sticky top-0 bg-background z-10 border-b">
-              {/* Ligne des mois */}
-              <div className="flex h-9 border-b">
-                {monthGroups.map((group, idx) => (
-                  <div
-                    key={`${group.month}-${group.year}-${idx}`}
-                    className="flex items-center justify-center text-xs font-semibold capitalize bg-muted/30"
-                    style={{ width: group.days.length * CELL_WIDTH }}
-                  >
-                    {group.month} {group.year}
-                  </div>
-                ))}
-              </div>
-              
-              {/* Ligne des jours */}
-              <div className="flex h-9">
-                {days.map((day) => {
-                  const isToday = isSameDay(day, new Date());
-                  const weekend = isWeekend(day);
-                  
-                  return (
-                    <div
-                      key={day.toISOString()}
-                      className={cn(
-                        "flex items-center justify-center gap-1.5 border-r text-xs transition-colors",
-                        weekend && "bg-muted/40",
-                        isToday && "bg-primary/10"
-                      )}
-                      style={{ width: CELL_WIDTH }}
-                    >
-                      <span className={cn(
-                        "uppercase text-[11px]",
-                        weekend ? "text-muted-foreground" : "text-muted-foreground"
-                      )}>
-                        {format(day, "EEE", { locale: fr }).slice(0, 3)}
-                      </span>
-                      <span className={cn(
-                        "font-semibold text-sm",
-                        isToday && "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs"
-                      )}>
-                        {format(day, "d")}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Corps de la grille */}
-            <div>
-              {(!members || members.length === 0) ? (
-                <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
-                  Ajoutez des membres à votre équipe pour voir le planning
-                </div>
-              ) : (
-                members.map(member => (
-                  <MemberRow
-                    key={member.user_id}
-                    member={member}
-                    days={days}
-                    getItemsForMemberAndDay={getItemsForMemberAndDay}
-                    getOccupancyRate={getOccupancyRate}
-                    onEventClick={onEventClick}
-                    onCellClick={(date, member) => {
-                      setSelectedCellDate(date);
-                      setSelectedCellMember(member);
-                      setTimeEntryDialogOpen(true);
-                      onCellClick?.(date, member);
-                    }}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    dragOverCell={dragOverCell}
-                    cellWidth={CELL_WIDTH}
-                    rowHeight={ROW_HEIGHT}
-                    onViewTask={handleViewTask}
-                    onUnschedule={handleUnschedule}
-                    onScheduleDragStart={handleScheduleDragStart}
-                    onResizeSchedule={handleResizeSchedule}
-                    onResizeTimeEntry={handleResizeTimeEntry}
-                    onViewTimeEntry={handleViewTimeEntry}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
       </div>
 
       {/* Task Detail Sheet */}
