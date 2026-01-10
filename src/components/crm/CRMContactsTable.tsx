@@ -34,6 +34,7 @@ import {
   ExternalLink,
   Search,
   ArrowUpDown,
+  Upload,
 } from "lucide-react";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
@@ -44,9 +45,10 @@ import { EditContactDialog } from "./EditContactDialog";
 export interface CRMContactsTableProps {
   search?: string;
   onCreateContact: () => void;
+  onImportContacts?: () => void;
 }
 
-export function CRMContactsTable({ search: externalSearch = "", onCreateContact }: CRMContactsTableProps) {
+export function CRMContactsTable({ search: externalSearch = "", onCreateContact, onImportContacts }: CRMContactsTableProps) {
   const navigate = useNavigate();
   const { contacts, isLoading, deleteContact } = useContacts();
   const { canViewSensitiveData, canEditContacts, canDeleteContacts } = useWorkspaceRole();
@@ -114,14 +116,22 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact 
       <div className="p-6 space-y-4">
         {/* Search bar */}
         <Card className="border-0 shadow-none bg-transparent">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher un contact..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Rechercher un contact..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            {onImportContacts && (
+              <Button variant="outline" size="sm" onClick={onImportContacts}>
+                <Upload className="h-4 w-4 mr-2" />
+                Importer
+              </Button>
+            )}
           </div>
         </Card>
 
