@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { usePhaseTemplates, PhaseTemplate, CreatePhaseTemplateInput } from "@/hooks/usePhaseTemplates";
+import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -42,19 +44,10 @@ import {
   ChevronUp,
   Layers,
   Puzzle,
-  Building2,
-  Home,
-  Theater,
+  Folder,
+  AlertCircle,
 } from "lucide-react";
-import { PROJECT_TYPE_LABELS, PHASE_CATEGORY_LABELS, PhaseCategory } from "@/lib/commercialTypes";
-
-const PROJECT_TYPES = ["architecture", "interior", "scenography"] as const;
-
-const PROJECT_TYPE_ICONS: Record<string, React.ReactNode> = {
-  architecture: <Building2 className="h-4 w-4" />,
-  interior: <Home className="h-4 w-4" />,
-  scenography: <Theater className="h-4 w-4" />,
-};
+import { PHASE_CATEGORY_LABELS, PhaseCategory } from "@/lib/commercialTypes";
 
 interface PhaseFormData {
   code: string;
@@ -79,7 +72,8 @@ const defaultFormData: PhaseFormData = {
 };
 
 export function PhasesSettings() {
-  const [activeProjectType, setActiveProjectType] = useState<string>("architecture");
+  const { projectTypes, isLoading: projectTypesLoading } = useProjectTypeSettings();
+  const [activeProjectType, setActiveProjectType] = useState<string>("");
   const { templates, isLoading, createTemplate, updateTemplate, deleteTemplate, reorderTemplates, resetToDefaults, initializeDefaultsIfEmpty } = usePhaseTemplates(activeProjectType);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -89,6 +83,13 @@ export function PhasesSettings() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [resetConfirmType, setResetConfirmType] = useState<string | null>(null);
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
+
+  // Set first project type as active when loaded
+  useEffect(() => {
+    if (projectTypes.length > 0 && !activeProjectType) {
+      setActiveProjectType(projectTypes[0].key);
+    }
+  }, [projectTypes, activeProjectType]);
 
   // Group templates by category
   const groupedTemplates = useMemo(() => {
@@ -106,7 +107,9 @@ export function PhasesSettings() {
 
   // Initialize defaults when switching project type
   useEffect(() => {
-    initializeDefaultsIfEmpty.mutate(activeProjectType);
+    if (activeProjectType) {
+      initializeDefaultsIfEmpty.mutate(activeProjectType);
+    }
   }, [activeProjectType]);
 
   const handleOpenCreate = (category: PhaseCategory = 'base') => {
@@ -347,65 +350,84 @@ export function PhasesSettings() {
         </p>
       </div>
 
-      <Tabs value={activeProjectType} onValueChange={setActiveProjectType}>
-        <TabsList>
-          {PROJECT_TYPES.map((type) => (
-            <TabsTrigger key={type} value={type} className="gap-2">
-              {PROJECT_TYPE_ICONS[type]}
-              {PROJECT_TYPE_LABELS[type]}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      {projectTypesLoading ? (
+        <Skeleton className="h-10 w-full" />
+      ) : projectTypes.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-8 text-center">
+            <AlertCircle className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+            <p className="text-muted-foreground mb-2">Aucun type de projet configuré</p>
+            <p className="text-sm text-muted-foreground">
+              Configurez d'abord vos types de projets dans les paramètres Projets.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs value={activeProjectType} onValueChange={setActiveProjectType}>
+          <ScrollArea className="w-full">
+            <TabsList className="inline-flex w-max">
+              {projectTypes.map((type) => (
+                <TabsTrigger key={type.key} value={type.key} className="gap-2">
+                  <div 
+                    className="h-3 w-3 rounded-full" 
+                    style={{ backgroundColor: type.color || '#6366f1' }}
+                  />
+                  {type.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
 
-        {PROJECT_TYPES.map((type) => (
-          <TabsContent key={type} value={type} className="space-y-6 mt-6">
-            {/* Summary Card */}
-            <Card className={totals.base !== 100 && groupedTemplates.base.length > 0 ? "border-orange-500" : ""}>
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <div className="text-center">
-                      <p className="text-2xl font-semibold">{groupedTemplates.base.length}</p>
-                      <p className="text-xs text-muted-foreground">Missions de base</p>
+          {projectTypes.map((type) => (
+            <TabsContent key={type.key} value={type.key} className="space-y-6 mt-6">
+              {/* Summary Card */}
+              <Card className={totals.base !== 100 && groupedTemplates.base.length > 0 ? "border-orange-500" : ""}>
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <div className="text-center">
+                        <p className="text-2xl font-semibold">{groupedTemplates.base.length}</p>
+                        <p className="text-xs text-muted-foreground">Missions de base</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-semibold">{groupedTemplates.complementary.length}</p>
+                        <p className="text-xs text-muted-foreground">Complémentaires</p>
+                      </div>
+                      <div className="text-center">
+                        <p className={`text-2xl font-semibold ${totals.base === 100 ? "text-green-600" : "text-orange-500"}`}>
+                          {totals.base}%
+                        </p>
+                        <p className="text-xs text-muted-foreground">Total base</p>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-semibold">{groupedTemplates.complementary.length}</p>
-                      <p className="text-xs text-muted-foreground">Complémentaires</p>
-                    </div>
-                    <div className="text-center">
-                      <p className={`text-2xl font-semibold ${totals.base === 100 ? "text-green-600" : "text-orange-500"}`}>
-                        {totals.base}%
-                      </p>
-                      <p className="text-xs text-muted-foreground">Total base</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {totals.base !== 100 && groupedTemplates.base.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      {totals.base !== 100 && groupedTemplates.base.length > 0 && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleNormalizePercentages()}
+                        >
+                          Ajuster à 100%
+                        </Button>
+                      )}
                       <Button
-                        variant="default"
+                        variant="outline"
                         size="sm"
-                        onClick={() => handleNormalizePercentages()}
+                        onClick={() => setResetConfirmType(type.key)}
                       >
-                        Ajuster à 100%
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                        Réinitialiser
                       </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setResetConfirmType(type)}
-                    >
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                      Réinitialiser
-                    </Button>
+                    </div>
                   </div>
-                </div>
-                {totals.base !== 100 && groupedTemplates.base.length > 0 && (
-                  <p className="text-sm text-orange-500 mt-2">
-                    ⚠️ Le total des missions de base doit être égal à 100% (actuellement {totals.base}%)
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                  {totals.base !== 100 && groupedTemplates.base.length > 0 && (
+                    <p className="text-sm text-orange-500 mt-2">
+                      ⚠️ Le total des missions de base doit être égal à 100% (actuellement {totals.base}%)
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
 
             {/* Missions de base */}
             <div className="space-y-3">
@@ -471,6 +493,7 @@ export function PhasesSettings() {
           </TabsContent>
         ))}
       </Tabs>
+      )}
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
