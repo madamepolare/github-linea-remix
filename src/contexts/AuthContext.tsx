@@ -69,7 +69,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role,
         workspace:workspaces(id, name, slug, logo_url, plan)
       `)
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      // Hide memberships that are marked as hidden for this user
+      .neq("is_hidden", true);
 
     if (error) {
       console.error("Error fetching workspaces:", error);
@@ -126,23 +128,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           // Defer Supabase calls with setTimeout to avoid deadlock
           setTimeout(() => {
-            Promise.all([
-              fetchProfile(session.user.id),
-              fetchWorkspaces(session.user.id)
-            ]).then(([profileData, workspacesData]) => {
-              setProfile(profileData);
-              setWorkspaces(workspacesData);
-              
-              // Check for pending workspace switch (founder seamless switch)
-              const pendingWorkspaceId = consumePendingWorkspace();
-              if (pendingWorkspaceId) {
-                // Vérifie que le workspace existe pour ce user
-                const workspaceExists = workspacesData.some(w => w.id === pendingWorkspaceId);
-                if (workspaceExists && profileData?.active_workspace_id !== pendingWorkspaceId) {
-                  setActiveWorkspaceInternal(pendingWorkspaceId, session.user.id);
-                }
-              }
-            });
+             Promise.all([
+               fetchProfile(session.user.id),
+               fetchWorkspaces(session.user.id)
+             ]).then(([profileData, workspacesData]) => {
+               setProfile(profileData);
+               setWorkspaces(workspacesData);
+
+               // Ensure profile points to a visible workspace. If not, pick the first available one and persist it.
+               const activeExists = !!profileData?.active_workspace_id && workspacesData.some(w => w.id === profileData.active_workspace_id);
+               if (profileData && workspacesData.length > 0 && !activeExists) {
+                 setActiveWorkspaceInternal(workspacesData[0].id, session.user.id);
+               }
+
+               // Check for pending workspace switch (founder seamless switch)
+               const pendingWorkspaceId = consumePendingWorkspace();
+               if (pendingWorkspaceId) {
+                 // Vérifie que le workspace existe pour ce user
+                 const workspaceExists = workspacesData.some(w => w.id === pendingWorkspaceId);
+                 if (workspaceExists && profileData?.active_workspace_id !== pendingWorkspaceId) {
+                   setActiveWorkspaceInternal(pendingWorkspaceId, session.user.id);
+                 }
+               }
+             });
           }, 0);
         } else {
           setProfile(null);
@@ -157,25 +165,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        Promise.all([
-          fetchProfile(session.user.id),
-          fetchWorkspaces(session.user.id)
-        ]).then(([profileData, workspacesData]) => {
-          setProfile(profileData);
-          setWorkspaces(workspacesData);
-          
-          // Check for pending workspace switch on initial load too
-          const pendingWorkspaceId = consumePendingWorkspace();
-          if (pendingWorkspaceId) {
-            const workspaceExists = workspacesData.some(w => w.id === pendingWorkspaceId);
-            if (workspaceExists && profileData?.active_workspace_id !== pendingWorkspaceId) {
-              setActiveWorkspaceInternal(pendingWorkspaceId, session.user.id);
-            }
-          }
-          
-          setLoading(false);
-          setIsInitialized(true);
-        });
+         Promise.all([
+           fetchProfile(session.user.id),
+           fetchWorkspaces(session.user.id)
+         ]).then(([profileData, workspacesData]) => {
+           setProfile(profileData);
+           setWorkspaces(workspacesData);
+
+           // Ensure profile points to a visible workspace. If not, pick the first available one and persist it.
+           const activeExists = !!profileData?.active_workspace_id && workspacesData.some(w => w.id === profileData.active_workspace_id);
+           if (profileData && workspacesData.length > 0 && !activeExists) {
+             setActiveWorkspaceInternal(workspacesData[0].id, session.user.id);
+           }
+
+           // Check for pending workspace switch on initial load too
+           const pendingWorkspaceId = consumePendingWorkspace();
+           if (pendingWorkspaceId) {
+             const workspaceExists = workspacesData.some(w => w.id === pendingWorkspaceId);
+             if (workspaceExists && profileData?.active_workspace_id !== pendingWorkspaceId) {
+               setActiveWorkspaceInternal(pendingWorkspaceId, session.user.id);
+             }
+           }
+           
+           setLoading(false);
+           setIsInitialized(true);
+         });
       } else {
         setLoading(false);
         setIsInitialized(true);
