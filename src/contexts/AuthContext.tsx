@@ -22,6 +22,8 @@ interface Workspace {
   logo_url: string | null;
   plan: string;
   role: string;
+  /** UI preference: membership hidden for this user */
+  is_hidden?: boolean;
 }
 
 interface AuthContextType {
@@ -65,13 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchWorkspaces = async (userId: string) => {
     const { data, error } = await supabase
       .from("workspace_members")
-      .select(`
+      .select(
+        `
         role,
+        is_hidden,
         workspace:workspaces(id, name, slug, logo_url, plan)
-      `)
-      .eq("user_id", userId)
-      // Hide memberships that are marked as hidden for this user
-      .neq("is_hidden", true);
+      `
+      )
+      .eq("user_id", userId);
 
     if (error) {
       console.error("Error fetching workspaces:", error);
@@ -81,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.map((item: any) => ({
       ...item.workspace,
       role: item.role,
+      is_hidden: item.is_hidden ?? false,
     })) as Workspace[];
   };
 

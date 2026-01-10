@@ -255,7 +255,7 @@ const Commercial = () => {
                   <SelectContent>
                     {workspaces.map((w) => (
                       <SelectItem key={w.id} value={w.id}>
-                        {w.name}
+                        {w.name}{w.is_hidden ? ' (masqué)' : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
