@@ -73,7 +73,6 @@ const App = () => (
         <BrowserRouter>
           <ScrollToTop />
           <AuthProvider>
-            <CommandPalette />
               <Routes>
                 {/* Public routes (no layout) */}
                 <Route path="/welcome" element={<Suspense fallback={<PageLoader />}><Welcome /></Suspense>} />
@@ -95,6 +94,7 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <TopBarProvider>
+                        <CommandPalette />
                         <MainLayout />
                       </TopBarProvider>
                     </ProtectedRoute>

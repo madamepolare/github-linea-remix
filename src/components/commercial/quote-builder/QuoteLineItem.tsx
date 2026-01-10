@@ -48,6 +48,7 @@ import {
 import { QuoteLine, QuoteDocument, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { UNIT_OPTIONS, BILLING_TYPE_LABELS, BillingType } from '@/hooks/useQuoteLineTemplates';
 import { AIDescriptionButton } from './AIDescriptionButton';
+import { SkillsMultiSelect } from './SkillsMultiSelect';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const TYPE_ICONS: Record<QuoteLine['line_type'], React.ReactNode> = {
@@ -98,6 +99,30 @@ export function QuoteLineItem({
   handleDragEnd,
   formatCurrency
 }: QuoteLineItemProps) {
+  const parseAssignedSkillIds = (value?: string): string[] => {
+    if (!value) return [];
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    // New format: JSON array of skill ids
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return Array.isArray(parsed) ? parsed.filter((x) => typeof x === 'string') : [];
+      } catch {
+        return [];
+      }
+    }
+
+    // Legacy format: comma-separated string
+    return trimmed
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  };
+
+  const selectedSkillIds = parseAssignedSkillIds(line.assigned_skill);
+
   return (
     <Collapsible open={isExpanded}>
       <div
@@ -370,12 +395,17 @@ export function QuoteLineItem({
 
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">
-                  Compétence / Rôle
+                  Compétences / Rôles
                 </Label>
-                <Input
-                  value={line.assigned_skill || ''}
-                  onChange={(e) => updateLine(line.id, { assigned_skill: e.target.value })}
-                  placeholder="Ex: Chef de projet"
+                <SkillsMultiSelect
+                  selectedSkillIds={selectedSkillIds}
+                  onSelectionChange={(skillIds) => {
+                    updateLine(line.id, {
+                      // Persist as JSON array of skill ids
+                      assigned_skill: JSON.stringify(skillIds),
+                    });
+                  }}
+                  placeholder="Sélectionner des compétences…"
                 />
               </div>
 
