@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { PDFDocumentConfig, isValidPDFConfig, DEFAULT_PDF_CONFIG } from '@/lib/pdfBlockTypes';
 
 export interface ContractTypeFields {
   surface?: boolean;
@@ -26,6 +27,7 @@ export interface ContractType {
   default_fields: ContractTypeFields;
   default_clauses: Record<string, string>;
   builder_tabs: BuilderTab[];
+  pdf_config: PDFDocumentConfig;
   sort_order: number;
   is_default: boolean;
   is_active: boolean;
@@ -63,6 +65,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     default_fields: { surface: true, construction_budget: true, address: true, city: true },
     default_clauses: {},
     builder_tabs: ['general', 'fees', 'planning', 'terms'],
+    pdf_config: DEFAULT_PDF_CONFIG,
     sort_order: 0,
     is_default: true,
     is_active: true
@@ -76,6 +79,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     default_fields: { surface: true, address: true, city: true, budget: true },
     default_clauses: {},
     builder_tabs: ['general', 'fees', 'lines', 'terms'],
+    pdf_config: DEFAULT_PDF_CONFIG,
     sort_order: 1,
     is_default: false,
     is_active: true
@@ -89,6 +93,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     default_fields: { surface: true, budget: true },
     default_clauses: {},
     builder_tabs: ['general', 'lines', 'production', 'planning', 'terms'],
+    pdf_config: DEFAULT_PDF_CONFIG,
     sort_order: 2,
     is_default: false,
     is_active: true
@@ -102,6 +107,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     default_fields: { budget: true },
     default_clauses: {},
     builder_tabs: ['general', 'lines', 'production', 'terms'],
+    pdf_config: DEFAULT_PDF_CONFIG,
     sort_order: 3,
     is_default: false,
     is_active: true
@@ -115,6 +121,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     default_fields: { budget: true },
     default_clauses: {},
     builder_tabs: ['general', 'lines', 'production', 'terms'],
+    pdf_config: DEFAULT_PDF_CONFIG,
     sort_order: 4,
     is_default: false,
     is_active: true
@@ -128,6 +135,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     default_fields: { budget: true },
     default_clauses: {},
     builder_tabs: ['general', 'lines', 'production', 'terms'],
+    pdf_config: DEFAULT_PDF_CONFIG,
     sort_order: 5,
     is_default: false,
     is_active: true
@@ -154,7 +162,10 @@ export function useContractTypes() {
         ...item,
         builder_tabs: Array.isArray(item.builder_tabs) 
           ? item.builder_tabs as BuilderTab[]
-          : ['general', 'lines', 'terms'] as BuilderTab[]
+          : ['general', 'lines', 'terms'] as BuilderTab[],
+        pdf_config: isValidPDFConfig(item.pdf_config) 
+          ? item.pdf_config as PDFDocumentConfig
+          : DEFAULT_PDF_CONFIG
       })) as ContractType[];
     },
     enabled: !!activeWorkspace?.id
@@ -176,7 +187,10 @@ export function useContractTypes() {
         .single();
 
       if (error) throw error;
-      return data as ContractType;
+      return {
+        ...data,
+        pdf_config: isValidPDFConfig(data.pdf_config) ? data.pdf_config as PDFDocumentConfig : DEFAULT_PDF_CONFIG
+      } as ContractType;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contract-types'] });
@@ -198,7 +212,10 @@ export function useContractTypes() {
         .single();
 
       if (error) throw error;
-      return data as ContractType;
+      return {
+        ...data,
+        pdf_config: isValidPDFConfig(data.pdf_config) ? data.pdf_config as PDFDocumentConfig : DEFAULT_PDF_CONFIG
+      } as ContractType;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contract-types'] });
@@ -249,7 +266,18 @@ export function useContractTypes() {
         .from('contract_types')
         .insert(
           typesToCreate.map(t => ({
-            ...t,
+            name: t.name,
+            code: t.code,
+            description: t.description,
+            icon: t.icon,
+            color: t.color,
+            default_fields: t.default_fields as Record<string, unknown>,
+            default_clauses: t.default_clauses as Record<string, unknown>,
+            builder_tabs: t.builder_tabs as unknown[],
+            pdf_config: JSON.parse(JSON.stringify(t.pdf_config)),
+            sort_order: t.sort_order,
+            is_default: t.is_default,
+            is_active: t.is_active,
             workspace_id: activeWorkspace.id
           }))
         );

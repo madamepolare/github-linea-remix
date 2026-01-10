@@ -1114,6 +1114,7 @@ export type Database = {
           is_active: boolean | null
           is_default: boolean | null
           name: string
+          pdf_config: Json | null
           sort_order: number | null
           updated_at: string | null
           workspace_id: string
@@ -1131,6 +1132,7 @@ export type Database = {
           is_active?: boolean | null
           is_default?: boolean | null
           name: string
+          pdf_config?: Json | null
           sort_order?: number | null
           updated_at?: string | null
           workspace_id: string
@@ -1148,6 +1150,7 @@ export type Database = {
           is_active?: boolean | null
           is_default?: boolean | null
           name?: string
+          pdf_config?: Json | null
           sort_order?: number | null
           updated_at?: string | null
           workspace_id?: string
