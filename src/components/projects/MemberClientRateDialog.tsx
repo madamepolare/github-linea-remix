@@ -19,7 +19,8 @@ interface MemberClientRateDialogProps {
   memberId: string;
   memberName: string;
   currentRate: number | null;
-  defaultRate: number;
+  memberDefaultRate: number | null;
+  workspaceRate: number;
   projectId: string;
 }
 
@@ -29,7 +30,8 @@ export function MemberClientRateDialog({
   memberId,
   memberName,
   currentRate,
-  defaultRate,
+  memberDefaultRate,
+  workspaceRate,
   projectId,
 }: MemberClientRateDialogProps) {
   const [rate, setRate] = useState<string>("");
@@ -69,6 +71,9 @@ export function MemberClientRateDialog({
     updateRate.mutate(numericRate);
   };
 
+  // Calculate effective rate if left empty
+  const effectiveRate = memberDefaultRate ?? workspaceRate;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[400px]">
@@ -86,13 +91,24 @@ export function MemberClientRateDialog({
               type="number"
               min="0"
               step="0.01"
-              placeholder={`Par défaut: ${defaultRate}€`}
+              placeholder={`Par défaut: ${effectiveRate}€`}
               value={rate}
               onChange={(e) => setRate(e.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
-              Laissez vide pour utiliser le tarif par défaut de l'agence ({defaultRate}€/jour)
-            </p>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>Laissez vide pour utiliser le tarif par défaut :</p>
+              <ul className="list-disc list-inside pl-2 space-y-0.5">
+                {memberDefaultRate !== null && (
+                  <li className="text-blue-600">
+                    Tarif membre : {memberDefaultRate}€/jour
+                  </li>
+                )}
+                <li className={memberDefaultRate === null ? "" : "text-muted-foreground/70"}>
+                  Tarif agence : {workspaceRate}€/jour
+                  {memberDefaultRate === null && " (utilisé)"}
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
         <DialogFooter>

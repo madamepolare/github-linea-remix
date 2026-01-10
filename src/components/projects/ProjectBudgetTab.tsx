@@ -224,7 +224,16 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
     return map;
   }, [employmentInfo]);
 
-  // Create a map of user_id -> custom client daily rate
+  // Create a map of user_id -> default client daily rate from employment info
+  const memberDefaultRatesMap = useMemo(() => {
+    const map = new Map<string, number | null>();
+    employmentInfo?.forEach((info) => {
+      map.set(info.user_id, info.client_daily_rate);
+    });
+    return map;
+  }, [employmentInfo]);
+
+  // Create a map of user_id -> custom client daily rate on project
   const memberClientRatesMap = useMemo(() => {
     const map = new Map<string, { memberId: string; rate: number | null }>();
     projectMembers.forEach((m) => {
@@ -233,10 +242,35 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
     return map;
   }, [projectMembers]);
 
-  // Helper to get hourly rate for a member (custom or default)
+  // Helper to get hourly rate for a member
+  // Priority: project rate > member default rate > workspace rate
   const getMemberHourlyRate = (userId: string) => {
-    const customRate = memberClientRatesMap.get(userId)?.rate;
-    return (customRate ?? dailyRate) / 8;
+    const projectRate = memberClientRatesMap.get(userId)?.rate;
+    if (projectRate !== null && projectRate !== undefined) {
+      return projectRate / 8;
+    }
+    
+    const memberDefaultRate = memberDefaultRatesMap.get(userId);
+    if (memberDefaultRate !== null && memberDefaultRate !== undefined) {
+      return memberDefaultRate / 8;
+    }
+    
+    return dailyRate / 8;
+  };
+
+  // Helper to get rate source for display
+  const getRateSource = (userId: string): 'project' | 'member' | 'workspace' => {
+    const projectRate = memberClientRatesMap.get(userId)?.rate;
+    if (projectRate !== null && projectRate !== undefined) {
+      return 'project';
+    }
+    
+    const memberDefaultRate = memberDefaultRatesMap.get(userId);
+    if (memberDefaultRate !== null && memberDefaultRate !== undefined) {
+      return 'member';
+    }
+    
+    return 'workspace';
   };
 
   // Filter schedules for this project
@@ -732,7 +766,8 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                   const realHourlyRate = employmentCostMap.get(member.userId);
                   const memberRealCost = realHourlyRate ? member.totalHours * realHourlyRate : null;
                   const memberRateInfo = memberClientRatesMap.get(member.userId);
-                  const hasCustomRate = memberRateInfo?.rate !== null && memberRateInfo?.rate !== undefined;
+                  const rateSource = getRateSource(member.userId);
+                  const hasCustomRate = rateSource !== 'workspace';
                   const isExpanded = expandedMember === member.userId;
                   const memberEntries = entriesByMember.get(member.userId) || [];
 
@@ -785,19 +820,24 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
                               <div className="text-right min-w-[70px]">
                                 <p className={cn(
                                   "text-sm font-medium",
-                                  hasCustomRate && "text-primary"
+                                  rateSource === 'project' && "text-primary",
+                                  rateSource === 'member' && "text-blue-600"
                                 )}>
                                   {formatCurrency(memberClientCost)}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {memberHourlyRate * 8}€/j{hasCustomRate && " *"}
+                                  {memberHourlyRate * 8}€/j
+                                  {rateSource === 'project' && " ●"}
+                                  {rateSource === 'member' && " ○"}
                                 </p>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                              {hasCustomRate 
-                                ? `Tarif personnalisé (défaut: ${dailyRate}€/jour)`
-                                : "Tarif par défaut"}
+                              {rateSource === 'project' 
+                                ? "Tarif personnalisé pour ce projet"
+                                : rateSource === 'member'
+                                ? "Tarif par défaut du membre"
+                                : `Tarif par défaut agence (${dailyRate}€/jour)`}
                             </TooltipContent>
                           </Tooltip>
 
@@ -1140,7 +1180,8 @@ export function ProjectBudgetTab({ projectId }: ProjectBudgetTabProps) {
           memberId={editingMember.id}
           memberName={editingMember.name}
           currentRate={editingMember.rate}
-          defaultRate={dailyRate}
+          memberDefaultRate={memberDefaultRatesMap.get(editingMember.userId) ?? null}
+          workspaceRate={dailyRate}
           projectId={projectId}
         />
       )}
