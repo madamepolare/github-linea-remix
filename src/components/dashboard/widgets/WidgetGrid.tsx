@@ -38,13 +38,13 @@ const DEFAULT_WIDGETS: string[] = [
 ];
 
 // Width constraints: 1 = 25%, 2 = 50%, 4 = 100% of grid
-const ALLOWED_WIDTHS = [1, 2, 4];
+const ALLOWED_WIDTHS = [1, 2, 4] as const;
 
-function snapToAllowedWidth(w: number): number {
-  // Find the closest allowed width
-  if (w <= 1) return 1;
-  if (w <= 2) return 2;
-  return 4;
+function snapToAllowedWidth(w: number): 1 | 2 | 4 {
+  // Snap to nearest allowed width based on thresholds
+  if (w <= 1.5) return 1;      // 25%
+  if (w <= 3) return 2;        // 50%
+  return 4;                     // 100%
 }
 
 function getDefaultLayout(widgets: string[]): RGLLayout[] {
@@ -229,11 +229,19 @@ export function WidgetGrid() {
           useCSSTransforms
           resizeHandles={["e", "w", "se"]}
         >
-          {widgets.map((widgetId) => (
-            <div key={widgetId} className={cn(isEditing && "transition-shadow")}>
-              <WidgetRenderer widgetId={widgetId} isEditing={isEditing} onRemove={() => handleRemoveWidget(widgetId)} />
-            </div>
-          ))}
+          {widgets.map((widgetId) => {
+            const widgetLayout = layout.find(l => l.i === widgetId);
+            return (
+              <div key={widgetId} className={cn(isEditing && "transition-shadow")}>
+                <WidgetRenderer 
+                  widgetId={widgetId} 
+                  isEditing={isEditing} 
+                  onRemove={() => handleRemoveWidget(widgetId)}
+                  widthCols={widgetLayout?.w}
+                />
+              </div>
+            );
+          })}
         </GridLayout>
       </div>
 
