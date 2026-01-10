@@ -45,7 +45,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Edit, Copy, GripVertical, FileText, Euro, Download, Sparkles, ChevronDown, FolderKanban, UserCog } from 'lucide-react';
+import { Plus, Trash2, Edit, Copy, GripVertical, FileText, Euro, Download, Sparkles, ChevronDown, FolderKanban, UserCog, Loader2 } from 'lucide-react';
 import { useQuoteTemplates, QuoteTemplate, QuoteTemplatePhase, PricingGrid, PricingGridItem } from '@/hooks/useQuoteTemplates';
 import { ProjectType, PROJECT_TYPE_LABELS, PHASES_BY_PROJECT_TYPE } from '@/lib/commercialTypes';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -53,6 +53,9 @@ import { ALL_MISSION_TEMPLATES, getMissionCategories, MissionTemplate } from '@/
 import { toast } from 'sonner';
 import { ContractTypesSettings } from './ContractTypesSettings';
 import { SkillsSettings } from './SkillsSettings';
+import { useAIGeneration } from '@/hooks/useAIGeneration';
+import { useWorkspaceDiscipline } from '@/hooks/useDiscipline';
+import { useSkills } from '@/hooks/useSkills';
 
 const GRID_TYPE_LABELS = {
   hourly: 'Horaire',
@@ -115,6 +118,8 @@ export function CommercialSettings() {
 
 function QuoteTemplatesSection() {
   const { templates, isLoadingTemplates, createTemplate, updateTemplate, deleteTemplate, initializeDefaults } = useQuoteTemplates();
+  const { isGenerating, generateQuoteTemplate } = useAIGeneration();
+  const { data: currentDiscipline } = useWorkspaceDiscipline();
   const [editingTemplate, setEditingTemplate] = useState<QuoteTemplate | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isLoadingDefaults, setIsLoadingDefaults] = useState(false);
@@ -125,6 +130,40 @@ function QuoteTemplatesSection() {
     phases: [],
     is_default: false
   });
+
+  const handleGenerateWithAI = async () => {
+    if (!currentDiscipline) {
+      toast.error('Veuillez d\'abord sélectionner une discipline dans les paramètres');
+      return;
+    }
+
+    try {
+      const generated = await generateQuoteTemplate(currentDiscipline.name);
+      
+      // Convert generated phases to expected format
+      const phases = generated.default_phases.map((p, idx) => ({
+        code: p.phase_code,
+        name: p.phase_name,
+        description: p.description,
+        defaultPercentage: p.percentage,
+        deliverables: [] as string[],
+        category: idx < 3 ? 'base' : 'complementary' as 'base' | 'complementary'
+      }));
+
+      await createTemplate.mutateAsync({
+        name: generated.name,
+        description: generated.description,
+        project_type: 'interior',
+        phases,
+        is_default: false,
+        sort_order: templates.length
+      });
+
+      toast.success('Template généré avec succès');
+    } catch (error) {
+      console.error('Error generating quote template:', error);
+    }
+  };
 
   const handleCreateFromDefaults = async (projectType: ProjectType) => {
     const defaultPhases = PHASES_BY_PROJECT_TYPE[projectType];
@@ -227,6 +266,19 @@ function QuoteTemplatesSection() {
           Créez des templates de phases réutilisables pour vos devis
         </p>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGenerateWithAI}
+            disabled={isGenerating || !currentDiscipline}
+          >
+            {isGenerating ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            Générer par IA
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" disabled={isLoadingDefaults}>
@@ -600,6 +652,9 @@ function QuoteTemplateEditDialog({ template, onClose, onSave }: QuoteTemplateEdi
 
 function PricingGridsSection() {
   const { pricingGrids, isLoadingPricingGrids, createPricingGrid, updatePricingGrid, deletePricingGrid } = useQuoteTemplates();
+  const { isGenerating, generatePricingGrid } = useAIGeneration();
+  const { data: currentDiscipline } = useWorkspaceDiscipline();
+  const { skills } = useSkills();
   const [editingGrid, setEditingGrid] = useState<PricingGrid | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newGrid, setNewGrid] = useState<Partial<PricingGrid>>({
@@ -609,6 +664,46 @@ function PricingGridsSection() {
     items: [],
     is_active: true
   });
+
+  const handleGenerateWithAI = async () => {
+    if (!currentDiscipline) {
+      toast.error('Veuillez d\'abord sélectionner une discipline dans les paramètres');
+      return;
+    }
+
+    try {
+      const skillNames = skills.map(s => s.setting_value?.label || '').filter(Boolean);
+      if (skillNames.length === 0) {
+        toast.error('Veuillez d\'abord créer des compétences');
+        return;
+      }
+
+      const generatedItems = await generatePricingGrid(currentDiscipline.name, skillNames);
+      
+      // Create pricing grid with generated items
+      const items = generatedItems.map((item, idx) => ({
+        id: `gen-${idx}`,
+        name: `${item.skill_name} - ${item.experience_level}`,
+        description: `Niveau ${item.experience_level}`,
+        unit: 'jour',
+        unit_price: item.daily_rate,
+        category: item.experience_level,
+      }));
+
+      await createPricingGrid.mutateAsync({
+        name: `Grille ${currentDiscipline.name}`,
+        description: 'Générée par IA',
+        grid_type: 'daily',
+        items,
+        is_active: true,
+        sort_order: pricingGrids.length
+      });
+
+      toast.success('Grille tarifaire générée avec succès');
+    } catch (error) {
+      console.error('Error generating pricing grid:', error);
+    }
+  };
 
   const handleSaveNew = async () => {
     if (!newGrid.name) return;
@@ -648,14 +743,28 @@ function PricingGridsSection() {
         <p className="text-sm text-muted-foreground">
           Créez des grilles tarifaires réutilisables
         </p>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvelle grille
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGenerateWithAI}
+            disabled={isGenerating || !currentDiscipline}
+          >
+            {isGenerating ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            Générer par IA
+          </Button>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Nouvelle grille
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
             <DialogHeader>
               <DialogTitle>Nouvelle grille tarifaire</DialogTitle>
               <DialogDescription>
@@ -709,6 +818,7 @@ function PricingGridsSection() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {pricingGrids.length === 0 ? (

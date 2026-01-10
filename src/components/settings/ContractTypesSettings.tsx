@@ -27,9 +27,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, Megaphone, Palette, Globe, FileText, Percent, List, Package, Calendar, FileCheck } from 'lucide-react';
+import { Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, Megaphone, Palette, Globe, FileText, Percent, List, Package, Calendar, FileCheck, Sparkles, Loader2 } from 'lucide-react';
 import { useContractTypes, ContractType, CreateContractTypeInput, ContractTypeFields, BuilderTab } from '@/hooks/useContractTypes';
+import { useAIGeneration } from '@/hooks/useAIGeneration';
+import { useWorkspaceDiscipline } from '@/hooks/useDiscipline';
 import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
 
 const TAB_OPTIONS: { key: BuilderTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: 'general', label: 'Général', icon: FileText },
@@ -73,6 +76,8 @@ function getIconComponent(iconName: string) {
 
 export function ContractTypesSettings() {
   const { contractTypes, isLoading, createContractType, updateContractType, deleteContractType, initializeDefaults } = useContractTypes();
+  const { isGenerating, generateContractTypes } = useAIGeneration();
+  const { data: currentDiscipline } = useWorkspaceDiscipline();
   const [editingType, setEditingType] = useState<ContractType | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newType, setNewType] = useState<Partial<CreateContractTypeInput>>({
@@ -85,6 +90,40 @@ export function ContractTypesSettings() {
     is_default: false,
     builder_tabs: ['general', 'lines', 'terms']
   });
+
+  const handleGenerateWithAI = async () => {
+    if (!currentDiscipline) {
+      toast.error('Veuillez d\'abord sélectionner une discipline dans les paramètres');
+      return;
+    }
+
+    try {
+      const generatedTypes = await generateContractTypes(
+        currentDiscipline.name,
+        currentDiscipline.description || undefined
+      );
+
+      // Create each generated contract type
+      for (let i = 0; i < generatedTypes.length; i++) {
+        const type = generatedTypes[i];
+        await createContractType.mutateAsync({
+          name: type.name,
+          code: type.code,
+          description: type.description,
+          icon: type.icon,
+          color: type.color,
+          default_fields: type.default_fields as ContractTypeFields,
+          builder_tabs: type.builder_tabs as BuilderTab[],
+          sort_order: contractTypes.length + i,
+          is_default: i === 0,
+        });
+      }
+
+      toast.success(`${generatedTypes.length} types de contrat générés avec succès`);
+    } catch (error) {
+      console.error('Error generating contract types:', error);
+    }
+  };
 
   const toggleBuilderTab = (tabs: BuilderTab[], tab: BuilderTab): BuilderTab[] => {
     if (tabs.includes(tab)) {
@@ -166,6 +205,19 @@ export function ContractTypesSettings() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleGenerateWithAI}
+            disabled={isGenerating || !currentDiscipline}
+          >
+            {isGenerating ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            Générer par IA
+          </Button>
           {contractTypes.length === 0 && (
             <Button
               variant="outline"
