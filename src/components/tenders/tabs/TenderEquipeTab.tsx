@@ -24,7 +24,7 @@ import {
   Phone,
   ExternalLink,
   Eye,
-  StickyNote,
+  NotebookPen,
   Copy,
   Download,
   GripVertical,
@@ -1631,7 +1631,7 @@ function CandidateRow({
             <Tooltip>
               <TooltipTrigger>
                 <Badge variant="outline" className="text-[10px] gap-1 bg-amber-50 dark:bg-amber-900/20 border-amber-200">
-                  <StickyNote className="h-3 w-3 text-amber-600" />
+                  <NotebookPen className="h-3 w-3 text-amber-600" />
                 </Badge>
               </TooltipTrigger>
               <TooltipContent className="max-w-[300px]">
@@ -1800,7 +1800,7 @@ function TeamView({
                       <Tooltip>
                         <TooltipTrigger>
                           <Badge variant="outline" className="text-[10px] gap-1 bg-amber-50 dark:bg-amber-900/20 border-amber-200">
-                            <StickyNote className="h-3 w-3 text-amber-600" />
+                            <NotebookPen className="h-3 w-3 text-amber-600" />
                           </Badge>
                         </TooltipTrigger>
                         <TooltipContent className="max-w-[300px]">

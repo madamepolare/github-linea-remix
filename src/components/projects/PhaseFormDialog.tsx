@@ -242,20 +242,22 @@ export function PhaseFormDialog({
                             Missions complémentaires
                           </div>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => toggleTemplate(template.code)}
+                        <div
                           className={cn(
-                            "w-full flex items-center gap-3 p-2 rounded-lg text-left transition-colors",
+                            "w-full flex items-center gap-3 p-2 rounded-lg text-left transition-colors cursor-pointer",
                             isSelected
                               ? "bg-primary/10 border border-primary/30"
                               : "hover:bg-muted/50"
                           )}
+                          onClick={() => toggleTemplate(template.code)}
                         >
                           <Checkbox 
                             checked={isSelected} 
-                            onCheckedChange={() => toggleTemplate(template.code)}
-                            className="shrink-0"
+                            onCheckedChange={(checked) => {
+                              // Prevent double toggle - let parent div handle it
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="shrink-0 pointer-events-none"
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
@@ -275,7 +277,7 @@ export function PhaseFormDialog({
                               {template.defaultPercentage}%
                             </Badge>
                           )}
-                        </button>
+                        </div>
                       </div>
                     );
                   })}

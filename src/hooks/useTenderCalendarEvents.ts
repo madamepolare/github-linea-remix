@@ -142,10 +142,11 @@ export function useTenderCalendarEvents(tenderId?: string) {
     site_visit_contact_phone?: string | null;
     site_visit_assigned_users?: string[] | null;
   }) => {
+    const startDate = new Date(tender.site_visit_date);
     const endDate = new Date(tender.site_visit_date);
     endDate.setHours(endDate.getHours() + 2); // Default 2 hours duration
 
-    // Build attendees from assigned users
+    // Build attendees from assigned users - include user_id for planning grid lookup
     const attendees = tender.site_visit_assigned_users?.map(userId => ({
       user_id: userId,
     })) || [];
@@ -155,7 +156,7 @@ export function useTenderCalendarEvents(tenderId?: string) {
       title: `🏗️ Visite de site${tender.site_visit_required ? " (obligatoire)" : ""} - ${tender.title}`,
       description: tender.site_visit_required ? "Visite de site obligatoire" : "Visite de site",
       event_type: "site_visit",
-      start_datetime: tender.site_visit_date,
+      start_datetime: startDate.toISOString(),
       end_datetime: endDate.toISOString(),
       location: tender.location || undefined,
       contact_name: tender.site_visit_contact_name || undefined,
