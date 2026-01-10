@@ -13,13 +13,20 @@ import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import { FeedbackSidebar } from "@/components/feedback/FeedbackSidebar";
 import { TerminologyProvider } from "@/contexts/TerminologyContext";
 import { useWorkspaceModuleGuard } from "@/hooks/useWorkspaceModuleGuard";
+import { useAuth } from "@/contexts/AuthContext";
+import { getModuleFromPath } from "@/lib/navigationConfig";
+import { THIN_STROKE } from "@/components/ui/icon";
 
 export function MainLayout() {
   // Guard: redirect to home if current module not enabled in new workspace
   useWorkspaceModuleGuard();
   const { collapsed } = useSidebarStore();
+  const { activeWorkspace } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Get current module for mobile header
+  const currentModule = getModuleFromPath(location.pathname);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -39,18 +46,43 @@ export function MainLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-14 px-4 bg-background border-b border-border">
+      {/* Mobile header - shows workspace name and current module */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center h-14 px-3 bg-background border-b border-border">
+        {/* Menu toggle */}
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="h-9 w-9"
+          className="h-9 w-9 shrink-0"
         >
           {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </Button>
-        <span className="font-semibold text-sm">DOMINI</span>
-        <div className="w-9" /> {/* Spacer for centering */}
+
+        {/* Workspace name + current module */}
+        <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
+          {activeWorkspace?.logo_url ? (
+            <img 
+              src={activeWorkspace.logo_url} 
+              alt={activeWorkspace.name}
+              className="h-6 w-6 rounded-md object-cover shrink-0"
+            />
+          ) : null}
+          <span className="font-semibold text-sm truncate">
+            {activeWorkspace?.name || "Workspace"}
+          </span>
+          {currentModule && currentModule.slug !== "dashboard" && (
+            <>
+              <span className="text-muted-foreground">/</span>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <currentModule.icon className="h-3.5 w-3.5" strokeWidth={THIN_STROKE} />
+                <span className="text-xs font-medium">{currentModule.title}</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Spacer for centering */}
+        <div className="w-9 shrink-0" />
       </header>
 
       {/* Mobile overlay */}
@@ -77,8 +109,10 @@ export function MainLayout() {
           collapsed ? "lg:pl-[72px]" : "lg:pl-[260px]"
         )}
       >
-        {/* Contextual TopBar */}
-        <TopBar />
+        {/* Contextual TopBar - hidden on mobile since we show module in header */}
+        <div className="hidden lg:block">
+          <TopBar />
+        </div>
         
         {/* Page content */}
         <main className="flex-1 flex flex-col">
