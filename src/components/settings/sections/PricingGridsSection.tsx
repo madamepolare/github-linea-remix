@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,12 +34,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Edit, Euro, Sparkles, Loader2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Plus, Trash2, Edit, Euro, Sparkles, Loader2, Upload, FileSpreadsheet, ChevronDown } from 'lucide-react';
 import { useQuoteTemplates, PricingGrid, PricingGridItem } from '@/hooks/useQuoteTemplates';
 import { toast } from 'sonner';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useWorkspaceDiscipline } from '@/hooks/useDiscipline';
 import { useSkills } from '@/hooks/useSkills';
+import { supabase } from '@/integrations/supabase/client';
 
 const GRID_TYPE_LABELS = {
   hourly: 'Horaire',
@@ -55,6 +62,11 @@ export function PricingGridsSection() {
   const { skills } = useSkills();
   const [editingGrid, setEditingGrid] = useState<PricingGrid | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [importedItems, setImportedItems] = useState<PricingGridItem[]>([]);
+  const [importGridName, setImportGridName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [newGrid, setNewGrid] = useState<Partial<PricingGrid>>({
     name: '',
     description: '',
@@ -102,6 +114,67 @@ export function PricingGridsSection() {
     }
   };
 
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const content = await file.text();
+      
+      const { data, error } = await supabase.functions.invoke('parse-bpu-file', {
+        body: {
+          fileContent: content,
+          fileName: file.name,
+          useAI: true
+        }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      if (data.items && data.items.length > 0) {
+        setImportedItems(data.items);
+        setImportGridName(`Import BPU - ${file.name.replace(/\.[^.]+$/, '')}`);
+        setIsImportDialogOpen(true);
+        toast.success(`${data.items.length} postes importés`);
+      } else {
+        toast.error('Aucun poste tarifaire trouvé dans le fichier');
+      }
+    } catch (error) {
+      console.error('Error importing BPU:', error);
+      toast.error('Erreur lors de l\'import du fichier');
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleSaveImport = async () => {
+    if (!importGridName || importedItems.length === 0) return;
+
+    try {
+      await createPricingGrid.mutateAsync({
+        name: importGridName,
+        description: 'Importée depuis BPU',
+        grid_type: 'fixed',
+        items: importedItems,
+        is_active: true,
+        sort_order: pricingGrids.length
+      });
+
+      setIsImportDialogOpen(false);
+      setImportedItems([]);
+      setImportGridName('');
+      toast.success('Grille créée avec succès');
+    } catch (error) {
+      console.error('Error saving imported grid:', error);
+      toast.error('Erreur lors de la création de la grille');
+    }
+  };
+
   const handleSaveNew = async () => {
     if (!newGrid.name) return;
     
@@ -136,24 +209,49 @@ export function PricingGridsSection() {
 
   return (
     <div className="space-y-4">
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept=".csv,.txt,.xlsx,.xls"
+        onChange={handleFileImport}
+      />
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           Créez des grilles tarifaires réutilisables
         </p>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleGenerateWithAI}
-            disabled={isGenerating || !currentDiscipline}
-          >
-            {isGenerating ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
-            Générer par IA
-          </Button>
+          {/* Import/Generate dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isGenerating || isImporting}
+              >
+                {isGenerating || isImporting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                Générer
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleGenerateWithAI} disabled={!currentDiscipline}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Générer par IA
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-4 w-4 mr-2" />
+                Importer un BPU
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
               <Button size="sm">
@@ -217,6 +315,63 @@ export function PricingGridsSection() {
           </Dialog>
         </div>
       </div>
+
+      {/* Import preview dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Import BPU - {importedItems.length} postes
+            </DialogTitle>
+            <DialogDescription>
+              Vérifiez les postes importés avant de créer la grille
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nom de la grille</Label>
+              <Input
+                value={importGridName}
+                onChange={(e) => setImportGridName(e.target.value)}
+                placeholder="Nom de la grille..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Postes importés ({importedItems.length})</Label>
+              <div className="max-h-[300px] overflow-y-auto space-y-2 border rounded-lg p-2">
+                {importedItems.map((item, index) => (
+                  <div key={item.id} className="flex items-center gap-2 p-2 bg-muted/30 rounded text-sm">
+                    <span className="font-mono text-xs text-muted-foreground w-16 shrink-0">
+                      {item.pricing_ref}
+                    </span>
+                    <span className="flex-1 truncate">{item.name}</span>
+                    <span className="font-medium shrink-0">
+                      {item.unit_price}€/{item.unit}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0"
+                      onClick={() => setImportedItems(prev => prev.filter((_, i) => i !== index))}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleSaveImport} disabled={!importGridName || importedItems.length === 0}>
+              Créer la grille
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {pricingGrids.length === 0 ? (
         <Card>
