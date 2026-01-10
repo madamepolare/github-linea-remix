@@ -587,6 +587,8 @@ export const useCommercialDocuments = () => {
   return {
     documents: documentsQuery.data || [],
     isLoading: documentsQuery.isLoading,
+    documentsError: documentsQuery.error,
+    refetchDocuments: documentsQuery.refetch,
     getDocument,
     getDocumentPhases,
     getDocumentItems,
