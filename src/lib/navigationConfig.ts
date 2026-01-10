@@ -16,6 +16,7 @@ import {
   CalendarClock,
   Megaphone,
   Calendar,
+  BookOpen,
   LucideIcon,
 } from "lucide-react";
 
@@ -274,11 +275,24 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
       { key: "create-media-item", label: "Nouveau placement", event: "open-create-media-item" },
     ],
   },
+  documentation: {
+    slug: "documentation",
+    title: "Documentation",
+    icon: BookOpen,
+    href: "/documentation",
+    isExtension: true,
+    subNav: [
+      { key: "all", label: "Toutes les pages", href: "/documentation" },
+    ],
+    quickActions: [
+      { key: "create-doc", label: "Nouvelle page", event: "open-create-doc-page" },
+    ],
+  },
 };
 
 // Module display order
 export const CORE_MODULES = ["workflow", "projects", "tasks", "crm", "commercial"];
-export const EXTENSION_MODULES = ["documents", "team", "chantier", "tenders", "invoicing", "references", "materials", "objects", "campaigns", "media-planning"];
+export const EXTENSION_MODULES = ["documentation", "documents", "team", "chantier", "tenders", "invoicing", "references", "materials", "objects", "campaigns", "media-planning"];
 
 // Helper to get module config from current path
 export function getModuleFromPath(pathname: string): ModuleNavConfig | null {
