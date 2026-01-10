@@ -399,6 +399,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-3 scrollbar-thin">
+        {/* Notifications at the top */}
+        <div className="mb-2">
+          <NotificationsDropdown collapsed={collapsed} inNavigation />
+        </div>
+        
         <div className="space-y-1">
           {coreNavigation.map((item) => (
             <NavItemComponent key={item.title} item={item} onClick={onNavigate} />
@@ -424,7 +429,6 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       </nav>
 
       <div className="border-t border-border px-3 py-2 space-y-0.5">
-        <NotificationsDropdown collapsed={collapsed} />
         <ThemeToggle collapsed={collapsed} />
         
         <NavItemComponent 

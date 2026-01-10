@@ -62,7 +62,7 @@ const iconMap = {
   invite: UserPlus,
 };
 
-export function NotificationsDropdown({ collapsed = false }: { collapsed?: boolean }) {
+export function NotificationsDropdown({ collapsed = false, inNavigation = false }: { collapsed?: boolean; inNavigation?: boolean }) {
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
   const [open, setOpen] = useState(false);
 
