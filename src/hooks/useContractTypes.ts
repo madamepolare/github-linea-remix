@@ -52,6 +52,7 @@ export interface UpdateContractTypeInput extends Partial<CreateContractTypeInput
   id: string;
   is_active?: boolean;
   builder_tabs?: BuilderTab[];
+  pdf_config?: PDFDocumentConfig;
 }
 
 // Default contract types to initialize workspaces with
@@ -203,10 +204,15 @@ export function useContractTypes() {
   });
 
   const updateContractType = useMutation({
-    mutationFn: async ({ id, ...input }: UpdateContractTypeInput) => {
+    mutationFn: async ({ id, pdf_config, ...input }: UpdateContractTypeInput) => {
+      const updateData: Record<string, any> = { ...input };
+      if (pdf_config) {
+        updateData.pdf_config = pdf_config;
+      }
+      
       const { data, error } = await supabase
         .from('contract_types')
-        .update(input)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
@@ -262,25 +268,25 @@ export function useContractTypes() {
         return;
       }
 
+      const insertData = typesToCreate.map(t => ({
+        name: t.name,
+        code: t.code,
+        description: t.description,
+        icon: t.icon,
+        color: t.color,
+        default_fields: t.default_fields,
+        default_clauses: t.default_clauses,
+        builder_tabs: t.builder_tabs as string[],
+        pdf_config: t.pdf_config,
+        sort_order: t.sort_order,
+        is_default: t.is_default,
+        is_active: t.is_active,
+        workspace_id: activeWorkspace.id
+      }));
+
       const { error } = await supabase
         .from('contract_types')
-        .insert(
-          typesToCreate.map(t => ({
-            name: t.name,
-            code: t.code,
-            description: t.description,
-            icon: t.icon,
-            color: t.color,
-            default_fields: t.default_fields as Record<string, unknown>,
-            default_clauses: t.default_clauses as Record<string, unknown>,
-            builder_tabs: t.builder_tabs as unknown[],
-            pdf_config: JSON.parse(JSON.stringify(t.pdf_config)),
-            sort_order: t.sort_order,
-            is_default: t.is_default,
-            is_active: t.is_active,
-            workspace_id: activeWorkspace.id
-          }))
-        );
+        .insert(insertData as any);
 
       if (error) throw error;
     },

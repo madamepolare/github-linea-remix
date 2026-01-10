@@ -13,11 +13,12 @@ import {
   CommercialDocument, 
   CommercialDocumentPhase
 } from '@/lib/commercialTypes';
-import { generateQuotePDF } from '@/lib/generateQuotePDF';
-import { generateContractPDF } from '@/lib/generateContractPDF';
-import { generateProposalPDF } from '@/lib/generateProposalPDF';
+import { generateUnifiedPDF } from '@/lib/generateUnifiedPDF';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { type AgencyPDFInfo } from '@/lib/pdfUtils';
+import { type ContractType } from '@/hooks/useContractTypes';
+import { type PDFDocumentConfig } from '@/lib/pdfBlockTypes';
+import { type QuoteLine } from '@/types/quoteTypes';
 
 type PDFTemplate = 'quote' | 'contract' | 'proposal';
 
@@ -27,6 +28,7 @@ interface PDFPreviewDialogProps {
   document: Partial<CommercialDocument>;
   phases: CommercialDocumentPhase[];
   total: number;
+  contractType?: ContractType | null;
 }
 
 const TEMPLATES: { id: PDFTemplate; label: string; description: string; icon: React.ReactNode }[] = [
@@ -55,7 +57,8 @@ export function PDFPreviewDialog({
   onOpenChange,
   document,
   phases,
-  total
+  total,
+  contractType
 }: PDFPreviewDialogProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -87,25 +90,43 @@ export function PDFPreviewDialog({
     };
   };
 
+  // Convert phases to QuoteLines for unified generator
+  const phasesToQuoteLines = (phases: CommercialDocumentPhase[]): QuoteLine[] => {
+    return phases.map((phase, index) => ({
+      id: phase.id,
+      document_id: phase.document_id,
+      phase_code: phase.phase_code,
+      phase_name: phase.phase_name,
+      phase_description: phase.phase_description,
+      line_type: 'phase' as const,
+      quantity: 1,
+      unit: 'forfait',
+      unit_price: phase.amount,
+      amount: phase.amount,
+      percentage_fee: phase.percentage_fee,
+      billing_type: 'one_time' as const,
+      is_optional: !phase.is_included,
+      is_included: phase.is_included,
+      deliverables: phase.deliverables,
+      sort_order: phase.sort_order,
+    }));
+  };
+
   const handleGenerate = async () => {
     setIsGenerating(true);
     try {
-      let pdfBlob: Blob;
       const agencyPDFInfo = getAgencyPDFInfo();
+      const lines = phasesToQuoteLines(phases);
+      const pdfConfig: PDFDocumentConfig | null = contractType?.pdf_config || null;
       
-      switch (selectedTemplate) {
-        case 'quote':
-          pdfBlob = await generateQuotePDF(document, phases, total, agencyPDFInfo);
-          break;
-        case 'contract':
-          pdfBlob = await generateContractPDF(document, phases, total, agencyPDFInfo);
-          break;
-        case 'proposal':
-          pdfBlob = await generateProposalPDF(document, phases, total, agencyPDFInfo);
-          break;
-        default:
-          pdfBlob = await generateQuotePDF(document, phases, total, agencyPDFInfo);
-      }
+      const pdfBlob = await generateUnifiedPDF(
+        document,
+        lines,
+        total,
+        agencyPDFInfo,
+        pdfConfig,
+        selectedTemplate
+      );
       
       const url = URL.createObjectURL(pdfBlob);
       setPdfUrl(url);
