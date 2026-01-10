@@ -21,6 +21,7 @@ import { ContractTypesSection } from "@/components/settings/sections/ContractTyp
 import { SkillsSection } from "@/components/settings/sections/SkillsSection";
 import { QuoteTemplatesSection } from "@/components/settings/sections/QuoteTemplatesSection";
 import { PricingGridsSection } from "@/components/settings/sections/PricingGridsSection";
+import { QuoteThemesSettings } from "@/components/settings/QuoteThemesSettings";
 
 export default function Settings() {
   const [activeSection, setActiveSection] = useState("workspace");
@@ -59,6 +60,8 @@ export default function Settings() {
         return <QuoteTemplatesSection />;
       case "pricing":
         return <PricingGridsSection />;
+      case "quote-themes":
+        return <QuoteThemesSettings />;
       case "documents":
         return <DocumentsSettings />;
       case "emails":

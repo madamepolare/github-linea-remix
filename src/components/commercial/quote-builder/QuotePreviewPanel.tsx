@@ -125,6 +125,7 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
         <table className="w-full mb-6" style={{ fontSize: '11px' }}>
           <thead>
             <tr className="border-b-2 border-gray-200">
+              <th className="text-left py-2 font-medium">Réf.</th>
               <th className="text-left py-2 font-medium">Désignation</th>
               <th className="text-right py-2 font-medium w-20">Qté</th>
               <th className="text-right py-2 font-medium w-24">P.U.</th>
@@ -148,19 +149,15 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
                   {/* Group lines */}
                   {groupLines.map(line => (
                     <tr key={line.id} className="border-b border-gray-100">
-                      <td className="py-2 pl-4">
-                        <div className="flex items-start gap-2">
-                          {line.phase_code && (
-                            <span className="text-xs bg-gray-100 px-1.5 py-0.5 rounded font-medium">
-                              {line.phase_code}
-                            </span>
+                      <td className="py-2 pl-4 align-top text-xs text-gray-500 font-mono">
+                        {line.pricing_ref || line.phase_code || '-'}
+                      </td>
+                      <td className="py-2">
+                        <div>
+                          <div className="font-medium">{line.phase_name || 'Ligne sans titre'}</div>
+                          {line.phase_description && (
+                            <div className="text-xs text-gray-500 mt-0.5">{line.phase_description}</div>
                           )}
-                          <div>
-                            <div className="font-medium">{line.phase_name || 'Ligne sans titre'}</div>
-                            {line.phase_description && (
-                              <div className="text-xs text-gray-500 mt-0.5">{line.phase_description}</div>
-                            )}
-                          </div>
                         </div>
                       </td>
                       <td className="text-right py-2 align-top">
@@ -177,7 +174,7 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
                   {/* Group subtotal */}
                   {groupLines.length > 0 && (
                     <tr className="bg-gray-50 border-b border-gray-200">
-                      <td colSpan={3} className="py-1.5 px-2 text-right text-xs font-medium text-gray-600">
+                      <td colSpan={4} className="py-1.5 px-2 text-right text-xs font-medium text-gray-600">
                         Sous-total {group.phase_name}
                       </td>
                       <td className="text-right py-1.5 font-semibold">
@@ -192,19 +189,15 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
             {/* Ungrouped lines */}
             {ungroupedLines.filter(l => l.is_included).map((line) => (
               <tr key={line.id} className="border-b border-gray-100">
+                <td className="py-2 align-top text-xs text-gray-500 font-mono">
+                  {line.pricing_ref || line.phase_code || '-'}
+                </td>
                 <td className="py-2">
-                  <div className="flex items-start gap-2">
-                    {line.phase_code && (
-                      <span className="text-xs bg-gray-100 px-1.5 py-0.5 rounded font-medium">
-                        {line.phase_code}
-                      </span>
+                  <div>
+                    <div className="font-medium">{line.phase_name || 'Ligne sans titre'}</div>
+                    {line.phase_description && (
+                      <div className="text-xs text-gray-500 mt-0.5">{line.phase_description}</div>
                     )}
-                    <div>
-                      <div className="font-medium">{line.phase_name || 'Ligne sans titre'}</div>
-                      {line.phase_description && (
-                        <div className="text-xs text-gray-500 mt-0.5">{line.phase_description}</div>
-                      )}
-                    </div>
                   </div>
                 </td>
                 <td className="text-right py-2 align-top">
