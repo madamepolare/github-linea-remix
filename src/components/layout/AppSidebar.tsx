@@ -16,9 +16,9 @@ import {
   Building2,
   RefreshCw,
   Loader2,
+  Bell,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { NotificationsDropdown } from "@/components/notifications/NotificationsDropdown";
 import { CommandTrigger } from "@/components/command-palette/CommandTrigger";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -225,6 +225,61 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         .slice(0, 2)
     : user?.email?.slice(0, 2).toUpperCase() || "??";
 
+  // Notifications nav item with unread count
+  const NotificationsNavItem = ({ collapsed: isCollapsed, onClick }: { collapsed: boolean; onClick?: () => void }) => {
+    // TODO: Get real unread count from useNotifications hook
+    const unreadCount = 3; // Mock for now
+    const active = location.pathname === "/notifications";
+
+    const content = (
+      <div
+        className={cn(
+          "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150",
+          active
+            ? "bg-foreground text-background font-medium"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        )}
+      >
+        <div className="relative">
+          <Bell
+            className={cn(
+              "h-[18px] w-[18px] shrink-0 transition-colors",
+              active ? "text-background" : "text-muted-foreground group-hover:text-foreground"
+            )}
+            strokeWidth={THIN_STROKE}
+          />
+          {unreadCount > 0 && (
+            <span className={cn(
+              "absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full text-[9px] font-medium px-0.5",
+              active ? "bg-background text-foreground" : "bg-destructive text-destructive-foreground"
+            )}>
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </div>
+        {!isCollapsed && (
+          <span className="flex-1 truncate text-left">Notifications</span>
+        )}
+      </div>
+    );
+
+    if (isCollapsed) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <NavLink to="/notifications" onClick={onClick}>{content}</NavLink>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            Notifications
+            {unreadCount > 0 && ` (${unreadCount})`}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return <NavLink to="/notifications" onClick={onClick}>{content}</NavLink>;
+  };
+
   const NavItemComponent = ({ item, onClick }: { item: NavItem; onClick?: () => void }) => {
     const active = isActive(item.href, item.moduleSlug);
 
@@ -399,9 +454,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-3 scrollbar-thin">
-        {/* Notifications at the top */}
+        {/* Notifications link at the top */}
         <div className="mb-2">
-          <NotificationsDropdown collapsed={collapsed} inNavigation />
+          <NotificationsNavItem collapsed={collapsed} onClick={onNavigate} />
         </div>
         
         <div className="space-y-1">
