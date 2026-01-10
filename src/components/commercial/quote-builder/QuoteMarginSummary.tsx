@@ -38,7 +38,8 @@ export function QuoteMarginSummary({ lines }: QuoteMarginSummaryProps) {
     totalMargin,
     totalMarginPercentage,
     linesCosts,
-    averageAgencyTJM,
+    averageAgencySellRate,
+    averageAgencyCostRate,
   } = useQuoteTotalsWithCosts(lines);
 
   const formatCurrency = (value: number) =>
