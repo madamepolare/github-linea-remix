@@ -105,11 +105,11 @@ export function QuoteLineItem({
         onDragStart={() => handleDragStart(index)}
         onDragOver={(e) => handleDragOver(e, index)}
         onDragEnd={handleDragEnd}
-        className={`border rounded-lg transition-all ${
-          draggedIndex === index ? 'opacity-50' : ''
-        } ${!line.is_included ? 'border-dashed border-muted-foreground/30 bg-muted/20' : 'border-border'} ${
-          isInGroup ? 'ml-2' : ''
-        }`}
+         className={`border rounded-lg transition-all ${
+           draggedIndex === index ? 'opacity-50' : ''
+         } ${!line.is_included ? 'border-dashed border-muted-foreground/30 bg-muted/20' : 'border-border'} ${
+           isInGroup ? 'ml-2' : ''
+         }`}
       >
         {/* Line header */}
         <div className="flex items-center gap-2 p-3">
@@ -141,29 +141,35 @@ export function QuoteLineItem({
             placeholder="Désignation..."
           />
 
-          <div className="flex items-center gap-2 shrink-0">
-            {line.line_type === 'phase' && line.percentage_fee !== undefined && (
-              <div className="flex items-center gap-1">
-                <Input
-                  type="number"
-                  value={line.percentage_fee}
-                  onChange={(e) => updateLine(line.id, { percentage_fee: parseFloat(e.target.value) || 0 })}
-                  className="h-9 w-16 text-right"
-                  min={0}
-                />
-                <span className="text-sm text-muted-foreground">%</span>
-              </div>
-            )}
+           <div className="flex items-center gap-2 shrink-0">
+             <div className="grid grid-cols-[92px_140px] items-center gap-2">
+               {line.line_type === 'phase' && line.percentage_fee !== undefined ? (
+                 <div className="flex items-center gap-1 justify-end">
+                   <Input
+                     type="number"
+                     value={line.percentage_fee}
+                     onChange={(e) => updateLine(line.id, { percentage_fee: parseFloat(e.target.value) || 0 })}
+                     className="h-9 w-[72px] text-right tabular-nums"
+                     min={0}
+                   />
+                   <span className="text-sm text-muted-foreground">%</span>
+                 </div>
+               ) : (
+                 <div />
+               )}
 
-            <Input
-              type="number"
-              value={line.amount || 0}
-              onChange={(e) => updateLine(line.id, { amount: parseFloat(e.target.value) || 0, unit_price: parseFloat(e.target.value) || 0 })}
-              className="h-9 w-28 text-right"
-              placeholder="0"
-            />
-            <span className="text-sm text-muted-foreground">€</span>
-          </div>
+               <div className="flex items-center justify-end gap-1">
+                 <Input
+                   type="number"
+                   value={line.amount || 0}
+                   onChange={(e) => updateLine(line.id, { amount: parseFloat(e.target.value) || 0, unit_price: parseFloat(e.target.value) || 0 })}
+                   className="h-9 w-[120px] text-right tabular-nums"
+                   placeholder="0"
+                 />
+                 <span className="text-sm text-muted-foreground">€</span>
+               </div>
+             </div>
+           </div>
 
           {!line.is_included && (
             <Badge variant="secondary" className="shrink-0">Exclu</Badge>
