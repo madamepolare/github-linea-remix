@@ -1,6 +1,10 @@
 import { useMemo } from 'react';
 import { useSkills, useMemberSkills } from './useSkills';
+import { useAllMemberEmploymentInfo } from './useMemberEmploymentInfo';
 import { QuoteLine } from '@/types/quoteTypes';
+
+// Working days per year in France (approximately)
+const WORKING_DAYS_PER_YEAR = 218;
 
 interface CostCalculationResult {
   calculatedPurchasePrice: number | undefined;
@@ -18,6 +22,15 @@ function isDayUnit(unit?: string): boolean {
   if (!unit) return false;
   const normalized = unit.toLowerCase().trim();
   return ['jour', 'jours', 'day', 'days', 'j'].includes(normalized);
+}
+
+/**
+ * Calculate daily cost from monthly salary
+ * Formula: (monthly_salary * 12) / working_days_per_year
+ */
+function calculateDailyCostFromSalary(salaryMonthly: number | null): number {
+  if (!salaryMonthly || salaryMonthly <= 0) return 0;
+  return (salaryMonthly * 12) / WORKING_DAYS_PER_YEAR;
 }
 
 /**
@@ -130,16 +143,19 @@ export function useLineCostCalculation(line: QuoteLine): CostCalculationResult {
 export function useLinesCostCalculation(lines: QuoteLine[]) {
   const { skills } = useSkills();
   const { memberSkills } = useMemberSkills();
+  const { data: allEmploymentInfo } = useAllMemberEmploymentInfo();
 
   return useMemo(() => {
-    // Calculate average agency rates from skills
+    // Calculate average agency sell rate from skills
     const skillsWithRates = skills.filter(s => s.setting_value?.daily_rate > 0);
     const averageAgencySellRate = skillsWithRates.length > 0
       ? skillsWithRates.reduce((sum, s) => sum + (s.setting_value?.daily_rate || 0), 0) / skillsWithRates.length
       : 0;
-    const skillsWithCost = skills.filter(s => s.setting_value?.cost_daily_rate > 0);
-    const averageAgencyCostRate = skillsWithCost.length > 0
-      ? skillsWithCost.reduce((sum, s) => sum + (s.setting_value?.cost_daily_rate || 0), 0) / skillsWithCost.length
+
+    // Calculate average agency cost rate from member salaries (CJM)
+    const membersWithSalary = (allEmploymentInfo || []).filter(e => e.salary_monthly && e.salary_monthly > 0);
+    const averageAgencyCostRate = membersWithSalary.length > 0
+      ? membersWithSalary.reduce((sum, e) => sum + calculateDailyCostFromSalary(e.salary_monthly), 0) / membersWithSalary.length
       : 0;
 
     return lines.map(line => {
@@ -147,24 +163,25 @@ export function useLinesCostCalculation(lines: QuoteLine[]) {
       let costSource: 'manual' | 'skill' | 'member' | 'average' | 'none' = 'none';
       let estimatedDays: number | undefined = undefined;
 
-      // Priority 1: Member assigned - use their real cost
+      // Priority 1: Member assigned - use their salary-based CJM
       if (line.assigned_member_id) {
+        const memberEmployment = (allEmploymentInfo || []).find(e => e.user_id === line.assigned_member_id);
+        const memberCostRate = calculateDailyCostFromSalary(memberEmployment?.salary_monthly || null);
+        
+        // Get sell rate from member skills
         const memberSkillsForMember = memberSkills.filter(ms => ms.user_id === line.assigned_member_id);
-        if (memberSkillsForMember.length > 0) {
-          const memberSkill = memberSkillsForMember[0];
-          const skillDef = skills.find(s => s.id === memberSkill.skill_id);
-          const memberCostRate = memberSkill.custom_daily_rate || skillDef?.setting_value?.cost_daily_rate || 0;
-          const memberSellRate = skillDef?.setting_value?.daily_rate || 0;
+        const memberSkill = memberSkillsForMember[0];
+        const skillDef = memberSkill ? skills.find(s => s.id === memberSkill.skill_id) : null;
+        const memberSellRate = skillDef?.setting_value?.daily_rate || 0;
 
+        if (memberCostRate > 0) {
           if (isDayUnit(line.unit)) {
-            // Day-based: member cost × quantity
-            if (memberCostRate > 0) {
-              calculatedPurchasePrice = memberCostRate * (line.quantity || 1);
-              costSource = 'member';
-              estimatedDays = line.quantity || 1;
-            }
+            // Day-based: member CJM × quantity
+            calculatedPurchasePrice = memberCostRate * (line.quantity || 1);
+            costSource = 'member';
+            estimatedDays = line.quantity || 1;
           } else {
-            // Forfait: estimate days from amount / sell rate, then cost = days × cost rate
+            // Forfait: estimate days from amount / sell rate, then cost = days × CJM
             const rateForEstimate = memberSellRate > 0 ? memberSellRate : averageAgencySellRate;
             if (rateForEstimate > 0 && (line.amount || 0) > 0) {
               estimatedDays = (line.amount || 0) / rateForEstimate;
@@ -174,27 +191,26 @@ export function useLinesCostCalculation(lines: QuoteLine[]) {
           }
         }
       }
-      // Priority 2: Assigned skill
+      // Priority 2: Assigned skill - use average CJM
       else if (line.assigned_skill) {
         const skillIds = parseSkillIds(line.assigned_skill);
         if (skillIds.length > 0) {
           const firstSkill = skills.find(s => s.id === skillIds[0]);
-          const skillCostRate = firstSkill?.setting_value?.cost_daily_rate || 0;
           const skillSellRate = firstSkill?.setting_value?.daily_rate || 0;
           
-          if (isDayUnit(line.unit)) {
-            if (skillCostRate > 0) {
-              calculatedPurchasePrice = skillCostRate * (line.quantity || 1);
+          if (averageAgencyCostRate > 0) {
+            if (isDayUnit(line.unit)) {
+              calculatedPurchasePrice = averageAgencyCostRate * (line.quantity || 1);
               costSource = 'skill';
               estimatedDays = line.quantity || 1;
-            }
-          } else {
-            // Forfait: estimate days from amount / sell rate, then cost = days × cost rate
-            const rateForEstimate = skillSellRate > 0 ? skillSellRate : averageAgencySellRate;
-            if (rateForEstimate > 0 && skillCostRate > 0 && (line.amount || 0) > 0) {
-              estimatedDays = (line.amount || 0) / rateForEstimate;
-              calculatedPurchasePrice = skillCostRate * estimatedDays;
-              costSource = 'skill';
+            } else {
+              // Forfait: estimate days from amount / sell rate, then cost = days × average CJM
+              const rateForEstimate = skillSellRate > 0 ? skillSellRate : averageAgencySellRate;
+              if (rateForEstimate > 0 && (line.amount || 0) > 0) {
+                estimatedDays = (line.amount || 0) / rateForEstimate;
+                calculatedPurchasePrice = averageAgencyCostRate * estimatedDays;
+                costSource = 'skill';
+              }
             }
           }
         }
@@ -227,7 +243,7 @@ export function useLinesCostCalculation(lines: QuoteLine[]) {
         estimatedDays,
       };
     });
-  }, [lines, skills, memberSkills]);
+  }, [lines, skills, memberSkills, allEmploymentInfo]);
 }
 
 /**
@@ -236,6 +252,7 @@ export function useLinesCostCalculation(lines: QuoteLine[]) {
 export function useQuoteTotalsWithCosts(lines: QuoteLine[]) {
   const linesCosts = useLinesCostCalculation(lines);
   const { skills } = useSkills();
+  const { data: allEmploymentInfo } = useAllMemberEmploymentInfo();
 
   return useMemo(() => {
     const includedLines = lines.filter(l => l.is_included && l.line_type !== 'discount' && l.line_type !== 'group');
@@ -255,14 +272,16 @@ export function useQuoteTotalsWithCosts(lines: QuoteLine[]) {
     const totalMargin = totalHT - totalPurchaseCost;
     const totalMarginPercentage = totalHT > 0 ? (totalMargin / totalHT) * 100 : 0;
 
-    // Calculate average agency rates
+    // Calculate average agency sell rate from skills
     const skillsWithRates = skills.filter(s => s.setting_value?.daily_rate > 0);
     const averageAgencySellRate = skillsWithRates.length > 0
       ? skillsWithRates.reduce((sum, s) => sum + (s.setting_value?.daily_rate || 0), 0) / skillsWithRates.length
       : 0;
-    const skillsWithCost = skills.filter(s => s.setting_value?.cost_daily_rate > 0);
-    const averageAgencyCostRate = skillsWithCost.length > 0
-      ? skillsWithCost.reduce((sum, s) => sum + (s.setting_value?.cost_daily_rate || 0), 0) / skillsWithCost.length
+
+    // Calculate average agency cost rate from member salaries (CJM)
+    const membersWithSalary = (allEmploymentInfo || []).filter(e => e.salary_monthly && e.salary_monthly > 0);
+    const averageAgencyCostRate = membersWithSalary.length > 0
+      ? membersWithSalary.reduce((sum, e) => sum + calculateDailyCostFromSalary(e.salary_monthly), 0) / membersWithSalary.length
       : 0;
 
     return {
@@ -276,7 +295,7 @@ export function useQuoteTotalsWithCosts(lines: QuoteLine[]) {
       averageAgencySellRate,
       averageAgencyCostRate,
     };
-  }, [lines, linesCosts, skills]);
+  }, [lines, linesCosts, skills, allEmploymentInfo]);
 }
 
 function parseSkillIds(value: string): string[] {
