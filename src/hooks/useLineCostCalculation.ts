@@ -25,12 +25,12 @@ function isDayUnit(unit?: string): boolean {
 }
 
 /**
- * Calculate daily cost from monthly salary
- * Formula: (monthly_salary * 12) / working_days_per_year
+ * Calculate daily cost from annual salary
+ * Formula: annual_salary / working_days_per_year
  */
-function calculateDailyCostFromSalary(salaryMonthly: number | null): number {
-  if (!salaryMonthly || salaryMonthly <= 0) return 0;
-  return (salaryMonthly * 12) / WORKING_DAYS_PER_YEAR;
+function calculateDailyCostFromSalary(salaryAnnual: number | null): number {
+  if (!salaryAnnual || salaryAnnual <= 0) return 0;
+  return salaryAnnual / WORKING_DAYS_PER_YEAR;
 }
 
 /**
