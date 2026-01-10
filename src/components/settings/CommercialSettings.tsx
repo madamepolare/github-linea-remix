@@ -45,13 +45,14 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Edit, Copy, GripVertical, FileText, Euro, Download, Sparkles, ChevronDown, FolderKanban } from 'lucide-react';
+import { Plus, Trash2, Edit, Copy, GripVertical, FileText, Euro, Download, Sparkles, ChevronDown, FolderKanban, UserCog } from 'lucide-react';
 import { useQuoteTemplates, QuoteTemplate, QuoteTemplatePhase, PricingGrid, PricingGridItem } from '@/hooks/useQuoteTemplates';
 import { ProjectType, PROJECT_TYPE_LABELS, PHASES_BY_PROJECT_TYPE } from '@/lib/commercialTypes';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ALL_MISSION_TEMPLATES, getMissionCategories, MissionTemplate } from '@/lib/defaultMissionTemplates';
 import { toast } from 'sonner';
 import { ContractTypesSettings } from './ContractTypesSettings';
+import { SkillsSettings } from './SkillsSettings';
 
 const GRID_TYPE_LABELS = {
   hourly: 'Horaire',
@@ -78,6 +79,10 @@ export function CommercialSettings() {
             <FolderKanban className="h-4 w-4" />
             Types de contrats
           </TabsTrigger>
+          <TabsTrigger value="skills" className="gap-2">
+            <UserCog className="h-4 w-4" />
+            Compétences
+          </TabsTrigger>
           <TabsTrigger value="templates" className="gap-2">
             <FileText className="h-4 w-4" />
             Templates de devis
@@ -90,6 +95,10 @@ export function CommercialSettings() {
 
         <TabsContent value="contracts" className="mt-6">
           <ContractTypesSettings />
+        </TabsContent>
+
+        <TabsContent value="skills" className="mt-6">
+          <SkillsSettings />
         </TabsContent>
 
         <TabsContent value="templates" className="mt-6">

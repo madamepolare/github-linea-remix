@@ -42,6 +42,7 @@ import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
 import { useQuoteTemplates } from '@/hooks/useQuoteTemplates';
 import { AIQuoteGenerator } from './AIQuoteGenerator';
 import { QuoteLineItem } from './QuoteLineItem';
+import { QuoteMarginSummary } from './QuoteMarginSummary';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 
 interface QuoteLinesEditorProps {
@@ -263,17 +264,20 @@ export function QuoteLinesEditor({
       )}
 
       {lines.length > 0 && (
-        <Card><CardContent className="py-4">
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Sous-total</span><span>{formatCurrency(subtotal)}</span></div>
-            {totalDiscount > 0 && <div className="flex justify-between text-sm text-red-600"><span>Remises</span><span>-{formatCurrency(totalDiscount)}</span></div>}
-            <Separator />
-            <div className="flex justify-between font-medium"><span>Total HT</span><span>{formatCurrency(totalHT)}</span></div>
-            <div className="flex justify-between text-sm text-muted-foreground"><span>TVA (20%)</span><span>{formatCurrency(tva)}</span></div>
-            <Separator />
-            <div className="flex justify-between text-lg font-semibold"><span>Total TTC</span><span>{formatCurrency(totalTTC)}</span></div>
-          </div>
-        </CardContent></Card>
+        <>
+          <QuoteMarginSummary lines={lines} />
+          <Card><CardContent className="py-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Sous-total</span><span>{formatCurrency(subtotal)}</span></div>
+              {totalDiscount > 0 && <div className="flex justify-between text-sm text-red-600"><span>Remises</span><span>-{formatCurrency(totalDiscount)}</span></div>}
+              <Separator />
+              <div className="flex justify-between font-medium"><span>Total HT</span><span>{formatCurrency(totalHT)}</span></div>
+              <div className="flex justify-between text-sm text-muted-foreground"><span>TVA (20%)</span><span>{formatCurrency(tva)}</span></div>
+              <Separator />
+              <div className="flex justify-between text-lg font-semibold"><span>Total TTC</span><span>{formatCurrency(totalTTC)}</span></div>
+            </div>
+          </CardContent></Card>
+        </>
       )}
     </div>
   );
