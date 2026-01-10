@@ -41,6 +41,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Plus, Trash2, Edit, Sparkles, Loader2, Euro, Clock } from 'lucide-react';
+import { usePricingGrids, PricingGrid, CreatePricingGridInput, PricingGridItem } from '@/hooks/usePricingGrids';
+import { useSkills } from '@/hooks/useSkills';
+import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
 
@@ -93,7 +96,7 @@ export function PricingGridsSettings() {
     }
 
     try {
-      const skillNames = skills.map(s => s.name);
+      const skillNames = skills.map(s => s.setting_value?.label || '').filter(Boolean);
       const generatedItems = await generatePricingGrid('Général', skillNames);
       
       if (generatedItems && generatedItems.length > 0) {
