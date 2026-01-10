@@ -372,50 +372,80 @@ export type Database = {
       commercial_document_phases: {
         Row: {
           amount: number | null
+          assigned_member_id: string | null
+          assigned_skill: string | null
+          billing_type: string | null
           created_at: string | null
           deliverables: Json | null
           document_id: string
           end_date: string | null
           id: string
           is_included: boolean | null
+          line_type: string | null
+          margin_percentage: number | null
           percentage_fee: number | null
           phase_code: string
           phase_description: string | null
           phase_name: string
+          purchase_price: number | null
+          quantity: number | null
+          recurrence_months: number | null
           sort_order: number | null
           start_date: string | null
+          unit: string | null
+          unit_price: number | null
           updated_at: string | null
         }
         Insert: {
           amount?: number | null
+          assigned_member_id?: string | null
+          assigned_skill?: string | null
+          billing_type?: string | null
           created_at?: string | null
           deliverables?: Json | null
           document_id: string
           end_date?: string | null
           id?: string
           is_included?: boolean | null
+          line_type?: string | null
+          margin_percentage?: number | null
           percentage_fee?: number | null
           phase_code: string
           phase_description?: string | null
           phase_name: string
+          purchase_price?: number | null
+          quantity?: number | null
+          recurrence_months?: number | null
           sort_order?: number | null
           start_date?: string | null
+          unit?: string | null
+          unit_price?: number | null
           updated_at?: string | null
         }
         Update: {
           amount?: number | null
+          assigned_member_id?: string | null
+          assigned_skill?: string | null
+          billing_type?: string | null
           created_at?: string | null
           deliverables?: Json | null
           document_id?: string
           end_date?: string | null
           id?: string
           is_included?: boolean | null
+          line_type?: string | null
+          margin_percentage?: number | null
           percentage_fee?: number | null
           phase_code?: string
           phase_description?: string | null
           phase_name?: string
+          purchase_price?: number | null
+          quantity?: number | null
+          recurrence_months?: number | null
           sort_order?: number | null
           start_date?: string | null
+          unit?: string | null
+          unit_price?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -486,6 +516,7 @@ export type Database = {
           client_contact_id: string | null
           construction_budget: number | null
           construction_budget_disclosed: boolean | null
+          contract_type_id: string | null
           created_at: string | null
           created_by: string | null
           currency: string | null
@@ -524,6 +555,7 @@ export type Database = {
           client_contact_id?: string | null
           construction_budget?: number | null
           construction_budget_disclosed?: boolean | null
+          contract_type_id?: string | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -562,6 +594,7 @@ export type Database = {
           client_contact_id?: string | null
           construction_budget?: number | null
           construction_budget_disclosed?: boolean | null
+          contract_type_id?: string | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -607,6 +640,13 @@ export type Database = {
             columns: ["client_contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_documents_contract_type_id_fkey"
+            columns: ["contract_type_id"]
+            isOneToOne: false
+            referencedRelation: "contract_types"
             referencedColumns: ["id"]
           },
           {
@@ -1033,6 +1073,65 @@ export type Database = {
           },
           {
             foreignKeyName: "contacts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_types: {
+        Row: {
+          code: string
+          color: string | null
+          created_at: string | null
+          default_clauses: Json | null
+          default_fields: Json | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          code: string
+          color?: string | null
+          created_at?: string | null
+          default_clauses?: Json | null
+          default_fields?: Json | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          code?: string
+          color?: string | null
+          created_at?: string | null
+          default_clauses?: Json | null
+          default_fields?: Json | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_types_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -4102,6 +4201,8 @@ export type Database = {
       }
       pricing_grids: {
         Row: {
+          billing_type: string | null
+          contract_type_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -4115,6 +4216,8 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          billing_type?: string | null
+          contract_type_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -4128,6 +4231,8 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          billing_type?: string | null
+          contract_type_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -4141,6 +4246,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "pricing_grids_contract_type_id_fkey"
+            columns: ["contract_type_id"]
+            isOneToOne: false
+            referencedRelation: "contract_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pricing_grids_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -5617,6 +5729,69 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "quick_tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_line_templates: {
+        Row: {
+          billing_type: string | null
+          category: string | null
+          contract_type_id: string | null
+          created_at: string | null
+          default_quantity: number | null
+          default_unit: string | null
+          default_unit_price: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          workspace_id: string
+        }
+        Insert: {
+          billing_type?: string | null
+          category?: string | null
+          contract_type_id?: string | null
+          created_at?: string | null
+          default_quantity?: number | null
+          default_unit?: string | null
+          default_unit_price?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          workspace_id: string
+        }
+        Update: {
+          billing_type?: string | null
+          category?: string | null
+          contract_type_id?: string | null
+          created_at?: string | null
+          default_quantity?: number | null
+          default_unit?: string | null
+          default_unit_price?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_line_templates_contract_type_id_fkey"
+            columns: ["contract_type_id"]
+            isOneToOne: false
+            referencedRelation: "contract_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_line_templates_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
