@@ -43,6 +43,16 @@ const Commercial = () => {
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<'list' | 'pipeline'>('list');
 
+  // Debug: help diagnose "documents not showing" issues
+  console.info('[Commercial] render', {
+    routeView: view,
+    workspace: activeWorkspace ? { id: activeWorkspace.id, name: activeWorkspace.name } : null,
+    documentsCount: documents.length,
+    isLoading,
+    statusFilter,
+    searchQuery
+  });
+
   // Derive type filter from URL
   const typeFilter: DocumentType | 'all' = 
     view === 'quotes' ? 'quote' : 
@@ -58,6 +68,11 @@ const Commercial = () => {
     const matchesStatus = statusFilter === 'all' || doc.status === statusFilter;
 
     return matchesSearch && matchesType && matchesStatus;
+  });
+
+  console.info('[Commercial] filteredDocuments', {
+    typeFilter,
+    filteredCount: filteredDocuments.length,
   });
 
   // KPIs
