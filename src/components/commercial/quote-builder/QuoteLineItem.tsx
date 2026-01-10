@@ -26,6 +26,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { 
   GripVertical, 
   Trash2, 
@@ -43,13 +48,17 @@ import {
   Euro,
   Percent,
   Folder,
-  FolderPlus
+  FolderPlus,
+  Briefcase,
+  PenTool,
+  Info
 } from 'lucide-react';
 import { QuoteLine, QuoteDocument, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { UNIT_OPTIONS, BILLING_TYPE_LABELS, BillingType } from '@/hooks/useQuoteLineTemplates';
 import { AIDescriptionButton } from './AIDescriptionButton';
 import { SkillsMultiSelect } from './SkillsMultiSelect';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useLineCostCalculation } from '@/hooks/useLineCostCalculation';
 
 const TYPE_ICONS: Record<QuoteLine['line_type'], React.ReactNode> = {
   phase: <FileText className="h-4 w-4" />,
@@ -58,6 +67,13 @@ const TYPE_ICONS: Record<QuoteLine['line_type'], React.ReactNode> = {
   expense: <Receipt className="h-4 w-4" />,
   discount: <MinusCircle className="h-4 w-4" />,
   group: <Folder className="h-4 w-4" />
+};
+
+const COST_SOURCE_CONFIG = {
+  manual: { label: 'Prix manuel', icon: PenTool, color: 'text-slate-600' },
+  skill: { label: 'Compétence assignée', icon: Briefcase, color: 'text-blue-600' },
+  member: { label: 'Membre assigné', icon: User, color: 'text-purple-600' },
+  none: { label: 'Non calculé', icon: null, color: 'text-muted-foreground' },
 };
 
 interface QuoteLineItemProps {
@@ -99,6 +115,17 @@ export function QuoteLineItem({
   handleDragEnd,
   formatCurrency
 }: QuoteLineItemProps) {
+  // Use the cost calculation hook
+  const {
+    effectivePurchasePrice,
+    costSource,
+    margin,
+    marginPercentage,
+  } = useLineCostCalculation(line);
+
+  const costSourceConfig = COST_SOURCE_CONFIG[costSource];
+  const CostSourceIcon = costSourceConfig.icon;
+
   const parseAssignedSkillIds = (value?: string): string[] => {
     if (!value) return [];
     const trimmed = value.trim();
@@ -451,27 +478,47 @@ export function QuoteLineItem({
                 <Label className="text-xs text-muted-foreground flex items-center gap-1">
                   <Euro className="h-3 w-3" />
                   Prix d'achat (coût interne)
+                  {costSource !== 'manual' && effectivePurchasePrice > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 text-blue-500 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Calculé automatiquement via: {costSourceConfig.label}</p>
+                        <p className="text-xs text-muted-foreground">Saisissez un prix manuel pour l'écraser</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </Label>
-                <Input
-                  type="number"
-                  value={line.purchase_price || ''}
-                  onChange={(e) => updateLine(line.id, { purchase_price: parseFloat(e.target.value) || undefined })}
-                  placeholder="0"
-                />
+                <div className="relative">
+                  <Input
+                    type="number"
+                    value={line.purchase_price || ''}
+                    onChange={(e) => updateLine(line.id, { purchase_price: parseFloat(e.target.value) || undefined })}
+                    placeholder={effectivePurchasePrice > 0 && costSource !== 'manual' ? `Auto: ${effectivePurchasePrice.toFixed(0)} €` : '0'}
+                    className="pr-20"
+                  />
+                  {costSource !== 'none' && effectivePurchasePrice > 0 && CostSourceIcon && (
+                    <div className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs ${costSourceConfig.color}`}>
+                      <CostSourceIcon className="h-3 w-3" />
+                      <span>{effectivePurchasePrice.toFixed(0)} €</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {line.purchase_price && line.amount > 0 && (
+              {(effectivePurchasePrice > 0 || (line.purchase_price && line.purchase_price > 0)) && line.amount > 0 && (
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground flex items-center gap-1">
                     <Percent className="h-3 w-3" />
                     Marge
                   </Label>
                   <div className="h-10 flex items-center px-3 border rounded-md bg-muted/50">
-                    <span className={`font-medium ${(line.margin_percentage || 0) < 20 ? 'text-amber-600' : 'text-green-600'}`}>
-                      {((line.amount - line.purchase_price) / line.amount * 100).toFixed(1)}%
+                    <span className={`font-medium ${marginPercentage < 20 ? 'text-amber-600' : 'text-green-600'}`}>
+                      {marginPercentage.toFixed(1)}%
                     </span>
                     <span className="text-xs text-muted-foreground ml-2">
-                      ({formatCurrency(line.amount - line.purchase_price)})
+                      ({formatCurrency(margin)})
                     </span>
                   </div>
                 </div>
