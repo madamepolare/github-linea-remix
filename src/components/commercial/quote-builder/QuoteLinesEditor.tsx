@@ -44,6 +44,7 @@ import { AIQuoteGenerator } from './AIQuoteGenerator';
 import { QuoteLineItem } from './QuoteLineItem';
 import { QuoteMarginSummary } from './QuoteMarginSummary';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useLineFeatures } from '@/contexts/LineFeatureContext';
 
 interface QuoteLinesEditorProps {
   lines: QuoteLine[];
@@ -65,6 +66,9 @@ export function QuoteLinesEditor({
   const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  // Get feature flags from context
+  const features = useLineFeatures();
 
   const projectType = document.project_type as 'interior' | 'architecture' | 'scenography' | undefined;
   const { templates: phaseTemplates } = usePhaseTemplates(projectType);
@@ -265,7 +269,9 @@ export function QuoteLinesEditor({
 
       {lines.length > 0 && (
         <>
-          <QuoteMarginSummary lines={lines} />
+          {/* Résumé des marges - conditionnel */}
+          {features.showMarginSummary && <QuoteMarginSummary lines={lines} />}
+          
           <Card><CardContent className="py-4">
             <div className="space-y-2">
               <div className="flex justify-between text-sm"><span className="text-muted-foreground">Sous-total</span><span>{formatCurrency(subtotal)}</span></div>
