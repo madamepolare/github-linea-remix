@@ -60,6 +60,7 @@ import { AIDescriptionButton } from './AIDescriptionButton';
 import { SkillsMultiSelect } from './SkillsMultiSelect';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLineCostCalculation } from '@/hooks/useLineCostCalculation';
+import { useLineFeatures } from '@/contexts/LineFeatureContext';
 
 const TYPE_ICONS: Record<QuoteLine['line_type'], React.ReactNode> = {
   phase: <FileText className="h-4 w-4" />,
@@ -117,6 +118,9 @@ export function QuoteLineItem({
   handleDragEnd,
   formatCurrency
 }: QuoteLineItemProps) {
+  // Get feature flags from context
+  const features = useLineFeatures();
+  
   // Use the cost calculation hook
   const {
     effectivePurchasePrice,
@@ -196,8 +200,9 @@ export function QuoteLineItem({
           />
 
            <div className="flex items-center gap-2 shrink-0">
-             <div className="grid grid-cols-[92px_140px] items-center gap-2">
-               {line.line_type === 'phase' && line.percentage_fee !== undefined ? (
+             <div className={`grid items-center gap-2 ${features.showPercentageFee && line.line_type === 'phase' ? 'grid-cols-[92px_140px]' : 'grid-cols-1'}`}>
+               {/* Pourcentage - seulement si activé ET type phase */}
+               {features.showPercentageFee && line.line_type === 'phase' && line.percentage_fee !== undefined && (
                  <div className="flex items-center gap-1 justify-end">
                    <Input
                      type="number"
@@ -208,8 +213,6 @@ export function QuoteLineItem({
                    />
                    <span className="text-sm text-muted-foreground">%</span>
                  </div>
-               ) : (
-                 <div />
                )}
 
                <div className="flex items-center justify-end gap-1">
@@ -390,142 +393,159 @@ export function QuoteLineItem({
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  Membre assigné
-                </Label>
-                <Select
-                  value={line.assigned_member_id || 'none'}
-                  onValueChange={(v) => updateLine(line.id, { assigned_member_id: v === 'none' ? undefined : v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Non assigné</SelectItem>
-                    {teamMembers?.map(member => (
-                      <SelectItem key={member.user_id} value={member.user_id}>
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-5 w-5">
-                            <AvatarImage src={member.profile?.avatar_url || ''} />
-                            <AvatarFallback className="text-[10px]">
-                              {(member.profile?.full_name || '?').charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{member.profile?.full_name || 'Membre'}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Compétences / Rôles
-                </Label>
-                <SkillsMultiSelect
-                  selectedSkillIds={selectedSkillIds}
-                  onSelectionChange={(skillIds) => {
-                    updateLine(line.id, {
-                      // Persist as JSON array of skill ids
-                      assigned_skill: JSON.stringify(skillIds),
-                    });
-                  }}
-                  placeholder="Sélectionner des compétences…"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  Date début
-                </Label>
-                <Input
-                  type="date"
-                  value={line.start_date || ''}
-                  onChange={(e) => updateLine(line.id, { start_date: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  Date fin
-                </Label>
-                <Input
-                  type="date"
-                  value={line.end_date || ''}
-                  onChange={(e) => updateLine(line.id, { end_date: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Réf. tarif (BPU)
-                </Label>
-                <Input
-                  value={line.pricing_ref || ''}
-                  onChange={(e) => updateLine(line.id, { pricing_ref: e.target.value })}
-                  placeholder="Ex: ARCHI-001"
-                  className="font-mono text-sm"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Euro className="h-3 w-3" />
-                  Prix d'achat (coût interne)
-                  {costSource !== 'manual' && effectivePurchasePrice > 0 && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-3 w-3 text-blue-500 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Calculé automatiquement via: {costSourceConfig.label}</p>
-                        <p className="text-xs text-muted-foreground">Saisissez un prix manuel pour l'écraser</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </Label>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    value={line.purchase_price || ''}
-                    onChange={(e) => updateLine(line.id, { purchase_price: parseFloat(e.target.value) || undefined })}
-                    placeholder={effectivePurchasePrice > 0 && costSource !== 'manual' ? `Auto: ${effectivePurchasePrice.toFixed(0)} €` : '0'}
-                    className="pr-20"
-                  />
-                  {costSource !== 'none' && effectivePurchasePrice > 0 && CostSourceIcon && (
-                    <div className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs ${costSourceConfig.color}`}>
-                      <CostSourceIcon className="h-3 w-3" />
-                      <span>{effectivePurchasePrice.toFixed(0)} €</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {(effectivePurchasePrice > 0 || (line.purchase_price && line.purchase_price > 0)) && line.amount > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Percent className="h-3 w-3" />
-                    Marge
-                  </Label>
-                  <div className="h-10 flex items-center px-3 border rounded-md bg-muted/50">
-                    <span className={`font-medium ${marginPercentage < 20 ? 'text-amber-600' : 'text-green-600'}`}>
-                      {marginPercentage.toFixed(1)}%
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-2">
-                      ({formatCurrency(margin)})
-                    </span>
+            {/* Ligne 2: Assignations et dates - conditionnellement affichées */}
+            {(features.showMemberAssignment || features.showSkillAssignment || features.showDates) && (
+              <div className="grid grid-cols-4 gap-4">
+                {features.showMemberAssignment && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      Membre assigné
+                    </Label>
+                    <Select
+                      value={line.assigned_member_id || 'none'}
+                      onValueChange={(v) => updateLine(line.id, { assigned_member_id: v === 'none' ? undefined : v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Non assigné</SelectItem>
+                        {teamMembers?.map(member => (
+                          <SelectItem key={member.user_id} value={member.user_id}>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-5 w-5">
+                                <AvatarImage src={member.profile?.avatar_url || ''} />
+                                <AvatarFallback className="text-[10px]">
+                                  {(member.profile?.full_name || '?').charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>{member.profile?.full_name || 'Membre'}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+
+                {features.showSkillAssignment && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Compétences / Rôles
+                    </Label>
+                    <SkillsMultiSelect
+                      selectedSkillIds={selectedSkillIds}
+                      onSelectionChange={(skillIds) => {
+                        updateLine(line.id, {
+                          assigned_skill: JSON.stringify(skillIds),
+                        });
+                      }}
+                      placeholder="Sélectionner des compétences…"
+                    />
+                  </div>
+                )}
+
+                {features.showDates && (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Date début
+                      </Label>
+                      <Input
+                        type="date"
+                        value={line.start_date || ''}
+                        onChange={(e) => updateLine(line.id, { start_date: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        Date fin
+                      </Label>
+                      <Input
+                        type="date"
+                        value={line.end_date || ''}
+                        onChange={(e) => updateLine(line.id, { end_date: e.target.value })}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Ligne 3: Coûts et marges - conditionnellement affichés */}
+            {(features.showPricingRef || features.showPurchasePrice || features.showCostAndMargin) && (
+              <div className="grid grid-cols-3 gap-4">
+                {features.showPricingRef && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Réf. tarif (BPU)
+                    </Label>
+                    <Input
+                      value={line.pricing_ref || ''}
+                      onChange={(e) => updateLine(line.id, { pricing_ref: e.target.value })}
+                      placeholder="Ex: ARCHI-001"
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                )}
+
+                {features.showPurchasePrice && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Euro className="h-3 w-3" />
+                      Prix d'achat (coût interne)
+                      {costSource !== 'manual' && effectivePurchasePrice > 0 && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3 w-3 text-blue-500 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Calculé automatiquement via: {costSourceConfig.label}</p>
+                            <p className="text-xs text-muted-foreground">Saisissez un prix manuel pour l'écraser</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        value={line.purchase_price || ''}
+                        onChange={(e) => updateLine(line.id, { purchase_price: parseFloat(e.target.value) || undefined })}
+                        placeholder={effectivePurchasePrice > 0 && costSource !== 'manual' ? `Auto: ${effectivePurchasePrice.toFixed(0)} €` : '0'}
+                        className="pr-20"
+                      />
+                      {costSource !== 'none' && effectivePurchasePrice > 0 && CostSourceIcon && (
+                        <div className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs ${costSourceConfig.color}`}>
+                          <CostSourceIcon className="h-3 w-3" />
+                          <span>{effectivePurchasePrice.toFixed(0)} €</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {features.showCostAndMargin && (effectivePurchasePrice > 0 || (line.purchase_price && line.purchase_price > 0)) && line.amount > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Percent className="h-3 w-3" />
+                      Marge
+                    </Label>
+                    <div className="h-10 flex items-center px-3 border rounded-md bg-muted/50">
+                      <span className={`font-medium ${marginPercentage < 20 ? 'text-amber-600' : 'text-green-600'}`}>
+                        {marginPercentage.toFixed(1)}%
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        ({formatCurrency(margin)})
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </CollapsibleContent>
       </div>

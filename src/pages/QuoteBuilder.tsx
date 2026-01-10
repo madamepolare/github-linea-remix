@@ -40,6 +40,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { ensureValidProjectType } from '@/lib/projectTypeMapping';
 import { useContractTypes, BuilderTab } from '@/hooks/useContractTypes';
+import { LineFeatureProvider } from '@/contexts/LineFeatureContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -332,6 +333,7 @@ export default function QuoteBuilder() {
   const canClickSave = !isSaving;
 
   return (
+    <LineFeatureProvider contractType={currentContractType}>
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b bg-background shrink-0">
@@ -549,5 +551,6 @@ export default function QuoteBuilder() {
         )}
       </div>
     </div>
+    </LineFeatureProvider>
   );
 }
