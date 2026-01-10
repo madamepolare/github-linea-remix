@@ -125,7 +125,7 @@ export function QuoteLineItem({
     marginPercentage,
   } = useLineCostCalculation(line);
 
-  const costSourceConfig = COST_SOURCE_CONFIG[costSource];
+  const costSourceConfig = COST_SOURCE_CONFIG[costSource] || COST_SOURCE_CONFIG.none;
   const CostSourceIcon = costSourceConfig.icon;
 
   const parseAssignedSkillIds = (value?: string): string[] => {
