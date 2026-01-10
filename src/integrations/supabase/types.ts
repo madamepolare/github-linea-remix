@@ -128,6 +128,68 @@ export type Database = {
           },
         ]
       }
+      apprentice_schedules: {
+        Row: {
+          company_days_per_week: number | null
+          created_at: string
+          created_by: string | null
+          custom_pattern: Json | null
+          end_date: string
+          id: string
+          pattern_type: string
+          pdf_filename: string | null
+          pdf_url: string | null
+          schedule_name: string
+          school_days_per_week: number | null
+          start_date: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          company_days_per_week?: number | null
+          created_at?: string
+          created_by?: string | null
+          custom_pattern?: Json | null
+          end_date: string
+          id?: string
+          pattern_type?: string
+          pdf_filename?: string | null
+          pdf_url?: string | null
+          schedule_name?: string
+          school_days_per_week?: number | null
+          start_date: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          company_days_per_week?: number | null
+          created_at?: string
+          created_by?: string | null
+          custom_pattern?: Json | null
+          end_date?: string
+          id?: string
+          pattern_type?: string
+          pdf_filename?: string | null
+          pdf_url?: string | null
+          schedule_name?: string
+          school_days_per_week?: number | null
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apprentice_schedules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_deliverables: {
         Row: {
           assigned_to: string | null

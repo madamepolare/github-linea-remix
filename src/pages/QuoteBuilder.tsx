@@ -455,6 +455,8 @@ export default function QuoteBuilder() {
                   <QuoteGeneralTab 
                     document={document}
                     onDocumentChange={handleDocumentChange}
+                    linkedProjectId={linkedProjectId}
+                    onLinkedProjectChange={setLinkedProjectId}
                   />
                 </TabsContent>
               )}

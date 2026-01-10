@@ -290,8 +290,8 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
   },
 };
 
-// Module display order
-export const CORE_MODULES = ["workflow", "projects", "tasks", "crm", "commercial"];
+// Module display order - Dashboard, CRM, Commercial, Planning, Projets, Tâches
+export const CORE_MODULES = ["crm", "commercial", "workflow", "projects", "tasks"];
 export const EXTENSION_MODULES = ["documentation", "documents", "team", "chantier", "tenders", "invoicing", "references", "materials", "objects", "campaigns", "media-planning"];
 
 // Helper to get module config from current path
