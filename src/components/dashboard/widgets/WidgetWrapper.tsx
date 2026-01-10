@@ -11,7 +11,14 @@ interface WidgetWrapperProps {
   onRemove?: () => void;
   isEditing?: boolean;
   module?: string;
+  widthCols?: number;
 }
+
+const WIDTH_LABELS: Record<number, string> = {
+  1: "25%",
+  2: "50%",
+  4: "100%",
+};
 
 export function WidgetWrapper({
   title,
@@ -21,11 +28,14 @@ export function WidgetWrapper({
   onRemove,
   isEditing = false,
   module,
+  widthCols,
 }: WidgetWrapperProps) {
+  const widthLabel = widthCols ? WIDTH_LABELS[widthCols] || `${widthCols}col` : null;
+
   return (
     <div
       className={cn(
-        "h-full flex flex-col bg-card border border-border rounded-xl overflow-hidden",
+        "h-full flex flex-col bg-card border border-border rounded-xl overflow-hidden relative",
         "transition-shadow duration-200",
         isEditing && "ring-2 ring-primary/20 shadow-lg",
         className
@@ -50,16 +60,23 @@ export function WidgetWrapper({
             </span>
           )}
         </div>
-        {isEditing && onRemove && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-            onClick={onRemove}
-          >
-            <X className="h-3.5 w-3.5" />
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {isEditing && widthLabel && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+              {widthLabel}
+            </span>
+          )}
+          {isEditing && onRemove && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+              onClick={onRemove}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Content */}

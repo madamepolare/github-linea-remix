@@ -10,6 +10,22 @@
   background-position: 10px 10px;
 }
 
+/* Width guide overlay in edit mode */
+.bg-dotted-grid::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: 
+    linear-gradient(90deg, transparent 24.5%, hsl(var(--primary) / 0.08) 24.5%, hsl(var(--primary) / 0.08) 25.5%, transparent 25.5%),
+    linear-gradient(90deg, transparent 49.5%, hsl(var(--primary) / 0.08) 49.5%, hsl(var(--primary) / 0.08) 50.5%, transparent 50.5%),
+    linear-gradient(90deg, transparent 74.5%, hsl(var(--primary) / 0.08) 74.5%, hsl(var(--primary) / 0.08) 75.5%, transparent 75.5%);
+}
+
 .react-grid-item {
   transition: all 200ms ease;
   transition-property: left, top, width, height;
@@ -23,6 +39,23 @@
   transition: none;
   z-index: 1;
   will-change: width, height;
+}
+
+/* Show width indicator when resizing */
+.react-grid-item.resizing::before {
+  content: attr(data-width-label);
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 100;
 }
 
 .react-grid-item.react-draggable-dragging {
@@ -137,4 +170,26 @@
 
 .react-resizable-handle-s {
   bottom: 0;
+}
+
+/* Width badges for edit mode */
+.widget-width-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  padding: 2px 6px;
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 150ms ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.react-grid-item:hover .widget-width-badge,
+.react-grid-item.resizing .widget-width-badge {
+  opacity: 1;
 }

@@ -20,9 +20,10 @@ interface WidgetRendererProps {
   widgetId: string;
   isEditing?: boolean;
   onRemove?: () => void;
+  widthCols?: number;
 }
 
-export function WidgetRenderer({ widgetId, isEditing, onRemove }: WidgetRendererProps) {
+export function WidgetRenderer({ widgetId, isEditing, onRemove, widthCols }: WidgetRendererProps) {
   const config = getWidgetById(widgetId);
 
   if (!config) {
@@ -149,6 +150,7 @@ export function WidgetRenderer({ widgetId, isEditing, onRemove }: WidgetRenderer
       isEditing={isEditing}
       onRemove={onRemove}
       module={isEditing ? config.module : undefined}
+      widthCols={widthCols}
     >
       {renderContent()}
     </WidgetWrapper>
