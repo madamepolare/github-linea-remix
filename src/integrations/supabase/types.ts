@@ -548,6 +548,7 @@ export type Database = {
           project_id: string | null
           project_surface: number | null
           project_type: string
+          quote_theme_id: string | null
           sent_at: string | null
           signed_at: string | null
           special_conditions: string | null
@@ -587,6 +588,7 @@ export type Database = {
           project_id?: string | null
           project_surface?: number | null
           project_type?: string
+          quote_theme_id?: string | null
           sent_at?: string | null
           signed_at?: string | null
           special_conditions?: string | null
@@ -626,6 +628,7 @@ export type Database = {
           project_id?: string | null
           project_surface?: number | null
           project_type?: string
+          quote_theme_id?: string | null
           sent_at?: string | null
           signed_at?: string | null
           special_conditions?: string | null
@@ -664,6 +667,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_documents_quote_theme_id_fkey"
+            columns: ["quote_theme_id"]
+            isOneToOne: false
+            referencedRelation: "quote_themes"
             referencedColumns: ["id"]
           },
           {
@@ -5958,6 +5968,110 @@ export type Database = {
           },
           {
             foreignKeyName: "quote_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_themes: {
+        Row: {
+          accent_color: string | null
+          ai_generated_css: string | null
+          background_color: string | null
+          body_font: string | null
+          body_size: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          footer_style: string | null
+          header_bg_color: string | null
+          header_style: string | null
+          heading_font: string | null
+          heading_size: string | null
+          id: string
+          is_ai_generated: boolean | null
+          is_default: boolean | null
+          logo_position: string | null
+          logo_size: string | null
+          name: string
+          primary_color: string | null
+          reference_image_url: string | null
+          secondary_color: string | null
+          show_logo: boolean | null
+          show_signature_area: boolean | null
+          table_border_style: string | null
+          table_header_bg: string | null
+          table_stripe_rows: boolean | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          ai_generated_css?: string | null
+          background_color?: string | null
+          body_font?: string | null
+          body_size?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          footer_style?: string | null
+          header_bg_color?: string | null
+          header_style?: string | null
+          heading_font?: string | null
+          heading_size?: string | null
+          id?: string
+          is_ai_generated?: boolean | null
+          is_default?: boolean | null
+          logo_position?: string | null
+          logo_size?: string | null
+          name: string
+          primary_color?: string | null
+          reference_image_url?: string | null
+          secondary_color?: string | null
+          show_logo?: boolean | null
+          show_signature_area?: boolean | null
+          table_border_style?: string | null
+          table_header_bg?: string | null
+          table_stripe_rows?: boolean | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          ai_generated_css?: string | null
+          background_color?: string | null
+          body_font?: string | null
+          body_size?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          footer_style?: string | null
+          header_bg_color?: string | null
+          header_style?: string | null
+          heading_font?: string | null
+          heading_size?: string | null
+          id?: string
+          is_ai_generated?: boolean | null
+          is_default?: boolean | null
+          logo_position?: string | null
+          logo_size?: string | null
+          name?: string
+          primary_color?: string | null
+          reference_image_url?: string | null
+          secondary_color?: string | null
+          show_logo?: boolean | null
+          show_signature_area?: boolean | null
+          table_border_style?: string | null
+          table_header_bg?: string | null
+          table_stripe_rows?: boolean | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_themes_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
