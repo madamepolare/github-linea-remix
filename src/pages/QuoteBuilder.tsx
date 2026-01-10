@@ -41,11 +41,10 @@ export default function QuoteBuilder() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { activeWorkspace, setActiveWorkspace } = useAuth();
+  const { activeWorkspace } = useAuth();
   
   const isNew = id === 'new';
   const projectId = searchParams.get('project');
-  const requestedWorkspaceId = searchParams.get('workspace');
   const documentType = searchParams.get('type') || 'quote';
   
   const { documents, createDocument, updateDocument, getDocumentPhases, createPhase, updatePhase, deletePhase } = useCommercialDocuments();
@@ -76,23 +75,11 @@ export default function QuoteBuilder() {
   // Store project_id separately for the save operation
   const [linkedProjectId, setLinkedProjectId] = useState<string | undefined>(projectId || undefined);
 
-  // Ensure we are on the right workspace when creating/editing
-  useEffect(() => {
-    if (requestedWorkspaceId && activeWorkspace?.id && requestedWorkspaceId !== activeWorkspace.id) {
-      setActiveWorkspace(requestedWorkspaceId);
-    }
-  }, [requestedWorkspaceId, activeWorkspace?.id, setActiveWorkspace]);
-
   // Load existing document
   useEffect(() => {
     if (!isNew && id && documents) {
       const existingDoc = documents.find(d => d.id === id);
       if (existingDoc) {
-        // If opening a document from another workspace, switch first
-        if (existingDoc.workspace_id && activeWorkspace?.id && existingDoc.workspace_id !== activeWorkspace.id) {
-          setActiveWorkspace(existingDoc.workspace_id);
-        }
-
         setDocument({
           ...existingDoc,
           document_type: existingDoc.document_type as 'quote' | 'contract' | 'proposal'
@@ -102,7 +89,7 @@ export default function QuoteBuilder() {
         }
       }
     }
-  }, [id, isNew, documents, activeWorkspace?.id, setActiveWorkspace]);
+  }, [id, isNew, documents]);
 
   // Load existing phases as lines
   useEffect(() => {
