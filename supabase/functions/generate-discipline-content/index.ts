@@ -23,104 +23,139 @@ serve(async (req) => {
     const { type, discipline_name, discipline_description, contract_type_name, existing_skills } = await req.json() as GenerateRequest;
 
     console.log(`[generate-discipline-content] Generating ${type} for discipline: ${discipline_name}`);
+    console.log(`[generate-discipline-content] Description: ${discipline_description || 'none'}`);
+
+    // Get the API key
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.error('[generate-discipline-content] LOVABLE_API_KEY not configured');
+      throw new Error('LOVABLE_API_KEY is not configured');
+    }
 
     let prompt = '';
     let systemPrompt = '';
 
+    // Build context about the discipline
+    const disciplineContext = `
+DISCIPLINE: "${discipline_name}"
+${discipline_description ? `DESCRIPTION: ${discipline_description}` : ''}
+
+IMPORTANT: Génère du contenu SPÉCIFIQUEMENT adapté à cette discipline.
+- Si c'est une agence de communication/publicité → génère des rôles comme Directeur Artistique, Concepteur-Rédacteur, Chef de Pub, etc.
+- Si c'est un cabinet d'architecture → génère des rôles comme Architecte, Architecte d'intérieur, Dessinateur-Projeteur, etc.
+- Si c'est un bureau d'études → génère des rôles techniques comme Ingénieur Structure, Thermicien, etc.
+- NE GÉNÈRE PAS de contenu générique ou inadapté à la discipline.
+`.trim();
+
     if (type === 'skills') {
-      systemPrompt = `Tu es un expert en gestion d'agences créatives et de bureaux d'études. Tu génères des listes de compétences/métiers professionnels.
-Réponds UNIQUEMENT avec un JSON valide, sans markdown, sans explication.`;
+      systemPrompt = `Tu es un expert RH spécialisé dans les agences créatives et bureaux d'études.
+Tu connais parfaitement les métiers et compétences de chaque secteur.
+Réponds UNIQUEMENT avec un JSON valide, sans markdown, sans explication, sans texte avant ou après.`;
       
-      prompt = `Génère une liste de 8-12 compétences/métiers professionnels pour une discipline "${discipline_name}"${discipline_description ? ` (${discipline_description})` : ''}.
+      prompt = `${disciplineContext}
 
-Pour chaque compétence, inclus:
-- label: Nom du métier/compétence en français
-- daily_rate: Taux journalier de vente en EUR (entre 400 et 1200 selon le niveau)
-- cost_daily_rate: Taux journalier de coût en EUR (environ 50-60% du taux de vente)
-- description: Description courte (1 phrase)
-- color: Couleur hexadécimale parmi #3b82f6, #22c55e, #f59e0b, #ef4444, #8b5cf6, #ec4899, #06b6d4, #84cc16, #f97316, #6366f1
+Génère une liste de 8-12 métiers/compétences SPÉCIFIQUES à cette discipline "${discipline_name}".
 
-Réponds avec un JSON array:
+EXEMPLES PAR DISCIPLINE:
+- Agence de communication/pub: Directeur Artistique, Concepteur-Rédacteur, Chef de Publicité, Planneur Stratégique, Motion Designer, Social Media Manager...
+- Cabinet d'architecture: Architecte DPLG, Architecte d'intérieur, Urbaniste, Dessinateur-Projeteur, Économiste de la construction...
+- Bureau d'études techniques: Ingénieur Structure, Ingénieur Fluides, Thermicien, Acousticien, BIM Manager...
+- Agence digitale: UX Designer, UI Designer, Développeur Front, Product Owner, Growth Hacker...
+
+Pour chaque compétence:
+- label: Nom du métier en français (PAS de termes génériques comme "Consultant" ou "Expert")
+- daily_rate: Taux journalier de vente en EUR (400-1200 selon séniorité)
+- cost_daily_rate: Coût journalier (50-65% du taux de vente)
+- description: Description courte du rôle (1 phrase)
+- color: Une couleur parmi #3b82f6, #22c55e, #f59e0b, #ef4444, #8b5cf6, #ec4899, #06b6d4, #84cc16, #f97316, #6366f1
+
+Réponds avec un JSON array uniquement:
 [{"label": "...", "daily_rate": number, "cost_daily_rate": number, "description": "...", "color": "..."}]`;
     } 
     else if (type === 'pricing_grid') {
-      systemPrompt = `Tu es un expert en tarification d'agences et bureaux d'études français. Tu connais les tarifs du marché.
+      systemPrompt = `Tu es un expert en tarification d'agences créatives et bureaux d'études français.
+Tu connais les tarifs du marché par secteur.
 Réponds UNIQUEMENT avec un JSON valide, sans markdown, sans explication.`;
       
       const skillsList = existing_skills?.join(', ') || '';
-      prompt = `Génère une grille tarifaire réaliste pour la discipline "${discipline_name}" avec les compétences: ${skillsList}.
+      prompt = `${disciplineContext}
 
-Pour chaque compétence, génère 4 niveaux d'expérience avec tarifs en EUR:
-- junior: 0-2 ans d'expérience
+Génère une grille tarifaire pour ces compétences: ${skillsList}.
+
+Pour chaque compétence, génère 4 niveaux d'expérience avec tarifs réalistes en EUR:
+- junior: 0-2 ans
 - confirmed: 2-5 ans
 - senior: 5-10 ans  
 - expert: 10+ ans
 
 Réponds avec un JSON array:
-[{
-  "skill_name": "...",
-  "experience_level": "junior|confirmed|senior|expert",
-  "hourly_rate": number,
-  "daily_rate": number
-}]`;
+[{"skill_name": "...", "experience_level": "junior|confirmed|senior|expert", "hourly_rate": number, "daily_rate": number}]`;
     }
     else if (type === 'quote_template') {
-      systemPrompt = `Tu es un expert en rédaction de devis et contrats pour agences créatives et bureaux d'études.
+      systemPrompt = `Tu es un expert commercial spécialisé dans les agences créatives et bureaux d'études.
+Tu connais les phases et livrables typiques de chaque secteur.
 Réponds UNIQUEMENT avec un JSON valide, sans markdown, sans explication.`;
       
-      prompt = `Génère un template de devis pour:
-- Discipline: ${discipline_name}
-- Type de contrat: ${contract_type_name || 'Standard'}
+      prompt = `${disciplineContext}
+
+Génère un template de devis pour:
+- Type de contrat: ${contract_type_name || 'Mission standard'}
+
+IMPORTANT: Les phases doivent être SPÉCIFIQUES à la discipline "${discipline_name}".
+- Agence de comm: Brief, Conception créative, Déclinaisons, Achat média...
+- Architecture: Esquisse, APS, APD, PRO, DCE, DET, AOR...
+- Bureau d'études: Études préliminaires, Avant-projet, Études d'exécution, Synthèse...
+- Agence digitale: Discovery, UX Research, UI Design, Développement, Recette...
+
+NE PAS GÉNÉRER de phases inadaptées (ex: pas de CCTP pour une agence de comm).
 
 Inclus:
 - name: Nom du template
 - description: Description
-- default_phases: Array de phases avec {phase_name, phase_code, description, percentage (du total)}
+- default_phases: Array de phases avec {phase_name, phase_code (court), description, percentage}
 - default_terms: Conditions générales courtes
 
 Réponds avec un JSON object:
-{
-  "name": "...",
-  "description": "...",
-  "default_phases": [{"phase_name": "...", "phase_code": "...", "description": "...", "percentage": number}],
-  "default_terms": "..."
-}`;
+{"name": "...", "description": "...", "default_phases": [{"phase_name": "...", "phase_code": "...", "description": "...", "percentage": number}], "default_terms": "..."}`;
     }
     else if (type === 'contract_types') {
-      systemPrompt = `Tu es un expert en gestion d'agences créatives et de bureaux d'études. Tu génères des types de contrats professionnels adaptés à chaque discipline.
+      systemPrompt = `Tu es un expert en gestion commerciale d'agences créatives et bureaux d'études.
+Tu connais les types de missions de chaque secteur.
 Réponds UNIQUEMENT avec un JSON valide, sans markdown, sans explication.`;
       
-      prompt = `Génère une liste de 4-6 types de contrats professionnels adaptés à la discipline "${discipline_name}"${discipline_description ? ` (${discipline_description})` : ''}.
+      prompt = `${disciplineContext}
 
-Pour chaque type de contrat, inclus:
-- name: Nom du type de contrat en français
-- code: Code court (3-6 lettres majuscules, ex: ARCHI, PUB, BRAND)
-- description: Description courte (1 phrase)
-- icon: Icône parmi 'FileText', 'Building2', 'Sofa', 'Theater', 'Megaphone', 'Palette', 'Globe'
-- color: Couleur hexadécimale parmi #3B82F6, #8B5CF6, #EC4899, #F59E0B, #10B981, #06B6D4, #EF4444, #6366F1
-- default_fields: Objet avec les champs à afficher {surface: boolean, construction_budget: boolean, address: boolean, city: boolean, budget: boolean}
-- builder_tabs: Array des onglets du builder parmi ['general', 'fees', 'lines', 'production', 'planning', 'terms'] (toujours inclure 'general')
+Génère 4-6 types de contrats SPÉCIFIQUES à la discipline "${discipline_name}".
+
+EXEMPLES PAR DISCIPLINE:
+- Agence de comm: Campagne 360°, Identité de marque, Activation, Contenu social, Stratégie de marque...
+- Architecture: Mission complète, Esquisse seule, Permis de construire, Aménagement intérieur, Urbanisme...
+- Bureau d'études: Mission complète OPC, Études thermiques, Études structure, Audit énergétique...
+- Agence digitale: Site vitrine, Application mobile, Refonte UX, Maintenance évolutive...
+
+Pour chaque type:
+- name: Nom en français
+- code: Code court (3-6 lettres, ex: CAMP, BRAND, MPC)
+- description: Description courte
+- icon: Parmi 'FileText', 'Building2', 'Sofa', 'Theater', 'Megaphone', 'Palette', 'Globe'
+- color: Parmi #3B82F6, #8B5CF6, #EC4899, #F59E0B, #10B981, #06B6D4, #EF4444
+- default_fields: {surface: boolean, construction_budget: boolean, address: boolean, city: boolean, budget: boolean}
+- builder_tabs: Array parmi ['general', 'fees', 'lines', 'production', 'planning', 'terms']
 
 Réponds avec un JSON array:
-[{
-  "name": "...",
-  "code": "...",
-  "description": "...",
-  "icon": "...",
-  "color": "...",
-  "default_fields": {"surface": true, "budget": true, ...},
-  "builder_tabs": ["general", "lines", "terms"]
-}]`;
+[{"name": "...", "code": "...", "description": "...", "icon": "...", "color": "...", "default_fields": {...}, "builder_tabs": [...]}]`;
     }
 
-    // Call Lovable AI Gateway (Gemini)
-    const gatewayUrl = 'https://gateway.lovable.ai';
+    // Call Lovable AI Gateway with correct URL and API key
+    const gatewayUrl = 'https://ai.gateway.lovable.dev/v1/chat/completions';
     
-    const response = await fetch(`${gatewayUrl}/v1/chat/completions`, {
+    console.log('[generate-discipline-content] Calling AI Gateway...');
+    
+    const response = await fetch(gatewayUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': req.headers.get('authorization') || '',
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
@@ -135,14 +170,34 @@ Réponds avec un JSON array:
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[generate-discipline-content] AI Gateway error:', errorText);
+      console.error('[generate-discipline-content] AI Gateway error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Rate limit exceeded. Please try again later.' 
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Payment required. Please add credits to your workspace.' 
+        }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
       throw new Error(`AI Gateway error: ${response.status}`);
     }
 
     const data = await response.json();
     const generatedText = data.choices?.[0]?.message?.content || '';
     
-    console.log('[generate-discipline-content] Raw response:', generatedText.substring(0, 200));
+    console.log('[generate-discipline-content] Raw response:', generatedText.substring(0, 300));
 
     // Parse JSON from response
     let result;
@@ -155,10 +210,11 @@ Réponds avec un JSON array:
       result = JSON.parse(cleanedText);
     } catch (parseError) {
       console.error('[generate-discipline-content] JSON parse error:', parseError);
+      console.error('[generate-discipline-content] Raw text was:', generatedText);
       throw new Error('Failed to parse AI response as JSON');
     }
 
-    console.log('[generate-discipline-content] Successfully generated', type);
+    console.log('[generate-discipline-content] Successfully generated', type, '- items:', Array.isArray(result) ? result.length : 1);
 
     return new Response(JSON.stringify({ 
       success: true, 
