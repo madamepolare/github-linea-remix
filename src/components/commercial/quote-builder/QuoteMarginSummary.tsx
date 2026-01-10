@@ -26,6 +26,7 @@ const COST_SOURCE_LABELS = {
   manual: { label: 'Manuel', icon: PenTool, color: 'text-slate-600' },
   skill: { label: 'Compétence', icon: Briefcase, color: 'text-blue-600' },
   member: { label: 'Membre', icon: User, color: 'text-purple-600' },
+  average: { label: 'Estimé (TJM moyen)', icon: Calculator, color: 'text-amber-600' },
   none: { label: '-', icon: null, color: 'text-muted-foreground' },
 };
 
@@ -37,6 +38,7 @@ export function QuoteMarginSummary({ lines }: QuoteMarginSummaryProps) {
     totalMargin,
     totalMarginPercentage,
     linesCosts,
+    averageAgencyTJM,
   } = useQuoteTotalsWithCosts(lines);
 
   const formatCurrency = (value: number) =>
@@ -51,8 +53,9 @@ export function QuoteMarginSummary({ lines }: QuoteMarginSummaryProps) {
   const lineDetails = includedLines.map(line => {
     const costInfo = linesCosts.find(lc => lc.lineId === line.id);
     
-    let estimatedDays = 0;
-    if (line.unit === 'jour' || line.unit === 'jours') {
+    // Use estimated days from cost calculation, or fallback to quantity if day unit
+    let estimatedDays = costInfo?.estimatedDays || 0;
+    if (estimatedDays === 0 && (line.unit === 'jour' || line.unit === 'jours')) {
       estimatedDays = line.quantity || 0;
     }
 
