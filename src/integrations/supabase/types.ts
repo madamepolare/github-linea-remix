@@ -3765,6 +3765,54 @@ export type Database = {
           },
         ]
       }
+      member_skills: {
+        Row: {
+          created_at: string
+          custom_daily_rate: number | null
+          id: string
+          proficiency_level: string | null
+          skill_id: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_daily_rate?: number | null
+          id?: string
+          proficiency_level?: string | null
+          skill_id: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_daily_rate?: number | null
+          id?: string
+          proficiency_level?: string | null
+          skill_id?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_skills_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_settings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_skills_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modules: {
         Row: {
           category: string | null
