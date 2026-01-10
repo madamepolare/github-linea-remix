@@ -20,7 +20,11 @@ import {
   Copy,
   Trash2,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Percent,
+  Package,
+  Calendar,
+  LucideIcon
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, phaseToQuoteLine, quoteLineToPhase, DOCUMENT_STATUS_LABELS } from '@/types/quoteTypes';
 import { QuoteGeneralTab } from '@/components/commercial/quote-builder/QuoteGeneralTab';
@@ -67,6 +71,9 @@ export default function QuoteBuilder() {
   const phasesQuery = getDocumentPhases(isNew ? '' : (id || ''));
   const phases = phasesQuery.data;
   
+  // Get contract types for dynamic tabs
+  const { activeContractTypes } = useContractTypes();
+  
   const [activeTab, setActiveTab] = useState('general');
   const [showPreview, setShowPreview] = useState(true);
   const [zoom, setZoom] = useState(70);
@@ -85,6 +92,20 @@ export default function QuoteBuilder() {
   });
   
   const [lines, setLines] = useState<QuoteLine[]>([]);
+  
+  // Tab configuration
+  const TAB_CONFIG: Record<BuilderTab, { label: string; icon: LucideIcon }> = {
+    general: { label: 'Général', icon: FileText },
+    fees: { label: 'Honoraires', icon: Percent },
+    lines: { label: 'Lignes', icon: List },
+    production: { label: 'Production', icon: Package },
+    planning: { label: 'Planning', icon: Calendar },
+    terms: { label: 'Conditions', icon: FileCheck }
+  };
+  
+  // Get enabled tabs from current contract type
+  const currentContractType = activeContractTypes.find(t => t.id === document.contract_type_id);
+  const enabledTabs: BuilderTab[] = currentContractType?.builder_tabs || ['general', 'lines', 'terms'];
   
   // Store project_id separately for the save operation
   const [linkedProjectId, setLinkedProjectId] = useState<string | undefined>(projectId || undefined);
@@ -133,6 +154,13 @@ export default function QuoteBuilder() {
     setLines(newLines);
     setHasChanges(true);
   };
+
+  // Reset active tab if it becomes unavailable
+  useEffect(() => {
+    if (!enabledTabs.includes(activeTab as BuilderTab)) {
+      setActiveTab('general');
+    }
+  }, [enabledTabs, activeTab]);
 
   const handleSave = async () => {
     // Wait for auth to be ready
@@ -401,49 +429,86 @@ export default function QuoteBuilder() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1">
             <div className="px-4 pt-4 pb-0 border-b bg-muted/30 shrink-0">
               <TabsList className="h-10">
-                <TabsTrigger value="general" className="gap-2 px-4">
-                  <FileText className="h-4 w-4" />
-                  <span className="hidden sm:inline">Général</span>
-                </TabsTrigger>
-                <TabsTrigger value="lines" className="gap-2 px-4">
-                  <List className="h-4 w-4" />
-                  <span className="hidden sm:inline">Lignes</span>
-                  {lines.length > 0 && (
-                    <span className="ml-1 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
-                      {lines.length}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="terms" className="gap-2 px-4">
-                  <FileCheck className="h-4 w-4" />
-                  <span className="hidden sm:inline">Conditions</span>
-                </TabsTrigger>
+                {enabledTabs.map(tabId => {
+                  const config = TAB_CONFIG[tabId];
+                  const Icon = config.icon;
+                  return (
+                    <TabsTrigger key={tabId} value={tabId} className="gap-2 px-4">
+                      <Icon className="h-4 w-4" />
+                      <span className="hidden sm:inline">{config.label}</span>
+                      {tabId === 'lines' && lines.length > 0 && (
+                        <span className="ml-1 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
+                          {lines.length}
+                        </span>
+                      )}
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
             </div>
 
             <ScrollArea className="flex-1">
-              <TabsContent value="general" className="m-0 p-6">
-                <QuoteGeneralTab 
-                  document={document}
-                  onDocumentChange={handleDocumentChange}
-                />
-              </TabsContent>
+              {enabledTabs.includes('general') && (
+                <TabsContent value="general" className="m-0 p-6">
+                  <QuoteGeneralTab 
+                    document={document}
+                    onDocumentChange={handleDocumentChange}
+                  />
+                </TabsContent>
+              )}
 
-              <TabsContent value="lines" className="m-0 p-6">
-                <QuoteLinesEditor
-                  lines={lines}
-                  onLinesChange={handleLinesChange}
-                  document={document}
-                  onDocumentChange={handleDocumentChange}
-                />
-              </TabsContent>
+              {enabledTabs.includes('fees') && (
+                <TabsContent value="fees" className="m-0 p-6">
+                  <QuoteFeesTab 
+                    document={document}
+                    onDocumentChange={handleDocumentChange}
+                    lines={lines}
+                    onLinesChange={handleLinesChange}
+                  />
+                </TabsContent>
+              )}
 
-              <TabsContent value="terms" className="m-0 p-6">
-                <QuoteTermsTab
-                  document={document}
-                  onDocumentChange={handleDocumentChange}
-                />
-              </TabsContent>
+              {enabledTabs.includes('lines') && (
+                <TabsContent value="lines" className="m-0 p-6">
+                  <QuoteLinesEditor
+                    lines={lines}
+                    onLinesChange={handleLinesChange}
+                    document={document}
+                    onDocumentChange={handleDocumentChange}
+                  />
+                </TabsContent>
+              )}
+
+              {enabledTabs.includes('production') && (
+                <TabsContent value="production" className="m-0 p-6">
+                  <QuoteProductionTab 
+                    document={document}
+                    onDocumentChange={handleDocumentChange}
+                    lines={lines}
+                    onLinesChange={handleLinesChange}
+                  />
+                </TabsContent>
+              )}
+
+              {enabledTabs.includes('planning') && (
+                <TabsContent value="planning" className="m-0 p-6">
+                  <QuotePlanningTab 
+                    document={document}
+                    onDocumentChange={handleDocumentChange}
+                    lines={lines}
+                    onLinesChange={handleLinesChange}
+                  />
+                </TabsContent>
+              )}
+
+              {enabledTabs.includes('terms') && (
+                <TabsContent value="terms" className="m-0 p-6">
+                  <QuoteTermsTab
+                    document={document}
+                    onDocumentChange={handleDocumentChange}
+                  />
+                </TabsContent>
+              )}
             </ScrollArea>
           </Tabs>
         </div>
