@@ -2185,6 +2185,262 @@ export type Database = {
           },
         ]
       }
+      documentation_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          slug: string
+          sort_order: number | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          slug: string
+          sort_order?: number | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_categories_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_category_templates: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          discipline: string
+          icon: string | null
+          id: string
+          name: string
+          parent_slug: string | null
+          slug: string
+          sort_order: number | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          discipline: string
+          icon?: string | null
+          id?: string
+          name: string
+          parent_slug?: string | null
+          slug: string
+          sort_order?: number | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          discipline?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          parent_slug?: string | null
+          slug?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
+      documentation_pages: {
+        Row: {
+          category_id: string | null
+          checklist: Json | null
+          content: string | null
+          context: string | null
+          created_at: string | null
+          created_by: string | null
+          emoji: string | null
+          id: string
+          is_published: boolean | null
+          is_template: boolean | null
+          last_edited_by: string | null
+          objective: string | null
+          page_type: string | null
+          parent_page_id: string | null
+          slug: string
+          sort_order: number | null
+          steps: Json | null
+          tags: string[] | null
+          tips: string | null
+          title: string
+          updated_at: string | null
+          view_count: number | null
+          workspace_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          checklist?: Json | null
+          content?: string | null
+          context?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          emoji?: string | null
+          id?: string
+          is_published?: boolean | null
+          is_template?: boolean | null
+          last_edited_by?: string | null
+          objective?: string | null
+          page_type?: string | null
+          parent_page_id?: string | null
+          slug: string
+          sort_order?: number | null
+          steps?: Json | null
+          tags?: string[] | null
+          tips?: string | null
+          title: string
+          updated_at?: string | null
+          view_count?: number | null
+          workspace_id: string
+        }
+        Update: {
+          category_id?: string | null
+          checklist?: Json | null
+          content?: string | null
+          context?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          emoji?: string | null
+          id?: string
+          is_published?: boolean | null
+          is_template?: boolean | null
+          last_edited_by?: string | null
+          objective?: string | null
+          page_type?: string | null
+          parent_page_id?: string | null
+          slug?: string
+          sort_order?: number | null
+          steps?: Json | null
+          tags?: string[] | null
+          tips?: string | null
+          title?: string
+          updated_at?: string | null
+          view_count?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentation_pages_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_pages_parent_page_id_fkey"
+            columns: ["parent_page_id"]
+            isOneToOne: false
+            referencedRelation: "documentation_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documentation_pages_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentation_templates: {
+        Row: {
+          category_slug: string
+          checklist: Json | null
+          content: string | null
+          context: string | null
+          created_at: string | null
+          discipline: string
+          emoji: string | null
+          id: string
+          objective: string | null
+          page_slug: string
+          page_type: string | null
+          sort_order: number | null
+          steps: Json | null
+          tags: string[] | null
+          tips: string | null
+          title: string
+        }
+        Insert: {
+          category_slug: string
+          checklist?: Json | null
+          content?: string | null
+          context?: string | null
+          created_at?: string | null
+          discipline: string
+          emoji?: string | null
+          id?: string
+          objective?: string | null
+          page_slug: string
+          page_type?: string | null
+          sort_order?: number | null
+          steps?: Json | null
+          tags?: string[] | null
+          tips?: string | null
+          title: string
+        }
+        Update: {
+          category_slug?: string
+          checklist?: Json | null
+          content?: string | null
+          context?: string | null
+          created_at?: string | null
+          discipline?: string
+          emoji?: string | null
+          id?: string
+          objective?: string | null
+          page_slug?: string
+          page_type?: string | null
+          sort_order?: number | null
+          steps?: Json | null
+          tags?: string[] | null
+          tips?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           body_html: string
