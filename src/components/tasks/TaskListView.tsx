@@ -408,7 +408,9 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                           const completedSubtasks = task.subtasks?.filter(s => s.status === "done").length || 0;
                           const relation = getRelationDisplay(task);
                           const isJustCompleted = recentlyCompleted.has(task.id);
-                          const commentCount = communicationsCounts?.[task.id] || 0;
+                          const commData = communicationsCounts?.[task.id];
+                          const commentCount = commData?.count || 0;
+                          const hasRecentComment = commData?.hasRecent || false;
                           const isScheduled = scheduledTaskIds?.has(task.id) || false;
 
                           return (
@@ -529,7 +531,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                   )}
                                 </div>
 
-                                {/* Comments bubble */}
+                                {/* Comments bubble with pulse animation */}
                                 <div 
                                   className="flex justify-center"
                                   onClick={(e) => {
@@ -538,15 +540,30 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                     setSelectedTask(task);
                                   }}
                                 >
-                                  <div className={cn(
-                                    "flex items-center gap-1 px-2 py-0.5 rounded-full transition-colors cursor-pointer hover:bg-primary/10",
-                                    commentCount > 0 ? "bg-muted text-muted-foreground" : "text-muted-foreground/50 hover:text-muted-foreground"
-                                  )}>
-                                    <MessageCircle className="h-3 w-3" />
-                                    {commentCount > 0 && (
-                                      <span className="text-2xs font-medium">{commentCount}</span>
+                                  <motion.div 
+                                    className={cn(
+                                      "relative flex items-center gap-1 px-2 py-0.5 rounded-full transition-colors cursor-pointer hover:bg-primary/10",
+                                      commentCount > 0 ? "bg-muted" : "text-muted-foreground/50 hover:text-muted-foreground"
                                     )}
-                                  </div>
+                                    animate={hasRecentComment ? { scale: [1, 1.1, 1] } : {}}
+                                    transition={{ repeat: hasRecentComment ? Infinity : 0, duration: 1.5 }}
+                                  >
+                                    <MessageCircle className={cn(
+                                      "h-3.5 w-3.5",
+                                      hasRecentComment && "text-primary"
+                                    )} />
+                                    {commentCount > 0 && (
+                                      <span className={cn(
+                                        "text-2xs font-medium",
+                                        hasRecentComment ? "text-primary" : "text-muted-foreground"
+                                      )}>
+                                        {commentCount}
+                                      </span>
+                                    )}
+                                    {hasRecentComment && (
+                                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
+                                    )}
+                                  </motion.div>
                                 </div>
                               </motion.div>
                               
