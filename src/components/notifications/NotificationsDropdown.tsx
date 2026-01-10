@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Check, CheckCheck, X, MessageSquare, UserPlus, FolderKanban, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, differenceInMinutes } from "date-fns";
 
 interface Notification {
   id: string;
@@ -67,6 +67,11 @@ export function NotificationsDropdown({ collapsed = false }: { collapsed?: boole
   const [open, setOpen] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+  
+  // Check if any notification is recent (less than 5 minutes old)
+  const hasRecentNotification = useMemo(() => {
+    return notifications.some((n) => !n.read && differenceInMinutes(new Date(), n.createdAt) < 5);
+  }, [notifications]);
 
   const markAsRead = (id: string) => {
     setNotifications((prev) =>
@@ -93,14 +98,20 @@ export function NotificationsDropdown({ collapsed = false }: { collapsed?: boole
           )}
         >
           <div className="relative">
-            <Bell className="h-[18px] w-[18px]" strokeWidth={1.5} />
+            <Bell className={cn("h-[18px] w-[18px]", hasRecentNotification && "animate-pulse")} strokeWidth={1.5} />
             <AnimatePresence>
               {unreadCount > 0 && (
                 <motion.span
                   initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
+                  animate={hasRecentNotification ? { 
+                    scale: [1, 1.2, 1],
+                    transition: { repeat: Infinity, duration: 1.5 }
+                  } : { scale: 1 }}
                   exit={{ scale: 0 }}
-                  className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground"
+                  className={cn(
+                    "absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground",
+                    hasRecentNotification && "ring-2 ring-destructive/30"
+                  )}
                 >
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </motion.span>

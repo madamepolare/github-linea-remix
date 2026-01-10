@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -11,19 +11,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, User, MapPin, Ruler, Euro, FileText } from 'lucide-react';
+import { Building2, User, MapPin, Ruler, Euro, FileText, FolderKanban, Link2 } from 'lucide-react';
 import { QuoteDocument, DOCUMENT_TYPE_LABELS } from '@/types/quoteTypes';
 import { useContractTypes, ContractType } from '@/hooks/useContractTypes';
+import { useProjects } from '@/hooks/useProjects';
 import { ClientSelector } from '../ClientSelector';
 import { getProjectTypeFromCode } from '@/lib/projectTypeMapping';
 
 interface QuoteGeneralTabProps {
   document: Partial<QuoteDocument>;
   onDocumentChange: (doc: Partial<QuoteDocument>) => void;
+  linkedProjectId?: string;
+  onLinkedProjectChange?: (projectId: string | undefined) => void;
 }
 
-export function QuoteGeneralTab({ document, onDocumentChange }: QuoteGeneralTabProps) {
+export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, onLinkedProjectChange }: QuoteGeneralTabProps) {
   const { activeContractTypes, isLoading: isLoadingTypes } = useContractTypes();
+  const { projects, isLoading: isLoadingProjects } = useProjects();
 
   // Get current contract type
   const currentContractType = activeContractTypes.find(t => t.id === document.contract_type_id);
@@ -97,6 +101,56 @@ export function QuoteGeneralTab({ document, onDocumentChange }: QuoteGeneralTabP
           </Select>
         </div>
       </div>
+
+      {/* Link to existing project (Avenant) */}
+      {onLinkedProjectChange && (
+        <Card className="border-dashed">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Link2 className="h-4 w-4" />
+              Rattacher à un projet existant
+            </CardTitle>
+            <CardDescription>
+              Transforme ce devis en avenant d'un projet existant
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Select
+              value={linkedProjectId || 'none'}
+              onValueChange={(v) => onLinkedProjectChange(v === 'none' ? undefined : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Aucun projet lié" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Aucun (nouveau projet)</SelectItem>
+                {projects?.filter(p => !p.is_archived).map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: project.color }}
+                      />
+                      <span>{project.name}</span>
+                      {project.crm_company?.name && (
+                        <Badge variant="outline" className="ml-1 text-xs">
+                          {project.crm_company.name}
+                        </Badge>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {linkedProjectId && (
+              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                <FolderKanban className="h-3 w-3" />
+                Ce devis sera enregistré comme avenant au projet sélectionné
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Client Selection */}
       <Card>

@@ -161,10 +161,11 @@ export function KanbanBoard<T>({
                     }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.15, layout: { duration: 0.2 } }}
-                    draggable
+                    draggable="true"
                     onDragStart={(e) => handleDragStart(e as any, itemId, column.id)}
                     onDragEnd={handleDragEnd}
-                    className="cursor-grab active:cursor-grabbing"
+                    className="cursor-grab active:cursor-grabbing touch-none"
+                    style={{ WebkitUserDrag: 'element' } as React.CSSProperties}
                   >
                     {renderCard(item, isDragging)}
                   </motion.div>
