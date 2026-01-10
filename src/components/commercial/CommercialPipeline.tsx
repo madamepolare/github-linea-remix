@@ -139,7 +139,7 @@ export const CommercialPipeline = ({
             <CommercialKanbanCard
               document={doc}
               stageColor={PIPELINE_STAGES.find((s) => s.status === doc.status)?.color}
-              onClick={() => navigate(`/commercial/${doc.id}`)}
+              onClick={() => navigate(`/commercial/quote/${doc.id}`)}
               onDuplicate={() => onDuplicate(doc.id)}
               onDelete={() => onDelete(doc.id)}
               isDragging={isDragging}
@@ -202,7 +202,7 @@ function CommercialKanbanCard({ document: doc, stageColor, onClick, onDuplicate,
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/commercial/${doc.id}`); }}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/commercial/quote/${doc.id}`); }}>
                 <Eye className="h-4 w-4 mr-2" />
                 Voir
               </DropdownMenuItem>
