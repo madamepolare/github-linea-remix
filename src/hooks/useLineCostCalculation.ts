@@ -215,10 +215,11 @@ export function useLinesCostCalculation(lines: QuoteLine[]) {
           }
         }
       }
-      // Priority 3: No member/skill - use average agency rates for forfaits
-      else if (!isDayUnit(line.unit) && averageAgencySellRate > 0 && averageAgencyCostRate > 0 && (line.amount || 0) > 0) {
-        estimatedDays = (line.amount || 0) / averageAgencySellRate;
-        calculatedPurchasePrice = averageAgencyCostRate * estimatedDays;
+      // Priority 3: No member/skill - use CJM to estimate days and cost
+      // Formula: estimatedDays = amount / CJM, cost = estimatedDays × CJM
+      else if (averageAgencyCostRate > 0 && (line.amount || 0) > 0) {
+        estimatedDays = (line.amount || 0) / averageAgencyCostRate;
+        calculatedPurchasePrice = estimatedDays * averageAgencyCostRate;
         costSource = 'average';
       }
       // Priority 4: Manual purchase price (fallback only if nothing else)
