@@ -2,15 +2,19 @@ import { useState, useCallback } from "react";
 import { TeamPlanningGrid } from "@/components/workflow/TeamPlanningGrid";
 import { WorkflowSidebar } from "@/components/workflow/WorkflowSidebar";
 import { ScheduleDetailSheet } from "@/components/workflow/ScheduleDetailSheet";
+import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
+import { Task } from "@/hooks/useTasks";
 import { Button } from "@/components/ui/button";
-import { PanelRight, CalendarClock, Plus } from "lucide-react";
+import { PanelRight, CalendarClock } from "lucide-react";
 import { TeamMember } from "@/hooks/useTeamMembers";
 
 export default function Workflow() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedSchedule, setSelectedSchedule] = useState<TaskSchedule | null>(null);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   
   const { createSchedule } = useTaskSchedules();
 
@@ -22,6 +26,11 @@ export default function Workflow() {
   const handleCellClick = useCallback((date: Date, member: TeamMember) => {
     // TODO: Ouvrir un dialog pour créer une nouvelle planification
     console.log("Cell clicked:", date, member);
+  }, []);
+
+  const handleTaskSelect = useCallback((task: any) => {
+    setSelectedTask(task as Task);
+    setTaskSheetOpen(true);
   }, []);
 
   return (
@@ -65,6 +74,7 @@ export default function Workflow() {
       <WorkflowSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        onTaskSelect={handleTaskSelect}
       />
 
       {/* Schedule detail sheet */}
@@ -72,6 +82,13 @@ export default function Workflow() {
         schedule={selectedSchedule}
         open={detailSheetOpen}
         onOpenChange={setDetailSheetOpen}
+      />
+
+      {/* Task detail sheet */}
+      <TaskDetailSheet
+        task={selectedTask}
+        open={taskSheetOpen}
+        onOpenChange={setTaskSheetOpen}
       />
     </div>
   );
