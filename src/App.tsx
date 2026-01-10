@@ -55,6 +55,7 @@ const MediaPlanning = lazy(() => import("./pages/MediaPlanning"));
 const Documentation = lazy(() => import("./pages/Documentation"));
 const DocumentationPage = lazy(() => import("./pages/DocumentationPage"));
 const CreateWorkspace = lazy(() => import("./pages/CreateWorkspace"));
+const NotificationsPage = lazy(() => import("./pages/Notifications"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading fallback
@@ -103,6 +104,7 @@ const App = () => (
                   }
                 >
                   <Route path="/" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
+                  <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
                   <Route path="/crm" element={<Suspense fallback={<PageLoader />}><CRM /></Suspense>} />
                   <Route path="/crm/:section" element={<Suspense fallback={<PageLoader />}><CRM /></Suspense>} />
                   <Route path="/crm/companies/:id" element={<Suspense fallback={<PageLoader />}><CompanyDetail /></Suspense>} />
