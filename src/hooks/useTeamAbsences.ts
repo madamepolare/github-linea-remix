@@ -72,25 +72,45 @@ export function useCreateAbsence() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (absence: Partial<TeamAbsence>) => {
+    mutationFn: async (absence: Partial<TeamAbsence> & { user_id?: string; auto_approve?: boolean }) => {
       if (!activeWorkspace || !user) throw new Error("No workspace");
+
+      const targetUserId = absence.user_id || user.id;
+      const autoApprove = absence.auto_approve;
+
+      const insertData: Record<string, unknown> = {
+        absence_type: absence.absence_type,
+        start_date: absence.start_date,
+        end_date: absence.end_date,
+        start_half_day: absence.start_half_day,
+        end_half_day: absence.end_half_day,
+        reason: absence.reason,
+        workspace_id: activeWorkspace.id,
+        user_id: targetUserId,
+      };
+
+      // If admin creates for someone else with auto-approve, mark as approved directly
+      if (autoApprove) {
+        insertData.status = "approved";
+        insertData.approved_by = user.id;
+        insertData.approved_at = new Date().toISOString();
+      }
 
       const { data, error } = await (supabase
         .from("team_absences") as any)
-        .insert({
-          ...absence,
-          workspace_id: activeWorkspace.id,
-          user_id: user.id,
-        })
+        .insert(insertData)
         .select()
         .single();
 
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["team-absences"] });
-      toast({ title: "Demande d'absence envoyée" });
+      const message = variables.auto_approve 
+        ? "Absence créée et approuvée" 
+        : "Demande d'absence envoyée";
+      toast({ title: message });
     },
     onError: () => {
       toast({ title: "Erreur", description: "Impossible de créer la demande", variant: "destructive" });

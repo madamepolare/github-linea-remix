@@ -51,13 +51,15 @@ export function AbsencesTab() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [createOpen, setCreateOpen] = useState(false);
   const [tab, setTab] = useState("calendar");
-  const [newAbsence, setNewAbsence] = useState<Partial<TeamAbsence>>({
+  const [newAbsence, setNewAbsence] = useState<Partial<TeamAbsence> & { target_user_id?: string; auto_approve?: boolean }>({
     absence_type: "conge_paye",
     start_date: "",
     end_date: "",
     start_half_day: false,
     end_half_day: false,
     reason: "",
+    target_user_id: "",
+    auto_approve: false,
   });
   const [editingAbsence, setEditingAbsence] = useState<TeamAbsence | null>(null);
   const [deleteAbsenceId, setDeleteAbsenceId] = useState<string | null>(null);
@@ -75,6 +77,7 @@ export function AbsencesTab() {
 
   const pendingAbsences = absences?.filter((a) => a.status === "pending") || [];
   const myAbsences = absences?.filter((a) => a.user_id === user?.id) || [];
+  const allAbsences = absences || [];
 
   const memberMap = members?.reduce((acc, m) => {
     acc[m.user_id] = m;
@@ -95,7 +98,20 @@ export function AbsencesTab() {
 
   const handleCreate = async () => {
     if (!newAbsence.start_date || !newAbsence.end_date) return;
-    await createAbsence.mutateAsync(newAbsence);
+    
+    // If admin is creating for another user
+    const targetUserId = canApprove && newAbsence.target_user_id ? newAbsence.target_user_id : undefined;
+    
+    await createAbsence.mutateAsync({
+      absence_type: newAbsence.absence_type,
+      start_date: newAbsence.start_date,
+      end_date: newAbsence.end_date,
+      start_half_day: newAbsence.start_half_day,
+      end_half_day: newAbsence.end_half_day,
+      reason: newAbsence.reason,
+      user_id: targetUserId,
+      auto_approve: canApprove && newAbsence.auto_approve,
+    });
     setCreateOpen(false);
     setNewAbsence({
       absence_type: "conge_paye",
@@ -104,6 +120,8 @@ export function AbsencesTab() {
       start_half_day: false,
       end_half_day: false,
       reason: "",
+      target_user_id: "",
+      auto_approve: false,
     });
   };
 
@@ -146,10 +164,13 @@ export function AbsencesTab() {
               )}
             </TabsTrigger>
             <TabsTrigger value="my">Mes absences</TabsTrigger>
+            {canApprove && (
+              <TabsTrigger value="all">Toutes les absences</TabsTrigger>
+            )}
           </TabsList>
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Demander une absence
+            {canApprove ? "Créer une absence" : "Demander une absence"}
           </Button>
         </div>
 
@@ -345,15 +366,120 @@ export function AbsencesTab() {
             </div>
           )}
         </TabsContent>
+
+        {/* All absences tab for admins */}
+        {canApprove && (
+          <TabsContent value="all" className="mt-6">
+            {allAbsences.length === 0 ? (
+              <EmptyState
+                icon={CalendarOff}
+                title="Aucune absence"
+                description="Les absences de l'équipe apparaîtront ici."
+              />
+            ) : (
+              <div className="space-y-4">
+                {allAbsences.map((absence) => {
+                  const member = memberMap?.[absence.user_id];
+                  const initials = member?.profile?.full_name?.split(" ").map((n) => n[0]).join("") || "?";
+
+                  return (
+                    <Card key={absence.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={member?.profile?.avatar_url || undefined} />
+                              <AvatarFallback>{initials}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{member?.profile?.full_name}</p>
+                                <AbsenceStatusBadge status={absence.status} />
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {absenceTypeLabels[absence.absence_type]} • {format(parseISO(absence.start_date), "d MMM", { locale: fr })} - {format(parseISO(absence.end_date), "d MMM yyyy", { locale: fr })}
+                              </p>
+                              {absence.reason && (
+                                <p className="text-sm mt-1">{absence.reason}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {absence.status === "pending" && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => approveAbsence.mutate({ id: absence.id, action: "approve" })}
+                                >
+                                  <Check className="h-4 w-4 mr-1" />
+                                  Approuver
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => approveAbsence.mutate({ id: absence.id, action: "reject" })}
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Refuser
+                                </Button>
+                              </>
+                            )}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => setEditingAbsence(absence)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => setDeleteAbsenceId(absence.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Create Absence Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Demander une absence</DialogTitle>
+            <DialogTitle>{canApprove ? "Créer une absence" : "Demander une absence"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Admin can select a member */}
+            {canApprove && (
+              <div className="space-y-2">
+                <Label>Membre</Label>
+                <Select
+                  value={newAbsence.target_user_id || ""}
+                  onValueChange={(v) => setNewAbsence({ ...newAbsence, target_user_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Moi-même (par défaut)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Moi-même</SelectItem>
+                    {members?.filter(m => m.user_id !== user?.id).map((member) => (
+                      <SelectItem key={member.user_id} value={member.user_id}>
+                        {member.profile?.full_name || member.user_id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Type d'absence</Label>
               <Select
@@ -414,6 +540,17 @@ export function AbsencesTab() {
                 placeholder="Précisez le motif si nécessaire..."
               />
             </div>
+            {/* Admin can auto-approve */}
+            {canApprove && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="auto_approve"
+                  checked={newAbsence.auto_approve}
+                  onCheckedChange={(c) => setNewAbsence({ ...newAbsence, auto_approve: !!c })}
+                />
+                <Label htmlFor="auto_approve" className="text-sm">Approuver directement</Label>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
@@ -423,7 +560,7 @@ export function AbsencesTab() {
               onClick={handleCreate}
               disabled={!newAbsence.start_date || !newAbsence.end_date || createAbsence.isPending}
             >
-              Envoyer la demande
+              {canApprove && newAbsence.auto_approve ? "Créer et approuver" : (canApprove ? "Créer" : "Envoyer la demande")}
             </Button>
           </DialogFooter>
         </DialogContent>
