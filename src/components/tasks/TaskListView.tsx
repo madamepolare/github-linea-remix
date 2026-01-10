@@ -531,7 +531,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                   )}
                                 </div>
 
-                                {/* Comments bubble with pulse animation */}
+                                {/* Comments bubble with notification badge */}
                                 <div 
                                   className="flex justify-center"
                                   onClick={(e) => {
@@ -542,26 +542,26 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                 >
                                   <motion.div 
                                     className={cn(
-                                      "relative flex items-center gap-1 px-2 py-0.5 rounded-full transition-colors cursor-pointer hover:bg-primary/10",
-                                      commentCount > 0 ? "bg-muted" : "text-muted-foreground/50 hover:text-muted-foreground"
+                                      "relative flex items-center justify-center cursor-pointer transition-colors",
+                                      commentCount > 0 ? "text-foreground" : "text-muted-foreground/40 hover:text-muted-foreground"
                                     )}
-                                    animate={hasRecentComment ? { scale: [1, 1.1, 1] } : {}}
+                                    animate={hasRecentComment ? { scale: [1, 1.15, 1] } : {}}
                                     transition={{ repeat: hasRecentComment ? Infinity : 0, duration: 1.5 }}
                                   >
                                     <MessageCircle className={cn(
-                                      "h-3.5 w-3.5",
-                                      hasRecentComment && "text-primary"
+                                      "h-4 w-4",
+                                      hasRecentComment && "text-primary",
+                                      commentCount > 0 && !hasRecentComment && "text-muted-foreground"
                                     )} />
                                     {commentCount > 0 && (
                                       <span className={cn(
-                                        "text-2xs font-medium",
-                                        hasRecentComment ? "text-primary" : "text-muted-foreground"
+                                        "absolute -top-1.5 -right-1.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[10px] font-bold px-1",
+                                        hasRecentComment 
+                                          ? "bg-primary text-primary-foreground animate-pulse" 
+                                          : "bg-muted-foreground/80 text-background"
                                       )}>
                                         {commentCount}
                                       </span>
-                                    )}
-                                    {hasRecentComment && (
-                                      <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
                                     )}
                                   </motion.div>
                                 </div>
