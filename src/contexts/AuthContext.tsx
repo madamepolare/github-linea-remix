@@ -139,10 +139,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                setProfile(profileData);
                setWorkspaces(workspacesData);
 
-               // Ensure profile points to a visible workspace. If not, pick the first available one and persist it.
-               const activeExists = !!profileData?.active_workspace_id && workspacesData.some(w => w.id === profileData.active_workspace_id);
-               if (profileData && workspacesData.length > 0 && !activeExists) {
-                 setActiveWorkspaceInternal(workspacesData[0].id, session.user.id);
+               // Ensure profile points to a visible (non-hidden) workspace. If not, pick the first visible one and persist it.
+               const visibleWs = workspacesData.filter((w) => !w.is_hidden);
+               const activeExists =
+                 !!profileData?.active_workspace_id &&
+                 visibleWs.some((w) => w.id === profileData.active_workspace_id);
+               if (profileData && visibleWs.length > 0 && !activeExists) {
+                 setActiveWorkspaceInternal(visibleWs[0].id, session.user.id);
                }
 
                // Check for pending workspace switch (founder seamless switch)
@@ -192,10 +195,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
            setProfile(profileData);
            setWorkspaces(workspacesData);
 
-           // Ensure profile points to a visible workspace. If not, pick the first available one and persist it.
-           const activeExists = !!profileData?.active_workspace_id && workspacesData.some(w => w.id === profileData.active_workspace_id);
-           if (profileData && workspacesData.length > 0 && !activeExists) {
-             setActiveWorkspaceInternal(workspacesData[0].id, session.user.id);
+           // Ensure profile points to a visible (non-hidden) workspace. If not, pick the first visible one and persist it.
+           const visibleWs = workspacesData.filter((w) => !w.is_hidden);
+           const activeExists =
+             !!profileData?.active_workspace_id &&
+             visibleWs.some((w) => w.id === profileData.active_workspace_id);
+           if (profileData && visibleWs.length > 0 && !activeExists) {
+             setActiveWorkspaceInternal(visibleWs[0].id, session.user.id);
            }
 
            // Check for pending workspace switch on initial load too
@@ -256,9 +262,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setActiveWorkspaceInternal(workspaceId, user.id);
   };
 
-  const activeWorkspace = workspaces.find(
-    (w) => w.id === profile?.active_workspace_id
-  ) || workspaces[0] || null;
+  // Only consider non-hidden workspaces for auto-selection
+  const visibleWorkspaces = workspaces.filter((w) => !w.is_hidden);
+  const activeWorkspace =
+    workspaces.find((w) => w.id === profile?.active_workspace_id) ||
+    visibleWorkspaces[0] ||
+    null;
 
   return (
     <AuthContext.Provider
