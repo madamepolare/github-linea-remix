@@ -10,26 +10,34 @@ import {
   Euro,
   AlertTriangle,
   CheckCircle2,
-  BarChart3
+  BarChart3,
+  User,
+  Briefcase,
+  PenTool
 } from 'lucide-react';
 import { QuoteLine } from '@/types/quoteTypes';
-import { useSkills } from '@/hooks/useSkills';
+import { useQuoteTotalsWithCosts } from '@/hooks/useLineCostCalculation';
 
 interface QuoteMarginSummaryProps {
   lines: QuoteLine[];
 }
 
-interface LineMarginDetail {
-  line: QuoteLine;
-  revenue: number;
-  cost: number;
-  margin: number;
-  marginPercent: number;
-  estimatedDays: number;
-}
+const COST_SOURCE_LABELS = {
+  manual: { label: 'Manuel', icon: PenTool, color: 'text-slate-600' },
+  skill: { label: 'Compétence', icon: Briefcase, color: 'text-blue-600' },
+  member: { label: 'Membre', icon: User, color: 'text-purple-600' },
+  none: { label: '-', icon: null, color: 'text-muted-foreground' },
+};
 
 export function QuoteMarginSummary({ lines }: QuoteMarginSummaryProps) {
-  const { skills } = useSkills();
+  const {
+    subtotal,
+    totalHT,
+    totalPurchaseCost,
+    totalMargin,
+    totalMarginPercentage,
+    linesCosts,
+  } = useQuoteTotalsWithCosts(lines);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -39,63 +47,40 @@ export function QuoteMarginSummary({ lines }: QuoteMarginSummaryProps) {
     l => l.is_included && l.line_type !== 'discount' && l.line_type !== 'group'
   );
 
-  // Calculate margin details for each line
-  const lineDetails: LineMarginDetail[] = includedLines.map(line => {
-    let cost = 0;
+  // Build line details with cost info from hook
+  const lineDetails = includedLines.map(line => {
+    const costInfo = linesCosts.find(lc => lc.lineId === line.id);
+    
     let estimatedDays = 0;
-
-    // Determine estimated days
     if (line.unit === 'jour' || line.unit === 'jours') {
       estimatedDays = line.quantity || 0;
-    } else if ((line as any).estimated_days) {
-      estimatedDays = (line as any).estimated_days;
     }
-
-    // Calculate cost
-    if (line.purchase_price !== undefined && line.purchase_price > 0) {
-      // Manual purchase price takes priority
-      cost = line.purchase_price;
-    } else if ((line as any).skill_ids && Array.isArray((line as any).skill_ids) && estimatedDays > 0) {
-      // Calculate from skills
-      const lineSkillIds = (line as any).skill_ids as string[];
-      const lineSkills = skills.filter(s => lineSkillIds.includes(s.id));
-      const dailyCost = lineSkills.reduce((sum, skill) => sum + (skill.setting_value.cost_daily_rate || 0), 0);
-      cost = dailyCost * estimatedDays;
-    }
-
-    const revenue = line.amount || 0;
-    const margin = revenue - cost;
-    const marginPercent = revenue > 0 ? (margin / revenue) * 100 : (cost > 0 ? -100 : 0);
 
     return {
       line,
-      revenue,
-      cost,
-      margin,
-      marginPercent,
+      revenue: line.amount || 0,
+      cost: costInfo?.effectivePurchasePrice || 0,
+      margin: costInfo?.margin || 0,
+      marginPercent: costInfo?.marginPercentage || 0,
       estimatedDays,
+      costSource: costInfo?.costSource || 'none',
     };
   });
 
-  // Calculate totals
-  const totalRevenue = lineDetails.reduce((sum, d) => sum + d.revenue, 0);
-  const totalCost = lineDetails.reduce((sum, d) => sum + d.cost, 0);
-  const totalMargin = totalRevenue - totalCost;
-  const totalMarginPercent = totalRevenue > 0 ? (totalMargin / totalRevenue) * 100 : 0;
   const totalDays = lineDetails.reduce((sum, d) => sum + d.estimatedDays, 0);
-  const averageDailyRate = totalDays > 0 ? totalRevenue / totalDays : 0;
-  const averageDailyCost = totalDays > 0 ? totalCost / totalDays : 0;
+  const averageDailyRate = totalDays > 0 ? totalHT / totalDays : 0;
+  const averageDailyCost = totalDays > 0 ? totalPurchaseCost / totalDays : 0;
 
   // Lines with issues
-  const lowMarginLines = lineDetails.filter(d => d.marginPercent < 20 && d.marginPercent >= 0);
+  const lowMarginLines = lineDetails.filter(d => d.marginPercent < 20 && d.marginPercent >= 0 && d.cost > 0);
   const negativeMarginLines = lineDetails.filter(d => d.marginPercent < 0);
   const linesWithCost = lineDetails.filter(d => d.cost > 0);
 
   // Get margin status
   const getMarginStatus = () => {
-    if (totalMarginPercent < 0) return { label: 'Déficitaire', color: 'text-red-600', bg: 'bg-red-500', icon: TrendingDown };
-    if (totalMarginPercent < 20) return { label: 'Faible', color: 'text-amber-600', bg: 'bg-amber-500', icon: AlertTriangle };
-    if (totalMarginPercent < 40) return { label: 'Correcte', color: 'text-blue-600', bg: 'bg-blue-500', icon: TrendingUp };
+    if (totalMarginPercentage < 0) return { label: 'Déficitaire', color: 'text-red-600', bg: 'bg-red-500', icon: TrendingDown };
+    if (totalMarginPercentage < 20) return { label: 'Faible', color: 'text-amber-600', bg: 'bg-amber-500', icon: AlertTriangle };
+    if (totalMarginPercentage < 40) return { label: 'Correcte', color: 'text-blue-600', bg: 'bg-blue-500', icon: TrendingUp };
     return { label: 'Excellente', color: 'text-green-600', bg: 'bg-green-500', icon: CheckCircle2 };
   };
 
@@ -103,7 +88,7 @@ export function QuoteMarginSummary({ lines }: QuoteMarginSummaryProps) {
   const StatusIcon = marginStatus.icon;
 
   // Only show if there's at least some cost information
-  if (linesWithCost.length === 0 && totalRevenue === 0) {
+  if (linesWithCost.length === 0 && totalHT === 0) {
     return null;
   }
 
@@ -126,11 +111,11 @@ export function QuoteMarginSummary({ lines }: QuoteMarginSummaryProps) {
         {/* Main metrics */}
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center p-3 bg-muted/30 rounded-lg">
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalHT)}</div>
             <div className="text-xs text-muted-foreground">Total vendu HT</div>
           </div>
           <div className="text-center p-3 bg-muted/30 rounded-lg">
-            <div className="text-2xl font-bold text-amber-600">-{formatCurrency(totalCost)}</div>
+            <div className="text-2xl font-bold text-amber-600">-{formatCurrency(totalPurchaseCost)}</div>
             <div className="text-xs text-muted-foreground">Coût des ressources</div>
           </div>
           <div className="text-center p-3 bg-muted/30 rounded-lg">
@@ -146,11 +131,11 @@ export function QuoteMarginSummary({ lines }: QuoteMarginSummaryProps) {
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Taux de marge</span>
             <span className={`font-medium ${marginStatus.color}`}>
-              {totalMarginPercent.toFixed(1)}%
+              {totalMarginPercentage.toFixed(1)}%
             </span>
           </div>
           <Progress 
-            value={Math.max(0, Math.min(100, totalMarginPercent))} 
+            value={Math.max(0, Math.min(100, totalMarginPercentage))} 
             className="h-2"
           />
         </div>
@@ -193,36 +178,46 @@ export function QuoteMarginSummary({ lines }: QuoteMarginSummaryProps) {
                 Détail des coûts
               </div>
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                {linesWithCost.map((detail) => (
-                  <div 
-                    key={detail.line.id} 
-                    className="flex items-center justify-between text-sm py-1.5 px-2 bg-muted/20 rounded"
-                  >
-                    <span className="truncate flex-1 mr-2">
-                      {detail.line.phase_name || 'Ligne sans nom'}
-                      {detail.estimatedDays > 0 && (
-                        <span className="text-muted-foreground ml-1">
-                          ({detail.estimatedDays}j)
-                        </span>
-                      )}
-                    </span>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-muted-foreground">
-                        -{formatCurrency(detail.cost)}
+                {linesWithCost.map((detail) => {
+                  const sourceInfo = COST_SOURCE_LABELS[detail.costSource];
+                  const SourceIcon = sourceInfo.icon;
+                  return (
+                    <div 
+                      key={detail.line.id} 
+                      className="flex items-center justify-between text-sm py-1.5 px-2 bg-muted/20 rounded"
+                    >
+                      <span className="truncate flex-1 mr-2">
+                        {detail.line.phase_name || 'Ligne sans nom'}
+                        {detail.estimatedDays > 0 && (
+                          <span className="text-muted-foreground ml-1">
+                            ({detail.estimatedDays}j)
+                          </span>
+                        )}
                       </span>
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs ${
-                          detail.marginPercent >= 30 ? 'border-green-500 text-green-600' :
-                          detail.marginPercent >= 0 ? 'border-amber-500 text-amber-600' :
-                          'border-red-500 text-red-600'
-                        }`}
-                      >
-                        {detail.marginPercent.toFixed(0)}%
-                      </Badge>
+                      <div className="flex items-center gap-3 shrink-0">
+                        {SourceIcon && (
+                          <span className={`flex items-center gap-1 text-xs ${sourceInfo.color}`}>
+                            <SourceIcon className="h-3 w-3" />
+                            {sourceInfo.label}
+                          </span>
+                        )}
+                        <span className="text-muted-foreground">
+                          -{formatCurrency(detail.cost)}
+                        </span>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${
+                            detail.marginPercent >= 30 ? 'border-green-500 text-green-600' :
+                            detail.marginPercent >= 0 ? 'border-amber-500 text-amber-600' :
+                            'border-red-500 text-red-600'
+                          }`}
+                        >
+                          {detail.marginPercent.toFixed(0)}%
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </>
