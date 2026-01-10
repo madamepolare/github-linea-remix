@@ -26,6 +26,7 @@ const Projects = lazy(() => import("./pages/Projects"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const Commercial = lazy(() => import("./pages/Commercial"));
 const CommercialDocument = lazy(() => import("./pages/CommercialDocument"));
+const QuoteBuilder = lazy(() => import("./pages/QuoteBuilder"));
 const Tenders = lazy(() => import("./pages/Tenders"));
 const TenderDetail = lazy(() => import("./pages/TenderDetail"));
 const Documents = lazy(() => import("./pages/Documents"));
@@ -118,6 +119,8 @@ const App = () => (
                 <Route path="/commercial/contracts" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
                 <Route path="/commercial/proposals" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
                 <Route path="/commercial/:id" element={<Suspense fallback={<PageLoader />}><CommercialDocument /></Suspense>} />
+                <Route path="/commercial/quote/new" element={<Suspense fallback={<PageLoader />}><QuoteBuilder /></Suspense>} />
+                <Route path="/commercial/quote/:id" element={<Suspense fallback={<PageLoader />}><QuoteBuilder /></Suspense>} />
                 <Route path="/invoicing" element={<Suspense fallback={<PageLoader />}><Invoicing /></Suspense>} />
                 <Route path="/invoicing/:filter" element={<Suspense fallback={<PageLoader />}><Invoicing /></Suspense>} />
                 <Route path="/tenders" element={<Suspense fallback={<PageLoader />}><Tenders /></Suspense>} />

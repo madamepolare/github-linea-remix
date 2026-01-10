@@ -113,7 +113,7 @@ export function ProjectCommercialTab({ projectId, projectName }: ProjectCommerci
             className="pl-9"
           />
         </div>
-        <Button onClick={() => navigate("/commercial/new")}>
+        <Button onClick={() => navigate(`/commercial/quote/new?project=${projectId}`)}>
           <Plus className="h-4 w-4 mr-2" />
           Nouveau devis
         </Button>
@@ -130,7 +130,7 @@ export function ProjectCommercialTab({ projectId, projectName }: ProjectCommerci
             <p className="text-muted-foreground max-w-md mb-4">
               Créez votre premier devis ou contrat pour ce projet.
             </p>
-            <Button onClick={() => navigate("/commercial/new")}>
+            <Button onClick={() => navigate(`/commercial/quote/new?project=${projectId}`)}>
               <Plus className="h-4 w-4 mr-2" />
               Créer un devis
             </Button>
@@ -180,7 +180,7 @@ export function ProjectCommercialTab({ projectId, projectName }: ProjectCommerci
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => navigate(`/commercial/${doc.id}`)}>
+                      <DropdownMenuItem onClick={() => navigate(`/commercial/quote/${doc.id}`)}>
                         <Eye className="h-4 w-4 mr-2" />
                         Voir / Modifier
                       </DropdownMenuItem>

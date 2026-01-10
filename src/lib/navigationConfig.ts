@@ -111,7 +111,7 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
       { key: "proposals", label: "Propositions", href: "/commercial/proposals" },
     ],
     quickActions: [
-      { key: "create-document", label: "Nouveau document", event: "open-create-commercial" },
+      { key: "create-quote", label: "Nouveau devis", event: "navigate-to-quote-builder" },
     ],
   },
   documents: {
