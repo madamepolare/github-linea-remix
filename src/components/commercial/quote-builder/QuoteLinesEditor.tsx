@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -44,7 +45,9 @@ import {
   Calendar,
   Euro,
   Percent,
-  Grid3X3
+  Grid3X3,
+  Sparkles,
+  List
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, LINE_TYPE_LABELS, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
@@ -52,6 +55,8 @@ import { useQuoteTemplates } from '@/hooks/useQuoteTemplates';
 import { UNIT_OPTIONS, BILLING_TYPE_LABELS, BillingType } from '@/hooks/useQuoteLineTemplates';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AIQuoteGenerator } from './AIQuoteGenerator';
+import { AIDescriptionButton } from './AIDescriptionButton';
 
 interface QuoteLinesEditorProps {
   lines: QuoteLine[];
@@ -222,118 +227,153 @@ export function QuoteLinesEditor({
   const complementaryTemplates = phaseTemplates.filter(t => t.category === 'complementary' && t.is_active);
   const activePricingGrids = pricingGrids.filter(g => g.is_active && g.items?.length > 0);
 
+  // Get all pricing items for AI context
+  const allPricingItems = activePricingGrids.flatMap(grid => 
+    (grid.items || []).map((item: any) => ({
+      name: item.name,
+      unit_price: item.unit_price,
+      unit: item.unit
+    }))
+  );
+
   return (
     <div className="space-y-6">
-      {/* Add buttons */}
-      <div className="flex items-center gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-64">
-            {/* Free lines */}
-            <DropdownMenuItem onClick={() => addLine('service')}>
-              <Package className="h-4 w-4 mr-2" />
-              Ligne libre (Prestation)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLine('phase')}>
-              <FileText className="h-4 w-4 mr-2" />
-              Phase
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLine('option')}>
-              <Gift className="h-4 w-4 mr-2" />
-              Option
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLine('expense')}>
-              <Receipt className="h-4 w-4 mr-2" />
-              Frais
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLine('discount')}>
-              <MinusCircle className="h-4 w-4 mr-2" />
-              Remise
-            </DropdownMenuItem>
+      {/* Tabs for Manual vs AI */}
+      <Tabs defaultValue="manual" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="manual" className="gap-2">
+            <List className="h-4 w-4" />
+            Manuel
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-2">
+            <Sparkles className="h-4 w-4" />
+            Génération IA
+          </TabsTrigger>
+        </TabsList>
 
-            {/* Phase templates */}
-            {baseTemplates.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Phases de base
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
-                    {baseTemplates.map(template => (
-                      <DropdownMenuItem 
-                        key={template.id}
-                        onClick={() => addLineFromTemplate(template)}
-                      >
-                        <Badge variant="outline" className="mr-2 text-xs">{template.code}</Badge>
-                        {template.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              </>
-            )}
+        <TabsContent value="ai" className="mt-4">
+          <AIQuoteGenerator
+            document={document}
+            existingLines={lines}
+            onLinesGenerated={onLinesChange}
+            onDocumentChange={onDocumentChange}
+            pricingItems={allPricingItems}
+          />
+        </TabsContent>
 
-            {complementaryTemplates.length > 0 && (
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
+        <TabsContent value="manual" className="mt-4 space-y-4">
+          {/* Add buttons */}
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                {/* Free lines */}
+                <DropdownMenuItem onClick={() => addLine('service')}>
+                  <Package className="h-4 w-4 mr-2" />
+                  Ligne libre (Prestation)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => addLine('phase')}>
                   <FileText className="h-4 w-4 mr-2" />
-                  Phases complémentaires
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
-                  {complementaryTemplates.map(template => (
-                    <DropdownMenuItem 
-                      key={template.id}
-                      onClick={() => addLineFromTemplate(template)}
-                    >
-                      <Badge variant="outline" className="mr-2 text-xs">{template.code}</Badge>
-                      {template.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-            )}
+                  Phase
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => addLine('option')}>
+                  <Gift className="h-4 w-4 mr-2" />
+                  Option
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => addLine('expense')}>
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Frais
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => addLine('discount')}>
+                  <MinusCircle className="h-4 w-4 mr-2" />
+                  Remise
+                </DropdownMenuItem>
 
-            {/* Pricing grids */}
-            {activePricingGrids.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                {activePricingGrids.map(grid => (
-                  <DropdownMenuSub key={grid.id}>
+                {/* Phase templates */}
+                {baseTemplates.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Phases de base
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
+                        {baseTemplates.map(template => (
+                          <DropdownMenuItem 
+                            key={template.id}
+                            onClick={() => addLineFromTemplate(template)}
+                          >
+                            <Badge variant="outline" className="mr-2 text-xs">{template.code}</Badge>
+                            {template.name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </>
+                )}
+
+                {complementaryTemplates.length > 0 && (
+                  <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
-                      <Grid3X3 className="h-4 w-4 mr-2" />
-                      {grid.name}
+                      <FileText className="h-4 w-4 mr-2" />
+                      Phases complémentaires
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
-                      {grid.items.map((item: any, idx: number) => (
+                      {complementaryTemplates.map(template => (
                         <DropdownMenuItem 
-                          key={idx}
-                          onClick={() => addLineFromPricingGrid(item)}
+                          key={template.id}
+                          onClick={() => addLineFromTemplate(template)}
                         >
-                          <div className="flex flex-col">
-                            <span>{item.name}</span>
-                            {item.unit_price && (
-                              <span className="text-xs text-muted-foreground">
-                                {formatCurrency(item.unit_price)}
-                              </span>
-                            )}
-                          </div>
+                          <Badge variant="outline" className="mr-2 text-xs">{template.code}</Badge>
+                          {template.name}
                         </DropdownMenuItem>
                       ))}
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
-                ))}
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+                )}
+
+                {/* Pricing grids */}
+                {activePricingGrids.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    {activePricingGrids.map(grid => (
+                      <DropdownMenuSub key={grid.id}>
+                        <DropdownMenuSubTrigger>
+                          <Grid3X3 className="h-4 w-4 mr-2" />
+                          {grid.name}
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
+                          {grid.items.map((item: any, idx: number) => (
+                            <DropdownMenuItem 
+                              key={idx}
+                              onClick={() => addLineFromPricingGrid(item)}
+                            >
+                              <div className="flex flex-col">
+                                <span>{item.name}</span>
+                                {item.unit_price && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatCurrency(item.unit_price)}
+                                  </span>
+                                )}
+                              </div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                    ))}
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Lines list */}
       {lines.length === 0 ? (
@@ -456,7 +496,15 @@ export function QuoteLinesEditor({
                   <Separator />
                   <div className="p-4 space-y-4 bg-muted/30">
                     <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Description</Label>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs text-muted-foreground">Description</Label>
+                        <AIDescriptionButton
+                          line={line}
+                          projectType={document.project_type}
+                          projectDescription={document.description}
+                          onDescriptionGenerated={(desc) => updateLine(line.id, { phase_description: desc })}
+                        />
+                      </div>
                       <Textarea
                         value={line.phase_description || ''}
                         onChange={(e) => updateLine(line.id, { phase_description: e.target.value })}
