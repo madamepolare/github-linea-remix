@@ -54,19 +54,22 @@ Règles importantes:
 - Si le genre n'est pas explicite, essaie de le déduire du prénom (Jean=male, Marie=female, etc.)
 - Normalise les numéros de téléphone au format français si possible
 - Extrait le maximum d'informations disponibles
-- Ne limite PAS le nombre de contacts extraits`;
+- Ne limite PAS le nombre de contacts extraits
+
+IMPORTANT: Tu DOIS appeler la fonction extract_contacts_and_companies avec les données extraites.`;
 
   const userPrompt = `Fichier: ${fileName} (${fileType})
 ${totalChunks > 1 ? `\n[PARTIE ${chunkIndex + 1}/${totalChunks} du fichier - extrait TOUS les contacts de cette partie]` : ''}
-${existingCompanyNames.size > 0 ? `\nEntreprises déjà extraites des parties précédentes: ${Array.from(existingCompanyNames).join(', ')}` : ''}
+${existingCompanyNames.size > 0 ? `\nEntreprises déjà extraites des parties précédentes: ${Array.from(existingCompanyNames).slice(0, 20).join(', ')}${existingCompanyNames.size > 20 ? '...' : ''}` : ''}
 
 Contenu à analyser:
 ${chunk}
 
-Extrait TOUS les contacts et entreprises de ce fichier. N'en oublie aucun !`;
+Extrait TOUS les contacts et entreprises. N'en oublie aucun ! Appelle la fonction avec les résultats.`;
 
   console.log(`Parsing chunk ${chunkIndex + 1}/${totalChunks}, content length: ${chunk.length} chars`);
 
+  // Use gemini-2.5-flash which is more reliable with function calling
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -74,12 +77,12 @@ Extrait TOUS les contacts et entreprises de ce fichier. N'en oublie aucun !`;
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      max_tokens: 8192, // Increase max tokens for larger responses
+      max_tokens: 16384,
       tools: [
         {
           type: "function",
@@ -156,16 +159,38 @@ Extrait TOUS les contacts et entreprises de ce fichier. N'en oublie aucun !`;
 
   const data = await response.json();
   
+  // Try to get tool call first
   const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall) {
-    console.error("No tool call in response for chunk", chunkIndex + 1);
-    return { companies: [], contacts: [], summary: "" };
+  if (toolCall) {
+    try {
+      const result = JSON.parse(toolCall.function.arguments);
+      console.log(`Chunk ${chunkIndex + 1} extracted via tool call: ${result.companies?.length || 0} companies, ${result.contacts?.length || 0} contacts`);
+      return result;
+    } catch (parseError) {
+      console.error("Error parsing tool call arguments:", parseError);
+    }
   }
 
-  const result = JSON.parse(toolCall.function.arguments);
-  console.log(`Chunk ${chunkIndex + 1} extracted: ${result.companies?.length || 0} companies, ${result.contacts?.length || 0} contacts`);
-  
-  return result;
+  // Fallback: try to extract from content if no tool call
+  const content = data.choices?.[0]?.message?.content;
+  if (content) {
+    console.log(`No tool call for chunk ${chunkIndex + 1}, trying to parse content...`);
+    
+    // Try to find JSON in the content
+    const jsonMatch = content.match(/\{[\s\S]*"companies"[\s\S]*"contacts"[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        const result = JSON.parse(jsonMatch[0]);
+        console.log(`Chunk ${chunkIndex + 1} extracted from content: ${result.companies?.length || 0} companies, ${result.contacts?.length || 0} contacts`);
+        return result;
+      } catch (e) {
+        console.error("Error parsing JSON from content");
+      }
+    }
+  }
+
+  console.error(`No extractable data for chunk ${chunkIndex + 1}`);
+  return { companies: [], contacts: [], summary: "" };
 }
 
 serve(async (req) => {
