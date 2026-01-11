@@ -378,7 +378,10 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
               <div className="text-center">
                 <p className="font-medium">Analyse en cours...</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  L'IA extrait les contacts et entreprises de votre fichier
+                  L'IA extrait tous les contacts et entreprises de votre fichier
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Les fichiers volumineux sont traités par lots pour extraire tous les contacts
                 </p>
               </div>
               <div className="w-full max-w-sm space-y-2">
