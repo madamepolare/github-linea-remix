@@ -5,31 +5,35 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Split content into chunks to avoid token limits
-function splitContentIntoChunks(content: string, maxLinesPerChunk = 50): string[] {
-  const lines = content.split('\n');
+// Split content into chunks to avoid token limits AND function timeouts
+// Goal: minimize number of AI calls while keeping each chunk reasonably sized.
+function splitContentIntoChunks(content: string, maxLinesPerChunk = 250): string[] {
+  const lines = content.split("\n");
   const chunks: string[] = [];
-  
+
   // Find header line (first non-empty line that looks like a header)
-  let headerLine = '';
+  let headerLine = "";
   for (const line of lines) {
-    if (line.trim() && (line.includes(',') || line.includes('\t') || line.includes(';'))) {
+    if (line.trim() && (line.includes(",") || line.includes("\t") || line.includes(";"))) {
       headerLine = line;
       break;
     }
   }
-  
+
   for (let i = 0; i < lines.length; i += maxLinesPerChunk) {
     const chunkLines = lines.slice(i, i + maxLinesPerChunk);
-    // Add header to each chunk if not the first chunk and header exists
-    if (i > 0 && headerLine && !chunkLines[0]?.includes(headerLine)) {
-      chunks.push(headerLine + '\n' + chunkLines.join('\n'));
+
+    // Always ensure we have a header in every chunk except if already present
+    if (i > 0 && headerLine) {
+      const first = (chunkLines[0] || "").trim();
+      const looksLikeHeader = first === headerLine.trim();
+      chunks.push((looksLikeHeader ? "" : headerLine + "\n") + chunkLines.join("\n"));
     } else {
-      chunks.push(chunkLines.join('\n'));
+      chunks.push(chunkLines.join("\n"));
     }
   }
-  
-  return chunks.filter(chunk => chunk.trim().length > 0);
+
+  return chunks.filter((chunk) => chunk.trim().length > 0);
 }
 
 async function parseChunk(
@@ -215,8 +219,8 @@ serve(async (req) => {
 
     console.log(`Starting parse for file: ${fileName}, content length: ${fileContent.length} chars`);
 
-    // Split content into chunks for large files
-    const chunks = splitContentIntoChunks(fileContent, 100); // 100 lines per chunk
+    // Split content into fewer chunks for large files to reduce runtime
+    const chunks = splitContentIntoChunks(fileContent, 250); // ~250 lines per chunk
     console.log(`File split into ${chunks.length} chunk(s)`);
 
     const allCompanies: any[] = [];
@@ -252,10 +256,9 @@ serve(async (req) => {
           summaries.push(result.summary);
         }
 
-        // Small delay between chunks to avoid rate limiting
-        if (i < chunks.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
+        // No artificial delay here: we want to avoid edge function timeouts.
+        // If rate limiting happens, it is handled and the user can retry.
+        // (If needed we can add backoff later based on 429 responses.)
       } catch (chunkError) {
         if (chunkError instanceof Error) {
           if (chunkError.message === "RATE_LIMIT") {

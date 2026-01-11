@@ -199,7 +199,14 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
     } catch (err) {
       clearInterval(progressInterval);
       console.error("Error parsing file:", err);
-      setError(err instanceof Error ? err.message : "Erreur lors de l'analyse du fichier");
+      const msg = err instanceof Error ? err.message : "Erreur lors de l'analyse du fichier";
+      const friendly =
+        msg.toLowerCase().includes("failed to fetch") ||
+        msg.toLowerCase().includes("load failed") ||
+        msg.toLowerCase().includes("network")
+          ? "La requête a expiré (fichier volumineux). Réessayez : l'import est maintenant découpé en moins de lots, sinon importez par fichiers plus petits."
+          : msg;
+      setError(friendly);
       setStep("upload");
     }
   };
