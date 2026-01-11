@@ -41,6 +41,7 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { ContactDetailSheet } from "./ContactDetailSheet";
 import { EditContactDialog } from "./EditContactDialog";
+import { CRMDataQualityManager } from "./CRMDataQualityManager";
 
 export interface CRMContactsTableProps {
   search?: string;
@@ -126,6 +127,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                 className="pl-9"
               />
             </div>
+            <CRMDataQualityManager />
             {onImportContacts && (
               <Button variant="outline" size="sm" onClick={onImportContacts}>
                 <Upload className="h-4 w-4 mr-2" />
