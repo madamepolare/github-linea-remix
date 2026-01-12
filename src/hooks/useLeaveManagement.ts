@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import type { Json } from "@/integrations/supabase/types";
 
 // =====================================================
 // TYPES
@@ -131,22 +132,8 @@ export interface PayrollVariable {
   training_days: number;
   total_worked_hours: number;
   overtime_hours: number;
-  bonuses: unknown;
-  deductions: unknown;
-  notes: string | null;
-}
-  cp_taken: number;
-  cp_remaining: number;
-  rtt_taken: number;
-  rtt_remaining: number;
-  sick_days: number;
-  sick_days_without_pay: number;
-  unpaid_leave_days: number;
-  training_days: number;
-  total_worked_hours: number;
-  overtime_hours: number;
-  bonuses: { type: string; amount: number; description: string }[];
-  deductions: { type: string; amount: number; description: string }[];
+  bonuses: Json | null;
+  deductions: Json | null;
   notes: string | null;
 }
 
