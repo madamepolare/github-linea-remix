@@ -548,6 +548,7 @@ Cordialement`);
             }
           }}
           isLoading={isLoading}
+          getSpecialtyLabel={getSpecialtyLabel}
         />
       )}
 
