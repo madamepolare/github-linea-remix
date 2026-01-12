@@ -75,7 +75,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const [showQuickSwitch, setShowQuickSwitch] = useState(false);
   const [switchingWorkspace, setSwitchingWorkspace] = useState<string | null>(null);
   const [showSupportChat, setShowSupportChat] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  
   const canQuickSwitch = useCanQuickSwitch(user?.email);
   const { toast } = useToast();
   
@@ -208,56 +208,24 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   // Navigation Item Component
   const NavItemComponent = ({ item, onClick }: { item: NavItem; onClick?: () => void }) => {
     const active = isActive(item.href, item.moduleSlug);
-    const isHovered = hoveredItem === item.href;
 
     const content = (
-      <motion.div
+      <div
         className={cn(
-          "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
+          "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
           "cursor-pointer select-none",
           active
-            ? "text-foreground font-medium"
-            : "text-muted-foreground hover:text-foreground"
+            ? "bg-foreground text-background font-medium"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
-        onHoverStart={() => setHoveredItem(item.href)}
-        onHoverEnd={() => setHoveredItem(null)}
       >
-        {/* Background indicator - simple approach without layoutId to avoid gradient glitch */}
-        {active && (
-          <div className="absolute inset-0 rounded-xl -z-10 bg-foreground" />
-        )}
-        {!active && isHovered && (
-          <div className="absolute inset-0 rounded-xl -z-10 bg-muted/80" />
-        )}
-
-        {/* Icon with glow effect when active */}
-        <div className="relative">
-          <item.icon
-            className={cn(
-              "h-[18px] w-[18px] shrink-0 transition-all duration-200",
-              active 
-                ? "text-background" 
-                : isHovered 
-                  ? "text-foreground" 
-                  : "text-muted-foreground"
-            )}
-            strokeWidth={THIN_STROKE}
-          />
-          {active && (
-            <motion.div
-              className="absolute inset-0 blur-sm bg-background/30 rounded-full -z-10"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1.5 }}
-              transition={{ duration: 0.3 }}
-            />
-          )}
-        </div>
+        <item.icon
+          className="h-[18px] w-[18px] shrink-0"
+          strokeWidth={THIN_STROKE}
+        />
 
         {!collapsed && (
-          <span className={cn(
-            "flex-1 truncate text-left transition-colors duration-200",
-            active ? "text-background" : ""
-          )}>
+          <span className="flex-1 truncate text-left">
             {item.title}
           </span>
         )}
@@ -265,11 +233,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         {/* Extension indicator */}
         {!collapsed && item.isExtension && (
           <Sparkles className={cn(
-            "h-3 w-3 shrink-0 transition-colors",
+            "h-3 w-3 shrink-0",
             active ? "text-background/70" : "text-muted-foreground/50"
           )} strokeWidth={THIN_STROKE} />
         )}
-      </motion.div>
+      </div>
     );
 
     if (collapsed) {
