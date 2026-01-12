@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, Users, Video, Phone, MapPin, Clock, Check, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { Calendar, Users, Video, Phone, MapPin, Clock, Check, ChevronLeft, ChevronRight, Sparkles, Building2, UserPlus, Download, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
 import { useTaskSchedules } from "@/hooks/useTaskSchedules";
@@ -33,8 +33,15 @@ import { useProjects } from "@/hooks/useProjects";
 import { usePlanningSettings } from "@/hooks/usePlanningSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+
+// Event categories
+const EVENT_CATEGORIES = [
+  { value: "internal", label: "Point interne", icon: Users, color: "bg-blue-500", description: "Réunion d'équipe" },
+  { value: "client", label: "Réunion client", icon: Building2, color: "bg-green-500", description: "Avec le client" },
+  { value: "other", label: "Autre événement", icon: Calendar, color: "bg-purple-500", description: "Formation, workshop..." },
+];
 
 const MEETING_TYPES = [
   { value: "video", label: "Visioconférence", icon: Video, description: "Google Meet, Zoom..." },
@@ -47,6 +54,7 @@ const DURATION_OPTIONS = [
   { value: 60, label: "1 heure" },
   { value: 90, label: "1h30" },
   { value: 120, label: "2 heures" },
+  { value: 180, label: "3 heures" },
 ];
 
 interface EventSchedulerDialogProps {
@@ -75,6 +83,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [eventCategory, setEventCategory] = useState("internal");
   const [meetingType, setMeetingType] = useState("video");
   const [duration, setDuration] = useState(60);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
@@ -83,6 +92,28 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [inviteClientContacts, setInviteClientContacts] = useState<string[]>([]);
+  const [sendInvitations, setSendInvitations] = useState(true);
+
+  // Get client contacts when project is selected
+  const selectedProject = useMemo(() => 
+    projects?.find(p => p.id === selectedProjectId),
+    [projects, selectedProjectId]
+  );
+
+  const { data: clientContacts } = useQuery({
+    queryKey: ["client-contacts", selectedProject?.crm_company_id],
+    queryFn: async () => {
+      if (!selectedProject?.crm_company_id) return [];
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, name, email, role, avatar_url")
+        .eq("crm_company_id", selectedProject.crm_company_id);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedProject?.crm_company_id && eventCategory === "client",
+  });
 
   // Reset on open
   useEffect(() => {
@@ -90,6 +121,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
       setStep(1);
       setTitle("");
       setDescription("");
+      setEventCategory("internal");
       setMeetingType("video");
       setDuration(60);
       setSelectedMembers(user?.id ? [user.id] : []);
@@ -97,6 +129,8 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
       setLocation("");
       setSelectedSlot(null);
       setWeekOffset(0);
+      setInviteClientContacts([]);
+      setSendInvitations(true);
     }
   }, [open, user]);
 
@@ -199,8 +233,62 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
     setSelectedSlot(null); // Reset slot selection when members change
   };
 
+  // Generate ICS file content
+  const generateICS = (event: {
+    title: string;
+    description: string;
+    startDate: Date;
+    endDate: Date;
+    location: string;
+    attendees: { email: string; name: string }[];
+  }) => {
+    const formatDateForICS = (date: Date) => {
+      return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    };
+
+    const attendeesStr = event.attendees
+      .filter(a => a.email)
+      .map(a => `ATTENDEE;CN=${a.name}:mailto:${a.email}`)
+      .join("\r\n");
+
+    const icsContent = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Workspace//Event Scheduler//FR",
+      "CALSCALE:GREGORIAN",
+      "METHOD:REQUEST",
+      "BEGIN:VEVENT",
+      `DTSTART:${formatDateForICS(event.startDate)}`,
+      `DTEND:${formatDateForICS(event.endDate)}`,
+      `SUMMARY:${event.title}`,
+      `DESCRIPTION:${event.description.replace(/\n/g, "\\n")}`,
+      `LOCATION:${event.location}`,
+      `UID:${Date.now()}@workspace.app`,
+      `DTSTAMP:${formatDateForICS(new Date())}`,
+      attendeesStr,
+      "STATUS:CONFIRMED",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].filter(Boolean).join("\r\n");
+
+    return icsContent;
+  };
+
+  const downloadICS = (event: Parameters<typeof generateICS>[0]) => {
+    const ics = generateICS(event);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${event.title.replace(/[^a-zA-Z0-9]/g, "_")}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleSubmit = async () => {
-    if (!selectedSlot || !title.trim() || !selectedProjectId || !activeWorkspace) return;
+    if (!selectedSlot || !title.trim() || !activeWorkspace) return;
 
     setIsSubmitting(true);
 
@@ -211,39 +299,69 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
       );
       const endDatetime = addMinutes(startDatetime, duration);
 
-      // Build attendees list
-      const attendees = selectedMembers.map((userId) => {
+      // Build attendees list (team members)
+      const attendees: { user_id?: string; email: string; name: string; type?: string }[] = selectedMembers.map((userId) => {
         const member = members?.find((m) => m.user_id === userId);
         return {
           user_id: userId,
           email: member?.profile?.email || "",
           name: member?.profile?.full_name || "",
+          type: "team",
         };
       });
+
+      // Add client contacts if any
+      if (eventCategory === "client" && inviteClientContacts.length > 0) {
+        inviteClientContacts.forEach((contactId) => {
+          const contact = clientContacts?.find((c) => c.id === contactId);
+          if (contact) {
+            attendees.push({
+              email: contact.email || "",
+              name: contact.name,
+              type: "client",
+            });
+          }
+        });
+      }
+
+      const locationValue = meetingType === "video"
+        ? "Visioconférence"
+        : meetingType === "call"
+        ? "Appel téléphonique"
+        : location || "En personne";
 
       // Create the event
       const { error } = await supabase.from("project_calendar_events").insert({
         workspace_id: activeWorkspace.id,
-        project_id: selectedProjectId,
+        project_id: selectedProjectId || null,
         title,
         description: description || null,
-        event_type: "meeting",
+        event_type: eventCategory === "internal" ? "internal_meeting" : eventCategory === "client" ? "client_meeting" : "other",
         start_datetime: startDatetime.toISOString(),
         end_datetime: endDatetime.toISOString(),
-        location:
-          meetingType === "video"
-            ? "Visioconférence"
-            : meetingType === "call"
-            ? "Appel téléphonique"
-            : location || null,
+        location: locationValue,
         attendees,
       });
 
       if (error) throw error;
 
+      // Download ICS if client contacts are invited
+      if (sendInvitations && (inviteClientContacts.length > 0 || eventCategory !== "internal")) {
+        downloadICS({
+          title,
+          description: description || "",
+          startDate: startDatetime,
+          endDate: endDatetime,
+          location: locationValue,
+          attendees,
+        });
+        toast.success("Réunion créée ! Fichier ICS téléchargé pour envoyer les invitations.");
+      } else {
+        toast.success("Réunion planifiée avec succès !");
+      }
+
       queryClient.invalidateQueries({ queryKey: ["workspace-events"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
-      toast.success("Réunion planifiée avec succès !");
       onOpenChange(false);
     } catch (error: any) {
       toast.error("Erreur: " + error.message);
@@ -256,6 +374,12 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
     const startH = slot.startHour.toString().padStart(2, "0");
     const endH = slot.endHour.toString().padStart(2, "0");
     return `${startH}:00 - ${endH}:00`;
+  };
+
+  const toggleClientContact = (contactId: string) => {
+    setInviteClientContacts((prev) =>
+      prev.includes(contactId) ? prev.filter((id) => id !== contactId) : [...prev, contactId]
+    );
   };
 
   return (
@@ -299,6 +423,32 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
             {/* Step 1: Basic info + participants */}
             {step === 1 && (
               <div className="space-y-4">
+                {/* Event Category */}
+                <div className="space-y-2">
+                  <Label>Type d'événement</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {EVENT_CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.value}
+                        onClick={() => {
+                          setEventCategory(cat.value);
+                          setInviteClientContacts([]);
+                        }}
+                        className={cn(
+                          "p-3 rounded-lg border text-left transition-all",
+                          eventCategory === cat.value
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:border-primary/50"
+                        )}
+                      >
+                        <div className={cn("w-2 h-2 rounded-full mb-2", cat.color)} />
+                        <div className="text-sm font-medium">{cat.label}</div>
+                        <div className="text-xs text-muted-foreground">{cat.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label>Titre de la réunion *</Label>
                   <Input
@@ -310,12 +460,13 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Projet associé *</Label>
+                    <Label>Projet associé {eventCategory === "client" ? "*" : "(optionnel)"}</Label>
                     <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Choisir un projet" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="">Aucun projet</SelectItem>
                         {projects?.map((project) => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.name}
@@ -409,6 +560,76 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
                     ))}
                   </div>
                 </div>
+
+                {/* Client contacts invitation - only for client meetings with a project */}
+                {eventCategory === "client" && selectedProject?.crm_company_id && (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <UserPlus className="h-4 w-4" />
+                      Inviter des contacts client
+                      {selectedProject.crm_company?.name && (
+                        <Badge variant="secondary" className="text-xs">
+                          {selectedProject.crm_company.name}
+                        </Badge>
+                      )}
+                    </Label>
+                    {clientContacts && clientContacts.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2 max-h-32 overflow-auto p-2 border rounded-lg border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-800">
+                        {clientContacts.map((contact) => (
+                          <label
+                            key={contact.id}
+                            className={cn(
+                              "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                              inviteClientContacts.includes(contact.id)
+                                ? "bg-green-100 dark:bg-green-900/30"
+                                : "hover:bg-green-100/50 dark:hover:bg-green-900/20"
+                            )}
+                          >
+                            <Checkbox
+                              checked={inviteClientContacts.includes(contact.id)}
+                              onCheckedChange={() => toggleClientContact(contact.id)}
+                            />
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={contact.avatar_url || ""} />
+                              <AvatarFallback className="text-[10px] bg-green-200 text-green-800">
+                                {contact.name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm truncate block">{contact.name}</span>
+                              {contact.email && (
+                                <span className="text-xs text-muted-foreground truncate block">{contact.email}</span>
+                              )}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground p-3 border rounded-lg border-dashed">
+                        Aucun contact trouvé pour ce client.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Send invitations checkbox */}
+                {(inviteClientContacts.length > 0 || eventCategory !== "internal") && (
+                  <label className="flex items-center gap-2 p-3 rounded-lg border bg-muted/30 cursor-pointer">
+                    <Checkbox
+                      checked={sendInvitations}
+                      onCheckedChange={(checked) => setSendInvitations(!!checked)}
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        <Download className="h-4 w-4" />
+                        Télécharger le fichier ICS
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Pour envoyer les invitations via votre calendrier (Outlook, Google Calendar...)
+                      </div>
+                    </div>
+                  </label>
+                )}
 
                 <div className="space-y-2">
                   <Label>Description (optionnel)</Label>
@@ -511,6 +732,21 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
             {step === 3 && selectedSlot && (
               <div className="space-y-4">
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                  {/* Event category badge */}
+                  <div className="flex items-center gap-2">
+                    <Badge className={cn(
+                      "text-white",
+                      eventCategory === "internal" && "bg-blue-500",
+                      eventCategory === "client" && "bg-green-500",
+                      eventCategory === "other" && "bg-purple-500"
+                    )}>
+                      {EVENT_CATEGORIES.find(c => c.value === eventCategory)?.label}
+                    </Badge>
+                    {selectedProject && (
+                      <Badge variant="outline">{selectedProject.name}</Badge>
+                    )}
+                  </div>
+
                   <h4 className="font-medium">{title}</h4>
                   
                   <div className="flex items-center gap-2 text-sm">
@@ -536,6 +772,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
                     </span>
                   </div>
                   
+                  {/* Team participants */}
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <div className="flex -space-x-1">
@@ -552,9 +789,40 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
                       })}
                     </div>
                     <span className="text-sm text-muted-foreground">
-                      {selectedMembers.length} participants
+                      {selectedMembers.length} membre{selectedMembers.length > 1 ? "s" : ""}
                     </span>
                   </div>
+
+                  {/* Client contacts */}
+                  {inviteClientContacts.length > 0 && (
+                    <div className="flex items-center gap-2 border-t pt-2">
+                      <Building2 className="h-4 w-4 text-green-600" />
+                      <div className="flex -space-x-1">
+                        {inviteClientContacts.map((contactId) => {
+                          const contact = clientContacts?.find((c) => c.id === contactId);
+                          return (
+                            <Avatar key={contactId} className="h-6 w-6 border-2 border-background">
+                              <AvatarImage src={contact?.avatar_url || ""} />
+                              <AvatarFallback className="text-[10px] bg-green-100 text-green-800">
+                                {(contact?.name || "?").charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                          );
+                        })}
+                      </div>
+                      <span className="text-sm text-green-600">
+                        {inviteClientContacts.length} contact{inviteClientContacts.length > 1 ? "s" : ""} client
+                      </span>
+                    </div>
+                  )}
+
+                  {/* ICS download info */}
+                  {sendInvitations && (inviteClientContacts.length > 0 || eventCategory !== "internal") && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                      <Mail className="h-4 w-4" />
+                      <span>Un fichier ICS sera téléchargé pour envoyer les invitations</span>
+                    </div>
+                  )}
 
                   {description && (
                     <p className="text-sm text-muted-foreground border-t pt-2 mt-2">
@@ -577,7 +845,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
           {step === 1 && (
             <Button
               onClick={() => setStep(2)}
-              disabled={!title.trim() || !selectedProjectId || selectedMembers.length === 0}
+              disabled={!title.trim() || selectedMembers.length === 0 || (eventCategory === "client" && !selectedProjectId)}
             >
               Trouver un créneau
             </Button>
