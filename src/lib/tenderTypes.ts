@@ -84,18 +84,25 @@ export function mapStatusToPipeline(status: TenderStatus): PipelineStatus {
 }
 
 // Procedure Types
-export type ProcedureType = 'ouvert' | 'restreint' | 'adapte' | 'mapa' | 'concours' | 'dialogue' | 'partenariat' | 'ppp' | 'conception_realisation' | 'autre';
+export type ProcedureType = 'ouvert' | 'restreint' | 'adapte' | 'mapa' | 'concours' | 'concours_restreint' | 'concours_ouvert' | 'dialogue' | 'dialogue_competitif' | 'partenariat' | 'partenariat_innovation' | 'ppp' | 'conception_realisation' | 'negociee' | 'appel_offres_ouvert' | 'appel_offres_restreint' | 'autre';
 
 export const PROCEDURE_TYPE_LABELS: Record<ProcedureType, string> = {
   ouvert: 'Appel d\'offres ouvert',
   restreint: 'Appel d\'offres restreint',
+  appel_offres_ouvert: 'AOO',
+  appel_offres_restreint: 'AOR',
   adapte: 'Procédure adaptée',
   mapa: 'MAPA',
   concours: 'Concours',
+  concours_restreint: 'Concours restreint',
+  concours_ouvert: 'Concours ouvert',
   dialogue: 'Dialogue compétitif',
+  dialogue_competitif: 'Dialogue compétitif',
   partenariat: 'Partenariat d\'innovation',
+  partenariat_innovation: 'Partenariat d\'innovation',
   ppp: 'Partenariat Public-Privé',
   conception_realisation: 'Conception-Réalisation',
+  negociee: 'Procédure négociée',
   autre: 'Autre',
 };
 

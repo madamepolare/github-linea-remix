@@ -144,7 +144,8 @@ export function TenderDocumentsTab({ tenderId }: TenderDocumentsTabProps) {
     setIsAskingAI(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('analyze-tender-documents', {
+      // Use the dedicated ask-dce-question function
+      const { data, error } = await supabase.functions.invoke('ask-dce-question', {
         body: {
           tenderId,
           question: userMessage.content,
@@ -164,6 +165,7 @@ export function TenderDocumentsTab({ tenderId }: TenderDocumentsTabProps) {
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error asking AI:', error);
+      toast.error("Erreur lors de l'analyse");
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         type: "assistant",

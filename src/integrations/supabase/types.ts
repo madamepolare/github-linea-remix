@@ -8095,6 +8095,7 @@ export type Database = {
           site_visit_contact_name: string | null
           site_visit_contact_phone: string | null
           site_visit_date: string | null
+          site_visit_notes: string | null
           site_visit_required: boolean | null
           site_visit_secondary_contact: Json | null
           source_contact_email: string | null
@@ -8162,6 +8163,7 @@ export type Database = {
           site_visit_contact_name?: string | null
           site_visit_contact_phone?: string | null
           site_visit_date?: string | null
+          site_visit_notes?: string | null
           site_visit_required?: boolean | null
           site_visit_secondary_contact?: Json | null
           source_contact_email?: string | null
@@ -8229,6 +8231,7 @@ export type Database = {
           site_visit_contact_name?: string | null
           site_visit_contact_phone?: string | null
           site_visit_date?: string | null
+          site_visit_notes?: string | null
           site_visit_required?: boolean | null
           site_visit_secondary_contact?: Json | null
           source_contact_email?: string | null

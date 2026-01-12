@@ -443,18 +443,11 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 grid-cols-3">
+              <div className="grid gap-4 grid-cols-2">
                 <div className="text-center p-3 bg-muted/50 rounded-lg">
                   <Euro className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
                   <p className="text-lg font-bold">{formatBudget(tender.estimated_budget)}</p>
                   <p className="text-xs text-muted-foreground">Budget HT</p>
-                </div>
-                <div className="text-center p-3 bg-muted/50 rounded-lg">
-                  <Ruler className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-                  <p className="text-lg font-bold">
-                    {tender.surface_area ? `${tender.surface_area.toLocaleString()}` : "—"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">m² SDP</p>
                 </div>
                 <div className="text-center p-3 bg-muted/50 rounded-lg">
                   <Hash className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
@@ -557,7 +550,7 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
               {(tender.site_visit_required || tender.site_visit_date) && (
                 <div className={cn(
                   "flex items-start gap-3 p-3 rounded-lg border",
-                  tender.site_visit_required ? "bg-amber-50 border-amber-200" : "bg-muted/50"
+                  tender.site_visit_required ? "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800" : "bg-muted/50"
                 )}>
                   <MapPin className="h-5 w-5 text-amber-600 shrink-0" />
                   <div className="flex-1">
@@ -572,6 +565,12 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
                         ? format(new Date(tender.site_visit_date), "d MMMM yyyy 'à' HH:mm", { locale: fr })
                         : "Date à définir"}
                     </p>
+                    {/* Site visit notes */}
+                    {extendedTender.site_visit_notes && (
+                      <p className="text-sm text-amber-700 dark:text-amber-400 mt-1 italic">
+                        📝 {extendedTender.site_visit_notes}
+                      </p>
+                    )}
                     {(extendedTender.site_visit_contact_name || extendedTender.site_visit_contact_phone) && (
                       <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
                         {extendedTender.site_visit_contact_name && (
