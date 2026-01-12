@@ -222,24 +222,13 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         onHoverStart={() => setHoveredItem(item.href)}
         onHoverEnd={() => setHoveredItem(null)}
       >
-        {/* Background indicator */}
-        <AnimatePresence>
-          {(active || isHovered) && (
-            <motion.div
-              layoutId="sidebar-nav-bg"
-              className={cn(
-                "absolute inset-0 rounded-xl -z-10",
-                active 
-                  ? "bg-foreground" 
-                  : "bg-muted/80"
-              )}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.15, ease: "easeOut" }}
-            />
-          )}
-        </AnimatePresence>
+        {/* Background indicator - simple approach without layoutId to avoid gradient glitch */}
+        {active && (
+          <div className="absolute inset-0 rounded-xl -z-10 bg-foreground" />
+        )}
+        {!active && isHovered && (
+          <div className="absolute inset-0 rounded-xl -z-10 bg-muted/80" />
+        )}
 
         {/* Icon with glow effect when active */}
         <div className="relative">
