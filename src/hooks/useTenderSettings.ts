@@ -97,8 +97,10 @@ const DEFAULT_LOT_DOMAINS: TenderLotDomainTemplate[] = [
 const DEFAULT_PIPELINE_COLUMNS: TenderPipelineColumn[] = [
   { id: 'a_approuver', name: 'À approuver', color: '#f59e0b', is_visible: true, sort_order: 0 },
   { id: 'en_cours', name: 'En cours', color: '#3b82f6', is_visible: true, sort_order: 1 },
-  { id: 'deposes', name: 'Déposés', color: '#10b981', is_visible: true, sort_order: 2 },
-  { id: 'archives', name: 'Archivés', color: '#6b7280', is_visible: true, sort_order: 3 },
+  { id: 'deposes', name: 'Déposés', color: '#a855f7', is_visible: true, sort_order: 2 },
+  { id: 'gagnes', name: 'Gagnés', color: '#10b981', is_visible: true, sort_order: 3 },
+  { id: 'perdus', name: 'Perdus', color: '#ef4444', is_visible: true, sort_order: 4 },
+  { id: 'archives', name: 'Archivés', color: '#6b7280', is_visible: true, sort_order: 5 },
 ];
 
 const DEFAULT_TENDER_SETTINGS: TenderSettings = {

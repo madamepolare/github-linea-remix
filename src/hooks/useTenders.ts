@@ -255,11 +255,14 @@ export function useTenders() {
     aApprouver: tenders.filter(t => t.pipeline_status === 'a_approuver' || !t.pipeline_status).length,
     enCours: tenders.filter(t => t.pipeline_status === 'en_cours').length,
     deposes: tenders.filter(t => t.pipeline_status === 'deposes').length,
+    gagnes: tenders.filter(t => t.pipeline_status === 'gagnes').length,
+    perdus: tenders.filter(t => t.pipeline_status === 'perdus').length,
     archives: tenders.filter(t => t.pipeline_status === 'archives').length,
-    gagnes: tenders.filter(t => t.status === 'gagne').length,
-    tauxReussite: tenders.filter(t => t.status === 'depose' || t.status === 'gagne' || t.status === 'perdu').length > 0
-      ? Math.round((tenders.filter(t => t.status === 'gagne').length / tenders.filter(t => t.status === 'depose' || t.status === 'gagne' || t.status === 'perdu').length) * 100)
-      : 0,
+    tauxReussite: (() => {
+      const totalResults = tenders.filter(t => t.pipeline_status === 'gagnes' || t.pipeline_status === 'perdus').length;
+      if (totalResults === 0) return 0;
+      return Math.round((tenders.filter(t => t.pipeline_status === 'gagnes').length / totalResults) * 100);
+    })(),
   };
 
   return {
