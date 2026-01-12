@@ -97,7 +97,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
 
   // Get client contacts when project is selected
   const selectedProject = useMemo(() => 
-    projects?.find(p => p.id === selectedProjectId),
+    selectedProjectId && selectedProjectId !== "__none__" ? projects?.find(p => p.id === selectedProjectId) : null,
     [projects, selectedProjectId]
   );
 
@@ -333,7 +333,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
       // Create the event
       const { error } = await supabase.from("project_calendar_events").insert({
         workspace_id: activeWorkspace.id,
-        project_id: selectedProjectId || null,
+        project_id: selectedProjectId && selectedProjectId !== "__none__" ? selectedProjectId : null,
         title,
         description: description || null,
         event_type: eventCategory === "internal" ? "internal_meeting" : eventCategory === "client" ? "client_meeting" : "other",
@@ -466,7 +466,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
                         <SelectValue placeholder="Choisir un projet" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Aucun projet</SelectItem>
+                        <SelectItem value="__none__">Aucun projet</SelectItem>
                         {projects?.map((project) => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.name}
@@ -845,7 +845,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
           {step === 1 && (
             <Button
               onClick={() => setStep(2)}
-              disabled={!title.trim() || selectedMembers.length === 0 || (eventCategory === "client" && !selectedProjectId)}
+              disabled={!title.trim() || selectedMembers.length === 0 || (eventCategory === "client" && (!selectedProjectId || selectedProjectId === "__none__"))}
             >
               Trouver un créneau
             </Button>
