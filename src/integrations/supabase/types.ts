@@ -8009,6 +8009,7 @@ export type Database = {
           dce_delivery_duration_months: number | null
           dce_link: string | null
           description: string | null
+          discipline_slug: string | null
           estimated_budget: number | null
           go_decision_by: string | null
           go_decision_date: string | null
@@ -8075,6 +8076,7 @@ export type Database = {
           dce_delivery_duration_months?: number | null
           dce_link?: string | null
           description?: string | null
+          discipline_slug?: string | null
           estimated_budget?: number | null
           go_decision_by?: string | null
           go_decision_date?: string | null
@@ -8141,6 +8143,7 @@ export type Database = {
           dce_delivery_duration_months?: number | null
           dce_link?: string | null
           description?: string | null
+          discipline_slug?: string | null
           estimated_budget?: number | null
           go_decision_by?: string | null
           go_decision_date?: string | null

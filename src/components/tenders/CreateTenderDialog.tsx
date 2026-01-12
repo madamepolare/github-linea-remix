@@ -51,16 +51,17 @@ import {
   PROCEDURE_TYPE_LABELS, 
   SUBMISSION_TYPE_LABELS,
   CLIENT_TYPES,
-  type TenderType,
   type SubmissionType,
   type CriterionType,
 } from "@/lib/tenderTypes";
-import { TenderTypeSelector } from "./TenderTypeSelector";
+import { type DisciplineSlug } from "@/lib/tenderDisciplineConfig";
+import { DisciplineTenderSelector } from "./DisciplineTenderSelector";
 import { MOASelector } from "./MOASelector";
 import { CriteriaWeightEditor, type CriterionItem } from "./CriteriaWeightEditor";
 import { RequiredTeamEditor, type RequiredTeamItem } from "./RequiredTeamEditor";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
+import { useDisciplineConfig } from "@/hooks/useTenderDisciplineConfig";
 
 interface SiteVisitSlot {
   date: string;
@@ -71,7 +72,7 @@ interface SiteVisitSlot {
 interface ExtractedInfo {
   title?: string;
   reference?: string;
-  tender_type?: TenderType;
+  discipline_slug?: DisciplineSlug;
   submission_type?: SubmissionType;
   client_name?: string;
   client_type?: string;
@@ -118,7 +119,7 @@ interface CreateTenderDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Step = 'type' | 'upload' | 'form';
+type Step = 'discipline' | 'upload' | 'form';
 
 export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogProps) {
   const navigate = useNavigate();
@@ -127,10 +128,13 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
   const { data: members } = useTeamMembers();
   
   // Step management
-  const [step, setStep] = useState<Step>('type');
+  const [step, setStep] = useState<Step>('discipline');
   
-  // Type selection
-  const [tenderType, setTenderType] = useState<TenderType>('architecture');
+  // Discipline selection
+  const [disciplineSlug, setDisciplineSlug] = useState<DisciplineSlug>('architecture');
+  
+  // Get discipline config for dynamic labels
+  const { config: disciplineConfig } = useDisciplineConfig(disciplineSlug);
   
   // Upload state
   const [isDragging, setIsDragging] = useState(false);
@@ -141,7 +145,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
   
   // Form state (pre-filled by AI)
   const [formData, setFormData] = useState<ExtractedInfo>({
-    tender_type: 'architecture',
+    discipline_slug: 'architecture',
     submission_type: 'candidature_offre',
     criteria: [],
     required_team: [],
@@ -367,7 +371,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       setAnalysisProgress("Analyse IA en cours... Lecture des documents PDF");
 
       const { data, error } = await supabase.functions.invoke('analyze-dce-before-creation', {
-        body: { files: filesData, tender_type: tenderType }
+        body: { files: filesData, discipline_slug: disciplineSlug }
       });
 
       clearInterval(progressInterval);
@@ -418,7 +422,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         
         setFormData({
           ...extracted,
-          tender_type: tenderType,
+          discipline_slug: disciplineSlug,
           submission_type: extracted.submission_type || 'candidature_offre',
           criteria: extracted.criteria || [],
           required_team: extracted.required_team || [],
@@ -431,7 +435,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       } else {
         setFormData({ 
           title: "Nouvel appel d'offre",
-          tender_type: tenderType,
+          discipline_slug: disciplineSlug,
           submission_type: 'candidature_offre',
           criteria: [],
           required_team: [],
@@ -446,7 +450,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       toast.error("Erreur lors de l'analyse IA - formulaire vierge");
       setFormData({ 
         title: "",
-        tender_type: tenderType,
+        discipline_slug: disciplineSlug,
         submission_type: 'candidature_offre',
         criteria: [],
         required_team: [],
@@ -465,7 +469,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
   const handleSkipAnalysis = () => {
     setFormData({ 
       title: "",
-      tender_type: tenderType,
+      discipline_slug: disciplineSlug,
       submission_type: 'candidature_offre',
       criteria: [],
       required_team: [],
@@ -492,7 +496,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         title: formData.title,
         status: 'en_analyse',
         pipeline_status: 'a_approuver',
-        tender_type: formData.tender_type || 'architecture',
+        tender_type: (formData.discipline_slug === 'scenographie' ? 'scenographie' : 'architecture') as any,
         submission_type: formData.submission_type || 'candidature_offre',
         client_name: formData.client_name || undefined,
         client_type: formData.client_type || undefined,
@@ -532,11 +536,11 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
 
   // Reset dialog state
   const handleClose = () => {
-    setStep('type');
-    setTenderType('architecture');
+    setStep('discipline');
+    setDisciplineSlug('architecture');
     setUploadedFiles([]);
     setFormData({
-      tender_type: 'architecture',
+      discipline_slug: 'architecture',
       submission_type: 'candidature_offre',
       criteria: [],
       required_team: [],
@@ -553,7 +557,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
 
   const goBack = () => {
     if (step === 'form') setStep('upload');
-    else if (step === 'upload') setStep('type');
+    else if (step === 'upload') setStep('discipline');
   };
 
   return (
@@ -561,7 +565,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {step === 'type' && (
+            {step === 'discipline' && (
               <>
                 <Sparkles className="h-5 w-5 text-primary" />
                 Nouvel appel d'offre
@@ -581,17 +585,17 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
             )}
           </DialogTitle>
           <DialogDescription>
-            {step === 'type' && "Choisissez le type d'appel d'offre"}
+            {step === 'discipline' && "Choisissez la discipline de l'appel d'offre"}
             {step === 'upload' && "Déposez vos documents DCE et l'IA extraira automatiquement les informations"}
             {step === 'form' && "Vérifiez et complétez les informations avant de créer l'appel d'offre"}
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
-          {/* Step 1: Type Selection */}
-          {step === 'type' && (
+          {/* Step 1: Discipline Selection */}
+          {step === 'discipline' && (
             <div className="space-y-6">
-              <TenderTypeSelector value={tenderType} onChange={setTenderType} />
+              <DisciplineTenderSelector value={disciplineSlug} onChange={setDisciplineSlug} />
               
               <div className="flex justify-end">
                 <Button onClick={() => setStep('upload')}>
