@@ -36,6 +36,180 @@ function splitContentIntoChunks(content: string, maxLinesPerChunk = 250): string
   return chunks.filter((chunk) => chunk.trim().length > 0);
 }
 
+function normalizeHeaderKey(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, "_");
+}
+
+function detectDelimiter(headerLine: string): string {
+  const counts = {
+    "\t": (headerLine.match(/\t/g) || []).length,
+    ";": (headerLine.match(/;/g) || []).length,
+    ",": (headerLine.match(/,/g) || []).length,
+  };
+  return (Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ";");
+}
+
+function splitDelimitedLine(line: string, delimiter: string): string[] {
+  // Simple CSV/TSV splitter with quotes support
+  const out: string[] = [];
+  let cur = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+
+    if (ch === '"') {
+      // escaped quote ""
+      const next = line[i + 1];
+      if (inQuotes && next === '"') {
+        cur += '"';
+        i++;
+        continue;
+      }
+      inQuotes = !inQuotes;
+      continue;
+    }
+
+    if (!inQuotes && ch === delimiter) {
+      out.push(cur.trim());
+      cur = "";
+      continue;
+    }
+
+    cur += ch;
+  }
+  out.push(cur.trim());
+  return out;
+}
+
+function pickFirstNonEmpty(row: string[], headerIndex: Record<string, number>, keys: string[]): string {
+  for (const key of keys) {
+    const idx = headerIndex[key];
+    if (typeof idx === "number") {
+      const v = (row[idx] ?? "").trim();
+      if (v) return v;
+    }
+  }
+  return "";
+}
+
+function parseCRMTabularExport(fileContent: string): { companies: any[]; contacts: any[]; summary: string } | null {
+  const rawLines = fileContent
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .filter((l) => l.trim().length > 0);
+
+  if (rawLines.length < 2) return null;
+
+  const headerLine = rawLines[0];
+  const delimiter = detectDelimiter(headerLine);
+  const headersRaw = splitDelimitedLine(headerLine, delimiter);
+  const headers = headersRaw.map(normalizeHeaderKey);
+
+  const headerIndex: Record<string, number> = {};
+  headers.forEach((h, idx) => {
+    if (h && headerIndex[h] === undefined) headerIndex[h] = idx;
+  });
+
+  // Expected columns from the user's export
+  const companyKeys = ["company", "entreprise", "societe", "societe_nom"];
+  const firstNameKeys = ["firstname", "prenom", "first_name"];
+  const lastNameKeys = ["lastname", "nom", "last_name"];
+
+  const hasCompany = companyKeys.some((k) => headerIndex[k] !== undefined);
+  const hasFirst = firstNameKeys.some((k) => headerIndex[k] !== undefined);
+  const hasLast = lastNameKeys.some((k) => headerIndex[k] !== undefined);
+  if (!hasCompany && !(hasFirst && hasLast)) return null;
+
+  const companiesByName = new Map<string, any>();
+  const contacts: any[] = [];
+
+  for (let i = 1; i < rawLines.length; i++) {
+    const line = rawLines[i];
+    const row = splitDelimitedLine(line, delimiter);
+
+    const companyName = pickFirstNonEmpty(row, headerIndex, companyKeys).replace(/^"|"$/g, "").trim();
+    const firstName = pickFirstNonEmpty(row, headerIndex, firstNameKeys).replace(/^"|"$/g, "").trim();
+    const lastName = pickFirstNonEmpty(row, headerIndex, lastNameKeys).replace(/^"|"$/g, "").trim();
+
+    // Skip completely empty rows
+    if (!companyName && !firstName && !lastName) continue;
+
+    let companyTempId: string | undefined;
+    if (companyName) {
+      const key = companyName.toLowerCase();
+      if (!companiesByName.has(key)) {
+        const industry = pickFirstNonEmpty(row, headerIndex, ["sector", "industrie", "industry"]).replace(/^"|"$/g, "").trim();
+        const website = pickFirstNonEmpty(row, headerIndex, ["website", "site_web", "site"]).replace(/^"|"$/g, "").trim();
+        const email = pickFirstNonEmpty(row, headerIndex, ["email", "company_email"]).replace(/^"|"$/g, "").trim();
+        const phone = pickFirstNonEmpty(row, headerIndex, ["phone", "telephone", "office_phone", "telephone_bureau"]).replace(/^"|"$/g, "").trim();
+        const address = pickFirstNonEmpty(row, headerIndex, ["address", "adresse"]).replace(/^"|"$/g, "").trim();
+        const city = pickFirstNonEmpty(row, headerIndex, ["city", "ville"]).replace(/^"|"$/g, "").trim();
+        const postal_code = pickFirstNonEmpty(row, headerIndex, ["zipcode", "postal_code", "code_postal"]).replace(/^"|"$/g, "").trim();
+
+        const temp_id = `c_${companiesByName.size + 1}`;
+        companiesByName.set(key, {
+          temp_id,
+          name: companyName,
+          industry: industry || undefined,
+          website: website || undefined,
+          email: email || undefined,
+          phone: phone || undefined,
+          address: address || undefined,
+          city: city || undefined,
+          postal_code: postal_code || undefined,
+        });
+      }
+      companyTempId = companiesByName.get(companyName.toLowerCase())?.temp_id;
+    }
+
+    if (firstName || lastName) {
+      const role = pickFirstNonEmpty(row, headerIndex, ["fonction", "role", "position", "job_title"]).replace(/^"|"$/g, "").trim();
+      const email = pickFirstNonEmpty(row, headerIndex, ["email", "contact_email"]).replace(/^"|"$/g, "").trim();
+      const mobile = pickFirstNonEmpty(row, headerIndex, ["mobile", "portable", "cell"]).replace(/^"|"$/g, "").trim();
+      const phone = pickFirstNonEmpty(row, headerIndex, ["phone", "telephone"]).replace(/^"|"$/g, "").trim();
+      const office = pickFirstNonEmpty(row, headerIndex, ["office_phone", "telephone_bureau"]).replace(/^"|"$/g, "").trim();
+
+      const category = pickFirstNonEmpty(row, headerIndex, ["category", "categorie"]).replace(/^"|"$/g, "").trim();
+      const categoryType = pickFirstNonEmpty(row, headerIndex, ["category_type", "type_categorie"]).replace(/^"|"$/g, "").trim();
+      const comment = pickFirstNonEmpty(row, headerIndex, ["comment", "notes"]).replace(/^"|"$/g, "").trim();
+      const tags = pickFirstNonEmpty(row, headerIndex, ["tags", "etiquettes"]).replace(/^"|"$/g, "").trim();
+
+      const notesParts = [
+        category ? `Catégorie: ${category}` : "",
+        categoryType ? `Type: ${categoryType}` : "",
+        tags ? `Tags: ${tags}` : "",
+        comment ? `Commentaire: ${comment}` : "",
+      ].filter(Boolean);
+
+      contacts.push({
+        first_name: firstName,
+        last_name: lastName,
+        email: email || undefined,
+        phone: (mobile || phone || office) || undefined,
+        role: role || undefined,
+        company_temp_id: companyTempId,
+        notes: notesParts.length ? notesParts.join("\n") : undefined,
+      });
+    }
+  }
+
+  const companies = Array.from(companiesByName.values());
+  if (companies.length === 0 && contacts.length === 0) return null;
+
+  return {
+    companies,
+    contacts,
+    summary: `Import détecté (CSV/TSV): ${companies.length} entreprise(s) et ${contacts.length} contact(s)`,
+  };
+}
 async function parseChunk(
   chunk: string, 
   chunkIndex: number, 
@@ -218,6 +392,17 @@ serve(async (req) => {
     }
 
     console.log(`Starting parse for file: ${fileName}, content length: ${fileContent.length} chars`);
+
+    // Fast-path: detect and parse CRM exports deterministically (much faster + avoids AI timeouts)
+    const direct = parseCRMTabularExport(fileContent);
+    if (direct) {
+      console.log(`Direct parser used: ${direct.companies.length} companies, ${direct.contacts.length} contacts`);
+      return new Response(JSON.stringify(direct), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Fallback to AI parsing when the structure isn't recognized
 
     // Split content into fewer chunks for large files to reduce runtime
     const chunks = splitContentIntoChunks(fileContent, 250); // ~250 lines per chunk
