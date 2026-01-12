@@ -15,13 +15,13 @@ interface PostItSidebarProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Different post-it colors for variety
+// Refined post-it colors - softer, more elegant
 const postItColors = [
-  { bg: "bg-amber-200", border: "border-amber-300", shadow: "shadow-amber-200/50", text: "text-amber-900" },
-  { bg: "bg-yellow-200", border: "border-yellow-300", shadow: "shadow-yellow-200/50", text: "text-yellow-900" },
-  { bg: "bg-lime-200", border: "border-lime-300", shadow: "shadow-lime-200/50", text: "text-lime-900" },
-  { bg: "bg-pink-200", border: "border-pink-300", shadow: "shadow-pink-200/50", text: "text-pink-900" },
-  { bg: "bg-sky-200", border: "border-sky-300", shadow: "shadow-sky-200/50", text: "text-sky-900" },
+  { accent: "bg-amber-400", bg: "bg-amber-50", text: "text-amber-800", muted: "text-amber-600" },
+  { accent: "bg-lime-400", bg: "bg-lime-50", text: "text-lime-800", muted: "text-lime-600" },
+  { accent: "bg-sky-400", bg: "bg-sky-50", text: "text-sky-800", muted: "text-sky-600" },
+  { accent: "bg-rose-400", bg: "bg-rose-50", text: "text-rose-800", muted: "text-rose-600" },
+  { accent: "bg-violet-400", bg: "bg-violet-50", text: "text-violet-800", muted: "text-violet-600" },
 ];
 
 function getPostItColor(index: number) {
@@ -52,54 +52,59 @@ export function PostItSidebar({ open, onOpenChange }: PostItSidebarProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
         side="right" 
-        className="w-[380px] sm:w-[420px] p-0 bg-gradient-to-b from-amber-50/50 to-background border-l border-border"
+        className="w-[360px] sm:w-[400px] p-0 border-l border-border bg-background"
       >
-        <SheetHeader className="px-6 py-4 border-b border-border bg-background">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="flex items-center gap-2">
-              <StickyNote className="h-5 w-5 text-amber-500" strokeWidth={THIN_STROKE} />
-              Mes Post-it
-            </SheetTitle>
-          </div>
+        <SheetHeader className="px-5 py-4 border-b border-border">
+          <SheetTitle className="flex items-center gap-2.5 text-base font-semibold">
+            <div className="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center">
+              <StickyNote className="h-4 w-4 text-amber-600" strokeWidth={THIN_STROKE} />
+            </div>
+            Mes Post-it
+            {pendingTasks.length > 0 && (
+              <span className="text-xs font-normal text-muted-foreground">
+                ({pendingTasks.length})
+              </span>
+            )}
+          </SheetTitle>
         </SheetHeader>
 
         <div className="flex flex-col h-[calc(100vh-73px)]">
           {/* Add new post-it */}
-          <div className="p-4 border-b border-border bg-background">
+          <div className="p-4 border-b border-border">
             <div className="flex gap-2">
               <Input
                 value={newTaskTitle}
                 onChange={(e) => setNewTaskTitle(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ajouter un post-it..."
-                className="flex-1 h-10 bg-amber-50 border-amber-200 focus-visible:ring-amber-300 placeholder:text-amber-600/50"
+                placeholder="Nouvelle note..."
+                className="flex-1 h-9 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-amber-400 placeholder:text-muted-foreground"
               />
               <Button
                 onClick={handleAddTask}
                 disabled={!newTaskTitle.trim() || createQuickTask.isPending}
-                size="icon"
-                className="h-10 w-10 bg-amber-500 hover:bg-amber-600 text-amber-950"
+                size="sm"
+                className="h-9 px-3 bg-amber-500 hover:bg-amber-600 text-white"
               >
-                <Plus className="h-4 w-4" strokeWidth={THIN_STROKE} />
+                <Plus className="h-4 w-4" strokeWidth={2} />
               </Button>
             </div>
           </div>
 
           {/* Post-it list */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin h-6 w-6 border-2 border-amber-500 border-t-transparent rounded-full" />
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin h-5 w-5 border-2 border-amber-400 border-t-transparent rounded-full" />
               </div>
             ) : pendingTasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
-                  <StickyNote className="h-8 w-8 text-amber-500" strokeWidth={THIN_STROKE} />
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-3">
+                  <StickyNote className="h-5 w-5 text-muted-foreground" strokeWidth={THIN_STROKE} />
                 </div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Aucun post-it
+                <p className="text-sm text-muted-foreground">
+                  Aucune note
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground/70 mt-1">
                   Ajoutez une note rapide ci-dessus
                 </p>
               </div>
@@ -119,19 +124,21 @@ export function PostItSidebar({ open, onOpenChange }: PostItSidebarProps) {
 
             {/* Completed tasks */}
             {completedTasks.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-border/50">
-                <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-                  Récemment terminés
+              <div className="mt-6 pt-4 border-t border-border">
+                <p className="text-[11px] font-medium text-muted-foreground mb-2 uppercase tracking-wider">
+                  Terminés
                 </p>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {completedTasks.map((task) => (
                     <motion.div
                       key={task.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/30"
+                      className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
                     >
-                      <Check className="h-4 w-4 text-success shrink-0" strokeWidth={THIN_STROKE} />
+                      <div className="h-4 w-4 rounded-full bg-success/20 flex items-center justify-center shrink-0">
+                        <Check className="h-2.5 w-2.5 text-success" strokeWidth={3} />
+                      </div>
                       <span className="text-sm text-muted-foreground line-through flex-1 truncate">
                         {task.title}
                       </span>
@@ -158,53 +165,43 @@ function PostItCard({ task, colorIndex, onComplete, onDelete }: PostItCardProps)
   const colors = getPostItColor(colorIndex);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Random slight rotation for authentic post-it look
-  const rotation = ((task.id.charCodeAt(0) % 7) - 3) * 0.8;
-
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, x: 100 }}
-      transition={{ type: "spring", damping: 20, stiffness: 300 }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: 50, scale: 0.95 }}
+      transition={{ type: "spring", damping: 25, stiffness: 350 }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "relative p-4 rounded-sm border-l-4 shadow-lg transition-all duration-200",
+        "group relative rounded-lg border border-border/60 transition-all duration-200",
         colors.bg,
-        colors.border,
-        colors.shadow,
-        isHovered && "shadow-xl scale-[1.02]"
+        isHovered && "border-border shadow-sm"
       )}
-      style={{ 
-        transform: `rotate(${rotation}deg)`,
-        backgroundImage: "linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.3) 50%, transparent 100%)"
-      }}
     >
-      {/* Tape effect at top */}
-      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-12 h-4 bg-amber-100/80 rounded-sm shadow-sm" 
-        style={{ transform: `translateX(-50%) rotate(${-rotation}deg)` }} 
-      />
+      {/* Color accent bar */}
+      <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-lg", colors.accent)} />
 
-      <div className="flex items-start gap-3 mt-1">
+      <div className="flex items-start gap-3 p-3 pl-4">
         {/* Complete checkbox */}
         <button
           onClick={onComplete}
           className={cn(
-            "mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
-            colors.text,
-            "border-current/40 hover:border-current hover:bg-white/30"
+            "mt-0.5 w-4 h-4 rounded-full border-[1.5px] flex items-center justify-center transition-all shrink-0",
+            "border-current/30 hover:border-current/60 hover:bg-white/50",
+            colors.muted
           )}
         >
           <AnimatePresence>
             {isHovered && (
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0 }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ duration: 0.15 }}
               >
-                <Check className="h-3 w-3" strokeWidth={3} />
+                <Check className="h-2.5 w-2.5" strokeWidth={3} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -212,35 +209,30 @@ function PostItCard({ task, colorIndex, onComplete, onDelete }: PostItCardProps)
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className={cn("text-sm font-medium leading-relaxed", colors.text)}>
+          <p className={cn("text-sm leading-relaxed", colors.text)}>
             {task.title}
           </p>
-          <p className={cn("text-xs mt-2 opacity-60", colors.text)}>
-            {format(new Date(task.created_at), "d MMM à HH:mm", { locale: fr })}
+          <p className={cn("text-[11px] mt-1.5", colors.muted, "opacity-70")}>
+            {format(new Date(task.created_at), "d MMM, HH:mm", { locale: fr })}
           </p>
         </div>
 
         {/* Delete button */}
         <AnimatePresence>
           {isHovered && (
-            <motion.div
+            <motion.button
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.15 }}
+              onClick={onDelete}
+              className={cn(
+                "p-1.5 rounded-md transition-colors shrink-0",
+                "text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10"
+              )}
             >
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onDelete}
-                className={cn(
-                  "h-7 w-7 rounded-full",
-                  colors.text,
-                  "hover:bg-white/30"
-                )}
-              >
-                <Trash2 className="h-3.5 w-3.5" strokeWidth={THIN_STROKE} />
-              </Button>
-            </motion.div>
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={THIN_STROKE} />
+            </motion.button>
           )}
         </AnimatePresence>
       </div>
