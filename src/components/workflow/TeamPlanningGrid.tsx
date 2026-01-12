@@ -473,6 +473,15 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     });
   }, [schedules, updateSchedule]);
 
+  // Handler pour modifier l'heure de début/fin d'une tâche planifiée
+  const handleChangeScheduleTime = useCallback((scheduleId: string, newStart: Date, newEnd: Date) => {
+    updateSchedule.mutate({
+      id: scheduleId,
+      start_datetime: newStart.toISOString(),
+      end_datetime: newEnd.toISOString(),
+    });
+  }, [updateSchedule]);
+
   // Handler pour redimensionner un temps manuel
   const handleResizeTimeEntry = useCallback((entryId: string, newDurationMinutes: number) => {
     updateTimeEntry.mutate({
@@ -996,6 +1005,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                       onUnschedule={handleUnschedule}
                       onScheduleDragStart={handleScheduleDragStart}
                       onResizeSchedule={handleResizeSchedule}
+                      onChangeTime={handleChangeScheduleTime}
                       onResizeTimeEntry={handleResizeTimeEntry}
                       onViewTimeEntry={handleViewTimeEntry}
                     />
@@ -1050,6 +1060,7 @@ interface MemberRowProps {
   onUnschedule: (scheduleId: string) => void;
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
   onResizeSchedule: (scheduleId: string, newDurationHours: number) => void;
+  onChangeTime: (scheduleId: string, newStart: Date, newEnd: Date) => void;
   onResizeTimeEntry: (entryId: string, newDurationMinutes: number) => void;
   onViewTimeEntry: (entry: TeamTimeEntry) => void;
 }
@@ -1071,6 +1082,7 @@ function MemberRow({
   onUnschedule,
   onScheduleDragStart,
   onResizeSchedule,
+  onChangeTime,
   onResizeTimeEntry,
   onViewTimeEntry,
 }: MemberRowProps) {
@@ -1107,6 +1119,7 @@ function MemberRow({
             onUnschedule={onUnschedule}
             onScheduleDragStart={onScheduleDragStart}
             onResizeSchedule={onResizeSchedule}
+            onChangeTime={onChangeTime}
             onResizeTimeEntry={onResizeTimeEntry}
             onViewTimeEntry={onViewTimeEntry}
           />
@@ -1135,6 +1148,7 @@ interface DayCellProps {
   onUnschedule: (scheduleId: string) => void;
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
   onResizeSchedule: (scheduleId: string, newDurationHours: number) => void;
+  onChangeTime: (scheduleId: string, newStart: Date, newEnd: Date) => void;
   onResizeTimeEntry: (entryId: string, newDurationMinutes: number) => void;
   onViewTimeEntry: (entry: TeamTimeEntry) => void;
 }
@@ -1158,6 +1172,7 @@ function DayCell({
   onUnschedule,
   onScheduleDragStart,
   onResizeSchedule,
+  onChangeTime,
   onResizeTimeEntry,
   onViewTimeEntry,
 }: DayCellProps) {
@@ -1213,6 +1228,7 @@ function DayCell({
               onUnschedule={onUnschedule}
               onScheduleDragStart={onScheduleDragStart}
               onResize={onResizeSchedule}
+              onChangeTime={onChangeTime}
               onResizeTimeEntry={onResizeTimeEntry}
               onViewTimeEntry={onViewTimeEntry}
             />
