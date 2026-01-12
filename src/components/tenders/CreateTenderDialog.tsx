@@ -154,7 +154,7 @@ type Step = 'discipline' | 'upload' | 'form';
 export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogProps) {
   const navigate = useNavigate();
   const { createTender } = useTenders();
-  const { companies } = useCRMCompanies();
+  const { companies, createCompany } = useCRMCompanies();
   const { data: members } = useTeamMembers();
   
   // Step management
@@ -469,11 +469,39 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         // Normalize procedure_type from AI extraction to valid enum value
         const normalizedProcedureType = normalizeProcedureType(extracted.procedure_type);
         
+        // Auto-create MOA if client_name detected but no matching company
+        let moaCompanyId: string | null = null;
+        if (extracted.client_name) {
+          const existingMoa = companies.find(c => 
+            c.name.toLowerCase().trim() === extracted.client_name?.toLowerCase().trim()
+          );
+          
+          if (existingMoa) {
+            moaCompanyId = existingMoa.id;
+            filledFields.add('moa_company_id');
+          } else {
+            // Auto-create the MOA company
+            try {
+              const clientType = extracted.client_type || 'client_public';
+              const result = await createCompany.mutateAsync({
+                name: extracted.client_name,
+                industry: clientType === 'prive' ? 'client_prive' : 'client_public',
+              });
+              moaCompanyId = result.id;
+              filledFields.add('moa_company_id');
+              toast.success(`MOA "${extracted.client_name}" créé automatiquement`);
+            } catch (e) {
+              console.warn('Failed to auto-create MOA company:', e);
+            }
+          }
+        }
+        
         setFormData({
           ...extracted,
           discipline_slug: disciplineSlug,
           submission_type: extracted.submission_type || 'candidature_offre',
           procedure_type: normalizedProcedureType || undefined,
+          moa_company_id: moaCompanyId,
           criteria: extracted.criteria || [],
           required_team: extracted.required_team || [],
           lots: extracted.lots || [],
