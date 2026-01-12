@@ -35,11 +35,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, MoreHorizontal, Mail, Shield, Trash2, Search, GraduationCap, Calendar, UsersRound, UserRoundPlus } from "lucide-react";
+import { UserPlus, MoreHorizontal, Mail, Shield, Trash2, Search, GraduationCap, Calendar, UsersRound, UserRoundPlus, Pencil } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/permissions";
 import { ApprenticeScheduleDialog } from "./ApprenticeScheduleDialog";
 import { TeamManagementDialog } from "./TeamManagementDialog";
 import { CreateMemberDialog } from "./CreateMemberDialog";
+import { EditMemberDialog } from "./EditMemberDialog";
 
 const roleColors: Record<string, string> = {
   owner: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
@@ -63,6 +64,7 @@ export function TeamUsersTab() {
   const [inviting, setInviting] = useState(false);
   const [apprenticeDialogUser, setApprenticeDialogUser] = useState<{ id: string; name: string } | null>(null);
   const [teamsDialogOpen, setTeamsDialogOpen] = useState(false);
+  const [editMember, setEditMember] = useState<TeamMember | null>(null);
 
   // Fetch all apprentice schedules to show badges
   const { data: apprenticeSchedules } = useQuery({
@@ -247,6 +249,7 @@ export function TeamUsersTab() {
             onUpdateRole={(role) => handleUpdateRole(member.id, role)}
             onRemove={() => handleRemoveMember(member.id)}
             onManageApprentice={() => setApprenticeDialogUser({ id: member.user_id, name: member.profile?.full_name || "Sans nom" })}
+            onEdit={() => setEditMember(member)}
           />
         ))}
       </div>
@@ -318,6 +321,13 @@ export function TeamUsersTab() {
         open={createMemberOpen}
         onOpenChange={setCreateMemberOpen}
       />
+
+      {/* Edit Member Dialog */}
+      <EditMemberDialog
+        open={!!editMember}
+        onOpenChange={(open) => !open && setEditMember(null)}
+        member={editMember}
+      />
     </div>
   );
 }
@@ -329,6 +339,7 @@ function MemberCard({
   onUpdateRole,
   onRemove,
   onManageApprentice,
+  onEdit,
 }: {
   member: TeamMember;
   isApprentice: boolean;
@@ -336,6 +347,7 @@ function MemberCard({
   onUpdateRole: (role: "admin" | "member" | "viewer") => void;
   onRemove: () => void;
   onManageApprentice: () => void;
+  onEdit: () => void;
 }) {
   const initials = member.profile?.full_name
     ?.split(" ")
@@ -373,6 +385,10 @@ function MemberCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onEdit}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Modifier le profil
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={onManageApprentice}>
                   <GraduationCap className="h-4 w-4 mr-2" />
                   {isApprentice ? "Modifier planning alternance" : "Configurer alternance"}
