@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { format, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { motion } from "framer-motion";
 import {
   Euro,
   Ruler,
@@ -24,7 +23,6 @@ interface TenderKeyMetricsProps {
   tender: Tender;
 }
 
-// Mapping des icônes par nom
 const ICON_MAP: Record<string, LucideIcon> = {
   Euro,
   Ruler,
@@ -68,13 +66,10 @@ export function TenderKeyMetrics({ tender }: TenderKeyMetricsProps) {
     return differenceInDays(new Date(tender.submission_deadline), new Date());
   }, [tender.submission_deadline]);
 
-  // Récupère la valeur d'un champ du tender (y compris les données extraites)
   const getFieldValue = (key: string): any => {
-    // D'abord chercher dans les champs standard
     if (key in tender) {
       return (tender as any)[key];
     }
-    // Ensuite chercher dans extracted_data
     const extractedData = (tender as any).extracted_data;
     if (extractedData && key in extractedData) {
       return extractedData[key];
@@ -82,7 +77,6 @@ export function TenderKeyMetrics({ tender }: TenderKeyMetricsProps) {
     return null;
   };
 
-  // Formate une valeur selon le type de métrique
   const formatMetricValue = (metricDef: DisciplineMetricDef, value: any): { displayValue: string | null; subValue?: string } => {
     if (value === null || value === undefined) {
       return { displayValue: null };
@@ -129,7 +123,6 @@ export function TenderKeyMetrics({ tender }: TenderKeyMetricsProps) {
       
       case 'text':
       default:
-        // Cas spécial pour l'équipe
         if (metricDef.key === 'required_team') {
           if (requiredTeam.length === 0) return { displayValue: null };
           return {
@@ -137,7 +130,6 @@ export function TenderKeyMetrics({ tender }: TenderKeyMetricsProps) {
             subValue: requiredTeam.length > mandatoryCount ? `+${requiredTeam.length - mandatoryCount} optionnel${requiredTeam.length - mandatoryCount > 1 ? "s" : ""}` : undefined
           };
         }
-        // Cas spécial pour type_campagne (afficher le label)
         if (metricDef.key === 'type_campagne') {
           const field = config.specificFields.find(f => f.key === 'type_campagne');
           const option = field?.options?.find(o => o.value === value);
@@ -147,14 +139,12 @@ export function TenderKeyMetrics({ tender }: TenderKeyMetricsProps) {
     }
   };
 
-  // Génère les métriques à partir de la config
   const metrics = useMemo(() => {
     return config.keyMetrics.map(metricDef => {
       const value = getFieldValue(metricDef.key);
       const { displayValue, subValue } = formatMetricValue(metricDef, value);
       const IconComponent = ICON_MAP[metricDef.icon] || Building2;
 
-      // Badge spécial pour la visite de site
       let badge: string | undefined;
       if (metricDef.key === 'site_visit_date' && tender.site_visit_required) {
         badge = 'Obligatoire';
@@ -175,40 +165,33 @@ export function TenderKeyMetrics({ tender }: TenderKeyMetricsProps) {
   return (
     <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
       {metrics.map((metric, index) => (
-        <motion.div
-          key={metric.label}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.05, duration: 0.3 }}
-        >
-          <Card className="h-full hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className={cn("p-2 rounded-lg shrink-0", metric.color)}>
-                  <metric.icon className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-muted-foreground truncate">{metric.label}</p>
-                  {metric.isEmpty ? (
-                    <p className="text-sm text-amber-600 font-medium">—</p>
-                  ) : (
-                    <>
-                      <p className="text-sm font-semibold truncate">{metric.value}</p>
-                      {metric.subValue && (
-                        <p className="text-xs text-muted-foreground">{metric.subValue}</p>
-                      )}
-                      {metric.badge && (
-                        <Badge variant="secondary" className="mt-1 text-xs">
-                          {metric.badge}
-                        </Badge>
-                      )}
-                    </>
-                  )}
-                </div>
+        <Card key={metric.label} className="h-full">
+          <CardContent className="p-3">
+            <div className="flex items-start gap-2">
+              <div className={cn("p-1.5 rounded shrink-0", metric.color)}>
+                <metric.icon className="h-3.5 w-3.5" />
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-muted-foreground truncate">{metric.label}</p>
+                {metric.isEmpty ? (
+                  <p className="text-sm text-muted-foreground">—</p>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium truncate">{metric.value}</p>
+                    {metric.subValue && (
+                      <p className="text-xs text-muted-foreground">{metric.subValue}</p>
+                    )}
+                    {metric.badge && (
+                      <Badge variant="secondary" className="mt-1 text-[10px] px-1.5 py-0">
+                        {metric.badge}
+                      </Badge>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   );

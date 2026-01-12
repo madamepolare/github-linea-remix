@@ -28,6 +28,7 @@ import {
   Euro,
   UserCog,
   Grid3X3,
+  Gavel,
 } from 'lucide-react';
 
 export interface SettingsSection {
@@ -92,6 +93,13 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
     sections: [
       { id: 'documents', label: 'Configuration', icon: <FileStack className="h-4 w-4" />, description: 'Types et templates' },
       { id: 'emails', label: 'Emails', icon: <Mail className="h-4 w-4" />, description: 'Templates email' },
+    ],
+  },
+  {
+    id: 'tenders',
+    label: 'Appels d\'offres',
+    sections: [
+      { id: 'tenders', label: 'Configuration AO', icon: <Gavel className="h-4 w-4" />, description: 'Phases, critères, rappels' },
     ],
   },
   {
