@@ -94,6 +94,8 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inviteClientContacts, setInviteClientContacts] = useState<string[]>([]);
   const [sendInvitations, setSendInvitations] = useState(true);
+  const [contactSearch, setContactSearch] = useState("");
+  const [showAllContacts, setShowAllContacts] = useState(false);
 
   // Get client contacts when project is selected
   const selectedProject = useMemo(() => 
@@ -101,33 +103,60 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
     [projects, selectedProjectId]
   );
 
-  // Get client contacts - from project company if selected, otherwise all workspace contacts
-  const { data: clientContacts } = useQuery({
-    queryKey: ["client-contacts", activeWorkspace?.id, selectedProject?.crm_company_id],
+  // Get all client contacts for the workspace
+  const { data: allClientContacts } = useQuery({
+    queryKey: ["client-contacts", activeWorkspace?.id],
     queryFn: async () => {
       if (!activeWorkspace?.id) return [];
       
-      let query = supabase
+      const { data, error } = await supabase
         .from("contacts")
         .select("id, name, email, role, avatar_url, crm_company_id, crm_company:crm_companies(name)")
         .eq("workspace_id", activeWorkspace.id)
         .order("name");
       
-      // Filter by company if a project with company is selected
-      if (selectedProject?.crm_company_id) {
-        query = query.eq("crm_company_id", selectedProject.crm_company_id);
-      }
-      
-      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
     enabled: !!activeWorkspace?.id,
   });
 
-  // Clear selected client contacts when project changes (different company = different contacts)
+  // Filter contacts: project contacts first, then optionally show all
+  const filteredContacts = useMemo(() => {
+    if (!allClientContacts) return { projectContacts: [], otherContacts: [] };
+    
+    const searchLower = contactSearch.toLowerCase();
+    
+    // Separate project contacts from others
+    const projectContacts = selectedProject?.crm_company_id
+      ? allClientContacts.filter((c: any) => c.crm_company_id === selectedProject.crm_company_id)
+      : [];
+    
+    const otherContacts = selectedProject?.crm_company_id
+      ? allClientContacts.filter((c: any) => c.crm_company_id !== selectedProject.crm_company_id)
+      : allClientContacts;
+    
+    // Apply search filter
+    const filterBySearch = (contacts: any[]) => {
+      if (!searchLower) return contacts;
+      return contacts.filter((c: any) =>
+        c.name?.toLowerCase().includes(searchLower) ||
+        c.email?.toLowerCase().includes(searchLower) ||
+        c.crm_company?.name?.toLowerCase().includes(searchLower)
+      );
+    };
+    
+    return {
+      projectContacts: filterBySearch(projectContacts),
+      otherContacts: filterBySearch(otherContacts),
+    };
+  }, [allClientContacts, selectedProject?.crm_company_id, contactSearch]);
+
+  // Reset contact selection and expand state when project changes
   useEffect(() => {
     setInviteClientContacts([]);
+    setShowAllContacts(false);
+    setContactSearch("");
   }, [selectedProject?.crm_company_id]);
 
   // Reset on open
@@ -146,6 +175,8 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
       setWeekOffset(0);
       setInviteClientContacts([]);
       setSendInvitations(true);
+      setContactSearch("");
+      setShowAllContacts(false);
     }
   }, [open, user]);
 
@@ -319,7 +350,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
       // Add client contacts if any (for all event types)
       if (inviteClientContacts.length > 0) {
         inviteClientContacts.forEach((contactId) => {
-          const contact = clientContacts?.find((c: any) => c.id === contactId);
+          const contact = allClientContacts?.find((c: any) => c.id === contactId);
           if (contact) {
             attendees.push({
               email: contact.email || "",
@@ -568,49 +599,127 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
                 </div>
 
                 {/* Client contacts invitation - available for all event types */}
-                {clientContacts && clientContacts.length > 0 && (
-                  <div className="space-y-2">
+                {allClientContacts && allClientContacts.length > 0 && (
+                  <div className="space-y-3">
                     <Label className="flex items-center gap-2">
                       <UserPlus className="h-4 w-4" />
                       Inviter des contacts externes
-                      {selectedProject?.crm_company?.name && (
-                        <Badge variant="secondary" className="text-xs">
-                          {selectedProject.crm_company.name}
-                        </Badge>
-                      )}
                       {inviteClientContacts.length > 0 && (
                         <Badge className="text-xs">{inviteClientContacts.length}</Badge>
                       )}
                     </Label>
-                    <div className="grid grid-cols-2 gap-2 max-h-40 overflow-auto p-2 border rounded-lg">
-                      {clientContacts.map((contact: any) => (
-                        <label
-                          key={contact.id}
-                          className={cn(
-                            "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
-                            inviteClientContacts.includes(contact.id)
-                              ? "bg-primary/10"
-                              : "hover:bg-muted"
-                          )}
-                        >
-                          <Checkbox
-                            checked={inviteClientContacts.includes(contact.id)}
-                            onCheckedChange={() => toggleClientContact(contact.id)}
-                          />
-                          <Avatar className="h-6 w-6">
-                            <AvatarImage src={contact.avatar_url || ""} />
-                            <AvatarFallback className="text-[10px]">
-                              {contact.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm truncate block">{contact.name}</span>
-                            <span className="text-xs text-muted-foreground truncate block">
-                              {contact.crm_company?.name || contact.email || ""}
-                            </span>
+                    
+                    {/* Search input */}
+                    <Input
+                      placeholder="Rechercher un contact..."
+                      value={contactSearch}
+                      onChange={(e) => setContactSearch(e.target.value)}
+                      className="h-8"
+                    />
+                    
+                    <div className="border rounded-lg overflow-hidden">
+                      {/* Project contacts first */}
+                      {selectedProject?.crm_company_id && filteredContacts.projectContacts.length > 0 && (
+                        <div className="p-2 bg-primary/5">
+                          <div className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            Contacts du projet ({selectedProject.crm_company?.name})
                           </div>
-                        </label>
-                      ))}
+                          <div className="grid grid-cols-2 gap-1">
+                            {filteredContacts.projectContacts.map((contact: any) => (
+                              <label
+                                key={contact.id}
+                                className={cn(
+                                  "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                                  inviteClientContacts.includes(contact.id)
+                                    ? "bg-primary/10"
+                                    : "hover:bg-muted"
+                                )}
+                              >
+                                <Checkbox
+                                  checked={inviteClientContacts.includes(contact.id)}
+                                  onCheckedChange={() => toggleClientContact(contact.id)}
+                                />
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={contact.avatar_url || ""} />
+                                  <AvatarFallback className="text-[10px]">
+                                    {contact.name.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-sm truncate block">{contact.name}</span>
+                                  <span className="text-xs text-muted-foreground truncate block">
+                                    {contact.email || contact.role || ""}
+                                  </span>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Other contacts - expandable */}
+                      {filteredContacts.otherContacts.length > 0 && (
+                        <div className="p-2">
+                          {selectedProject?.crm_company_id && !showAllContacts ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full text-xs"
+                              onClick={() => setShowAllContacts(true)}
+                            >
+                              <Users className="h-3 w-3 mr-1" />
+                              Voir tous les contacts ({filteredContacts.otherContacts.length})
+                            </Button>
+                          ) : (
+                            <>
+                              {selectedProject?.crm_company_id && (
+                                <div className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                                  <Users className="h-3 w-3" />
+                                  Autres contacts
+                                </div>
+                              )}
+                              <div className="grid grid-cols-2 gap-1 max-h-32 overflow-auto">
+                                {filteredContacts.otherContacts.map((contact: any) => (
+                                  <label
+                                    key={contact.id}
+                                    className={cn(
+                                      "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                                      inviteClientContacts.includes(contact.id)
+                                        ? "bg-primary/10"
+                                        : "hover:bg-muted"
+                                    )}
+                                  >
+                                    <Checkbox
+                                      checked={inviteClientContacts.includes(contact.id)}
+                                      onCheckedChange={() => toggleClientContact(contact.id)}
+                                    />
+                                    <Avatar className="h-6 w-6">
+                                      <AvatarImage src={contact.avatar_url || ""} />
+                                      <AvatarFallback className="text-[10px]">
+                                        {contact.name.charAt(0)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-sm truncate block">{contact.name}</span>
+                                      <span className="text-xs text-muted-foreground truncate block">
+                                        {contact.crm_company?.name || contact.email || ""}
+                                      </span>
+                                    </div>
+                                  </label>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* No results */}
+                      {filteredContacts.projectContacts.length === 0 && filteredContacts.otherContacts.length === 0 && contactSearch && (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                          Aucun contact trouvé pour "{contactSearch}"
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -802,7 +911,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
                       <Building2 className="h-4 w-4 text-green-600" />
                       <div className="flex -space-x-1">
                         {inviteClientContacts.map((contactId) => {
-                          const contact = clientContacts?.find((c) => c.id === contactId);
+                          const contact = allClientContacts?.find((c: any) => c.id === contactId);
                           return (
                             <Avatar key={contactId} className="h-6 w-6 border-2 border-background">
                               <AvatarImage src={contact?.avatar_url || ""} />
