@@ -199,11 +199,11 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
 
   return (
     <div className="h-12 flex items-center gap-3 px-4 border-b border-border bg-background">
-      {/* Search - Left side, takes available space */}
-      <div ref={searchRef} className="relative flex-1 max-w-xl">
+      {/* Search - Left side, takes all available space */}
+      <div ref={searchRef} className="relative flex-1">
         <Popover open={searchOpen && (searchQuery.length >= 2 || (searchResults?.length ?? 0) > 0)}>
           <PopoverTrigger asChild>
-            <div className="relative">
+            <div className="relative max-w-2xl">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" strokeWidth={THIN_STROKE} />
               <Input
                 ref={inputRef}
@@ -260,8 +260,8 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
         </Popover>
       </div>
 
-      {/* Center actions */}
-      <div className="flex items-center gap-1">
+      {/* Right side - All actions + Notifications + User */}
+      <div className="flex items-center gap-1 shrink-0">
         {/* Quick Actions Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -325,13 +325,9 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
             </>
           )}
         </Button>
-      </div>
 
-      {/* Separator */}
-      <div className="w-px h-6 bg-border" />
-
-      {/* Right side - Notifications + User */}
-      <div className="flex items-center gap-1">
+        {/* Separator */}
+        <div className="w-px h-6 bg-border mx-1" />
         {/* Notifications */}
         <Popover open={notifOpen} onOpenChange={setNotifOpen}>
           <PopoverTrigger asChild>
