@@ -26,9 +26,9 @@ import {
   Smile,
   Heart,
   ThumbsUp,
+  AtSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +64,7 @@ import {
 } from "@/hooks/useCommunicationReactions";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { useAuth } from "@/contexts/AuthContext";
+import { MentionInput, renderContentWithMentions } from "./MentionInput";
 
 interface EntityCommunicationsProps {
   entityType: EntityType;
@@ -159,12 +160,14 @@ export function EntityCommunications({
     useCommunicationReactions(allCommIds);
 
   const [newContent, setNewContent] = useState("");
+  const [newMentions, setNewMentions] = useState<string[]>([]);
   const [newTitle, setNewTitle] = useState("");
   const [createType, setCreateType] = useState<"comment" | "exchange" | "note">(
     "comment"
   );
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
+  const [replyMentions, setReplyMentions] = useState<string[]>([]);
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(
     new Set()
   );
@@ -225,11 +228,13 @@ export function EntityCommunications({
         type: createType,
         content: newContent,
         title: createType === "exchange" ? newTitle : undefined,
+        mentions: newMentions.length > 0 ? newMentions : undefined,
       },
       {
         onSuccess: () => {
           setNewContent("");
           setNewTitle("");
+          setNewMentions([]);
         },
       }
     );
@@ -253,6 +258,7 @@ export function EntityCommunications({
         type: parentComm?.communication_type || "comment",
         content: replyContent,
         parentId,
+        mentions: replyMentions.length > 0 ? replyMentions : undefined,
         targetEntityType: targetEntityType || undefined,
         targetEntityId: targetEntityId || undefined,
         contextEntityType: needsContext ? entityType : undefined,
@@ -261,6 +267,7 @@ export function EntityCommunications({
       {
         onSuccess: () => {
           setReplyContent("");
+          setReplyMentions([]);
           setReplyTo(null);
           setExpandedThreads((prev) => new Set([...prev, parentId]));
         },
@@ -446,7 +453,7 @@ export function EntityCommunications({
                   "italic text-yellow-700 dark:text-yellow-400"
               )}
             >
-              {comm.content}
+              {renderContentWithMentions(comm.content, profiles || [])}
             </div>
 
             {/* Reactions */}
@@ -595,14 +602,19 @@ export function EntityCommunications({
                         )}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 flex gap-2">
-                      <Textarea
-                        placeholder="Écrire une réponse..."
-                        value={replyContent}
-                        onChange={(e) => setReplyContent(e.target.value)}
-                        className="min-h-[60px] text-sm resize-none"
-                        autoFocus
-                      />
+                    <div className="flex-1 flex gap-2 items-start">
+                      <div className="flex-1">
+                        <MentionInput
+                          placeholder="Écrire une réponse... @mention"
+                          value={replyContent}
+                          onChange={(value, mentions) => {
+                            setReplyContent(value);
+                            setReplyMentions(mentions);
+                          }}
+                          minHeight="60px"
+                          autoFocus
+                        />
+                      </div>
                       <Button
                         size="sm"
                         onClick={() => handleReply(comm.id)}
@@ -714,20 +726,24 @@ export function EntityCommunications({
             />
           )}
 
-          <Textarea
+          <MentionInput
             placeholder={
               createType === "comment"
-                ? "Ajouter un commentaire..."
+                ? "Ajouter un commentaire... @mention"
                 : createType === "exchange"
-                ? "Contenu de l'échange..."
+                ? "Contenu de l'échange... @mention"
                 : "Ajouter une note privée..."
             }
             value={newContent}
-            onChange={(e) => setNewContent(e.target.value)}
+            onChange={(value, mentions) => {
+              setNewContent(value);
+              setNewMentions(mentions);
+            }}
             className={cn(
-              "min-h-[80px] text-sm resize-none",
+              "text-sm",
               createType === "note" && "bg-yellow-50/50 dark:bg-yellow-950/20"
             )}
+            minHeight="80px"
           />
 
           <div className="flex justify-end">

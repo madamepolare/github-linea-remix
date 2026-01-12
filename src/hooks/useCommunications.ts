@@ -43,6 +43,7 @@ interface CreateCommunicationParams {
   content: string;
   title?: string;
   parentId?: string;
+  mentions?: string[];
   /**
    * When replying/adding from an aggregated view (e.g. from Project → a Task communication),
    * we must write on the source entity, not the current view entity.
@@ -177,6 +178,7 @@ export function useCommunications(
       content,
       title,
       parentId,
+      mentions,
       targetEntityType,
       targetEntityId,
       contextEntityType,
@@ -199,6 +201,7 @@ export function useCommunications(
           parent_id: parentId || null,
           thread_id: parentId || null,
           created_by: user?.id,
+          mentions: mentions && mentions.length > 0 ? mentions : null,
           context_entity_type: contextEntityType || null,
           context_entity_id: contextEntityId || null,
         })
