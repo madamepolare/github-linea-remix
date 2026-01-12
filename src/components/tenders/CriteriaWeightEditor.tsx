@@ -1,35 +1,53 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Trash2, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { CRITERION_TYPE_LABELS, type CriterionType } from "@/lib/tenderTypes";
 import { cn } from "@/lib/utils";
+import { useTenderDisciplineConfig } from "@/hooks/useTenderDisciplineConfig";
+import type { DisciplineSlug } from "@/lib/tenderDisciplineConfig";
 
 export interface CriterionItem {
   id: string;
   name: string;
-  type: CriterionType;
+  type: string;
   weight: number;
 }
 
 interface CriteriaWeightEditorProps {
   criteria: CriterionItem[];
   onChange: (criteria: CriterionItem[]) => void;
+  tenderId?: string;
+  disciplineSlug?: DisciplineSlug;
 }
 
-export function CriteriaWeightEditor({ criteria, onChange }: CriteriaWeightEditorProps) {
-  const [newCriterionType, setNewCriterionType] = useState<CriterionType>('technical');
+export function CriteriaWeightEditor({ 
+  criteria, 
+  onChange,
+  tenderId,
+  disciplineSlug,
+}: CriteriaWeightEditorProps) {
+  const { criterionTypes, getCriterionLabel } = useTenderDisciplineConfig(tenderId, disciplineSlug);
+  const [newCriterionType, setNewCriterionType] = useState<string>(criterionTypes[0]?.value || 'technical');
 
   const totalWeight = criteria.reduce((sum, c) => sum + c.weight, 0);
   const isValid = totalWeight === 100;
 
+  // Build criterion type labels map from config
+  const criterionTypeLabels = useMemo(() => {
+    const map: Record<string, string> = {};
+    criterionTypes.forEach(ct => {
+      map[ct.value] = ct.label;
+    });
+    return map;
+  }, [criterionTypes]);
+
   const addCriterion = () => {
     const newCriterion: CriterionItem = {
       id: crypto.randomUUID(),
-      name: CRITERION_TYPE_LABELS[newCriterionType],
+      name: criterionTypeLabels[newCriterionType] || newCriterionType,
       type: newCriterionType,
       weight: Math.max(0, 100 - totalWeight),
     };
@@ -44,13 +62,21 @@ export function CriteriaWeightEditor({ criteria, onChange }: CriteriaWeightEdito
     onChange(criteria.filter(c => c.id !== id));
   };
 
-  const getTypeColor = (type: CriterionType) => {
+  const getTypeColor = (type: string) => {
     switch (type) {
       case 'price': return 'bg-emerald-500';
       case 'technical': return 'bg-blue-500';
       case 'delay': return 'bg-amber-500';
       case 'environmental': return 'bg-green-500';
       case 'social': return 'bg-purple-500';
+      case 'creative': return 'bg-pink-500';
+      case 'strategic': return 'bg-indigo-500';
+      case 'experience': return 'bg-orange-500';
+      case 'team': return 'bg-cyan-500';
+      case 'media': return 'bg-violet-500';
+      case 'digital': return 'bg-rose-500';
+      case 'artistic': return 'bg-fuchsia-500';
+      case 'scenographic': return 'bg-teal-500';
       default: return 'bg-gray-500';
     }
   };
@@ -107,14 +133,14 @@ export function CriteriaWeightEditor({ criteria, onChange }: CriteriaWeightEdito
                 />
                 <Select
                   value={criterion.type}
-                  onValueChange={(value) => updateCriterion(criterion.id, { type: value as CriterionType })}
+                  onValueChange={(value) => updateCriterion(criterion.id, { type: value })}
                 >
                   <SelectTrigger className="h-8 w-40">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(CRITERION_TYPE_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    {criterionTypes.map((ct) => (
+                      <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -156,13 +182,13 @@ export function CriteriaWeightEditor({ criteria, onChange }: CriteriaWeightEdito
 
       {/* Add criterion */}
       <div className="flex items-center gap-2">
-        <Select value={newCriterionType} onValueChange={(v) => setNewCriterionType(v as CriterionType)}>
+        <Select value={newCriterionType} onValueChange={(v) => setNewCriterionType(v)}>
           <SelectTrigger className="w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(CRITERION_TYPE_LABELS).map(([value, label]) => (
-              <SelectItem key={value} value={value}>{label}</SelectItem>
+            {criterionTypes.map((ct) => (
+              <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>

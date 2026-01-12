@@ -30,8 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTenderSections, SECTION_TYPES } from "@/hooks/useTenderSections";
+import { useTenderSections } from "@/hooks/useTenderSections";
 import { useKnowledgeBase } from "@/hooks/useKnowledgeBase";
+import { useTenderDisciplineConfig } from "@/hooks/useTenderDisciplineConfig";
 import { cn } from "@/lib/utils";
 import type { Tender } from "@/lib/tenderTypes";
 
@@ -43,20 +44,22 @@ interface TenderMemoireTabProps {
 export function TenderMemoireTab({ tenderId, tender }: TenderMemoireTabProps) {
   const { sections, isLoading, addSection, updateSection, deleteSection, generateWithAI } = useTenderSections(tenderId);
   const { entries: knowledgeEntries } = useKnowledgeBase();
+  const { memoireSections, getSectionLabel } = useTenderDisciplineConfig(tenderId);
+  
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showKnowledgeDialog, setShowKnowledgeDialog] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
-  const [newSection, setNewSection] = useState({ section_type: "presentation", title: "" });
+  const [newSection, setNewSection] = useState({ section_type: memoireSections[0]?.value || "presentation", title: "" });
   const [generatingSection, setGeneratingSection] = useState<string | null>(null);
 
   const handleAdd = () => {
-    const typeLabel = SECTION_TYPES.find(t => t.value === newSection.section_type)?.label || "";
+    const typeLabel = memoireSections.find(t => t.value === newSection.section_type)?.label || "";
     addSection.mutate({
       section_type: newSection.section_type,
       title: newSection.title || typeLabel,
     });
     setShowAddDialog(false);
-    setNewSection({ section_type: "presentation", title: "" });
+    setNewSection({ section_type: memoireSections[0]?.value || "presentation", title: "" });
   };
 
   const handleInsertKnowledge = (content: string) => {
@@ -223,8 +226,15 @@ export function TenderMemoireTab({ tenderId, tender }: TenderMemoireTabProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SECTION_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  {memoireSections.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                      {t.description && (
+                        <span className="text-xs text-muted-foreground ml-2">
+                          — {t.description}
+                        </span>
+                      )}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

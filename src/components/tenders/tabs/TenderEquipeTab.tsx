@@ -97,7 +97,8 @@ import { useTenderPartnerCandidates, CANDIDATE_STATUS_LABELS, CANDIDATE_STATUS_C
 import { useTender } from "@/hooks/useTenders";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
-import { TEAM_ROLE_LABELS, SPECIALTIES, type TenderTeamRole } from "@/lib/tenderTypes";
+import { useTenderDisciplineConfig } from "@/hooks/useTenderDisciplineConfig";
+import { TEAM_ROLE_LABELS, type TenderTeamRole } from "@/lib/tenderTypes";
 import { BulkInvitationDialog } from "@/components/tenders/BulkInvitationDialog";
 import { PartnerPrefilterPanel } from "@/components/tenders/PartnerPrefilterPanel";
 import { PartnerProposalEmailDialog } from "@/components/tenders/PartnerProposalEmailDialog";
@@ -143,6 +144,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   const { data: tender } = useTender(tenderId);
   const { companies } = useCRMCompanies();
   const { contacts } = useContacts();
+  const { teamSpecialties, getSpecialtyLabel } = useTenderDisciplineConfig(tenderId);
   
   // Get deliverables for email dialog
   const { deliverables } = useTenderDeliverables(tenderId, teamMembers);
@@ -315,7 +317,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
     setSingleInviteSubject(`Appel à partenariat - ${tender?.title?.substring(0, 50) || 'Projet'}`);
     setSingleInviteBody(`Bonjour,
 
-Nous constituons actuellement une équipe de maîtrise d'œuvre pour répondre à un appel d'offres et souhaiterions vous associer à ce projet en tant que ${SPECIALTIES.find(s => s.value === specialty)?.label || specialty}.
+Nous constituons actuellement une équipe de maîtrise d'œuvre pour répondre à un appel d'offres et souhaiterions vous associer à ce projet en tant que ${getSpecialtyLabel(specialty)}.
 
 Projet: ${tender?.title || ''}
 ${tender?.location ? `Localisation: ${tender.location}` : ''}
@@ -460,7 +462,7 @@ Cordialement`);
                       onClick={() => openAddDialogWithSpecialty(s)}
                     >
                       <Plus className="h-3 w-3 mr-1" />
-                      {SPECIALTIES.find(sp => sp.value === s)?.label || s}
+                      {getSpecialtyLabel(s)}
                     </Button>
                   ))}
                 </div>
@@ -519,9 +521,10 @@ Cordialement`);
                toast.error("Pas d'email pour ce partenaire (contact ou entreprise)");
              }
            }}
-          onBulkInvite={() => setShowBulkInviteDialog(true)}
+           onBulkInvite={() => setShowBulkInviteDialog(true)}
           isLoading={isLoading}
           requiredSpecialties={requiredSpecialties}
+          getSpecialtyLabel={getSpecialtyLabel}
         />
       ) : (
         <TeamView
@@ -545,6 +548,7 @@ Cordialement`);
             }
           }}
           isLoading={isLoading}
+          getSpecialtyLabel={getSpecialtyLabel}
         />
       )}
 
@@ -569,7 +573,7 @@ Cordialement`);
                     <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SPECIALTIES.map((s) => (
+                    {teamSpecialties.map((s) => (
                       <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -610,7 +614,7 @@ Cordialement`);
                   {filteredCompanies.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       {newCandidate.specialty 
-                        ? `Aucune entreprise avec la spécialité "${SPECIALTIES.find(s => s.value === newCandidate.specialty)?.label}"`
+                        ? `Aucune entreprise avec la spécialité "${getSpecialtyLabel(newCandidate.specialty)}"`
                         : "Aucune entreprise trouvée"}
                     </p>
                   ) : (
@@ -641,7 +645,7 @@ Cordialement`);
                             <div className="flex flex-wrap gap-1">
                               {company.bet_specialties.slice(0, 2).map((s) => (
                                 <Badge key={s} variant="outline" className="text-[10px] px-1 py-0">
-                                  {SPECIALTIES.find(sp => sp.value === s)?.label || s}
+                                  {getSpecialtyLabel(s)}
                                 </Badge>
                               ))}
                             </div>
@@ -735,7 +739,7 @@ Cordialement`);
                     <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SPECIALTIES.map((s) => (
+                    {teamSpecialties.map((s) => (
                       <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -923,7 +927,7 @@ Cordialement`);
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {SPECIALTIES.map((s) => (
+                      {teamSpecialties.map((s) => (
                         <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                       ))}
                     </SelectContent>
@@ -1029,7 +1033,7 @@ Cordialement`);
                       <SelectValue placeholder="Sélectionner" />
                     </SelectTrigger>
                     <SelectContent>
-                      {SPECIALTIES.map((s) => (
+                      {teamSpecialties.map((s) => (
                         <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                       ))}
                     </SelectContent>
@@ -1282,6 +1286,7 @@ function PipelineView({
   onBulkInvite,
   isLoading,
   requiredSpecialties,
+  getSpecialtyLabel,
 }: {
   candidates: PartnerCandidate[];
   candidatesBySpecialty: Record<string, PartnerCandidate[]>;
@@ -1306,6 +1311,7 @@ function PipelineView({
   onBulkInvite: () => void;
   isLoading: boolean;
   requiredSpecialties: string[];
+  getSpecialtyLabel: (value: string) => string;
 }) {
   const toggleCandidate = (id: string) => {
     const newSet = new Set(selectedCandidates);
@@ -1454,7 +1460,7 @@ function PipelineView({
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    {SPECIALTIES.find(s => s.value === specialty)?.label || specialty}
+                    {getSpecialtyLabel(specialty)}
                     {hasCandidate && <Badge variant="secondary">{specCandidates.length}</Badge>}
                     {!hasCandidate && <Badge variant="outline" className="text-amber-600 border-amber-300">Requis</Badge>}
                   </CardTitle>
@@ -1501,7 +1507,7 @@ function PipelineView({
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    {SPECIALTIES.find(s => s.value === specialty)?.label || specialty}
+                    {getSpecialtyLabel(specialty)}
                     <Badge variant="secondary">{specCandidates.length}</Badge>
                   </CardTitle>
                   <Button 
@@ -1743,6 +1749,7 @@ function TeamView({
   onRemoveMember,
   onSendInvite,
   isLoading,
+  getSpecialtyLabel,
 }: {
   teamMembers: any[];
   teamByRole: Record<string, any[]>;
@@ -1751,6 +1758,7 @@ function TeamView({
   onRemoveMember: (id: string, name: string) => void;
   onSendInvite: (member: any) => void;
   isLoading: boolean;
+  getSpecialtyLabel: (value: string) => string;
 }) {
   const roles: TenderTeamRole[] = ['mandataire', 'cotraitant', 'sous_traitant'];
 
@@ -1815,7 +1823,7 @@ function TeamView({
                   <div className="flex items-center gap-2 flex-wrap">
                     {member.specialty && (
                       <p className="text-xs text-muted-foreground">
-                        {SPECIALTIES.find(s => s.value === member.specialty)?.label || member.specialty}
+                        {getSpecialtyLabel(member.specialty)}
                       </p>
                     )}
                     {/* Fee percentage and amount */}
