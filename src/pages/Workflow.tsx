@@ -1,15 +1,20 @@
 import { useState, useCallback } from "react";
 import { TeamPlanningGrid } from "@/components/workflow/TeamPlanningGrid";
+import { TimelinePlanningGrid } from "@/components/workflow/TimelinePlanningGrid";
 import { WorkflowSidebar } from "@/components/workflow/WorkflowSidebar";
 import { ScheduleDetailSheet } from "@/components/workflow/ScheduleDetailSheet";
 import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { Task } from "@/hooks/useTasks";
 import { Button } from "@/components/ui/button";
-import { PanelRight, CalendarClock } from "lucide-react";
+import { PanelRight, CalendarClock, LayoutGrid, Clock } from "lucide-react";
 import { TeamMember } from "@/hooks/useTeamMembers";
+import { ViewSwitcher } from "@/components/ui/view-switcher";
+
+type ViewType = "grid" | "timeline";
 
 export default function Workflow() {
+  const [view, setView] = useState<ViewType>("timeline");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedSchedule, setSelectedSchedule] = useState<TaskSchedule | null>(null);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
@@ -24,7 +29,6 @@ export default function Workflow() {
   }, []);
 
   const handleCellClick = useCallback((date: Date, member: TeamMember) => {
-    // TODO: Ouvrir un dialog pour créer une nouvelle planification
     console.log("Cell clicked:", date, member);
   }, []);
 
@@ -50,7 +54,15 @@ export default function Workflow() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <ViewSwitcher
+              value={view}
+              onChange={(v) => setView(v as ViewType)}
+              options={[
+                { value: "timeline", label: "Agenda", icon: <Clock className="h-4 w-4" /> },
+                { value: "grid", label: "Grille", icon: <LayoutGrid className="h-4 w-4" /> },
+              ]}
+            />
             <Button
               variant="outline"
               size="sm"
@@ -63,10 +75,16 @@ export default function Workflow() {
         </div>
 
         <div className="flex-1 overflow-hidden">
-          <TeamPlanningGrid
-            onEventClick={handleEventClick}
-            onCellClick={handleCellClick}
-          />
+          {view === "timeline" ? (
+            <TimelinePlanningGrid
+              onEventClick={handleEventClick}
+            />
+          ) : (
+            <TeamPlanningGrid
+              onEventClick={handleEventClick}
+              onCellClick={handleCellClick}
+            />
+          )}
         </div>
       </div>
 
