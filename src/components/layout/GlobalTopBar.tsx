@@ -15,14 +15,6 @@ import {
   Bell,
   Settings,
   LogOut,
-  RefreshCw,
-  CheckCheck,
-  Check,
-  X,
-  MessageSquare,
-  UserPlus,
-  FolderKanban,
-  CheckSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +38,8 @@ import { useGlobalSearch, SearchResult } from "@/hooks/useGlobalSearch";
 import { useTimeTrackerStore } from "@/hooks/useTimeTrackerStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
-import { formatDistanceToNow, differenceInMinutes } from "date-fns";
+import { NotificationsSidebar } from "./NotificationsSidebar";
+import { differenceInMinutes } from "date-fns";
 
 // Quick actions config
 const quickActions = [
@@ -56,50 +49,6 @@ const quickActions = [
   { id: "new-invoice", label: "Nouvelle facture", icon: Receipt, event: "open-create-invoice" },
   { id: "new-document", label: "Nouveau document", icon: FileText, event: "open-create-document" },
 ];
-
-// Mock notifications (replace with real data later)
-interface Notification {
-  id: string;
-  type: "task" | "project" | "mention" | "invite";
-  title: string;
-  description?: string;
-  read: boolean;
-  createdAt: Date;
-}
-
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "mention",
-    title: "Vous avez été mentionné",
-    description: "Alex vous a mentionné dans un commentaire",
-    read: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 5),
-  },
-  {
-    id: "2",
-    type: "task",
-    title: "Tâche assignée",
-    description: "Nouvelle tâche: Réviser la documentation API",
-    read: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 30),
-  },
-  {
-    id: "3",
-    type: "project",
-    title: "Projet mis à jour",
-    description: "Mobile App v2 passé en phase 'En cours'",
-    read: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-  },
-];
-
-const iconMap = {
-  task: CheckSquare,
-  project: FolderKanban,
-  mention: MessageSquare,
-  invite: UserPlus,
-};
 
 interface GlobalTopBarProps {
   onOpenPostIt: () => void;
@@ -117,12 +66,11 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
   const { isRunning, elapsedSeconds, openTracker } = useTimeTrackerStore();
   const { user, profile, signOut } = useAuth();
   
-  // Notifications state
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Notifications state - use real notifications from hook
+  const { notifications, unreadCount } = useNotifications();
+  const [notifSidebarOpen, setNotifSidebarOpen] = useState(false);
   const hasRecentNotification = notifications.some(
-    (n) => !n.read && differenceInMinutes(new Date(), n.createdAt) < 5
+    (n) => !n.is_read && differenceInMinutes(new Date(), new Date(n.created_at)) < 5
   );
 
   // User initials
@@ -184,13 +132,6 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
     }
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-  };
-
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -328,111 +269,39 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
 
         {/* Separator */}
         <div className="w-px h-6 bg-border mx-1" />
-        {/* Notifications */}
-        <Popover open={notifOpen} onOpenChange={setNotifOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 relative">
-              <Bell className={cn("h-4 w-4", hasRecentNotification && "animate-pulse")} strokeWidth={THIN_STROKE} />
-              <AnimatePresence>
-                {unreadCount > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={hasRecentNotification ? { 
-                      scale: [1, 1.2, 1],
-                      transition: { repeat: Infinity, duration: 1.5 }
-                    } : { scale: 1 }}
-                    exit={{ scale: 0 }}
-                    className={cn(
-                      "absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground",
-                      hasRecentNotification && "ring-2 ring-destructive/30"
-                    )}
-                  >
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </motion.span>
+        {/* Notifications Button */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8 relative"
+          onClick={() => setNotifSidebarOpen(true)}
+        >
+          <Bell className={cn("h-4 w-4", hasRecentNotification && "animate-pulse")} strokeWidth={THIN_STROKE} />
+          <AnimatePresence>
+            {unreadCount > 0 && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={hasRecentNotification ? { 
+                  scale: [1, 1.2, 1],
+                  transition: { repeat: Infinity, duration: 1.5 }
+                } : { scale: 1 }}
+                exit={{ scale: 0 }}
+                className={cn(
+                  "absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground",
+                  hasRecentNotification && "ring-2 ring-destructive/30"
                 )}
-              </AnimatePresence>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" sideOffset={8} className="w-80 p-0">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <h3 className="text-sm font-medium">Notifications</h3>
-              {unreadCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={markAllAsRead}
-                  className="h-auto px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <CheckCheck className="h-3.5 w-3.5 mr-1" />
-                  Tout lire
-                </Button>
-              )}
-            </div>
-
-            {/* Notifications List */}
-            <div className="max-h-80 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Bell className="h-8 w-8 text-muted-foreground/50 mb-2" strokeWidth={1} />
-                  <p className="text-sm text-muted-foreground">Aucune notification</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-border">
-                  {notifications.map((notification) => {
-                    const Icon = iconMap[notification.type];
-                    return (
-                      <div
-                        key={notification.id}
-                        className={cn(
-                          "group relative flex gap-3 px-4 py-3 transition-colors hover:bg-muted/50 cursor-pointer",
-                          !notification.read && "bg-muted/30"
-                        )}
-                        onClick={() => markAsRead(notification.id)}
-                      >
-                        {!notification.read && (
-                          <div className="absolute left-1.5 top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-primary" />
-                        )}
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                          <Icon className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {notification.title}
-                          </p>
-                          {notification.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                              {notification.description}
-                            </p>
-                          )}
-                          <p className="text-xs text-muted-foreground/70 mt-1">
-                            {formatDistanceToNow(notification.createdAt, { addSuffix: true })}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            {notifications.length > 0 && (
-              <div className="border-t border-border p-2">
-                <Button 
-                  variant="ghost" 
-                  className="w-full text-sm h-8"
-                  onClick={() => {
-                    navigate("/notifications");
-                    setNotifOpen(false);
-                  }}
-                >
-                  Voir toutes les notifications
-                </Button>
-              </div>
+              >
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </motion.span>
             )}
-          </PopoverContent>
-        </Popover>
+          </AnimatePresence>
+        </Button>
+
+        {/* Notifications Sidebar */}
+        <NotificationsSidebar 
+          open={notifSidebarOpen} 
+          onClose={() => setNotifSidebarOpen(false)} 
+        />
 
         {/* User Menu */}
         <DropdownMenu>
