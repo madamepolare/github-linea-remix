@@ -317,7 +317,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
     setSingleInviteSubject(`Appel à partenariat - ${tender?.title?.substring(0, 50) || 'Projet'}`);
     setSingleInviteBody(`Bonjour,
 
-Nous constituons actuellement une équipe de maîtrise d'œuvre pour répondre à un appel d'offres et souhaiterions vous associer à ce projet en tant que ${SPECIALTIES.find(s => s.value === specialty)?.label || specialty}.
+Nous constituons actuellement une équipe de maîtrise d'œuvre pour répondre à un appel d'offres et souhaiterions vous associer à ce projet en tant que ${getSpecialtyLabel(specialty)}.
 
 Projet: ${tender?.title || ''}
 ${tender?.location ? `Localisation: ${tender.location}` : ''}
@@ -462,7 +462,7 @@ Cordialement`);
                       onClick={() => openAddDialogWithSpecialty(s)}
                     >
                       <Plus className="h-3 w-3 mr-1" />
-                      {SPECIALTIES.find(sp => sp.value === s)?.label || s}
+                      {getSpecialtyLabel(s)}
                     </Button>
                   ))}
                 </div>
@@ -571,7 +571,7 @@ Cordialement`);
                     <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SPECIALTIES.map((s) => (
+                    {teamSpecialties.map((s) => (
                       <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -612,7 +612,7 @@ Cordialement`);
                   {filteredCompanies.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
                       {newCandidate.specialty 
-                        ? `Aucune entreprise avec la spécialité "${SPECIALTIES.find(s => s.value === newCandidate.specialty)?.label}"`
+                        ? `Aucune entreprise avec la spécialité "${getSpecialtyLabel(newCandidate.specialty)}"`
                         : "Aucune entreprise trouvée"}
                     </p>
                   ) : (
@@ -643,7 +643,7 @@ Cordialement`);
                             <div className="flex flex-wrap gap-1">
                               {company.bet_specialties.slice(0, 2).map((s) => (
                                 <Badge key={s} variant="outline" className="text-[10px] px-1 py-0">
-                                  {SPECIALTIES.find(sp => sp.value === s)?.label || s}
+                                  {getSpecialtyLabel(s)}
                                 </Badge>
                               ))}
                             </div>
@@ -737,7 +737,7 @@ Cordialement`);
                     <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
                   <SelectContent>
-                    {SPECIALTIES.map((s) => (
+                    {teamSpecialties.map((s) => (
                       <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                     ))}
                   </SelectContent>
@@ -925,7 +925,7 @@ Cordialement`);
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {SPECIALTIES.map((s) => (
+                      {teamSpecialties.map((s) => (
                         <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                       ))}
                     </SelectContent>
@@ -1031,7 +1031,7 @@ Cordialement`);
                       <SelectValue placeholder="Sélectionner" />
                     </SelectTrigger>
                     <SelectContent>
-                      {SPECIALTIES.map((s) => (
+                      {teamSpecialties.map((s) => (
                         <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                       ))}
                     </SelectContent>
@@ -1456,7 +1456,7 @@ function PipelineView({
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    {SPECIALTIES.find(s => s.value === specialty)?.label || specialty}
+                    {getSpecialtyLabel(specialty)}
                     {hasCandidate && <Badge variant="secondary">{specCandidates.length}</Badge>}
                     {!hasCandidate && <Badge variant="outline" className="text-amber-600 border-amber-300">Requis</Badge>}
                   </CardTitle>
@@ -1503,7 +1503,7 @@ function PipelineView({
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    {SPECIALTIES.find(s => s.value === specialty)?.label || specialty}
+                    {getSpecialtyLabel(specialty)}
                     <Badge variant="secondary">{specCandidates.length}</Badge>
                   </CardTitle>
                   <Button 
@@ -1817,7 +1817,7 @@ function TeamView({
                   <div className="flex items-center gap-2 flex-wrap">
                     {member.specialty && (
                       <p className="text-xs text-muted-foreground">
-                        {SPECIALTIES.find(s => s.value === member.specialty)?.label || member.specialty}
+                        {getSpecialtyLabel(member.specialty)}
                       </p>
                     )}
                     {/* Fee percentage and amount */}
