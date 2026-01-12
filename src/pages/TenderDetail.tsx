@@ -67,7 +67,7 @@ export default function TenderDetail() {
         metadata: [
           ...(tender.client_name ? [{ icon: Building2, label: tender.client_name }] : []),
           ...(tender.location ? [{ icon: MapPin, label: tender.location }] : []),
-          ...(tender.estimated_budget ? [{ icon: Euro, label: `${(tender.estimated_budget / 1000000).toFixed(1)}M€` }] : []),
+          ...(tender.estimated_budget ? [{ icon: Euro, label: tender.estimated_budget >= 1000000 ? `${(tender.estimated_budget / 1000000).toFixed(1)}M€` : `${Math.round(tender.estimated_budget / 1000)}k€` }] : []),
           ...(deadline ? [{ icon: Calendar, label: `Dépôt: ${format(deadline, "dd MMM yyyy", { locale: fr })}` }] : []),
         ],
         tabs: TENDER_TABS,

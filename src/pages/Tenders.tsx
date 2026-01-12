@@ -43,6 +43,7 @@ const PIPELINE_COLUMN_COLORS: Record<PipelineStatus, string> = {
   a_approuver: "#f59e0b",
   en_cours: "#3b82f6",
   deposes: "#10b981",
+  archives: "#6b7280",
 };
 
 export default function Tenders() {
@@ -68,7 +69,7 @@ export default function Tenders() {
       t.client_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const pipelineColumns: PipelineStatus[] = ["a_approuver", "en_cours", "deposes"];
+  const pipelineColumns: PipelineStatus[] = ["a_approuver", "en_cours", "deposes", "archives"];
 
   const handleDrop = (tenderId: string, fromColumnId: string, toColumnId: string) => {
     if (fromColumnId !== toColumnId) {
@@ -88,7 +89,7 @@ export default function Tenders() {
     <>
       <div className="flex flex-col h-full">
         {/* Stats Row */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 px-6 py-4 border-b border-border">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 px-6 py-4 border-b border-border">
           <div className="text-center">
             <p className="text-2xl font-bold">{stats.total}</p>
             <p className="text-xs text-muted-foreground">Total</p>
@@ -104,6 +105,10 @@ export default function Tenders() {
           <div className="text-center">
             <p className="text-2xl font-bold text-emerald-600">{stats.deposes}</p>
             <p className="text-xs text-muted-foreground">Déposés</p>
+          </div>
+          <div className="text-center">
+            <p className="text-2xl font-bold text-gray-500">{stats.archives}</p>
+            <p className="text-xs text-muted-foreground">Archivés</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-emerald-600">{stats.tauxReussite}%</p>
@@ -212,7 +217,9 @@ function TenderKanbanCard({
           {tender.estimated_budget && (
             <span className="flex items-center gap-1">
               <Euro className="h-3 w-3" strokeWidth={THIN_STROKE} />
-              {(tender.estimated_budget / 1000000).toFixed(1)}M€
+              {tender.estimated_budget >= 1000000
+                ? `${(tender.estimated_budget / 1000000).toFixed(1)}M€`
+                : `${Math.round(tender.estimated_budget / 1000)}k€`}
             </span>
           )}
         </div>
@@ -286,7 +293,9 @@ function TenderListView({
                 </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
                   {tender.estimated_budget 
-                    ? `${(tender.estimated_budget / 1000000).toFixed(1)}M€`
+                    ? tender.estimated_budget >= 1000000
+                      ? `${(tender.estimated_budget / 1000000).toFixed(1)}M€`
+                      : `${Math.round(tender.estimated_budget / 1000)}k€`
                     : "-"}
                 </td>
                 <td className="px-4 py-3">
