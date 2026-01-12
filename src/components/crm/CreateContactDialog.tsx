@@ -77,9 +77,10 @@ type FormData = z.infer<typeof schema>;
 interface CreateContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultCompanyId?: string;
 }
 
-export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogProps) {
+export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: CreateContactDialogProps) {
   const { createContact } = useContacts();
   const { companies, createCompany } = useCRMCompanies();
   const { contactTypes } = useCRMSettings();
@@ -106,6 +107,17 @@ export function CreateContactDialog({ open, onOpenChange }: CreateContactDialogP
       is_individual: false,
     },
   });
+
+  // Pre-fill company when defaultCompanyId is provided
+  const hasInitializedDefault = useState(false);
+  if (defaultCompanyId && !hasInitializedDefault[0] && open) {
+    form.setValue("crm_company_id", defaultCompanyId);
+    hasInitializedDefault[1](true);
+  }
+  // Reset initialization flag when dialog closes
+  if (!open && hasInitializedDefault[0]) {
+    hasInitializedDefault[1](false);
+  }
 
   const isIndividual = form.watch("is_individual");
   const selectedRole = form.watch("role");
