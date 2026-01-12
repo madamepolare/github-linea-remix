@@ -22,6 +22,7 @@ import { SkillsSection } from "@/components/settings/sections/SkillsSection";
 import { QuoteTemplatesSection } from "@/components/settings/sections/QuoteTemplatesSection";
 import { PricingGridsSection } from "@/components/settings/sections/PricingGridsSection";
 import { QuoteThemesSettings } from "@/components/settings/QuoteThemesSettings";
+import { TenderSettings } from "@/components/settings/TenderSettings";
 
 export default function Settings() {
   const [activeSection, setActiveSection] = useState("workspace");
@@ -68,6 +69,8 @@ export default function Settings() {
         return <EmailTemplatesSettings />;
       case "crm":
         return <CRMSettings />;
+      case "tenders":
+        return <TenderSettings />;
       case "feedback":
         return <FeedbackSettings />;
       default:
