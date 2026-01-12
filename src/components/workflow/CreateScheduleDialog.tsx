@@ -13,6 +13,7 @@ import { useTaskSchedules, useUnscheduledTasks } from "@/hooks/useTaskSchedules"
 import { TeamMember } from "@/hooks/useTeamMembers";
 import { useProjects } from "@/hooks/useProjects";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
+import { usePlanningSettings } from "@/hooks/usePlanningSettings";
 import { DurationInput } from "@/components/tasks/DurationInput";
 import { Calendar, Clock, ListTodo, CalendarPlus, MapPin, Users, FolderKanban } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -54,13 +55,20 @@ export function CreateScheduleDialog({
   const { data: tasks } = useUnscheduledTasks();
   const { projects } = useProjects();
   const { data: members } = useTeamMembers();
+  const { planningSettings } = usePlanningSettings();
+
+  // Use configured default hour (fallback to passed hour if no items exist)
+  const defaultStartHour = planningSettings.default_start_hour;
 
   const [activeTab, setActiveTab] = useState<"task" | "event">("task");
   
   // Calculate the next available start time based on existing items
   const nextAvailableTime = useMemo(() => {
+    // Use configured default hour if no specific hour clicked, or if no existing items
+    const baseHour = existingItems.length === 0 ? defaultStartHour : hour;
+    
     if (existingItems.length === 0) {
-      return { hour, minute: 0 };
+      return { hour: baseHour, minute: 0 };
     }
     
     const clickedTime = setHours(setMinutes(startOfDay(date), 0), hour);
@@ -89,7 +97,7 @@ export function CreateScheduleDialog({
     }
     
     return { hour: proposedStart.getHours(), minute: proposedStart.getMinutes() };
-  }, [existingItems, hour, date]);
+  }, [existingItems, hour, date, defaultStartHour]);
 
   // Task scheduling state
   const [selectedTaskId, setSelectedTaskId] = useState<string>("");

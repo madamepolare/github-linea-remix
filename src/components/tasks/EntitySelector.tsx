@@ -15,8 +15,9 @@ import {
   SelectLabel,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { FolderKanban, Target, Building2, User, Home, FileText } from "lucide-react";
+import { FolderKanban, Target, Building2, User, Home, FileText, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 const entityIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   project: FolderKanban,
@@ -24,6 +25,39 @@ const entityIcons: Record<string, React.ComponentType<{ className?: string }>> =
   company: Building2,
   contact: User,
   tender: FileText,
+};
+
+const entityColors: Record<string, { bg: string; border: string; text: string; iconBg: string }> = {
+  project: { 
+    bg: "bg-blue-50 hover:bg-blue-100", 
+    border: "border-blue-200", 
+    text: "text-blue-700",
+    iconBg: "bg-blue-100"
+  },
+  lead: { 
+    bg: "bg-amber-50 hover:bg-amber-100", 
+    border: "border-amber-200", 
+    text: "text-amber-700",
+    iconBg: "bg-amber-100"
+  },
+  company: { 
+    bg: "bg-purple-50 hover:bg-purple-100", 
+    border: "border-purple-200", 
+    text: "text-purple-700",
+    iconBg: "bg-purple-100"
+  },
+  contact: { 
+    bg: "bg-emerald-50 hover:bg-emerald-100", 
+    border: "border-emerald-200", 
+    text: "text-emerald-700",
+    iconBg: "bg-emerald-100"
+  },
+  tender: { 
+    bg: "bg-rose-50 hover:bg-rose-100", 
+    border: "border-rose-200", 
+    text: "text-rose-700",
+    iconBg: "bg-rose-100"
+  },
 };
 
 interface EntitySelectorProps {
@@ -73,12 +107,13 @@ export function EntitySelector({
   const entities = getEntitiesForType(entityType);
   const selectedEntity = entities.find((e) => e.id === entityId);
 
-  const handleTypeChange = (value: string) => {
-    if (value === "none") {
+  const handleTypeClick = (typeId: RelatedEntityType) => {
+    if (entityType === typeId) {
+      // Clicking same type again deselects it
       onEntityTypeChange(null);
       onEntityIdChange(null);
     } else {
-      onEntityTypeChange(value as RelatedEntityType);
+      onEntityTypeChange(typeId);
       onEntityIdChange(null);
     }
   };
@@ -90,88 +125,118 @@ export function EntitySelector({
   return (
     <div className={cn("space-y-3", className)}>
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">Type d'entité</Label>
-        <Select
-          value={entityType || "none"}
-          onValueChange={handleTypeChange}
-          disabled={disabled}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Aucune liaison" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Aucune liaison</SelectItem>
-            {RELATED_ENTITY_TYPES.map((type) => {
-              const Icon = entityIcons[type.id];
-              return (
-                <SelectItem key={type.id} value={type.id}>
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4" />
-                    {type.label}
-                  </div>
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
+        <Label className="text-xs text-muted-foreground">Lier à une entité</Label>
+        <div className="flex flex-wrap gap-2">
+          {RELATED_ENTITY_TYPES.map((type) => {
+            const Icon = entityIcons[type.id];
+            const colors = entityColors[type.id];
+            const isSelected = entityType === type.id;
+            
+            return (
+              <motion.button
+                key={type.id}
+                type="button"
+                onClick={() => handleTypeClick(type.id)}
+                disabled={disabled}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={cn(
+                  "relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200",
+                  "text-sm font-medium",
+                  isSelected 
+                    ? cn(colors.bg, colors.border, colors.text, "border-2 shadow-sm")
+                    : "bg-muted/30 border-border hover:bg-muted/50 text-muted-foreground",
+                  disabled && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <div className={cn(
+                  "w-6 h-6 rounded-md flex items-center justify-center",
+                  isSelected ? colors.iconBg : "bg-muted"
+                )}>
+                  <Icon className="h-3.5 w-3.5" />
+                </div>
+                <span>{type.label}</span>
+                {isSelected && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 w-4 h-4 bg-background rounded-full border shadow-sm flex items-center justify-center"
+                  >
+                    <X className="h-2.5 w-2.5 text-muted-foreground" />
+                  </motion.div>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
       </div>
 
-      {entityType && (
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">Sélectionner</Label>
-          <Select
-            value={entityId || "none"}
-            onValueChange={handleEntityChange}
-            disabled={disabled}
+      <AnimatePresence>
+        {entityType && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-2 overflow-hidden"
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionner..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Aucun</SelectItem>
-              {entityType === "project" ? (
-                <>
-                  {internalProjects.length > 0 && (
-                    <SelectGroup>
-                      <SelectLabel className="flex items-center gap-1.5 text-xs">
-                        <Home className="h-3 w-3" />
-                        Projets internes
-                      </SelectLabel>
-                      {internalProjects.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          <span className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-muted-foreground/50" />
+            <Label className="text-xs text-muted-foreground">Sélectionner</Label>
+            <Select
+              value={entityId || "none"}
+              onValueChange={handleEntityChange}
+              disabled={disabled}
+            >
+              <SelectTrigger className={cn(
+                "border-2",
+                entityType && entityColors[entityType]?.border
+              )}>
+                <SelectValue placeholder="Sélectionner..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Aucun</SelectItem>
+                {entityType === "project" ? (
+                  <>
+                    {internalProjects.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel className="flex items-center gap-1.5 text-xs">
+                          <Home className="h-3 w-3" />
+                          Projets internes
+                        </SelectLabel>
+                        {internalProjects.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            <span className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-muted-foreground/50" />
+                              {p.name}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {clientProjects.length > 0 && (
+                      <SelectGroup>
+                        <SelectLabel className="flex items-center gap-1.5 text-xs">
+                          <FolderKanban className="h-3 w-3" />
+                          Projets clients
+                        </SelectLabel>
+                        {clientProjects.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
                             {p.name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )}
-                  {clientProjects.length > 0 && (
-                    <SelectGroup>
-                      <SelectLabel className="flex items-center gap-1.5 text-xs">
-                        <FolderKanban className="h-3 w-3" />
-                        Projets clients
-                      </SelectLabel>
-                      {clientProjects.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )}
-                </>
-              ) : (
-                entities.map((entity) => (
-                  <SelectItem key={entity.id} value={entity.id}>
-                    {entity.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                  </>
+                ) : (
+                  entities.map((entity) => (
+                    <SelectItem key={entity.id} value={entity.id}>
+                      {entity.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -212,10 +277,15 @@ export function LinkedEntityBadge({ entityType, entityId, className }: LinkedEnt
   }
 
   const Icon = entityIcons[entityType];
+  const colors = entityColors[entityType];
   const typeLabel = RELATED_ENTITY_TYPES.find((t) => t.id === entityType)?.label || "";
 
   return (
-    <div className={cn("flex items-center gap-1.5 text-xs text-muted-foreground", className)}>
+    <div className={cn(
+      "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs",
+      colors?.bg, colors?.text,
+      className
+    )}>
       <Icon className="h-3 w-3" />
       <span className="truncate max-w-[120px]">{entityName}</span>
     </div>
