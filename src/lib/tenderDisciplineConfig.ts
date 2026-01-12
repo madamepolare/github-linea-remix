@@ -224,7 +224,6 @@ export const ARCHITECTURE_CONFIG: TenderDisciplineConfig = {
   
   keyMetrics: [
     { key: 'estimated_budget', label: 'Budget travaux', icon: 'Euro', colorClass: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400', formatType: 'currency' },
-    { key: 'surface_area', label: 'Surface', icon: 'Ruler', colorClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400', formatType: 'number', unit: 'm²' },
     { key: 'location', label: 'Localisation', icon: 'MapPin', colorClass: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400', formatType: 'text' },
     { key: 'required_team', label: 'Équipe', icon: 'Users', colorClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400', formatType: 'text' },
     { key: 'client_name', label: 'Maître d\'ouvrage', icon: 'Building2', colorClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400', formatType: 'text' },

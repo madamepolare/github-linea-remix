@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTasks, Task } from "@/hooks/useTasks";
 import { RelatedEntityType } from "@/lib/taskTypes";
 import { EntitySelector } from "./EntitySelector";
+import { MultiAssigneePicker } from "./MultiAssigneePicker";
 import {
   Dialog,
   DialogContent,
@@ -64,6 +65,7 @@ export function CreateTaskDialog({
   const [priority, setPriority] = useState<Task["priority"]>("medium");
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [estimatedHours, setEstimatedHours] = useState("");
+  const [assignees, setAssignees] = useState<string[]>([]);
   const [relatedType, setRelatedType] = useState<RelatedEntityType | null>(
     defaultProjectId ? "project" : (defaultRelatedType || null)
   );
@@ -81,6 +83,7 @@ export function CreateTaskDialog({
         setRelatedType(defaultRelatedType || null);
         setRelatedId(defaultRelatedId || null);
       }
+      setAssignees([]);
     }
   }, [open, defaultRelatedType, defaultRelatedId, defaultProjectId]);
 
@@ -120,6 +123,7 @@ export function CreateTaskDialog({
       priority,
       due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
       estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
+      assigned_to: assignees.length > 0 ? assignees : null,
       ...entityFields,
     });
 
@@ -130,6 +134,7 @@ export function CreateTaskDialog({
     setPriority("medium");
     setDueDate(undefined);
     setEstimatedHours("");
+    setAssignees([]);
     setRelatedType(null);
     setRelatedId(null);
     onOpenChange(false);
@@ -172,6 +177,16 @@ export function CreateTaskDialog({
             onEntityTypeChange={setRelatedType}
             onEntityIdChange={setRelatedId}
           />
+
+          {/* Assignee Picker */}
+          <div className="space-y-2">
+            <Label>Assigner à</Label>
+            <MultiAssigneePicker
+              value={assignees}
+              onChange={setAssignees}
+              className="w-full"
+            />
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
