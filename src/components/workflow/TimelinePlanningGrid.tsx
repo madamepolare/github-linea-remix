@@ -8,6 +8,7 @@ import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
 import { useWorkspaceEvents, UnifiedWorkspaceEvent, WorkspaceEvent, TenderWorkspaceEvent } from "@/hooks/useWorkspaceEvents";
 import { useAllProjectMembers, useProjects } from "@/hooks/useProjects";
+import { useAuth } from "@/contexts/AuthContext";
 import { useTeamAbsences, absenceTypeLabels } from "@/hooks/useTeamAbsences";
 import { useTeamTimeEntries, TeamTimeEntry } from "@/hooks/useTeamTimeEntries";
 import { useTeams } from "@/hooks/useTeams";
@@ -46,6 +47,7 @@ interface TimelinePlanningGridProps {
 }
 
 export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlanningGridProps) {
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const [showEvents, setShowEvents] = useState(true);
@@ -79,12 +81,19 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
 
   const isLoading = schedulesLoading || membersLoading || eventsLoading;
 
-  // Auto-select first member if none selected (force single member view in agenda)
+  // Auto-select current logged-in user as default ("Mon agenda")
   useEffect(() => {
-    if (!focusedMemberId && members && members.length > 0) {
-      setFocusedMemberId(members[0].user_id);
+    if (!focusedMemberId && members && members.length > 0 && user) {
+      // First, try to find the logged-in user in members
+      const currentUserMember = members.find(m => m.user_id === user.id);
+      if (currentUserMember) {
+        setFocusedMemberId(currentUserMember.user_id);
+      } else {
+        // Fallback to first member if current user not found
+        setFocusedMemberId(members[0].user_id);
+      }
     }
-  }, [members, focusedMemberId]);
+  }, [members, focusedMemberId, user]);
 
   // In agenda mode, we ALWAYS show only one member (single focus mode)
   const displayedMember = useMemo(() => {
