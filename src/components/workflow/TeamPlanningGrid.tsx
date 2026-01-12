@@ -152,9 +152,10 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const filteredMembers = useMemo(() => {
     let result = members || [];
     
-    // Filter by selected members
+    // If member filter is active, use ONLY those members (bypass project filter for selected members)
     if (selectedMemberIds.size > 0) {
       result = result.filter(m => selectedMemberIds.has(m.user_id));
+      return result;
     }
     
     // Filter by selected teams
@@ -592,30 +593,38 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                 <CommandInput placeholder="Rechercher un membre..." />
                 <CommandList>
                   <CommandEmpty>Aucun membre trouvé</CommandEmpty>
-                  <CommandGroup>
-                    {members?.map(member => (
-                      <CommandItem
-                        key={member.user_id}
-                        onSelect={() => toggleMemberFilter(member.user_id)}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <div className={cn(
-                          "flex h-4 w-4 items-center justify-center rounded-sm border",
-                          selectedMemberIds.has(member.user_id)
-                            ? "bg-primary border-primary text-primary-foreground"
-                            : "border-muted-foreground/30"
-                        )}>
-                          {selectedMemberIds.has(member.user_id) && <Check className="h-3 w-3" />}
-                        </div>
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={member.profile?.avatar_url || ""} />
-                          <AvatarFallback className="text-[8px]">
-                            {(member.profile?.full_name || "?").charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm truncate">{member.profile?.full_name || "Sans nom"}</span>
-                      </CommandItem>
-                    ))}
+                  <CommandGroup heading={selectedProjectIds.size > 0 ? "Ajouter des membres" : undefined}>
+                    {members?.map(member => {
+                      const isAssignedToProject = selectedProjectIds.size > 0 && projectAssignedUserIds?.has(member.user_id);
+                      return (
+                        <CommandItem
+                          key={member.user_id}
+                          onSelect={() => toggleMemberFilter(member.user_id)}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <div className={cn(
+                            "flex h-4 w-4 items-center justify-center rounded-sm border",
+                            selectedMemberIds.has(member.user_id)
+                              ? "bg-primary border-primary text-primary-foreground"
+                              : "border-muted-foreground/30"
+                          )}>
+                            {selectedMemberIds.has(member.user_id) && <Check className="h-3 w-3" />}
+                          </div>
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={member.profile?.avatar_url || ""} />
+                            <AvatarFallback className="text-[8px]">
+                              {(member.profile?.full_name || "?").charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm truncate flex-1">{member.profile?.full_name || "Sans nom"}</span>
+                          {isAssignedToProject && (
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+                              projet
+                            </Badge>
+                          )}
+                        </CommandItem>
+                      );
+                    })}
                   </CommandGroup>
                   {selectedMemberIds.size > 0 && (
                     <>
