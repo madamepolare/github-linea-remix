@@ -60,34 +60,35 @@ export function PageHeader({
     >
       {/* Main Row: Title + Actions */}
       <motion.div
-        className="px-6 sm:px-8 py-5"
+        className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5"
         variants={rowVariants}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           {/* Left: Title */}
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-foreground tracking-tight">
               {title}
             </h1>
             {description && (
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 line-clamp-2">
                 {description}
               </p>
             )}
           </div>
 
           {/* Right: Actions + Primary Button (backwards compat) */}
-          <div className="flex items-center gap-3 justify-end sm:justify-start flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 justify-start sm:justify-end flex-shrink-0 overflow-x-auto scrollbar-hide">
             {actions}
             
             {primaryAction && (
               <Button
                 onClick={primaryAction.onClick}
-                size="default"
-                className="gap-2"
+                size="sm"
+                className="gap-2 shrink-0"
               >
                 <Plus className="h-4 w-4" strokeWidth={2} />
-                {primaryAction.label}
+                <span className="hidden sm:inline">{primaryAction.label}</span>
+                <span className="sm:hidden">Ajouter</span>
               </Button>
             )}
           </div>
@@ -97,7 +98,7 @@ export function PageHeader({
       {/* Filters Row (optional) */}
       {hasFilters && (
         <motion.div
-          className="px-6 sm:px-8 py-4 border-b border-border bg-muted/30"
+          className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 border-b border-border bg-muted/30 overflow-x-auto scrollbar-hide"
           variants={rowVariants}
         >
           {filters}

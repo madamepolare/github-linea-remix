@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useLocation, Outlet } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { TopBar } from "./TopBar";
 import { GlobalTopBar } from "./GlobalTopBar";
 import { PostItSidebar } from "./PostItSidebar";
 import { PageTransition } from "./PageTransition";
 import { WorkspaceStylesLoader } from "./WorkspaceStylesLoader";
+import { MobileBottomNav } from "./MobileBottomNav";
 import { useSidebarStore } from "@/hooks/useSidebarStore";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -61,69 +62,93 @@ export function MainLayout() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Load and apply workspace-specific styles */}
       <WorkspaceStylesLoader />
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center h-14 px-3 bg-background border-b border-border">
-        {/* Menu toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="h-9 w-9 shrink-0"
-        >
-          {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
-
-        {/* Workspace name + current module */}
-        <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
+      
+      {/* Mobile Header - Simplified */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-center h-12 px-4 bg-background/95 backdrop-blur-lg border-b border-border">
+        <div className="flex items-center gap-2">
           {activeWorkspace?.logo_url ? (
             <img 
               src={activeWorkspace.logo_url} 
               alt={activeWorkspace.name}
-              className="h-6 w-6 rounded-md object-cover shrink-0"
+              className="h-6 w-6 rounded-md object-cover"
             />
-          ) : null}
-          <span className="font-semibold text-sm truncate">
-            {activeWorkspace?.name || "Workspace"}
-          </span>
-          {currentModule && currentModule.slug !== "dashboard" && (
-            <>
-              <span className="text-muted-foreground">/</span>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <currentModule.icon className="h-3.5 w-3.5" strokeWidth={THIN_STROKE} />
-                <span className="text-xs font-medium">{currentModule.title}</span>
-              </div>
-            </>
+          ) : (
+            <div className="h-6 w-6 rounded-md bg-foreground flex items-center justify-center">
+              <span className="text-xs font-semibold text-background">
+                {activeWorkspace?.name?.slice(0, 1).toUpperCase() || "L"}
+              </span>
+            </div>
           )}
+          <span className="font-semibold text-sm">
+            {activeWorkspace?.name || "Linea"}
+          </span>
         </div>
-
-        {/* Spacer for centering */}
-        <div className="w-9 shrink-0" />
       </header>
 
-      {/* Mobile overlay */}
-      {mobileMenuOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/50"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            
+            {/* Sidebar Panel */}
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="lg:hidden fixed inset-y-0 left-0 z-50 w-[280px] bg-background shadow-2xl"
+            >
+              {/* Close button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setMobileMenuOpen(false)}
+                className="absolute top-3 right-3 h-8 w-8 rounded-full z-10"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+              
+              <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
-      {/* Sidebar - hidden on mobile unless menu is open */}
-      <div className={cn(
-        "lg:block",
-        mobileMenuOpen ? "block" : "hidden"
-      )}>
-        <AppSidebar onNavigate={() => setMobileMenuOpen(false)} />
+      {/* Desktop Sidebar - always visible on lg+ */}
+      <div className="hidden lg:block">
+        <AppSidebar />
       </div>
 
       {/* Main content with TopBar */}
       <div 
         className={cn(
           "min-h-screen flex flex-col transition-all duration-200 ease-out",
-          "pt-14 lg:pt-0", // Account for mobile header
+          "pt-12 pb-16 lg:pt-0 lg:pb-0", // Account for mobile header + bottom nav
           collapsed ? "lg:pl-[72px]" : "lg:pl-[260px]"
         )}
       >
@@ -153,6 +178,9 @@ export function MainLayout() {
           </TerminologyProvider>
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav onMenuClick={() => setMobileMenuOpen(true)} />
 
       {/* Post-it Sidebar */}
       <PostItSidebar open={postItOpen} onOpenChange={setPostItOpen} />
