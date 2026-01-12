@@ -277,20 +277,35 @@ export function PhaseQuickEditDialog({
                               Complémentaires
                             </div>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => toggleTemplate(template.code)}
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleTemplate(template.code);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                toggleTemplate(template.code);
+                              }
+                            }}
                             className={cn(
-                              "w-full flex items-center gap-2 p-1.5 rounded text-left transition-colors text-xs",
+                              "w-full flex items-center gap-2 p-1.5 rounded text-left transition-colors text-xs cursor-pointer select-none",
                               isSelected ? "bg-primary/10" : "hover:bg-muted/50"
                             )}
                           >
-                            <Checkbox checked={isSelected} className="h-3.5 w-3.5" />
+                            <Checkbox 
+                              checked={isSelected} 
+                              className="h-3.5 w-3.5 pointer-events-none"
+                              tabIndex={-1}
+                            />
                             <Badge variant="outline" className="text-[10px] font-mono px-1 py-0">
                               {template.code}
                             </Badge>
                             <span className="truncate">{template.name}</span>
-                          </button>
+                          </div>
                         </div>
                       );
                     })}

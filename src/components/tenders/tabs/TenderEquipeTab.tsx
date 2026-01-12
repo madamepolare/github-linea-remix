@@ -94,7 +94,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useTenderTeam } from "@/hooks/useTenderTeam";
 import { useTenderPartnerCandidates, CANDIDATE_STATUS_LABELS, CANDIDATE_STATUS_COLORS, type PartnerCandidate } from "@/hooks/useTenderPartnerCandidates";
-import { useTender } from "@/hooks/useTenders";
+import { useTender, useTenders } from "@/hooks/useTenders";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
 import { useTenderDisciplineConfig } from "@/hooks/useTenderDisciplineConfig";
@@ -142,12 +142,29 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   } = useTenderPartnerCandidates(tenderId);
 
   const { data: tender } = useTender(tenderId);
+  const { updateTender } = useTenders();
   const { companies } = useCRMCompanies();
   const { contacts } = useContacts();
   const { teamSpecialties, getSpecialtyLabel } = useTenderDisciplineConfig(tenderId);
   
   // Get deliverables for email dialog
   const { deliverables } = useTenderDeliverables(tenderId, teamMembers);
+
+  // Required team from tender
+  const requiredTeam = Array.isArray(tender?.required_team) ? tender.required_team : [];
+
+  // Handle remove required specialty
+  const handleRemoveRequiredSpecialty = (memberId: string) => {
+    const updatedTeam = requiredTeam.filter((m: any) => m.id !== memberId);
+    updateTender.mutate({
+      id: tenderId,
+      required_team: updatedTeam,
+    }, {
+      onSuccess: () => {
+        toast.success("Spécialité retirée");
+      },
+    });
+  };
 
   // UI State
   const [activeView, setActiveView] = useState<"pipeline" | "team">("team");
@@ -471,6 +488,47 @@ Cordialement`);
                 <Sparkles className="h-3 w-3 mr-1" />
                 IA
               </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Required Specialties Management */}
+      {requiredTeam.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Spécialités requises
+                <Badge variant="secondary">{requiredTeam.length}</Badge>
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {requiredTeam.map((member: any) => (
+                <div
+                  key={member.id}
+                  className="group flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-sm"
+                >
+                  <span className={member.is_mandatory ? "font-medium" : ""}>
+                    {getSpecialtyLabel(member.specialty)}
+                  </span>
+                  {member.is_mandatory && (
+                    <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">
+                      Obligatoire
+                    </Badge>
+                  )}
+                  <button
+                    onClick={() => handleRemoveRequiredSpecialty(member.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
+                    title="Retirer cette spécialité"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
