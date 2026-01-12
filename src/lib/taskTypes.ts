@@ -1,5 +1,5 @@
 export type TaskModule = 'general' | 'admin' | 'concours' | 'project' | 'hr' | 'finance' | 'commercial';
-export type RelatedEntityType = 'contact' | 'lead' | 'project' | 'company' | 'invoice' | 'quote';
+export type RelatedEntityType = 'contact' | 'lead' | 'project' | 'company' | 'invoice' | 'quote' | 'tender';
 
 export const TASK_MODULES = [
   { id: 'general', label: 'Général' },
@@ -31,6 +31,7 @@ export const RELATED_ENTITY_TYPES = [
   { id: 'lead', label: 'Lead', icon: 'Target' },
   { id: 'company', label: 'Entreprise', icon: 'Building2' },
   { id: 'contact', label: 'Contact', icon: 'User' },
+  { id: 'tender', label: 'Appel d\'offre', icon: 'FileText' },
 ] as const;
 
 export const ENTITY_TABS = [
@@ -39,4 +40,5 @@ export const ENTITY_TABS = [
   { id: 'lead', label: 'Leads' },
   { id: 'company', label: 'Entreprises' },
   { id: 'contact', label: 'Contacts' },
+  { id: 'tender', label: 'Appels d\'offres' },
 ] as const;

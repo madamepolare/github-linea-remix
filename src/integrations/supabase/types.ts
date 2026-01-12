@@ -6877,6 +6877,7 @@ export type Database = {
           start_date: string | null
           status: string | null
           tags: string[] | null
+          tender_id: string | null
           title: string
           updated_at: string | null
           workspace_id: string
@@ -6906,6 +6907,7 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           tags?: string[] | null
+          tender_id?: string | null
           title: string
           updated_at?: string | null
           workspace_id: string
@@ -6935,6 +6937,7 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           tags?: string[] | null
+          tender_id?: string | null
           title?: string
           updated_at?: string | null
           workspace_id?: string
@@ -6973,6 +6976,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
             referencedColumns: ["id"]
           },
           {

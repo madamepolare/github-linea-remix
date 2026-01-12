@@ -3,6 +3,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useLeads } from "@/hooks/useLeads";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
+import { useTenders } from "@/hooks/useTenders";
 import { RELATED_ENTITY_TYPES, RelatedEntityType } from "@/lib/taskTypes";
 import {
   Select,
@@ -14,7 +15,7 @@ import {
   SelectLabel,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { FolderKanban, Target, Building2, User, Home } from "lucide-react";
+import { FolderKanban, Target, Building2, User, Home, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const entityIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -22,6 +23,7 @@ const entityIcons: Record<string, React.ComponentType<{ className?: string }>> =
   lead: Target,
   company: Building2,
   contact: User,
+  tender: FileText,
 };
 
 interface EntitySelectorProps {
@@ -45,6 +47,7 @@ export function EntitySelector({
   const { leads } = useLeads();
   const { allCompanies } = useCRMCompanies();
   const { allContacts } = useContacts();
+  const { tenders } = useTenders();
 
   // Separate internal and client projects
   const internalProjects = projects.filter(p => p.is_internal);
@@ -60,6 +63,8 @@ export function EntitySelector({
         return allCompanies.map((c) => ({ id: c.id, name: c.name, isInternal: false }));
       case "contact":
         return allContacts.map((c) => ({ id: c.id, name: c.name, isInternal: false }));
+      case "tender":
+        return (tenders || []).map((t) => ({ id: t.id, name: t.title, isInternal: false }));
       default:
         return [];
     }
@@ -183,6 +188,7 @@ export function LinkedEntityBadge({ entityType, entityId, className }: LinkedEnt
   const { leads } = useLeads();
   const { allCompanies } = useCRMCompanies();
   const { allContacts } = useContacts();
+  const { tenders } = useTenders();
 
   if (!entityType || !entityId) return null;
 
@@ -199,6 +205,9 @@ export function LinkedEntityBadge({ entityType, entityId, className }: LinkedEnt
       break;
     case "contact":
       entityName = allContacts.find((c) => c.id === entityId)?.name || "Contact";
+      break;
+    case "tender":
+      entityName = (tenders || []).find((t) => t.id === entityId)?.title || "Appel d'offre";
       break;
   }
 

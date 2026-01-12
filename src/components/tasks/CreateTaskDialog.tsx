@@ -107,6 +107,9 @@ export function CreateTaskDialog({
         case "contact":
           entityFields.contact_id = relatedId;
           break;
+        case "tender":
+          entityFields.tender_id = relatedId;
+          break;
       }
     }
 

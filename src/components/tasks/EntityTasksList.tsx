@@ -38,6 +38,8 @@ export function EntityTasksList({ entityType, entityId, entityName, compact = fa
         return task.crm_company_id === entityId || (task.related_type === "company" && task.related_id === entityId);
       case "contact":
         return task.contact_id === entityId || (task.related_type === "contact" && task.related_id === entityId);
+      case "tender":
+        return task.tender_id === entityId || (task.related_type === "tender" && task.related_id === entityId);
       default:
         return false;
     }

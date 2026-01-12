@@ -113,6 +113,9 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
       } else if (task.contact_id) {
         setRelatedType("contact");
         setRelatedId(task.contact_id);
+      } else if (task.tender_id) {
+        setRelatedType("tender");
+        setRelatedId(task.tender_id);
       } else {
         setRelatedType(null);
         setRelatedId(null);
@@ -130,6 +133,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
         lead_id: null,
         crm_company_id: null,
         contact_id: null,
+        tender_id: null,
       };
 
       if (relatedType && relatedId) {
@@ -145,6 +149,9 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
             break;
           case "contact":
             entityFields.contact_id = relatedId;
+            break;
+          case "tender":
+            entityFields.tender_id = relatedId;
             break;
         }
       }
@@ -197,6 +204,9 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
         break;
       case "contact":
         path = `/crm/contacts/${relatedId}`;
+        break;
+      case "tender":
+        path = `/tenders/${relatedId}`;
         break;
     }
     
