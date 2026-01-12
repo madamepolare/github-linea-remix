@@ -6,6 +6,10 @@ import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { TeamMember } from "@/hooks/useTeamMembers";
 import { AgendaTimelineItem, DAY_START_HOUR, DAY_END_HOUR, TOTAL_HOURS, PIXELS_PER_MINUTE } from "./AgendaTimelineItem";
 
+// Lunch break configuration
+const LUNCH_START_HOUR = 13;
+const LUNCH_END_HOUR = 14;
+
 interface DayTimelineCellProps {
   day: Date;
   member: TeamMember;
@@ -132,36 +136,51 @@ export function DayTimelineCell({
     >
       {/* Hour grid lines */}
       <div className="absolute inset-0">
-        {hourSlots.map((hour) => (
-          <div
-            key={hour}
-            className={cn(
-              "absolute left-0 right-0 border-t border-border/30 hover:bg-accent/30 transition-colors cursor-pointer",
-              dragOverHour === hour && "bg-primary/20"
-            )}
-            style={{
-              top: `${((hour - DAY_START_HOUR) / TOTAL_HOURS) * 100}%`,
-              height: `${(1 / TOTAL_HOURS) * 100}%`,
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setDragOverHour(hour);
-            }}
-            onDragLeave={(e) => {
-              e.stopPropagation();
-              setDragOverHour(null);
-            }}
-            onDrop={(e) => handleSlotDrop(e, hour)}
-            onClick={() => handleSlotClick(hour)}
-          >
-            {/* Half-hour line */}
-            <div 
-              className="absolute left-0 right-0 border-t border-border/10"
-              style={{ top: "50%" }}
-            />
-          </div>
-        ))}
+        {hourSlots.map((hour) => {
+          const isLunchBreak = hour >= LUNCH_START_HOUR && hour < LUNCH_END_HOUR;
+          
+          return (
+            <div
+              key={hour}
+              className={cn(
+                "absolute left-0 right-0 border-t border-border/30 hover:bg-accent/30 transition-colors cursor-pointer",
+                dragOverHour === hour && "bg-primary/20",
+                isLunchBreak && "bg-muted/40"
+              )}
+              style={{
+                top: `${((hour - DAY_START_HOUR) / TOTAL_HOURS) * 100}%`,
+                height: `${(1 / TOTAL_HOURS) * 100}%`,
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverHour(hour);
+              }}
+              onDragLeave={(e) => {
+                e.stopPropagation();
+                setDragOverHour(null);
+              }}
+              onDrop={(e) => handleSlotDrop(e, hour)}
+              onClick={() => handleSlotClick(hour)}
+            >
+              {/* Half-hour line */}
+              <div 
+                className="absolute left-0 right-0 border-t border-border/10"
+                style={{ top: "50%" }}
+              />
+              {/* Lunch break diagonal pattern indicator */}
+              {isLunchBreak && (
+                <div 
+                  className="absolute inset-0 pointer-events-none opacity-30"
+                  style={{
+                    backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 4px, currentColor 4px, currentColor 5px)",
+                    color: "var(--muted-foreground)",
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Items positioned by time */}
