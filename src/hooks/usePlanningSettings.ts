@@ -7,11 +7,21 @@ import type { Json } from "@/integrations/supabase/types";
 export interface PlanningSettings {
   default_start_hour: number;
   default_task_duration: number;
+  // Agency working hours
+  agency_open_hour: number;
+  agency_close_hour: number;
+  // Lunch break
+  lunch_start_hour: number;
+  lunch_end_hour: number;
 }
 
 const DEFAULT_PLANNING_SETTINGS: PlanningSettings = {
   default_start_hour: 10, // 10h by default as requested
   default_task_duration: 2,
+  agency_open_hour: 10,   // Opens at 10h
+  agency_close_hour: 18,  // Closes at 18h (7h of work with 1h lunch)
+  lunch_start_hour: 13,
+  lunch_end_hour: 14,
 };
 
 export function usePlanningSettings() {
@@ -37,10 +47,16 @@ export function usePlanningSettings() {
     enabled: !!activeWorkspace?.id,
   });
 
-  const planningSettings: PlanningSettings = settingRecord?.setting_value 
+  const rawValue = settingRecord?.setting_value as Record<string, unknown> | null;
+  
+  const planningSettings: PlanningSettings = rawValue 
     ? {
-        default_start_hour: (settingRecord.setting_value as Record<string, unknown>).default_start_hour as number ?? DEFAULT_PLANNING_SETTINGS.default_start_hour,
-        default_task_duration: (settingRecord.setting_value as Record<string, unknown>).default_task_duration as number ?? DEFAULT_PLANNING_SETTINGS.default_task_duration,
+        default_start_hour: (rawValue.default_start_hour as number) ?? DEFAULT_PLANNING_SETTINGS.default_start_hour,
+        default_task_duration: (rawValue.default_task_duration as number) ?? DEFAULT_PLANNING_SETTINGS.default_task_duration,
+        agency_open_hour: (rawValue.agency_open_hour as number) ?? DEFAULT_PLANNING_SETTINGS.agency_open_hour,
+        agency_close_hour: (rawValue.agency_close_hour as number) ?? DEFAULT_PLANNING_SETTINGS.agency_close_hour,
+        lunch_start_hour: (rawValue.lunch_start_hour as number) ?? DEFAULT_PLANNING_SETTINGS.lunch_start_hour,
+        lunch_end_hour: (rawValue.lunch_end_hour as number) ?? DEFAULT_PLANNING_SETTINGS.lunch_end_hour,
       }
     : DEFAULT_PLANNING_SETTINGS;
 
