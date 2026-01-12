@@ -181,7 +181,7 @@ export function PayrollExportTab() {
       </div>
 
       {/* Periods Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
         {MONTHS.map((monthName, idx) => {
           const month = idx + 1;
           const period = periods?.find((p) => p.period_month === month);
@@ -221,51 +221,53 @@ export function PayrollExportTab() {
       {/* Selected Period Details */}
       {selectedPeriod && (
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-lg">
                   {MONTHS[selectedPeriod.period_month - 1]} {selectedPeriod.period_year}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Du {format(new Date(selectedPeriod.start_date), "d MMMM", { locale: fr })} au{" "}
                   {format(new Date(selectedPeriod.end_date), "d MMMM yyyy", { locale: fr })}
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => generateVariables.mutate(selectedPeriod.id)}
                   disabled={generateVariables.isPending}
+                  className="h-8"
                 >
-                  <RefreshCw className={cn("h-4 w-4 mr-2", generateVariables.isPending && "animate-spin")} />
-                  Calculer
+                  <RefreshCw className={cn("h-4 w-4 sm:mr-2", generateVariables.isPending && "animate-spin")} />
+                  <span className="hidden sm:inline">Calculer</span>
                 </Button>
                 {selectedPeriod.status === "draft" && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => updatePeriod.mutate({ id: selectedPeriod.id, status: "validated" })}
+                    className="h-8"
                   >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Valider
+                    <CheckCircle className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Valider</span>
                   </Button>
                 )}
                 {(selectedPeriod.status === "validated" || selectedPeriod.status === "exported") && (
-                  <Button size="sm" onClick={handleExportCSV}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Exporter CSV
+                  <Button size="sm" onClick={handleExportCSV} className="h-8">
+                    <Download className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Exporter CSV</span>
                   </Button>
                 )}
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 sm:px-6">
             {variablesLoading ? (
-              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-48 w-full mx-4 sm:mx-0" />
             ) : variables && variables.length > 0 ? (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto -mx-0 sm:mx-0">
                 <Table>
                   <TableHeader>
                     <TableRow>

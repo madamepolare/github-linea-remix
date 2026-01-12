@@ -219,53 +219,55 @@ export function AbsencesTab() {
   return (
     <div className="space-y-6">
       <Tabs value={tab} onValueChange={setTab}>
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="calendar">Calendrier</TabsTrigger>
-            <TabsTrigger value="requests">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <TabsList className="w-full sm:w-auto overflow-x-auto">
+            <TabsTrigger value="calendar" className="text-xs sm:text-sm">Calendrier</TabsTrigger>
+            <TabsTrigger value="requests" className="text-xs sm:text-sm">
               Demandes
               {pendingAbsences.length > 0 && canApprove && (
-                <Badge variant="destructive" className="ml-2 h-5 w-5 p-0 justify-center">
+                <Badge variant="destructive" className="ml-1.5 h-4 w-4 sm:h-5 sm:w-5 p-0 justify-center text-[10px]">
                   {pendingAbsences.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="my">Mes absences</TabsTrigger>
+            <TabsTrigger value="my" className="text-xs sm:text-sm">Mes absences</TabsTrigger>
             {canApprove && (
-              <TabsTrigger value="all">Toutes les absences</TabsTrigger>
+              <TabsTrigger value="all" className="text-xs sm:text-sm">Toutes</TabsTrigger>
             )}
           </TabsList>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {canApprove ? "Créer une absence" : "Demander une absence"}
+          <Button size="sm" onClick={() => setCreateOpen(true)} className="h-9">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{canApprove ? "Créer une absence" : "Demander"}</span>
+            <span className="sm:hidden">Demander</span>
           </Button>
         </div>
 
-        <TabsContent value="calendar" className="mt-6">
+        <TabsContent value="calendar" className="mt-4 sm:mt-6">
           <Card>
-            <CardHeader className="flex-row items-center justify-between py-4">
+            <CardHeader className="flex-row items-center justify-between py-3 sm:py-4 px-3 sm:px-6">
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <CardTitle className="text-lg min-w-[160px] text-center">
+                <CardTitle className="text-sm sm:text-lg min-w-[120px] sm:min-w-[160px] text-center capitalize">
                   {format(currentMonth, "MMMM yyyy", { locale: fr })}
                 </CardTitle>
-                <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
               <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden">
-                {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((day) => (
-                  <div key={day} className="bg-muted p-2 text-center text-xs font-medium text-muted-foreground">
-                    {day}
+                {["L", "M", "M", "J", "V", "S", "D"].map((day, i) => (
+                  <div key={`${day}-${i}`} className="bg-muted p-1.5 sm:p-2 text-center text-[10px] sm:text-xs font-medium text-muted-foreground">
+                    <span className="sm:hidden">{day}</span>
+                    <span className="hidden sm:inline">{["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"][i]}</span>
                   </div>
                 ))}
                 {/* Offset for first day */}
                 {[...Array((monthStart.getDay() + 6) % 7)].map((_, i) => (
-                  <div key={`empty-${i}`} className="bg-background p-2 min-h-[80px]" />
+                  <div key={`empty-${i}`} className="bg-background p-1 sm:p-2 min-h-[48px] sm:min-h-[80px]" />
                 ))}
                 {days.map((day) => {
                   const dayAbsences = getAbsencesForDay(day);
@@ -277,24 +279,24 @@ export function AbsencesTab() {
                     <div
                       key={day.toISOString()}
                       className={cn(
-                        "bg-background p-2 min-h-[80px]",
+                        "bg-background p-1 sm:p-2 min-h-[48px] sm:min-h-[80px]",
                         isToday && "bg-primary/5",
                         isWeekend && "bg-muted/30"
                       )}
                     >
                       <span className={cn(
-                        "text-sm",
+                        "text-xs sm:text-sm",
                         isToday && "font-bold text-primary",
                         isWeekend && "text-muted-foreground"
                       )}>
                         {format(day, "d")}
                       </span>
-                      <div className="mt-1 space-y-1">
-                        {/* School days for apprentices */}
+                      <div className="mt-0.5 sm:mt-1 space-y-0.5 sm:space-y-1">
+                        {/* School days for apprentices - hidden on mobile */}
                         {schoolDays.slice(0, 2).map((sd, idx) => (
                           <div
                             key={`school-${sd.userId}-${idx}`}
-                            className="text-xs p-1 rounded bg-purple-100 dark:bg-purple-900/30 truncate flex items-center gap-1"
+                            className="hidden sm:flex text-xs p-1 rounded bg-purple-100 dark:bg-purple-900/30 truncate items-center gap-1"
                             title={`${sd.memberName} - École`}
                           >
                             <GraduationCap className="h-3 w-3 shrink-0" />
@@ -302,21 +304,25 @@ export function AbsencesTab() {
                           </div>
                         ))}
                         {/* Regular absences */}
-                        {dayAbsences.slice(0, 3 - Math.min(schoolDays.length, 2)).map((absence) => {
+                        {dayAbsences.slice(0, 2).map((absence, idx) => {
                           const member = memberMap?.[absence.user_id];
                           return (
                             <div
                               key={absence.id}
-                              className="text-xs p-1 rounded bg-blue-100 dark:bg-blue-900/30 truncate"
+                              className={cn(
+                                "text-[10px] sm:text-xs p-0.5 sm:p-1 rounded bg-blue-100 dark:bg-blue-900/30 truncate",
+                                idx > 0 && "hidden sm:block"
+                              )}
                               title={member?.profile?.full_name || "—"}
                             >
-                              {member?.profile?.full_name?.split(" ")[0] || "—"}
+                              <span className="hidden sm:inline">{member?.profile?.full_name?.split(" ")[0] || "—"}</span>
+                              <span className="sm:hidden">{member?.profile?.full_name?.split(" ")[0]?.charAt(0) || "•"}</span>
                             </div>
                           );
                         })}
-                        {(dayAbsences.length + schoolDays.length) > 3 && (
-                          <div className="text-xs text-muted-foreground">
-                            +{dayAbsences.length + schoolDays.length - 3}
+                        {(dayAbsences.length + schoolDays.length) > 2 && (
+                          <div className="text-[10px] sm:text-xs text-muted-foreground">
+                            +{dayAbsences.length + schoolDays.length - 2}
                           </div>
                         )}
                       </div>

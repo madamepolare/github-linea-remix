@@ -217,22 +217,22 @@ export function TeamUsersTab() {
             className="pl-9"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {isAdmin && (
-            <Button variant="outline" onClick={() => setTeamsDialogOpen(true)}>
-              <UsersRound className="h-4 w-4 mr-2" />
-              Équipes ({teams.length})
+            <Button variant="outline" size="sm" onClick={() => setTeamsDialogOpen(true)} className="h-9">
+              <UsersRound className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Équipes ({teams.length})</span>
             </Button>
           )}
           {canInvite && (
             <>
-              <Button variant="outline" onClick={() => setCreateMemberOpen(true)}>
-                <UserRoundPlus className="h-4 w-4 mr-2" />
-                Créer
+              <Button variant="outline" size="sm" onClick={() => setCreateMemberOpen(true)} className="h-9">
+                <UserRoundPlus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Créer</span>
               </Button>
-              <Button onClick={() => setInviteOpen(true)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Inviter
+              <Button size="sm" onClick={() => setInviteOpen(true)} className="h-9">
+                <UserPlus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Inviter</span>
               </Button>
             </>
           )}

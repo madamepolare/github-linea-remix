@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { TeamPlanningGrid } from "@/components/workflow/TeamPlanningGrid";
 import { TimelinePlanningGrid } from "@/components/workflow/TimelinePlanningGrid";
+import { MobilePlanningView } from "@/components/workflow/MobilePlanningView";
 import { WorkflowSidebar } from "@/components/workflow/WorkflowSidebar";
 import { ScheduleDetailSheet } from "@/components/workflow/ScheduleDetailSheet";
 import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
@@ -10,10 +11,12 @@ import { Button } from "@/components/ui/button";
 import { PanelRight, CalendarClock, LayoutGrid, Clock } from "lucide-react";
 import { TeamMember } from "@/hooks/useTeamMembers";
 import { ViewSwitcher } from "@/components/ui/view-switcher";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 type ViewType = "grid" | "timeline";
 
 export default function Workflow() {
+  const isMobile = useMediaQuery("(max-width: 1023px)");
   const [view, setView] = useState<ViewType>("grid");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedSchedule, setSelectedSchedule] = useState<TaskSchedule | null>(null);
@@ -22,6 +25,13 @@ export default function Workflow() {
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   
   const { createSchedule } = useTaskSchedules();
+
+  // Auto-close sidebar on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [isMobile]);
 
   const handleEventClick = useCallback((schedule: TaskSchedule) => {
     setSelectedSchedule(schedule);
@@ -37,6 +47,23 @@ export default function Workflow() {
     setTaskSheetOpen(true);
   }, []);
 
+  // Mobile view
+  if (isMobile) {
+    return (
+      <div className="h-[calc(100vh-8rem)]">
+        <MobilePlanningView onEventClick={handleEventClick} />
+        
+        {/* Schedule detail sheet */}
+        <ScheduleDetailSheet
+          schedule={selectedSchedule}
+          open={detailSheetOpen}
+          onOpenChange={setDetailSheetOpen}
+        />
+      </div>
+    );
+  }
+
+  // Desktop view
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Main planning area */}
