@@ -106,6 +106,65 @@ export const PROCEDURE_TYPE_LABELS: Record<ProcedureType, string> = {
   autre: 'Autre',
 };
 
+// Normalize procedure type from AI extraction to enum value
+export function normalizeProcedureType(value: string | null | undefined): ProcedureType | null {
+  if (!value) return null;
+  
+  const normalized = value.toLowerCase().trim();
+  
+  // Direct enum value match
+  const validTypes: ProcedureType[] = ['ouvert', 'restreint', 'adapte', 'mapa', 'concours', 'concours_restreint', 'concours_ouvert', 'dialogue', 'dialogue_competitif', 'partenariat', 'partenariat_innovation', 'ppp', 'conception_realisation', 'negociee', 'appel_offres_ouvert', 'appel_offres_restreint', 'autre'];
+  if (validTypes.includes(normalized as ProcedureType)) {
+    return normalized as ProcedureType;
+  }
+  
+  // Match by label or common variations
+  const mappings: Record<string, ProcedureType> = {
+    // Négociée
+    'procédure négociée': 'negociee',
+    'procedure negociee': 'negociee',
+    'négociée': 'negociee',
+    'negociee': 'negociee',
+    'procédure avec négociation': 'negociee',
+    'procedure avec negociation': 'negociee',
+    'avec négociation': 'negociee',
+    // MAPA
+    'marché à procédure adaptée': 'mapa',
+    'marche a procedure adaptee': 'mapa',
+    'procédure adaptée': 'adapte',
+    'procedure adaptee': 'adapte',
+    // Concours
+    'concours de maîtrise d\'œuvre': 'concours',
+    'concours de maitrise d\'oeuvre': 'concours',
+    'concours restreint de maîtrise d\'œuvre': 'concours_restreint',
+    'concours restreint': 'concours_restreint',
+    'concours ouvert': 'concours_ouvert',
+    // Dialogue
+    'dialogue compétitif': 'dialogue_competitif',
+    'dialogue competitif': 'dialogue_competitif',
+    // Appel d'offres
+    'appel d\'offres ouvert': 'ouvert',
+    'appel d\'offres restreint': 'restreint',
+    'aoo': 'appel_offres_ouvert',
+    'aor': 'appel_offres_restreint',
+    // Conception-réalisation
+    'conception-réalisation': 'conception_realisation',
+    'conception realisation': 'conception_realisation',
+    // Partenariat
+    'partenariat d\'innovation': 'partenariat_innovation',
+    'partenariat public-privé': 'ppp',
+  };
+  
+  for (const [pattern, enumValue] of Object.entries(mappings)) {
+    if (normalized.includes(pattern)) {
+      return enumValue;
+    }
+  }
+  
+  // Fallback to 'autre' if no match
+  return 'autre';
+}
+
 // Team Roles
 export type TenderTeamRole = 'mandataire' | 'cotraitant' | 'sous_traitant';
 

@@ -54,6 +54,7 @@ import {
   PROCEDURE_TYPE_LABELS, 
   SUBMISSION_TYPE_LABELS,
   CLIENT_TYPES,
+  normalizeProcedureType,
   type SubmissionType,
   type CriterionType,
 } from "@/lib/tenderTypes";
@@ -465,10 +466,14 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         setAiFilledFields(filledFields);
         setExtractionStats(data.stats || null);
         
+        // Normalize procedure_type from AI extraction to valid enum value
+        const normalizedProcedureType = normalizeProcedureType(extracted.procedure_type);
+        
         setFormData({
           ...extracted,
           discipline_slug: disciplineSlug,
           submission_type: extracted.submission_type || 'candidature_offre',
+          procedure_type: normalizedProcedureType || undefined,
           criteria: extracted.criteria || [],
           required_team: extracted.required_team || [],
           lots: extracted.lots || [],
