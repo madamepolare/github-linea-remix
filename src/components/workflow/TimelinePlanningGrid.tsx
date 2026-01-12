@@ -1,12 +1,9 @@
 import { useState, useMemo, useCallback } from "react";
 import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, setHours, setMinutes, startOfDay, addMinutes, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Check, X, UsersRound, ChevronDown, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Clock, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
-import { Badge } from "@/components/ui/badge";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
 import { useWorkspaceEvents, UnifiedWorkspaceEvent, WorkspaceEvent, TenderWorkspaceEvent } from "@/hooks/useWorkspaceEvents";
@@ -16,7 +13,6 @@ import { useTeamTimeEntries, TeamTimeEntry } from "@/hooks/useTeamTimeEntries";
 import { useTeams } from "@/hooks/useTeams";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -27,6 +23,8 @@ import { DayTimelineCell, TimelineHourLabels, DAY_START_HOUR, DAY_END_HOUR, TOTA
 import { AddTimeEntryDialog } from "./AddTimeEntryDialog";
 import { EditTimeEntryDialog } from "./EditTimeEntryDialog";
 import { CreateScheduleDialog } from "./CreateScheduleDialog";
+import { MemberFocusSwitcher } from "./MemberFocusSwitcher";
+import { CalendarSyncPanel } from "./CalendarSyncPanel";
 
 // Configuration
 const DAYS_TO_SHOW = 7; // 1 week
@@ -53,8 +51,7 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
   const [showEvents, setShowEvents] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
-  const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
-  const [memberFilterOpen, setMemberFilterOpen] = useState(false);
+  const [focusedMemberId, setFocusedMemberId] = useState<string | null>(null);
 
   // Create schedule dialog state
   const [createScheduleOpen, setCreateScheduleOpen] = useState(false);
@@ -81,11 +78,14 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
 
   const isLoading = schedulesLoading || membersLoading || eventsLoading;
 
-  // Filter members
-  const filteredMembers = useMemo(() => {
-    if (selectedMemberIds.size === 0) return members || [];
-    return (members || []).filter(m => selectedMemberIds.has(m.user_id));
-  }, [members, selectedMemberIds]);
+  // Filter members based on focus mode
+  const displayedMembers = useMemo(() => {
+    if (!members) return [];
+    if (focusedMemberId) {
+      return members.filter(m => m.user_id === focusedMemberId);
+    }
+    return members;
+  }, [members, focusedMemberId]);
 
   // Calculate days to show
   const days = useMemo(() => {
@@ -288,23 +288,7 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
     setEditTimeEntryDialogOpen(true);
   }, []);
 
-  const toggleMemberFilter = useCallback((userId: string) => {
-    setSelectedMemberIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(userId)) {
-        newSet.delete(userId);
-      } else {
-        newSet.add(userId);
-      }
-      return newSet;
-    });
-  }, []);
-
-  const clearMemberFilter = useCallback(() => {
-    setSelectedMemberIds(new Set());
-  }, []);
-
-  const containerHeight = TOTAL_HOURS * 60 * PIXELS_PER_MINUTE;
+  const containerHeight = useMemo(() => TOTAL_HOURS * 60 * PIXELS_PER_MINUTE, []);
 
   if (isLoading) {
     return (
@@ -348,64 +332,15 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Member filter */}
-          <Popover open={memberFilterOpen} onOpenChange={setMemberFilterOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-2">
-                <Users className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Membres</span>
-                {selectedMemberIds.size > 0 && (
-                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
-                    {selectedMemberIds.size}
-                  </Badge>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-0" align="end">
-              <Command>
-                <CommandInput placeholder="Rechercher un membre..." />
-                <CommandList>
-                  <CommandEmpty>Aucun membre trouvé</CommandEmpty>
-                  <CommandGroup>
-                    {members?.map(member => (
-                      <CommandItem
-                        key={member.user_id}
-                        onSelect={() => toggleMemberFilter(member.user_id)}
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <div className={cn(
-                          "flex h-4 w-4 items-center justify-center rounded-sm border",
-                          selectedMemberIds.has(member.user_id)
-                            ? "bg-primary border-primary text-primary-foreground"
-                            : "border-muted-foreground/30"
-                        )}>
-                          {selectedMemberIds.has(member.user_id) && <Check className="h-3 w-3" />}
-                        </div>
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={member.profile?.avatar_url || ""} />
-                          <AvatarFallback className="text-[8px]">
-                            {(member.profile?.full_name || "?").charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm truncate">{member.profile?.full_name || "Sans nom"}</span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  {selectedMemberIds.size > 0 && (
-                    <>
-                      <CommandSeparator />
-                      <CommandGroup>
-                        <CommandItem onSelect={clearMemberFilter} className="justify-center text-muted-foreground">
-                          <X className="h-3 w-3 mr-1" />
-                          Effacer les filtres
-                        </CommandItem>
-                      </CommandGroup>
-                    </>
-                  )}
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          {/* Member focus switcher */}
+          <MemberFocusSwitcher
+            members={members || []}
+            focusedMemberId={focusedMemberId}
+            onFocusChange={setFocusedMemberId}
+          />
+
+          {/* Calendar sync panel */}
+          <CalendarSyncPanel />
 
           {/* Show events toggle */}
           <div className="flex items-center gap-2">
@@ -435,7 +370,7 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
           
           {/* Member rows */}
           <ScrollArea className="h-[calc(100%-4rem)]">
-            {filteredMembers.map(member => (
+            {displayedMembers.map(member => (
               <div
                 key={member.user_id}
                 className="flex items-center gap-2 px-3 py-2 border-b"
@@ -499,7 +434,7 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
                   </div>
 
                   {/* Member timelines for this day */}
-                  {filteredMembers.map(member => {
+                  {displayedMembers.map(member => {
                     const cellKey = `${member.user_id}-${day.toISOString()}`;
                     const items = getItemsForMemberAndDay(member.user_id, member.profile?.email || null, day);
                     
