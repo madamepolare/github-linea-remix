@@ -144,6 +144,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   const { data: tender } = useTender(tenderId);
   const { companies } = useCRMCompanies();
   const { contacts } = useContacts();
+  const { teamSpecialties, getSpecialtyLabel } = useTenderDisciplineConfig(tenderId);
   
   // Get deliverables for email dialog
   const { deliverables } = useTenderDeliverables(tenderId, teamMembers);
