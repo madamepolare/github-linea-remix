@@ -187,6 +187,71 @@ export function useTenderDocuments(tenderId: string | undefined) {
     },
   });
 
+  // Full DCE reanalysis - re-triggers analysis on ALL documents
+  const reanalyzeAllDocuments = useMutation({
+    mutationFn: async () => {
+      if (!tenderId || documents.length === 0) {
+        throw new Error("No documents to analyze");
+      }
+
+      // Get all document URLs and types
+      const documentData = documents.map(doc => ({
+        id: doc.id,
+        url: doc.file_url,
+        type: doc.document_type,
+        name: doc.file_name,
+      }));
+
+      // Call the analysis edge function with all documents
+      const { data, error } = await supabase.functions.invoke("analyze-dce-before-creation", {
+        body: { 
+          files: documentData.map(d => ({
+            name: d.name,
+            type: d.type,
+            url: d.url,
+          })),
+          tenderId,
+          forceReanalyze: true,
+        },
+      });
+
+      if (error) throw error;
+
+      // Mark all documents as analyzed
+      for (const doc of documents) {
+        await supabase
+          .from("tender_documents")
+          .update({
+            is_analyzed: true,
+            analyzed_at: new Date().toISOString(),
+          })
+          .eq("id", doc.id);
+      }
+
+      // Update tender with extracted analysis if available
+      if (data?.analysis) {
+        await supabase
+          .from("tenders")
+          .update({
+            description: data.analysis.description || undefined,
+          } as any)
+          .eq("id", tenderId);
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tender-documents", tenderId] });
+      queryClient.invalidateQueries({ queryKey: ["tender", tenderId] });
+      queryClient.invalidateQueries({ queryKey: ["tender-criteria", tenderId] });
+      toast.success("Analyse DCE terminée");
+    },
+    onError: (error) => {
+      toast.error("Erreur lors de l'analyse DCE");
+      console.error(error);
+    },
+  });
+
   return {
     documents,
     isLoading,
@@ -195,5 +260,6 @@ export function useTenderDocuments(tenderId: string | undefined) {
     uploadMultipleDocuments,
     deleteDocument,
     analyzeDocument,
+    reanalyzeAllDocuments,
   };
 }
