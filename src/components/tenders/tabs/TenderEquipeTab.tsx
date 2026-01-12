@@ -97,7 +97,8 @@ import { useTenderPartnerCandidates, CANDIDATE_STATUS_LABELS, CANDIDATE_STATUS_C
 import { useTender } from "@/hooks/useTenders";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
-import { TEAM_ROLE_LABELS, SPECIALTIES, type TenderTeamRole } from "@/lib/tenderTypes";
+import { useTenderDisciplineConfig } from "@/hooks/useTenderDisciplineConfig";
+import { TEAM_ROLE_LABELS, type TenderTeamRole } from "@/lib/tenderTypes";
 import { BulkInvitationDialog } from "@/components/tenders/BulkInvitationDialog";
 import { PartnerPrefilterPanel } from "@/components/tenders/PartnerPrefilterPanel";
 import { PartnerProposalEmailDialog } from "@/components/tenders/PartnerProposalEmailDialog";
