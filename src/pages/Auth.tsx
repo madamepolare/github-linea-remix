@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Hexagon, Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, UserPlus } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, UserPlus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,8 +118,8 @@ export default function Auth() {
       });
     } else {
       toast({
-        title: "Account created!",
-        description: "Welcome to ARCHIMIND. Let's set up your workspace.",
+        title: "Compte créé !",
+        description: "Bienvenue sur Linea. Configurons votre espace de travail.",
       });
     }
   };
@@ -135,27 +135,31 @@ export default function Auth() {
   return (
     <div className="min-h-screen flex">
       {/* Left Panel - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/80" />
+      <div className="hidden lg:flex lg:w-1/2 bg-foreground relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-foreground to-foreground/90" />
         
-        {/* Geometric pattern */}
-        <div className="absolute inset-0 opacity-10">
+        {/* Geometric pattern - Linea style */}
+        <div className="absolute inset-0 opacity-5">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-                <path d="M 60 0 L 0 0 0 60" fill="none" stroke="currentColor" strokeWidth="1"/>
+              <pattern id="linea-grid" width="80" height="80" patternUnits="userSpaceOnUse">
+                <line x1="0" y1="0" x2="80" y2="0" stroke="currentColor" strokeWidth="1"/>
+                <line x1="0" y1="40" x2="80" y2="40" stroke="currentColor" strokeWidth="0.5"/>
               </pattern>
             </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" className="text-primary-foreground"/>
+            <rect width="100%" height="100%" fill="url(#linea-grid)" className="text-background"/>
           </svg>
         </div>
 
-        <div className="relative z-10 flex flex-col justify-between p-12 text-primary-foreground">
+        <div className="relative z-10 flex flex-col justify-between p-12 text-background">
+          {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent">
-              <Hexagon className="h-7 w-7 text-accent-foreground" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5 bg-background" />
+              <div className="w-4 h-0.5 bg-background/60" />
+              <div className="w-2 h-0.5 bg-background/30" />
             </div>
-            <span className="font-display text-2xl font-bold">ARCHIMIND</span>
+            <span className="font-display text-2xl font-bold tracking-tight">LINEA</span>
           </div>
 
           <div className="space-y-6">
@@ -165,46 +169,49 @@ export default function Auth() {
               transition={{ delay: 0.2 }}
               className="font-display text-5xl font-bold leading-tight"
             >
-              Design the future.<br />
-              Manage with precision.
+              Concevez l'avenir.<br />
+              Gérez avec précision.
             </motion.h1>
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-xl text-primary-foreground/80 max-w-md"
+              className="text-xl text-background/70 max-w-md"
             >
-              The complete platform for architecture firms. Projects, CRM, tenders, finances, and construction management — all in one place.
+              La plateforme complète pour les agences d'architecture. Projets, CRM, appels d'offres, finances et suivi de chantier — tout en un seul endroit.
             </motion.p>
           </div>
 
           <div className="flex items-center gap-8">
             <div className="text-center">
               <div className="font-display text-3xl font-bold">500+</div>
-              <div className="text-sm text-primary-foreground/70">Architecture Firms</div>
+              <div className="text-sm text-background/60">Agences</div>
             </div>
-            <div className="h-12 w-px bg-primary-foreground/20" />
+            <div className="h-12 w-px bg-background/20" />
             <div className="text-center">
               <div className="font-display text-3xl font-bold">15K+</div>
-              <div className="text-sm text-primary-foreground/70">Projects Managed</div>
+              <div className="text-sm text-background/60">Projets gérés</div>
             </div>
-            <div className="h-12 w-px bg-primary-foreground/20" />
+            <div className="h-12 w-px bg-background/20" />
             <div className="text-center">
-              <div className="font-display text-3xl font-bold">€2B+</div>
-              <div className="text-sm text-primary-foreground/70">Revenue Tracked</div>
+              <div className="font-display text-3xl font-bold">€2Md+</div>
+              <div className="text-sm text-background/60">CA suivi</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Right Panel - Auth Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md">
+          {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Hexagon className="h-6 w-6 text-primary-foreground" />
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-0.5 bg-foreground" />
+              <div className="w-3 h-0.5 bg-foreground/60" />
+              <div className="w-1.5 h-0.5 bg-foreground/30" />
             </div>
-            <span className="font-display text-xl font-bold text-foreground">ARCHIMIND</span>
+            <span className="font-display text-xl font-bold text-foreground tracking-tight">LINEA</span>
           </div>
 
           <motion.div
@@ -237,7 +244,7 @@ export default function Auth() {
               <h2 className="font-display text-3xl font-bold text-foreground">
                 {isInviteFlow 
                   ? (isLogin ? "Connectez-vous" : "Créez votre compte")
-                  : (isLogin ? "Welcome back" : "Create your account")}
+                  : (isLogin ? "Bon retour" : "Créez votre compte")}
               </h2>
               <p className="text-muted-foreground">
                 {isInviteFlow
@@ -245,8 +252,8 @@ export default function Auth() {
                       ? "Connectez-vous pour rejoindre l'équipe" 
                       : `Inscrivez-vous avec ${suggestedEmail}`)
                   : (isLogin
-                      ? "Sign in to access your workspace"
-                      : "Start managing your architecture practice")}
+                      ? "Connectez-vous à votre espace Linea"
+                      : "Commencez à gérer votre agence")}
               </p>
             </div>
 
@@ -260,7 +267,7 @@ export default function Auth() {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {isInviteFlow ? "Connexion" : "Sign In"}
+                Connexion
               </button>
               <button
                 onClick={() => setIsLogin(false)}
@@ -270,7 +277,7 @@ export default function Auth() {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {isInviteFlow ? "Inscription" : "Sign Up"}
+                Inscription
               </button>
             </div>
 
@@ -291,7 +298,7 @@ export default function Auth() {
                       <Input
                         id="login-email"
                         type="email"
-                        placeholder="you@company.com"
+                        placeholder="vous@agence.com"
                         className="pl-10"
                         {...loginForm.register("email")}
                       />
@@ -302,7 +309,7 @@ export default function Auth() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
+                    <Label htmlFor="login-password">Mot de passe</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -331,7 +338,7 @@ export default function Auth() {
                     ) : (
                       <ArrowRight className="h-4 w-4 mr-2" />
                     )}
-                    Sign In
+                    Se connecter
                   </Button>
                 </motion.form>
               ) : (
@@ -367,7 +374,7 @@ export default function Auth() {
                       <Input
                         id="signup-email"
                         type="email"
-                        placeholder="you@company.com"
+                        placeholder="vous@agence.com"
                         className="pl-10"
                         {...signupForm.register("email")}
                       />
@@ -378,7 +385,7 @@ export default function Auth() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password">Mot de passe</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -402,7 +409,7 @@ export default function Auth() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="signup-confirm">Confirm Password</Label>
+                    <Label htmlFor="signup-confirm">Confirmer le mot de passe</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -424,14 +431,14 @@ export default function Auth() {
                     ) : (
                       <ArrowRight className="h-4 w-4 mr-2" />
                     )}
-                    Create Account
+                    Créer mon compte
                   </Button>
 
                   <p className="text-xs text-center text-muted-foreground">
-                    By signing up, you agree to our{" "}
-                    <a href="#" className="text-primary hover:underline">Terms of Service</a>
-                    {" "}and{" "}
-                    <a href="#" className="text-primary hover:underline">Privacy Policy</a>
+                    En vous inscrivant, vous acceptez nos{" "}
+                    <a href="#" className="text-foreground hover:underline">Conditions d'utilisation</a>
+                    {" "}et notre{" "}
+                    <a href="#" className="text-foreground hover:underline">Politique de confidentialité</a>
                   </p>
                 </motion.form>
               )}
