@@ -521,9 +521,10 @@ Cordialement`);
                toast.error("Pas d'email pour ce partenaire (contact ou entreprise)");
              }
            }}
-          onBulkInvite={() => setShowBulkInviteDialog(true)}
+           onBulkInvite={() => setShowBulkInviteDialog(true)}
           isLoading={isLoading}
           requiredSpecialties={requiredSpecialties}
+          getSpecialtyLabel={getSpecialtyLabel}
         />
       ) : (
         <TeamView
