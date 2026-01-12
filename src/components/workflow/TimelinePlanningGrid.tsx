@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, setHours, setMinutes, startOfDay, addMinutes, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar, Clock, CalendarDays } from "lucide-react";
@@ -51,6 +51,7 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
   const [showEvents, setShowEvents] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
+  // In agenda view, we always focus on a single member (forced focus mode)
   const [focusedMemberId, setFocusedMemberId] = useState<string | null>(null);
 
   // Create schedule dialog state
@@ -78,13 +79,20 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
 
   const isLoading = schedulesLoading || membersLoading || eventsLoading;
 
-  // Filter members based on focus mode
-  const displayedMembers = useMemo(() => {
-    if (!members) return [];
-    if (focusedMemberId) {
-      return members.filter(m => m.user_id === focusedMemberId);
+  // Auto-select first member if none selected (force single member view in agenda)
+  useEffect(() => {
+    if (!focusedMemberId && members && members.length > 0) {
+      setFocusedMemberId(members[0].user_id);
     }
-    return members;
+  }, [members, focusedMemberId]);
+
+  // In agenda mode, we ALWAYS show only one member (single focus mode)
+  const displayedMember = useMemo(() => {
+    if (!members) return null;
+    if (focusedMemberId) {
+      return members.find(m => m.user_id === focusedMemberId) || members[0];
+    }
+    return members[0] || null;
   }, [members, focusedMemberId]);
 
   // Calculate days to show
@@ -356,51 +364,42 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
         </div>
       </div>
 
-      {/* Main grid */}
+      {/* Main grid - Single member view */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Members column (sticky) */}
-        <div 
-          className="flex-shrink-0 border-r bg-muted/30"
-          style={{ width: MEMBER_COLUMN_WIDTH }}
-        >
-          {/* Header spacer */}
-          <div className="h-16 border-b flex items-center justify-center">
-            <span className="text-xs font-medium text-muted-foreground">Équipe</span>
-          </div>
-          
-          {/* Member rows */}
-          <ScrollArea className="h-[calc(100%-4rem)]">
-            {displayedMembers.map(member => (
-              <div
-                key={member.user_id}
-                className="flex items-center gap-2 px-3 py-2 border-b"
-                style={{ height: containerHeight }}
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={member.profile?.avatar_url || ""} />
-                  <AvatarFallback className="text-xs">
-                    {(member.profile?.full_name || "?").charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">
-                    {member.profile?.full_name || "Sans nom"}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground truncate">
-                    {member.role}
-                  </div>
+        {/* Member info column (sticky) */}
+        {displayedMember && (
+          <div 
+            className="flex-shrink-0 border-r bg-muted/30"
+            style={{ width: MEMBER_COLUMN_WIDTH }}
+          >
+            {/* Header with member info */}
+            <div className="h-16 border-b flex items-center gap-3 px-3 bg-card/50">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={displayedMember.profile?.avatar_url || ""} />
+                <AvatarFallback className="text-sm">
+                  {(displayedMember.profile?.full_name || "?").charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold truncate">
+                  {displayedMember.profile?.full_name || "Sans nom"}
+                </div>
+                <div className="text-[11px] text-muted-foreground truncate">
+                  {displayedMember.role || "Membre"}
                 </div>
               </div>
-            ))}
-          </ScrollArea>
-        </div>
+            </div>
+            
+            {/* Hour labels integrated into member column */}
+            <div className="h-[calc(100%-4rem)]">
+              <TimelineHourLabels />
+            </div>
+          </div>
+        )}
 
         {/* Timeline area */}
         <ScrollArea className="flex-1">
           <div className="flex min-w-max">
-            {/* Hour labels */}
-            <TimelineHourLabels />
-
             {/* Days columns */}
             {days.map(day => {
               const isToday = isSameDay(day, new Date());
@@ -433,33 +432,28 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
                     </span>
                   </div>
 
-                  {/* Member timelines for this day */}
-                  {displayedMembers.map(member => {
-                    const cellKey = `${member.user_id}-${day.toISOString()}`;
-                    const items = getItemsForMemberAndDay(member.user_id, member.profile?.email || null, day);
-                    
-                    return (
-                      <DayTimelineCell
-                        key={cellKey}
-                        day={day}
-                        member={member}
-                        items={items}
-                        isDragOver={dragOverCell === cellKey}
-                        isToday={isToday}
-                        isWeekend={weekend}
-                        onDragOver={() => setDragOverCell(cellKey)}
-                        onDragLeave={() => setDragOverCell(null)}
-                        onDrop={(e, hour) => {
-                          setDragOverCell(null);
-                          handleDrop(e, day, member, hour);
-                        }}
-                        onViewTask={handleViewTask}
-                        onUnschedule={handleUnschedule}
-                        onCellClick={(date, hour) => handleCellClick(date, hour, member, items)}
-                        onViewTimeEntry={handleViewTimeEntry}
-                      />
-                    );
-                  })}
+                  {/* Single member timeline for this day */}
+                  {displayedMember && (
+                    <DayTimelineCell
+                      key={`${displayedMember.user_id}-${day.toISOString()}`}
+                      day={day}
+                      member={displayedMember}
+                      items={getItemsForMemberAndDay(displayedMember.user_id, displayedMember.profile?.email || null, day)}
+                      isDragOver={dragOverCell === `${displayedMember.user_id}-${day.toISOString()}`}
+                      isToday={isToday}
+                      isWeekend={weekend}
+                      onDragOver={() => setDragOverCell(`${displayedMember.user_id}-${day.toISOString()}`)}
+                      onDragLeave={() => setDragOverCell(null)}
+                      onDrop={(e, hour) => {
+                        setDragOverCell(null);
+                        handleDrop(e, day, displayedMember, hour);
+                      }}
+                      onViewTask={handleViewTask}
+                      onUnschedule={handleUnschedule}
+                      onCellClick={(date, hour) => handleCellClick(date, hour, displayedMember, getItemsForMemberAndDay(displayedMember.user_id, displayedMember.profile?.email || null, day))}
+                      onViewTimeEntry={handleViewTimeEntry}
+                    />
+                  )}
                 </div>
               );
             })}

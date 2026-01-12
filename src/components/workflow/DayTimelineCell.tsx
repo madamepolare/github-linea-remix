@@ -1,188 +1,10 @@
-import { useState, useCallback, useMemo, useRef } from "react";
-import { format, addMinutes, startOfDay, setHours, setMinutes, differenceInMinutes } from "date-fns";
-import { fr } from "date-fns/locale";
+import { useState, useCallback, useMemo } from "react";
+import { startOfDay, setHours, setMinutes, addMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
 import { PlanningItem } from "./ResizablePlanningItem";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { TeamMember } from "@/hooks/useTeamMembers";
-import { Calendar, Clock, Users, GripVertical, Trash2, Eye, MoveVertical } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-
-// Constants for the timeline
-const DAY_START_HOUR = 8;
-const DAY_END_HOUR = 20;
-const TOTAL_HOURS = DAY_END_HOUR - DAY_START_HOUR;
-const MINUTES_PER_SLOT = 15; // 15-minute slots
-const PIXELS_PER_MINUTE = 1.5;
-
-interface TimelineItemProps {
-  item: PlanningItem;
-  dayStart: Date;
-  onViewTask: (schedule: TaskSchedule) => void;
-  onUnschedule: (scheduleId: string) => void;
-  onDragStart: (e: React.DragEvent, item: PlanningItem) => void;
-  onViewEvent?: (event: any) => void;
-  onViewTimeEntry?: (entry: any) => void;
-  containerHeight: number;
-  isDragging?: boolean;
-  isDropTarget?: boolean;
-}
-
-function TimelineItem({
-  item,
-  dayStart,
-  onViewTask,
-  onUnschedule,
-  onDragStart,
-  onViewEvent,
-  onViewTimeEntry,
-  containerHeight,
-  isDragging = false,
-  isDropTarget = false,
-}: TimelineItemProps) {
-  const schedule = item.type === "task" ? (item.originalData as TaskSchedule) : null;
-  const isAbsence = item.type === "absence";
-  const isTimeEntry = item.type === "timeEntry";
-
-  // Calculate position and height based on time
-  const dayStartMinutes = DAY_START_HOUR * 60;
-  const dayEndMinutes = DAY_END_HOUR * 60;
-  const totalDayMinutes = dayEndMinutes - dayStartMinutes;
-
-  const itemStartMinutes = item.start.getHours() * 60 + item.start.getMinutes();
-  const itemEndMinutes = item.end 
-    ? item.end.getHours() * 60 + item.end.getMinutes()
-    : itemStartMinutes + 60;
-
-  // Clamp to day boundaries
-  const clampedStart = Math.max(dayStartMinutes, Math.min(itemStartMinutes, dayEndMinutes));
-  const clampedEnd = Math.max(dayStartMinutes, Math.min(itemEndMinutes, dayEndMinutes));
-
-  const topPercent = ((clampedStart - dayStartMinutes) / totalDayMinutes) * 100;
-  const heightPercent = ((clampedEnd - clampedStart) / totalDayMinutes) * 100;
-
-  const startTimeLabel = format(item.start, "HH:mm");
-  const endTimeLabel = item.end ? format(item.end, "HH:mm") : "";
-  const durationLabel = item.durationHours 
-    ? item.durationHours >= 1 
-      ? `${Math.round(item.durationHours * 10) / 10}h`
-      : `${Math.round(item.durationHours * 60)}m`
-    : "";
-
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (item.type === "task" && schedule) {
-      onViewTask(schedule);
-    } else if (item.type === "event" && onViewEvent) {
-      onViewEvent(item.originalData);
-    } else if (item.type === "timeEntry" && onViewTimeEntry) {
-      onViewTimeEntry(item.originalData);
-    }
-  }, [item, schedule, onViewTask, onViewEvent, onViewTimeEntry]);
-
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <TooltipProvider delayDuration={200}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  "absolute left-1 right-1 rounded-lg overflow-hidden transition-all duration-200",
-                  "cursor-pointer hover:shadow-lg hover:scale-[1.02] group",
-                  item.type === "task" && "cursor-grab active:cursor-grabbing",
-                  isAbsence && "opacity-60 cursor-not-allowed"
-                )}
-                style={{
-                  top: `${topPercent}%`,
-                  height: `${Math.max(heightPercent, 3)}%`,
-                  backgroundColor: item.color,
-                  minHeight: 24,
-                }}
-                draggable={item.type === "task" && !isAbsence}
-                onDragStart={(e) => item.type === "task" && onDragStart(e, item)}
-                onClick={handleClick}
-              >
-                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
-                
-                <div className="p-1.5 flex flex-col h-full text-white relative">
-                  {/* Drag handle */}
-                  {item.type === "task" && (
-                    <GripVertical className="absolute top-1 right-1 h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />
-                  )}
-                  
-                  {/* Time label */}
-                  <div className="text-[9px] font-medium opacity-80 flex items-center gap-1">
-                    <Clock className="h-2.5 w-2.5" />
-                    {startTimeLabel} - {endTimeLabel}
-                  </div>
-                  
-                  {/* Title */}
-                  <div className="text-[11px] font-semibold truncate flex-1">
-                    {item.title}
-                  </div>
-                  
-                  {/* Project name if available */}
-                  {item.projectName && heightPercent > 8 && (
-                    <div className="text-[9px] opacity-70 truncate">
-                      {item.projectName}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="max-w-xs">
-              <div className="space-y-1">
-                <div className="font-medium flex items-center gap-1.5">
-                  {item.type === "event" && <Calendar className="h-3.5 w-3.5" />}
-                  {item.type === "task" && <Clock className="h-3.5 w-3.5" />}
-                  {item.type === "absence" && <Users className="h-3.5 w-3.5" />}
-                  {item.title}
-                </div>
-                {item.projectName && (
-                  <div className="text-xs text-muted-foreground flex items-center gap-1">
-                    <div 
-                      className="w-2 h-2 rounded-full" 
-                      style={{ backgroundColor: item.projectColor || "#6366f1" }}
-                    />
-                    {item.projectName}
-                  </div>
-                )}
-                <div className="text-xs text-muted-foreground">
-                  {startTimeLabel} - {endTimeLabel}
-                  <span className="ml-2 font-medium">({durationLabel})</span>
-                </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </ContextMenuTrigger>
-      {item.type === "task" && schedule && (
-        <ContextMenuContent>
-          <ContextMenuItem onClick={() => onViewTask(schedule)}>
-            <Eye className="h-4 w-4 mr-2" />
-            Voir les détails
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem 
-            onClick={() => onUnschedule(schedule.id)}
-            className="text-destructive focus:text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Déplanifier
-          </ContextMenuItem>
-        </ContextMenuContent>
-      )}
-    </ContextMenu>
-  );
-}
+import { AgendaTimelineItem, DAY_START_HOUR, DAY_END_HOUR, TOTAL_HOURS, PIXELS_PER_MINUTE } from "./AgendaTimelineItem";
 
 interface DayTimelineCellProps {
   day: Date;
@@ -283,6 +105,15 @@ export function DayTimelineCell({
     onCellClick?.(day, hour);
   }, [day, onCellClick]);
 
+  // Handle resize from AgendaTimelineItem
+  const handleResize = useCallback((scheduleId: string, newStart: Date, newEnd: Date) => {
+    updateSchedule.mutate({
+      id: scheduleId,
+      start_datetime: newStart.toISOString(),
+      end_datetime: newEnd.toISOString(),
+    });
+  }, [updateSchedule]);
+
   const containerHeight = TOTAL_HOURS * 60 * PIXELS_PER_MINUTE;
 
   return (
@@ -339,13 +170,14 @@ export function DayTimelineCell({
         style={{ height: containerHeight }}
       >
         {items.map((item) => (
-          <TimelineItem
+          <AgendaTimelineItem
             key={item.id}
             item={item}
             dayStart={startOfDay(day)}
             onViewTask={onViewTask}
             onUnschedule={onUnschedule}
             onDragStart={handleItemDragStart}
+            onResize={handleResize}
             onViewEvent={onViewEvent}
             onViewTimeEntry={onViewTimeEntry}
             containerHeight={containerHeight}
