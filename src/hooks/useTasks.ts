@@ -38,6 +38,7 @@ export interface Task {
   crm_company_id: string | null;
   contact_id: string | null;
   lead_id: string | null;
+  tender_id: string | null;
   // Subtasks preview (not full Task objects)
   subtasks?: SubtaskPreview[];
 }
@@ -128,6 +129,7 @@ export function useTasks(options?: UseTasksOptions) {
           lead_id: newTask.lead_id,
           crm_company_id: newTask.crm_company_id,
           contact_id: newTask.contact_id,
+          tender_id: newTask.tender_id,
           related_type: newTask.related_type,
           related_id: newTask.related_id,
           module: newTask.module,
