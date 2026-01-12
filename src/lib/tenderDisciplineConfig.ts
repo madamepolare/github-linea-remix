@@ -41,6 +41,28 @@ export interface TeamRoleDef {
   label: string;
 }
 
+// Champs spécifiques par discipline
+export interface DisciplineFieldDef {
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'checkbox';
+  placeholder?: string;
+  unit?: string; // "€", "m²", "mois", etc.
+  options?: { value: string; label: string }[];
+  section: 'general' | 'project' | 'financial' | 'procedure' | 'dates';
+  required?: boolean;
+}
+
+// Métriques affichées sur la synthèse
+export interface DisciplineMetricDef {
+  key: string;
+  label: string;
+  icon: string;
+  colorClass: string;
+  formatType: 'currency' | 'number' | 'date' | 'text' | 'duration';
+  unit?: string;
+}
+
 export interface TenderDisciplineConfig {
   slug: DisciplineSlug;
   name: string;
@@ -70,6 +92,12 @@ export interface TenderDisciplineConfig {
   
   // Rôles d'équipe
   teamRoles: TeamRoleDef[];
+  
+  // Champs spécifiques à la discipline (formulaires)
+  specificFields: DisciplineFieldDef[];
+  
+  // Métriques à afficher sur la synthèse
+  keyMetrics: DisciplineMetricDef[];
   
   // Prompts IA spécifiques
   aiPrompts: {
@@ -182,6 +210,27 @@ export const ARCHITECTURE_CONFIG: TenderDisciplineConfig = {
     { value: 'sous_traitant', label: 'Sous-traitant' },
   ],
   
+  specificFields: [
+    { key: 'estimated_budget', label: 'Budget travaux estimé', type: 'number', unit: '€ HT', section: 'financial', required: false },
+    { key: 'surface_area', label: 'Surface', type: 'number', unit: 'm²', section: 'project', required: false },
+    { key: 'location', label: 'Localisation du projet', type: 'text', section: 'project', required: false },
+    { key: 'project_type', label: 'Type de projet', type: 'select', section: 'project', options: [
+      { value: 'neuf', label: 'Construction neuve' },
+      { value: 'rehabilitation', label: 'Réhabilitation' },
+      { value: 'extension', label: 'Extension' },
+      { value: 'renovation', label: 'Rénovation' },
+    ]},
+  ],
+  
+  keyMetrics: [
+    { key: 'estimated_budget', label: 'Budget travaux', icon: 'Euro', colorClass: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400', formatType: 'currency' },
+    { key: 'surface_area', label: 'Surface', icon: 'Ruler', colorClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400', formatType: 'number', unit: 'm²' },
+    { key: 'location', label: 'Localisation', icon: 'MapPin', colorClass: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400', formatType: 'text' },
+    { key: 'required_team', label: 'Équipe', icon: 'Users', colorClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400', formatType: 'text' },
+    { key: 'client_name', label: 'Maître d\'ouvrage', icon: 'Building2', colorClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400', formatType: 'text' },
+    { key: 'site_visit_date', label: 'Visite de site', icon: 'Calendar', colorClass: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-400', formatType: 'date' },
+  ],
+  
   aiPrompts: {
     dceAnalysis: `Tu es un expert senior en marchés publics français, spécialisé dans les concours d'architecture et les missions de maîtrise d'œuvre (MOE).`,
     memoireGeneration: `Tu es un rédacteur expert en marchés publics de maîtrise d'œuvre, spécialisé dans la rédaction de mémoires techniques pour les concours d'architecture.`,
@@ -275,6 +324,26 @@ export const SCENOGRAPHIE_CONFIG: TenderDisciplineConfig = {
     { value: 'sous_traitant', label: 'Sous-traitant' },
   ],
   
+  specificFields: [
+    { key: 'estimated_budget', label: 'Budget scénographie', type: 'number', unit: '€ HT', section: 'financial', required: false },
+    { key: 'surface_area', label: 'Surface d\'exposition', type: 'number', unit: 'm²', section: 'project', required: false },
+    { key: 'location', label: 'Lieu', type: 'text', section: 'project', required: false },
+    { key: 'exposition_type', label: 'Type d\'exposition', type: 'select', section: 'project', options: [
+      { value: 'permanente', label: 'Exposition permanente' },
+      { value: 'temporaire', label: 'Exposition temporaire' },
+      { value: 'itinerante', label: 'Exposition itinérante' },
+    ]},
+  ],
+  
+  keyMetrics: [
+    { key: 'estimated_budget', label: 'Budget', icon: 'Euro', colorClass: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400', formatType: 'currency' },
+    { key: 'surface_area', label: 'Surface', icon: 'Ruler', colorClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400', formatType: 'number', unit: 'm²' },
+    { key: 'location', label: 'Lieu', icon: 'MapPin', colorClass: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400', formatType: 'text' },
+    { key: 'required_team', label: 'Équipe', icon: 'Users', colorClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400', formatType: 'text' },
+    { key: 'client_name', label: 'Commanditaire', icon: 'Building2', colorClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400', formatType: 'text' },
+    { key: 'site_visit_date', label: 'Visite', icon: 'Calendar', colorClass: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-400', formatType: 'date' },
+  ],
+  
   aiPrompts: {
     dceAnalysis: `Tu es un expert en marchés publics culturels, spécialisé dans les appels d'offres de scénographie, muséographie et expositions.`,
     memoireGeneration: `Tu es un rédacteur expert en scénographie d'exposition, spécialisé dans la rédaction de notes d'intention et mémoires techniques pour les concours culturels.`,
@@ -289,21 +358,23 @@ export const COMMUNICATION_CONFIG: TenderDisciplineConfig = {
   icon: 'Megaphone',
   
   teamSpecialties: [
+    // Postes clés issus des BPU communication
+    { value: 'directeur_conseil', label: 'Directeur conseil', category: 'direction' },
+    { value: 'directeur_creation', label: 'Directeur de création', category: 'direction' },
+    { value: 'directeur_clientele', label: 'Directeur de clientèle', category: 'commercial' },
     { value: 'directeur_artistique', label: 'Directeur artistique', category: 'creation' },
+    { value: 'chef_de_projet', label: 'Chef de projet', category: 'gestion' },
     { value: 'concepteur_redacteur', label: 'Concepteur-rédacteur', category: 'creation' },
+    { value: 'graphiste', label: 'Graphiste / Exécutant', category: 'creation' },
+    { value: 'integrateur_web', label: 'Intégrateur web', category: 'digital' },
+    { value: 'motion_designer', label: 'Motion Designer', category: 'creation' },
     { value: 'planneur_strategique', label: 'Planneur stratégique', category: 'strategie' },
-    { value: 'chef_de_pub', label: 'Chef de publicité', category: 'commercial' },
     { value: 'social_media_manager', label: 'Social Media Manager', category: 'digital' },
     { value: 'community_manager', label: 'Community Manager', category: 'digital' },
-    { value: 'motion_designer', label: 'Motion Designer', category: 'creation' },
     { value: 'photographe', label: 'Photographe', category: 'production' },
     { value: 'realisateur', label: 'Réalisateur', category: 'production' },
-    { value: 'production_print', label: 'Production print', category: 'production' },
     { value: 'acheteur_media', label: 'Acheteur média', category: 'media' },
-    { value: 'webdesigner', label: 'Webdesigner', category: 'digital' },
-    { value: 'developpeur', label: 'Développeur web', category: 'digital' },
     { value: 'rp_influence', label: 'RP / Influence', category: 'rp' },
-    { value: 'evenementiel', label: 'Chef de projet événementiel', category: 'event' },
     { value: 'autre', label: 'Autre', category: 'autre' },
   ],
   
@@ -380,8 +451,49 @@ export const COMMUNICATION_CONFIG: TenderDisciplineConfig = {
     { value: 'sous_traitant', label: 'Prestataire' },
   ],
   
+  specificFields: [
+    { key: 'montant_minimum', label: 'Montant minimum', type: 'number', unit: '€ HT', section: 'financial', required: false },
+    { key: 'montant_maximum', label: 'Montant maximum', type: 'number', unit: '€ HT', section: 'financial', required: false },
+    { key: 'duree_accord_cadre', label: 'Durée accord-cadre', type: 'number', unit: 'mois', section: 'procedure', required: false },
+    { key: 'nombre_reconductions', label: 'Reconductions', type: 'number', section: 'procedure', required: false },
+    { key: 'type_campagne', label: 'Type de campagne', type: 'select', section: 'project', options: [
+      { value: 'evenementielle', label: 'Communication événementielle' },
+      { value: 'corporate', label: 'Communication corporate' },
+      { value: 'institutionnelle', label: 'Communication institutionnelle' },
+      { value: 'digitale', label: 'Communication digitale' },
+      { value: 'produit', label: 'Communication produit' },
+      { value: 'recrutement', label: 'Marque employeur' },
+    ]},
+    { key: 'cibles', label: 'Cibles', type: 'textarea', section: 'project', placeholder: 'Ex: Salariés, habitants, étudiants, touristes...', required: false },
+    { key: 'cas_pratique_requis', label: 'Cas pratique requis', type: 'checkbox', section: 'procedure', required: false },
+  ],
+  
+  keyMetrics: [
+    { key: 'montant_maximum', label: 'Budget max.', icon: 'Euro', colorClass: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400', formatType: 'currency' },
+    { key: 'duree_accord_cadre', label: 'Durée', icon: 'Clock', colorClass: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400', formatType: 'duration', unit: 'mois' },
+    { key: 'type_campagne', label: 'Type', icon: 'Megaphone', colorClass: 'bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-400', formatType: 'text' },
+    { key: 'required_team', label: 'Équipe', icon: 'Users', colorClass: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400', formatType: 'text' },
+    { key: 'client_name', label: 'Annonceur', icon: 'Building2', colorClass: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400', formatType: 'text' },
+    { key: 'submission_deadline', label: 'Date limite', icon: 'Calendar', colorClass: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400', formatType: 'date' },
+  ],
+  
   aiPrompts: {
-    dceAnalysis: `Tu es un expert en appels d'offres de communication publicitaire et institutionnelle, spécialisé dans l'analyse de briefs et cahiers des charges d'agences.`,
+    dceAnalysis: `Tu es un expert en appels d'offres de communication publicitaire et institutionnelle, spécialisé dans l'analyse de briefs et cahiers des charges d'agences de communication.
+
+Ton rôle est d'analyser les DCE (Dossier de Consultation des Entreprises) de marchés de communication pour en extraire les informations clés.
+
+Pour un marché de communication, tu dois identifier :
+- Le type de marché (accord-cadre, marché simple, compétition)
+- Les montants min/max de l'accord-cadre
+- La durée et les reconductions possibles
+- Le type de campagne (événementielle, corporate, digitale, etc.)
+- Les prestations attendues (conseil, création, déclinaisons, plan média, etc.)
+- Les critères de jugement et leur pondération
+- Les éléments du cas pratique s'il y en a un
+- Les cibles de communication
+- Les livrables demandés (BPU, DQE, mémoire technique, cas pratique)
+
+Tu NE dois PAS chercher de surface en m² ou de budget travaux car ce sont des champs spécifiques à l'architecture.`,
     memoireGeneration: `Tu es un planneur stratégique senior, expert en rédaction de recommandations stratégiques et créatives pour les compétitions d'agences.`,
   },
 };

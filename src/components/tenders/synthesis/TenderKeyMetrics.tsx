@@ -9,18 +9,37 @@ import {
   Users,
   Calendar,
   Building2,
+  Clock,
+  Megaphone,
+  LucideIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Tender } from "@/lib/tenderTypes";
+import { useTenderDisciplineConfig } from "@/hooks/useTenderDisciplineConfig";
+import type { DisciplineMetricDef } from "@/lib/tenderDisciplineConfig";
 
 interface TenderKeyMetricsProps {
   tender: Tender;
 }
 
+// Mapping des icônes par nom
+const ICON_MAP: Record<string, LucideIcon> = {
+  Euro,
+  Ruler,
+  MapPin,
+  Users,
+  Calendar,
+  Building2,
+  Clock,
+  Megaphone,
+};
+
 export function TenderKeyMetrics({ tender }: TenderKeyMetricsProps) {
-  const formatBudget = (amount: number | null) => {
+  const { config, disciplineSlug } = useTenderDisciplineConfig(tender.id);
+
+  const formatBudget = (amount: number | null | undefined) => {
     if (!amount) return null;
     if (amount >= 1000000) {
       return `${(amount / 1000000).toFixed(1).replace(".0", "")} M€`;
@@ -44,62 +63,114 @@ export function TenderKeyMetrics({ tender }: TenderKeyMetricsProps) {
     return differenceInDays(new Date(tender.site_visit_date), new Date());
   }, [tender.site_visit_date]);
 
-  const metrics = [
-    {
-      icon: Euro,
-      label: "Budget travaux",
-      value: formatBudget(tender.estimated_budget),
-      subValue: tender.estimated_budget ? "HT" : null,
-      color: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400",
-      isEmpty: !tender.estimated_budget,
-    },
-    {
-      icon: Ruler,
-      label: "Surface",
-      value: tender.surface_area ? `${tender.surface_area.toLocaleString()} m²` : null,
-      color: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400",
-      isEmpty: !tender.surface_area,
-    },
-    {
-      icon: MapPin,
-      label: "Localisation",
-      value: tender.location,
-      color: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400",
-      isEmpty: !tender.location,
-    },
-    {
-      icon: Users,
-      label: "Équipe",
-      value: mandatoryCount > 0 ? `${mandatoryCount} obligatoire${mandatoryCount > 1 ? "s" : ""}` : null,
-      subValue: requiredTeam.length > mandatoryCount ? `+${requiredTeam.length - mandatoryCount} optionnel${requiredTeam.length - mandatoryCount > 1 ? "s" : ""}` : null,
-      color: "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400",
-      isEmpty: requiredTeam.length === 0,
-    },
-    {
-      icon: Building2,
-      label: "Maître d'ouvrage",
-      value: tender.client_name,
-      color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400",
-      isEmpty: !tender.client_name,
-    },
-    {
-      icon: Calendar,
-      label: "Visite de site",
-      value: tender.site_visit_required
-        ? tender.site_visit_date
-          ? format(new Date(tender.site_visit_date), "d MMM", { locale: fr })
-          : "À planifier"
-        : "Non requise",
-      subValue: tender.site_visit_required && siteVisitDaysLeft !== null && siteVisitDaysLeft >= 0
-        ? `J-${siteVisitDaysLeft}`
-        : null,
-      color: tender.site_visit_required
-        ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-400"
-        : "bg-muted text-muted-foreground",
-      badge: tender.site_visit_required ? "Obligatoire" : undefined,
-      isEmpty: false,
-    },
-  ];
+  const submissionDaysLeft = useMemo(() => {
+    if (!tender.submission_deadline) return null;
+    return differenceInDays(new Date(tender.submission_deadline), new Date());
+  }, [tender.submission_deadline]);
+
+  // Récupère la valeur d'un champ du tender (y compris les données extraites)
+  const getFieldValue = (key: string): any => {
+    // D'abord chercher dans les champs standard
+    if (key in tender) {
+      return (tender as any)[key];
+    }
+    // Ensuite chercher dans extracted_data
+    const extractedData = (tender as any).extracted_data;
+    if (extractedData && key in extractedData) {
+      return extractedData[key];
+    }
+    return null;
+  };
+
+  // Formate une valeur selon le type de métrique
+  const formatMetricValue = (metricDef: DisciplineMetricDef, value: any): { displayValue: string | null; subValue?: string } => {
+    if (value === null || value === undefined) {
+      return { displayValue: null };
+    }
+
+    switch (metricDef.formatType) {
+      case 'currency':
+        return { displayValue: formatBudget(value), subValue: 'HT' };
+      
+      case 'number':
+        return { 
+          displayValue: typeof value === 'number' 
+            ? `${value.toLocaleString()}${metricDef.unit ? ` ${metricDef.unit}` : ''}` 
+            : String(value)
+        };
+      
+      case 'duration':
+        return { 
+          displayValue: typeof value === 'number' 
+            ? `${value} ${metricDef.unit || 'mois'}` 
+            : String(value)
+        };
+      
+      case 'date':
+        if (metricDef.key === 'site_visit_date') {
+          if (!tender.site_visit_required) {
+            return { displayValue: 'Non requise' };
+          }
+          if (value) {
+            return { 
+              displayValue: format(new Date(value), "d MMM", { locale: fr }),
+              subValue: siteVisitDaysLeft !== null && siteVisitDaysLeft >= 0 ? `J-${siteVisitDaysLeft}` : undefined
+            };
+          }
+          return { displayValue: 'À planifier' };
+        }
+        if (metricDef.key === 'submission_deadline' && value) {
+          return { 
+            displayValue: format(new Date(value), "d MMM", { locale: fr }),
+            subValue: submissionDaysLeft !== null && submissionDaysLeft >= 0 ? `J-${submissionDaysLeft}` : undefined
+          };
+        }
+        return { displayValue: value ? format(new Date(value), "d MMM yyyy", { locale: fr }) : null };
+      
+      case 'text':
+      default:
+        // Cas spécial pour l'équipe
+        if (metricDef.key === 'required_team') {
+          if (requiredTeam.length === 0) return { displayValue: null };
+          return {
+            displayValue: mandatoryCount > 0 ? `${mandatoryCount} obligatoire${mandatoryCount > 1 ? "s" : ""}` : `${requiredTeam.length} profil${requiredTeam.length > 1 ? "s" : ""}`,
+            subValue: requiredTeam.length > mandatoryCount ? `+${requiredTeam.length - mandatoryCount} optionnel${requiredTeam.length - mandatoryCount > 1 ? "s" : ""}` : undefined
+          };
+        }
+        // Cas spécial pour type_campagne (afficher le label)
+        if (metricDef.key === 'type_campagne') {
+          const field = config.specificFields.find(f => f.key === 'type_campagne');
+          const option = field?.options?.find(o => o.value === value);
+          return { displayValue: option?.label || value };
+        }
+        return { displayValue: String(value) };
+    }
+  };
+
+  // Génère les métriques à partir de la config
+  const metrics = useMemo(() => {
+    return config.keyMetrics.map(metricDef => {
+      const value = getFieldValue(metricDef.key);
+      const { displayValue, subValue } = formatMetricValue(metricDef, value);
+      const IconComponent = ICON_MAP[metricDef.icon] || Building2;
+
+      // Badge spécial pour la visite de site
+      let badge: string | undefined;
+      if (metricDef.key === 'site_visit_date' && tender.site_visit_required) {
+        badge = 'Obligatoire';
+      }
+
+      return {
+        icon: IconComponent,
+        label: metricDef.label,
+        value: displayValue,
+        subValue,
+        color: metricDef.colorClass,
+        isEmpty: displayValue === null,
+        badge,
+      };
+    });
+  }, [config, tender, requiredTeam, mandatoryCount, siteVisitDaysLeft, submissionDaysLeft]);
 
   return (
     <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
