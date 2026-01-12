@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { format } from "date-fns";
-import { Calendar, Clock, Users, Eye, Copy, ExternalLink, Move, CheckCircle2, Trash2, Pencil, Check, X } from "lucide-react";
+import { format, setHours, setMinutes, addMinutes, startOfDay } from "date-fns";
+import { Calendar, Clock, Users, Eye, Copy, ExternalLink, Move, CheckCircle2, Trash2, Pencil, Check, X, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TaskSchedule } from "@/hooks/useTaskSchedules";
 import { DurationInput } from "@/components/tasks/DurationInput";
 
@@ -37,7 +38,11 @@ interface ResizablePlanningItemProps {
   onResizeTimeEntry?: (entryId: string, newDurationMinutes: number) => void;
   onViewEvent?: (event: any) => void;
   onViewTimeEntry?: (entry: any) => void;
+  onChangeTime?: (scheduleId: string, newStart: Date, newEnd: Date) => void;
 }
+
+// Generate hour options for the time picker
+const HOUR_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 8); // 8h to 19h
 
 export function ResizablePlanningItem({
   item,
@@ -51,6 +56,7 @@ export function ResizablePlanningItem({
   onResizeTimeEntry,
   onViewEvent,
   onViewTimeEntry,
+  onChangeTime,
 }: ResizablePlanningItemProps) {
   const schedule = item.type === "task" ? item.originalData as TaskSchedule : null;
   const isAbsence = item.type === "absence";
@@ -62,7 +68,10 @@ export function ResizablePlanningItem({
   const [height, setHeight] = useState(initialHeight);
   const [isResizing, setIsResizing] = useState(false);
   const [isEditingDuration, setIsEditingDuration] = useState(false);
+  const [isEditingTime, setIsEditingTime] = useState(false);
   const [editingDuration, setEditingDuration] = useState(hours.toString());
+  const [editingStartHour, setEditingStartHour] = useState<string>("");
+  const [editingStartMinute, setEditingStartMinute] = useState<string>("");
   const resizeRef = useRef<{ startY: number; startHeight: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -73,10 +82,20 @@ export function ResizablePlanningItem({
       setHeight(newHeight);
     }
   }, [hours, pixelsPerHour, minHeight, isResizing]);
+
+  // Initialize editing time values
+  useEffect(() => {
+    if (isEditingTime && item.start) {
+      setEditingStartHour(item.start.getHours().toString());
+      setEditingStartMinute(item.start.getMinutes().toString().padStart(2, '0'));
+    }
+  }, [isEditingTime, item.start]);
   
   const hoursLabel = hours >= 1 ? `${Math.round(hours * 10) / 10}h` : `${Math.round(hours * 60)}m`;
   const currentHours = Math.max(0.25, Math.round((height / pixelsPerHour) * 4) / 4); // Arrondi à 0.25h
   const currentHoursLabel = currentHours >= 1 ? `${currentHours}h` : `${Math.round(currentHours * 60)}m`;
+  const startTimeLabel = format(item.start, "HH:mm");
+  const endTimeLabel = item.end ? format(item.end, "HH:mm") : "";
 
   const handleOpenDurationEdit = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -84,6 +103,12 @@ export function ResizablePlanningItem({
     setEditingDuration(hours.toString());
     setIsEditingDuration(true);
   }, [hours]);
+
+  const handleOpenTimeEdit = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsEditingTime(true);
+  }, []);
 
   const handleSaveDuration = useCallback(() => {
     const newHours = parseFloat(editingDuration);
@@ -93,7 +118,31 @@ export function ResizablePlanningItem({
     setIsEditingDuration(false);
   }, [editingDuration, schedule, onResize]);
 
+  const handleSaveTime = useCallback(() => {
+    if (!schedule || !onChangeTime) {
+      setIsEditingTime(false);
+      return;
+    }
+    
+    const newStartHour = parseInt(editingStartHour);
+    const newStartMinute = parseInt(editingStartMinute);
+    
+    if (isNaN(newStartHour) || isNaN(newStartMinute)) {
+      setIsEditingTime(false);
+      return;
+    }
+    
+    const dayStart = startOfDay(item.start);
+    const newStart = setMinutes(setHours(dayStart, newStartHour), newStartMinute);
+    const durationMs = hours * 60 * 60 * 1000;
+    const newEnd = new Date(newStart.getTime() + durationMs);
+    
+    onChangeTime(schedule.id, newStart, newEnd);
+    setIsEditingTime(false);
+  }, [schedule, onChangeTime, editingStartHour, editingStartMinute, item.start, hours]);
+
   const canResize = item.type === "task" || item.type === "timeEntry";
+  const canChangeTime = item.type === "task" && onChangeTime;
 
   const handleResizeStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!canResize) return;
@@ -197,6 +246,76 @@ export function ResizablePlanningItem({
               }}
               onClick={handleItemClick}
             >
+              {/* Time badge with edit capability */}
+              {item.type === "task" && schedule && canChangeTime && (
+                <Popover open={isEditingTime} onOpenChange={setIsEditingTime}>
+                  <PopoverTrigger asChild>
+                    <button
+                      className={cn(
+                        "absolute -top-1 -left-1 rounded-full px-1.5 py-0.5 text-[8px] font-semibold shadow-sm border transition-all flex items-center gap-0.5 hover:scale-110",
+                        "bg-background/90 text-foreground hover:bg-background"
+                      )}
+                      onClick={handleOpenTimeEdit}
+                    >
+                      <Clock className="h-2 w-2" />
+                      {startTimeLabel}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-3" align="start" onClick={(e) => e.stopPropagation()}>
+                    <div className="space-y-3">
+                      <div className="text-sm font-medium">Modifier l'heure de début</div>
+                      <div className="flex items-center gap-2">
+                        <Select value={editingStartHour} onValueChange={setEditingStartHour}>
+                          <SelectTrigger className="w-20">
+                            <SelectValue placeholder="Heure" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {HOUR_OPTIONS.map(h => (
+                              <SelectItem key={h} value={h.toString()}>
+                                {h.toString().padStart(2, '0')}h
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-muted-foreground">:</span>
+                        <Select value={editingStartMinute} onValueChange={setEditingStartMinute}>
+                          <SelectTrigger className="w-20">
+                            <SelectValue placeholder="Min" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {['00', '15', '30', '45'].map(m => (
+                              <SelectItem key={m} value={m}>
+                                {m}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Durée : {hoursLabel} → Fin : {(() => {
+                          const h = parseInt(editingStartHour) || 0;
+                          const m = parseInt(editingStartMinute) || 0;
+                          const endMinutes = h * 60 + m + hours * 60;
+                          const endH = Math.floor(endMinutes / 60);
+                          const endM = endMinutes % 60;
+                          return `${endH.toString().padStart(2, '0')}:${endM.toString().padStart(2, '0')}`;
+                        })()}
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => setIsEditingTime(false)}>
+                          <X className="h-3 w-3 mr-1" />
+                          Annuler
+                        </Button>
+                        <Button size="sm" onClick={handleSaveTime}>
+                          <Check className="h-3 w-3 mr-1" />
+                          OK
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+
               {/* Badge durée avec bouton d'édition */}
               {item.type === "task" && schedule ? (
                 <Popover open={isEditingDuration} onOpenChange={setIsEditingDuration}>
@@ -255,8 +374,13 @@ export function ResizablePlanningItem({
                 </div>
               )}
               
+              {/* Drag handle indicator */}
+              {item.type === "task" && !isAbsence && (
+                <GripVertical className="absolute top-1/2 -translate-y-1/2 right-1 h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+              )}
+              
               {/* Content - avec padding-right pour éviter le chevauchement avec le badge */}
-              <div className="flex items-start gap-1.5 flex-1 min-w-0 overflow-hidden pr-6">
+              <div className="flex items-start gap-1.5 flex-1 min-w-0 overflow-hidden pr-6 mt-1">
                 {/* Icon */}
                 {item.type === "event" && <Calendar className="h-3 w-3 flex-shrink-0 mt-0.5" />}
                 {item.type === "task" && <Clock className="h-3 w-3 flex-shrink-0 mt-0.5" />}
@@ -319,6 +443,12 @@ export function ResizablePlanningItem({
               {item.type === "task" && (
                 <div className="text-xs text-muted-foreground mt-1 pt-1 border-t border-border/50">
                   ↕ Étirer pour modifier la durée
+                  {canChangeTime && (
+                    <>
+                      <br />
+                      🕐 Cliquer sur l'heure pour la modifier
+                    </>
+                  )}
                 </div>
               )}
               {item.type === "timeEntry" && (
