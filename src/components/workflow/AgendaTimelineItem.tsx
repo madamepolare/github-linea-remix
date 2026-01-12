@@ -313,8 +313,6 @@ export function AgendaTimelineItem({
                 className={cn(
                   "absolute left-1 right-1 rounded-lg overflow-hidden transition-shadow",
                   "cursor-pointer hover:shadow-lg group select-none",
-                  canDrag && !isInteracting && "cursor-grab",
-                  isDraggingVertical && "cursor-grabbing",
                   isAbsence && "opacity-60 cursor-not-allowed",
                   isInteracting && "ring-2 ring-primary/50 z-30 shadow-xl"
                 )}
@@ -324,35 +322,57 @@ export function AgendaTimelineItem({
                   backgroundColor: item.color,
                   zIndex: isInteracting ? 30 : 10,
                 }}
-                draggable={canDrag && !isResizing && !isDraggingVertical}
-                onDragStart={(e) => {
-                  if (canDrag && !isResizing && !isDraggingVertical) {
-                    hasDraggedRef.current = true;
-                    onDragStart(e, item);
-                  }
-                }}
-                onMouseDown={(e) => {
-                  // Only start vertical drag if clicking on the main area (not resize handles)
-                  // and not on the drag handle for horizontal drag
-                  const target = e.target as HTMLElement;
-                  if (target.closest('[data-resize-handle]')) return;
-                  if (target.closest('[data-drag-handle]')) return;
-                  if (canDrag && !isResizing) {
-                    handleVerticalDragStart(e);
-                  }
-                }}
-                onTouchStart={(e) => {
-                  const target = e.target as HTMLElement;
-                  if (target.closest('[data-resize-handle]')) return;
-                  if (target.closest('[data-drag-handle]')) return;
-                  if (canDrag && !isResizing) {
-                    handleVerticalDragStart(e);
-                  }
-                }}
                 onClick={handleClick}
               >
                 {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent pointer-events-none" />
+                
+                {/* Horizontal drag handle - for moving between days */}
+                {canDrag && (
+                  <div
+                    data-drag-handle="horizontal"
+                    draggable
+                    onDragStart={(e) => {
+                      e.stopPropagation();
+                      hasDraggedRef.current = true;
+                      onDragStart(e, item);
+                    }}
+                    className={cn(
+                      "absolute top-0 left-0 bottom-0 w-6 cursor-grab active:cursor-grabbing z-20",
+                      "flex items-center justify-center",
+                      "opacity-0 group-hover:opacity-100 transition-opacity",
+                      "bg-gradient-to-r from-black/20 to-transparent"
+                    )}
+                  >
+                    <GripVertical className="h-3 w-3 text-white/80" />
+                  </div>
+                )}
+                
+                {/* Vertical drag area - for moving within same day (time adjustment) */}
+                <div
+                  className={cn(
+                    "absolute inset-0",
+                    canDrag && !isResizing && "cursor-ns-resize",
+                    isDraggingVertical && "cursor-grabbing"
+                  )}
+                  style={{ left: canDrag ? 24 : 0 }}
+                  onMouseDown={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest('[data-resize-handle]')) return;
+                    if (target.closest('[data-drag-handle]')) return;
+                    if (canDrag && !isResizing) {
+                      handleVerticalDragStart(e);
+                    }
+                  }}
+                  onTouchStart={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest('[data-resize-handle]')) return;
+                    if (target.closest('[data-drag-handle]')) return;
+                    if (canDrag && !isResizing) {
+                      handleVerticalDragStart(e);
+                    }
+                  }}
+                />
                 
                 {/* Top resize handle */}
                 {canResize && (
@@ -371,13 +391,10 @@ export function AgendaTimelineItem({
                 )}
                 
                 {/* Content */}
-                <div className="p-1.5 flex flex-col h-full text-white relative">
-                  {/* Drag handle indicator */}
-                  {canDrag && (
-                    <div className={cn(
-                      "absolute top-1 right-1 opacity-0 group-hover:opacity-70 transition-opacity",
-                      isDraggingVertical && "opacity-100"
-                    )}>
+                <div className="p-1.5 flex flex-col h-full text-white relative pointer-events-none" style={{ paddingLeft: canDrag ? 24 : 6 }}>
+                  {/* Move indicator */}
+                  {isDraggingVertical && (
+                    <div className="absolute top-1 right-1">
                       <Move className="h-3 w-3" />
                     </div>
                   )}
