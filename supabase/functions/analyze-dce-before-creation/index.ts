@@ -191,11 +191,9 @@ const SCENOGRAPHIE_EXPERT_PROMPT = `Tu es un expert en marchés publics culturel
 
 Ton rôle est d'analyser les DCE pour les marchés de scénographie d'exposition.`;
 
-// Parse a single document using LlamaParse
-async function parseDocument(file: { name: string; type: string; content: string }, apiKey: string): Promise<{ success: boolean; text?: string; error?: string }> {
+// Upload a document to LlamaParse and return the job ID (fast operation)
+async function uploadToLlamaParse(file: { name: string; type: string; content: string }, apiKey: string): Promise<{ success: boolean; jobId?: string; error?: string }> {
   try {
-    console.log(`[LlamaParse] Parsing: ${file.name}`);
-    
     // Convert base64 to binary
     const binaryContent = Uint8Array.from(atob(file.content), c => c.charCodeAt(0));
     
@@ -220,58 +218,60 @@ async function parseDocument(file: { name: string; type: string; content: string
     }
     
     const uploadResult = await uploadResponse.json();
-    const jobId = uploadResult.id;
+    console.log(`[LlamaParse] Upload OK: ${file.name} -> job ${uploadResult.id}`);
+    return { success: true, jobId: uploadResult.id };
+  } catch (error) {
+    console.error(`[LlamaParse] Upload error for ${file.name}:`, error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+// Poll for a specific job result with short timeout
+async function pollLlamaParseResult(jobId: string, fileName: string, apiKey: string, maxWaitMs: number = 20000): Promise<{ success: boolean; text?: string; error?: string }> {
+  const pollInterval = 1500;
+  let elapsed = 0;
+  
+  while (elapsed < maxWaitMs) {
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+    elapsed += pollInterval;
     
-    console.log(`[LlamaParse] Job started: ${jobId} for ${file.name}`);
-    
-    // Poll for completion (max 60 seconds)
-    const maxWait = 60000;
-    const pollInterval = 2000;
-    let elapsed = 0;
-    
-    while (elapsed < maxWait) {
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-      elapsed += pollInterval;
-      
+    try {
       const statusResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}`, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-        },
+        headers: { 'Authorization': `Bearer ${apiKey}` },
       });
       
-      if (!statusResponse.ok) {
-        continue;
-      }
+      if (!statusResponse.ok) continue;
       
       const statusResult = await statusResponse.json();
       
       if (statusResult.status === 'SUCCESS') {
-        // Get the result
         const resultResponse = await fetch(`https://api.cloud.llamaindex.ai/api/parsing/job/${jobId}/result/markdown`, {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-          },
+          headers: { 'Authorization': `Bearer ${apiKey}` },
         });
         
         if (resultResponse.ok) {
           const resultData = await resultResponse.json();
           const text = resultData.markdown || resultData.text || '';
-          console.log(`[LlamaParse] Successfully parsed ${file.name}: ${text.length} chars`);
           return { success: true, text };
         }
       } else if (statusResult.status === 'ERROR') {
-        console.error(`[LlamaParse] Parsing failed for ${file.name}`);
         return { success: false, error: 'Parsing failed' };
       }
-      
-      console.log(`[LlamaParse] Status for ${file.name}: ${statusResult.status}, elapsed: ${elapsed}ms`);
+    } catch {
+      // Continue polling
     }
-    
-    return { success: false, error: 'Timeout waiting for parsing' };
-  } catch (error) {
-    console.error(`[LlamaParse] Error parsing ${file.name}:`, error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
+  
+  return { success: false, error: 'Timeout' };
+}
+
+// Legacy function for backward compatibility
+async function parseDocument(file: { name: string; type: string; content: string }, apiKey: string): Promise<{ success: boolean; text?: string; error?: string }> {
+  const upload = await uploadToLlamaParse(file, apiKey);
+  if (!upload.success || !upload.jobId) {
+    return { success: false, error: upload.error };
+  }
+  return await pollLlamaParseResult(upload.jobId, file.name, apiKey, 20000);
 }
 
 function getExpertPrompt(disciplineSlug: string): string {
@@ -668,7 +668,7 @@ serve(async (req) => {
     
     // Parse documents with LlamaParse if available
     let parsedTexts: string[] = [];
-    let parsingStats = { success: 0, failed: 0 };
+    let parsingStats = { success: 0, failed: 0, skipped: 0 };
     
     // Prioritize important documents first
     const getPriority = (fileName: string): number => {
@@ -680,44 +680,64 @@ serve(async (req) => {
       if (lowerName.includes('programme') || lowerName.includes('brief')) return 5;
       if (lowerName.includes('bpu') || lowerName.includes('bordereau')) return 6;
       if (lowerName.includes('acte') || lowerName.includes('engagement')) return 7;
-      if (lowerName.includes('charte')) return 10; // Low priority
-      if (lowerName.includes('annexe')) return 9; // Low priority
+      if (lowerName.includes('charte')) return 10; // Low priority - often just reference
+      if (lowerName.includes('annexe') && !lowerName.includes('bpu')) return 9; // Low priority unless BPU
       return 8;
     };
     
     // Sort files by priority
     const sortedFiles = [...files].sort((a, b) => getPriority(a.name) - getPriority(b.name));
-    
-    // Only process the 3 most important documents to avoid CPU timeout
-    const priorityFiles = sortedFiles.slice(0, 3);
-    console.log(`[DCE Analysis] Priority files selected: ${priorityFiles.map((f: { name: string }) => f.name).join(', ')}`);
+    console.log(`[DCE Analysis] Files sorted by priority: ${sortedFiles.map((f: { name: string }) => f.name).join(', ')}`);
     
     if (LLAMA_PARSE_API_KEY) {
-      console.log('[DCE Analysis] LlamaParse API key found - parsing top 3 priority documents');
+      console.log(`[DCE Analysis] LlamaParse API key found - processing ALL ${sortedFiles.length} documents`);
       
-      // Parse documents SEQUENTIALLY to avoid CPU overload
-      for (const file of priorityFiles) {
-        try {
-          console.log(`[DCE Analysis] Parsing: ${file.name}`);
-          const result = await parseDocument(file, LLAMA_PARSE_API_KEY);
-          
-          if (result.success && result.text) {
-            // Limit text size to avoid memory issues
-            const truncatedText = result.text.substring(0, 50000);
-            parsedTexts.push(`\n\n=== DOCUMENT: ${file.name} ===\n\n${truncatedText}`);
-            parsingStats.success++;
-            console.log(`[DCE Analysis] Successfully parsed ${file.name} (${truncatedText.length} chars)`);
-          } else {
-            console.log(`[DCE Analysis] Failed to parse ${file.name}: ${result.error}`);
-            parsingStats.failed++;
-          }
-        } catch (err) {
-          console.error(`[DCE Analysis] Error parsing ${file.name}:`, err);
+      // STEP 1: Upload ALL documents in parallel (fast operation)
+      console.log('[DCE Analysis] Step 1: Uploading all documents in parallel...');
+      const uploadPromises = sortedFiles.map(async (file: { name: string; type: string; content: string }) => {
+        const result = await uploadToLlamaParse(file, LLAMA_PARSE_API_KEY);
+        return { fileName: file.name, ...result };
+      });
+      
+      const uploadResults = await Promise.all(uploadPromises);
+      const successfulUploads = uploadResults.filter(r => r.success && r.jobId);
+      console.log(`[DCE Analysis] Uploads complete: ${successfulUploads.length}/${sortedFiles.length} successful`);
+      
+      // STEP 2: Poll for results sequentially with short timeouts
+      console.log('[DCE Analysis] Step 2: Retrieving parsed content...');
+      const startTime = Date.now();
+      const maxTotalTime = 45000; // 45 seconds max for all polling
+      
+      for (const upload of successfulUploads) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed > maxTotalTime) {
+          console.log(`[DCE Analysis] Time limit reached after ${parsingStats.success} documents`);
+          parsingStats.skipped = successfulUploads.length - parsingStats.success - parsingStats.failed;
+          break;
+        }
+        
+        // Calculate remaining time, min 8s per doc
+        const remainingTime = maxTotalTime - elapsed;
+        const docsRemaining = successfulUploads.length - parsingStats.success - parsingStats.failed;
+        const timePerDoc = Math.max(8000, Math.min(15000, remainingTime / docsRemaining));
+        
+        console.log(`[DCE Analysis] Polling ${upload.fileName} (max ${Math.round(timePerDoc/1000)}s)...`);
+        
+        const result = await pollLlamaParseResult(upload.jobId!, upload.fileName, LLAMA_PARSE_API_KEY, timePerDoc);
+        
+        if (result.success && result.text) {
+          // Limit text size per document to avoid memory issues
+          const truncatedText = result.text.substring(0, 40000);
+          parsedTexts.push(`\n\n=== DOCUMENT: ${upload.fileName} ===\n\n${truncatedText}`);
+          parsingStats.success++;
+          console.log(`[DCE Analysis] ✓ ${upload.fileName} (${truncatedText.length} chars)`);
+        } else {
+          console.log(`[DCE Analysis] ✗ ${upload.fileName}: ${result.error}`);
           parsingStats.failed++;
         }
       }
       
-      console.log(`[DCE Analysis] Parsing complete: ${parsingStats.success} success, ${parsingStats.failed} failed`);
+      console.log(`[DCE Analysis] Parsing complete: ${parsingStats.success} success, ${parsingStats.failed} failed, ${parsingStats.skipped} skipped`);
     } else {
       console.log('[DCE Analysis] No LlamaParse API key - falling back to filename analysis');
     }
