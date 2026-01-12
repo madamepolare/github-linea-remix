@@ -156,7 +156,8 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task-schedules"] });
-      toast({ title: "Créneau mis à jour" });
+      queryClient.invalidateQueries({ queryKey: ["unscheduled-tasks"] });
+      // No toast for move operations - keep it silent for better UX
     },
     onError: (error: any) => {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });

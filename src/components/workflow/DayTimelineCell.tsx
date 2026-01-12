@@ -65,14 +65,15 @@ export function DayTimelineCell({
       
       const data = JSON.parse(dataString);
       
-      // If it's a planned task being moved within the timeline
-      if (data.itemId && data.itemType === "task") {
+      // If it's a planned task being moved within the timeline (from DayTimelineCell or TeamPlanningGrid)
+      if ((data.itemId || data.scheduleId) && data.itemType === "task") {
+        const scheduleId = data.scheduleId || data.itemId;
         const newStart = setHours(setMinutes(startOfDay(day), 0), hour);
         const durationMinutes = (data.durationHours || 1) * 60;
         const newEnd = addMinutes(newStart, durationMinutes);
         
         updateSchedule.mutate({
-          id: data.scheduleId,
+          id: scheduleId,
           start_datetime: newStart.toISOString(),
           end_datetime: newEnd.toISOString(),
           user_id: member.user_id,

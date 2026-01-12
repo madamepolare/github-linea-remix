@@ -75,6 +75,9 @@ export function ResizablePlanningItem({
   const resizeRef = useRef<{ startY: number; startHeight: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
+  // Track if a drag actually happened (to prevent click after drag)
+  const hasDraggedRef = useRef(false);
+  
   // Synchroniser avec la durée externe
   useEffect(() => {
     const newHeight = Math.max(minHeight, hours * pixelsPerHour);
@@ -203,7 +206,11 @@ export function ResizablePlanningItem({
     e.stopPropagation();
     e.preventDefault();
     
-    if (isResizing) return;
+    // Don't open modal if we just finished dragging
+    if (isResizing || hasDraggedRef.current) {
+      hasDraggedRef.current = false;
+      return;
+    }
     
     if (item.type === "task" && schedule) {
       onViewTask(schedule);
@@ -241,6 +248,7 @@ export function ResizablePlanningItem({
               onDragStart={(e) => {
                 if (item.type === "task" && schedule && !isResizing) {
                   e.stopPropagation();
+                  hasDraggedRef.current = true;
                   onScheduleDragStart(e, schedule.id, item.title);
                 }
               }}

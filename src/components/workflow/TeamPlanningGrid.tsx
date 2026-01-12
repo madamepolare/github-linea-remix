@@ -109,11 +109,15 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
 
   // Handler pour démarrer le drag d'une tâche planifiée
   const handleScheduleDragStart = useCallback((e: React.DragEvent, scheduleId: string, taskTitle: string) => {
-    const payload = JSON.stringify({ scheduleId });
+    const schedule = schedules?.find(s => s.id === scheduleId);
+    const durationHours = schedule 
+      ? (new Date(schedule.end_datetime).getTime() - new Date(schedule.start_datetime).getTime()) / (1000 * 60 * 60)
+      : 1;
+    const payload = JSON.stringify({ scheduleId, itemType: "task", durationHours });
     e.dataTransfer.setData("application/json", payload);
     e.dataTransfer.setData("text/plain", payload);
     e.dataTransfer.effectAllowed = "move";
-  }, []);
+  }, [schedules]);
 
   // Map des emails vers user_ids
   const emailToUserMap = useMemo(() => {
