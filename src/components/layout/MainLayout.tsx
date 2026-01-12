@@ -7,6 +7,7 @@ import { TopBar } from "./TopBar";
 import { GlobalTopBar } from "./GlobalTopBar";
 import { PostItSidebar } from "./PostItSidebar";
 import { PageTransition } from "./PageTransition";
+import { WorkspaceStylesLoader } from "./WorkspaceStylesLoader";
 import { useSidebarStore } from "@/hooks/useSidebarStore";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,8 @@ export function MainLayout() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile header - shows workspace name and current module */}
+      {/* Load and apply workspace-specific styles */}
+      <WorkspaceStylesLoader />
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center h-14 px-3 bg-background border-b border-border">
         {/* Menu toggle */}
         <Button
