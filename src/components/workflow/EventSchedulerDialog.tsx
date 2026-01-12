@@ -125,6 +125,11 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
     enabled: !!activeWorkspace?.id,
   });
 
+  // Clear selected client contacts when project changes (different company = different contacts)
+  useEffect(() => {
+    setInviteClientContacts([]);
+  }, [selectedProject?.crm_company_id]);
+
   // Reset on open
   useEffect(() => {
     if (open) {
