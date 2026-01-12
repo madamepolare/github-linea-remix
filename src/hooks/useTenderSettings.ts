@@ -35,6 +35,14 @@ export interface TenderLotDomainTemplate {
   is_default: boolean;
 }
 
+export interface TenderPipelineColumn {
+  id: string;
+  name: string;
+  color: string;
+  is_visible: boolean;
+  sort_order: number;
+}
+
 export interface TenderSettings {
   // Phases par défaut
   default_phases: TenderPhaseTemplate[];
@@ -48,6 +56,9 @@ export interface TenderSettings {
   
   // Domaines/lots types
   default_lot_domains: TenderLotDomainTemplate[];
+  
+  // Colonnes pipeline
+  pipeline_columns: TenderPipelineColumn[];
   
   // Autres configurations
   default_offer_validity_days: number;
@@ -83,6 +94,13 @@ const DEFAULT_LOT_DOMAINS: TenderLotDomainTemplate[] = [
   { id: 'signalétique', name: 'Signalétique', description: 'Signalétique, habillage', color: '#14B8A6', is_default: false },
 ];
 
+const DEFAULT_PIPELINE_COLUMNS: TenderPipelineColumn[] = [
+  { id: 'a_approuver', name: 'À approuver', color: '#f59e0b', is_visible: true, sort_order: 0 },
+  { id: 'en_cours', name: 'En cours', color: '#3b82f6', is_visible: true, sort_order: 1 },
+  { id: 'deposes', name: 'Déposés', color: '#10b981', is_visible: true, sort_order: 2 },
+  { id: 'archives', name: 'Archivés', color: '#6b7280', is_visible: true, sort_order: 3 },
+];
+
 const DEFAULT_TENDER_SETTINGS: TenderSettings = {
   default_phases: DEFAULT_PHASES,
   validity_reminder: {
@@ -95,6 +113,7 @@ const DEFAULT_TENDER_SETTINGS: TenderSettings = {
   },
   default_criteria: DEFAULT_CRITERIA,
   default_lot_domains: DEFAULT_LOT_DOMAINS,
+  pipeline_columns: DEFAULT_PIPELINE_COLUMNS,
   default_offer_validity_days: 90,
   auto_create_tasks_for_case_study: true,
 };
@@ -133,6 +152,7 @@ export function useTenderSettings() {
         submission_reminder: (rawValue.submission_reminder as TenderReminderConfig) ?? DEFAULT_TENDER_SETTINGS.submission_reminder,
         default_criteria: (rawValue.default_criteria as TenderCriterionTemplate[]) ?? DEFAULT_TENDER_SETTINGS.default_criteria,
         default_lot_domains: (rawValue.default_lot_domains as TenderLotDomainTemplate[]) ?? DEFAULT_TENDER_SETTINGS.default_lot_domains,
+        pipeline_columns: (rawValue.pipeline_columns as TenderPipelineColumn[]) ?? DEFAULT_TENDER_SETTINGS.pipeline_columns,
         default_offer_validity_days: (rawValue.default_offer_validity_days as number) ?? DEFAULT_TENDER_SETTINGS.default_offer_validity_days,
         auto_create_tasks_for_case_study: (rawValue.auto_create_tasks_for_case_study as boolean) ?? DEFAULT_TENDER_SETTINGS.auto_create_tasks_for_case_study,
       }
@@ -251,6 +271,32 @@ export function useTenderSettings() {
     });
   };
 
+  // Helper functions for managing pipeline columns
+  const addPipelineColumn = (column: Omit<TenderPipelineColumn, 'id' | 'sort_order'>) => {
+    const newColumn: TenderPipelineColumn = {
+      ...column,
+      id: `column_${Date.now()}`,
+      sort_order: tenderSettings.pipeline_columns.length,
+    };
+    updateTenderSettings.mutate({
+      pipeline_columns: [...tenderSettings.pipeline_columns, newColumn],
+    });
+  };
+
+  const updatePipelineColumn = (id: string, updates: Partial<TenderPipelineColumn>) => {
+    updateTenderSettings.mutate({
+      pipeline_columns: tenderSettings.pipeline_columns.map(c =>
+        c.id === id ? { ...c, ...updates } : c
+      ),
+    });
+  };
+
+  const removePipelineColumn = (id: string) => {
+    updateTenderSettings.mutate({
+      pipeline_columns: tenderSettings.pipeline_columns.filter(c => c.id !== id),
+    });
+  };
+
   return {
     tenderSettings,
     isLoading,
@@ -267,5 +313,9 @@ export function useTenderSettings() {
     addLotDomain,
     updateLotDomain,
     removeLotDomain,
+    // Pipeline columns
+    addPipelineColumn,
+    updatePipelineColumn,
+    removePipelineColumn,
   };
 }

@@ -213,23 +213,24 @@ function EntityTopBar({ config, module }: EntityTopBarProps) {
           )}
 
           {/* Entity title + badges */}
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-base font-semibold tracking-tight truncate">
+          <div className="flex flex-col gap-0.5 min-w-0 max-w-[50vw]">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <h1 className="text-base font-semibold tracking-tight truncate max-w-[40vw]" title={config.title}>
                 {config.title}
               </h1>
-              {config.badges?.map((badge, idx) => (
-                <Badge
-                  key={idx}
-                  variant={badge.variant || "outline"}
-                  className="text-xs font-normal text-muted-foreground border-border shrink-0"
-                >
-                  {badge.icon && <badge.icon className="h-3 w-3 mr-1" strokeWidth={THIN_STROKE} />}
-                  {badge.label}
-                </Badge>
-              ))}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {config.badges?.map((badge, idx) => (
+                  <Badge
+                    key={idx}
+                    variant={badge.variant || "outline"}
+                    className="text-xs font-normal text-muted-foreground border-border whitespace-nowrap"
+                  >
+                    {badge.icon && <badge.icon className="h-3 w-3 mr-1" strokeWidth={THIN_STROKE} />}
+                    {badge.label}
+                  </Badge>
+                ))}
+              </div>
             </div>
-
             {/* Metadata row */}
             {config.metadata && config.metadata.length > 0 && (
               <div className="flex items-center gap-2.5 text-xs text-muted-foreground">

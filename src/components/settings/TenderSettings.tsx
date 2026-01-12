@@ -11,6 +11,7 @@ import {
   GripVertical,
   Check,
   Settings2,
+  Columns,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import {
   type TenderPhaseTemplate,
   type TenderCriterionTemplate,
   type TenderLotDomainTemplate,
+  type TenderPipelineColumn,
 } from "@/hooks/useTenderSettings";
 
 // ============= PHASES SECTION =============
@@ -493,6 +495,100 @@ function LotDomainsSection() {
   );
 }
 
+// ============= PIPELINE COLUMNS SECTION =============
+
+function PipelineColumnsSection() {
+  const { tenderSettings, updatePipelineColumn, removePipelineColumn, addPipelineColumn } = useTenderSettings();
+  const [newColumnName, setNewColumnName] = useState("");
+  const [newColumnColor, setNewColumnColor] = useState("#8B5CF6");
+
+  const handleAddColumn = () => {
+    if (!newColumnName.trim()) return;
+    addPipelineColumn({
+      name: newColumnName,
+      color: newColumnColor,
+      is_visible: true,
+    });
+    setNewColumnName("");
+    setNewColumnColor("#8B5CF6");
+  };
+
+  const colorOptions = [
+    "#f59e0b", "#3b82f6", "#10b981", "#6b7280",
+    "#8B5CF6", "#EC4899", "#EF4444", "#14B8A6",
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h4 className="font-medium">Colonnes du tableau de bord</h4>
+        <p className="text-sm text-muted-foreground">
+          Configurez les colonnes affichées en vue Kanban
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {tenderSettings.pipeline_columns.map((column) => (
+          <div
+            key={column.id}
+            className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg group"
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground/50" />
+            <div
+              className="w-4 h-4 rounded-full shrink-0 cursor-pointer"
+              style={{ backgroundColor: column.color }}
+            />
+            <Input
+              value={column.name}
+              onChange={(e) => updatePipelineColumn(column.id, { name: e.target.value })}
+              className="h-9 flex-1"
+            />
+            <Switch
+              checked={column.is_visible}
+              onCheckedChange={(checked) => updatePipelineColumn(column.id, { is_visible: checked })}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 opacity-0 group-hover:opacity-100"
+              onClick={() => removePipelineColumn(column.id)}
+              disabled={['a_approuver', 'en_cours', 'deposes'].includes(column.id)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-3 p-3 border border-dashed rounded-lg">
+        <Plus className="h-4 w-4 text-muted-foreground" />
+        <div className="flex gap-1">
+          {colorOptions.map((color) => (
+            <button
+              key={color}
+              className={cn(
+                "w-6 h-6 rounded-full transition-transform",
+                newColumnColor === color && "ring-2 ring-offset-2 ring-primary scale-110"
+              )}
+              style={{ backgroundColor: color }}
+              onClick={() => setNewColumnColor(color)}
+            />
+          ))}
+        </div>
+        <Input
+          placeholder="Nouvelle colonne..."
+          value={newColumnName}
+          onChange={(e) => setNewColumnName(e.target.value)}
+          className="h-9 flex-1"
+        />
+        <Button size="sm" onClick={handleAddColumn} disabled={!newColumnName.trim()}>
+          Ajouter
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ============= OTHER SETTINGS SECTION =============
 
 function OtherSettingsSection() {
@@ -552,8 +648,12 @@ export function TenderSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="phases" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+          <Tabs defaultValue="columns" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="columns" className="gap-2">
+                <Columns className="h-4 w-4" />
+                <span className="hidden sm:inline">Colonnes</span>
+              </TabsTrigger>
               <TabsTrigger value="phases" className="gap-2">
                 <Clock className="h-4 w-4" />
                 <span className="hidden sm:inline">Phases</span>
@@ -571,6 +671,10 @@ export function TenderSettings() {
                 <span className="hidden sm:inline">Domaines</span>
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="columns">
+              <PipelineColumnsSection />
+            </TabsContent>
 
             <TabsContent value="phases">
               <PhasesSection />
