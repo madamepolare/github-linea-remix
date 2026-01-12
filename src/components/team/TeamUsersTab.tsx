@@ -35,10 +35,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, MoreHorizontal, Mail, Shield, Trash2, Search, GraduationCap, Calendar, UsersRound } from "lucide-react";
+import { UserPlus, MoreHorizontal, Mail, Shield, Trash2, Search, GraduationCap, Calendar, UsersRound, UserRoundPlus } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/permissions";
 import { ApprenticeScheduleDialog } from "./ApprenticeScheduleDialog";
 import { TeamManagementDialog } from "./TeamManagementDialog";
+import { CreateMemberDialog } from "./CreateMemberDialog";
 
 const roleColors: Record<string, string> = {
   owner: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
@@ -56,6 +57,7 @@ export function TeamUsersTab() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [createMemberOpen, setCreateMemberOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
@@ -221,10 +223,16 @@ export function TeamUsersTab() {
             </Button>
           )}
           {canInvite && (
-            <Button onClick={() => setInviteOpen(true)}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Inviter
-            </Button>
+            <>
+              <Button variant="outline" onClick={() => setCreateMemberOpen(true)}>
+                <UserRoundPlus className="h-4 w-4 mr-2" />
+                Créer
+              </Button>
+              <Button onClick={() => setInviteOpen(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Inviter
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -303,6 +311,12 @@ export function TeamUsersTab() {
       <TeamManagementDialog
         open={teamsDialogOpen}
         onOpenChange={setTeamsDialogOpen}
+      />
+
+      {/* Create Member Dialog */}
+      <CreateMemberDialog
+        open={createMemberOpen}
+        onOpenChange={setCreateMemberOpen}
       />
     </div>
   );

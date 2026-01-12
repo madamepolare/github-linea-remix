@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.generate-discipline-content]
 verify_jwt = false
+
+[functions.create-user]
+verify_jwt = false
