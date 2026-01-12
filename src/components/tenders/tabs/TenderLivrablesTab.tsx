@@ -267,10 +267,17 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
       <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileCheck className="h-5 w-5" />
-              Progression des livrables
-            </CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <FileCheck className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Progression des livrables</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  {deliverables.length} livrable{deliverables.length > 1 ? 's' : ''} à produire
+                </p>
+              </div>
+            </div>
             <span className={cn(
               "text-3xl font-bold tabular-nums",
               progressPercent === 100 ? "text-green-600" : "text-foreground"
@@ -283,31 +290,28 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
           <Progress 
             value={progressPercent} 
             className={cn(
-              "h-4",
+              "h-3",
               progressPercent === 100 && "[&>div]:bg-green-500"
             )} 
           />
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{deliverables.length} livrables</span>
-            <div className="flex items-center gap-2">
-              {deliverables.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleExportExcel}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Excel
-                </Button>
-              )}
+          <div className="flex items-center justify-end gap-2">
+            {deliverables.length > 0 && (
               <Button
                 size="sm"
-                onClick={() => setShowAddDialog(true)}
+                variant="outline"
+                onClick={handleExportExcel}
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter manuellement
+                <Download className="h-4 w-4 mr-2" />
+                Export Excel
               </Button>
-            </div>
+            )}
+            <Button
+              size="sm"
+              onClick={() => setShowAddDialog(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter
+            </Button>
           </div>
         </CardContent>
       </Card>

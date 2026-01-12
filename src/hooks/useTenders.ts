@@ -112,14 +112,31 @@ export function useTenders() {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as Tender;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tenders"] });
+    onMutate: async ({ id, ...updates }) => {
+      await queryClient.cancelQueries({ queryKey: ["tender", id] });
+      
+      const previousTender = queryClient.getQueryData<Tender>(["tender", id]);
+      
+      if (previousTender) {
+        queryClient.setQueryData<Tender>(["tender", id], {
+          ...previousTender,
+          ...updates,
+        });
+      }
+      
+      return { previousTender };
     },
-    onError: (error) => {
+    onError: (err, { id }, context) => {
+      if (context?.previousTender) {
+        queryClient.setQueryData(["tender", id], context.previousTender);
+      }
       toast.error("Erreur lors de la mise à jour");
-      console.error(error);
+    },
+    onSuccess: (data, { id }) => {
+      queryClient.setQueryData(["tender", id], data);
+      queryClient.invalidateQueries({ queryKey: ["tenders", activeWorkspace?.id] });
     },
   });
 
@@ -143,11 +160,57 @@ export function useTenders() {
         .single();
       
       if (error) throw error;
-      return data;
+      return data as Tender;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tenders"] });
-      toast.success("Statut mis à jour");
+    onMutate: async ({ id, status, notes }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["tender", id] });
+      await queryClient.cancelQueries({ queryKey: ["tenders", activeWorkspace?.id] });
+      
+      // Snapshot current state
+      const previousTender = queryClient.getQueryData<Tender>(["tender", id]);
+      const previousTenders = queryClient.getQueryData<Tender[]>(["tenders", activeWorkspace?.id]);
+      
+      // Optimistically update single tender
+      if (previousTender) {
+        queryClient.setQueryData<Tender>(["tender", id], {
+          ...previousTender,
+          status,
+          go_decision_notes: notes || previousTender.go_decision_notes,
+          go_decision_date: new Date().toISOString(),
+        });
+      }
+      
+      // Optimistically update tenders list
+      if (previousTenders) {
+        queryClient.setQueryData<Tender[]>(
+          ["tenders", activeWorkspace?.id],
+          previousTenders.map(t => t.id === id ? {
+            ...t,
+            status,
+            go_decision_notes: notes || t.go_decision_notes,
+            go_decision_date: new Date().toISOString(),
+          } : t)
+        );
+      }
+      
+      return { previousTender, previousTenders };
+    },
+    onError: (err, { id }, context) => {
+      // Rollback on error
+      if (context?.previousTender) {
+        queryClient.setQueryData(["tender", id], context.previousTender);
+      }
+      if (context?.previousTenders) {
+        queryClient.setQueryData(["tenders", activeWorkspace?.id], context.previousTenders);
+      }
+      toast.error("Erreur lors de la mise à jour du statut");
+    },
+    onSuccess: (data, { id }) => {
+      // Update with server data
+      queryClient.setQueryData(["tender", id], data);
+      queryClient.invalidateQueries({ queryKey: ["tenders", activeWorkspace?.id] });
+      toast.success("Décision enregistrée");
     },
   });
 

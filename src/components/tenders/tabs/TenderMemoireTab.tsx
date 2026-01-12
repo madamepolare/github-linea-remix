@@ -86,21 +86,27 @@ export function TenderMemoireTab({ tenderId, tender }: TenderMemoireTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Mémoire Technique</h2>
-          <p className="text-sm text-muted-foreground">
-            Construisez votre mémoire section par section avec l'aide de l'IA
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-muted">
+            <PenTool className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">Mémoire Technique</h2>
+            <p className="text-sm text-muted-foreground">
+              {sections.length} section{sections.length > 1 ? 's' : ''} • Génération assistée par IA
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" disabled>
             <Download className="h-4 w-4 mr-2" />
-            Exporter .docx
+            Exporter
           </Button>
           <Button onClick={() => setShowAddDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Ajouter une section
+            Ajouter section
           </Button>
         </div>
       </div>

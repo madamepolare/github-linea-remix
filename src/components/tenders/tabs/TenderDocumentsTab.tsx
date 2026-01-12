@@ -80,10 +80,16 @@ interface Message {
 }
 
 export function TenderDocumentsTab({ tenderId }: TenderDocumentsTabProps) {
-  const { documents, isLoading, uploadDocument, deleteDocument, analyzeDocument } = useTenderDocuments(tenderId);
+  const { 
+    documents, 
+    isLoading, 
+    uploadDocument, 
+    deleteDocument, 
+    analyzeDocument, 
+    reanalyzeAllDocuments 
+  } = useTenderDocuments(tenderId);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState<string>("all");
-  const [isReanalyzing, setIsReanalyzing] = useState(false);
   
   // Chat state
   const [showChat, setShowChat] = useState(false);
@@ -117,22 +123,10 @@ export function TenderDocumentsTab({ tenderId }: TenderDocumentsTabProps) {
     e.target.value = '';
   };
 
-  // Reanalyze all documents (for updated DCE or Q&A)
+  // Reanalyze all documents with the full DCE analysis
   const handleReanalyze = async () => {
     if (documents.length === 0) return;
-    
-    setIsReanalyzing(true);
-    try {
-      for (const doc of documents) {
-        await analyzeDocument.mutateAsync(doc.id);
-      }
-      toast.success("Analyse terminée !");
-    } catch (error) {
-      console.error('Reanalysis error:', error);
-      toast.error("Erreur lors de la réanalyse");
-    } finally {
-      setIsReanalyzing(false);
-    }
+    reanalyzeAllDocuments.mutate();
   };
 
   // Ask AI a question about the documents
@@ -201,20 +195,26 @@ export function TenderDocumentsTab({ tenderId }: TenderDocumentsTabProps) {
     <div className="space-y-6">
       {/* Header with actions */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Documents DCE</h2>
-          <p className="text-sm text-muted-foreground">
-            {documents.length} document{documents.length > 1 ? 's' : ''} • {analyzedCount} analysé{analyzedCount > 1 ? 's' : ''}
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-muted">
+            <FolderOpen className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">Documents DCE</h2>
+            <p className="text-sm text-muted-foreground">
+              {documents.length} document{documents.length > 1 ? 's' : ''} • {analyzedCount} analysé{analyzedCount > 1 ? 's' : ''}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={handleReanalyze}
-            disabled={documents.length === 0 || isReanalyzing}
+            disabled={documents.length === 0 || reanalyzeAllDocuments.isPending}
+            title="Relancer l'analyse DCE complète pour mettre à jour les informations extraites"
           >
-            {isReanalyzing ? (
+            {reanalyzeAllDocuments.isPending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -222,7 +222,7 @@ export function TenderDocumentsTab({ tenderId }: TenderDocumentsTabProps) {
             Relancer l'analyse
           </Button>
           <Button
-            variant={showChat ? "secondary" : "outline"}
+            variant={showChat ? "default" : "outline"}
             size="sm"
             onClick={() => setShowChat(!showChat)}
             disabled={documents.length === 0}
@@ -256,7 +256,7 @@ export function TenderDocumentsTab({ tenderId }: TenderDocumentsTabProps) {
               </CardHeader>
               <CardContent className="p-0">
                 {/* Messages Area */}
-                <ScrollArea ref={scrollRef} className="h-64 p-4">
+                <div ref={scrollRef} className="h-64 overflow-auto p-4">
                   <div className="space-y-4">
                     {messages.length === 0 && !isAskingAI && (
                       <div className="text-center py-8">
@@ -332,7 +332,7 @@ export function TenderDocumentsTab({ tenderId }: TenderDocumentsTabProps) {
                       </div>
                     )}
                   </div>
-                </ScrollArea>
+                </div>
                 
                 {/* Input Area */}
                 <div className="p-3 border-t">

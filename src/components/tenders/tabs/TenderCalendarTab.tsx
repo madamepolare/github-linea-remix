@@ -331,27 +331,37 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
 
   return (
     <div className="space-y-6">
-      {/* Actions */}
+      {/* Header */}
       <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-muted">
+            <Calendar className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">Calendrier</h2>
+            <p className="text-sm text-muted-foreground">
+              {events.length} événement{events.length > 1 ? 's' : ''} planifié{events.length > 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
-          {/* Sync buttons for missing events */}
           {tender.site_visit_date && !hasSiteVisit && (
             <Button size="sm" variant="outline" onClick={handleSyncSiteVisit}>
               <MapPin className="h-4 w-4 mr-1.5" />
-              Synchroniser visite de site
+              Sync visite
             </Button>
           )}
           {tender.submission_deadline && !hasDeadline && (
             <Button size="sm" variant="outline" onClick={handleSyncDeadline}>
               <Calendar className="h-4 w-4 mr-1.5" />
-              Synchroniser échéance
+              Sync échéance
             </Button>
           )}
+          <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Nouvel événement
+          </Button>
         </div>
-        <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          Nouvel événement
-        </Button>
       </div>
 
       {/* Calendar */}
