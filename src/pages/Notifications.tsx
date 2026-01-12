@@ -22,7 +22,11 @@ import {
   Trash2,
   MoreHorizontal,
   ChevronDown,
-  Loader2
+  Loader2,
+  Heart,
+  AtSign,
+  Reply,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,32 +42,71 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow, isToday, isYesterday, isThisWeek } from "date-fns";
+import { formatDistanceToNow, isToday, isYesterday, isThisWeek, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { THIN_STROKE } from "@/components/ui/icon";
 import { useNotifications, Notification } from "@/hooks/useNotifications";
 
-type NotificationCategory = "all" | "unread" | "mentions" | "tasks" | "projects" | "documents";
+type NotificationCategory = "all" | "unread" | "mentions" | "tasks" | "projects" | "messages";
 
-const iconMap: Record<string, typeof Bell> = {
-  task: CheckSquare,
-  project: FolderKanban,
-  mention: MessageSquare,
-  invite: UserPlus,
-  document: FileText,
-  alert: AlertCircle,
-  calendar: Calendar,
-  team: Users,
-  system: Bell,
+// Map notification types to icons and colors
+const notificationTypeConfig: Record<string, { 
+  icon: typeof Bell; 
+  label: string; 
+  color: string; 
+  bgColor: string;
+}> = {
+  comment_reply: { 
+    icon: Reply, 
+    label: "Réponse", 
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30"
+  },
+  reaction: { 
+    icon: Heart, 
+    label: "Réaction", 
+    color: "text-pink-600 dark:text-pink-400",
+    bgColor: "bg-pink-100 dark:bg-pink-900/30"
+  },
+  task_created: { 
+    icon: CheckSquare, 
+    label: "Nouvelle tâche", 
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-100 dark:bg-green-900/30"
+  },
+  project_update: { 
+    icon: FolderKanban, 
+    label: "Projet", 
+    color: "text-amber-600 dark:text-amber-400",
+    bgColor: "bg-amber-100 dark:bg-amber-900/30"
+  },
+  mention: { 
+    icon: AtSign, 
+    label: "Mention", 
+    color: "text-purple-600 dark:text-purple-400",
+    bgColor: "bg-purple-100 dark:bg-purple-900/30"
+  },
+  invite: { 
+    icon: UserPlus, 
+    label: "Invitation", 
+    color: "text-indigo-600 dark:text-indigo-400",
+    bgColor: "bg-indigo-100 dark:bg-indigo-900/30"
+  },
+  default: { 
+    icon: Bell, 
+    label: "Notification", 
+    color: "text-muted-foreground",
+    bgColor: "bg-muted"
+  },
 };
 
-const categoryConfig: Record<NotificationCategory, { label: string; icon: typeof Bell }> = {
+const categoryConfig: Record<NotificationCategory, { label: string; icon: typeof Bell; types?: string[] }> = {
   all: { label: "Toutes", icon: Inbox },
   unread: { label: "Non lues", icon: Bell },
-  mentions: { label: "Mentions", icon: MessageSquare },
-  tasks: { label: "Tâches", icon: CheckSquare },
-  projects: { label: "Projets", icon: FolderKanban },
-  documents: { label: "Documents", icon: FileText },
+  mentions: { label: "Mentions", icon: AtSign, types: ["mention"] },
+  messages: { label: "Messages", icon: MessageSquare, types: ["comment_reply", "reaction"] },
+  tasks: { label: "Tâches", icon: CheckSquare, types: ["task_created"] },
+  projects: { label: "Projets", icon: FolderKanban, types: ["project_update"] },
 };
 
 function groupNotificationsByDate(notifications: Notification[]) {
@@ -115,22 +158,13 @@ export default function NotificationsPage() {
     let result = [...notifications];
 
     // Filter by category
-    switch (selectedCategory) {
-      case "unread":
-        result = result.filter((n) => !n.is_read);
-        break;
-      case "mentions":
-        result = result.filter((n) => n.type === "mention");
-        break;
-      case "tasks":
-        result = result.filter((n) => n.type === "task");
-        break;
-      case "projects":
-        result = result.filter((n) => n.type === "project");
-        break;
-      case "documents":
-        result = result.filter((n) => n.type === "document");
-        break;
+    if (selectedCategory === "unread") {
+      result = result.filter((n) => !n.is_read);
+    } else if (selectedCategory !== "all") {
+      const categoryTypes = categoryConfig[selectedCategory]?.types;
+      if (categoryTypes) {
+        result = result.filter((n) => categoryTypes.includes(n.type));
+      }
     }
 
     // Filter by search
@@ -360,7 +394,8 @@ export default function NotificationsPage() {
                   <div className="space-y-1">
                     <AnimatePresence mode="popLayout">
                       {group.notifications.map((notification) => {
-                        const Icon = iconMap[notification.type] || Bell;
+                        const typeConfig = notificationTypeConfig[notification.type] || notificationTypeConfig.default;
+                        const Icon = typeConfig.icon;
                         const isSelected = selectedIds.has(notification.id);
 
                         return (
@@ -409,14 +444,11 @@ export default function NotificationsPage() {
                             <div
                               className={cn(
                                 "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                                notification.type === "alert" ? "bg-destructive/10" : "bg-muted"
+                                typeConfig.bgColor
                               )}
                             >
                               <Icon
-                                className={cn(
-                                  "h-5 w-5",
-                                  notification.type === "alert" ? "text-destructive" : "text-muted-foreground"
-                                )}
+                                className={cn("h-5 w-5", typeConfig.color)}
                                 strokeWidth={THIN_STROKE}
                               />
                             </div>
@@ -424,23 +456,50 @@ export default function NotificationsPage() {
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-4">
-                                <div>
+                                <div className="flex-1 min-w-0">
+                                  {/* Type badge */}
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", typeConfig.color, typeConfig.bgColor)}>
+                                      {typeConfig.label}
+                                    </Badge>
+                                  </div>
+                                  
+                                  {/* Title */}
                                   <p className={cn(
                                     "text-sm",
                                     !notification.is_read && "font-medium"
                                   )}>
                                     {notification.title}
                                   </p>
+                                  
+                                  {/* Message content */}
                                   {notification.message && (
-                                    <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
+                                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2 bg-muted/50 rounded px-2 py-1">
                                       {notification.message}
                                     </p>
                                   )}
-                                  <div className="flex items-center gap-2 mt-2">
-                                    <Clock className="h-3 w-3 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground">
-                                      {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: fr })}
+                                  
+                                  {/* Metadata row */}
+                                  <div className="flex items-center gap-3 mt-2">
+                                    <div className="flex items-center gap-1.5">
+                                      <Clock className="h-3 w-3 text-muted-foreground" />
+                                      <span className="text-xs text-muted-foreground">
+                                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: fr })}
+                                      </span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground/50">•</span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {format(new Date(notification.created_at), "dd/MM/yyyy HH:mm", { locale: fr })}
                                     </span>
+                                    {notification.action_url && (
+                                      <>
+                                        <span className="text-xs text-muted-foreground/50">•</span>
+                                        <span className="text-xs text-primary flex items-center gap-1">
+                                          <ExternalLink className="h-3 w-3" />
+                                          Voir
+                                        </span>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
 
