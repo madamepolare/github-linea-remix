@@ -152,15 +152,35 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as TaskSchedule;
+    },
+    onMutate: async (vars) => {
+      // Optimistic update for immediate UI refresh
+      await queryClient.cancelQueries({ queryKey: ["task-schedules", activeWorkspace?.id] });
+
+      const previous = queryClient.getQueriesData<TaskSchedule[]>({
+        queryKey: ["task-schedules", activeWorkspace?.id],
+      });
+
+      queryClient.setQueriesData<TaskSchedule[]>({ queryKey: ["task-schedules", activeWorkspace?.id] }, (old) => {
+        if (!old) return old;
+        return old.map((s) => (s.id === vars.id ? ({ ...s, ...vars } as any) : s));
+      });
+
+      return { previous };
+    },
+    onError: (error: any, _vars, context) => {
+      // Rollback
+      context?.previous?.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data);
+      });
+      toast({ title: "Erreur", description: error.message, variant: "destructive" });
     },
     onSuccess: () => {
+      // Reconcile with server
       queryClient.invalidateQueries({ queryKey: ["task-schedules"] });
       queryClient.invalidateQueries({ queryKey: ["unscheduled-tasks"] });
       // No toast for move operations - keep it silent for better UX
-    },
-    onError: (error: any) => {
-      toast({ title: "Erreur", description: error.message, variant: "destructive" });
     },
   });
 

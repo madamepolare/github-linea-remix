@@ -324,8 +324,7 @@ export function AgendaTimelineItem({
                 }}
                 onClick={handleClick}
               >
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent pointer-events-none" />
+                {/* No gradient overlay */}
                 
                 {/* Horizontal drag handle - for moving between days */}
                 {canDrag && (
@@ -341,10 +340,10 @@ export function AgendaTimelineItem({
                       "absolute top-0 left-0 bottom-0 w-6 cursor-grab active:cursor-grabbing z-20",
                       "flex items-center justify-center",
                       "opacity-0 group-hover:opacity-100 transition-opacity",
-                      "bg-gradient-to-r from-black/20 to-transparent"
+                      "bg-background/15"
                     )}
                   >
-                    <GripVertical className="h-3 w-3 text-white/80" />
+                    <GripVertical className="h-3 w-3 text-background/90" />
                   </div>
                 )}
                 
