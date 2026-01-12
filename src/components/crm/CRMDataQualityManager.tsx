@@ -14,6 +14,9 @@ import {
   Check,
   AlertCircle,
   Sparkles,
+  Trash2,
+  Loader2,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +70,8 @@ export function CRMDataQualityManager() {
   const [open, setOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(["duplicates", "missing"]);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [autoCleanupDialogOpen, setAutoCleanupDialogOpen] = useState(false);
+  const [isAutoCleanupRunning, setIsAutoCleanupRunning] = useState(false);
   const [selectedDuplicates, setSelectedDuplicates] = useState<{
     type: "contact" | "company";
     items: (Contact | CRMCompanyEnriched)[];
@@ -316,6 +321,49 @@ export function CRMDataQualityManager() {
     }
   };
 
+  // Auto-cleanup: keep the first item in each duplicate group and delete the rest
+  const handleAutoCleanup = async () => {
+    setIsAutoCleanupRunning(true);
+    let deletedCount = 0;
+
+    try {
+      // Clean up duplicate contacts
+      for (const group of duplicateContacts) {
+        const toDelete = group.items.slice(1); // Keep the first, delete the rest
+        for (const contact of toDelete) {
+          try {
+            await deleteContact.mutateAsync(contact.id);
+            deletedCount++;
+          } catch (error) {
+            console.error("Error deleting contact:", error);
+          }
+        }
+      }
+
+      // Clean up duplicate companies
+      for (const group of duplicateCompanies) {
+        const toDelete = group.items.slice(1);
+        for (const company of toDelete) {
+          try {
+            await deleteCompany.mutateAsync(company.id);
+            deletedCount++;
+          } catch (error) {
+            console.error("Error deleting company:", error);
+          }
+        }
+      }
+
+      setAutoCleanupDialogOpen(false);
+    } catch (error) {
+      console.error("Error during auto-cleanup:", error);
+    } finally {
+      setIsAutoCleanupRunning(false);
+    }
+  };
+
+  const totalDuplicatesToDelete = duplicateContacts.reduce((sum, g) => sum + g.items.length - 1, 0) +
+    duplicateCompanies.reduce((sum, g) => sum + g.items.length - 1, 0);
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-green-600";
     if (score >= 60) return "text-yellow-600";
@@ -428,6 +476,16 @@ export function CRMDataQualityManager() {
                         </Card>
                       ) : (
                         <>
+                          {/* Auto-cleanup button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-2 border-yellow-500/50 text-yellow-600 hover:bg-yellow-50 mb-2"
+                            onClick={() => setAutoCleanupDialogOpen(true)}
+                          >
+                            <Zap className="h-4 w-4" />
+                            Nettoyage automatique ({totalDuplicatesToDelete} à supprimer)
+                          </Button>
                           {duplicateContacts.map((group, index) => (
                             <Card key={`contact-${index}`} className="border-yellow-200 bg-yellow-50/50">
                               <CardContent className="py-3">
@@ -719,6 +777,61 @@ export function CRMDataQualityManager() {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleMerge}>
               Fusionner
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Auto-Cleanup Dialog */}
+      <AlertDialog open={autoCleanupDialogOpen} onOpenChange={setAutoCleanupDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-yellow-500" />
+              Nettoyage automatique des doublons
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action va supprimer automatiquement {totalDuplicatesToDelete} entrée(s) en double 
+              en conservant la première entrée de chaque groupe.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="my-4 p-4 rounded-lg bg-yellow-50 border border-yellow-200">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 shrink-0 mt-0.5" />
+              <div className="text-sm text-yellow-800">
+                <p className="font-medium mb-1">Résumé des suppressions :</p>
+                <ul className="list-disc list-inside space-y-1">
+                  {duplicateContacts.length > 0 && (
+                    <li>{duplicateContacts.reduce((sum, g) => sum + g.items.length - 1, 0)} contact(s) en doublon</li>
+                  )}
+                  {duplicateCompanies.length > 0 && (
+                    <li>{duplicateCompanies.reduce((sum, g) => sum + g.items.length - 1, 0)} entreprise(s) en doublon</li>
+                  )}
+                </ul>
+                <p className="mt-2 text-xs">Cette action est irréversible.</p>
+              </div>
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isAutoCleanupRunning}>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleAutoCleanup}
+              disabled={isAutoCleanupRunning}
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              {isAutoCleanupRunning ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Nettoyage en cours...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer les doublons
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

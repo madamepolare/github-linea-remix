@@ -144,12 +144,48 @@ export function ImportContactsDialog({ open, onOpenChange }: ImportContactsDialo
       });
     }
 
-    // Handle text/CSV files
+    // Handle text/CSV files - try UTF-16 first (Excel exports), then UTF-8
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.onload = (e) => {
+        const arrayBuffer = e.target?.result as ArrayBuffer;
+        const bytes = new Uint8Array(arrayBuffer);
+        
+        // Check for UTF-16 BOM (little-endian: FF FE, big-endian: FE FF)
+        const isUtf16LE = bytes[0] === 0xFF && bytes[1] === 0xFE;
+        const isUtf16BE = bytes[0] === 0xFE && bytes[1] === 0xFF;
+        
+        let text: string;
+        
+        if (isUtf16LE || isUtf16BE) {
+          // Decode as UTF-16
+          const decoder = new TextDecoder(isUtf16LE ? "utf-16le" : "utf-16be");
+          text = decoder.decode(arrayBuffer);
+        } else {
+          // Try UTF-8
+          const decoder = new TextDecoder("utf-8");
+          text = decoder.decode(arrayBuffer);
+        }
+        
+        // Normalize line endings and convert tabs to semicolons for consistency
+        text = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        
+        // If the file uses tabs as separator, convert to semicolons
+        // Only do this if there are more tabs than commas/semicolons per line
+        const firstLine = text.split("\n")[0] || "";
+        const tabCount = (firstLine.match(/\t/g) || []).length;
+        const commaCount = (firstLine.match(/,/g) || []).length;
+        const semicolonCount = (firstLine.match(/;/g) || []).length;
+        
+        if (tabCount > Math.max(commaCount, semicolonCount)) {
+          // Tab-separated file - convert tabs to semicolons
+          text = text.split("\n").map(line => line.replace(/\t/g, ";")).join("\n");
+        }
+        
+        resolve(text);
+      };
       reader.onerror = reject;
-      reader.readAsText(file);
+      reader.readAsArrayBuffer(file);
     });
   };
 

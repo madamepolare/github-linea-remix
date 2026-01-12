@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GenericSettingsManager } from "./GenericSettingsManager";
 import { PipelineSettings } from "./PipelineSettings";
+import { CRMResetSection } from "./CRMResetSection";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -9,6 +10,7 @@ import {
   Phone,
   Users,
   Layers,
+  Settings2,
 } from "lucide-react";
 import {
   DEFAULT_LEAD_SOURCES,
@@ -176,6 +178,10 @@ export function CRMSettings() {
             <Phone className="h-3.5 w-3.5" />
             Activités
           </TabsTrigger>
+          <TabsTrigger value="advanced" className="gap-1.5 text-xs">
+            <Settings2 className="h-3.5 w-3.5" />
+            Avancé
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pipelines" className="mt-6">
@@ -217,6 +223,12 @@ export function CRMSettings() {
             showColor
             defaultItems={DEFAULT_ACTIVITY_TYPES}
           />
+        </TabsContent>
+
+        <TabsContent value="advanced" className="mt-6">
+          <div className="space-y-6">
+            <CRMResetSection />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
