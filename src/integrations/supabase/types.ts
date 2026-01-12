@@ -4226,10 +4226,14 @@ export type Database = {
       notifications: {
         Row: {
           action_url: string | null
+          actor_id: string | null
           created_at: string
           id: string
           is_read: boolean
           message: string | null
+          related_entity_id: string | null
+          related_entity_name: string | null
+          related_entity_type: string | null
           title: string
           type: string
           user_id: string
@@ -4237,10 +4241,14 @@ export type Database = {
         }
         Insert: {
           action_url?: string | null
+          actor_id?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
           message?: string | null
+          related_entity_id?: string | null
+          related_entity_name?: string | null
+          related_entity_type?: string | null
           title: string
           type?: string
           user_id: string
@@ -4248,10 +4256,14 @@ export type Database = {
         }
         Update: {
           action_url?: string | null
+          actor_id?: string | null
           created_at?: string
           id?: string
           is_read?: boolean
           message?: string | null
+          related_entity_id?: string | null
+          related_entity_name?: string | null
+          related_entity_type?: string | null
           title?: string
           type?: string
           user_id?: string

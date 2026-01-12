@@ -45,7 +45,8 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow, isToday, isYesterday, isThisWeek, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { THIN_STROKE } from "@/components/ui/icon";
-import { useNotifications, Notification } from "@/hooks/useNotifications";
+import { useNotifications, NotificationWithActor } from "@/hooks/useNotifications";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Helper to format mentions in notification messages
 function formatMentionMessage(message: string): React.ReactNode {
@@ -142,12 +143,12 @@ const categoryConfig: Record<NotificationCategory, { label: string; icon: typeof
   projects: { label: "Projets", icon: FolderKanban, types: ["project_update"] },
 };
 
-function groupNotificationsByDate(notifications: Notification[]) {
-  const groups: { label: string; notifications: Notification[] }[] = [];
-  const today: Notification[] = [];
-  const yesterday: Notification[] = [];
-  const thisWeek: Notification[] = [];
-  const older: Notification[] = [];
+function groupNotificationsByDate(notifications: NotificationWithActor[]) {
+  const groups: { label: string; notifications: NotificationWithActor[] }[] = [];
+  const today: NotificationWithActor[] = [];
+  const yesterday: NotificationWithActor[] = [];
+  const thisWeek: NotificationWithActor[] = [];
+  const older: NotificationWithActor[] = [];
 
   notifications.forEach((n) => {
     const date = new Date(n.created_at);
@@ -168,6 +169,18 @@ function groupNotificationsByDate(notifications: Notification[]) {
   if (older.length > 0) groups.push({ label: "Plus ancien", notifications: older });
 
   return groups;
+}
+
+// Entity type labels
+const entityTypeLabels: Record<string, { label: string; icon: typeof CheckSquare }> = {
+  task: { label: "Tâche", icon: CheckSquare },
+  project: { label: "Projet", icon: FolderKanban },
+};
+
+// Helper to get initials
+function getInitials(name: string | null) {
+  if (!name) return "?";
+  return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
 export default function NotificationsPage() {
@@ -229,7 +242,7 @@ export default function NotificationsPage() {
     deleteNotification.mutate(id);
   };
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = (notification: NotificationWithActor) => {
     handleMarkAsRead(notification.id);
     if (notification.action_url) {
       navigate(notification.action_url);
@@ -473,28 +486,52 @@ export default function NotificationsPage() {
                               <div className="absolute left-1 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-primary" />
                             )}
 
-                            {/* Icon */}
-                            <div
-                              className={cn(
-                                "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-                                typeConfig.bgColor
-                              )}
-                            >
-                              <Icon
-                                className={cn("h-5 w-5", typeConfig.color)}
-                                strokeWidth={THIN_STROKE}
-                              />
-                            </div>
+                            {/* Actor Avatar or Icon */}
+                            {notification.actor ? (
+                              <Avatar className="h-10 w-10 shrink-0">
+                                <AvatarImage src={notification.actor.avatar_url || undefined} />
+                                <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                                  {getInitials(notification.actor.full_name)}
+                                </AvatarFallback>
+                              </Avatar>
+                            ) : (
+                              <div
+                                className={cn(
+                                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                                  typeConfig.bgColor
+                                )}
+                              >
+                                <Icon
+                                  className={cn("h-5 w-5", typeConfig.color)}
+                                  strokeWidth={THIN_STROKE}
+                                />
+                              </div>
+                            )}
 
                             {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1 min-w-0">
-                                  {/* Type badge */}
-                                  <div className="flex items-center gap-2 mb-1">
+                                  {/* Type and Entity badges */}
+                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                                     <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", typeConfig.color, typeConfig.bgColor)}>
                                       {typeConfig.label}
                                     </Badge>
+                                    {notification.related_entity_type && notification.related_entity_name && (
+                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
+                                        {entityTypeLabels[notification.related_entity_type]?.icon && (
+                                          <span className="inline-flex">
+                                            {(() => {
+                                              const EntityIcon = entityTypeLabels[notification.related_entity_type]?.icon;
+                                              return EntityIcon ? <EntityIcon className="h-3 w-3" /> : null;
+                                            })()}
+                                          </span>
+                                        )}
+                                        <span className="truncate max-w-[120px]">
+                                          {notification.related_entity_name}
+                                        </span>
+                                      </Badge>
+                                    )}
                                   </div>
                                   
                                   {/* Title */}
