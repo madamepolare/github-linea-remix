@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { startOfDay, setHours, setMinutes, addMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
 import { PlanningItem } from "./ResizablePlanningItem";
@@ -40,6 +40,7 @@ export function DayTimelineCell({
   onViewEvent,
   onViewTimeEntry,
 }: DayTimelineCellProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [dragOverHour, setDragOverHour] = useState<number | null>(null);
   const { updateSchedule } = useTaskSchedules();
   const { planningSettings } = usePlanningSettings();
@@ -121,6 +122,7 @@ export function DayTimelineCell({
 
   return (
     <div
+      ref={containerRef}
       className={cn(
         "relative flex-1 border-r transition-colors",
         isWeekend && "bg-muted/20",
@@ -130,8 +132,33 @@ export function DayTimelineCell({
       onDragOver={(e) => {
         e.preventDefault();
         onDragOver(e);
+
+        // Show a drop indicator even when the cursor is between grid lines
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const y = e.clientY - rect.top;
+        const pct = Math.max(0, Math.min(0.999, y / rect.height));
+        const hourFloat = DAY_START_HOUR + pct * TOTAL_HOURS;
+        const hour = Math.min(DAY_END_HOUR - 1, Math.max(DAY_START_HOUR, Math.floor(hourFloat)));
+        setDragOverHour(hour);
       }}
-      onDragLeave={onDragLeave}
+      onDragLeave={() => {
+        setDragOverHour(null);
+        onDragLeave();
+      }}
+      onDrop={(e) => {
+        // If dropped not exactly on a slot, infer hour from pointer position
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (!rect) {
+          onDrop(e);
+          return;
+        }
+        const y = e.clientY - rect.top;
+        const pct = Math.max(0, Math.min(0.999, y / rect.height));
+        const hourFloat = DAY_START_HOUR + pct * TOTAL_HOURS;
+        const hour = Math.min(DAY_END_HOUR - 1, Math.max(DAY_START_HOUR, Math.floor(hourFloat)));
+        handleSlotDrop(e, hour);
+      }}
     >
       {/* Hour grid lines */}
       <div className="absolute inset-0">
