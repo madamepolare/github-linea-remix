@@ -15,6 +15,7 @@ import {
   Bell,
   Settings,
   LogOut,
+  CalendarPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ import { differenceInMinutes } from "date-fns";
 
 // Quick actions config
 const quickActions = [
+  { id: "new-event", label: "Planifier une réunion", icon: CalendarPlus, event: "open-event-scheduler" },
   { id: "new-project", label: "Nouveau projet", icon: FolderPlus, event: "open-create-project" },
   { id: "new-tender", label: "Nouvel AO", icon: Trophy, event: "open-create-tender" },
   { id: "new-contact", label: "Nouveau contact", icon: Users, event: "open-create-contact" },
@@ -269,11 +271,16 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
 
         {/* Separator */}
         <div className="w-px h-6 bg-border mx-1" />
-        {/* Notifications Button */}
+        
+        {/* Notifications Button - More prominent */}
         <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8 relative"
+          variant={unreadCount > 0 ? "secondary" : "ghost"}
+          size="sm"
+          className={cn(
+            "h-8 px-2.5 relative gap-1.5",
+            unreadCount > 0 && "bg-destructive/10 hover:bg-destructive/20 text-destructive",
+            hasRecentNotification && "ring-2 ring-destructive/30"
+          )}
           onClick={() => setNotifSidebarOpen(true)}
         >
           <Bell className={cn("h-4 w-4", hasRecentNotification && "animate-pulse")} strokeWidth={THIN_STROKE} />
@@ -282,14 +289,11 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
               <motion.span
                 initial={{ scale: 0 }}
                 animate={hasRecentNotification ? { 
-                  scale: [1, 1.2, 1],
+                  scale: [1, 1.1, 1],
                   transition: { repeat: Infinity, duration: 1.5 }
                 } : { scale: 1 }}
                 exit={{ scale: 0 }}
-                className={cn(
-                  "absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground",
-                  hasRecentNotification && "ring-2 ring-destructive/30"
-                )}
+                className="text-xs font-semibold"
               >
                 {unreadCount > 9 ? "9+" : unreadCount}
               </motion.span>
@@ -303,21 +307,11 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
           onClose={() => setNotifSidebarOpen(false)} 
         />
 
-        {/* User Menu */}
+        {/* User Menu - Icon only, no avatar in topbar */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full p-0">
-              {profile?.avatar_url ? (
-                <img 
-                  src={profile.avatar_url} 
-                  alt={profile.full_name || "User"} 
-                  className="h-8 w-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className="h-8 w-8 rounded-full bg-foreground flex items-center justify-center text-xs font-medium text-background">
-                  {userInitials}
-                </div>
-              )}
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Settings className="h-4 w-4" strokeWidth={THIN_STROKE} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
