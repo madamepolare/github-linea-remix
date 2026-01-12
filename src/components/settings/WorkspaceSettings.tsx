@@ -97,6 +97,31 @@ function AgencyHoursSection() {
           />
         </div>
       </div>
+
+      <div className="border-t pt-6">
+        <h4 className="font-medium mb-1">Heures travaillables par jour</h4>
+        <p className="text-sm text-muted-foreground mb-4">
+          Nombre d'heures de travail effectives (hors pause déjeuner)
+        </p>
+        <div className="flex items-center gap-2">
+          <Select
+            value={planningSettings.workable_hours_per_day.toString()}
+            onValueChange={(v) => updatePlanningSettings.mutate({ workable_hours_per_day: parseInt(v) })}
+          >
+            <SelectTrigger className="w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[6, 7, 8, 9, 10].map((h) => (
+                <SelectItem key={h} value={h.toString()}>
+                  {h}h
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground">par jour</span>
+        </div>
+      </div>
     </div>
   );
 }
