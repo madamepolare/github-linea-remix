@@ -101,18 +101,28 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
     [projects, selectedProjectId]
   );
 
+  // Get client contacts - from project company if selected, otherwise all workspace contacts
   const { data: clientContacts } = useQuery({
-    queryKey: ["client-contacts", selectedProject?.crm_company_id],
+    queryKey: ["client-contacts", activeWorkspace?.id, selectedProject?.crm_company_id],
     queryFn: async () => {
-      if (!selectedProject?.crm_company_id) return [];
-      const { data, error } = await supabase
+      if (!activeWorkspace?.id) return [];
+      
+      let query = supabase
         .from("contacts")
-        .select("id, name, email, role, avatar_url")
-        .eq("crm_company_id", selectedProject.crm_company_id);
+        .select("id, name, email, role, avatar_url, crm_company_id, crm_company:crm_companies(name)")
+        .eq("workspace_id", activeWorkspace.id)
+        .order("name");
+      
+      // Filter by company if a project with company is selected
+      if (selectedProject?.crm_company_id) {
+        query = query.eq("crm_company_id", selectedProject.crm_company_id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!selectedProject?.crm_company_id && eventCategory === "client",
+    enabled: !!activeWorkspace?.id,
   });
 
   // Reset on open
@@ -301,10 +311,10 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
         };
       });
 
-      // Add client contacts if any
-      if (eventCategory === "client" && inviteClientContacts.length > 0) {
+      // Add client contacts if any (for all event types)
+      if (inviteClientContacts.length > 0) {
         inviteClientContacts.forEach((contactId) => {
-          const contact = clientContacts?.find((c) => c.id === contactId);
+          const contact = clientContacts?.find((c: any) => c.id === contactId);
           if (contact) {
             attendees.push({
               email: contact.email || "",
@@ -552,54 +562,51 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
                   </div>
                 </div>
 
-                {/* Client contacts invitation - only for client meetings with a project */}
-                {eventCategory === "client" && selectedProject?.crm_company_id && (
+                {/* Client contacts invitation - available for all event types */}
+                {clientContacts && clientContacts.length > 0 && (
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                       <UserPlus className="h-4 w-4" />
-                      Inviter des contacts client
-                      {selectedProject.crm_company?.name && (
+                      Inviter des contacts externes
+                      {selectedProject?.crm_company?.name && (
                         <Badge variant="secondary" className="text-xs">
                           {selectedProject.crm_company.name}
                         </Badge>
                       )}
+                      {inviteClientContacts.length > 0 && (
+                        <Badge className="text-xs">{inviteClientContacts.length}</Badge>
+                      )}
                     </Label>
-                    {clientContacts && clientContacts.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-2 max-h-32 overflow-auto p-2 border rounded-lg border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-800">
-                        {clientContacts.map((contact) => (
-                          <label
-                            key={contact.id}
-                            className={cn(
-                              "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
-                              inviteClientContacts.includes(contact.id)
-                                ? "bg-green-100 dark:bg-green-900/30"
-                                : "hover:bg-green-100/50 dark:hover:bg-green-900/20"
-                            )}
-                          >
-                            <Checkbox
-                              checked={inviteClientContacts.includes(contact.id)}
-                              onCheckedChange={() => toggleClientContact(contact.id)}
-                            />
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={contact.avatar_url || ""} />
-                              <AvatarFallback className="text-[10px] bg-green-200 text-green-800">
-                                {contact.name.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <span className="text-sm truncate block">{contact.name}</span>
-                              {contact.email && (
-                                <span className="text-xs text-muted-foreground truncate block">{contact.email}</span>
-                              )}
-                            </div>
-                          </label>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-muted-foreground p-3 border rounded-lg border-dashed">
-                        Aucun contact trouvé pour ce client.
-                      </div>
-                    )}
+                    <div className="grid grid-cols-2 gap-2 max-h-40 overflow-auto p-2 border rounded-lg">
+                      {clientContacts.map((contact: any) => (
+                        <label
+                          key={contact.id}
+                          className={cn(
+                            "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                            inviteClientContacts.includes(contact.id)
+                              ? "bg-primary/10"
+                              : "hover:bg-muted"
+                          )}
+                        >
+                          <Checkbox
+                            checked={inviteClientContacts.includes(contact.id)}
+                            onCheckedChange={() => toggleClientContact(contact.id)}
+                          />
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={contact.avatar_url || ""} />
+                            <AvatarFallback className="text-[10px]">
+                              {contact.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm truncate block">{contact.name}</span>
+                            <span className="text-xs text-muted-foreground truncate block">
+                              {contact.crm_company?.name || contact.email || ""}
+                            </span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 )}
 
