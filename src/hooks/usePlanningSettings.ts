@@ -13,6 +13,8 @@ export interface PlanningSettings {
   // Lunch break
   lunch_start_hour: number;
   lunch_end_hour: number;
+  // Workable hours per day (excluding lunch)
+  workable_hours_per_day: number;
 }
 
 const DEFAULT_PLANNING_SETTINGS: PlanningSettings = {
@@ -22,6 +24,7 @@ const DEFAULT_PLANNING_SETTINGS: PlanningSettings = {
   agency_close_hour: 18,  // Closes at 18h (7h of work with 1h lunch)
   lunch_start_hour: 13,
   lunch_end_hour: 14,
+  workable_hours_per_day: 7, // 7h by default (8h - 1h lunch)
 };
 
 export function usePlanningSettings() {
@@ -57,6 +60,7 @@ export function usePlanningSettings() {
         agency_close_hour: (rawValue.agency_close_hour as number) ?? DEFAULT_PLANNING_SETTINGS.agency_close_hour,
         lunch_start_hour: (rawValue.lunch_start_hour as number) ?? DEFAULT_PLANNING_SETTINGS.lunch_start_hour,
         lunch_end_hour: (rawValue.lunch_end_hour as number) ?? DEFAULT_PLANNING_SETTINGS.lunch_end_hour,
+        workable_hours_per_day: (rawValue.workable_hours_per_day as number) ?? DEFAULT_PLANNING_SETTINGS.workable_hours_per_day,
       }
     : DEFAULT_PLANNING_SETTINGS;
 
