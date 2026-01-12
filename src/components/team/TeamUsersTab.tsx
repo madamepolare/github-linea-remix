@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
+import { useTeams } from "@/hooks/useTeams";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,9 +35,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, MoreHorizontal, Mail, Shield, Trash2, Search, GraduationCap, Calendar } from "lucide-react";
+import { UserPlus, MoreHorizontal, Mail, Shield, Trash2, Search, GraduationCap, Calendar, UsersRound } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/permissions";
 import { ApprenticeScheduleDialog } from "./ApprenticeScheduleDialog";
+import { TeamManagementDialog } from "./TeamManagementDialog";
 
 const roleColors: Record<string, string> = {
   owner: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
@@ -47,6 +49,7 @@ const roleColors: Record<string, string> = {
 
 export function TeamUsersTab() {
   const { data: members, isLoading } = useTeamMembers();
+  const { teams, userTeamsMap } = useTeams();
   const { activeWorkspace, user } = useAuth();
   const { can, isAdmin } = usePermissions();
   const queryClient = useQueryClient();
@@ -57,6 +60,7 @@ export function TeamUsersTab() {
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
   const [apprenticeDialogUser, setApprenticeDialogUser] = useState<{ id: string; name: string } | null>(null);
+  const [teamsDialogOpen, setTeamsDialogOpen] = useState(false);
 
   // Fetch all apprentice schedules to show badges
   const { data: apprenticeSchedules } = useQuery({
@@ -209,12 +213,20 @@ export function TeamUsersTab() {
             className="pl-9"
           />
         </div>
-        {canInvite && (
-          <Button onClick={() => setInviteOpen(true)}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Inviter
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button variant="outline" onClick={() => setTeamsDialogOpen(true)}>
+              <UsersRound className="h-4 w-4 mr-2" />
+              Équipes ({teams.length})
+            </Button>
+          )}
+          {canInvite && (
+            <Button onClick={() => setInviteOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Inviter
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -286,6 +298,12 @@ export function TeamUsersTab() {
           userName={apprenticeDialogUser.name}
         />
       )}
+
+      {/* Teams Management Dialog */}
+      <TeamManagementDialog
+        open={teamsDialogOpen}
+        onOpenChange={setTeamsDialogOpen}
+      />
     </div>
   );
 }

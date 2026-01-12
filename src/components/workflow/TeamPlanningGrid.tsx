@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay, setHours, parseISO, addHours } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye, GripVertical, CheckCircle2, ExternalLink, Copy, Move, Plus, PanelLeftClose, PanelLeft, FolderKanban, Check, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye, GripVertical, CheckCircle2, ExternalLink, Copy, Move, Plus, PanelLeftClose, PanelLeft, FolderKanban, Check, X, UsersRound, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -13,6 +13,7 @@ import { useWorkspaceEvents, UnifiedWorkspaceEvent, WorkspaceEvent, TenderWorksp
 import { useAllProjectMembers, useProjects } from "@/hooks/useProjects";
 import { useTeamAbsences, TeamAbsence, absenceTypeLabels } from "@/hooks/useTeamAbsences";
 import { useTeamTimeEntries, useUpdateTimeEntry, TeamTimeEntry } from "@/hooks/useTeamTimeEntries";
+import { useTeams } from "@/hooks/useTeams";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -60,8 +61,11 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const [teamColumnCollapsed, setTeamColumnCollapsed] = useState(false);
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
+  const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
+  const [showNonAssigned, setShowNonAssigned] = useState(false);
   const [memberFilterOpen, setMemberFilterOpen] = useState(false);
   const [projectFilterOpen, setProjectFilterOpen] = useState(false);
+  const [teamFilterOpen, setTeamFilterOpen] = useState(false);
   
   // Time entry dialog state (add)
   const [timeEntryDialogOpen, setTimeEntryDialogOpen] = useState(false);
@@ -79,6 +83,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const { data: absences, isLoading: absencesLoading } = useTeamAbsences({ status: "approved" });
   const { data: timeEntries, isLoading: timeEntriesLoading } = useTeamTimeEntries();
   const { projects, isLoading: projectsLoading } = useProjects();
+  const { teams, userTeamsMap } = useTeams();
   const updateTimeEntry = useUpdateTimeEntry();
 
   const isLoading = schedulesLoading || membersLoading || eventsLoading || projectMembersLoading || absencesLoading || timeEntriesLoading || projectsLoading;
@@ -127,11 +132,76 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     return Array.from({ length: DAYS_TO_SHOW }, (_, i) => addDays(start, i));
   }, [currentDate]);
 
-  // Filter members based on selection
+  // Get project member user IDs for filtering
+  const projectAssignedUserIds = useMemo(() => {
+    if (selectedProjectIds.size === 0) return null;
+    
+    const userIds = new Set<string>();
+    userProjectsMap?.forEach((projectIds, userId) => {
+      for (const projectId of selectedProjectIds) {
+        if (projectIds.has(projectId)) {
+          userIds.add(userId);
+          break;
+        }
+      }
+    });
+    return userIds;
+  }, [selectedProjectIds, userProjectsMap]);
+
+  // Filter members based on selection (member filter, team filter, project assignment)
   const filteredMembers = useMemo(() => {
-    if (selectedMemberIds.size === 0) return members || [];
-    return (members || []).filter(m => selectedMemberIds.has(m.user_id));
-  }, [members, selectedMemberIds]);
+    let result = members || [];
+    
+    // Filter by selected members
+    if (selectedMemberIds.size > 0) {
+      result = result.filter(m => selectedMemberIds.has(m.user_id));
+    }
+    
+    // Filter by selected teams
+    if (selectedTeamIds.size > 0) {
+      result = result.filter(m => {
+        const memberTeams = userTeamsMap.get(m.user_id);
+        if (!memberTeams) return false;
+        for (const teamId of selectedTeamIds) {
+          if (memberTeams.has(teamId)) return true;
+        }
+        return false;
+      });
+    }
+    
+    // Filter by project assignment when project filter is active (unless showNonAssigned is true)
+    if (selectedProjectIds.size > 0 && !showNonAssigned && projectAssignedUserIds) {
+      result = result.filter(m => projectAssignedUserIds.has(m.user_id));
+    }
+    
+    return result;
+  }, [members, selectedMemberIds, selectedTeamIds, userTeamsMap, selectedProjectIds, showNonAssigned, projectAssignedUserIds]);
+
+  // Count of hidden non-assigned members
+  const hiddenNonAssignedCount = useMemo(() => {
+    if (selectedProjectIds.size === 0 || showNonAssigned || !projectAssignedUserIds) return 0;
+    
+    let baseMembers = members || [];
+    
+    // Apply member filter if any
+    if (selectedMemberIds.size > 0) {
+      baseMembers = baseMembers.filter(m => selectedMemberIds.has(m.user_id));
+    }
+    
+    // Apply team filter if any
+    if (selectedTeamIds.size > 0) {
+      baseMembers = baseMembers.filter(m => {
+        const memberTeams = userTeamsMap.get(m.user_id);
+        if (!memberTeams) return false;
+        for (const teamId of selectedTeamIds) {
+          if (memberTeams.has(teamId)) return true;
+        }
+        return false;
+      });
+    }
+    
+    return baseMembers.filter(m => !projectAssignedUserIds.has(m.user_id)).length;
+  }, [members, selectedMemberIds, selectedTeamIds, userTeamsMap, selectedProjectIds, showNonAssigned, projectAssignedUserIds]);
 
   const toggleMemberFilter = useCallback((userId: string) => {
     setSelectedMemberIds(prev => {
@@ -159,10 +229,29 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
       }
       return newSet;
     });
+    // Reset showNonAssigned when changing project filter
+    setShowNonAssigned(false);
   }, []);
 
   const clearProjectFilter = useCallback(() => {
     setSelectedProjectIds(new Set());
+    setShowNonAssigned(false);
+  }, []);
+
+  const toggleTeamFilter = useCallback((teamId: string) => {
+    setSelectedTeamIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(teamId)) {
+        newSet.delete(teamId);
+      } else {
+        newSet.add(teamId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const clearTeamFilter = useCallback(() => {
+    setSelectedTeamIds(new Set());
   }, []);
 
   // Grouper les jours par mois
@@ -544,6 +633,66 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
             </PopoverContent>
           </Popover>
 
+          {/* Filtre par équipe - Dropdown multiselect */}
+          <Popover open={teamFilterOpen} onOpenChange={setTeamFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 gap-2">
+                <UsersRound className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Équipes</span>
+                {selectedTeamIds.size > 0 && (
+                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                    {selectedTeamIds.size}
+                  </Badge>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-0" align="end">
+              <Command>
+                <CommandInput placeholder="Rechercher une équipe..." />
+                <CommandList>
+                  <CommandEmpty>Aucune équipe trouvée</CommandEmpty>
+                  <CommandGroup>
+                    {teams.map(team => (
+                      <CommandItem
+                        key={team.id}
+                        onSelect={() => toggleTeamFilter(team.id)}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <div className={cn(
+                          "flex h-4 w-4 items-center justify-center rounded-sm border",
+                          selectedTeamIds.has(team.id)
+                            ? "bg-primary border-primary text-primary-foreground"
+                            : "border-muted-foreground/30"
+                        )}>
+                          {selectedTeamIds.has(team.id) && <Check className="h-3 w-3" />}
+                        </div>
+                        <div 
+                          className="h-3 w-3 rounded-full shrink-0" 
+                          style={{ backgroundColor: team.color || "#6366f1" }}
+                        />
+                        <span className="text-sm truncate">{team.name}</span>
+                        <Badge variant="outline" className="ml-auto text-[10px]">
+                          {team.members?.length || 0}
+                        </Badge>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                  {selectedTeamIds.size > 0 && (
+                    <>
+                      <CommandSeparator />
+                      <CommandGroup>
+                        <CommandItem onSelect={clearTeamFilter} className="justify-center text-center text-muted-foreground">
+                          <X className="h-3 w-3 mr-1" />
+                          Effacer les filtres
+                        </CommandItem>
+                      </CommandGroup>
+                    </>
+                  )}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
           {/* Filtre par projet - Dropdown multiselect */}
           <Popover open={projectFilterOpen} onOpenChange={setProjectFilterOpen}>
             <PopoverTrigger asChild>
@@ -665,12 +814,31 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
             {/* Header aligné */}
             <div className="h-[72px] border-b flex items-center justify-between px-2 shrink-0">
               {!teamColumnCollapsed ? (
-                <div className="flex items-center gap-2 text-muted-foreground px-2">
-                  <Users className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase tracking-wider">Équipe</span>
-                  <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
-                    {filteredMembers.length}{selectedMemberIds.size > 0 ? `/${members?.length || 0}` : ''}
-                  </span>
+                <div className="flex flex-col gap-1 px-2">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span className="text-xs font-medium uppercase tracking-wider">Équipe</span>
+                    <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
+                      {filteredMembers.length}{(selectedMemberIds.size > 0 || selectedTeamIds.size > 0) ? `/${members?.length || 0}` : ''}
+                    </span>
+                  </div>
+                  {/* Show non-assigned button when project filter is active */}
+                  {selectedProjectIds.size > 0 && hiddenNonAssignedCount > 0 && !showNonAssigned && (
+                    <button
+                      onClick={() => setShowNonAssigned(true)}
+                      className="text-[10px] text-muted-foreground hover:text-foreground underline"
+                    >
+                      + {hiddenNonAssignedCount} non assigné{hiddenNonAssignedCount > 1 ? 's' : ''}
+                    </button>
+                  )}
+                  {showNonAssigned && selectedProjectIds.size > 0 && (
+                    <button
+                      onClick={() => setShowNonAssigned(false)}
+                      className="text-[10px] text-muted-foreground hover:text-foreground underline"
+                    >
+                      Masquer non assignés
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center justify-center w-full">
