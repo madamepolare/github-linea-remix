@@ -18,137 +18,61 @@ import {
   Trash2,
   Type,
   Upload,
+  Loader2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-// Predefined color themes
-const COLOR_THEMES = [
-  { 
-    id: "default", 
-    name: "Noir & Blanc", 
-    primary: "0 0% 4%", 
-    accent: "262 83% 58%",
-    preview: { bg: "#fafafa", fg: "#0a0a0a", accent: "#7c3aed" }
-  },
-  { 
-    id: "ocean", 
-    name: "Océan", 
-    primary: "217 91% 60%", 
-    accent: "199 89% 48%",
-    preview: { bg: "#f0f9ff", fg: "#0369a1", accent: "#0ea5e9" }
-  },
-  { 
-    id: "forest", 
-    name: "Forêt", 
-    primary: "142 76% 36%", 
-    accent: "158 64% 52%",
-    preview: { bg: "#f0fdf4", fg: "#166534", accent: "#22c55e" }
-  },
-  { 
-    id: "sunset", 
-    name: "Crépuscule", 
-    primary: "24 95% 53%", 
-    accent: "338 78% 52%",
-    preview: { bg: "#fff7ed", fg: "#c2410c", accent: "#ec4899" }
-  },
-  { 
-    id: "purple", 
-    name: "Violet", 
-    primary: "262 83% 58%", 
-    accent: "280 65% 60%",
-    preview: { bg: "#faf5ff", fg: "#7c3aed", accent: "#a855f7" }
-  },
-  { 
-    id: "rose", 
-    name: "Rose", 
-    primary: "346 77% 50%", 
-    accent: "328 85% 70%",
-    preview: { bg: "#fff1f2", fg: "#be123c", accent: "#f472b6" }
-  },
-];
-
-// Predefined font options with Google Fonts URL
-const FONT_OPTIONS = [
-  { id: "inter", name: "Inter", family: "'Inter', sans-serif", style: "Moderne", googleUrl: "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" },
-  { id: "roboto", name: "Roboto", family: "'Roboto', sans-serif", style: "Clean", googleUrl: "https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" },
-  { id: "poppins", name: "Poppins", family: "'Poppins', sans-serif", style: "Géométrique", googleUrl: "https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" },
-  { id: "nunito", name: "Nunito", family: "'Nunito', sans-serif", style: "Arrondi", googleUrl: "https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&display=swap" },
-  { id: "playfair", name: "Playfair Display", family: "'Playfair Display', serif", style: "Élégant", googleUrl: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap" },
-  { id: "source-sans", name: "Source Sans 3", family: "'Source Sans 3', sans-serif", style: "Pro", googleUrl: "https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600;700&display=swap" },
-  { id: "dm-sans", name: "DM Sans", family: "'DM Sans', sans-serif", style: "Sharp", googleUrl: "https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" },
-  { id: "space-grotesk", name: "Space Grotesk", family: "'Space Grotesk', sans-serif", style: "Tech", googleUrl: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" },
-];
-
-interface CustomFont {
-  id: string;
-  name: string;
-  fileName: string;
-  fontFamily: string;
-}
+import { 
+  useWorkspaceStyles, 
+  FONT_OPTIONS, 
+  COLOR_THEMES,
+  CustomFont,
+  applyStyles,
+} from "@/hooks/useWorkspaceStyles";
 
 type ThemeMode = "light" | "dark" | "system";
 
 export function StyleSettings() {
-  // Theme state
+  const { styleSettings, updateStyles, isLoading } = useWorkspaceStyles();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingFont, setIsUploadingFont] = useState(false);
+  
+  // Theme mode is stored locally (per user, not per workspace)
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     const saved = localStorage.getItem("theme");
     if (saved === "dark") return "dark";
     if (saved === "light") return "light";
     return "system";
   });
-  const [selectedColorTheme, setSelectedColorTheme] = useState(() => localStorage.getItem("color-theme") || "default");
 
-  // Typography state (persisted)
-  const savedTypography = (() => {
-    try {
-      return JSON.parse(localStorage.getItem("typography-settings") || "null");
-    } catch {
-      return null;
-    }
-  })();
+  // Local state that syncs with workspace settings
+  const [selectedColorTheme, setSelectedColorTheme] = useState(styleSettings.colorTheme);
+  const [headingFont, setHeadingFont] = useState(styleSettings.headingFont);
+  const [bodyFont, setBodyFont] = useState(styleSettings.bodyFont);
+  const [baseFontSize, setBaseFontSize] = useState([styleSettings.baseFontSize]);
+  const [headingWeight, setHeadingWeight] = useState(styleSettings.headingWeight);
+  const [bodyWeight, setBodyWeight] = useState(styleSettings.bodyWeight);
+  const [borderRadius, setBorderRadius] = useState([styleSettings.borderRadius]);
+  const [customFonts, setCustomFonts] = useState<CustomFont[]>(styleSettings.customFonts || []);
 
-  const [headingFont, setHeadingFont] = useState(savedTypography?.headingFont || "inter");
-  const [bodyFont, setBodyFont] = useState(savedTypography?.bodyFont || "inter");
-  const [baseFontSize, setBaseFontSize] = useState([savedTypography?.baseFontSize || 14]);
-  const [headingWeight, setHeadingWeight] = useState(savedTypography?.headingWeight || "600");
-  const [bodyWeight, setBodyWeight] = useState(savedTypography?.bodyWeight || "400");
-  
-  // Custom fonts state
-  const [customFonts, setCustomFonts] = useState<CustomFont[]>([]);
-  const [isUploadingFont, setIsUploadingFont] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // UI options
+  // UI options (local only)
   const [enableAnimations, setEnableAnimations] = useState(true);
   const [compactMode, setCompactMode] = useState(false);
-  const [borderRadius, setBorderRadius] = useState([savedTypography?.borderRadius || 8]);
 
-  // Apply persisted settings on mount
+  // Sync local state when workspace settings load/change
   useEffect(() => {
-    // Apply saved color theme
-    const theme = COLOR_THEMES.find((t) => t.id === selectedColorTheme);
-    if (theme) {
-      document.documentElement.style.setProperty("--primary", theme.primary);
-      document.documentElement.style.setProperty("--accent", theme.accent);
+    if (!isLoading) {
+      setSelectedColorTheme(styleSettings.colorTheme);
+      setHeadingFont(styleSettings.headingFont);
+      setBodyFont(styleSettings.bodyFont);
+      setBaseFontSize([styleSettings.baseFontSize]);
+      setHeadingWeight(styleSettings.headingWeight);
+      setBodyWeight(styleSettings.bodyWeight);
+      setBorderRadius([styleSettings.borderRadius]);
+      setCustomFonts(styleSettings.customFonts || []);
     }
-
-    // Apply typography immediately
-    document.documentElement.style.setProperty("--font-size-base", `${baseFontSize[0]}px`);
-    document.documentElement.style.setProperty("--font-weight-heading", headingWeight);
-    document.documentElement.style.setProperty("--font-weight-body", bodyWeight);
-    document.documentElement.style.setProperty("--radius", `${borderRadius[0]}px`);
-
-    // Load + apply chosen Google fonts (custom fonts cannot be rehydrated)
-    const h = FONT_OPTIONS.find((f) => f.id === headingFont);
-    const b = FONT_OPTIONS.find((f) => f.id === bodyFont);
-    if (h) loadGoogleFont(h);
-    if (b) loadGoogleFont(b);
-    if (h) document.documentElement.style.setProperty("--font-heading", h.family);
-    if (b) document.documentElement.style.setProperty("--font-body", b.family);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [styleSettings, isLoading]);
 
   // Handle theme mode change
   const handleThemeModeChange = (mode: ThemeMode) => {
@@ -173,14 +97,14 @@ export function StyleSettings() {
     toast.success(`Mode ${mode === "light" ? "clair" : mode === "dark" ? "sombre" : "système"} activé`);
   };
 
-  // Handle color theme change
+  // Handle color theme change - save to workspace
   const handleColorThemeChange = (themeId: string) => {
     setSelectedColorTheme(themeId);
     const theme = COLOR_THEMES.find(t => t.id === themeId);
     if (theme) {
       document.documentElement.style.setProperty("--primary", theme.primary);
       document.documentElement.style.setProperty("--accent", theme.accent);
-      localStorage.setItem("color-theme", themeId);
+      updateStyles.mutate({ colorTheme: themeId });
       toast.success(`Thème "${theme.name}" appliqué`);
     }
   };
@@ -303,17 +227,16 @@ export function StyleSettings() {
     document.documentElement.style.setProperty("--font-weight-body", bodyWeight);
     document.documentElement.style.setProperty("--radius", `${borderRadius[0]}px`);
 
-    localStorage.setItem(
-      "typography-settings",
-      JSON.stringify({
-        headingFont,
-        bodyFont,
-        baseFontSize: baseFontSize[0],
-        headingWeight,
-        bodyWeight,
-        borderRadius: borderRadius[0],
-      })
-    );
+    // Save to workspace (persists across sessions)
+    updateStyles.mutate({
+      headingFont,
+      bodyFont,
+      baseFontSize: baseFontSize[0],
+      headingWeight,
+      bodyWeight,
+      borderRadius: borderRadius[0],
+      customFonts,
+    });
 
     toast.success("Typographie mise à jour");
   };

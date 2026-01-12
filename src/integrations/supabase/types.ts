@@ -8521,6 +8521,7 @@ export type Database = {
           siren: string | null
           siret: string | null
           slug: string
+          style_settings: Json | null
           updated_at: string
           vat_number: string | null
           website: string | null
@@ -8552,6 +8553,7 @@ export type Database = {
           siren?: string | null
           siret?: string | null
           slug: string
+          style_settings?: Json | null
           updated_at?: string
           vat_number?: string | null
           website?: string | null
@@ -8583,6 +8585,7 @@ export type Database = {
           siren?: string | null
           siret?: string | null
           slug?: string
+          style_settings?: Json | null
           updated_at?: string
           vat_number?: string | null
           website?: string | null
