@@ -13,12 +13,15 @@ import {
   AtSign,
   Heart,
   ExternalLink,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { THIN_STROKE } from "@/components/ui/icon";
-import { useNotifications, Notification } from "@/hooks/useNotifications";
+import { useNotifications, NotificationWithActor } from "@/hooks/useNotifications";
 
 // Helper to format mentions in notification messages (simplified version without needing profiles)
 function formatMentionMessage(message: string): React.ReactNode {
@@ -55,6 +58,12 @@ function formatMentionMessage(message: string): React.ReactNode {
   return parts.length > 0 ? parts : message;
 }
 
+// Entity type labels
+const entityTypeLabels: Record<string, { label: string; icon: typeof CheckSquare }> = {
+  task: { label: "Tâche", icon: CheckSquare },
+  project: { label: "Projet", icon: FolderKanban },
+};
+
 const iconMap: Record<string, typeof Bell> = {
   comment_reply: MessageSquare,
   reaction: Heart,
@@ -74,7 +83,7 @@ export function NotificationsSidebar({ open, onClose }: NotificationsSidebarProp
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useNotifications();
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = (notification: NotificationWithActor) => {
     // Mark as read
     if (!notification.is_read) {
       markAsRead.mutate(notification.id);
@@ -89,6 +98,11 @@ export function NotificationsSidebar({ open, onClose }: NotificationsSidebarProp
 
   const getIcon = (type: string) => {
     return iconMap[type] || iconMap.default;
+  };
+  
+  const getInitials = (name: string | null) => {
+    if (!name) return "?";
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
   return (
@@ -162,6 +176,10 @@ export function NotificationsSidebar({ open, onClose }: NotificationsSidebarProp
                 <div className="divide-y divide-border/50">
                   {notifications.map((notification) => {
                     const Icon = getIcon(notification.type);
+                    const entityConfig = notification.related_entity_type 
+                      ? entityTypeLabels[notification.related_entity_type] 
+                      : null;
+                    
                     return (
                       <motion.div
                         key={notification.id}
@@ -180,35 +198,60 @@ export function NotificationsSidebar({ open, onClose }: NotificationsSidebarProp
                           <div className="absolute left-1.5 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-primary" />
                         )}
                         
-                        {/* Icon */}
-                        <div className={cn(
-                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                          notification.type === "reaction" ? "bg-pink-100 dark:bg-pink-900/30" :
-                          notification.type === "mention" ? "bg-blue-100 dark:bg-blue-900/30" :
-                          notification.type === "task_created" ? "bg-green-100 dark:bg-green-900/30" :
-                          notification.type === "project_update" ? "bg-amber-100 dark:bg-amber-900/30" :
-                          "bg-muted"
-                        )}>
-                          <Icon className={cn(
-                            "h-4 w-4",
-                            notification.type === "reaction" ? "text-pink-600 dark:text-pink-400" :
-                            notification.type === "mention" ? "text-blue-600 dark:text-blue-400" :
-                            notification.type === "task_created" ? "text-green-600 dark:text-green-400" :
-                            notification.type === "project_update" ? "text-amber-600 dark:text-amber-400" :
-                            "text-muted-foreground"
-                          )} strokeWidth={1.5} />
-                        </div>
+                        {/* Avatar or Icon */}
+                        {notification.actor ? (
+                          <Avatar className="h-9 w-9 shrink-0">
+                            <AvatarImage src={notification.actor.avatar_url || undefined} />
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                              {getInitials(notification.actor.full_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                        ) : (
+                          <div className={cn(
+                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                            notification.type === "reaction" ? "bg-pink-100 dark:bg-pink-900/30" :
+                            notification.type === "mention" ? "bg-blue-100 dark:bg-blue-900/30" :
+                            notification.type === "task_created" ? "bg-green-100 dark:bg-green-900/30" :
+                            notification.type === "project_update" ? "bg-amber-100 dark:bg-amber-900/30" :
+                            "bg-muted"
+                          )}>
+                            <Icon className={cn(
+                              "h-4 w-4",
+                              notification.type === "reaction" ? "text-pink-600 dark:text-pink-400" :
+                              notification.type === "mention" ? "text-blue-600 dark:text-blue-400" :
+                              notification.type === "task_created" ? "text-green-600 dark:text-green-400" :
+                              notification.type === "project_update" ? "text-amber-600 dark:text-amber-400" :
+                              "text-muted-foreground"
+                            )} strokeWidth={1.5} />
+                          </div>
+                        )}
                         
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                           <p className={cn(
-                            "text-sm truncate",
+                            "text-sm",
                             !notification.is_read ? "font-medium text-foreground" : "text-foreground/90"
                           )}>
                             {notification.title}
                           </p>
+                          
+                          {/* Entity context badge */}
+                          {entityConfig && notification.related_entity_name && (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <Badge 
+                                variant="secondary" 
+                                className="text-[10px] px-1.5 py-0 h-5 gap-1 font-normal"
+                              >
+                                <entityConfig.icon className="h-3 w-3" />
+                                <span className="truncate max-w-[150px]">
+                                  {entityConfig.label}: {notification.related_entity_name}
+                                </span>
+                              </Badge>
+                            </div>
+                          )}
+                          
                           {notification.message && (
-                            <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                            <p className="text-xs text-muted-foreground line-clamp-2 mt-1 bg-muted/50 rounded px-2 py-1">
                               {formatMentionMessage(notification.message)}
                             </p>
                           )}
