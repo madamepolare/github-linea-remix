@@ -61,6 +61,7 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
   const [createScheduleDate, setCreateScheduleDate] = useState<Date | null>(null);
   const [createScheduleHour, setCreateScheduleHour] = useState<number>(9);
   const [createScheduleMember, setCreateScheduleMember] = useState<TeamMember | null>(null);
+  const [createScheduleItems, setCreateScheduleItems] = useState<PlanningItem[]>([]);
 
   // Time entry dialogs
   const [timeEntryDialogOpen, setTimeEntryDialogOpen] = useState(false);
@@ -230,10 +231,11 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
     deleteSchedule.mutate(scheduleId);
   }, [deleteSchedule]);
 
-  const handleCellClick = useCallback((date: Date, hour: number, member: TeamMember) => {
+  const handleCellClick = useCallback((date: Date, hour: number, member: TeamMember, items: PlanningItem[]) => {
     setCreateScheduleDate(date);
     setCreateScheduleHour(hour);
     setCreateScheduleMember(member);
+    setCreateScheduleItems(items);
     setCreateScheduleOpen(true);
   }, []);
 
@@ -518,7 +520,7 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
                         }}
                         onViewTask={handleViewTask}
                         onUnschedule={handleUnschedule}
-                        onCellClick={(date, hour) => handleCellClick(date, hour, member)}
+                        onCellClick={(date, hour) => handleCellClick(date, hour, member, items)}
                         onViewTimeEntry={handleViewTimeEntry}
                       />
                     );
@@ -546,6 +548,7 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
           date={createScheduleDate}
           hour={createScheduleHour}
           member={createScheduleMember}
+          existingItems={createScheduleItems}
         />
       )}
 
