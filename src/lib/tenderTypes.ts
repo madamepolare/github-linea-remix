@@ -21,12 +21,13 @@ export const PIPELINE_STATUS_COLORS: Record<PipelineStatus, string> = {
   archives: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
 };
 
-// Tender Type (Architecture / Scénographie)
-export type TenderType = 'architecture' | 'scenographie';
+// Tender Type (based on discipline)
+export type TenderType = 'architecture' | 'scenographie' | 'communication';
 
 export const TENDER_TYPE_LABELS: Record<TenderType, string> = {
   architecture: 'Architecture',
   scenographie: 'Scénographie',
+  communication: 'Communication',
 };
 
 // Submission Type
