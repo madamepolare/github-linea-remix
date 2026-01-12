@@ -83,6 +83,9 @@ export function AgendaTimelineItem({
   const [isDraggingVertical, setIsDraggingVertical] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const dragRef = useRef<{ startY: number; initialTop: number } | null>(null);
+  
+  // Track if a drag actually happened (to prevent click after drag)
+  const hasDraggedRef = useRef(false);
 
   // Current dimensions during resize or drag
   const currentTopPx = topPx + resizeOffset.top + dragOffset;
@@ -123,6 +126,7 @@ export function AgendaTimelineItem({
     
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     dragRef.current = { startY: clientY, initialTop: topPx };
+    hasDraggedRef.current = false;
     setIsDraggingVertical(true);
   }, [canDrag, isResizing, topPx]);
 
@@ -132,6 +136,11 @@ export function AgendaTimelineItem({
     
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     const delta = clientY - dragRef.current.startY;
+    
+    // Mark that a drag has actually occurred (movement > 5px)
+    if (Math.abs(delta) > 5) {
+      hasDraggedRef.current = true;
+    }
     
     // Clamp to day boundaries
     const newTop = Math.max(0, Math.min(containerHeight - heightPx, dragRef.current.initialTop + delta));
@@ -255,7 +264,11 @@ export function AgendaTimelineItem({
   }, [isDraggingVertical, handleVerticalDragMove, handleVerticalDragEnd]);
 
   const handleClick = useCallback((e: React.MouseEvent) => {
-    if (isResizing || isDraggingVertical) return;
+    // Don't open modal if we just finished dragging or resizing
+    if (isResizing || isDraggingVertical || hasDraggedRef.current) {
+      hasDraggedRef.current = false;
+      return;
+    }
     e.stopPropagation();
     
     if (item.type === "task" && schedule) {
