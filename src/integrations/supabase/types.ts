@@ -6146,6 +6146,38 @@ export type Database = {
           },
         ]
       }
+      quick_task_shares: {
+        Row: {
+          created_at: string
+          id: string
+          quick_task_id: string
+          shared_by_user_id: string
+          shared_with_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          quick_task_id: string
+          shared_by_user_id: string
+          shared_with_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          quick_task_id?: string
+          shared_by_user_id?: string
+          shared_with_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quick_task_shares_quick_task_id_fkey"
+            columns: ["quick_task_id"]
+            isOneToOne: false
+            referencedRelation: "quick_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quick_tasks: {
         Row: {
           completed_at: string | null
