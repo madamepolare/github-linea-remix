@@ -1,8 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GenericSettingsManager } from "./GenericSettingsManager";
-import { FolderKanban, FileText, Layers } from "lucide-react";
+import { FolderKanban, FileText, Layers, Clock } from "lucide-react";
 import { useWorkspaceDiscipline } from "@/hooks/useDiscipline";
 import { useMemo } from "react";
+import { usePlanningSettings } from "@/hooks/usePlanningSettings";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Types/sous-types structure - chaque type a ses sous-types liés
 interface ProjectTypeConfig {
@@ -373,6 +377,93 @@ const DEFAULT_DELIVERABLE_TYPES = [
   { key: "estimatif", label: "Estimatif", color: "#10B981", description: "Estimations budgétaires" },
 ];
 
+// Helper component for hours select
+function HourSelect({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <Select value={value.toString()} onValueChange={(v) => onChange(parseInt(v))}>
+        <SelectTrigger className="w-[120px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {hours.map((h) => (
+            <SelectItem key={h} value={h.toString()}>
+              {h.toString().padStart(2, "0")}:00
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function PlanningSettingsSection() {
+  const { planningSettings, updatePlanningSettings, isLoading } = usePlanningSettings();
+
+  if (isLoading) {
+    return <div className="animate-pulse h-32 bg-muted rounded-lg" />;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="h-5 w-5 text-primary" />
+          Horaires de l'agence
+        </CardTitle>
+        <CardDescription>
+          Configurez les heures d'ouverture et la pause déjeuner pour le planning
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Working hours */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium">Heures d'ouverture</h4>
+          <div className="flex items-center gap-4 flex-wrap">
+            <HourSelect
+              value={planningSettings.agency_open_hour}
+              onChange={(v) => updatePlanningSettings.mutate({ agency_open_hour: v })}
+              label="Ouverture"
+            />
+            <span className="text-muted-foreground mt-6">à</span>
+            <HourSelect
+              value={planningSettings.agency_close_hour}
+              onChange={(v) => updatePlanningSettings.mutate({ agency_close_hour: v })}
+              label="Fermeture"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Les créneaux en dehors de ces horaires seront grisés sur le planning
+          </p>
+        </div>
+
+        {/* Lunch break */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium">Pause déjeuner</h4>
+          <div className="flex items-center gap-4 flex-wrap">
+            <HourSelect
+              value={planningSettings.lunch_start_hour}
+              onChange={(v) => updatePlanningSettings.mutate({ lunch_start_hour: v })}
+              label="Début"
+            />
+            <span className="text-muted-foreground mt-6">à</span>
+            <HourSelect
+              value={planningSettings.lunch_end_hour}
+              onChange={(v) => updatePlanningSettings.mutate({ lunch_end_hour: v })}
+              label="Fin"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            La pause sera légèrement grisée mais reste planifiable
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ProjectsSettings() {
   const { data: discipline } = useWorkspaceDiscipline();
   
@@ -427,6 +518,10 @@ export function ProjectsSettings() {
             <FileText className="h-4 w-4" />
             Livrables
           </TabsTrigger>
+          <TabsTrigger value="planning" className="gap-1.5 text-xs">
+            <Clock className="h-4 w-4" />
+            Horaires agence
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="types" className="mt-6">
@@ -463,6 +558,10 @@ export function ProjectsSettings() {
             showDescription
             defaultItems={DEFAULT_DELIVERABLE_TYPES}
           />
+        </TabsContent>
+
+        <TabsContent value="planning" className="mt-6">
+          <PlanningSettingsSection />
         </TabsContent>
       </Tabs>
     </div>
