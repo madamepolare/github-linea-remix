@@ -713,3 +713,45 @@
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
 }
+
+/* Mobile utilities */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile touch improvements */
+@media (hover: none) and (pointer: coarse) {
+  .touch-action-pan-y {
+    touch-action: pan-y;
+  }
+  
+  /* Larger touch targets on mobile */
+  button, 
+  [role="button"],
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Except for small icon buttons */
+  button[class*="h-8"],
+  button[class*="h-6"],
+  button[class*="w-8"],
+  button[class*="w-6"] {
+    min-height: auto;
+    min-width: auto;
+  }
+}

@@ -119,6 +119,7 @@ export function WidgetGrid() {
   const [isEditing, setIsEditing] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [{ widgets, layout }, setState] = useState(loadLayout);
+  const [isMobile, setIsMobile] = useState(false);
   const [currentTemplate, setCurrentTemplate] = useState<DashboardTemplate>(() => {
     try {
       const saved = localStorage.getItem(TEMPLATE_KEY);
@@ -131,7 +132,9 @@ export function WidgetGrid() {
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth);
+        const width = containerRef.current.offsetWidth;
+        setContainerWidth(width);
+        setIsMobile(width < 640);
       }
     };
     updateWidth();
@@ -217,6 +220,79 @@ export function WidgetGrid() {
     setCurrentTemplate(templateId);
     localStorage.setItem(TEMPLATE_KEY, templateId);
   }, []);
+
+  // Mobile: render as simple stack
+  if (isMobile) {
+    return (
+      <div className="relative space-y-4" ref={containerRef}>
+        {/* Mobile Header */}
+        <div className="flex items-center justify-between gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 text-xs">
+                {(() => {
+                  const template = DASHBOARD_TEMPLATES.find(t => t.id === currentTemplate);
+                  const Icon = template?.icon || Settings2;
+                  return <Icon className="h-3.5 w-3.5" />;
+                })()}
+                <span className="max-w-[100px] truncate">
+                  {DASHBOARD_TEMPLATES.find(t => t.id === currentTemplate)?.name || "Dashboard"}
+                </span>
+                <ChevronDown className="h-3 w-3 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              {DASHBOARD_TEMPLATES.filter(t => t.id !== "custom").map((template) => {
+                const Icon = template.icon;
+                return (
+                  <DropdownMenuItem
+                    key={template.id}
+                    onClick={() => handleApplyTemplate(template.id)}
+                    className={cn(currentTemplate === template.id && "bg-accent")}
+                  >
+                    <Icon className="h-4 w-4 mr-2" />
+                    <div className="flex flex-col flex-1">
+                      <span className="font-medium">{template.name}</span>
+                      <span className="text-xs text-muted-foreground">{template.description}</span>
+                    </div>
+                    {currentTemplate === template.id && <Check className="h-4 w-4 ml-2" />}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowPicker(true)}
+            className="gap-1.5 text-xs text-muted-foreground"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            Modifier
+          </Button>
+        </div>
+
+        {/* Mobile Widgets Stack */}
+        <div className="space-y-3">
+          {widgets.map((widgetId) => (
+            <div key={widgetId} className="w-full">
+              <WidgetRenderer 
+                widgetId={widgetId} 
+                isEditing={false} 
+                onRemove={() => handleRemoveWidget(widgetId)}
+                widthCols={4}
+              />
+            </div>
+          ))}
+        </div>
+
+        {showPicker && (
+          <WidgetPicker open={showPicker} onClose={() => setShowPicker(false)} onSelect={handleAddWidget} activeWidgets={widgets} />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="relative" ref={containerRef}>
