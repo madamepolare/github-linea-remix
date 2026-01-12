@@ -540,13 +540,11 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Aucun client</SelectItem>
-                        {companies
-                          .filter(c => c.industry === "client_particulier" || c.industry === "client_professionnel" || c.industry === "promoteur" || c.industry === "investisseur")
-                          .map((company) => (
-                            <SelectItem key={company.id} value={company.id}>
-                              {company.name}
-                            </SelectItem>
-                          ))}
+                        {companies.map((company) => (
+                          <SelectItem key={company.id} value={company.id}>
+                            {company.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
