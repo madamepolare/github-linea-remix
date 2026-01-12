@@ -670,23 +670,49 @@ serve(async (req) => {
     let parsedTexts: string[] = [];
     let parsingStats = { success: 0, failed: 0 };
     
+    // Prioritize important documents first
+    const getPriority = (fileName: string): number => {
+      const lowerName = fileName.toLowerCase();
+      if (lowerName.match(/\brc\b/) || lowerName.includes('reglement') || lowerName.includes('règlement')) return 1;
+      if (lowerName.includes('ccap') || lowerName.includes('clauses_admin')) return 2;
+      if (lowerName.includes('avis') || lowerName.includes('publicite')) return 3;
+      if (lowerName.includes('cctp') || lowerName.includes('clauses_tech')) return 4;
+      if (lowerName.includes('programme') || lowerName.includes('brief')) return 5;
+      if (lowerName.includes('bpu') || lowerName.includes('bordereau')) return 6;
+      if (lowerName.includes('acte') || lowerName.includes('engagement')) return 7;
+      if (lowerName.includes('charte')) return 10; // Low priority
+      if (lowerName.includes('annexe')) return 9; // Low priority
+      return 8;
+    };
+    
+    // Sort files by priority
+    const sortedFiles = [...files].sort((a, b) => getPriority(a.name) - getPriority(b.name));
+    
+    // Only process the 3 most important documents to avoid CPU timeout
+    const priorityFiles = sortedFiles.slice(0, 3);
+    console.log(`[DCE Analysis] Priority files selected: ${priorityFiles.map((f: { name: string }) => f.name).join(', ')}`);
+    
     if (LLAMA_PARSE_API_KEY) {
-      console.log('[DCE Analysis] LlamaParse API key found - using multi-format parsing');
+      console.log('[DCE Analysis] LlamaParse API key found - parsing top 3 priority documents');
       
-      // Parse all documents in parallel (with limit)
-      const parsePromises = files.slice(0, 10).map(async (file: { name: string; type: string; content: string }) => {
-        const result = await parseDocument(file, LLAMA_PARSE_API_KEY);
-        return { file: file.name, ...result };
-      });
-      
-      const parseResults = await Promise.all(parsePromises);
-      
-      for (const result of parseResults) {
-        if (result.success && result.text) {
-          parsedTexts.push(`\n\n=== DOCUMENT: ${result.file} ===\n\n${result.text}`);
-          parsingStats.success++;
-        } else {
-          console.log(`[DCE Analysis] Failed to parse ${result.file}: ${result.error}`);
+      // Parse documents SEQUENTIALLY to avoid CPU overload
+      for (const file of priorityFiles) {
+        try {
+          console.log(`[DCE Analysis] Parsing: ${file.name}`);
+          const result = await parseDocument(file, LLAMA_PARSE_API_KEY);
+          
+          if (result.success && result.text) {
+            // Limit text size to avoid memory issues
+            const truncatedText = result.text.substring(0, 50000);
+            parsedTexts.push(`\n\n=== DOCUMENT: ${file.name} ===\n\n${truncatedText}`);
+            parsingStats.success++;
+            console.log(`[DCE Analysis] Successfully parsed ${file.name} (${truncatedText.length} chars)`);
+          } else {
+            console.log(`[DCE Analysis] Failed to parse ${file.name}: ${result.error}`);
+            parsingStats.failed++;
+          }
+        } catch (err) {
+          console.error(`[DCE Analysis] Error parsing ${file.name}:`, err);
           parsingStats.failed++;
         }
       }
