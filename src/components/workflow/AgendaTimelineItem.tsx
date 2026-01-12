@@ -79,8 +79,13 @@ export function AgendaTimelineItem({
   const resizeRef = useRef<{ startY: number; initialTop: number; initialHeight: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Current dimensions during resize
-  const currentTopPx = topPx + resizeOffset.top;
+  // Vertical drag state (move entire item)
+  const [isDraggingVertical, setIsDraggingVertical] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const dragRef = useRef<{ startY: number; initialTop: number } | null>(null);
+
+  // Current dimensions during resize or drag
+  const currentTopPx = topPx + resizeOffset.top + dragOffset;
   const currentHeightPx = heightPx + resizeOffset.height;
   
   // Calculate current time from pixels
@@ -109,6 +114,60 @@ export function AgendaTimelineItem({
     resizeRef.current = { startY: clientY, initialTop: topPx, initialHeight: heightPx };
     setIsResizing(handle);
   }, [canResize, topPx, heightPx]);
+
+  // Start vertical drag (move entire item)
+  const handleVerticalDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!canDrag || isResizing) return;
+    e.stopPropagation();
+    e.preventDefault();
+    
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    dragRef.current = { startY: clientY, initialTop: topPx };
+    setIsDraggingVertical(true);
+  }, [canDrag, isResizing, topPx]);
+
+  // Handle vertical drag move
+  const handleVerticalDragMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!dragRef.current || !isDraggingVertical) return;
+    
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const delta = clientY - dragRef.current.startY;
+    
+    // Clamp to day boundaries
+    const newTop = Math.max(0, Math.min(containerHeight - heightPx, dragRef.current.initialTop + delta));
+    setDragOffset(newTop - topPx);
+  }, [isDraggingVertical, containerHeight, heightPx, topPx]);
+
+  // Handle vertical drag end
+  const handleVerticalDragEnd = useCallback(() => {
+    if (!isDraggingVertical || !schedule) return;
+    
+    setIsDraggingVertical(false);
+    dragRef.current = null;
+    
+    // Calculate new times (rounded to 15-minute intervals)
+    const newTopPx = topPx + dragOffset;
+    const startMinutes = dayStartMinutes + (newTopPx / PIXELS_PER_MINUTE);
+    const durationMinutes = heightPx / PIXELS_PER_MINUTE;
+    const endMinutes = startMinutes + durationMinutes;
+    
+    const startHour = Math.floor(startMinutes / 60);
+    const startMin = Math.round((startMinutes % 60) / 15) * 15;
+    const endHour = Math.floor(endMinutes / 60);
+    const endMin = Math.round((endMinutes % 60) / 15) * 15;
+    
+    const newStart = new Date(dayStart);
+    newStart.setHours(startHour, startMin, 0, 0);
+    
+    const newEnd = new Date(dayStart);
+    newEnd.setHours(endHour, endMin, 0, 0);
+    
+    if (onResize && schedule) {
+      onResize(schedule.id, newStart, newEnd);
+    }
+    
+    setDragOffset(0);
+  }, [isDraggingVertical, dragOffset, topPx, heightPx, dayStartMinutes, dayStart, schedule, onResize]);
 
   const handleResizeMove = useCallback((e: MouseEvent | TouchEvent) => {
     if (!resizeRef.current || !isResizing) return;
@@ -178,8 +237,25 @@ export function AgendaTimelineItem({
     }
   }, [isResizing, handleResizeMove, handleResizeEnd]);
 
+  // Global listeners for vertical drag
+  useEffect(() => {
+    if (isDraggingVertical) {
+      window.addEventListener("mousemove", handleVerticalDragMove);
+      window.addEventListener("mouseup", handleVerticalDragEnd);
+      window.addEventListener("touchmove", handleVerticalDragMove);
+      window.addEventListener("touchend", handleVerticalDragEnd);
+      
+      return () => {
+        window.removeEventListener("mousemove", handleVerticalDragMove);
+        window.removeEventListener("mouseup", handleVerticalDragEnd);
+        window.removeEventListener("touchmove", handleVerticalDragMove);
+        window.removeEventListener("touchend", handleVerticalDragEnd);
+      };
+    }
+  }, [isDraggingVertical, handleVerticalDragMove, handleVerticalDragEnd]);
+
   const handleClick = useCallback((e: React.MouseEvent) => {
-    if (isResizing) return;
+    if (isResizing || isDraggingVertical) return;
     e.stopPropagation();
     
     if (item.type === "task" && schedule) {
@@ -189,7 +265,7 @@ export function AgendaTimelineItem({
     } else if (item.type === "timeEntry" && onViewTimeEntry) {
       onViewTimeEntry(item.originalData);
     }
-  }, [item, schedule, isResizing, onViewTask, onViewEvent, onViewTimeEntry]);
+  }, [item, schedule, isResizing, isDraggingVertical, onViewTask, onViewEvent, onViewTimeEntry]);
 
   const handleSaveDuration = useCallback(() => {
     const newHours = parseFloat(editingDuration);
@@ -200,9 +276,10 @@ export function AgendaTimelineItem({
     setIsEditingDuration(false);
   }, [editingDuration, schedule, item.start, onResize]);
 
-  const currentTimes = isResizing ? getCurrentTimes() : null;
-  const displayHeight = isResizing ? currentHeightPx : heightPx;
-  const displayTop = isResizing ? currentTopPx : topPx;
+  const isInteracting = isResizing || isDraggingVertical;
+  const currentTimes = isInteracting ? getCurrentTimes() : null;
+  const displayHeight = isInteracting ? currentHeightPx : heightPx;
+  const displayTop = isInteracting ? currentTopPx : topPx;
 
   return (
     <ContextMenu>
@@ -215,18 +292,33 @@ export function AgendaTimelineItem({
                 className={cn(
                   "absolute left-1 right-1 rounded-lg overflow-hidden transition-shadow",
                   "cursor-pointer hover:shadow-lg group select-none",
-                  canDrag && "cursor-grab active:cursor-grabbing",
+                  canDrag && !isInteracting && "cursor-grab",
+                  isDraggingVertical && "cursor-grabbing",
                   isAbsence && "opacity-60 cursor-not-allowed",
-                  isResizing && "ring-2 ring-primary/50 z-30 shadow-xl"
+                  isInteracting && "ring-2 ring-primary/50 z-30 shadow-xl"
                 )}
                 style={{
                   top: displayTop,
                   height: Math.max(displayHeight, 24),
                   backgroundColor: item.color,
-                  zIndex: isResizing ? 30 : 10,
+                  zIndex: isInteracting ? 30 : 10,
                 }}
-                draggable={canDrag && !isResizing}
-                onDragStart={(e) => canDrag && onDragStart(e, item)}
+                draggable={false}
+                onMouseDown={(e) => {
+                  // Only start vertical drag if clicking on the main area (not resize handles)
+                  const target = e.target as HTMLElement;
+                  if (target.closest('[data-resize-handle]')) return;
+                  if (canDrag && !isResizing) {
+                    handleVerticalDragStart(e);
+                  }
+                }}
+                onTouchStart={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.closest('[data-resize-handle]')) return;
+                  if (canDrag && !isResizing) {
+                    handleVerticalDragStart(e);
+                  }
+                }}
                 onClick={handleClick}
               >
                 {/* Gradient overlay */}
@@ -235,6 +327,7 @@ export function AgendaTimelineItem({
                 {/* Top resize handle */}
                 {canResize && (
                   <div
+                    data-resize-handle="top"
                     className={cn(
                       "absolute top-0 left-0 right-0 h-2 cursor-ns-resize z-20 flex items-center justify-center",
                       "opacity-0 group-hover:opacity-100 transition-opacity",
@@ -249,15 +342,20 @@ export function AgendaTimelineItem({
                 
                 {/* Content */}
                 <div className="p-1.5 flex flex-col h-full text-white relative">
-                  {/* Drag handle */}
+                  {/* Drag handle indicator */}
                   {canDrag && (
-                    <GripVertical className="absolute top-1 right-1 h-3 w-3 opacity-0 group-hover:opacity-70 transition-opacity" />
+                    <div className={cn(
+                      "absolute top-1 right-1 opacity-0 group-hover:opacity-70 transition-opacity",
+                      isDraggingVertical && "opacity-100"
+                    )}>
+                      <Move className="h-3 w-3" />
+                    </div>
                   )}
                   
-                  {/* Time label - show real-time during resize */}
+                  {/* Time label - show real-time during interaction */}
                   <div className="text-[9px] font-medium opacity-80 flex items-center gap-1">
                     <Clock className="h-2.5 w-2.5" />
-                    {isResizing ? (
+                    {isInteracting ? (
                       <span className="font-bold text-white">
                         {currentTimes?.start} - {currentTimes?.end}
                       </span>
@@ -341,6 +439,7 @@ export function AgendaTimelineItem({
                 {/* Bottom resize handle */}
                 {canResize && (
                   <div
+                    data-resize-handle="bottom"
                     className={cn(
                       "absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize z-20 flex items-center justify-center",
                       "opacity-0 group-hover:opacity-100 transition-opacity",
@@ -376,8 +475,9 @@ export function AgendaTimelineItem({
                   <span className="ml-2 font-medium">({hoursLabel})</span>
                 </div>
                 {item.type === "task" && (
-                  <div className="text-xs text-muted-foreground mt-1 pt-1 border-t border-border/50">
-                    ↕ Étirer les bords pour modifier les heures
+                  <div className="text-xs text-muted-foreground mt-1 pt-1 border-t border-border/50 space-y-0.5">
+                    <div>↕ Glisser pour changer l'heure</div>
+                    <div>↕ Étirer les bords pour modifier la durée</div>
                   </div>
                 )}
               </div>
