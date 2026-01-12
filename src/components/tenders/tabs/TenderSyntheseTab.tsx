@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
-import { Sparkles, MessageSquare } from "lucide-react";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,9 +20,6 @@ import { TenderKeyMetrics } from "@/components/tenders/synthesis/TenderKeyMetric
 import { TenderCriteriaChart } from "@/components/tenders/synthesis/TenderCriteriaChart";
 import { TenderCriticalAlerts } from "@/components/tenders/synthesis/TenderCriticalAlerts";
 import { TenderInfoAccordion } from "@/components/tenders/synthesis/TenderInfoAccordion";
-import { TenderAskDCEDialog } from "@/components/tenders/synthesis/TenderAskDCEDialog";
-
-import { ThumbsUp, ThumbsDown } from "lucide-react";
 
 interface TenderSyntheseTabProps {
   tender: Tender;
@@ -45,7 +41,7 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
   const [showGoDialog, setShowGoDialog] = useState(false);
   const [goDecisionNotes, setGoDecisionNotes] = useState("");
   const [pendingDecision, setPendingDecision] = useState<"go" | "no_go" | null>(null);
-  const [showAskDCE, setShowAskDCE] = useState(false);
+  const [isChangingDecision, setIsChangingDecision] = useState(false);
 
   // Calculate completion score
   const { completionScore, hasAllRequiredFields } = useMemo(() => {
@@ -69,6 +65,14 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
     setShowGoDialog(true);
   };
 
+  // Handle changing an existing decision
+  const handleChangeDecision = () => {
+    setIsChangingDecision(true);
+    setGoDecisionNotes(tender.go_decision_notes || "");
+    setShowGoDialog(true);
+    setPendingDecision(null);
+  };
+
   const confirmDecision = () => {
     if (pendingDecision) {
       updateStatus.mutate({
@@ -79,7 +83,15 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
       setShowGoDialog(false);
       setPendingDecision(null);
       setGoDecisionNotes("");
+      setIsChangingDecision(false);
     }
+  };
+
+  const handleDialogClose = () => {
+    setShowGoDialog(false);
+    setPendingDecision(null);
+    setGoDecisionNotes("");
+    setIsChangingDecision(false);
   };
 
   return (
@@ -90,6 +102,7 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
         completionScore={completionScore}
         hasAllRequiredFields={hasAllRequiredFields}
         onDecision={handleDecision}
+        onChangeDecision={handleChangeDecision}
       />
 
       {/* Key Metrics Cards */}
@@ -104,36 +117,14 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
       {/* Info Accordion */}
       <TenderInfoAccordion tender={tender} onNavigateToTab={onNavigateToTab} />
 
-      {/* Floating Ask DCE Button */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="fixed bottom-6 right-6 z-50"
-      >
-        <Button
-          size="lg"
-          className="rounded-full shadow-lg shadow-primary/25 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 gap-2 px-6"
-          onClick={() => setShowAskDCE(true)}
-        >
-          <Sparkles className="h-5 w-5" />
-          Question au DCE
-        </Button>
-      </motion.div>
-
-      {/* Ask DCE Dialog */}
-      <TenderAskDCEDialog
-        tenderId={tender.id}
-        open={showAskDCE}
-        onOpenChange={setShowAskDCE}
-      />
-
       {/* Go/No-Go Decision Dialog */}
-      <Dialog open={showGoDialog} onOpenChange={setShowGoDialog}>
+      <Dialog open={showGoDialog} onOpenChange={handleDialogClose}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {pendingDecision === "go" ? (
+              {isChangingDecision ? (
+                "Modifier la décision Go/No-Go"
+              ) : pendingDecision === "go" ? (
                 <>
                   <ThumbsUp className="h-5 w-5 text-green-600" />
                   Confirmer la décision Go
@@ -146,12 +137,34 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
               )}
             </DialogTitle>
             <DialogDescription>
-              {pendingDecision === "go"
+              {isChangingDecision
+                ? "Choisissez une nouvelle décision pour ce concours."
+                : pendingDecision === "go"
                 ? "Vous confirmez vouloir répondre à ce concours. L'équipe sera notifiée."
                 : "Vous confirmez ne pas répondre à ce concours. Vous pouvez indiquer la raison ci-dessous."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {isChangingDecision && (
+              <div className="flex gap-3">
+                <Button
+                  variant={pendingDecision === "go" ? "default" : "outline"}
+                  className={pendingDecision === "go" ? "bg-green-600 hover:bg-green-700 flex-1" : "flex-1"}
+                  onClick={() => setPendingDecision("go")}
+                >
+                  <ThumbsUp className="h-4 w-4 mr-2" />
+                  GO
+                </Button>
+                <Button
+                  variant={pendingDecision === "no_go" ? "default" : "outline"}
+                  className={pendingDecision === "no_go" ? "bg-red-600 hover:bg-red-700 flex-1" : "flex-1"}
+                  onClick={() => setPendingDecision("no_go")}
+                >
+                  <ThumbsDown className="h-4 w-4 mr-2" />
+                  NO-GO
+                </Button>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Notes (optionnel)</Label>
               <Textarea
@@ -167,15 +180,18 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowGoDialog(false)}>
+            <Button variant="outline" onClick={handleDialogClose}>
               Annuler
             </Button>
             <Button
               onClick={confirmDecision}
+              disabled={!pendingDecision}
               className={
                 pendingDecision === "go"
                   ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
+                  : pendingDecision === "no_go"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : ""
               }
             >
               Confirmer

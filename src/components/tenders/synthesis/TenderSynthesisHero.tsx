@@ -7,6 +7,7 @@ import {
   ThumbsDown,
   CheckCircle2,
   XCircle,
+  RotateCcw,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ interface TenderSynthesisHeroProps {
   completionScore: number;
   hasAllRequiredFields: boolean;
   onDecision: (decision: 'go' | 'no_go') => void;
+  onChangeDecision?: () => void;
 }
 
 export function TenderSynthesisHero({
@@ -26,6 +28,7 @@ export function TenderSynthesisHero({
   completionScore,
   hasAllRequiredFields,
   onDecision,
+  onChangeDecision,
 }: TenderSynthesisHeroProps) {
   // Calculate deadline info
   const deadlineInfo = useMemo(() => {
@@ -166,34 +169,46 @@ export function TenderSynthesisHero({
           </div>
 
           {/* Action Buttons */}
-          {!isDecided && (
-            <div className="flex flex-col gap-2">
-              <Button
-                size="default"
-                className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
-                onClick={handleGoClick}
-                disabled={!hasAllRequiredFields}
-              >
-                <ThumbsUp className="h-4 w-4 mr-2" />
-                GO
-              </Button>
+          <div className="flex flex-col gap-2">
+            {!isDecided ? (
+              <>
+                <Button
+                  size="default"
+                  className="bg-green-600 hover:bg-green-700 text-white min-w-[120px]"
+                  onClick={handleGoClick}
+                  disabled={!hasAllRequiredFields}
+                >
+                  <ThumbsUp className="h-4 w-4 mr-2" />
+                  GO
+                </Button>
+                <Button
+                  variant="outline"
+                  size="default"
+                  className="border-red-300 text-red-600 hover:bg-red-50 min-w-[120px]"
+                  onClick={handleNoGoClick}
+                  disabled={!hasAllRequiredFields}
+                >
+                  <ThumbsDown className="h-4 w-4 mr-2" />
+                  NO-GO
+                </Button>
+                {!hasAllRequiredFields && (
+                  <p className="text-xs text-amber-600 text-center">
+                    Remplir les champs obligatoires
+                  </p>
+                )}
+              </>
+            ) : (
               <Button
                 variant="outline"
-                size="default"
-                className="border-red-300 text-red-600 hover:bg-red-50 min-w-[120px]"
-                onClick={handleNoGoClick}
-                disabled={!hasAllRequiredFields}
+                size="sm"
+                className="text-muted-foreground"
+                onClick={onChangeDecision}
               >
-                <ThumbsDown className="h-4 w-4 mr-2" />
-                NO-GO
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Modifier la décision
               </Button>
-              {!hasAllRequiredFields && (
-                <p className="text-xs text-amber-600 text-center">
-                  Remplir les champs obligatoires
-                </p>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

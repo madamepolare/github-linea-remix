@@ -6,7 +6,7 @@ import type { TenderDocument } from "@/lib/tenderTypes";
 export function useTenderDocuments(tenderId: string | undefined) {
   const queryClient = useQueryClient();
 
-  const { data: documents = [], isLoading } = useQuery({
+  const { data: documents = [], isLoading, refetch } = useQuery({
     queryKey: ["tender-documents", tenderId],
     queryFn: async () => {
       if (!tenderId) return [];
@@ -23,30 +23,39 @@ export function useTenderDocuments(tenderId: string | undefined) {
     enabled: !!tenderId,
   });
 
-  const uploadDocument = useMutation({
-    mutationFn: async ({ 
-      file, 
-      documentType 
-    }: { 
-      file: File; 
-      documentType: string;
-    }) => {
-      if (!tenderId) throw new Error("No tender ID");
+  // Helper function to upload a single file
+  const uploadSingleFile = async (file: File, documentType: string): Promise<TenderDocument | null> => {
+    if (!tenderId) throw new Error("No tender ID");
 
-      // Upload to storage
-      const fileName = `${tenderId}/${Date.now()}_${file.name}`;
+    try {
+      // Upload to storage with unique filename
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substring(2, 8);
+      const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const fileName = `${tenderId}/${timestamp}_${randomSuffix}_${safeName}`;
+      
+      console.log(`[Upload] Starting upload: ${file.name}`);
+      
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("tender-documents")
-        .upload(fileName, file);
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error(`[Upload] Storage error for ${file.name}:`, uploadError);
+        throw uploadError;
+      }
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from("tender-documents")
         .getPublicUrl(fileName);
 
-      // Create record
+      console.log(`[Upload] Stored at: ${publicUrl}`);
+
+      // Create record in database
       const { data, error } = await supabase
         .from("tender_documents")
         .insert({
@@ -59,8 +68,28 @@ export function useTenderDocuments(tenderId: string | undefined) {
         .select()
         .single();
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error(`[Upload] Database error for ${file.name}:`, error);
+        throw error;
+      }
+
+      console.log(`[Upload] Successfully saved: ${file.name}`);
+      return data as TenderDocument;
+    } catch (err) {
+      console.error(`[Upload] Failed for ${file.name}:`, err);
+      throw err;
+    }
+  };
+
+  const uploadDocument = useMutation({
+    mutationFn: async ({ 
+      file, 
+      documentType 
+    }: { 
+      file: File; 
+      documentType: string;
+    }) => {
+      return uploadSingleFile(file, documentType);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tender-documents", tenderId] });
@@ -69,6 +98,39 @@ export function useTenderDocuments(tenderId: string | undefined) {
     onError: (error) => {
       toast.error("Erreur lors de l'upload");
       console.error(error);
+    },
+  });
+
+  // Upload multiple files at once
+  const uploadMultipleDocuments = useMutation({
+    mutationFn: async (files: Array<{ file: File; documentType: string }>) => {
+      const results: TenderDocument[] = [];
+      const errors: string[] = [];
+
+      // Upload files sequentially to avoid conflicts
+      for (const { file, documentType } of files) {
+        try {
+          const result = await uploadSingleFile(file, documentType);
+          if (result) results.push(result);
+        } catch (err) {
+          console.error(`Failed to upload ${file.name}:`, err);
+          errors.push(file.name);
+        }
+      }
+
+      if (errors.length > 0) {
+        throw new Error(`Échec pour: ${errors.join(', ')}`);
+      }
+
+      return results;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["tender-documents", tenderId] });
+      toast.success(`${data.length} document(s) uploadé(s)`);
+    },
+    onError: (error) => {
+      queryClient.invalidateQueries({ queryKey: ["tender-documents", tenderId] });
+      toast.error(error.message || "Erreur lors de l'upload");
     },
   });
 
@@ -128,7 +190,9 @@ export function useTenderDocuments(tenderId: string | undefined) {
   return {
     documents,
     isLoading,
+    refetch,
     uploadDocument,
+    uploadMultipleDocuments,
     deleteDocument,
     analyzeDocument,
   };
