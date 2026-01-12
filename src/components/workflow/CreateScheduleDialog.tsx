@@ -63,21 +63,32 @@ export function CreateScheduleDialog({
       return { hour, minute: 0 };
     }
     
-    // Find the latest end time among existing items
-    let latestEnd = new Date(0);
-    existingItems.forEach(item => {
-      if (item.end && item.end > latestEnd) {
-        latestEnd = item.end;
-      }
-    });
-    
-    // If latest end is after the clicked hour, use it
     const clickedTime = setHours(setMinutes(startOfDay(date), 0), hour);
-    if (latestEnd > clickedTime) {
-      return { hour: latestEnd.getHours(), minute: latestEnd.getMinutes() };
+    
+    // Find all items that overlap with or come after the clicked time
+    // Sort items by start time
+    const sortedItems = [...existingItems]
+      .filter(item => item.start && item.end)
+      .sort((a, b) => (a.start?.getTime() || 0) - (b.start?.getTime() || 0));
+    
+    // Find if clicked time falls within an existing item or find the item that blocks it
+    let proposedStart = clickedTime;
+    
+    for (const item of sortedItems) {
+      if (!item.start || !item.end) continue;
+      
+      // If proposed start is before this item ends and after/during this item starts
+      // we need to move to after this item
+      if (proposedStart >= item.start && proposedStart < item.end) {
+        // Clicked inside an existing item - move to end of this item
+        proposedStart = item.end;
+      } else if (proposedStart < item.start) {
+        // There's a gap before this item - we can use the proposed start
+        break;
+      }
     }
     
-    return { hour, minute: 0 };
+    return { hour: proposedStart.getHours(), minute: proposedStart.getMinutes() };
   }, [existingItems, hour, date]);
 
   // Task scheduling state
