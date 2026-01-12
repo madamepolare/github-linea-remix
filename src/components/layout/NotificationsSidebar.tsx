@@ -20,6 +20,41 @@ import { cn } from "@/lib/utils";
 import { THIN_STROKE } from "@/components/ui/icon";
 import { useNotifications, Notification } from "@/hooks/useNotifications";
 
+// Helper to format mentions in notification messages (simplified version without needing profiles)
+function formatMentionMessage(message: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mentionRegex.exec(message)) !== null) {
+    // Add text before mention
+    if (match.index > lastIndex) {
+      parts.push(message.slice(lastIndex, match.index));
+    }
+
+    const mentionName = match[1];
+
+    parts.push(
+      <span
+        key={match.index}
+        className="inline-flex items-center gap-0.5 text-primary font-medium"
+      >
+        @{mentionName}
+      </span>
+    );
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < message.length) {
+    parts.push(message.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : message;
+}
+
 const iconMap: Record<string, typeof Bell> = {
   comment_reply: MessageSquare,
   reaction: Heart,
@@ -174,7 +209,7 @@ export function NotificationsSidebar({ open, onClose }: NotificationsSidebarProp
                           </p>
                           {notification.message && (
                             <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
-                              {notification.message}
+                              {formatMentionMessage(notification.message)}
                             </p>
                           )}
                           <p className="text-[11px] text-muted-foreground/70 mt-1">
