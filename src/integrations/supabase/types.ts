@@ -8752,6 +8752,13 @@ export type Database = {
         | "ppp"
         | "conception_realisation"
         | "autre"
+        | "concours_restreint"
+        | "concours_ouvert"
+        | "dialogue_competitif"
+        | "partenariat_innovation"
+        | "appel_offres_ouvert"
+        | "appel_offres_restreint"
+        | "negociee"
       tender_status:
         | "repere"
         | "en_analyse"
@@ -8912,6 +8919,13 @@ export const Constants = {
         "ppp",
         "conception_realisation",
         "autre",
+        "concours_restreint",
+        "concours_ouvert",
+        "dialogue_competitif",
+        "partenariat_innovation",
+        "appel_offres_ouvert",
+        "appel_offres_restreint",
+        "negociee",
       ],
       tender_status: [
         "repere",
