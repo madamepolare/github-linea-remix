@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { MOE_SPECIALTIES } from "@/lib/tenderTypes";
 import { cn } from "@/lib/utils";
+import type { TeamSpecialty, DisciplineSlug } from "@/lib/tenderDisciplineConfig";
+import { useTenderDisciplineConfig } from "@/hooks/useTenderDisciplineConfig";
 
 export interface RequiredTeamItem {
   id: string;
@@ -22,10 +23,19 @@ interface RequiredTeamEditorProps {
   team: RequiredTeamItem[];
   onChange: (team: RequiredTeamItem[]) => void;
   companies?: Array<{ id: string; name: string; bet_specialties?: string[] }>;
+  tenderId?: string;
+  disciplineSlug?: DisciplineSlug;
 }
 
-export function RequiredTeamEditor({ team, onChange, companies = [] }: RequiredTeamEditorProps) {
-  const [selectedSpecialty, setSelectedSpecialty] = useState<string>('bet_structure');
+export function RequiredTeamEditor({ 
+  team, 
+  onChange, 
+  companies = [],
+  tenderId,
+  disciplineSlug,
+}: RequiredTeamEditorProps) {
+  const { teamSpecialties, getSpecialtyLabel } = useTenderDisciplineConfig(tenderId, disciplineSlug);
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string>(teamSpecialties[0]?.value || '');
 
   const addTeamMember = () => {
     const newMember: RequiredTeamItem = {
@@ -46,10 +56,6 @@ export function RequiredTeamEditor({ team, onChange, companies = [] }: RequiredT
     onChange(team.filter(m => m.id !== id));
   };
 
-  const getSpecialtyLabel = (value: string) => {
-    return MOE_SPECIALTIES.find(s => s.value === value)?.label || value;
-  };
-
   // Get companies that match a specialty
   const getMatchingCompanies = (specialty: string) => {
     return companies.filter(c => 
@@ -59,7 +65,7 @@ export function RequiredTeamEditor({ team, onChange, companies = [] }: RequiredT
   };
 
   // Available specialties not yet added
-  const availableSpecialties = MOE_SPECIALTIES.filter(
+  const availableSpecialties = teamSpecialties.filter(
     s => !team.some(t => t.specialty === s.value)
   );
 
@@ -196,8 +202,8 @@ export function RequiredTeamEditor({ team, onChange, companies = [] }: RequiredT
         </div>
       )}
 
-      {/* Quick add common team */}
-      {team.length === 0 && (
+      {/* Quick add common team - only for architecture discipline */}
+      {team.length === 0 && disciplineSlug !== 'communication' && (
         <div className="p-4 rounded-lg border border-dashed bg-muted/30 text-center">
           <p className="text-sm text-muted-foreground mb-3">
             Ajoutez rapidement une équipe type
@@ -207,9 +213,9 @@ export function RequiredTeamEditor({ team, onChange, companies = [] }: RequiredT
               variant="outline"
               size="sm"
               onClick={() => onChange([
-                { id: crypto.randomUUID(), specialty: 'bet_structure', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'bet_fluides', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'economiste', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: teamSpecialties[1]?.value || 'bet_structure', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: teamSpecialties[2]?.value || 'bet_fluides', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: teamSpecialties[5]?.value || 'economiste', is_mandatory: true, notes: '' },
               ])}
             >
               Équipe base
@@ -218,15 +224,51 @@ export function RequiredTeamEditor({ team, onChange, companies = [] }: RequiredT
               variant="outline"
               size="sm"
               onClick={() => onChange([
-                { id: crypto.randomUUID(), specialty: 'bet_structure', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'bet_fluides', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'bet_electricite', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'thermicien', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'economiste', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'acousticien', is_mandatory: false, notes: '' },
+                { id: crypto.randomUUID(), specialty: teamSpecialties[1]?.value || 'bet_structure', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: teamSpecialties[2]?.value || 'bet_fluides', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: teamSpecialties[3]?.value || 'bet_electricite', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: teamSpecialties[4]?.value || 'thermicien', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: teamSpecialties[5]?.value || 'economiste', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: teamSpecialties[6]?.value || 'acousticien', is_mandatory: false, notes: '' },
               ])}
             >
               Équipe complète
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Quick add for communication discipline */}
+      {team.length === 0 && disciplineSlug === 'communication' && (
+        <div className="p-4 rounded-lg border border-dashed bg-muted/30 text-center">
+          <p className="text-sm text-muted-foreground mb-3">
+            Ajoutez rapidement une équipe type
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onChange([
+                { id: crypto.randomUUID(), specialty: 'directeur_artistique', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: 'concepteur_redacteur', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: 'chef_de_pub', is_mandatory: true, notes: '' },
+              ])}
+            >
+              Équipe créative base
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onChange([
+                { id: crypto.randomUUID(), specialty: 'directeur_artistique', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: 'concepteur_redacteur', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: 'planneur_strategique', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: 'chef_de_pub', is_mandatory: true, notes: '' },
+                { id: crypto.randomUUID(), specialty: 'social_media_manager', is_mandatory: false, notes: '' },
+                { id: crypto.randomUUID(), specialty: 'motion_designer', is_mandatory: false, notes: '' },
+              ])}
+            >
+              Équipe 360°
             </Button>
           </div>
         </div>
