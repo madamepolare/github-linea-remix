@@ -12,8 +12,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Loader2 } from "lucide-react";
+import { Camera, Loader2, Linkedin, Building2 } from "lucide-react";
 
 interface EditMemberDialogProps {
   open: boolean;
@@ -26,6 +27,9 @@ interface EditMemberDialogProps {
       job_title?: string;
       phone?: string;
       email?: string;
+      company?: string;
+      linkedin_url?: string;
+      bio?: string;
     };
   } | null;
 }
@@ -41,6 +45,9 @@ export function EditMemberDialog({ open, onOpenChange, member }: EditMemberDialo
     job_title: "",
     phone: "",
     avatar_url: "",
+    company: "",
+    linkedin_url: "",
+    bio: "",
   });
 
   useEffect(() => {
@@ -50,6 +57,9 @@ export function EditMemberDialog({ open, onOpenChange, member }: EditMemberDialo
         job_title: member.profile.job_title || "",
         phone: member.profile.phone || "",
         avatar_url: member.profile.avatar_url || "",
+        company: (member.profile as any)?.company || "",
+        linkedin_url: (member.profile as any)?.linkedin_url || "",
+        bio: (member.profile as any)?.bio || "",
       });
     }
   }, [member]);
@@ -57,6 +67,18 @@ export function EditMemberDialog({ open, onOpenChange, member }: EditMemberDialo
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !member) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({ variant: "destructive", title: "Fichier invalide", description: "Veuillez sélectionner une image." });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "Fichier trop volumineux", description: "L'image doit faire moins de 5 Mo." });
+      return;
+    }
 
     setUploading(true);
     try {
@@ -96,9 +118,12 @@ export function EditMemberDialog({ open, onOpenChange, member }: EditMemberDialo
         .from("profiles")
         .update({
           full_name: formData.full_name,
-          job_title: formData.job_title,
-          phone: formData.phone,
-          avatar_url: formData.avatar_url,
+          job_title: formData.job_title || null,
+          phone: formData.phone || null,
+          avatar_url: formData.avatar_url || null,
+          company: formData.company || null,
+          linkedin_url: formData.linkedin_url || null,
+          bio: formData.bio || null,
         })
         .eq("user_id", member.user_id);
 
@@ -127,21 +152,21 @@ export function EditMemberDialog({ open, onOpenChange, member }: EditMemberDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Modifier le profil</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
           {/* Avatar */}
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex items-center gap-4">
             <div className="relative">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={formData.avatar_url || undefined} />
+              <Avatar className="h-20 w-20 cursor-pointer ring-2 ring-border hover:ring-primary transition-all">
+                <AvatarImage src={formData.avatar_url || undefined} className="object-cover" />
                 <AvatarFallback className="text-xl">{initials}</AvatarFallback>
               </Avatar>
               <label
-                htmlFor="avatar-upload"
+                htmlFor="member-avatar-upload"
                 className="absolute bottom-0 right-0 p-1.5 bg-primary text-primary-foreground rounded-full cursor-pointer hover:bg-primary/90 transition-colors"
               >
                 {uploading ? (
@@ -151,7 +176,7 @@ export function EditMemberDialog({ open, onOpenChange, member }: EditMemberDialo
                 )}
               </label>
               <input
-                id="avatar-upload"
+                id="member-avatar-upload"
                 type="file"
                 accept="image/*"
                 className="hidden"
@@ -159,17 +184,19 @@ export function EditMemberDialog({ open, onOpenChange, member }: EditMemberDialo
                 disabled={uploading}
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Cliquez sur l'icône pour changer la photo
-            </p>
+            <div>
+              <p className="font-medium">{formData.full_name || "Nom du membre"}</p>
+              <p className="text-sm text-muted-foreground">{member?.profile?.email}</p>
+              <p className="text-xs text-muted-foreground mt-1">Cliquez pour changer la photo</p>
+            </div>
           </div>
 
-          {/* Form fields */}
-          <div className="space-y-4">
+          {/* Form fields - matching ProfileSettings */}
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="full_name">Nom complet</Label>
+              <Label htmlFor="member_full_name">Nom complet</Label>
               <Input
-                id="full_name"
+                id="member_full_name"
                 value={formData.full_name}
                 onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
                 placeholder="Jean Dupont"
@@ -177,23 +204,53 @@ export function EditMemberDialog({ open, onOpenChange, member }: EditMemberDialo
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="job_title">Poste</Label>
+              <Label htmlFor="member_job_title">Fonction</Label>
               <Input
-                id="job_title"
+                id="member_job_title"
                 value={formData.job_title}
                 onChange={(e) => setFormData(prev => ({ ...prev, job_title: e.target.value }))}
-                placeholder="Architecte"
+                placeholder="Architecte principal"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Téléphone</Label>
+              <Label htmlFor="member_company">
+                <span className="flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Entreprise
+                </span>
+              </Label>
               <Input
-                id="phone"
+                id="member_company"
+                value={formData.company}
+                onChange={(e) => setFormData(prev => ({ ...prev, company: e.target.value }))}
+                placeholder="Nom de l'agence"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="member_phone">Téléphone</Label>
+              <Input
+                id="member_phone"
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                 placeholder="+33 6 12 34 56 78"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="member_linkedin">
+                <span className="flex items-center gap-1.5">
+                  <Linkedin className="h-3.5 w-3.5" />
+                  LinkedIn
+                </span>
+              </Label>
+              <Input
+                id="member_linkedin"
+                value={formData.linkedin_url}
+                onChange={(e) => setFormData(prev => ({ ...prev, linkedin_url: e.target.value }))}
+                placeholder="https://linkedin.com/in/profil"
               />
             </div>
 
@@ -208,6 +265,20 @@ export function EditMemberDialog({ open, onOpenChange, member }: EditMemberDialo
                 L'email ne peut pas être modifié
               </p>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="member_bio">Bio</Label>
+            <Textarea
+              id="member_bio"
+              value={formData.bio}
+              onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+              placeholder="Quelques mots sur ce membre..."
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              {formData.bio.length}/500 caractères
+            </p>
           </div>
         </div>
 
