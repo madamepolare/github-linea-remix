@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getModuleFromPath } from "@/lib/navigationConfig";
 import { THIN_STROKE } from "@/components/ui/icon";
 import { usePostItTasks } from "@/hooks/usePostItTasks";
+import { EventSchedulerDialog } from "@/components/workflow/EventSchedulerDialog";
 
 export function MainLayout() {
   // Guard: redirect to home if current module not enabled in new workspace
@@ -29,9 +30,17 @@ export function MainLayout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [postItOpen, setPostItOpen] = useState(false);
+  const [eventSchedulerOpen, setEventSchedulerOpen] = useState(false);
   
   // Get pending post-it count
   const { pendingCount } = usePostItTasks();
+
+  // Listen for open-event-scheduler event
+  useEffect(() => {
+    const handleOpenScheduler = () => setEventSchedulerOpen(true);
+    window.addEventListener("open-event-scheduler", handleOpenScheduler);
+    return () => window.removeEventListener("open-event-scheduler", handleOpenScheduler);
+  }, []);
 
   // Get current module for mobile header
   const currentModule = getModuleFromPath(location.pathname);
@@ -154,6 +163,12 @@ export function MainLayout() {
       {/* Feedback Mode Components */}
       <FeedbackButton />
       <FeedbackSidebar />
+
+      {/* Event Scheduler Dialog */}
+      <EventSchedulerDialog 
+        open={eventSchedulerOpen} 
+        onOpenChange={setEventSchedulerOpen} 
+      />
     </div>
   );
 }

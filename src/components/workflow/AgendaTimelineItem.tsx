@@ -324,11 +324,19 @@ export function AgendaTimelineItem({
                   backgroundColor: item.color,
                   zIndex: isInteracting ? 30 : 10,
                 }}
-                draggable={false}
+                draggable={canDrag && !isResizing && !isDraggingVertical}
+                onDragStart={(e) => {
+                  if (canDrag && !isResizing && !isDraggingVertical) {
+                    hasDraggedRef.current = true;
+                    onDragStart(e, item);
+                  }
+                }}
                 onMouseDown={(e) => {
                   // Only start vertical drag if clicking on the main area (not resize handles)
+                  // and not on the drag handle for horizontal drag
                   const target = e.target as HTMLElement;
                   if (target.closest('[data-resize-handle]')) return;
+                  if (target.closest('[data-drag-handle]')) return;
                   if (canDrag && !isResizing) {
                     handleVerticalDragStart(e);
                   }
@@ -336,6 +344,7 @@ export function AgendaTimelineItem({
                 onTouchStart={(e) => {
                   const target = e.target as HTMLElement;
                   if (target.closest('[data-resize-handle]')) return;
+                  if (target.closest('[data-drag-handle]')) return;
                   if (canDrag && !isResizing) {
                     handleVerticalDragStart(e);
                   }
