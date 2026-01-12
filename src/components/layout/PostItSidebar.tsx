@@ -30,7 +30,7 @@ function getPostItColor(index: number) {
 
 export function PostItSidebar({ open, onOpenChange }: PostItSidebarProps) {
   const [newTaskTitle, setNewTaskTitle] = useState("");
-  const { quickTasks, isLoading, createQuickTask, completeQuickTask, deleteQuickTask } = usePostItTasks();
+  const { quickTasks, isLoading, createQuickTask, completeQuickTask, uncompleteQuickTask, deleteQuickTask } = usePostItTasks();
 
   const pendingTasks = quickTasks?.filter((t) => t.status === "pending") || [];
   const completedTasks = quickTasks?.filter((t) => t.status === "completed").slice(0, 5) || [];
@@ -134,14 +134,25 @@ export function PostItSidebar({ open, onOpenChange }: PostItSidebarProps) {
                       key={task.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
+                      className="group flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors"
                     >
-                      <div className="h-4 w-4 rounded-full bg-success/20 flex items-center justify-center shrink-0">
+                      <button
+                        onClick={() => uncompleteQuickTask.mutate(task.id)}
+                        className="h-4 w-4 rounded-full bg-success/20 flex items-center justify-center shrink-0 hover:bg-success/30 transition-colors cursor-pointer"
+                        title="Remettre en attente"
+                      >
                         <Check className="h-2.5 w-2.5 text-success" strokeWidth={3} />
-                      </div>
+                      </button>
                       <span className="text-sm text-muted-foreground line-through flex-1 truncate">
                         {task.title}
                       </span>
+                      <button
+                        onClick={() => deleteQuickTask.mutate(task.id)}
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="h-3 w-3" strokeWidth={THIN_STROKE} />
+                      </button>
                     </motion.div>
                   ))}
                 </div>

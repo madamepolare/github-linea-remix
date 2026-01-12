@@ -1,11 +1,19 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import ReactGridLayout from "react-grid-layout";
-import { Plus, Settings2, RotateCcw, Check } from "lucide-react";
+import { Plus, Settings2, RotateCcw, Check, User, FolderKanban, Wallet, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WidgetRenderer } from "./WidgetRenderer";
 import { WidgetPicker } from "./WidgetPicker";
 import { getWidgetById, getSizeDefaults } from "./registry";
+import { DASHBOARD_TEMPLATES, DashboardTemplate } from "./DashboardTemplates";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -27,6 +35,7 @@ interface RGLLayout {
 }
 
 const STORAGE_KEY = "linea-dashboard-layout";
+const TEMPLATE_KEY = "linea-dashboard-template";
 
 const DEFAULT_WIDGETS: string[] = [
   "welcome",
@@ -110,6 +119,14 @@ export function WidgetGrid() {
   const [isEditing, setIsEditing] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [{ widgets, layout }, setState] = useState(loadLayout);
+  const [currentTemplate, setCurrentTemplate] = useState<DashboardTemplate>(() => {
+    try {
+      const saved = localStorage.getItem(TEMPLATE_KEY);
+      return (saved as DashboardTemplate) || "custom";
+    } catch {
+      return "custom";
+    }
+  });
 
   useEffect(() => {
     const updateWidth = () => {
@@ -181,31 +198,95 @@ export function WidgetGrid() {
     };
     setState(defaultState);
     saveLayout(DEFAULT_WIDGETS, defaultState.layout);
+    setCurrentTemplate("custom");
+    localStorage.setItem(TEMPLATE_KEY, "custom");
+  }, []);
+
+  const handleApplyTemplate = useCallback((templateId: DashboardTemplate) => {
+    const template = DASHBOARD_TEMPLATES.find(t => t.id === templateId);
+    if (!template || templateId === "custom") {
+      setCurrentTemplate("custom");
+      localStorage.setItem(TEMPLATE_KEY, "custom");
+      return;
+    }
+    
+    const newWidgets = template.widgets;
+    const newLayout = getDefaultLayout(newWidgets);
+    setState({ widgets: newWidgets, layout: newLayout });
+    saveLayout(newWidgets, newLayout);
+    setCurrentTemplate(templateId);
+    localStorage.setItem(TEMPLATE_KEY, templateId);
   }, []);
 
   return (
     <div className="relative" ref={containerRef}>
-      <div className="flex items-center justify-end gap-2 mb-4">
-        {isEditing && (
-          <>
-            <Button variant="outline" size="sm" onClick={() => setShowPicker(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Ajouter un widget
+      <div className="flex items-center justify-between gap-2 mb-4">
+        {/* Left side - Template selector */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              {(() => {
+                const template = DASHBOARD_TEMPLATES.find(t => t.id === currentTemplate);
+                const Icon = template?.icon || Settings2;
+                return <Icon className="h-4 w-4" />;
+              })()}
+              {DASHBOARD_TEMPLATES.find(t => t.id === currentTemplate)?.name || "Dashboard"}
+              <ChevronDown className="h-3 w-3 ml-1 opacity-50" />
             </Button>
-            <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
-              <RotateCcw className="h-4 w-4" />
-              Réinitialiser
-            </Button>
-          </>
-        )}
-        <Button
-          variant={isEditing ? "default" : "outline"}
-          size="sm"
-          onClick={() => { setIsEditing(!isEditing); setShowPicker(false); }}
-          className="gap-2"
-        >
-          {isEditing ? <><Check className="h-4 w-4" />Terminer</> : <><Settings2 className="h-4 w-4" />Personnaliser</>}
-        </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            {DASHBOARD_TEMPLATES.filter(t => t.id !== "custom").map((template) => {
+              const Icon = template.icon;
+              return (
+                <DropdownMenuItem
+                  key={template.id}
+                  onClick={() => handleApplyTemplate(template.id)}
+                  className={cn(currentTemplate === template.id && "bg-accent")}
+                >
+                  <Icon className="h-4 w-4 mr-2" />
+                  <div className="flex flex-col flex-1">
+                    <span className="font-medium">{template.name}</span>
+                    <span className="text-xs text-muted-foreground">{template.description}</span>
+                  </div>
+                  {currentTemplate === template.id && <Check className="h-4 w-4 ml-2" />}
+                </DropdownMenuItem>
+              );
+            })}
+            {currentTemplate === "custom" && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled className="opacity-70">
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  <span>Configuration personnalisée</span>
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Right side - Actions */}
+        <div className="flex items-center gap-2">
+          {isEditing && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setShowPicker(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Ajouter un widget
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
+                <RotateCcw className="h-4 w-4" />
+                Réinitialiser
+              </Button>
+            </>
+          )}
+          <Button
+            variant={isEditing ? "default" : "outline"}
+            size="sm"
+            onClick={() => { setIsEditing(!isEditing); setShowPicker(false); }}
+            className="gap-2"
+          >
+            {isEditing ? <><Check className="h-4 w-4" />Terminer</> : <><Settings2 className="h-4 w-4" />Personnaliser</>}
+          </Button>
+        </div>
       </div>
 
       <div 

@@ -79,6 +79,27 @@ export function usePostItTasks() {
     },
   });
 
+  const uncompleteQuickTask = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("quick_tasks")
+        .update({ 
+          status: "pending", 
+          completed_at: null 
+        })
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quick_tasks"] });
+      toast.success("Post-it remis en attente");
+    },
+    onError: (error) => {
+      toast.error("Erreur: " + error.message);
+    },
+  });
+
   const deleteQuickTask = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -104,6 +125,7 @@ export function usePostItTasks() {
     pendingCount,
     createQuickTask,
     completeQuickTask,
+    uncompleteQuickTask,
     deleteQuickTask,
   };
 }

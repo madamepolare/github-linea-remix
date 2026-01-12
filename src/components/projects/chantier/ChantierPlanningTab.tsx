@@ -39,8 +39,10 @@ import {
   History,
   CalendarDays,
   FileDown,
+  Filter,
 } from "lucide-react";
 import { toast } from "sonner";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 interface ChantierPlanningTabProps {
   projectId: string;
@@ -95,8 +97,8 @@ export function ChantierPlanningTab({
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const [selectedIntervention, setSelectedIntervention] = useState<Intervention | null>(null);
   const [editingIntervention, setEditingIntervention] = useState<Intervention | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [companyFilter, setCompanyFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [companyFilter, setCompanyFilter] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [preselectedLotId, setPreselectedLotId] = useState<string | undefined>();
@@ -147,11 +149,11 @@ export function ChantierPlanningTab({
   // Filter lots
   const filteredLots = useMemo(() => {
     let result = lots;
-    if (statusFilter) {
-      result = result.filter(l => l.status === statusFilter);
+    if (statusFilter.length > 0) {
+      result = result.filter(l => statusFilter.includes(l.status || ""));
     }
-    if (companyFilter) {
-      result = result.filter(l => l.crm_company_id === companyFilter);
+    if (companyFilter.length > 0) {
+      result = result.filter(l => companyFilter.includes(l.crm_company_id || ""));
     }
     return result;
   }, [lots, statusFilter, companyFilter]);
@@ -537,14 +539,25 @@ export function ChantierPlanningTab({
           </div>
         </div>
 
-        {/* Center - Stats (minimal) */}
-        <div className="hidden md:flex items-center gap-3 text-sm text-muted-foreground">
-          <span>{stats.totalInterventions} interventions</span>
-          {stats.delayedInterventions > 0 && (
-            <Badge variant="destructive" className="gap-1 text-xs">
-              <AlertTriangle className="w-3 h-3" />
-              {stats.delayedInterventions}
-            </Badge>
+        {/* Center - Filters */}
+        <div className="hidden md:flex items-center gap-2">
+          <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+          <MultiSelect
+            options={companies.map(c => ({ value: c.id, label: c.name }))}
+            selected={companyFilter}
+            onChange={setCompanyFilter}
+            placeholder="Entreprises"
+          />
+          <MultiSelect
+            options={LOT_STATUS.map(s => ({ value: s.value, label: s.label, color: s.color }))}
+            selected={statusFilter}
+            onChange={setStatusFilter}
+            placeholder="Statut"
+          />
+          {(companyFilter.length > 0 || statusFilter.length > 0) && (
+            <span className="text-xs text-muted-foreground">
+              {filteredLots.length}/{lots.length} lots
+            </span>
           )}
         </div>
 
