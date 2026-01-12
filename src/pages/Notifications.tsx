@@ -512,13 +512,20 @@ export default function NotificationsPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1 min-w-0">
+                                  {/* Actor name */}
+                                  {notification.actor?.full_name && (
+                                    <p className="text-xs text-muted-foreground mb-1">
+                                      Par <span className="font-medium text-foreground">{notification.actor.full_name}</span>
+                                    </p>
+                                  )}
+                                  
                                   {/* Type and Entity badges */}
                                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                                     <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0", typeConfig.color, typeConfig.bgColor)}>
                                       {typeConfig.label}
                                     </Badge>
                                     {notification.related_entity_type && notification.related_entity_name && (
-                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
+                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1 cursor-pointer hover:bg-muted">
                                         {entityTypeLabels[notification.related_entity_type]?.icon && (
                                           <span className="inline-flex">
                                             {(() => {

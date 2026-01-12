@@ -228,6 +228,13 @@ export function NotificationsSidebar({ open, onClose }: NotificationsSidebarProp
                         
                         {/* Content */}
                         <div className="flex-1 min-w-0">
+                          {/* Actor name if avatar shown */}
+                          {notification.actor?.full_name && (
+                            <p className="text-xs text-muted-foreground mb-0.5">
+                              Par <span className="font-medium text-foreground">{notification.actor.full_name}</span>
+                            </p>
+                          )}
+                          
                           <p className={cn(
                             "text-sm",
                             !notification.is_read ? "font-medium text-foreground" : "text-foreground/90"
@@ -240,7 +247,7 @@ export function NotificationsSidebar({ open, onClose }: NotificationsSidebarProp
                             <div className="flex items-center gap-1.5 mt-1">
                               <Badge 
                                 variant="secondary" 
-                                className="text-[10px] px-1.5 py-0 h-5 gap-1 font-normal"
+                                className="text-[10px] px-1.5 py-0 h-5 gap-1 font-normal cursor-pointer hover:bg-secondary/80"
                               >
                                 <entityConfig.icon className="h-3 w-3" />
                                 <span className="truncate max-w-[150px]">
