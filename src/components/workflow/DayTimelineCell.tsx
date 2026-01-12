@@ -5,10 +5,7 @@ import { PlanningItem } from "./ResizablePlanningItem";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { TeamMember } from "@/hooks/useTeamMembers";
 import { AgendaTimelineItem, DAY_START_HOUR, DAY_END_HOUR, TOTAL_HOURS, PIXELS_PER_MINUTE } from "./AgendaTimelineItem";
-
-// Lunch break configuration
-const LUNCH_START_HOUR = 13;
-const LUNCH_END_HOUR = 14;
+import { usePlanningSettings } from "@/hooks/usePlanningSettings";
 
 interface DayTimelineCellProps {
   day: Date;
@@ -45,6 +42,7 @@ export function DayTimelineCell({
 }: DayTimelineCellProps) {
   const [dragOverHour, setDragOverHour] = useState<number | null>(null);
   const { updateSchedule } = useTaskSchedules();
+  const { planningSettings } = usePlanningSettings();
 
   // Generate hour slots
   const hourSlots = useMemo(() => {
@@ -137,7 +135,8 @@ export function DayTimelineCell({
       {/* Hour grid lines */}
       <div className="absolute inset-0">
         {hourSlots.map((hour) => {
-          const isLunchBreak = hour >= LUNCH_START_HOUR && hour < LUNCH_END_HOUR;
+          const isLunchBreak = hour >= planningSettings.lunch_start_hour && hour < planningSettings.lunch_end_hour;
+          const isOutsideWorkingHours = hour < planningSettings.agency_open_hour || hour >= planningSettings.agency_close_hour;
           
           return (
             <div
@@ -145,7 +144,8 @@ export function DayTimelineCell({
               className={cn(
                 "absolute left-0 right-0 border-t border-border/30 hover:bg-accent/30 transition-colors cursor-pointer",
                 dragOverHour === hour && "bg-primary/20",
-                isLunchBreak && "bg-muted/40"
+                isOutsideWorkingHours && "bg-muted/50",
+                isLunchBreak && !isOutsideWorkingHours && "bg-muted/30"
               )}
               style={{
                 top: `${((hour - DAY_START_HOUR) / TOTAL_HOURS) * 100}%`,
@@ -169,11 +169,21 @@ export function DayTimelineCell({
                 style={{ top: "50%" }}
               />
               {/* Lunch break diagonal pattern indicator */}
-              {isLunchBreak && (
+              {isLunchBreak && !isOutsideWorkingHours && (
                 <div 
-                  className="absolute inset-0 pointer-events-none opacity-30"
+                  className="absolute inset-0 pointer-events-none opacity-20"
                   style={{
                     backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 4px, currentColor 4px, currentColor 5px)",
+                    color: "var(--muted-foreground)",
+                  }}
+                />
+              )}
+              {/* Outside working hours pattern */}
+              {isOutsideWorkingHours && (
+                <div 
+                  className="absolute inset-0 pointer-events-none opacity-10"
+                  style={{
+                    backgroundImage: "repeating-linear-gradient(-45deg, transparent, transparent 6px, currentColor 6px, currentColor 7px)",
                     color: "var(--muted-foreground)",
                   }}
                 />
