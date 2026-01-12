@@ -260,8 +260,16 @@ export function AgendaTimelineItem({
     
     if (item.type === "task" && schedule) {
       onViewTask(schedule);
-    } else if (item.type === "event" && onViewEvent) {
-      onViewEvent(item.originalData);
+    } else if (item.type === "event" && item.originalData) {
+      // Navigate to the related entity (project or tender)
+      const eventData = item.originalData as any;
+      if (eventData.project_id) {
+        window.location.href = `/projects/${eventData.project_id}`;
+      } else if (eventData.tender_id) {
+        window.location.href = `/tenders/${eventData.tender_id}`;
+      } else if (onViewEvent) {
+        onViewEvent(item.originalData);
+      }
     } else if (item.type === "timeEntry" && onViewTimeEntry) {
       onViewTimeEntry(item.originalData);
     }
