@@ -144,6 +144,8 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
       { key: "time-validation", label: "Validation", href: "/team/time-validation" },
       { key: "recruitment", label: "Recrutement", href: "/team/recruitment" },
       { key: "absences", label: "Absences", href: "/team/absences" },
+      { key: "leave-balances", label: "Soldes congés", href: "/team/leave-balances" },
+      { key: "payroll", label: "Variables paie", href: "/team/payroll" },
       { key: "requests", label: "Demandes", href: "/team/requests" },
       { key: "evaluations", label: "Évaluations", href: "/team/evaluations" },
       { key: "directory", label: "Annuaire", href: "/team/directory" },
