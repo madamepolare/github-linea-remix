@@ -9,6 +9,7 @@ import { PostItSidebar } from "./PostItSidebar";
 import { PageTransition } from "./PageTransition";
 import { WorkspaceStylesLoader } from "./WorkspaceStylesLoader";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { MobileSubNav } from "./MobileSubNav";
 import { useSidebarStore } from "@/hooks/useSidebarStore";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -164,6 +165,9 @@ export function MainLayout() {
         <div className="hidden lg:block">
           <TopBar />
         </div>
+
+        {/* Mobile Sub-Navigation */}
+        <MobileSubNav />
         
         {/* Page content */}
         <main className="flex-1 flex flex-col">
