@@ -61,6 +61,7 @@ import { LinkedEntitiesPanel } from "@/components/shared/LinkedEntitiesPanel";
 import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 import { EntityCommunications } from "@/components/shared/EntityCommunications";
 import { EntityEmailsTab } from "@/components/shared/EntityEmailsTab";
+import { CreateContactDialog } from "@/components/crm/CreateContactDialog";
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
@@ -89,9 +90,13 @@ export default function CompanyDetail() {
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
 
   const company = allCompanies.find((c) => c.id === id);
+  const companyId = company?.id; // stable reference for useEffect deps
   const companyContacts = contacts.filter((c) => c.crm_company_id === id);
   const companyLeads = leads.filter((l) => l.crm_company_id === id);
   const totalLeadValue = companyLeads.reduce((sum, l) => sum + (Number(l.estimated_value) || 0), 0);
+
+  // State for create contact dialog
+  const [createContactOpen, setCreateContactOpen] = useState(false);
 
   // Helper to find category from industry type (based on workspace settings)
   const getCategoryFromIndustry = (industry: string | null | undefined): CompanyCategory | "" => {
@@ -221,6 +226,7 @@ export default function CompanyDetail() {
   }, [company, activeTab, isEditing, updateCompany.isPending, setEntityConfig, handleSave]);
 
   // Initialize form state when company changes - but NOT while user is editing
+  // Use companyId to avoid infinite loops from company object reference changes
   useEffect(() => {
     if (company && !isEditing) {
       const normalizedIndustry = company.industry?.startsWith("bet_") ? "bet" : company.industry;
@@ -230,7 +236,8 @@ export default function CompanyDetail() {
       setSelectedCategory(getCategoryFromIndustry(company.industry));
       setSelectedSpecialties(normalizedSpecs);
     }
-  }, [company, isEditing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId, isEditing]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("fr-FR", {
@@ -655,7 +662,7 @@ export default function CompanyDetail() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Contacts</CardTitle>
-                <Button size="sm">
+                <Button size="sm" onClick={() => setCreateContactOpen(true)}>
                   <Plus className="h-4 w-4 mr-1" strokeWidth={1.5} />
                   Ajouter
                 </Button>
@@ -788,6 +795,13 @@ export default function CompanyDetail() {
 
         </div>
       </div>
+
+      {/* Create Contact Dialog - preselect this company */}
+      <CreateContactDialog
+        open={createContactOpen}
+        onOpenChange={setCreateContactOpen}
+        defaultCompanyId={company?.id}
+      />
     </div>
   );
 }
