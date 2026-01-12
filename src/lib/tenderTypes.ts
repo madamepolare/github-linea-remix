@@ -1,19 +1,23 @@
 // ============= TENDER TYPES =============
 
 // New Pipeline Status (configurable columns)
-export type PipelineStatus = 'a_approuver' | 'en_cours' | 'deposes' | 'archives';
+export type PipelineStatus = 'a_approuver' | 'en_cours' | 'deposes' | 'gagnes' | 'perdus' | 'archives';
 
 export const PIPELINE_STATUS_LABELS: Record<PipelineStatus, string> = {
   a_approuver: 'À approuver',
   en_cours: 'En cours',
   deposes: 'Déposés',
+  gagnes: 'Gagnés',
+  perdus: 'Perdus',
   archives: 'Archivés',
 };
 
 export const PIPELINE_STATUS_COLORS: Record<PipelineStatus, string> = {
   a_approuver: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
   en_cours: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  deposes: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+  deposes: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+  gagnes: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+  perdus: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
   archives: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
 };
 

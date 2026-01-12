@@ -10,6 +10,8 @@ interface DashboardStats {
   pendingInvoicesChange: number;
   activeTenders: number;
   activeTendersChange: number;
+  wonTenders: number;
+  lostTenders: number;
   teamMembers: number;
   teamMembersChange: number;
 }
@@ -30,6 +32,8 @@ export function useDashboardStats() {
           pendingInvoicesChange: 0,
           activeTenders: 0,
           activeTendersChange: 0,
+          wonTenders: 0,
+          lostTenders: 0,
           teamMembers: 0,
           teamMembersChange: 0,
         };
@@ -47,6 +51,8 @@ export function useDashboardStats() {
         previousInvoicesResult,
         activeTendersResult,
         previousTendersResult,
+        wonTendersResult,
+        lostTendersResult,
         teamMembersResult,
         previousMembersResult,
       ] = await Promise.all([
@@ -80,20 +86,34 @@ export function useDashboardStats() {
           .eq("status", "sent")
           .lt("created_at", thirtyDaysAgo.toISOString()),
 
-        // Current active tenders (using actual French status values)
+        // Current active tenders (using pipeline_status)
         supabase
           .from("tenders")
           .select("id", { count: "exact", head: true })
           .eq("workspace_id", workspaceId)
-          .in("status", ["repere", "en_analyse", "en_montage", "go"]),
+          .in("pipeline_status", ["a_approuver", "en_cours"]),
 
         // Previous tenders
         supabase
           .from("tenders")
           .select("id", { count: "exact", head: true })
           .eq("workspace_id", workspaceId)
-          .in("status", ["repere", "en_analyse", "en_montage", "go"])
+          .in("pipeline_status", ["a_approuver", "en_cours"])
           .lt("created_at", thirtyDaysAgo.toISOString()),
+
+        // Won tenders
+        supabase
+          .from("tenders")
+          .select("id", { count: "exact", head: true })
+          .eq("workspace_id", workspaceId)
+          .eq("pipeline_status", "gagnes"),
+
+        // Lost tenders
+        supabase
+          .from("tenders")
+          .select("id", { count: "exact", head: true })
+          .eq("workspace_id", workspaceId)
+          .eq("pipeline_status", "perdus"),
 
         // Current team members (exclude hidden)
         supabase
@@ -128,6 +148,9 @@ export function useDashboardStats() {
       const previousTenders = previousTendersResult.count || 0;
       const activeTendersChange = activeTenders - previousTenders;
 
+      const wonTenders = wonTendersResult.count || 0;
+      const lostTenders = lostTendersResult.count || 0;
+
       const teamMembers = teamMembersResult.count || 0;
       const previousMembers = previousMembersResult.count || 0;
       const teamMembersChange = teamMembers - previousMembers;
@@ -140,6 +163,8 @@ export function useDashboardStats() {
         pendingInvoicesChange,
         activeTenders,
         activeTendersChange,
+        wonTenders,
+        lostTenders,
         teamMembers,
         teamMembersChange,
       };

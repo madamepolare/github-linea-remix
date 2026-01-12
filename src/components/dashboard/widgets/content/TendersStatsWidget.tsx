@@ -1,4 +1,4 @@
-import { Trophy, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Trophy, Clock, CheckCircle, XCircle, TrendingUp, FileText } from "lucide-react";
 import { StatsWidget } from "./StatsWidget";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 
@@ -10,26 +10,26 @@ export function TendersStatsWidget() {
       label: "Actifs",
       value: stats?.activeTenders ?? 0,
       change: stats?.activeTendersChange,
-      icon: Trophy,
-      color: "bg-warning/10 text-warning",
+      icon: FileText,
+      color: "bg-blue-100/80 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
     },
     {
       label: "En préparation",
       value: 3,
       icon: Clock,
-      color: "bg-info/10 text-info",
+      color: "bg-amber-100/80 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400",
     },
     {
       label: "Gagnés",
-      value: 8,
-      icon: CheckCircle,
-      color: "bg-success/10 text-success",
+      value: stats?.wonTenders ?? 0,
+      icon: Trophy,
+      color: "bg-emerald-100/80 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400",
     },
     {
       label: "Perdus",
-      value: 4,
+      value: stats?.lostTenders ?? 0,
       icon: XCircle,
-      color: "bg-destructive/10 text-destructive",
+      color: "bg-red-100/80 text-red-500 dark:bg-red-900/30 dark:text-red-400",
     },
   ];
 
