@@ -26,7 +26,7 @@ import {
 import { Calendar, Users, Video, Phone, MapPin, Clock, Check, ChevronLeft, ChevronRight, Sparkles, Building2, UserPlus, Download, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
-import { useTaskSchedules } from "@/hooks/useTaskSchedules";
+
 import { useWorkspaceEvents } from "@/hooks/useWorkspaceEvents";
 import { useTeamAbsences } from "@/hooks/useTeamAbsences";
 import { useProjects } from "@/hooks/useProjects";
@@ -73,7 +73,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
   const { activeWorkspace, user } = useAuth();
   const queryClient = useQueryClient();
   const { data: members } = useTeamMembers();
-  const { schedules } = useTaskSchedules();
+  
   const { data: events } = useWorkspaceEvents();
   const { data: absences } = useTeamAbsences({ status: "approved" });
   const { projects } = useProjects();
@@ -145,6 +145,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
   }, [weekStart]);
 
   // Find available slots for all selected members
+  // Find available slots - only events and absences are blocking (not tasks)
   const availableSlots = useMemo(() => {
     if (selectedMembers.length === 0) return [];
 
@@ -176,17 +177,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
             }
           });
 
-          // Check scheduled tasks
-          schedules?.forEach((schedule) => {
-            if (schedule.user_id !== memberId) return;
-            const scheduleStart = new Date(schedule.start_datetime);
-            const scheduleEnd = new Date(schedule.end_datetime);
-            if (slotStart < scheduleEnd && slotEnd > scheduleStart) {
-              isAvailable = false;
-            }
-          });
-
-          // Check events
+          // Check events (only blocking elements for availability)
           events?.forEach((event) => {
             const isAttendee = event.attendees?.some(
               (a) => a.user_id === memberId
@@ -219,7 +210,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
     });
 
     return slots;
-  }, [weekDays, selectedMembers, duration, schedules, events, absences, planningSettings]);
+  }, [weekDays, selectedMembers, duration, events, absences, planningSettings]);
 
   // Slots where ALL selected members are available
   const perfectSlots = useMemo(() => {
