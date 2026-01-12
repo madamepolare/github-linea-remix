@@ -26,10 +26,10 @@ import { CreateScheduleDialog } from "./CreateScheduleDialog";
 import { MemberFocusSwitcher } from "./MemberFocusSwitcher";
 import { CalendarSyncPanel } from "./CalendarSyncPanel";
 
-// Configuration
+// Configuration - Use flex-grow to maximize width
 const DAYS_TO_SHOW = 7; // 1 week
-const MEMBER_COLUMN_WIDTH = 180;
-const DAY_COLUMN_WIDTH = 160;
+const MEMBER_COLUMN_WIDTH = 200;
+const MIN_DAY_COLUMN_WIDTH = 180; // Minimum width per day, will grow to fill space
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
   meeting: "#3b82f6",
@@ -397,10 +397,10 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
           </div>
         )}
 
-        {/* Timeline area */}
-        <ScrollArea className="flex-1">
-          <div className="flex min-w-max">
-            {/* Days columns */}
+        {/* Timeline area - full width distribution */}
+        <div className="flex-1 overflow-x-auto">
+          <div className="flex h-full" style={{ minWidth: DAYS_TO_SHOW * MIN_DAY_COLUMN_WIDTH }}>
+            {/* Days columns - distribute evenly */}
             {days.map(day => {
               const isToday = isSameDay(day, new Date());
               const weekend = isWeekend(day);
@@ -408,8 +408,8 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
               return (
                 <div
                   key={day.toISOString()}
-                  className="flex flex-col"
-                  style={{ width: DAY_COLUMN_WIDTH }}
+                  className="flex flex-col flex-1"
+                  style={{ minWidth: MIN_DAY_COLUMN_WIDTH }}
                 >
                   {/* Day header */}
                   <div
@@ -458,8 +458,7 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
               );
             })}
           </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Task Detail Sheet */}

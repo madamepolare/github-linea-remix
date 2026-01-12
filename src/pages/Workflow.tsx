@@ -14,7 +14,7 @@ import { ViewSwitcher } from "@/components/ui/view-switcher";
 type ViewType = "grid" | "timeline";
 
 export default function Workflow() {
-  const [view, setView] = useState<ViewType>("timeline");
+  const [view, setView] = useState<ViewType>("grid");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedSchedule, setSelectedSchedule] = useState<TaskSchedule | null>(null);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
