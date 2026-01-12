@@ -1,26 +1,22 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { useState } from "react";
-import { useNotifications } from "@/hooks/useNotifications";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useMemo } from "react";
 import {
   Settings,
   ChevronLeft,
+  ChevronRight,
   LogOut,
   ChevronsUpDown,
   HelpCircle,
-  LockOpen,
   LayoutDashboard,
   LucideIcon,
   Plus,
   Check,
   Building2,
-  RefreshCw,
   Loader2,
-  Bell,
+  RefreshCw,
+  Sparkles,
 } from "lucide-react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { CommandTrigger } from "@/components/command-palette/CommandTrigger";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { THIN_STROKE } from "@/components/ui/icon";
@@ -39,7 +35,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebarStore } from "@/hooks/useSidebarStore";
-import { useMemo } from "react";
 import { useModules, useWorkspaceModules } from "@/hooks/useModules";
 import { 
   MODULE_CONFIG, 
@@ -76,13 +71,13 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { collapsed, toggle } = useSidebarStore();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, activeWorkspace, workspaces, signOut, setActiveWorkspace, refreshProfile } = useAuth();
+  const { user, profile, activeWorkspace, workspaces, signOut, setActiveWorkspace } = useAuth();
   const [showQuickSwitch, setShowQuickSwitch] = useState(false);
   const [switchingWorkspace, setSwitchingWorkspace] = useState<string | null>(null);
   const [showSupportChat, setShowSupportChat] = useState(false);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const canQuickSwitch = useCanQuickSwitch(user?.email);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   
   // Get modules data
   const { data: modules = [] } = useModules();
@@ -151,33 +146,28 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     }
   };
 
-  // Smart workspace switch: pour le fondateur, TOUJOURS switch au bon compte
+  // Smart workspace switch
   const handleWorkspaceSwitch = async (workspaceId: string) => {
     const targetWorkspace = workspaces.find(w => w.id === workspaceId);
     if (!targetWorkspace) return;
 
-    // Si pas fondateur, comportement normal
     if (!isFounderEmail(user?.email)) {
       await setActiveWorkspace(workspaceId);
       return;
     }
 
-    // Cherche l'email IMPOSÉ pour ce workspace (par slug)
     const targetEmail = getEmailForWorkspace(targetWorkspace.slug);
 
-    // Si pas de mapping pour ce workspace, juste changer le workspace
     if (!targetEmail) {
       await setActiveWorkspace(workspaceId);
       return;
     }
 
-    // Si déjà sur le bon compte, juste changer le workspace actif
     if (targetEmail.toLowerCase() === user?.email?.toLowerCase()) {
       await setActiveWorkspace(workspaceId);
       return;
     }
 
-    // On doit changer de compte - vérifie si on a un token
     if (!hasStoredSessionFor(targetEmail)) {
       toast({
         variant: "destructive",
@@ -188,10 +178,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       return;
     }
 
-    // Switch instantané vers l'autre compte
     setSwitchingWorkspace(workspaceId);
-    
-    // Stocke le workspace cible pour l'appliquer après le switch d'auth
     setPendingWorkspace(workspaceId);
 
     const result = await instantSwitchToEmail(targetEmail);
@@ -212,107 +199,88 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       return;
     }
 
-    // Petit délai pour laisser onAuthStateChange traiter le pending workspace
     setTimeout(() => {
       setSwitchingWorkspace(null);
       window.location.href = "/";
     }, 100);
   };
 
-  const userInitials = profile?.full_name
-    ? profile.full_name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : user?.email?.slice(0, 2).toUpperCase() || "??";
-
-  // Notifications nav item with unread count
-  const NotificationsNavItem = ({ collapsed: isCollapsed, onClick }: { collapsed: boolean; onClick?: () => void }) => {
-    const { unreadCount } = useNotifications();
-    const active = location.pathname === "/notifications";
+  // Navigation Item Component
+  const NavItemComponent = ({ item, onClick }: { item: NavItem; onClick?: () => void }) => {
+    const active = isActive(item.href, item.moduleSlug);
+    const isHovered = hoveredItem === item.href;
 
     const content = (
-      <div
+      <motion.div
         className={cn(
-          "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150",
+          "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
+          "cursor-pointer select-none",
           active
-            ? "bg-foreground text-background font-medium"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            ? "text-foreground font-medium"
+            : "text-muted-foreground hover:text-foreground"
         )}
+        onHoverStart={() => setHoveredItem(item.href)}
+        onHoverEnd={() => setHoveredItem(null)}
       >
+        {/* Background indicator */}
+        <AnimatePresence>
+          {(active || isHovered) && (
+            <motion.div
+              layoutId="sidebar-nav-bg"
+              className={cn(
+                "absolute inset-0 rounded-xl -z-10",
+                active 
+                  ? "bg-foreground" 
+                  : "bg-muted/80"
+              )}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Icon with glow effect when active */}
         <div className="relative">
-          <Bell
+          <item.icon
             className={cn(
-              "h-[18px] w-[18px] shrink-0 transition-colors",
-              active ? "text-background" : "text-muted-foreground group-hover:text-foreground"
+              "h-[18px] w-[18px] shrink-0 transition-all duration-200",
+              active 
+                ? "text-background" 
+                : isHovered 
+                  ? "text-foreground" 
+                  : "text-muted-foreground"
             )}
             strokeWidth={THIN_STROKE}
           />
-          {unreadCount > 0 && (
-            <span className={cn(
-              "absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full text-[9px] font-medium px-0.5",
-              active ? "bg-background text-foreground" : "bg-destructive text-destructive-foreground"
-            )}>
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
+          {active && (
+            <motion.div
+              className="absolute inset-0 blur-sm bg-background/30 rounded-full -z-10"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1.5 }}
+              transition={{ duration: 0.3 }}
+            />
           )}
         </div>
-        {!isCollapsed && (
-          <span className="flex-1 truncate text-left">Notifications</span>
-        )}
-      </div>
-    );
 
-    if (isCollapsed) {
-      return (
-        <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>
-            <NavLink to="/notifications" onClick={onClick}>{content}</NavLink>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            Notifications
-            {unreadCount > 0 && ` (${unreadCount})`}
-          </TooltipContent>
-        </Tooltip>
-      );
-    }
-
-    return <NavLink to="/notifications" onClick={onClick}>{content}</NavLink>;
-  };
-
-  const NavItemComponent = ({ item, onClick }: { item: NavItem; onClick?: () => void }) => {
-    const active = isActive(item.href, item.moduleSlug);
-
-    const content = (
-      <div
-        className={cn(
-          "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-150",
-          active
-            ? "bg-foreground text-background font-medium"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        )}
-      >
-        <item.icon
-          className={cn(
-            "h-[18px] w-[18px] shrink-0 transition-colors",
-            active ? "text-background" : "text-muted-foreground group-hover:text-foreground"
-          )}
-          strokeWidth={THIN_STROKE}
-        />
         {!collapsed && (
-          <>
-            <span className="flex-1 truncate text-left">{item.title}</span>
-            {item.isExtension && (
-              <LockOpen className={cn(
-                "h-3.5 w-3.5 shrink-0",
-                active ? "text-background" : "text-muted-foreground"
-              )} strokeWidth={THIN_STROKE} />
-            )}
-          </>
+          <span className={cn(
+            "flex-1 truncate text-left transition-colors duration-200",
+            active ? "text-background" : ""
+          )}>
+            {item.title}
+          </span>
         )}
-      </div>
+
+        {/* Extension indicator */}
+        {!collapsed && item.isExtension && (
+          <Sparkles className={cn(
+            "h-3 w-3 shrink-0 transition-colors",
+            active ? "text-background/70" : "text-muted-foreground/50"
+          )} strokeWidth={THIN_STROKE} />
+        )}
+      </motion.div>
     );
 
     if (collapsed) {
@@ -324,7 +292,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           <TooltipContent side="right" className="flex items-center gap-2">
             {item.title}
             {item.isExtension && (
-              <LockOpen className="h-3 w-3 text-muted-foreground" strokeWidth={THIN_STROKE} />
+              <Sparkles className="h-3 w-3 text-muted-foreground" strokeWidth={THIN_STROKE} />
             )}
           </TooltipContent>
         </Tooltip>
@@ -338,29 +306,56 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     <motion.aside
       initial={false}
       animate={{ width: collapsed ? 72 : 260 }}
-      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-      className="fixed left-0 top-0 z-40 flex h-screen flex-col bg-background border-r border-border"
+      transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+      className={cn(
+        "fixed left-0 top-0 z-40 flex h-screen flex-col",
+        "bg-gradient-to-b from-background to-background/98",
+        "border-r border-border/50"
+      )}
     >
-      {/* Workspace Switcher (top) */}
-      <div className="flex items-center justify-between h-14 px-3">
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-muted/20 via-transparent to-transparent pointer-events-none" />
+
+      {/* Workspace Switcher */}
+      <div className="relative flex items-center justify-between h-16 px-3 border-b border-border/50">
         {activeWorkspace ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex flex-1 items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background font-semibold text-sm">
-                  {activeWorkspace.name.slice(0, 1).toUpperCase()}
+              <motion.button 
+                className="flex flex-1 items-center gap-3 rounded-xl px-2 py-2 text-left transition-all hover:bg-muted/50"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+              >
+                {/* Logo with gradient border */}
+                <div className="relative">
+                  <div className="absolute -inset-0.5 bg-gradient-to-br from-foreground/20 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                  {activeWorkspace.logo_url ? (
+                    <img 
+                      src={activeWorkspace.logo_url} 
+                      alt={activeWorkspace.name} 
+                      className="relative h-9 w-9 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-background font-semibold text-sm">
+                      {activeWorkspace.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
                 </div>
+                
                 {!collapsed && (
                   <>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">
                         {activeWorkspace.name}
                       </p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                        Workspace
+                      </p>
                     </div>
                     <ChevronsUpDown className="h-4 w-4 text-muted-foreground shrink-0" strokeWidth={THIN_STROKE} />
                   </>
                 )}
-              </button>
+              </motion.button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-64">
               <DropdownMenuLabel className="flex items-center gap-2 text-xs text-muted-foreground font-normal uppercase tracking-wider">
@@ -374,7 +369,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   onClick={() => handleWorkspaceSwitch(workspace.id)}
                   disabled={switchingWorkspace === workspace.id}
                   className={cn(
-                    "flex items-center justify-between",
+                    "flex items-center justify-between rounded-lg",
                     workspace.id === activeWorkspace.id && "bg-muted"
                   )}
                 >
@@ -383,10 +378,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                       <img 
                         src={workspace.logo_url} 
                         alt={workspace.name} 
-                        className="h-7 w-7 rounded-md object-cover"
+                        className="h-7 w-7 rounded-lg object-cover"
                       />
                     ) : (
-                      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-foreground text-background text-xs font-semibold">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background text-xs font-semibold">
                         {workspace.name.slice(0, 2).toUpperCase()}
                       </div>
                     )}
@@ -413,64 +408,44 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <div className="flex items-center gap-2.5 px-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground">
-              <span className="text-background text-sm font-bold">A</span>
-            </div>
-            {!collapsed && <span className="text-sm font-semibold">Loading...</span>}
+          <div className="flex items-center gap-3 px-2">
+            <div className="h-9 w-9 rounded-xl bg-muted animate-pulse" />
+            {!collapsed && <div className="h-4 w-24 rounded bg-muted animate-pulse" />}
           </div>
         )}
         
-        {!collapsed && (
+        {/* Collapse toggle */}
+        <motion.div
+          initial={false}
+          animate={{ rotate: collapsed ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
           <Button
             variant="ghost"
             size="icon"
             onClick={toggle}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
+            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 shrink-0"
           >
             <ChevronLeft className="h-4 w-4" strokeWidth={THIN_STROKE} />
           </Button>
-        )}
+        </motion.div>
       </div>
 
-      {/* Collapsed toggle */}
-      {collapsed && (
-        <div className="flex justify-start px-3 py-3 border-b border-border">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggle}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
-          >
-            <ChevronLeft className="h-4 w-4 rotate-180" strokeWidth={THIN_STROKE} />
-          </Button>
-        </div>
-      )}
-
-      {/* Command Palette Trigger */}
-      {!collapsed && (
-        <div className="px-3 py-2">
-          <CommandTrigger />
-        </div>
-      )}
-
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3 scrollbar-thin">
-        {/* Notifications link at the top */}
-        <div className="mb-2">
-          <NotificationsNavItem collapsed={collapsed} onClick={onNavigate} />
-        </div>
-        
+      <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-thin">
+        {/* Core Navigation */}
         <div className="space-y-1">
           {coreNavigation.map((item) => (
-            <NavItemComponent key={item.title} item={item} onClick={onNavigate} />
+            <NavItemComponent key={item.href} item={item} onClick={onNavigate} />
           ))}
         </div>
         
+        {/* Extensions */}
         {extensionNavigation.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-border">
+          <div className="mt-6 pt-6 border-t border-border/50">
             {!collapsed && (
-              <div className="px-3 mb-2">
+              <div className="flex items-center gap-2 px-3 mb-3">
+                <Sparkles className="h-3 w-3 text-muted-foreground" strokeWidth={THIN_STROKE} />
                 <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                   Extensions
                 </span>
@@ -478,110 +453,128 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             )}
             <div className="space-y-1">
               {extensionNavigation.map((item) => (
-                <NavItemComponent key={item.title} item={item} onClick={onNavigate} />
+                <NavItemComponent key={item.href} item={item} onClick={onNavigate} />
               ))}
             </div>
           </div>
         )}
       </nav>
 
-      <div className="border-t border-border px-3 py-2 space-y-0.5">
-        <ThemeToggle collapsed={collapsed} />
-        
+      {/* Bottom Section */}
+      <div className="relative border-t border-border/50 px-3 py-3 space-y-1">
+        {/* Settings */}
         <NavItemComponent 
-          item={{ title: "Settings", icon: Settings, href: "/settings" }} 
+          item={{ title: "Paramètres", icon: Settings, href: "/settings" }} 
           onClick={onNavigate} 
         />
         
+        {/* Help */}
         {!collapsed ? (
-          <button 
+          <motion.button 
             onClick={() => setShowSupportChat(true)}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-all hover:bg-muted/50 hover:text-foreground"
+            whileHover={{ x: 2 }}
+            whileTap={{ scale: 0.98 }}
           >
             <HelpCircle className="h-[18px] w-[18px]" strokeWidth={THIN_STROKE} />
-            <span>Help & Support</span>
-          </button>
+            <span>Aide & Support</span>
+          </motion.button>
         ) : (
           <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
-              <button 
+              <motion.button 
                 onClick={() => setShowSupportChat(true)}
-                className="flex w-full items-center justify-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="flex w-full items-center justify-center rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-all hover:bg-muted/50 hover:text-foreground"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 <HelpCircle className="h-[18px] w-[18px]" strokeWidth={THIN_STROKE} />
-              </button>
+              </motion.button>
             </TooltipTrigger>
-            <TooltipContent side="right">Help & Support</TooltipContent>
+            <TooltipContent side="right">Aide & Support</TooltipContent>
           </Tooltip>
         )}
       </div>
 
-      {/* User Profile */}
-      <div className="border-t border-border p-3">
+      {/* User Profile - Minimal design */}
+      <div className="relative border-t border-border/50 p-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
+            <motion.button
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-muted cursor-pointer",
-                collapsed && "justify-center px-0"
+                "flex w-full items-center gap-3 rounded-xl p-2 transition-all hover:bg-muted/50",
+                collapsed && "justify-center"
               )}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
             >
-              {profile?.avatar_url ? (
-                <img 
-                  src={profile.avatar_url} 
-                  alt={profile.full_name || "User"} 
-                  className="h-8 w-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className="h-8 w-8 rounded-full bg-foreground flex items-center justify-center text-xs font-medium text-background">
-                  {userInitials}
-                </div>
-              )}
-              {!collapsed && (
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {profile?.full_name || "User"}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {profile?.job_title || user?.email}
-                  </p>
-                </div>
-              )}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align={collapsed ? "center" : "end"} side={collapsed ? "right" : "top"} className="w-52">
-            <DropdownMenuLabel>
-              <div className="flex items-center gap-2">
+              {/* Avatar with ring */}
+              <div className="relative">
+                <div className="absolute -inset-0.5 rounded-full bg-gradient-to-br from-foreground/10 to-transparent" />
                 {profile?.avatar_url ? (
                   <img 
                     src={profile.avatar_url} 
                     alt={profile.full_name || "User"} 
-                    className="h-8 w-8 rounded-full object-cover"
+                    className="relative h-9 w-9 rounded-full object-cover ring-2 ring-background"
                   />
                 ) : (
-                  <div className="h-8 w-8 rounded-full bg-foreground flex items-center justify-center text-xs font-medium text-background">
-                    {userInitials}
+                  <div className="relative h-9 w-9 rounded-full bg-foreground flex items-center justify-center text-xs font-medium text-background ring-2 ring-background">
+                    {profile?.full_name
+                      ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+                      : user?.email?.slice(0, 2).toUpperCase() || "??"}
                   </div>
                 )}
-                <div>
-                  <p className="font-medium text-sm">{profile?.full_name || "User"}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                {/* Online indicator */}
+                <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 ring-2 ring-background" />
+              </div>
+              
+              {!collapsed && (
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {profile?.full_name || "Utilisateur"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {profile?.job_title || "En ligne"}
+                  </p>
+                </div>
+              )}
+            </motion.button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align={collapsed ? "center" : "end"} side="top" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex items-center gap-3">
+                {profile?.avatar_url ? (
+                  <img 
+                    src={profile.avatar_url} 
+                    alt={profile.full_name || "User"} 
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-foreground flex items-center justify-center text-sm font-medium text-background">
+                    {profile?.full_name
+                      ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+                      : user?.email?.slice(0, 2).toUpperCase() || "??"}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="font-medium text-sm truncate">{profile?.full_name || "Utilisateur"}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                 </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/settings")}>
               <Settings className="h-4 w-4 mr-2" strokeWidth={THIN_STROKE} />
-              Settings
+              Paramètres
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSwitchAccount}>
               <RefreshCw className="h-4 w-4 mr-2" strokeWidth={THIN_STROKE} />
               Changer de compte
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+            <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
               <LogOut className="h-4 w-4 mr-2" strokeWidth={THIN_STROKE} />
-              Sign out
+              Déconnexion
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
