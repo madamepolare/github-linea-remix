@@ -1,13 +1,12 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { format, addMinutes, startOfDay, setHours, setMinutes, differenceInMinutes } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PlanningItem } from "./ResizablePlanningItem";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { TeamMember } from "@/hooks/useTeamMembers";
-import { Calendar, Clock, Users, GripVertical, Plus, Trash2, Eye } from "lucide-react";
+import { Calendar, Clock, Users, GripVertical, Trash2, Eye, MoveVertical } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -32,6 +31,8 @@ interface TimelineItemProps {
   onViewEvent?: (event: any) => void;
   onViewTimeEntry?: (entry: any) => void;
   containerHeight: number;
+  isDragging?: boolean;
+  isDropTarget?: boolean;
 }
 
 function TimelineItem({
@@ -43,6 +44,8 @@ function TimelineItem({
   onViewEvent,
   onViewTimeEntry,
   containerHeight,
+  isDragging = false,
+  isDropTarget = false,
 }: TimelineItemProps) {
   const schedule = item.type === "task" ? (item.originalData as TaskSchedule) : null;
   const isAbsence = item.type === "absence";
