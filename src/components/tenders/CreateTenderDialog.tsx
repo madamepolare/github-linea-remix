@@ -21,6 +21,9 @@ import {
   Users,
   Clock,
   Archive,
+  Layers,
+  Mic,
+  History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +62,8 @@ import { DisciplineTenderSelector } from "./DisciplineTenderSelector";
 import { MOASelector } from "./MOASelector";
 import { CriteriaWeightEditor, type CriterionItem } from "./CriteriaWeightEditor";
 import { RequiredTeamEditor, type RequiredTeamItem } from "./RequiredTeamEditor";
+import { CommunicationLotsEditor, type TenderLot } from "./CommunicationLotsEditor";
+import { CasPratiqueEditor, type CasPratique } from "./CasPratiqueEditor";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useDisciplineConfig } from "@/hooks/useTenderDisciplineConfig";
@@ -67,6 +72,13 @@ interface SiteVisitSlot {
   date: string;
   time: string;
   notes?: string;
+}
+
+interface Audition {
+  prevue: boolean;
+  date?: string;
+  duree_minutes?: number;
+  format?: string;
 }
 
 interface ExtractedInfo {
@@ -104,6 +116,22 @@ interface ExtractedInfo {
   required_team?: RequiredTeamItem[];
   critical_alerts?: Array<{ type: string; message: string; severity: string; source?: string }>;
   detected_documents?: { filename: string; type: string }[];
+  // Communication-specific fields
+  is_multi_attributaire?: boolean;
+  nb_attributaires?: number;
+  lots?: TenderLot[];
+  montant_minimum?: number;
+  montant_maximum?: number;
+  duree_initiale_mois?: number;
+  nb_reconductions?: number;
+  duree_reconduction_mois?: number;
+  date_debut_mission?: string;
+  validite_offre_jours?: number;
+  cas_pratique?: CasPratique;
+  audition?: Audition;
+  anciens_prestataires?: string[];
+  type_campagne?: string;
+  cibles?: string[];
 }
 
 interface ExtractionStats {
@@ -149,9 +177,14 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
     submission_type: 'candidature_offre',
     criteria: [],
     required_team: [],
+    lots: [],
+    cas_pratique: { requis: false },
+    audition: { prevue: false },
+    anciens_prestataires: [],
   });
   const [extractionStats, setExtractionStats] = useState<ExtractionStats | null>(null);
   const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
+  const [newPrestataire, setNewPrestataire] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
   const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
@@ -416,6 +449,17 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         if (extracted.required_team?.length > 0) filledFields.add('required_team');
         if (extracted.dce_link || extracted.dce_url) filledFields.add('dce_link');
         if (extracted.site_visit_slots?.length > 0) filledFields.add('site_visit_slots');
+        // Communication-specific fields
+        if (extracted.is_multi_attributaire !== undefined) filledFields.add('is_multi_attributaire');
+        if (extracted.lots?.length > 0) filledFields.add('lots');
+        if (extracted.montant_minimum || extracted.montant_maximum) filledFields.add('montant');
+        if (extracted.duree_initiale_mois) filledFields.add('duree_initiale_mois');
+        if (extracted.validite_offre_jours) filledFields.add('validite_offre_jours');
+        if (extracted.cas_pratique?.requis) filledFields.add('cas_pratique');
+        if (extracted.audition?.prevue) filledFields.add('audition');
+        if (extracted.anciens_prestataires?.length > 0) filledFields.add('anciens_prestataires');
+        if (extracted.type_campagne) filledFields.add('type_campagne');
+        if (extracted.cibles?.length > 0) filledFields.add('cibles');
         
         setAiFilledFields(filledFields);
         setExtractionStats(data.stats || null);
@@ -426,6 +470,10 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
           submission_type: extracted.submission_type || 'candidature_offre',
           criteria: extracted.criteria || [],
           required_team: extracted.required_team || [],
+          lots: extracted.lots || [],
+          cas_pratique: extracted.cas_pratique || { requis: false },
+          audition: extracted.audition || { prevue: false },
+          anciens_prestataires: extracted.anciens_prestataires || [],
         });
         
         const statsMsg = data.stats 
@@ -439,6 +487,10 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
           submission_type: 'candidature_offre',
           criteria: [],
           required_team: [],
+          lots: [],
+          cas_pratique: { requis: false },
+          audition: { prevue: false },
+          anciens_prestataires: [],
         });
         setAiFilledFields(new Set());
         setExtractionStats(null);
@@ -454,6 +506,10 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         submission_type: 'candidature_offre',
         criteria: [],
         required_team: [],
+        lots: [],
+        cas_pratique: { requis: false },
+        audition: { prevue: false },
+        anciens_prestataires: [],
       });
       setAiFilledFields(new Set());
       setExtractionStats(null);
@@ -473,6 +529,10 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       submission_type: 'candidature_offre',
       criteria: [],
       required_team: [],
+      lots: [],
+      cas_pratique: { requis: false },
+      audition: { prevue: false },
+      anciens_prestataires: [],
     });
     setAiFilledFields(new Set());
     setExtractionStats(null);
@@ -544,9 +604,14 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       submission_type: 'candidature_offre',
       criteria: [],
       required_team: [],
+      lots: [],
+      cas_pratique: { requis: false },
+      audition: { prevue: false },
+      anciens_prestataires: [],
     });
     setIsAnalyzing(false);
     setIsCreating(false);
+    setNewPrestataire("");
     onOpenChange(false);
   };
 
@@ -715,17 +780,33 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                 <div className="mt-6 p-4 bg-primary/5 border border-primary/10 rounded-lg">
                   <p className="text-sm font-medium mb-3 flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary" />
-                    L'IA expert architecture va extraire automatiquement :
+                    {disciplineSlug === 'communication' 
+                      ? "L'IA expert communication va extraire automatiquement :"
+                      : "L'IA expert architecture va extraire automatiquement :"
+                    }
                   </p>
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-muted-foreground ml-6">
                     <li className="list-disc">Titre et référence du marché</li>
                     <li className="list-disc">Maître d'ouvrage et contacts</li>
-                    <li className="list-disc">Budget et surface</li>
-                    <li className="list-disc">Date limite et visite de site</li>
-                    <li className="list-disc">Critères de jugement (pondérations)</li>
-                    <li className="list-disc">Équipe MOE requise</li>
-                    <li className="list-disc">Phases de mission demandées</li>
-                    <li className="list-disc">Pièces à remettre</li>
+                    {disciplineSlug === 'communication' ? (
+                      <>
+                        <li className="list-disc">Lots et domaines (graphisme, digital...)</li>
+                        <li className="list-disc">Multi-attributaires et montants</li>
+                        <li className="list-disc">Cas pratique et brief</li>
+                        <li className="list-disc">Audition (date, durée, format)</li>
+                        <li className="list-disc">Anciens prestataires</li>
+                        <li className="list-disc">Critères de notation</li>
+                      </>
+                    ) : (
+                      <>
+                        <li className="list-disc">Budget et surface</li>
+                        <li className="list-disc">Date limite et visite de site</li>
+                        <li className="list-disc">Critères de jugement (pondérations)</li>
+                        <li className="list-disc">Équipe MOE requise</li>
+                        <li className="list-disc">Phases de mission demandées</li>
+                        <li className="list-disc">Pièces à remettre</li>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -1133,7 +1214,7 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
               <div className="space-y-4">
                 <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                   <Users className="h-4 w-4" />
-                  Équipe MOE demandée
+                  {disciplineSlug === 'communication' ? 'Équipe demandée' : 'Équipe MOE demandée'}
                 </h3>
                 <RequiredTeamEditor
                   team={formData.required_team || []}
@@ -1146,6 +1227,292 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                   ) || []}
                 />
               </div>
+
+              {/* Communication-specific fields */}
+              {disciplineSlug === 'communication' && (
+                <>
+                  {/* Multi-attributaire & Lots */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                      <Layers className="h-4 w-4" />
+                      Structure du marché
+                      {aiFilledFields.has('lots') && (
+                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20">
+                          <Sparkles className="h-3 w-3 mr-0.5" />IA
+                        </Badge>
+                      )}
+                    </h3>
+
+                    <div className="p-4 rounded-lg border bg-muted/30 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-medium">Marché multi-attributaires</Label>
+                        <Switch
+                          checked={formData.is_multi_attributaire || false}
+                          onCheckedChange={(checked) => updateFormField('is_multi_attributaire', checked)}
+                        />
+                      </div>
+
+                      {formData.is_multi_attributaire && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-sm">Nombre d'attributaires</Label>
+                            <Input
+                              type="number"
+                              value={formData.nb_attributaires || ''}
+                              onChange={(e) => updateFormField('nb_attributaires', e.target.value ? Number(e.target.value) : undefined)}
+                              placeholder="Ex: 3"
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <CommunicationLotsEditor
+                      lots={formData.lots || []}
+                      onChange={(lots) => updateFormField('lots', lots)}
+                    />
+
+                    {/* Montants accord-cadre */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="flex items-center gap-1.5">
+                          <Euro className="h-3.5 w-3.5" />
+                          Montant minimum (€ HT)
+                          {aiFilledFields.has('montant') && (
+                            <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20">
+                              <Sparkles className="h-3 w-3 mr-0.5" />IA
+                            </Badge>
+                          )}
+                        </Label>
+                        <Input
+                          type="number"
+                          value={formData.montant_minimum || ''}
+                          onChange={(e) => updateFormField('montant_minimum', e.target.value ? Number(e.target.value) : undefined)}
+                          placeholder="Optionnel"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="flex items-center gap-1.5">
+                          <Euro className="h-3.5 w-3.5" />
+                          Montant maximum (€ HT)
+                        </Label>
+                        <Input
+                          type="number"
+                          value={formData.montant_maximum || ''}
+                          onChange={(e) => updateFormField('montant_maximum', e.target.value ? Number(e.target.value) : undefined)}
+                          placeholder="Optionnel"
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Durée et reconductions */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Durée du marché
+                      {aiFilledFields.has('duree_initiale_mois') && (
+                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20">
+                          <Sparkles className="h-3 w-3 mr-0.5" />IA
+                        </Badge>
+                      )}
+                    </h3>
+
+                    <div className="grid grid-cols-4 gap-4">
+                      <div>
+                        <Label className="text-sm">Durée initiale (mois)</Label>
+                        <Input
+                          type="number"
+                          value={formData.duree_initiale_mois || ''}
+                          onChange={(e) => updateFormField('duree_initiale_mois', e.target.value ? Number(e.target.value) : undefined)}
+                          placeholder="12"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">Nb. reconductions</Label>
+                        <Input
+                          type="number"
+                          value={formData.nb_reconductions || ''}
+                          onChange={(e) => updateFormField('nb_reconductions', e.target.value ? Number(e.target.value) : undefined)}
+                          placeholder="0"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">Durée reconduction (mois)</Label>
+                        <Input
+                          type="number"
+                          value={formData.duree_reconduction_mois || ''}
+                          onChange={(e) => updateFormField('duree_reconduction_mois', e.target.value ? Number(e.target.value) : undefined)}
+                          placeholder="12"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm flex items-center gap-1.5">
+                          Validité offre (jours)
+                          {aiFilledFields.has('validite_offre_jours') && (
+                            <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20">
+                              <Sparkles className="h-3 w-3 mr-0.5" />IA
+                            </Badge>
+                          )}
+                        </Label>
+                        <Input
+                          type="number"
+                          value={formData.validite_offre_jours || ''}
+                          onChange={(e) => updateFormField('validite_offre_jours', e.target.value ? Number(e.target.value) : undefined)}
+                          placeholder="90"
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cas pratique */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      Cas pratique
+                    </h3>
+                    <CasPratiqueEditor
+                      value={formData.cas_pratique || { requis: false }}
+                      onChange={(value) => updateFormField('cas_pratique', value)}
+                      aiFilledFields={aiFilledFields}
+                    />
+                  </div>
+
+                  {/* Audition */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                      <Mic className="h-4 w-4" />
+                      Audition / Présentation
+                      {aiFilledFields.has('audition') && (
+                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20">
+                          <Sparkles className="h-3 w-3 mr-0.5" />IA
+                        </Badge>
+                      )}
+                    </h3>
+
+                    <div className="p-4 rounded-lg border bg-muted/30 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="font-medium">Audition prévue</Label>
+                        <Switch
+                          checked={formData.audition?.prevue || false}
+                          onCheckedChange={(checked) => updateFormField('audition', { ...formData.audition, prevue: checked })}
+                        />
+                      </div>
+
+                      {formData.audition?.prevue && (
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <Label className="text-sm">Date prévue</Label>
+                            <Input
+                              type="date"
+                              value={formData.audition?.date || ''}
+                              onChange={(e) => updateFormField('audition', { ...formData.audition, date: e.target.value })}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm">Durée (minutes)</Label>
+                            <Input
+                              type="number"
+                              value={formData.audition?.duree_minutes || ''}
+                              onChange={(e) => updateFormField('audition', { ...formData.audition, duree_minutes: e.target.value ? Number(e.target.value) : undefined })}
+                              placeholder="45"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm">Format</Label>
+                            <Select
+                              value={formData.audition?.format || ''}
+                              onValueChange={(value) => updateFormField('audition', { ...formData.audition, format: value })}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="Sélectionner..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="presentiel">Présentiel</SelectItem>
+                                <SelectItem value="visio">Visioconférence</SelectItem>
+                                <SelectItem value="hybride">Hybride</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Anciens prestataires */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                      <History className="h-4 w-4" />
+                      Anciens prestataires
+                      {aiFilledFields.has('anciens_prestataires') && (
+                        <Badge variant="outline" className="h-5 px-1.5 text-[10px] bg-primary/10 border-primary/20">
+                          <Sparkles className="h-3 w-3 mr-0.5" />IA
+                        </Badge>
+                      )}
+                    </h3>
+
+                    <div className="space-y-3">
+                      {(formData.anciens_prestataires || []).length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {(formData.anciens_prestataires || []).map((presta, index) => (
+                            <Badge key={index} variant="secondary" className="flex items-center gap-1 pr-1">
+                              {presta}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = (formData.anciens_prestataires || []).filter((_, i) => i !== index);
+                                  updateFormField('anciens_prestataires', updated);
+                                }}
+                                className="ml-1 p-0.5 rounded hover:bg-destructive/20"
+                              >
+                                ×
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Input
+                          value={newPrestataire}
+                          onChange={(e) => setNewPrestataire(e.target.value)}
+                          placeholder="Nom d'un ancien prestataire..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newPrestataire.trim()) {
+                              e.preventDefault();
+                              updateFormField('anciens_prestataires', [...(formData.anciens_prestataires || []), newPrestataire.trim()]);
+                              setNewPrestataire("");
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            if (newPrestataire.trim()) {
+                              updateFormField('anciens_prestataires', [...(formData.anciens_prestataires || []), newPrestataire.trim()]);
+                              setNewPrestataire("");
+                            }
+                          }}
+                          disabled={!newPrestataire.trim()}
+                        >
+                          Ajouter
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Connaître les anciens titulaires peut aider à évaluer la concurrence
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Navigation */}
               <div className="flex justify-between pt-4 border-t">
