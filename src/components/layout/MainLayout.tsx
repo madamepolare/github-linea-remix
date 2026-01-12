@@ -4,6 +4,8 @@ import { AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { TopBar } from "./TopBar";
+import { GlobalTopBar } from "./GlobalTopBar";
+import { PostItSidebar } from "./PostItSidebar";
 import { PageTransition } from "./PageTransition";
 import { useSidebarStore } from "@/hooks/useSidebarStore";
 import { cn } from "@/lib/utils";
@@ -16,6 +18,7 @@ import { useWorkspaceModuleGuard } from "@/hooks/useWorkspaceModuleGuard";
 import { useAuth } from "@/contexts/AuthContext";
 import { getModuleFromPath } from "@/lib/navigationConfig";
 import { THIN_STROKE } from "@/components/ui/icon";
+import { usePostItTasks } from "@/hooks/usePostItTasks";
 
 export function MainLayout() {
   // Guard: redirect to home if current module not enabled in new workspace
@@ -24,6 +27,10 @@ export function MainLayout() {
   const { activeWorkspace } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [postItOpen, setPostItOpen] = useState(false);
+  
+  // Get pending post-it count
+  const { pendingCount } = usePostItTasks();
 
   // Get current module for mobile header
   const currentModule = getModuleFromPath(location.pathname);
@@ -109,6 +116,14 @@ export function MainLayout() {
           collapsed ? "lg:pl-[72px]" : "lg:pl-[260px]"
         )}
       >
+        {/* Global TopBar with search, actions, post-it, timer - hidden on mobile */}
+        <div className="hidden lg:block sticky top-0 z-40 bg-background">
+          <GlobalTopBar 
+            onOpenPostIt={() => setPostItOpen(true)} 
+            postItCount={pendingCount} 
+          />
+        </div>
+
         {/* Contextual TopBar - hidden on mobile since we show module in header */}
         <div className="hidden lg:block">
           <TopBar />
@@ -127,6 +142,9 @@ export function MainLayout() {
           </TerminologyProvider>
         </main>
       </div>
+
+      {/* Post-it Sidebar */}
+      <PostItSidebar open={postItOpen} onOpenChange={setPostItOpen} />
 
       {/* Global Time Tracker Overlay */}
       <GlobalTimeTracker />
