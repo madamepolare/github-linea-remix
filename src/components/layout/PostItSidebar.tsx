@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Check, Trash2, StickyNote, Users, AtSign } from "lucide-react";
+import { Plus, Check, Trash2, StickyNote, Users, AtSign, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -10,8 +10,9 @@ import { THIN_STROKE } from "@/components/ui/icon";
 import { usePostItTasks, QuickTask } from "@/hooks/usePostItTasks";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
+import { format, isAfter, subHours } from "date-fns";
 import { fr } from "date-fns/locale";
+import confetti from "canvas-confetti";
 
 interface PostItSidebarProps {
   open: boolean;
@@ -66,11 +67,39 @@ export function PostItSidebar({ open, onOpenChange }: PostItSidebarProps) {
   );
 
   const pendingTasks = quickTasks?.filter((t) => t.status === "pending") || [];
-  const completedTasks = quickTasks?.filter((t) => t.status === "completed").slice(0, 5) || [];
+  
+  // Filter completed tasks - only show those completed in the last 24 hours
+  const twentyFourHoursAgo = subHours(new Date(), 24);
+  const recentCompletedTasks = quickTasks?.filter((t) => {
+    if (t.status !== "completed") return false;
+    if (!t.completed_at) return true; // Show if no timestamp
+    return isAfter(new Date(t.completed_at), twentyFourHoursAgo);
+  }).slice(0, 5) || [];
 
   // Separate own tasks vs shared tasks
   const myTasks = pendingTasks.filter(t => t.created_by === user?.id);
   const sharedWithMe = pendingTasks.filter(t => t.created_by !== user?.id);
+
+  // Animation state for celebrating completion
+  const [celebratingId, setCelebratingId] = useState<string | null>(null);
+
+  const handleCompleteWithCelebration = (taskId: string) => {
+    setCelebratingId(taskId);
+    
+    // Fire confetti
+    confetti({
+      particleCount: 80,
+      spread: 60,
+      origin: { y: 0.6 },
+      colors: ['#fbbf24', '#84cc16', '#3b82f6', '#a855f7', '#f43f5e'],
+    });
+    
+    // Delay the actual completion to show animation
+    setTimeout(() => {
+      completeQuickTask.mutate(taskId);
+      setCelebratingId(null);
+    }, 400);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -256,10 +285,11 @@ export function PostItSidebar({ open, onOpenChange }: PostItSidebarProps) {
                         key={task.id}
                         task={task}
                         colorIndex={index}
-                        onComplete={() => completeQuickTask.mutate(task.id)}
+                        onComplete={() => handleCompleteWithCelebration(task.id)}
                         onDelete={() => deleteQuickTask.mutate(task.id)}
                         isOwner={true}
                         profiles={profiles}
+                        isCelebrating={celebratingId === task.id}
                       />
                     ))}
                   </AnimatePresence>
@@ -278,10 +308,11 @@ export function PostItSidebar({ open, onOpenChange }: PostItSidebarProps) {
                           key={task.id}
                           task={task}
                           colorIndex={index + myTasks.length}
-                          onComplete={() => completeQuickTask.mutate(task.id)}
+                          onComplete={() => handleCompleteWithCelebration(task.id)}
                           onDelete={() => {}} // Shared users can't delete
                           isOwner={false}
                           profiles={profiles}
+                          isCelebrating={celebratingId === task.id}
                         />
                       ))}
                     </AnimatePresence>
@@ -290,14 +321,14 @@ export function PostItSidebar({ open, onOpenChange }: PostItSidebarProps) {
               </>
             )}
 
-            {/* Completed tasks */}
-            {completedTasks.length > 0 && (
+            {/* Completed tasks - only from last 24h */}
+            {recentCompletedTasks.length > 0 && (
               <div className="mt-6 pt-4 border-t border-border">
                 <p className="text-[11px] font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-                  Terminés
+                  Terminés (dernières 24h)
                 </p>
                 <div className="space-y-1">
-                  {completedTasks.map((task) => (
+                  {recentCompletedTasks.map((task) => (
                     <motion.div
                       key={task.id}
                       initial={{ opacity: 0 }}
@@ -342,9 +373,10 @@ interface PostItCardProps {
   onDelete: () => void;
   isOwner: boolean;
   profiles?: Array<{ user_id: string; full_name: string | null; avatar_url: string | null }>;
+  isCelebrating?: boolean;
 }
 
-function PostItCard({ task, colorIndex, onComplete, onDelete, isOwner, profiles }: PostItCardProps) {
+function PostItCard({ task, colorIndex, onComplete, onDelete, isOwner, profiles, isCelebrating }: PostItCardProps) {
   const colors = getPostItColor(colorIndex);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -355,7 +387,11 @@ function PostItCard({ task, colorIndex, onComplete, onDelete, isOwner, profiles 
     <motion.div
       layout
       initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ 
+        opacity: isCelebrating ? 0.5 : 1, 
+        y: 0,
+        scale: isCelebrating ? 0.95 : 1,
+      }}
       exit={{ opacity: 0, x: 50, scale: 0.95 }}
       transition={{ type: "spring", damping: 25, stiffness: 350 }}
       onMouseEnter={() => setIsHovered(true)}
@@ -363,7 +399,8 @@ function PostItCard({ task, colorIndex, onComplete, onDelete, isOwner, profiles 
       className={cn(
         "group relative rounded-lg border border-border/60 transition-all duration-200",
         colors.bg,
-        isHovered && "border-border shadow-sm"
+        isHovered && "border-border shadow-sm",
+        isCelebrating && "ring-2 ring-success/50"
       )}
     >
       {/* Color accent bar */}
@@ -380,14 +417,18 @@ function PostItCard({ task, colorIndex, onComplete, onDelete, isOwner, profiles 
           )}
         >
           <AnimatePresence>
-            {isHovered && (
+            {(isHovered || isCelebrating) && (
               <motion.div
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}
                 transition={{ duration: 0.15 }}
               >
-                <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                {isCelebrating ? (
+                  <Sparkles className="h-2.5 w-2.5 text-success" strokeWidth={3} />
+                ) : (
+                  <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                )}
               </motion.div>
             )}
           </AnimatePresence>
