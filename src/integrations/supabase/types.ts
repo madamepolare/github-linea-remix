@@ -2568,6 +2568,74 @@ export type Database = {
           },
         ]
       }
+      employee_contracts: {
+        Row: {
+          annual_days: number | null
+          contract_type: string
+          cp_annual_days: number | null
+          created_at: string | null
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          is_executive: boolean | null
+          notes: string | null
+          probation_end_date: string | null
+          rtt_annual_days: number | null
+          seniority_start_date: string | null
+          start_date: string
+          updated_at: string | null
+          user_id: string
+          weekly_hours: number | null
+          workspace_id: string
+        }
+        Insert: {
+          annual_days?: number | null
+          contract_type?: string
+          cp_annual_days?: number | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_executive?: boolean | null
+          notes?: string | null
+          probation_end_date?: string | null
+          rtt_annual_days?: number | null
+          seniority_start_date?: string | null
+          start_date: string
+          updated_at?: string | null
+          user_id: string
+          weekly_hours?: number | null
+          workspace_id: string
+        }
+        Update: {
+          annual_days?: number | null
+          contract_type?: string
+          cp_annual_days?: number | null
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_executive?: boolean | null
+          notes?: string | null
+          probation_end_date?: string | null
+          rtt_annual_days?: number | null
+          seniority_start_date?: string | null
+          start_date?: string
+          updated_at?: string | null
+          user_id?: string
+          weekly_hours?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_contracts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entity_activities: {
         Row: {
           activity_type: string
@@ -2661,6 +2729,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "feedback_entries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      french_holidays: {
+        Row: {
+          created_at: string | null
+          holiday_date: string
+          id: string
+          is_worked: boolean | null
+          name: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          holiday_date: string
+          id?: string
+          is_worked?: boolean | null
+          name: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          holiday_date?: string
+          id?: string
+          is_worked?: boolean | null
+          name?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "french_holidays_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -3523,6 +3626,194 @@ export type Database = {
           },
         ]
       }
+      leave_balance_transactions: {
+        Row: {
+          absence_id: string | null
+          amount: number
+          balance_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          leave_type: string
+          transaction_type: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          absence_id?: string | null
+          amount: number
+          balance_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          leave_type: string
+          transaction_type: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          absence_id?: string | null
+          amount?: number
+          balance_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          leave_type?: string
+          transaction_type?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_balance_transactions_absence_id_fkey"
+            columns: ["absence_id"]
+            isOneToOne: false
+            referencedRelation: "team_absences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_balance_transactions_balance_id_fkey"
+            columns: ["balance_id"]
+            isOneToOne: false
+            referencedRelation: "leave_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_balance_transactions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_balances: {
+        Row: {
+          acquired: number | null
+          adjustment: number | null
+          created_at: string | null
+          id: string
+          initial_balance: number | null
+          last_accrual_date: string | null
+          leave_type: string
+          notes: string | null
+          pending: number | null
+          period_year: number
+          taken: number | null
+          updated_at: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          acquired?: number | null
+          adjustment?: number | null
+          created_at?: string | null
+          id?: string
+          initial_balance?: number | null
+          last_accrual_date?: string | null
+          leave_type: string
+          notes?: string | null
+          pending?: number | null
+          period_year: number
+          taken?: number | null
+          updated_at?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          acquired?: number | null
+          adjustment?: number | null
+          created_at?: string | null
+          id?: string
+          initial_balance?: number | null
+          last_accrual_date?: string | null
+          leave_type?: string
+          notes?: string | null
+          pending?: number | null
+          period_year?: number
+          taken?: number | null
+          updated_at?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_balances_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_type_config: {
+        Row: {
+          annual_allowance: number | null
+          color: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_countable: boolean | null
+          is_paid: boolean | null
+          label: string
+          leave_type: string
+          max_carry_over: number | null
+          min_notice_days: number | null
+          monthly_accrual: number | null
+          requires_justification: boolean | null
+          sort_order: number | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          annual_allowance?: number | null
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_countable?: boolean | null
+          is_paid?: boolean | null
+          label: string
+          leave_type: string
+          max_carry_over?: number | null
+          min_notice_days?: number | null
+          monthly_accrual?: number | null
+          requires_justification?: boolean | null
+          sort_order?: number | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          annual_allowance?: number | null
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_countable?: boolean | null
+          is_paid?: boolean | null
+          label?: string
+          leave_type?: string
+          max_carry_over?: number | null
+          min_notice_days?: number | null
+          monthly_accrual?: number | null
+          requires_justification?: boolean | null
+          sort_order?: number | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_type_config_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_categories: {
         Row: {
           color: string | null
@@ -4326,6 +4617,146 @@ export type Database = {
           },
           {
             foreignKeyName: "object_categories_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_periods: {
+        Row: {
+          created_at: string | null
+          end_date: string
+          export_filename: string | null
+          exported_at: string | null
+          id: string
+          notes: string | null
+          period_month: number
+          period_year: number
+          start_date: string
+          status: string | null
+          updated_at: string | null
+          validated_at: string | null
+          validated_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_date: string
+          export_filename?: string | null
+          exported_at?: string | null
+          id?: string
+          notes?: string | null
+          period_month: number
+          period_year: number
+          start_date: string
+          status?: string | null
+          updated_at?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string
+          export_filename?: string | null
+          exported_at?: string | null
+          id?: string
+          notes?: string | null
+          period_month?: number
+          period_year?: number
+          start_date?: string
+          status?: string | null
+          updated_at?: string | null
+          validated_at?: string | null
+          validated_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_periods_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_variables: {
+        Row: {
+          bonuses: Json | null
+          cp_remaining: number | null
+          cp_taken: number | null
+          created_at: string | null
+          deductions: Json | null
+          id: string
+          notes: string | null
+          overtime_hours: number | null
+          period_id: string
+          rtt_remaining: number | null
+          rtt_taken: number | null
+          sick_days: number | null
+          sick_days_without_pay: number | null
+          total_worked_hours: number | null
+          training_days: number | null
+          unpaid_leave_days: number | null
+          updated_at: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          bonuses?: Json | null
+          cp_remaining?: number | null
+          cp_taken?: number | null
+          created_at?: string | null
+          deductions?: Json | null
+          id?: string
+          notes?: string | null
+          overtime_hours?: number | null
+          period_id: string
+          rtt_remaining?: number | null
+          rtt_taken?: number | null
+          sick_days?: number | null
+          sick_days_without_pay?: number | null
+          total_worked_hours?: number | null
+          training_days?: number | null
+          unpaid_leave_days?: number | null
+          updated_at?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          bonuses?: Json | null
+          cp_remaining?: number | null
+          cp_taken?: number | null
+          created_at?: string | null
+          deductions?: Json | null
+          id?: string
+          notes?: string | null
+          overtime_hours?: number | null
+          period_id?: string
+          rtt_remaining?: number | null
+          rtt_taken?: number | null
+          sick_days?: number | null
+          sick_days_without_pay?: number | null
+          total_worked_hours?: number | null
+          training_days?: number | null
+          unpaid_leave_days?: number | null
+          updated_at?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_variables_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_variables_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -7032,9 +7463,12 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           created_at: string
+          days_count: number | null
+          deducted_from_balance: boolean | null
           end_date: string
           end_half_day: boolean | null
           id: string
+          justification_url: string | null
           reason: string | null
           rejection_reason: string | null
           start_date: string
@@ -7042,6 +7476,7 @@ export type Database = {
           status: string
           updated_at: string
           user_id: string
+          working_days_count: number | null
           workspace_id: string
         }
         Insert: {
@@ -7049,9 +7484,12 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          days_count?: number | null
+          deducted_from_balance?: boolean | null
           end_date: string
           end_half_day?: boolean | null
           id?: string
+          justification_url?: string | null
           reason?: string | null
           rejection_reason?: string | null
           start_date: string
@@ -7059,6 +7497,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id: string
+          working_days_count?: number | null
           workspace_id: string
         }
         Update: {
@@ -7066,9 +7505,12 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
+          days_count?: number | null
+          deducted_from_balance?: boolean | null
           end_date?: string
           end_half_day?: boolean | null
           id?: string
+          justification_url?: string | null
           reason?: string | null
           rejection_reason?: string | null
           start_date?: string
@@ -7076,6 +7518,7 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+          working_days_count?: number | null
           workspace_id?: string
         }
         Relationships: [
@@ -8651,6 +9094,16 @@ export type Database = {
     }
     Functions: {
       accept_workspace_invite: { Args: { invite_token: string }; Returns: Json }
+      calculate_working_days: {
+        Args: {
+          p_end_date: string
+          p_end_half_day?: boolean
+          p_start_date: string
+          p_start_half_day?: boolean
+          p_workspace_id: string
+        }
+        Returns: number
+      }
       can_access_emails: {
         Args: { _created_by: string; _user_id: string; _workspace_id: string }
         Returns: boolean
@@ -8740,7 +9193,28 @@ export type Database = {
         | "letter"
         | "other"
       element_visibility: "all" | "admin" | "owner"
+      french_leave_type:
+        | "cp"
+        | "rtt"
+        | "anciennete"
+        | "fractionnement"
+        | "maladie"
+        | "maternite"
+        | "paternite"
+        | "parental"
+        | "enfant_malade"
+        | "evenement_familial"
+        | "sans_solde"
+        | "formation"
+        | "compte_epargne"
+        | "autre"
       invitation_response: "pending" | "accepted" | "declined"
+      payroll_period_status:
+        | "draft"
+        | "pending"
+        | "validated"
+        | "exported"
+        | "closed"
       procedure_type:
         | "ouvert"
         | "restreint"
@@ -8907,7 +9381,30 @@ export const Constants = {
         "other",
       ],
       element_visibility: ["all", "admin", "owner"],
+      french_leave_type: [
+        "cp",
+        "rtt",
+        "anciennete",
+        "fractionnement",
+        "maladie",
+        "maternite",
+        "paternite",
+        "parental",
+        "enfant_malade",
+        "evenement_familial",
+        "sans_solde",
+        "formation",
+        "compte_epargne",
+        "autre",
+      ],
       invitation_response: ["pending", "accepted", "declined"],
+      payroll_period_status: [
+        "draft",
+        "pending",
+        "validated",
+        "exported",
+        "closed",
+      ],
       procedure_type: [
         "ouvert",
         "restreint",
