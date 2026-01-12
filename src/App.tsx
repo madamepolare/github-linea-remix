@@ -23,6 +23,7 @@ const CompanyDetail = lazy(() => import("./pages/CompanyDetail"));
 const ContactDetail = lazy(() => import("./pages/ContactDetail"));
 const LeadDetail = lazy(() => import("./pages/LeadDetail"));
 const Tasks = lazy(() => import("./pages/Tasks"));
+const TaskDetail = lazy(() => import("./pages/TaskDetail"));
 const Projects = lazy(() => import("./pages/Projects"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const Commercial = lazy(() => import("./pages/Commercial"));
@@ -111,7 +112,8 @@ const App = () => (
                   <Route path="/crm/contacts/:id" element={<Suspense fallback={<PageLoader />}><ContactDetail /></Suspense>} />
                   <Route path="/crm/leads/:id" element={<Suspense fallback={<PageLoader />}><LeadDetail /></Suspense>} />
                   <Route path="/tasks" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
-                  <Route path="/tasks/:view" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
+                  <Route path="/tasks/view/:view" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
+                  <Route path="/tasks/:taskId" element={<Suspense fallback={<PageLoader />}><TaskDetail /></Suspense>} />
                   <Route path="/projects" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
                   <Route path="/projects/list" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
                   <Route path="/projects/board" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
