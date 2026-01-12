@@ -65,70 +65,127 @@ RÈGLES:
 - Si une information n'est pas trouvée, indique null (pas "Non précisé")
 - Pour les critères, extrait les VRAIS pourcentages du RC, pas des estimations`;
 
-const COMMUNICATION_EXPERT_PROMPT = `Tu es un expert senior en marchés publics de communication, spécialisé dans les appels d'offres d'agences de communication, RP, publicité et événementiel.
+const COMMUNICATION_EXPERT_PROMPT = `Tu es l'EXPERT NUMÉRO UN en marchés publics de communication en France. Tu analyses les DCE d'agences de communication avec une précision PARFAITE.
 
-MISSION: Analyse en détail les documents DCE fournis et extrais TOUTES les informations pertinentes pour constituer le dossier de candidature d'une agence de communication.
+## TON EXPERTISE
+- 20 ans d'expérience sur les marchés de communication publique
+- Expert des accords-cadres multi-attributaires
+- Maîtrise totale des BPU communication (taux journaliers DA, CR, CDP...)
+- Connaissance exhaustive des procédures (MAPA, AOO, AORestreint, Concours)
 
-EXPERTISE REQUISE:
-- Connaissance des marchés de communication publique (accords-cadres, compétitions d'agences)
-- Maîtrise des prestations de communication : conseil, création, production, média, digital, RP
-- Compréhension des BPU (Bordereau de Prix Unitaires) avec taux journaliers
-- Expertise en analyse des RC, CCAP, cahiers des charges de communication
+## TA MISSION CRITIQUE
+Analyse CHAQUE LIGNE des documents DCE et extrais TOUTES les informations avec une précision de 100%.
+Tu dois comprendre le CONTEXTE, les ENJEUX et les SUBTILITÉS de chaque marché.
 
-SPÉCIFICITÉS MARCHÉS COMMUNICATION:
-1. STRUCTURE DU MARCHÉ:
-   - Mono ou multi-attributaires (1 à N agences retenues)
-   - Nombre de LOTS et périmètre de chaque lot
-   - Pour chaque lot: domaine (graphisme, impression, digital, événementiel, RP, vidéo...)
-   
-2. MONTANTS:
-   - Montant MINIMUM et MAXIMUM de l'accord-cadre (pas de budget travaux!)
-   - Budget par lot si allotissement
-   - Durée de l'accord-cadre et reconductions
+## STRUCTURE DU MARCHÉ - EXTRACTION OBLIGATOIRE
 
-3. CAS PRATIQUE:
-   - Y a-t-il un cas pratique / exercice créatif demandé?
-   - Quel est le brief exact?
-   - Quels sont les livrables attendus pour le cas pratique?
-   - Délai de réalisation du cas pratique
+### 1. ALLOTISSEMENT ET MULTI-ATTRIBUTAIRES
+- Le marché est-il alloti? Combien de LOTS?
+- Pour CHAQUE LOT, extrais:
+  * Numéro et intitulé EXACT
+  * Domaine: graphisme, impression, digital, événementiel, vidéo, stratégie, RP, signalétique, global
+  * Montant min/max par lot si indiqué
+- Le marché est-il MULTI-ATTRIBUTAIRE? (plusieurs agences sur le même lot)
+- Si oui, combien d'agences seront retenues par lot?
 
-4. CRITÈRES DE JUGEMENT:
-   - Attention: souvent Valeur technique 60-70%, Prix 30-40%
-   - Sous-critères fréquents: compréhension du besoin, recommandation stratégique, créativité, méthodologie, équipe dédiée
-   - Le cas pratique est souvent noté séparément ou intégré dans la valeur technique
+### 2. MONTANTS DE L'ACCORD-CADRE (CRITIQUE!)
+- Cherche "montant minimum" et "montant maximum" dans le RC/CCAP
+- Attention: ce sont souvent des montants sur 4 ans (durée totale avec reconductions)
+- Format type: "sans montant minimum et avec un montant maximum de 400 000 € HT"
+- EXTRAIS les montants EXACTS en euros HT
 
-5. ANCIENS PRESTATAIRES:
-   - Le titulaire actuel est-il mentionné?
-   - Y a-t-il des informations sur les marchés précédents?
+### 3. DURÉE ET RECONDUCTIONS
+- Durée INITIALE du marché (souvent 12 ou 24 mois)
+- Nombre de RECONDUCTIONS possibles (souvent 1 à 3)
+- Durée de chaque reconduction
+- Date de notification prévisionnelle / début de mission
 
-6. ÉQUIPE ATTENDUE:
-   - Profils types: Directeur conseil, DA, Chef de projet, Concepteur-rédacteur, Planneur
-   - Attentes en termes de séniorité
+### 4. VALIDITÉ DES OFFRES
+- Cherche "validité des offres" ou "délai de validité"
+- Généralement 90, 120 ou 180 jours
+- CRITIQUE pour le rappel automatique avant expiration
 
-7. PHASES:
-   - Phase candidature: quand? quelles pièces?
-   - Phase offre: quand? quelles pièces?
-   - Audition/soutenance prévue?
+### 5. CAS PRATIQUE / EXERCICE CRÉATIF (EXTRACTION DÉTAILLÉE!)
+Si un cas pratique est demandé, extrais TOUT:
+- Le BRIEF COMPLET (recopie le texte intégral si possible)
+- Les LIVRABLES ATTENDUS (ex: "recommandation stratégique 5 pages", "3 pistes créatives")
+- Le FORMAT de rendu (PDF, nombre de pages, dimensions...)
+- Le DÉLAI pour réaliser le cas pratique
+- La PONDÉRATION dans la note finale (souvent 20-40% de la valeur technique)
+- Les CONTRAINTES spécifiques
 
-EXTRACTION PRIORITAIRE:
-1. IDENTIFICATION: Référence, titre, annonceur/MOA
-2. STRUCTURE: Mono/multi-attributaire, nombre de lots, domaine par lot
-3. MONTANTS: Min/max accord-cadre, budget/lot, durée
-4. DATES: Candidature, offre, audition, début de mission
-5. CRITÈRES: Avec pondérations EXACTES
-6. CAS PRATIQUE: Brief détaillé, livrables, délai
-7. ÉQUIPE: Profils demandés avec niveau
-8. ANCIENS PRESTATAIRES: Si mentionnés
-9. LIVRABLES: Par phase (candidature vs offre)
-10. ALERTES: Points critiques, exigences inhabituelles
+### 6. AUDITION / SOUTENANCE
+- Une audition est-elle prévue?
+- Date ou période envisagée
+- Durée de la présentation (souvent 30-60 min)
+- Format: présentiel, visio, hybride
+- Qui sera présent côté MOA?
 
-NE PAS CHERCHER: Surface en m², budget travaux, phases MOE (ESQ, APS...) car ce ne sont PAS des marchés d'architecture.
+### 7. CRITÈRES DE JUGEMENT (PONDÉRATIONS EXACTES!)
+CRITIQUE: Extrais CHAQUE critère avec sa pondération EXACTE
+Format typique:
+- Valeur technique: 60% (dont méthodologie 20%, références 20%, équipe 20%)
+- Prix: 40%
+OU avec cas pratique:
+- Valeur technique hors cas: 40%
+- Cas pratique: 20%
+- Prix: 40%
 
-RÈGLES:
-- Sois EXHAUSTIF et PRÉCIS
-- Cite les sources (RC article X, CCAP page Y)
-- Si une information n'est pas trouvée, indique null
-- Pour les critères, extrait les VRAIS pourcentages`;
+### 8. ANCIENS PRESTATAIRES
+Cherche dans le RC ou CCAP si mentionné:
+- Titulaire(s) sortant(s)
+- Ancien marché (montants, durée)
+- Cette info est PRÉCIEUSE pour comprendre le contexte
+
+### 9. ÉQUIPE ATTENDUE (PROFILS COMMUNICATION)
+Profils types à identifier:
+- Directeur conseil / Directeur de clientèle
+- Directeur de création / Directeur artistique
+- Chef de projet / Chef de publicité
+- Concepteur-rédacteur
+- Planneur stratégique
+- Social media manager / Community manager
+- Motion designer / Vidéaste
+- Photographe
+- Acheteur média
+- RP / Relations presse / Influence
+
+### 10. PIÈCES À REMETTRE
+PHASE CANDIDATURE:
+- DC1, DC2, attestations...
+- Références (combien? quel montant minimum?)
+- Moyens humains et techniques
+
+PHASE OFFRE:
+- Mémoire technique (nombre de pages max?)
+- BPU rempli
+- Cas pratique
+- Planning d'intervention
+
+### 11. DATES CRITIQUES
+- Date limite de remise des CANDIDATURES
+- Date limite de remise des OFFRES
+- Date d'AUDITION prévue
+- Date de NOTIFICATION prévisionnelle
+
+### 12. ALERTES ET POINTS D'ATTENTION
+Génère des alertes sur:
+- Délais serrés pour le cas pratique
+- Exigences inhabituelles (assurances élevées, CA minimum...)
+- Références spécifiques demandées
+- Exclusivité sectorielle
+- Conflits d'intérêts potentiels
+
+## RÈGLES D'OR
+1. NE DEVINE JAMAIS - extrais UNIQUEMENT ce qui est ÉCRIT
+2. Si une info n'est pas trouvée → null (pas "non précisé")
+3. Pour les montants: TOUJOURS en euros HT
+4. Pour les dates: TOUJOURS au format YYYY-MM-DD
+5. Pour les heures: TOUJOURS au format HH:MM
+6. CITE tes sources (RC page X, CCAP article Y)
+
+## FORMAT DE SORTIE
+Utilise OBLIGATOIREMENT la fonction extract_tender_info avec TOUS les champs pertinents.`;
 
 const SCENOGRAPHIE_EXPERT_PROMPT = `Tu es un expert en marchés publics culturels, spécialisé dans les appels d'offres de scénographie, muséographie et expositions.
 
@@ -646,13 +703,70 @@ serve(async (req) => {
     let analysisContent: string;
     
     if (parsedTexts.length > 0) {
-      analysisContent = `CONTENU DES DOCUMENTS DCE:
+      // Build discipline-specific instructions
+      const disciplineInstructions = discipline_slug === 'communication' 
+        ? `
+## INSTRUCTIONS SPÉCIFIQUES COMMUNICATION
+
+Tu analyses un marché public de COMMUNICATION. Cherche et extrais avec précision:
+
+1. **STRUCTURE DU MARCHÉ**
+   - Recherche "allotissement", "lot n°", "nombre de lots"
+   - Recherche "multi-attributaire", "nombre d'attributaires maximum"
+   - Pour chaque lot: numéro, intitulé, domaine (graphisme/digital/événementiel...)
+
+2. **MONTANTS ACCORD-CADRE**
+   - Recherche "montant minimum", "montant maximum", "montant estimatif"
+   - Attention: souvent exprimé sur la durée totale (4 ans)
+   - Format fréquent: "sans minimum et avec un maximum de XXX € HT"
+
+3. **CAS PRATIQUE - TRÈS IMPORTANT**
+   - Recherche "cas pratique", "exercice", "mise en situation", "épreuve créative"
+   - EXTRAIS LE BRIEF COMPLET mot pour mot
+   - Note les livrables attendus (combien de pistes? format?)
+   - Délai de réalisation
+   - Pondération dans la note
+
+4. **AUDITION**
+   - Recherche "audition", "soutenance", "présentation orale", "jury"
+   - Date, durée, format (visio/présentiel)
+
+5. **ANCIENS TITULAIRES**
+   - Recherche "sortant", "titulaire actuel", "marché précédent"
+   - Nom de l'agence si mentionné
+
+6. **CRITÈRES DE NOTATION**
+   - Recherche "critères de jugement", "notation", "pondération"
+   - EXTRAIT chaque critère avec son % EXACT
+`
+        : `
+## INSTRUCTIONS POUR L'ANALYSE
+
+Analyse ces documents DCE d'architecture et extrais:
+- Toutes les dates critiques
+- Le budget travaux
+- Les critères de jugement avec pondérations
+- L'équipe MOE requise
+- Les pièces à remettre
+`;
+
+      analysisContent = `${disciplineInstructions}
+
+## CONTENU DES DOCUMENTS DCE
+
 ${parsedTexts.join('\n\n')}
+
+---
 
 FICHIERS ANALYSÉS: ${files.map((f: { name: string }) => f.name).join(', ')}
 
-Analyse ces documents DCE et extrais TOUTES les informations pour créer le dossier.
-Utilise la fonction extract_tender_info pour retourner les données structurées.`;
+## INSTRUCTIONS FINALES
+
+1. Lis ATTENTIVEMENT chaque document
+2. Extrais TOUTES les informations demandées
+3. Pour chaque champ, cite la SOURCE (document + page/article si possible)
+4. N'invente RIEN - si une info n'est pas trouvée, mets null
+5. Utilise la fonction extract_tender_info pour retourner les données structurées`;
     } else {
       const fileAnalyses = files.map((f: { name: string; type: string }) => {
         const docType = detectDocumentType(f.name);
@@ -755,6 +869,43 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
     // Add discipline to extracted data
     extractedData.discipline_slug = discipline_slug;
 
+    // Normalize communication-specific data for frontend compatibility
+    if (discipline_slug === 'communication') {
+      // Convert anciens_prestataires from objects to strings if needed
+      if (Array.isArray(extractedData.anciens_prestataires)) {
+        extractedData.anciens_prestataires = (extractedData.anciens_prestataires as Array<unknown>).map((p: unknown) => {
+          if (typeof p === 'string') return p;
+          if (p && typeof p === 'object' && 'nom' in p) {
+            const presta = p as { nom: string; lot?: string; periode?: string };
+            let result = presta.nom;
+            if (presta.lot) result += ` (Lot: ${presta.lot})`;
+            if (presta.periode) result += ` - ${presta.periode}`;
+            return result;
+          }
+          return String(p);
+        });
+      }
+
+      // Ensure cas_pratique has the right structure
+      if (extractedData.cas_pratique && typeof extractedData.cas_pratique === 'object') {
+        const cp = extractedData.cas_pratique as Record<string, unknown>;
+        if (cp.requis === undefined) {
+          cp.requis = !!(cp.brief || cp.livrables);
+        }
+      }
+
+      // Convert cibles from string to array if needed
+      if (typeof extractedData.cibles === 'string') {
+        extractedData.cibles = extractedData.cibles.split(',').map((c: string) => c.trim()).filter((c: string) => c);
+      }
+
+      console.log("[DCE Analysis] Communication data normalized", {
+        lots: Array.isArray(extractedData.lots) ? extractedData.lots.length : 0,
+        cas_pratique_requis: (extractedData.cas_pratique as Record<string, unknown>)?.requis,
+        anciens_prestataires: Array.isArray(extractedData.anciens_prestataires) ? extractedData.anciens_prestataires.length : 0
+      });
+    }
+
     // Count what was extracted for feedback
     const extractionStats = {
       files_analyzed: parsingStats.success > 0 ? parsingStats.success : files.length,
@@ -763,6 +914,7 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
       team_requirements: Array.isArray(extractedData.required_team) ? extractedData.required_team.length : 0,
       alerts_found: Array.isArray(extractedData.critical_alerts) ? extractedData.critical_alerts.length : 0,
       lots_found: Array.isArray(extractedData.lots) ? extractedData.lots.length : 0,
+      cas_pratique_found: !!(extractedData.cas_pratique && (extractedData.cas_pratique as Record<string, unknown>).requis),
       parsing_method: LLAMA_PARSE_API_KEY ? 'llamaparse' : 'filename_only',
     };
 
