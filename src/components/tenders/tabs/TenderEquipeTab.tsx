@@ -1284,6 +1284,7 @@ function PipelineView({
   onBulkInvite,
   isLoading,
   requiredSpecialties,
+  getSpecialtyLabel,
 }: {
   candidates: PartnerCandidate[];
   candidatesBySpecialty: Record<string, PartnerCandidate[]>;
@@ -1308,6 +1309,7 @@ function PipelineView({
   onBulkInvite: () => void;
   isLoading: boolean;
   requiredSpecialties: string[];
+  getSpecialtyLabel: (value: string) => string;
 }) {
   const toggleCandidate = (id: string) => {
     const newSet = new Set(selectedCandidates);
@@ -1745,6 +1747,7 @@ function TeamView({
   onRemoveMember,
   onSendInvite,
   isLoading,
+  getSpecialtyLabel,
 }: {
   teamMembers: any[];
   teamByRole: Record<string, any[]>;
@@ -1753,6 +1756,7 @@ function TeamView({
   onRemoveMember: (id: string, name: string) => void;
   onSendInvite: (member: any) => void;
   isLoading: boolean;
+  getSpecialtyLabel: (value: string) => string;
 }) {
   const roles: TenderTeamRole[] = ['mandataire', 'cotraitant', 'sous_traitant'];
 
