@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Building2, Loader2, Save, Upload, FileText, Palette, Image, PenLine, X } from "lucide-react";
+import { Building2, Loader2, Save, Upload, FileText, Palette, Image, PenLine, X, Clock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAgencyInfo, UpdateAgencyInfoInput } from "@/hooks/useAgencyInfo";
+import { usePlanningSettings } from "@/hooks/usePlanningSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { LiveDocumentPreview } from "@/components/documents/editors/LiveDocumentPreview";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,6 +26,80 @@ const workspaceSchema = z.object({
 });
 
 type WorkspaceFormData = z.infer<typeof workspaceSchema>;
+
+// Helper component for hours select
+function HourSelect({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <Select value={value.toString()} onValueChange={(v) => onChange(parseInt(v))}>
+        <SelectTrigger className="w-[120px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {hours.map((h) => (
+            <SelectItem key={h} value={h.toString()}>
+              {h.toString().padStart(2, "0")}:00
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function AgencyHoursSection() {
+  const { planningSettings, updatePlanningSettings, isLoading } = usePlanningSettings();
+
+  if (isLoading) {
+    return <div className="animate-pulse h-32 bg-muted rounded-lg" />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h4 className="font-medium mb-1">Heures d'ouverture</h4>
+        <p className="text-sm text-muted-foreground mb-4">
+          Les créneaux en dehors de ces horaires seront grisés sur le planning
+        </p>
+        <div className="flex items-center gap-4 flex-wrap">
+          <HourSelect
+            value={planningSettings.agency_open_hour}
+            onChange={(v) => updatePlanningSettings.mutate({ agency_open_hour: v })}
+            label="Ouverture"
+          />
+          <span className="text-muted-foreground mt-6">à</span>
+          <HourSelect
+            value={planningSettings.agency_close_hour}
+            onChange={(v) => updatePlanningSettings.mutate({ agency_close_hour: v })}
+            label="Fermeture"
+          />
+        </div>
+      </div>
+
+      <div className="border-t pt-6">
+        <h4 className="font-medium mb-1">Pause déjeuner</h4>
+        <p className="text-sm text-muted-foreground mb-4">
+          La pause sera légèrement grisée mais reste planifiable
+        </p>
+        <div className="flex items-center gap-4 flex-wrap">
+          <HourSelect
+            value={planningSettings.lunch_start_hour}
+            onChange={(v) => updatePlanningSettings.mutate({ lunch_start_hour: v })}
+            label="Début"
+          />
+          <span className="text-muted-foreground mt-6">à</span>
+          <HourSelect
+            value={planningSettings.lunch_end_hour}
+            onChange={(v) => updatePlanningSettings.mutate({ lunch_end_hour: v })}
+            label="Fin"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function WorkspaceSettings() {
   const { activeWorkspace, refreshProfile } = useAuth();
@@ -222,10 +298,14 @@ export function WorkspaceSettings() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
               <TabsTrigger value="general" className="gap-2">
                 <Building2 className="h-4 w-4" />
                 <span className="hidden sm:inline">Général</span>
+              </TabsTrigger>
+              <TabsTrigger value="hours" className="gap-2">
+                <Clock className="h-4 w-4" />
+                <span className="hidden sm:inline">Horaires</span>
               </TabsTrigger>
               <TabsTrigger value="legal" className="gap-2">
                 <FileText className="h-4 w-4" />
@@ -390,6 +470,10 @@ export function WorkspaceSettings() {
                   </Button>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="hours" className="space-y-6">
+              <AgencyHoursSection />
             </TabsContent>
 
             <TabsContent value="legal" className="space-y-6">
