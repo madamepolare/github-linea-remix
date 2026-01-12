@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.create-user]
 verify_jwt = false
+
+[functions.ask-dce-question]
+verify_jwt = false

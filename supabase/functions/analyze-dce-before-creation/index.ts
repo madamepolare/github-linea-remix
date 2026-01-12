@@ -378,17 +378,18 @@ function getToolParameters(disciplineSlug: string) {
       description: "Heure limite candidatures (HH:MM)"
     },
     procedure_type: { 
-      type: "string", 
-      description: "Type de procédure" 
+      type: "string",
+      enum: ["mapa", "ouvert", "restreint", "concours", "concours_restreint", "concours_ouvert", "dialogue_competitif", "negociee", "partenariat_innovation", "appel_offres_ouvert", "appel_offres_restreint", "adapte", "autre"],
+      description: "Type de procédure de passation. Cherche dans le RC ou l'avis les mentions: MAPA (marché à procédure adaptée), concours restreint, concours ouvert, appel d'offres ouvert (AOO), appel d'offres restreint (AOR), procédure négociée, dialogue compétitif, etc." 
     },
     submission_type: {
       type: "string",
       enum: ["candidature", "offre", "candidature_offre"],
-      description: "Type de remise"
+      description: "Type de remise: 'candidature' si phase de sélection puis offre séparée, 'offre' si offre directe, 'candidature_offre' si simultané"
     },
     dce_url: {
       type: "string",
-      description: "URL vers la plateforme de téléchargement du DCE"
+      description: "URL vers la plateforme de téléchargement du DCE (AWS, PLACE, marches-publics.gouv.fr, achatpublic.com, etc.)"
     },
     criteria: {
       type: "array",

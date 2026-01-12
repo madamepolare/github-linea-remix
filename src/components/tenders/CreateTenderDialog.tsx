@@ -106,6 +106,7 @@ interface ExtractedInfo {
   site_visit_contact_email?: string;
   site_visit_assigned_user_id?: string | null;
   site_visit_slots?: SiteVisitSlot[];
+  site_visit_notes?: string;
   dce_link?: string;
   dce_url?: string;
   project_description?: string;
@@ -1122,6 +1123,21 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
                       checked={formData.site_visit_required || false}
                       onCheckedChange={(checked) => updateFormField('site_visit_required', checked)}
                     />
+                  </div>
+                  
+                  {/* Site visit notes field */}
+                  <div>
+                    <Label htmlFor="site_visit_notes" className="text-sm">Note sur la visite</Label>
+                    <Input
+                      id="site_visit_notes"
+                      value={formData.site_visit_notes || ''}
+                      onChange={(e) => updateFormField('site_visit_notes', e.target.value)}
+                      placeholder="Ex: Visite obligatoire uniquement en phase 2"
+                      className="mt-1"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Précisez les conditions particulières de visite
+                    </p>
                   </div>
                   
                   {/* Site Visit Slots - Quick selection */}
