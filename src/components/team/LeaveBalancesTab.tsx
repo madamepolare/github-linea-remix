@@ -194,7 +194,7 @@ export function LeaveBalancesTab() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {activeLeaveTypes.map((config) => {
               const balance = allBalances?.find(
                 (b) => b.user_id === user?.id && b.leave_type === config.leave_type
@@ -243,7 +243,7 @@ export function LeaveBalancesTab() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
               <Table>
                 <TableHeader>
                   <TableRow>
