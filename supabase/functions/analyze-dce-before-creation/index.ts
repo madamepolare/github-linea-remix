@@ -560,53 +560,70 @@ function getToolParameters(disciplineSlug: string) {
   if (disciplineSlug === 'communication') {
     return {
       ...baseParams,
+      // Localisation (adresse du projet/mission si mentionnée)
+      location: {
+        type: "string",
+        description: "Adresse ou localisation géographique du projet/mission si mentionnée (ville, département, adresse de l'annonceur)"
+      },
       // Structure du marché
       is_multi_attributaire: {
         type: "boolean",
-        description: "Le marché est-il multi-attributaires (plusieurs agences retenues)?"
+        description: "Le marché global est-il multi-attributaires? (ATTENTION: peut aussi être par lot)"
       },
       nb_attributaires: {
         type: "number",
-        description: "Nombre d'agences qui seront retenues (si multi-attributaire)"
+        description: "Nombre total d'agences qui seront retenues (si multi-attributaire global)"
       },
-      // Lots
+      // Lots - ENRICHIS avec multi-attributaire et budgets par lot
       lots: {
         type: "array",
-        description: "Liste des lots du marché avec leurs caractéristiques",
+        description: "Liste EXHAUSTIVE des lots du marché avec TOUTES leurs caractéristiques",
         items: {
           type: "object",
           properties: {
-            numero: { type: "number", description: "Numéro du lot" },
-            intitule: { type: "string", description: "Intitulé du lot" },
+            numero: { type: "number", description: "Numéro du lot (1, 2, 3...)" },
+            intitule: { type: "string", description: "Intitulé EXACT du lot tel qu'il apparaît dans le RC" },
             domaine: { 
               type: "string", 
-              enum: ["graphisme", "impression", "digital", "evenementiel", "video", "strategie", "rp", "signaletique", "global"],
-              description: "Domaine du lot" 
+              enum: ["graphisme", "impression", "digital", "evenementiel", "video", "strategie", "rp", "signaletique", "global", "conseil", "creation", "production", "autre"],
+              description: "Domaine principal du lot" 
             },
-            budget_min: { type: "number", description: "Budget minimum du lot en € HT" },
-            budget_max: { type: "number", description: "Budget maximum du lot en € HT" },
-            description: { type: "string" }
+            description: { type: "string", description: "Description des prestations attendues pour ce lot" },
+            // BUDGETS PAR LOT
+            budget_min: { type: "number", description: "Montant MINIMUM du lot en € HT (si indiqué séparément)" },
+            budget_max: { type: "number", description: "Montant MAXIMUM du lot en € HT (si indiqué séparément)" },
+            // MULTI-ATTRIBUTAIRE PAR LOT
+            is_multi_attributaire: { type: "boolean", description: "CE LOT est-il multi-attributaires? (plusieurs agences sur ce lot)" },
+            nb_attributaires: { type: "number", description: "Nombre d'attributaires pour CE LOT spécifique" },
+            // Durée spécifique au lot si différente
+            duree_mois: { type: "number", description: "Durée spécifique du lot en mois (si différente du marché global)" },
+            nb_reconductions: { type: "number", description: "Nombre de reconductions pour ce lot (si différent)" }
           },
           required: ["numero", "intitule", "domaine"]
         }
       },
-      // Montants accord-cadre
+      // Montants accord-cadre GLOBAL (si pas par lot)
       montant_minimum: {
         type: "number",
-        description: "Montant MINIMUM de l'accord-cadre en € HT"
+        description: "Montant MINIMUM GLOBAL de l'accord-cadre en € HT (tous lots confondus)"
       },
       montant_maximum: {
         type: "number",
-        description: "Montant MAXIMUM de l'accord-cadre en € HT"
+        description: "Montant MAXIMUM GLOBAL de l'accord-cadre en € HT (tous lots confondus)"
+      },
+      // Budget estimé (souvent dans les marchés de com)
+      estimated_budget: {
+        type: "number",
+        description: "Budget estimé ou enveloppe prévisionnelle si mentionné en € HT"
       },
       // Durée
       duree_initiale_mois: {
         type: "number",
-        description: "Durée initiale du marché en mois"
+        description: "Durée initiale du marché en mois (souvent 12 ou 24)"
       },
       nb_reconductions: {
         type: "number",
-        description: "Nombre de reconductions possibles"
+        description: "Nombre de reconductions possibles (souvent 1 à 3)"
       },
       duree_reconduction_mois: {
         type: "number",
@@ -614,100 +631,105 @@ function getToolParameters(disciplineSlug: string) {
       },
       date_debut_mission: {
         type: "string",
-        description: "Date prévue de début de mission (YYYY-MM-DD)"
+        description: "Date prévue de début de mission/notification (YYYY-MM-DD)"
       },
       validite_offre_jours: {
         type: "number",
-        description: "Durée de validité des offres en jours (souvent 90 ou 180)"
+        description: "Durée de validité des offres en jours (cherche 'validité des offres' - souvent 90 ou 180)"
       },
       // Cas pratique
       cas_pratique: {
         type: "object",
-        description: "Détails du cas pratique si requis",
+        description: "Détails COMPLETS du cas pratique si requis. EXTRAIS LE BRIEF EN ENTIER!",
         properties: {
-          requis: { type: "boolean", description: "Un cas pratique est-il demandé?" },
-          brief: { type: "string", description: "Brief détaillé du cas pratique" },
+          requis: { type: "boolean", description: "Un cas pratique/exercice créatif est-il demandé?" },
+          brief: { type: "string", description: "TEXTE COMPLET du brief du cas pratique - recopie le verbatim" },
           livrables: { 
             type: "array", 
             items: { type: "string" },
-            description: "Liste des livrables attendus pour le cas pratique" 
+            description: "Liste des livrables attendus (ex: '3 pistes créatives', 'recommandation 5 pages', etc.)" 
           },
-          format: { type: "string", description: "Format de rendu (nb de pages, support...)" },
+          format: { type: "string", description: "Format de rendu exigé (PDF, nombre de pages max, dimensions...)" },
           delai_jours: { type: "number", description: "Délai de réalisation du cas pratique en jours" },
-          ponderation: { type: "number", description: "Pondération du cas pratique dans la note (%)" }
+          ponderation: { type: "number", description: "Pondération du cas pratique dans la note technique (%)" }
         }
       },
       // Audition
       audition: {
         type: "object",
-        description: "Informations sur l'audition/soutenance",
+        description: "Informations sur l'audition/soutenance orale",
         properties: {
-          prevue: { type: "boolean" },
-          date: { type: "string", description: "Date prévue (YYYY-MM-DD)" },
-          duree_minutes: { type: "number" },
-          format: { type: "string", description: "Format de l'audition (présentiel, visio...)" }
+          prevue: { type: "boolean", description: "Une audition est-elle prévue?" },
+          date: { type: "string", description: "Date prévue de l'audition (YYYY-MM-DD) ou période" },
+          duree_minutes: { type: "number", description: "Durée de la présentation en minutes" },
+          format: { type: "string", description: "Format: présentiel, visio, ou les deux possibles" },
+          lieu: { type: "string", description: "Lieu de l'audition si présentiel" }
         }
       },
       // Anciens prestataires
       anciens_prestataires: {
         type: "array",
-        description: "Anciens titulaires du marché si mentionnés",
+        description: "Prestataires sortants/titulaires actuels du marché si mentionnés",
         items: {
           type: "object",
           properties: {
-            nom: { type: "string" },
-            lot: { type: "string" },
-            periode: { type: "string" }
-          }
+            nom: { type: "string", description: "Nom de l'agence/entreprise" },
+            lot: { type: "string", description: "Lot concerné" },
+            periode: { type: "string", description: "Période du marché précédent" }
+          },
+          required: ["nom"]
         }
       },
-      // Équipe communication
+      // Équipe communication - profils métiers
       required_team: {
         type: "array",
-        description: "Profils d'équipe attendus",
+        description: "Compétences/profils d'équipe mentionnés dans le marché",
         items: {
           type: "object",
           properties: {
             specialty: { 
               type: "string",
-              enum: ["directeur_conseil", "directeur_creation", "directeur_artistique", "chef_de_projet", "concepteur_redacteur", "graphiste", "planneur_strategique", "social_media_manager", "community_manager", "motion_designer", "photographe", "realisateur", "acheteur_media", "rp_influence", "autre"]
+              enum: ["directeur_conseil", "directeur_creation", "directeur_clientele", "directeur_artistique", "chef_de_projet", "concepteur_redacteur", "graphiste", "integrateur_web", "motion_designer", "planneur_strategique", "social_media_manager", "community_manager", "photographe", "realisateur", "acheteur_media", "rp_influence", "autre"],
+              description: "Type de profil métier"
             },
-            is_mandatory: { type: "boolean" },
-            notes: { type: "string" },
-            source: { type: "string" }
+            is_mandatory: { type: "boolean", description: "Ce profil est-il obligatoire/exigé?" },
+            notes: { type: "string", description: "Précisions sur le profil demandé" },
+            source: { type: "string", description: "Source dans le DCE (RC article X, CCTP...)" }
           },
           required: ["specialty", "is_mandatory"]
         }
       },
-      // Type de campagne
+      // Type de campagne/communication
       type_campagne: {
         type: "string",
-        enum: ["evenementielle", "corporate", "institutionnelle", "digitale", "produit", "recrutement", "global"],
-        description: "Type principal de communication"
+        enum: ["evenementielle", "corporate", "institutionnelle", "digitale", "produit", "recrutement", "global", "360"],
+        description: "Type principal de communication demandée"
       },
       cibles: {
         type: "string",
-        description: "Cibles de communication mentionnées"
+        description: "Cibles de communication mentionnées (habitants, salariés, touristes, jeunes, etc.)"
       },
-      // Livrables attendus
+      // Livrables attendus par phase
       deliverables_candidature: {
         type: "array",
+        description: "Pièces à remettre en phase CANDIDATURE",
         items: {
           type: "object",
           properties: {
-            name: { type: "string" },
-            format: { type: "string" },
+            name: { type: "string", description: "Nom du document" },
+            format: { type: "string", description: "Format exigé (PDF, nombre de pages...)" },
             is_mandatory: { type: "boolean" }
           }
         }
       },
       deliverables_offre: {
         type: "array",
+        description: "Pièces à remettre en phase OFFRE",
         items: {
           type: "object",
           properties: {
-            name: { type: "string" },
-            format: { type: "string" },
+            name: { type: "string", description: "Nom du document" },
+            format: { type: "string", description: "Format exigé" },
             is_mandatory: { type: "boolean" }
           }
         }
@@ -1108,36 +1130,70 @@ serve(async (req) => {
         ? `
 ## INSTRUCTIONS SPÉCIFIQUES COMMUNICATION
 
-Tu analyses un marché public de COMMUNICATION. Cherche et extrais avec précision:
+Tu analyses un marché public de COMMUNICATION. Cherche et extrais avec PRÉCISION MAXIMALE:
 
-1. **STRUCTURE DU MARCHÉ**
-   - Recherche "allotissement", "lot n°", "nombre de lots"
-   - Recherche "multi-attributaire", "nombre d'attributaires maximum"
-   - Pour chaque lot: numéro, intitulé, domaine (graphisme/digital/événementiel...)
+### 1. IDENTIFICATION DU MARCHÉ
+- **reference** = Numéro/référence de la consultation (cherche "référence", "n° marché", "n° consultation")
+- **location** = Adresse ou ville du projet/annonceur (cherche l'adresse dans l'en-tête ou "siège social")
+- **client_name** = Nom COMPLET de l'annonceur/MOA
 
-2. **MONTANTS ACCORD-CADRE**
-   - Recherche "montant minimum", "montant maximum", "montant estimatif"
-   - Attention: souvent exprimé sur la durée totale (4 ans)
-   - Format fréquent: "sans minimum et avec un maximum de XXX € HT"
+### 2. DATE LIMITE - CRITIQUE!
+- **submission_deadline** = Cherche "date limite", "remise des plis", "limite de réception"
+- Format typique: "avant le [date] à [heure]" ou "[date] 12h00"
+- N'OUBLIE PAS L'HEURE (souvent 12:00 ou 17:00)
+- **submission_time** = Heure au format HH:MM
 
-3. **CAS PRATIQUE - TRÈS IMPORTANT**
-   - Recherche "cas pratique", "exercice", "mise en situation", "épreuve créative"
-   - EXTRAIS LE BRIEF COMPLET mot pour mot
-   - Note les livrables attendus (combien de pistes? format?)
-   - Délai de réalisation
-   - Pondération dans la note
+### 3. STRUCTURE DU MARCHÉ ET LOTS
+- Le marché est-il ALLOTI? Combien de lots?
+- POUR CHAQUE LOT, extrais:
+  * numero: numéro du lot (1, 2, 3...)
+  * intitule: titre EXACT
+  * domaine: graphisme, impression, digital, événementiel, vidéo, stratégie, RP, signalétique, global
+  * **is_multi_attributaire**: CE LOT est-il multi-attributaires?
+  * **nb_attributaires**: combien d'agences retenues sur CE LOT?
+  * **budget_min / budget_max**: montants min/max pour CE LOT si indiqués
 
-4. **AUDITION**
-   - Recherche "audition", "soutenance", "présentation orale", "jury"
-   - Date, durée, format (visio/présentiel)
+### 4. MONTANTS ACCORD-CADRE
+- **montant_minimum** = Montant minimum en € HT (global si pas par lot)
+- **montant_maximum** = Montant maximum en € HT (global si pas par lot)
+- Attention: souvent sur durée totale (4 ans avec reconductions)
 
-5. **ANCIENS TITULAIRES**
-   - Recherche "sortant", "titulaire actuel", "marché précédent"
-   - Nom de l'agence si mentionné
+### 5. DURÉE ET RECONDUCTIONS
+- **duree_initiale_mois** = Durée initiale (souvent 12 ou 24 mois)
+- **nb_reconductions** = Nombre de reconductions possibles
+- **duree_reconduction_mois** = Durée de chaque reconduction
+- **validite_offre_jours** = Validité des offres (cherche "validité" - souvent 90 ou 180 jours)
 
-6. **CRITÈRES DE NOTATION**
-   - Recherche "critères de jugement", "notation", "pondération"
-   - EXTRAIT chaque critère avec son % EXACT
+### 6. CAS PRATIQUE - TRÈS IMPORTANT!
+Si un exercice créatif est demandé:
+- **cas_pratique.requis** = true
+- **cas_pratique.brief** = TEXTE COMPLET du brief (recopie verbatim!)
+- **cas_pratique.livrables** = liste des livrables ("3 pistes créatives", "recommandation 10 pages"...)
+- **cas_pratique.format** = format exigé (PDF, nombre de pages...)
+- **cas_pratique.delai_jours** = délai de réalisation
+- **cas_pratique.ponderation** = % dans la note finale
+
+### 7. AUDITION/SOUTENANCE
+- **audition.prevue** = une audition est-elle prévue?
+- **audition.date** = date/période prévue
+- **audition.duree_minutes** = durée (souvent 30-60 min)
+- **audition.format** = présentiel, visio ou hybride
+
+### 8. CRITÈRES DE JUGEMENT
+Extrais CHAQUE critère avec sa pondération EXACTE:
+- Cherche "critères de jugement", "critères d'attribution", "notation"
+- Format typique: "Valeur technique: 60%" ou "Prix: 40 points"
+- Attention aux sous-critères
+
+### 9. ANCIENS PRESTATAIRES
+Cherche "sortant", "titulaire actuel", "ancien marché", "prestataire actuel"
+
+### 10. ALERTES ET POINTS D'ATTENTION
+Génère des alertes (critical_alerts) pour:
+- Délais très courts
+- Documents PDF images non lisibles
+- Informations manquantes critiques (montants, critères...)
+- Exigences inhabituelles
 `
         : `
 ## INSTRUCTIONS POUR L'ANALYSE
