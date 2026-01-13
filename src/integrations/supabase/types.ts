@@ -8737,6 +8737,7 @@ export type Database = {
           contracting_authority: string | null
           created_at: string | null
           created_by: string | null
+          critical_alerts: Json | null
           dce_delivery_deadline: string | null
           dce_delivery_duration_months: number | null
           dce_link: string | null
@@ -8805,6 +8806,7 @@ export type Database = {
           contracting_authority?: string | null
           created_at?: string | null
           created_by?: string | null
+          critical_alerts?: Json | null
           dce_delivery_deadline?: string | null
           dce_delivery_duration_months?: number | null
           dce_link?: string | null
@@ -8873,6 +8875,7 @@ export type Database = {
           contracting_authority?: string | null
           created_at?: string | null
           created_by?: string | null
+          critical_alerts?: Json | null
           dce_delivery_deadline?: string | null
           dce_delivery_duration_months?: number | null
           dce_link?: string | null

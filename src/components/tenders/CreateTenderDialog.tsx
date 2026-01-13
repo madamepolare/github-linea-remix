@@ -611,6 +611,10 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
         site_visit_assigned_user_id: formData.site_visit_assigned_user_id || undefined,
         dce_link: formData.dce_link || undefined,
         description: formData.project_description || undefined,
+        // Save critical alerts extracted from AI analysis
+        critical_alerts: formData.critical_alerts && formData.critical_alerts.length > 0 
+          ? formData.critical_alerts 
+          : undefined,
       });
 
       // Store criteria to be created on detail page
