@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,7 @@ import {
   Trash2,
   Users,
   UserCircle,
+  GripVertical,
 } from "lucide-react";
 import { useCompanyDepartments, CompanyDepartment, CreateDepartmentInput } from "@/hooks/useCompanyDepartments";
 import { useContacts, Contact } from "@/hooks/useContacts";
@@ -109,6 +111,21 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
 
   const unassignedContacts = companyContacts.filter(c => !c.department_id);
 
+  // Handle drag and drop
+  const handleDragEnd = (result: DropResult) => {
+    const { draggableId, destination, source } = result;
+
+    // No destination or same position
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId) return;
+
+    // Get target department ID (null if dropping to unassigned)
+    const targetDepartmentId = destination.droppableId === "unassigned" ? null : destination.droppableId;
+    
+    // Update contact's department
+    handleAssignContact(draggableId, targetDepartmentId);
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -129,6 +146,9 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
           <CardTitle className="text-base flex items-center gap-2">
             <Building className="h-4 w-4 text-muted-foreground" />
             Départements / Directions
+            <Badge variant="secondary" className="ml-1 text-xs">
+              Glisser-déposer
+            </Badge>
           </CardTitle>
           <Button size="sm" variant="outline" onClick={handleOpenCreate}>
             <Plus className="h-4 w-4 mr-1" />
@@ -136,147 +156,194 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
           </Button>
         </CardHeader>
         <CardContent className="pt-0">
-          {departments.length === 0 ? (
+          {departments.length === 0 && unassignedContacts.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Building className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">Aucun département</p>
               <p className="text-xs mt-1">Créez des départements pour organiser vos contacts</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {departments.map((dept) => {
-                const deptContacts = getContactsForDepartment(dept.id);
-                const manager = deptContacts.find(c => c.id === dept.manager_contact_id);
-                
-                return (
-                  <div
-                    key={dept.id}
-                    className="border rounded-lg p-3 hover:bg-muted/30 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-sm">{dept.name}</h4>
-                          <Badge variant="secondary" className="text-[10px]">
-                            {deptContacts.length} contact{deptContacts.length !== 1 ? "s" : ""}
-                          </Badge>
-                        </div>
-                        {dept.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                            {dept.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                          {dept.location && (
-                            <span className="flex items-center gap-1">
-                              <CountryFlag location={dept.location} size="xs" />
-                              <MapPin className="h-3 w-3" />
-                              {dept.location}
-                            </span>
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div className="space-y-3">
+                {departments.map((dept) => {
+                  const deptContacts = getContactsForDepartment(dept.id);
+                  const manager = deptContacts.find(c => c.id === dept.manager_contact_id);
+                  
+                  return (
+                    <Droppable key={dept.id} droppableId={dept.id}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={cn(
+                            "border rounded-lg p-3 transition-colors",
+                            snapshot.isDraggingOver && "bg-primary/5 border-primary/30"
                           )}
-                          {manager && (
-                            <span className="flex items-center gap-1">
-                              <UserCircle className="h-3 w-3" />
-                              {manager.name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleOpenEdit(dept)}>
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Modifier
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => deleteDepartment.mutate(dept.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-
-                    {/* Contacts in department */}
-                    {deptContacts.length > 0 && (
-                      <div className="mt-3 pt-3 border-t">
-                        <div className="flex flex-wrap gap-2">
-                          {deptContacts.map((contact) => (
-                            <Link
-                              key={contact.id}
-                              to={`/crm/contacts/${contact.id}`}
-                              className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted hover:bg-muted/80 transition-colors"
-                            >
-                              <Avatar className="h-5 w-5">
-                                <AvatarImage src={contact.avatar_url || undefined} />
-                                <AvatarFallback className="text-[8px]">
-                                  {contact.name.slice(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-xs font-medium">{contact.name}</span>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Unassigned contacts */}
-              {unassignedContacts.length > 0 && (
-                <div className="border border-dashed rounded-lg p-3 bg-muted/20">
-                  <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                    <Users className="h-4 w-4" />
-                    <span className="text-xs font-medium">Non assignés ({unassignedContacts.length})</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {unassignedContacts.slice(0, 6).map((contact) => (
-                      <div
-                        key={contact.id}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-background border"
-                      >
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={contact.avatar_url || undefined} />
-                          <AvatarFallback className="text-[8px]">
-                            {contact.name.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-xs">{contact.name}</span>
-                        <Select
-                          value=""
-                          onValueChange={(val) => handleAssignContact(contact.id, val)}
                         >
-                          <SelectTrigger className="h-5 w-5 p-0 border-0 bg-transparent [&>svg]:hidden">
-                            <Plus className="h-3 w-3 text-muted-foreground" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {departments.map((d) => (
-                              <SelectItem key={d.id} value={d.id}>
-                                {d.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium text-sm">{dept.name}</h4>
+                                <Badge variant="secondary" className="text-[10px]">
+                                  {deptContacts.length} contact{deptContacts.length !== 1 ? "s" : ""}
+                                </Badge>
+                              </div>
+                              {dept.description && (
+                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                                  {dept.description}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                                {dept.location && (
+                                  <span className="flex items-center gap-1">
+                                    <CountryFlag location={dept.location} size="xs" />
+                                    <MapPin className="h-3 w-3" />
+                                    {dept.location}
+                                  </span>
+                                )}
+                                {manager && (
+                                  <span className="flex items-center gap-1">
+                                    <UserCircle className="h-3 w-3" />
+                                    {manager.name}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleOpenEdit(dept)}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Modifier
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => deleteDepartment.mutate(dept.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Supprimer
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
+                          {/* Contacts in department - Draggable */}
+                          <div className={cn(
+                            "mt-3 pt-3 border-t min-h-[40px]",
+                            deptContacts.length === 0 && "border-dashed"
+                          )}>
+                            {deptContacts.length === 0 ? (
+                              <p className="text-xs text-muted-foreground text-center py-2">
+                                Glissez des contacts ici
+                              </p>
+                            ) : (
+                              <div className="flex flex-wrap gap-2">
+                                {deptContacts.map((contact, index) => (
+                                  <Draggable key={contact.id} draggableId={contact.id} index={index}>
+                                    {(provided, snapshot) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        className={cn(
+                                          "flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted hover:bg-muted/80 transition-colors cursor-grab active:cursor-grabbing",
+                                          snapshot.isDragging && "shadow-lg ring-2 ring-primary/20"
+                                        )}
+                                      >
+                                        <GripVertical className="h-3 w-3 text-muted-foreground" />
+                                        <Avatar className="h-5 w-5">
+                                          <AvatarImage src={contact.avatar_url || undefined} />
+                                          <AvatarFallback className="text-[8px]">
+                                            {contact.name.slice(0, 2).toUpperCase()}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <Link
+                                          to={`/crm/contacts/${contact.id}`}
+                                          className="text-xs font-medium hover:text-primary transition-colors"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          {contact.name}
+                                        </Link>
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+                              </div>
+                            )}
+                            {provided.placeholder}
+                          </div>
+                        </div>
+                      )}
+                    </Droppable>
+                  );
+                })}
+
+                {/* Unassigned contacts - also droppable */}
+                {(unassignedContacts.length > 0 || departments.length > 0) && (
+                  <Droppable droppableId="unassigned">
+                    {(provided, snapshot) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={cn(
+                          "border border-dashed rounded-lg p-3 bg-muted/20 transition-colors",
+                          snapshot.isDraggingOver && "bg-muted/40 border-muted-foreground/30"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                          <Users className="h-4 w-4" />
+                          <span className="text-xs font-medium">Non assignés ({unassignedContacts.length})</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 min-h-[32px]">
+                          {unassignedContacts.length === 0 ? (
+                            <p className="text-xs text-muted-foreground py-1">
+                              Glissez des contacts ici pour les désassigner
+                            </p>
+                          ) : (
+                            unassignedContacts.map((contact, index) => (
+                              <Draggable key={contact.id} draggableId={contact.id} index={index}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={cn(
+                                      "flex items-center gap-1.5 px-2 py-1 rounded-full bg-background border cursor-grab active:cursor-grabbing hover:border-primary/30 transition-colors",
+                                      snapshot.isDragging && "shadow-lg ring-2 ring-primary/20"
+                                    )}
+                                  >
+                                    <GripVertical className="h-3 w-3 text-muted-foreground" />
+                                    <Avatar className="h-5 w-5">
+                                      <AvatarImage src={contact.avatar_url || undefined} />
+                                      <AvatarFallback className="text-[8px]">
+                                        {contact.name.slice(0, 2).toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <Link
+                                      to={`/crm/contacts/${contact.id}`}
+                                      className="text-xs font-medium hover:text-primary transition-colors"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {contact.name}
+                                    </Link>
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))
+                          )}
+                          {provided.placeholder}
+                        </div>
                       </div>
-                    ))}
-                    {unassignedContacts.length > 6 && (
-                      <span className="text-xs text-muted-foreground px-2 py-1">
-                        +{unassignedContacts.length - 6} autres
-                      </span>
                     )}
-                  </div>
-                </div>
-              )}
-            </div>
+                  </Droppable>
+                )}
+              </div>
+            </DragDropContext>
           )}
         </CardContent>
       </Card>
