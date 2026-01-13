@@ -90,20 +90,30 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     return workspaceModules.some((wm) => wm.module?.slug === slug);
   };
 
+  // Helper to build workspace-prefixed paths
+  const buildWorkspacePath = (path: string): string => {
+    if (!activeWorkspace?.slug) return path;
+    // Don't prefix if it's the root
+    if (path === "/") return `/${activeWorkspace.slug}`;
+    const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+    return `/${activeWorkspace.slug}/${cleanPath}`;
+  };
+
   // Build navigation based on enabled modules
   const { coreNavigation, extensionNavigation } = useMemo(() => {
     const core: NavItem[] = [
-      { title: "Dashboard", icon: LayoutDashboard, href: "/" },
+      { title: "Dashboard", icon: LayoutDashboard, href: buildWorkspacePath("/") },
     ];
     const extensions: NavItem[] = [];
 
     CORE_MODULES.forEach((slug) => {
       const config = MODULE_CONFIG[slug];
       if (config && isModuleEnabled(slug)) {
+        const basePath = config.subNav.length > 0 ? config.subNav[0].href : config.href;
         core.push({
           title: config.title,
           icon: config.icon,
-          href: config.subNav.length > 0 ? config.subNav[0].href : config.href,
+          href: buildWorkspacePath(basePath),
           moduleSlug: slug,
         });
       }
@@ -112,10 +122,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     EXTENSION_MODULES.forEach((slug) => {
       const config = MODULE_CONFIG[slug];
       if (config && isModuleEnabled(slug)) {
+        const basePath = config.subNav.length > 0 ? config.subNav[0].href : config.href;
         extensions.push({
           title: config.title,
           icon: config.icon,
-          href: config.subNav.length > 0 ? config.subNav[0].href : config.href,
+          href: buildWorkspacePath(basePath),
           moduleSlug: slug,
           isExtension: true,
         });
@@ -123,12 +134,19 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     });
 
     return { coreNavigation: core, extensionNavigation: extensions };
-  }, [modules, workspaceModules]);
+  }, [modules, workspaceModules, activeWorkspace?.slug]);
 
   const isActive = (href: string, moduleSlug?: string) => {
-    if (href === "/" && !moduleSlug) return location.pathname === "/";
+    const workspacePrefix = activeWorkspace?.slug ? `/${activeWorkspace.slug}` : "";
+    
+    // Dashboard case
+    if (moduleSlug === undefined && (href === "/" || href === workspacePrefix)) {
+      return location.pathname === "/" || location.pathname === workspacePrefix;
+    }
+    
     if (moduleSlug) {
-      return location.pathname.startsWith(`/${moduleSlug}`);
+      // Check if path contains the module slug
+      return location.pathname.includes(`/${moduleSlug}`);
     }
     return location.pathname.startsWith(href);
   };
@@ -201,7 +219,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
     setTimeout(() => {
       setSwitchingWorkspace(null);
-      window.location.href = "/";
+      // Redirect to new workspace's dashboard after switch
+      const targetWs = workspaces.find(w => w.id === workspaceId);
+      window.location.href = targetWs ? `/${targetWs.slug}` : "/";
     }, 100);
   };
 
@@ -421,7 +441,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       <div className="relative border-t border-border/50 px-3 py-3 space-y-1">
         {/* Settings */}
         <NavItemComponent 
-          item={{ title: "Paramètres", icon: Settings, href: "/settings" }} 
+          item={{ title: "Paramètres", icon: Settings, href: buildWorkspacePath("/settings") }} 
           onClick={onNavigate} 
         />
         

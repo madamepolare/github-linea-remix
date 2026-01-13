@@ -105,7 +105,11 @@ export default function Onboarding() {
         return;
       }
       if (profile?.onboarding_completed) {
-        navigate("/");
+        // Redirect to workspace-scoped URL
+        const targetWorkspace = workspaces?.find(w => !w.is_hidden) || workspaces?.[0];
+        if (targetWorkspace) {
+          navigate(`/${targetWorkspace.slug}`);
+        }
         return;
       }
       // If user is already a member of a workspace (invited), skip to step 2
@@ -218,8 +222,16 @@ export default function Onboarding() {
     }
   };
 
-  const handleComplete = () => {
-    navigate("/");
+  const handleComplete = async () => {
+    // Refresh to get latest workspaces
+    await refreshProfile();
+    // Get the workspace to redirect to
+    const targetWorkspace = workspaces?.find(w => !w.is_hidden) || workspaces?.[0];
+    if (targetWorkspace) {
+      navigate(`/${targetWorkspace.slug}`);
+    } else {
+      navigate("/");
+    }
   };
 
   if (loading) {
