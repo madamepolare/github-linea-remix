@@ -333,8 +333,9 @@ export interface Tender {
   reference: string;
   title: string;
   description: string | null;
-  // Tender type
+  // Tender type & discipline
   tender_type: TenderType;
+  discipline_slug: string | null;
   submission_type: SubmissionType;
   pipeline_status: PipelineStatus;
   // Market identification

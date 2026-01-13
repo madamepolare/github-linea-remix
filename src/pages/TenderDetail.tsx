@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTender, useTenders } from "@/hooks/useTenders";
 import { useTopBar } from "@/contexts/TopBarContext";
-import { TENDER_TABS } from "@/lib/entityTabsConfig";
+import { useTenderTabs } from "@/hooks/useDisciplineTabs";
 import { THIN_STROKE } from "@/components/ui/icon";
 import { 
   TENDER_STATUS_LABELS, 
@@ -24,6 +24,7 @@ import {
   PROCEDURE_TYPE_LABELS,
 } from "@/lib/tenderTypes";
 import { cn } from "@/lib/utils";
+import type { DisciplineSlug } from "@/lib/disciplines";
 
 // Tab components
 import { TenderSyntheseTab } from "@/components/tenders/tabs/TenderSyntheseTab";
@@ -35,6 +36,8 @@ import { TenderMemoireTab } from "@/components/tenders/tabs/TenderMemoireTab";
 import { TenderEditDialog } from "@/components/tenders/TenderEditDialog";
 import { EntityEmailsTab } from "@/components/shared/EntityEmailsTab";
 import { EntityTasksList } from "@/components/tasks/EntityTasksList";
+import { TenderBudgetCommTab } from "@/components/tenders/tabs/TenderBudgetCommTab";
+import { TenderCasPratiqueTab } from "@/components/tenders/tabs/TenderCasPratiqueTab";
 
 export default function TenderDetail() {
   const { id } = useParams();
@@ -44,6 +47,10 @@ export default function TenderDetail() {
   const { setEntityConfig } = useTopBar();
   const [activeTab, setActiveTab] = useState("synthese");
   const [showEditDialog, setShowEditDialog] = useState(false);
+  
+  // Get discipline-specific tabs
+  const disciplineSlug = (tender?.discipline_slug as DisciplineSlug) || 'architecture';
+  const disciplineTabs = useTenderTabs(disciplineSlug);
 
   // Configure TopBar for entity view
   useEffect(() => {
@@ -70,7 +77,7 @@ export default function TenderDetail() {
           ...(tender.estimated_budget ? [{ icon: Euro, label: tender.estimated_budget >= 1000000 ? `${(tender.estimated_budget / 1000000).toFixed(1)}M€` : `${Math.round(tender.estimated_budget / 1000)}k€` }] : []),
           ...(deadline ? [{ icon: Calendar, label: `Dépôt: ${format(deadline, "dd MMM yyyy", { locale: fr })}` }] : []),
         ],
-        tabs: TENDER_TABS,
+        tabs: disciplineTabs,
         activeTab,
         onTabChange: setActiveTab,
         actions: (
@@ -93,7 +100,7 @@ export default function TenderDetail() {
     }
     
     return () => setEntityConfig(null);
-  }, [tender, activeTab, setEntityConfig]);
+  }, [tender, activeTab, setEntityConfig, disciplineTabs]);
 
   // Clean up any stored files from creation (no auto-upload anymore)
   useEffect(() => {
@@ -123,6 +130,13 @@ export default function TenderDetail() {
   }
 
   const renderTabContent = () => {
+    // Required specialties for team tab
+    const requiredSpecialties = Array.isArray(tender.required_team)
+      ? (tender.required_team as any[])
+          .map((t) => (typeof t === "string" ? t : t?.specialty))
+          .filter(Boolean)
+      : [];
+    
     switch (activeTab) {
       case "synthese":
         return <TenderSyntheseTab tender={tender} onNavigateToTab={setActiveTab} />;
@@ -137,14 +151,14 @@ export default function TenderDetail() {
       case "livrables":
         return <TenderLivrablesTab tenderId={tender.id} />;
       case "equipe":
-        const requiredSpecialties = Array.isArray(tender.required_team)
-          ? (tender.required_team as any[])
-              .map((t) => (typeof t === "string" ? t : t?.specialty))
-              .filter(Boolean)
-          : [];
         return <TenderEquipeTab tenderId={tender.id} requiredCompetencies={requiredSpecialties} />;
       case "memoire":
         return <TenderMemoireTab tenderId={tender.id} tender={tender} />;
+      // Communication-specific tabs
+      case "budget":
+        return <TenderBudgetCommTab tender={tender} />;
+      case "cas_pratique":
+        return <TenderCasPratiqueTab tender={tender} />;
       default:
         return <TenderSyntheseTab tender={tender} onNavigateToTab={setActiveTab} />;
     }
