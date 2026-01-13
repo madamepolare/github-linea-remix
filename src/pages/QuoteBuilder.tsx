@@ -34,9 +34,11 @@ import { QuoteProductionTab } from '@/components/commercial/quote-builder/QuoteP
 import { QuotePlanningTab } from '@/components/commercial/quote-builder/QuotePlanningTab';
 import { QuoteTermsTab } from '@/components/commercial/quote-builder/QuoteTermsTab';
 import { QuoteMOETermsTab } from '@/components/commercial/quote-builder/QuoteMOETermsTab';
+import { QuoteCommunicationTermsTab } from '@/components/commercial/quote-builder/QuoteCommunicationTermsTab';
 import { QuotePreviewPanel } from '@/components/commercial/quote-builder/QuotePreviewPanel';
 import { QuoteMOEPreviewPanel } from '@/components/commercial/quote-builder/QuoteMOEPreviewPanel';
-import { isArchitectureContractType } from '@/lib/moeContractDefaults';
+import { isArchitectureContractType, COMMUNICATION_CONTRACT_CODES } from '@/lib/moeContractDefaults';
+import { isCommunicationContractType } from '@/lib/communicationContractDefaults';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -516,6 +518,12 @@ export default function QuoteBuilder() {
                 <TabsContent value="terms" className="m-0 p-6">
                   {isArchitectureContractType(currentContractType?.code || document.project_type || '') ? (
                     <QuoteMOETermsTab
+                      document={document}
+                      onDocumentChange={handleDocumentChange}
+                      contractTypeConfig={currentContractType}
+                    />
+                  ) : isCommunicationContractType(currentContractType?.code || '') ? (
+                    <QuoteCommunicationTermsTab
                       document={document}
                       onDocumentChange={handleDocumentChange}
                       contractTypeConfig={currentContractType}
