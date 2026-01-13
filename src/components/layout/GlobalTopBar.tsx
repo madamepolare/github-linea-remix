@@ -163,13 +163,13 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
   };
 
   return (
-    <div className="h-12 flex items-center gap-3 px-4 border-b border-border bg-background">
+    <div className="h-14 flex items-center gap-4 px-5 bg-transparent">
       {/* Search - Left side, takes all available space */}
       <div ref={searchRef} className="relative flex-1">
         <Popover open={searchOpen && (searchQuery.length >= 2 || (searchResults?.length ?? 0) > 0)}>
           <PopoverTrigger asChild>
             <div className="relative max-w-2xl">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" strokeWidth={THIN_STROKE} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" strokeWidth={THIN_STROKE} />
               <Input
                 ref={inputRef}
                 value={searchQuery}
@@ -179,14 +179,14 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
                 }}
                 onFocus={() => setSearchOpen(true)}
                 placeholder="Rechercher projets, tâches, contacts... ⌘K"
-                className="w-full h-9 pl-9 pr-3 text-sm bg-muted/50 border-0 focus-visible:ring-1"
+                className="w-full h-10 pl-11 pr-4 text-sm bg-white/60 border-border/40 rounded-full focus:bg-white focus:border-foreground/20"
               />
             </div>
           </PopoverTrigger>
           <PopoverContent 
-            className="w-[400px] p-0" 
+            className="w-[420px] p-0 rounded-2xl shadow-pastel-hover border-border/40" 
             align="start" 
-            sideOffset={8}
+            sideOffset={12}
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
             {searchLoading ? (
