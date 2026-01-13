@@ -91,10 +91,10 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
     href: "/crm",
     subNav: [
       { key: "overview", label: "Vue d'ensemble", href: "/crm/overview" },
-      { key: "leads", label: "Opportunités", href: "/crm/leads" },
-      { key: "prospection", label: "Prospection", href: "/crm/prospection" },
       { key: "contacts", label: "Contacts", href: "/crm/contacts" },
       { key: "companies", label: "Entreprises", href: "/crm/companies" },
+      { key: "leads", label: "Opportunités", href: "/crm/leads" },
+      { key: "prospection", label: "Prospection", href: "/crm/prospection" },
     ],
     quickActions: [
       { key: "crm-add", label: "Ajouter", event: "open-crm-add-menu" },
