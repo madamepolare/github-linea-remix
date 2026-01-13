@@ -466,6 +466,8 @@ Cordialement`);
         <TenderFeeManagement
           tender={{
             id: tender.id,
+            name: tender.title,
+            reference: tender.reference,
             estimated_budget: tender.estimated_budget,
             moe_fee_percentage: tender.moe_fee_percentage,
             moe_fee_amount: tender.moe_fee_amount,

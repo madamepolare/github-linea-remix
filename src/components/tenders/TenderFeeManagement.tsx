@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Euro, Percent, Calculator, Info, Users, AlertCircle, RotateCcw, Save } from "lucide-react";
+import { Euro, Percent, Calculator, Info, Users, AlertCircle, RotateCcw, Save, FileDown, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,11 +9,16 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useAgencyInfo } from "@/hooks/useAgencyInfo";
+import { generateFeeDistributionPDF } from "@/lib/generateFeeDistributionPDF";
 import type { TenderTeamMember } from "@/lib/tenderTypes";
 
 interface TenderFeeManagementProps {
   tender: {
     id: string;
+    name?: string;
+    reference?: string | null;
     estimated_budget?: number | null;
     moe_fee_percentage?: number | null;
     moe_fee_amount?: number | null;
@@ -33,6 +38,9 @@ const formatCurrency = (amount: number) => {
 };
 
 export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMemberFee, isUpdating }: TenderFeeManagementProps) {
+  const { agencyInfo } = useAgencyInfo();
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  
   // Local state for inputs
   const [feePercentage, setFeePercentage] = useState<string>(
     tender.moe_fee_percentage?.toString() || ""
@@ -135,6 +143,76 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMem
     }
   };
 
+  // Export PDF
+  const handleExportPDF = async () => {
+    if (!feeAmount || feeAmount <= 0) {
+      toast.error("Définissez d'abord les honoraires pour générer le PDF");
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+    try {
+      // Build members list with mandataire having the remaining percentage
+      const mandataire = teamMembers.find(m => m.role === 'mandataire');
+      const members = [
+        {
+          name: mandataire?.company?.name || agencyInfo?.name || 'Mandataire',
+          role: 'mandataire' as const,
+          specialty: 'Direction de projet',
+          percentage: teamFeeDistribution.remainingForMandataire,
+          amount: teamFeeDistribution.mandataireAmount,
+        },
+        ...teamFeeDistribution.partnerAmounts.map(({ member, percentage, amount }) => ({
+          name: member.company?.name || member.contact?.name || 'Partenaire',
+          role: 'cotraitant' as const,
+          specialty: member.specialty || undefined,
+          percentage,
+          amount,
+        })),
+      ];
+
+      const pdfBlob = await generateFeeDistributionPDF({
+        tenderName: tender.name || 'Appel d\'offres',
+        tenderReference: tender.reference || undefined,
+        estimatedBudget: tender.estimated_budget || 0,
+        feePercentage: parseFloat(feePercentage) || 0,
+        feeAmount,
+        members,
+        agency: agencyInfo ? {
+          name: agencyInfo.name,
+          logo_url: agencyInfo.logo_url,
+          address: agencyInfo.address,
+          city: agencyInfo.city,
+          postal_code: agencyInfo.postal_code,
+          phone: agencyInfo.phone,
+          email: agencyInfo.email,
+          siret: agencyInfo.siret,
+          vat_number: agencyInfo.vat_number,
+          capital_social: agencyInfo.capital_social,
+          forme_juridique: agencyInfo.forme_juridique,
+          rcs_city: agencyInfo.rcs_city,
+        } : undefined,
+      });
+
+      // Download PDF
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `repartition-honoraires-${tender.reference || tender.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("PDF généré avec succès");
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error("Erreur lors de la génération du PDF");
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   return (
     <Card className="border-primary/20">
       <CardHeader className="pb-4">
@@ -234,6 +312,19 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMem
                   <Badge variant="outline" className="font-mono">
                     Total : {formatCurrency(feeAmount)}
                   </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportPDF}
+                    disabled={isGeneratingPDF || feeAmount <= 0}
+                  >
+                    {isGeneratingPDF ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <FileDown className="h-4 w-4 mr-2" />
+                    )}
+                    Export PDF
+                  </Button>
                 </div>
               </div>
 
