@@ -8756,6 +8756,9 @@ export type Database = {
           mandataire_must_be_solidary: boolean | null
           market_object: string | null
           moa_company_id: string | null
+          moe_fee_amount: number | null
+          moe_fee_percentage: number | null
+          moe_phases: Json | null
           negotiation_candidates_count: number | null
           negotiation_method: string | null
           offer_validity_days: number | null
@@ -8825,6 +8828,9 @@ export type Database = {
           mandataire_must_be_solidary?: boolean | null
           market_object?: string | null
           moa_company_id?: string | null
+          moe_fee_amount?: number | null
+          moe_fee_percentage?: number | null
+          moe_phases?: Json | null
           negotiation_candidates_count?: number | null
           negotiation_method?: string | null
           offer_validity_days?: number | null
@@ -8894,6 +8900,9 @@ export type Database = {
           mandataire_must_be_solidary?: boolean | null
           market_object?: string | null
           moa_company_id?: string | null
+          moe_fee_amount?: number | null
+          moe_fee_percentage?: number | null
+          moe_phases?: Json | null
           negotiation_candidates_count?: number | null
           negotiation_method?: string | null
           offer_validity_days?: number | null

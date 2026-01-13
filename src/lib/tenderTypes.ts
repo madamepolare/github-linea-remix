@@ -399,6 +399,10 @@ export interface Tender {
   required_team: unknown;
   // Critical alerts from AI analysis (stored as JSON)
   critical_alerts: unknown;
+  // MOE Fees
+  moe_fee_percentage: number | null;
+  moe_phases: string[] | null;
+  moe_fee_amount: number | null;
   // Timestamps
   created_at: string;
   updated_at: string;
