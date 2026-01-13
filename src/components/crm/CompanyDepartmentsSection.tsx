@@ -18,6 +18,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Select,
@@ -26,6 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Plus,
   Building,
@@ -36,6 +43,11 @@ import {
   Users,
   UserCircle,
   GripVertical,
+  Receipt,
+  Mail,
+  Phone,
+  Crown,
+  Briefcase,
 } from "lucide-react";
 import { useCompanyDepartments, CompanyDepartment, CreateDepartmentInput } from "@/hooks/useCompanyDepartments";
 import { useContacts, Contact } from "@/hooks/useContacts";
@@ -46,14 +58,39 @@ import { cn } from "@/lib/utils";
 interface CompanyDepartmentsSectionProps {
   companyId: string;
   companyContacts: Contact[];
+  companyBillingContactId?: string | null;
+  onBillingContactChange?: (contactId: string | null) => void;
 }
 
-export function CompanyDepartmentsSection({ companyId, companyContacts }: CompanyDepartmentsSectionProps) {
+// Common department roles
+const DEPARTMENT_ROLES = [
+  { value: "directeur", label: "Directeur" },
+  { value: "directeur_adjoint", label: "Directeur adjoint" },
+  { value: "responsable", label: "Responsable" },
+  { value: "chef_projet", label: "Chef de projet" },
+  { value: "ingenieur", label: "Ingénieur" },
+  { value: "technicien", label: "Technicien" },
+  { value: "assistant", label: "Assistant(e)" },
+  { value: "charge_affaires", label: "Chargé d'affaires" },
+  { value: "commercial", label: "Commercial" },
+  { value: "administratif", label: "Administratif" },
+  { value: "autre", label: "Autre" },
+];
+
+export function CompanyDepartmentsSection({ 
+  companyId, 
+  companyContacts,
+  companyBillingContactId,
+  onBillingContactChange,
+}: CompanyDepartmentsSectionProps) {
   const { departments, isLoading, createDepartment, updateDepartment, deleteDepartment } = useCompanyDepartments(companyId);
   const { updateContact } = useContacts();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState<CompanyDepartment | null>(null);
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>("");
   const [formData, setFormData] = useState<CreateDepartmentInput>({
     company_id: companyId,
     name: "",
@@ -105,24 +142,51 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
     updateContact.mutate({ id: contactId, department_id: departmentId });
   };
 
+  const handleOpenRoleDialog = (contact: Contact) => {
+    setEditingContact(contact);
+    setSelectedRole((contact as any).department_role || "");
+    setRoleDialogOpen(true);
+  };
+
+  const handleSaveRole = () => {
+    if (editingContact) {
+      updateContact.mutate({ 
+        id: editingContact.id, 
+        department_role: selectedRole || null 
+      } as any);
+      setRoleDialogOpen(false);
+      setEditingContact(null);
+    }
+  };
+
+  const handleSetBillingContact = (deptId: string | null, contactId: string) => {
+    if (deptId) {
+      // Set billing contact for department
+      updateDepartment.mutate({ id: deptId, billing_contact_id: contactId });
+    } else {
+      // Set billing contact for company
+      onBillingContactChange?.(contactId);
+    }
+  };
+
   const getContactsForDepartment = (deptId: string) => {
     return companyContacts.filter(c => c.department_id === deptId);
   };
 
   const unassignedContacts = companyContacts.filter(c => !c.department_id);
 
+  const getRoleLabel = (role: string | null | undefined) => {
+    if (!role) return null;
+    return DEPARTMENT_ROLES.find(r => r.value === role)?.label || role;
+  };
+
   // Handle drag and drop
   const handleDragEnd = (result: DropResult) => {
     const { draggableId, destination, source } = result;
-
-    // No destination or same position
     if (!destination) return;
     if (destination.droppableId === source.droppableId) return;
 
-    // Get target department ID (null if dropping to unassigned)
     const targetDepartmentId = destination.droppableId === "unassigned" ? null : destination.droppableId;
-    
-    // Update contact's department
     handleAssignContact(draggableId, targetDepartmentId);
   };
 
@@ -138,6 +202,118 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
       </Card>
     );
   }
+
+  // Contact Card Component
+  const ContactCard = ({ 
+    contact, 
+    isDragging, 
+    departmentId,
+    isBillingContact,
+    isManager,
+  }: { 
+    contact: Contact; 
+    isDragging?: boolean;
+    departmentId: string | null;
+    isBillingContact?: boolean;
+    isManager?: boolean;
+  }) => {
+    const role = (contact as any).department_role;
+    
+    return (
+      <div
+        className={cn(
+          "flex items-center gap-2 p-2 rounded-lg bg-card border transition-all group",
+          isDragging && "shadow-lg ring-2 ring-primary/20",
+          "hover:border-primary/30"
+        )}
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab active:cursor-grabbing shrink-0" />
+        
+        <Avatar className="h-8 w-8 shrink-0">
+          <AvatarImage src={contact.avatar_url || undefined} />
+          <AvatarFallback className="text-xs bg-primary/10 text-primary">
+            {contact.name.slice(0, 2).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <Link
+              to={`/crm/contacts/${contact.id}`}
+              className="text-sm font-medium hover:text-primary transition-colors truncate"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {contact.name}
+            </Link>
+            {isManager && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Crown className="h-3.5 w-3.5 text-amber-500" />
+                  </TooltipTrigger>
+                  <TooltipContent>Responsable</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {isBillingContact && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <Receipt className="h-3.5 w-3.5 text-emerald-500" />
+                  </TooltipTrigger>
+                  <TooltipContent>Contact facturation</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+          {(role || contact.role) && (
+            <p className="text-xs text-muted-foreground truncate">
+              {getRoleLabel(role) || contact.role}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {contact.email && (
+            <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+              <a href={`mailto:${contact.email}`} onClick={(e) => e.stopPropagation()}>
+                <Mail className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+          )}
+          {contact.phone && (
+            <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+              <a href={`tel:${contact.phone}`} onClick={(e) => e.stopPropagation()}>
+                <Phone className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleOpenRoleDialog(contact)}>
+                <Briefcase className="h-4 w-4 mr-2" />
+                Définir le rôle
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleSetBillingContact(departmentId, contact.id)}>
+                <Receipt className="h-4 w-4 mr-2" />
+                Contact facturation
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleAssignContact(contact.id, null)}>
+                <Users className="h-4 w-4 mr-2" />
+                Désassigner
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -164,10 +340,11 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
             </div>
           ) : (
             <DragDropContext onDragEnd={handleDragEnd}>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {departments.map((dept) => {
                   const deptContacts = getContactsForDepartment(dept.id);
                   const manager = deptContacts.find(c => c.id === dept.manager_contact_id);
+                  const billingContact = deptContacts.find(c => c.id === (dept as any).billing_contact_id);
                   
                   return (
                     <Droppable key={dept.id} droppableId={dept.id}>
@@ -176,24 +353,25 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
                           ref={provided.innerRef}
                           {...provided.droppableProps}
                           className={cn(
-                            "border rounded-lg p-3 transition-colors",
+                            "border rounded-lg p-4 transition-colors",
                             snapshot.isDraggingOver && "bg-primary/5 border-primary/30"
                           )}
                         >
-                          <div className="flex items-start justify-between gap-3">
+                          {/* Department Header */}
+                          <div className="flex items-start justify-between gap-3 mb-3">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <h4 className="font-medium text-sm">{dept.name}</h4>
-                                <Badge variant="secondary" className="text-[10px]">
+                                <h4 className="font-semibold">{dept.name}</h4>
+                                <Badge variant="outline" className="text-[10px]">
                                   {deptContacts.length} contact{deptContacts.length !== 1 ? "s" : ""}
                                 </Badge>
                               </div>
                               {dept.description && (
-                                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                                <p className="text-sm text-muted-foreground mt-0.5">
                                   {dept.description}
                                 </p>
                               )}
-                              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                                 {dept.location && (
                                   <span className="flex items-center gap-1">
                                     <CountryFlag location={dept.location} size="xs" />
@@ -203,8 +381,14 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
                                 )}
                                 {manager && (
                                   <span className="flex items-center gap-1">
-                                    <UserCircle className="h-3 w-3" />
+                                    <Crown className="h-3 w-3 text-amber-500" />
                                     {manager.name}
+                                  </span>
+                                )}
+                                {billingContact && (
+                                  <span className="flex items-center gap-1">
+                                    <Receipt className="h-3 w-3 text-emerald-500" />
+                                    {billingContact.name}
                                   </span>
                                 )}
                               </div>
@@ -212,7 +396,7 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
                             
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -232,48 +416,35 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
                             </DropdownMenu>
                           </div>
 
-                          {/* Contacts in department - Draggable */}
+                          {/* Contacts Grid */}
                           <div className={cn(
-                            "mt-3 pt-3 border-t min-h-[40px]",
-                            deptContacts.length === 0 && "border-dashed"
+                            "grid grid-cols-1 md:grid-cols-2 gap-2 min-h-[48px]",
+                            deptContacts.length === 0 && "border-2 border-dashed rounded-lg"
                           )}>
                             {deptContacts.length === 0 ? (
-                              <p className="text-xs text-muted-foreground text-center py-2">
+                              <p className="text-xs text-muted-foreground text-center py-4 col-span-2">
                                 Glissez des contacts ici
                               </p>
                             ) : (
-                              <div className="flex flex-wrap gap-2">
-                                {deptContacts.map((contact, index) => (
-                                  <Draggable key={contact.id} draggableId={contact.id} index={index}>
-                                    {(provided, snapshot) => (
-                                      <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        {...provided.dragHandleProps}
-                                        className={cn(
-                                          "flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted hover:bg-muted/80 transition-colors cursor-grab active:cursor-grabbing",
-                                          snapshot.isDragging && "shadow-lg ring-2 ring-primary/20"
-                                        )}
-                                      >
-                                        <GripVertical className="h-3 w-3 text-muted-foreground" />
-                                        <Avatar className="h-5 w-5">
-                                          <AvatarImage src={contact.avatar_url || undefined} />
-                                          <AvatarFallback className="text-[8px]">
-                                            {contact.name.slice(0, 2).toUpperCase()}
-                                          </AvatarFallback>
-                                        </Avatar>
-                                        <Link
-                                          to={`/crm/contacts/${contact.id}`}
-                                          className="text-xs font-medium hover:text-primary transition-colors"
-                                          onClick={(e) => e.stopPropagation()}
-                                        >
-                                          {contact.name}
-                                        </Link>
-                                      </div>
-                                    )}
-                                  </Draggable>
-                                ))}
-                              </div>
+                              deptContacts.map((contact, index) => (
+                                <Draggable key={contact.id} draggableId={contact.id} index={index}>
+                                  {(provided, snapshot) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.draggableProps}
+                                      {...provided.dragHandleProps}
+                                    >
+                                      <ContactCard
+                                        contact={contact}
+                                        isDragging={snapshot.isDragging}
+                                        departmentId={dept.id}
+                                        isBillingContact={contact.id === (dept as any).billing_contact_id}
+                                        isManager={contact.id === dept.manager_contact_id}
+                                      />
+                                    </div>
+                                  )}
+                                </Draggable>
+                              ))
                             )}
                             {provided.placeholder}
                           </div>
@@ -283,7 +454,7 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
                   );
                 })}
 
-                {/* Unassigned contacts - also droppable */}
+                {/* Unassigned contacts */}
                 {(unassignedContacts.length > 0 || departments.length > 0) && (
                   <Droppable droppableId="unassigned">
                     {(provided, snapshot) => (
@@ -291,17 +462,17 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
                         ref={provided.innerRef}
                         {...provided.droppableProps}
                         className={cn(
-                          "border border-dashed rounded-lg p-3 bg-muted/20 transition-colors",
-                          snapshot.isDraggingOver && "bg-muted/40 border-muted-foreground/30"
+                          "border border-dashed rounded-lg p-4 bg-muted/10 transition-colors",
+                          snapshot.isDraggingOver && "bg-muted/30 border-muted-foreground/30"
                         )}
                       >
-                        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                        <div className="flex items-center gap-2 text-muted-foreground mb-3">
                           <Users className="h-4 w-4" />
-                          <span className="text-xs font-medium">Non assignés ({unassignedContacts.length})</span>
+                          <span className="text-sm font-medium">Non assignés ({unassignedContacts.length})</span>
                         </div>
-                        <div className="flex flex-wrap gap-2 min-h-[32px]">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 min-h-[40px]">
                           {unassignedContacts.length === 0 ? (
-                            <p className="text-xs text-muted-foreground py-1">
+                            <p className="text-xs text-muted-foreground py-2 col-span-3">
                               Glissez des contacts ici pour les désassigner
                             </p>
                           ) : (
@@ -312,25 +483,13 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
                                     ref={provided.innerRef}
                                     {...provided.draggableProps}
                                     {...provided.dragHandleProps}
-                                    className={cn(
-                                      "flex items-center gap-1.5 px-2 py-1 rounded-full bg-background border cursor-grab active:cursor-grabbing hover:border-primary/30 transition-colors",
-                                      snapshot.isDragging && "shadow-lg ring-2 ring-primary/20"
-                                    )}
                                   >
-                                    <GripVertical className="h-3 w-3 text-muted-foreground" />
-                                    <Avatar className="h-5 w-5">
-                                      <AvatarImage src={contact.avatar_url || undefined} />
-                                      <AvatarFallback className="text-[8px]">
-                                        {contact.name.slice(0, 2).toUpperCase()}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <Link
-                                      to={`/crm/contacts/${contact.id}`}
-                                      className="text-xs font-medium hover:text-primary transition-colors"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {contact.name}
-                                    </Link>
+                                    <ContactCard
+                                      contact={contact}
+                                      isDragging={snapshot.isDragging}
+                                      departmentId={null}
+                                      isBillingContact={contact.id === companyBillingContactId}
+                                    />
                                   </div>
                                 )}
                               </Draggable>
@@ -348,7 +507,7 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
+      {/* Create/Edit Department Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -416,6 +575,39 @@ export function CompanyDepartmentsSection({ companyId, companyContacts }: Compan
               disabled={!formData.name.trim() || createDepartment.isPending || updateDepartment.isPending}
             >
               {editingDepartment ? "Enregistrer" : "Créer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Role Dialog */}
+      <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rôle dans le département</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="text-sm font-medium">Rôle de {editingContact?.name}</label>
+            <Select value={selectedRole} onValueChange={setSelectedRole}>
+              <SelectTrigger className="mt-2">
+                <SelectValue placeholder="Sélectionner un rôle..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="_none">Aucun rôle spécifique</SelectItem>
+                {DEPARTMENT_ROLES.map((role) => (
+                  <SelectItem key={role.value} value={role.value}>
+                    {role.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleSaveRole}>
+              Enregistrer
             </Button>
           </DialogFooter>
         </DialogContent>

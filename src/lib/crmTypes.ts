@@ -255,6 +255,7 @@ export interface Contact {
   avatar_url: string | null;
   crm_company_id: string | null;
   department_id: string | null;
+  department_role: string | null; // Role within the department
   created_by: string | null;
   workspace_id: string;
   created_at: string | null;

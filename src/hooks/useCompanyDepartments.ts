@@ -11,6 +11,7 @@ export interface CompanyDepartment {
   description: string | null;
   location: string | null;
   manager_contact_id: string | null;
+  billing_contact_id: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
