@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   XCircle,
   Building2,
+  Euro,
 } from "lucide-react";
 import {
   Dialog,
@@ -29,7 +30,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tender, TenderTeamMember, TenderDeliverable, DELIVERABLE_TYPES } from "@/lib/tenderTypes";
+import { Tender, TenderTeamMember, TenderDeliverable, DELIVERABLE_TYPES, SPECIALTIES } from "@/lib/tenderTypes";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -47,6 +48,8 @@ interface MemberDeliverables {
     deliverable: TenderDeliverable;
     isCompleted: boolean;
   }>;
+  feePercentage: number | null;
+  feeAmount: number | null;
 }
 
 export function TeamDeliverablesEmailDialog({
@@ -61,6 +64,22 @@ export function TeamDeliverablesEmailDialog({
   const [introText, setIntroText] = useState("");
   const [isSending, setIsSending] = useState(false);
 
+  // Calculate MOE total fee amount
+  const moeFeeAmount = tender?.moe_fee_amount || 
+    ((tender?.estimated_budget || 0) * ((tender?.moe_fee_percentage || 0) / 100));
+
+  const getSpecialtyLabel = (value: string) => {
+    return SPECIALTIES.find((s) => s.value === value)?.label || value;
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "EUR",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   // Group deliverables by team member
   const memberDeliverables = useMemo<MemberDeliverables[]>(() => {
     return teamMembers
@@ -74,22 +93,30 @@ export function TeamDeliverablesEmailDialog({
             isCompleted: (d.member_completion as Record<string, boolean>)?.[companyId] ?? d.is_completed,
           }));
         
+        // Calculate fee for this member
+        const feePercentage = member.fee_percentage || null;
+        const feeAmount = feePercentage && moeFeeAmount 
+          ? moeFeeAmount * (feePercentage / 100)
+          : null;
+        
         return {
           member,
           deliverables: memberDelivs,
+          feePercentage,
+          feeAmount,
         };
       })
-      .filter(md => md.deliverables.length > 0);
-  }, [teamMembers, deliverables]);
+      .filter(md => md.deliverables.length > 0 || md.feePercentage !== null);
+  }, [teamMembers, deliverables, moeFeeAmount]);
 
   useEffect(() => {
     if (open && tender) {
-      setSubject(`Récapitulatif des livrables - ${tender.title?.substring(0, 40) || 'Projet'}`);
+      setSubject(`Récapitulatif honoraires et livrables - ${tender.title?.substring(0, 40) || 'Projet'}`);
       setIntroText(`Bonjour,
 
-Voici le récapitulatif des livrables attendus pour le projet "${tender.title}".
+Voici le récapitulatif de votre participation au groupement pour le projet "${tender.title}".
 
-Merci de nous transmettre les documents manquants dans les meilleurs délais.`);
+Ce document reprend la proposition d'honoraires convenue ainsi que la liste des livrables attendus.`);
       // Select all members by default
       setSelectedMembers(new Set(memberDeliverables.map(md => md.member.id)));
     }
@@ -113,38 +140,57 @@ Merci de nous transmettre les documents manquants dans les meilleurs délais.`);
     const completedDelivs = md.deliverables.filter(d => d.isCompleted);
 
     let body = `${introText}
+`;
 
+    // Add fee section if available
+    if (md.feePercentage !== null && md.feeAmount !== null) {
+      body += `
 ═══════════════════════════════════════
+💼 PROPOSITION D'HONORAIRES
+═══════════════════════════════════════
+
+Votre participation au groupement :
+• Part : ${md.feePercentage}% des honoraires MOE
+• Montant estimatif : ${formatCurrency(md.feeAmount)} HT
+${tender?.moe_fee_percentage ? `• Base MOE globale : ${tender.moe_fee_percentage}% du budget travaux` : ''}
+
+`;
+    }
+
+    // Add deliverables section
+    if (md.deliverables.length > 0) {
+      body += `═══════════════════════════════════════
 📋 VOS LIVRABLES
 ═══════════════════════════════════════
 
 `;
 
-    if (pendingDelivs.length > 0) {
-      body += `⏳ À PRODUIRE (${pendingDelivs.length})
+      if (pendingDelivs.length > 0) {
+        body += `⏳ À PRODUIRE (${pendingDelivs.length})
 ──────────────────────────────────────
 `;
-      pendingDelivs.forEach((d, i) => {
-        body += `${i + 1}. ${d.deliverable.name}`;
-        if (d.deliverable.due_date) {
-          body += ` - Échéance : ${formatDate(d.deliverable.due_date)}`;
-        }
+        pendingDelivs.forEach((d, i) => {
+          body += `${i + 1}. ${d.deliverable.name}`;
+          if (d.deliverable.due_date) {
+            body += ` - Échéance : ${formatDate(d.deliverable.due_date)}`;
+          }
+          body += '\n';
+          if (d.deliverable.description) {
+            body += `   ${d.deliverable.description}\n`;
+          }
+        });
         body += '\n';
-        if (d.deliverable.description) {
-          body += `   ${d.deliverable.description}\n`;
-        }
-      });
-      body += '\n';
-    }
+      }
 
-    if (completedDelivs.length > 0) {
-      body += `✅ DÉJÀ REÇUS (${completedDelivs.length})
+      if (completedDelivs.length > 0) {
+        body += `✅ DÉJÀ REÇUS (${completedDelivs.length})
 ──────────────────────────────────────
 `;
-      completedDelivs.forEach((d, i) => {
-        body += `${i + 1}. ${d.deliverable.name}\n`;
-      });
-      body += '\n';
+        completedDelivs.forEach((d, i) => {
+          body += `${i + 1}. ${d.deliverable.name}\n`;
+        });
+        body += '\n';
+      }
     }
 
     body += `═══════════════════════════════════════
@@ -315,7 +361,13 @@ Cordialement`;
                                 {md.member.contact?.email}
                               </p>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap justify-end">
+                              {md.feePercentage !== null && (
+                                <Badge variant="secondary" className="text-primary">
+                                  <Euro className="h-3 w-3 mr-1" />
+                                  {md.feePercentage}%
+                                </Badge>
+                              )}
                               {pendingCount > 0 && (
                                 <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
                                   <XCircle className="h-3 w-3 mr-1" />
