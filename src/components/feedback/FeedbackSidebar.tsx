@@ -113,9 +113,9 @@ export function FeedbackSidebar() {
               )}
             </Button>
             <typeConfig.icon className={cn("h-4 w-4", typeConfig.color)} />
-            <Badge variant="outline" className="text-[10px]">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full border bg-background font-medium">
               {typeConfig.label}
-            </Badge>
+            </span>
           </div>
           <Button
             variant="ghost"
@@ -222,8 +222,8 @@ export function FeedbackSidebar() {
       </div>
 
       {/* Feedback List with Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-        <TabsList className="mx-4 mt-3">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <TabsList className="mx-4 mt-3 shrink-0">
           <TabsTrigger value="pending" className="flex-1 gap-1.5">
             <Circle className="h-3 w-3" />
             En attente ({pendingEntries.length})
@@ -234,27 +234,35 @@ export function FeedbackSidebar() {
           </TabsTrigger>
         </TabsList>
 
-        <ScrollArea className="flex-1">
-          <TabsContent value="pending" className="p-4 space-y-3 mt-0">
-            {isLoading ? (
-              <p className="text-sm text-muted-foreground">Chargement...</p>
-            ) : pendingEntries.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Aucun feedback en attente</p>
-            ) : (
-              pendingEntries.map(renderFeedbackCard)
-            )}
+        <div className="flex-1 overflow-hidden">
+          <TabsContent value="pending" className="h-full mt-0 data-[state=active]:flex data-[state=active]:flex-col">
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-3">
+                {isLoading ? (
+                  <p className="text-sm text-muted-foreground">Chargement...</p>
+                ) : pendingEntries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Aucun feedback en attente</p>
+                ) : (
+                  pendingEntries.map(renderFeedbackCard)
+                )}
+              </div>
+            </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="resolved" className="p-4 space-y-3 mt-0">
-            {isLoading ? (
-              <p className="text-sm text-muted-foreground">Chargement...</p>
-            ) : resolvedEntries.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Aucun feedback résolu</p>
-            ) : (
-              resolvedEntries.map(renderFeedbackCard)
-            )}
+          <TabsContent value="resolved" className="h-full mt-0 data-[state=active]:flex data-[state=active]:flex-col">
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-3">
+                {isLoading ? (
+                  <p className="text-sm text-muted-foreground">Chargement...</p>
+                ) : resolvedEntries.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">Aucun feedback résolu</p>
+                ) : (
+                  resolvedEntries.map(renderFeedbackCard)
+                )}
+              </div>
+            </ScrollArea>
           </TabsContent>
-        </ScrollArea>
+        </div>
       </Tabs>
     </div>
   );
