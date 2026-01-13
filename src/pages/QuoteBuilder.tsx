@@ -36,8 +36,7 @@ import { QuoteTermsTab } from '@/components/commercial/quote-builder/QuoteTermsT
 import { QuoteMOETermsTab } from '@/components/commercial/quote-builder/QuoteMOETermsTab';
 import { QuoteCommunicationTermsTab } from '@/components/commercial/quote-builder/QuoteCommunicationTermsTab';
 import { QuotePreviewPanel } from '@/components/commercial/quote-builder/QuotePreviewPanel';
-import { QuoteMOEPreviewPanel } from '@/components/commercial/quote-builder/QuoteMOEPreviewPanel';
-import { QuoteCommunicationPreviewPanel } from '@/components/commercial/quote-builder/QuoteCommunicationPreviewPanel';
+import { ContractPreviewPanel } from '@/components/commercial/quote-builder/ContractPreviewPanel';
 import { isArchitectureContractType, COMMUNICATION_CONTRACT_CODES, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
 import { generateQuotePDFSimple } from '@/lib/generateQuotePDFSimple';
@@ -616,8 +615,16 @@ export default function QuoteBuilder() {
               </div>
             </div>
             <div className="flex-1 overflow-auto p-4">
-              {/* Aperçu unique (HTML) pour devis ET contrats : même rendu, plus fiable que l'iframe PDF */}
-              <QuotePreviewPanel document={document} lines={lines} zoom={zoom} />
+              {document.document_type === 'contract' ? (
+                <ContractPreviewPanel
+                  document={document}
+                  lines={lines}
+                  zoom={zoom}
+                  contractTypeCode={currentContractType?.code || null}
+                />
+              ) : (
+                <QuotePreviewPanel document={document} lines={lines} zoom={zoom} />
+              )}
             </div>
           </div>
         )}
