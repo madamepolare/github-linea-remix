@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import { useTasks, Task } from "@/hooks/useTasks";
 import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 import { Loader2 } from "lucide-react";
@@ -7,7 +8,7 @@ import { Loader2 } from "lucide-react";
 export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const { tasks, isLoading } = useTasks();
   
   const [task, setTask] = useState<Task | null>(null);

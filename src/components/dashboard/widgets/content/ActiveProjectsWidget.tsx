@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { ChevronRight, Clock } from "lucide-react";
@@ -61,7 +61,7 @@ const phaseColors: Record<string, string> = {
 };
 
 export function ActiveProjectsWidget() {
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
 
   return (
     <ScrollArea className="h-full">

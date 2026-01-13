@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -41,7 +42,7 @@ import { TenderCasPratiqueTab } from "@/components/tenders/tabs/TenderCasPratiqu
 
 export default function TenderDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const { data: tender, isLoading } = useTender(id);
   const { updateTender, updateStatus } = useTenders();
   const { setEntityConfig } = useTopBar();

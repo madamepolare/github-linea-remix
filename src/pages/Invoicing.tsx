@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useWorkspaceNavigation } from '@/hooks/useWorkspaceNavigation';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -70,7 +71,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 export default function Invoicing() {
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const { filter } = useParams<{ filter?: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');

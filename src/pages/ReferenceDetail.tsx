@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
@@ -48,7 +49,7 @@ const clientTypeLabels: Record<string, string> = {
 
 export default function ReferenceDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const { references, isLoading } = useReferences();
 
   const [lightboxOpen, setLightboxOpen] = useState(false);

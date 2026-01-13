@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,7 +31,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export default function ContactDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const { allContacts, isLoading, updateContact } = useContacts();
   const { allCompanies } = useCRMCompanies();
   const { leads } = useLeads();

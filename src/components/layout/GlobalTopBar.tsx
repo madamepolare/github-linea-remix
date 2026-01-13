@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -63,7 +63,7 @@ interface GlobalTopBarProps {
 }
 
 export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import { motion } from "framer-motion";
 import {
   Search,
@@ -50,7 +51,7 @@ const CATEGORY_ICONS: Record<string, typeof BookOpen> = {
 };
 
 export default function Documentation() {
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");

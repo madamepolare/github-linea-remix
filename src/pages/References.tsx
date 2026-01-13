@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import { motion } from "framer-motion";
 import { 
   Award, 
@@ -69,7 +70,7 @@ const CLIENT_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function References() {
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const [searchParams] = useSearchParams();
   
   const [search, setSearch] = useState("");
