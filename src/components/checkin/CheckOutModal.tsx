@@ -10,15 +10,18 @@ import {
   ChevronUp,
   Star,
   Zap,
+  StickyNote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { THIN_STROKE } from "@/components/ui/icon";
 import { useTodayData } from "@/hooks/useTodayData";
 import { useUserCheckins } from "@/hooks/useUserCheckins";
 import { useCheckinStore } from "@/hooks/useCheckinStore";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePostItTasks } from "@/hooks/usePostItTasks";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { DayQualityVote } from "./DayQualityVote";
@@ -32,10 +35,12 @@ export function CheckOutModal() {
   const { profile } = useAuth();
   const { isCheckoutOpen, closeCheckout } = useCheckinStore();
   const { checkOut } = useUserCheckins();
+  const { createQuickTask } = usePostItTasks();
   const todayData = useTodayData();
   
   const [dayQuality, setDayQuality] = useState<number | null>(null);
   const [tomorrowNotes, setTomorrowNotes] = useState("");
+  const [createPostIt, setCreatePostIt] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
 
@@ -74,6 +79,11 @@ export function CheckOutModal() {
 
     setIsSubmitting(true);
     try {
+      // Create post-it if checked and notes exist
+      if (createPostIt && tomorrowNotes.trim()) {
+        await createQuickTask.mutateAsync({ title: tomorrowNotes.trim() });
+      }
+      
       await checkOut.mutateAsync({
         day_quality: dayQuality,
         tomorrow_notes: tomorrowNotes || undefined,
@@ -267,10 +277,12 @@ export function CheckOutModal() {
               </motion.div>
 
               {/* Tomorrow notes */}
+              {/* Tomorrow notes with post-it option */}
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
+                className="space-y-2"
               >
                 <Textarea
                   value={tomorrowNotes}
@@ -278,6 +290,19 @@ export function CheckOutModal() {
                   placeholder="Une note pour demain ? (optionnel)"
                   className="resize-none text-sm h-16"
                 />
+                {tomorrowNotes.trim() && (
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={createPostIt}
+                      onCheckedChange={(checked) => setCreatePostIt(checked as boolean)}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <StickyNote className="h-3 w-3 text-amber-500" />
+                      Créer un post-it avec cette note
+                    </span>
+                  </label>
+                )}
               </motion.div>
 
               {/* CTA */}
