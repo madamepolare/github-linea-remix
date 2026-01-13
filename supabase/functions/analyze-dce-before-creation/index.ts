@@ -1053,8 +1053,8 @@ serve(async (req) => {
     const sortedFiles = [...files].sort((a, b) => getPriority(a.name) - getPriority(b.name));
     
     // Limit to most important documents to avoid function timeout
-    // We increase the cap for Communication because fields are often spread across RC/CCAP/CCTP/BPU.
-    const MAX_DOCS = discipline_slug === 'communication' ? 8 : 6;
+    // We allow up to 15 documents to ensure all DCE pieces are parsed
+    const MAX_DOCS = 15;
     const filesToProcess = sortedFiles.slice(0, MAX_DOCS);
     
     console.log(`[DCE Analysis] Processing top ${filesToProcess.length} files (of ${files.length} total): ${filesToProcess.map((f: { name: string }) => f.name).join(', ')}`);
