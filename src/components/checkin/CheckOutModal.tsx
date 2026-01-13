@@ -9,10 +9,11 @@ import {
   Sparkles,
   ListChecks,
   CalendarCheck,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -21,17 +22,19 @@ import { useTodayData } from "@/hooks/useTodayData";
 import { useUserCheckins } from "@/hooks/useUserCheckins";
 import { useCheckinStore } from "@/hooks/useCheckinStore";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { DayQualityVote } from "./DayQualityVote";
+import { QuickTimeEntry } from "./QuickTimeEntry";
+import { useQueryClient } from "@tanstack/react-query";
 
-const MINIMUM_HOURS_REQUIRED = 7;
+// Set to 0 for testing, 7 for production
+const MINIMUM_HOURS_REQUIRED = 0;
 const MINIMUM_MINUTES_REQUIRED = MINIMUM_HOURS_REQUIRED * 60;
 
 export function CheckOutModal() {
-  const navigate = useNavigate();
-  const { profile } = useAuth();
+  const queryClient = useQueryClient();
+  const { profile, activeWorkspace, user } = useAuth();
   const { isCheckoutOpen, closeCheckout } = useCheckinStore();
   const { checkOut } = useUserCheckins();
   const todayData = useTodayData();
@@ -39,8 +42,14 @@ export function CheckOutModal() {
   const [dayQuality, setDayQuality] = useState<number | null>(null);
   const [tomorrowNotes, setTomorrowNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showQuickEntry, setShowQuickEntry] = useState(false);
 
   const firstName = profile?.full_name?.split(" ")[0] || "Vous";
+
+  // Refetch time entries after adding
+  const handleTimeAdded = () => {
+    queryClient.invalidateQueries({ queryKey: ["team-time-entries"] });
+  };
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -50,10 +59,9 @@ export function CheckOutModal() {
     const totalTasks = todayData.todaySchedules.length;
     const totalEvents = todayData.todayEvents.length;
     const timeLoggedHours = Math.round((todayData.totalTimeLoggedMinutes / 60) * 10) / 10;
-    const timeProgress = Math.min(
-      (todayData.totalTimeLoggedMinutes / MINIMUM_MINUTES_REQUIRED) * 100,
-      100
-    );
+    const timeProgress = MINIMUM_MINUTES_REQUIRED > 0 
+      ? Math.min((todayData.totalTimeLoggedMinutes / MINIMUM_MINUTES_REQUIRED) * 100, 100)
+      : 100;
     const missingMinutes = Math.max(
       0,
       MINIMUM_MINUTES_REQUIRED - todayData.totalTimeLoggedMinutes
@@ -66,7 +74,7 @@ export function CheckOutModal() {
       timeLoggedHours,
       timeProgress,
       missingMinutes,
-      hasEnoughTime: todayData.totalTimeLoggedMinutes >= MINIMUM_MINUTES_REQUIRED,
+      hasEnoughTime: MINIMUM_MINUTES_REQUIRED === 0 || todayData.totalTimeLoggedMinutes >= MINIMUM_MINUTES_REQUIRED,
     };
   }, [todayData]);
 
@@ -108,11 +116,6 @@ export function CheckOutModal() {
     }
   };
 
-  const handleGoToTimeTracking = () => {
-    closeCheckout();
-    navigate("/time-tracking");
-  };
-
   if (!isCheckoutOpen) return null;
 
   return (
@@ -130,8 +133,8 @@ export function CheckOutModal() {
               key={i}
               className="absolute w-1 h-1 rounded-full bg-purple-400/30"
               initial={{
-                x: Math.random() * window.innerWidth,
-                y: Math.random() * window.innerHeight,
+                x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
+                y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
               }}
               animate={{
                 opacity: [0.2, 0.8, 0.2],
@@ -235,18 +238,62 @@ export function CheckOutModal() {
                 </div>
               </motion.div>
 
+              {/* Quick Time Entry - Always visible for easy access */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-card border border-border rounded-2xl p-6 shadow-lg"
+              >
+                <button
+                  onClick={() => setShowQuickEntry(!showQuickEntry)}
+                  className="w-full flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-blue-500" strokeWidth={THIN_STROKE} />
+                    <h2 className="font-semibold text-lg">Saisie rapide des temps</h2>
+                  </div>
+                  {showQuickEntry ? (
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </button>
+
+                <AnimatePresence>
+                  {showQuickEntry && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-4">
+                        <QuickTimeEntry onEntryAdded={handleTimeAdded} />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {!showQuickEntry && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Clique pour ajouter rapidement tes temps de la journée
+                  </p>
+                )}
+              </motion.div>
+
               {/* Time warning if needed */}
               {!stats.hasEnoughTime && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
+                  transition={{ delay: 0.35 }}
                   className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6"
                 >
                   <div className="flex items-center gap-2 mb-4">
                     <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                     <h2 className="font-semibold text-lg text-amber-700 dark:text-amber-300">
-                      Temps non saisi !
+                      Temps insuffisant
                     </h2>
                   </div>
                   
@@ -265,19 +312,10 @@ export function CheckOutModal() {
                       Il manque{" "}
                       <span className="font-semibold">
                         {Math.floor(stats.missingMinutes / 60)}h
-                        {stats.missingMinutes % 60 > 0 && `${stats.missingMinutes % 60}min`}
+                        {stats.missingMinutes % 60 > 0 ? ` ${stats.missingMinutes % 60}min` : ""}
                       </span>{" "}
-                      de temps pour aujourd'hui.
+                      pour aujourd'hui. Utilise la saisie rapide ci-dessus.
                     </p>
-
-                    <Button
-                      onClick={handleGoToTimeTracking}
-                      variant="default"
-                      className="w-full bg-amber-600 hover:bg-amber-700 text-white"
-                    >
-                      <Clock className="h-4 w-4 mr-2" />
-                      Saisir mes temps maintenant
-                    </Button>
                   </div>
                 </motion.div>
               )}
