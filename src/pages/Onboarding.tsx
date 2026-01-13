@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { OnboardingLayout } from "@/components/onboarding/OnboardingLayout";
 import { WelcomeStep } from "@/components/onboarding/steps/WelcomeStep";
+import { AuthStep } from "@/components/onboarding/steps/AuthStep";
 import { WorkspaceStep } from "@/components/onboarding/steps/WorkspaceStep";
 import { ModulesStep } from "@/components/onboarding/steps/ModulesStep";
 import { InviteStep } from "@/components/onboarding/steps/InviteStep";
@@ -38,26 +39,21 @@ export default function Onboarding() {
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [inviteEmails, setInviteEmails] = useState<string[]>([]);
 
-  const TOTAL_STEPS = 5;
+  const TOTAL_STEPS = 6; // Welcome, Auth, Workspace, Modules, Invite, Complete
 
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
+    const initOnboarding = async () => {
+      // Wait for auth to be ready
       if (loading) return;
-      
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
 
-      // Check if already has a workspace and onboarding completed
-      if (workspaces && workspaces.length > 0 && profile?.onboarding_completed) {
+      // If user is logged in and has completed onboarding with workspace
+      if (user && workspaces && workspaces.length > 0 && profile?.onboarding_completed) {
         navigate("/dashboard");
         return;
       }
 
       // If user is invited to a workspace but hasn't completed onboarding
-      if (workspaces && workspaces.length > 0 && !profile?.onboarding_completed) {
-        // Mark onboarding as completed for invited users
+      if (user && workspaces && workspaces.length > 0 && !profile?.onboarding_completed) {
         await supabase
           .from("profiles")
           .update({ onboarding_completed: true })
@@ -66,6 +62,11 @@ export default function Onboarding() {
         await refreshProfile();
         navigate("/dashboard");
         return;
+      }
+
+      // If user is logged in but no workspace, skip to workspace step
+      if (user && (!workspaces || workspaces.length === 0)) {
+        setStep(2); // Go to workspace creation
       }
 
       // Fetch modules
@@ -77,15 +78,19 @@ export default function Onboarding() {
 
       if (modulesData) {
         setModules(modulesData as Module[]);
-        // Pre-select core modules
         setSelectedModules(modulesData.filter((m: any) => m.is_core).map((m: any) => m.id));
       }
 
       setIsLoading(false);
     };
 
-    checkOnboardingStatus();
+    initOnboarding();
   }, [user, profile, loading, navigate, workspaces, refreshProfile]);
+
+  const handleAuthSuccess = () => {
+    // After auth, go to workspace creation
+    setStep(2);
+  };
 
   const handleComplete = async () => {
     if (!user) return;
@@ -184,36 +189,30 @@ export default function Onboarding() {
     <OnboardingLayout currentStep={step} totalSteps={TOTAL_STEPS}>
       {step === 0 && (
         <WelcomeStep
-          userName={profile?.full_name?.split(" ")[0] || ""}
+          userName=""
           onNext={() => setStep(1)}
         />
       )}
       
       {step === 1 && (
-        <WorkspaceStep
-          onNext={(data) => {
-            setWorkspaceData(data);
-            setStep(2);
-          }}
-          onBack={() => setStep(0)}
-        />
+        <AuthStep onAuthenticated={handleAuthSuccess} />
       )}
       
       {step === 2 && (
-        <ModulesStep
-          modules={modules}
-          onNext={(mods) => {
-            setSelectedModules(mods);
+        <WorkspaceStep
+          onNext={(data) => {
+            setWorkspaceData(data);
             setStep(3);
           }}
-          onBack={() => setStep(1)}
+          onBack={() => user ? setStep(0) : setStep(1)}
         />
       )}
       
       {step === 3 && (
-        <InviteStep
-          onNext={(emails) => {
-            setInviteEmails(emails);
+        <ModulesStep
+          modules={modules}
+          onNext={(mods) => {
+            setSelectedModules(mods);
             setStep(4);
           }}
           onBack={() => setStep(2)}
@@ -221,6 +220,16 @@ export default function Onboarding() {
       )}
       
       {step === 4 && (
+        <InviteStep
+          onNext={(emails) => {
+            setInviteEmails(emails);
+            setStep(5);
+          }}
+          onBack={() => setStep(3)}
+        />
+      )}
+      
+      {step === 5 && (
         <CompleteStep
           workspaceName={workspaceData.name}
           modulesCount={selectedModules.length}
