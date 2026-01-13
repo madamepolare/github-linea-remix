@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CountryFlag } from "@/components/ui/country-flag";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,12 +29,7 @@ import {
   Trash2,
   Building2,
   ExternalLink,
-  Mail,
-  Phone,
-  Globe,
-  MapPin,
   ArrowUpDown,
-  ChevronDown,
 } from "lucide-react";
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
@@ -164,7 +160,6 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
   };
 
   const isAllSelected = filteredCompanies.length > 0 && selectedIds.size === filteredCompanies.length;
-  const isSomeSelected = selectedIds.size > 0 && selectedIds.size < filteredCompanies.length;
 
   if (isLoading) {
     return (
@@ -292,7 +287,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                         )} />
                       </div>
                     </TableHead>
-                    <TableHead className="hidden md:table-cell">Contact</TableHead>
+                    <TableHead className="hidden lg:table-cell">Contact principal</TableHead>
                     <TableHead 
                       className="hidden sm:table-cell cursor-pointer hover:text-foreground"
                       onClick={() => handleSort("city")}
@@ -305,7 +300,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                         )} />
                       </div>
                     </TableHead>
-                    <TableHead className="w-20 text-center hidden lg:table-cell">Actions</TableHead>
+                    <TableHead className="hidden xl:table-cell w-16">Pays</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -360,13 +355,22 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="py-2 hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
-                          <InlineEditCell
-                            value={company.primary_contact?.name || ""}
-                            placeholder="Ajouter contact"
-                            onSave={() => {}}
-                            disabled
-                          />
+                        <TableCell className="py-2 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
+                          {company.primary_contact ? (
+                            <div className="min-w-0">
+                              <p className="text-sm truncate">{company.primary_contact.name}</p>
+                              {company.primary_contact.email && (
+                                <a
+                                  href={`mailto:${company.primary_contact.email}`}
+                                  className="text-[11px] text-muted-foreground hover:text-primary truncate block"
+                                >
+                                  {company.primary_contact.email}
+                                </a>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground/50">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="py-2 hidden sm:table-cell" onClick={(e) => e.stopPropagation()}>
                           <InlineEditCell
@@ -375,38 +379,8 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                             onSave={(val) => handleInlineUpdate(company.id, "city", val)}
                           />
                         </TableCell>
-                        <TableCell className="py-2 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-1">
-                            {company.email && (
-                              <a
-                                href={`mailto:${company.email}`}
-                                className="p-1.5 rounded hover:bg-muted transition-colors"
-                                title={company.email}
-                              >
-                                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                              </a>
-                            )}
-                            {company.phone && (
-                              <a
-                                href={`tel:${company.phone}`}
-                                className="p-1.5 rounded hover:bg-muted transition-colors"
-                                title={company.phone}
-                              >
-                                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                              </a>
-                            )}
-                            {company.website && (
-                              <a
-                                href={company.website.startsWith("http") ? company.website : `https://${company.website}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-1.5 rounded hover:bg-muted transition-colors"
-                                title={company.website}
-                              >
-                                <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                              </a>
-                            )}
-                          </div>
+                        <TableCell className="py-2 hidden xl:table-cell">
+                          <CountryFlag country={company.country} size="sm" />
                         </TableCell>
                         <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
@@ -447,17 +421,17 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
             )}
           </div>
         </Card>
-
-        {/* Bulk actions */}
-        <CRMBulkActionsBar
-          selectedCount={selectedIds.size}
-          onClearSelection={() => setSelectedIds(new Set())}
-          onDelete={handleBulkDelete}
-          onExport={() => {}}
-          entityType="companies"
-        />
       </div>
 
+      {/* Bulk actions */}
+      <CRMBulkActionsBar
+        selectedCount={selectedIds.size}
+        onClearSelection={() => setSelectedIds(new Set())}
+        onDelete={handleBulkDelete}
+        entityType="companies"
+      />
+
+      {/* Edit dialog */}
       <EditCompanyDialog
         company={editingCompany}
         open={!!editingCompany}

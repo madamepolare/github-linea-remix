@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CountryFlag } from "@/components/ui/country-flag";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +43,6 @@ import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { ContactDetailSheet } from "./ContactDetailSheet";
 import { EditContactDialog } from "./EditContactDialog";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
-import { InlineEditCell } from "./InlineEditCell";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
 import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
 import { cn } from "@/lib/utils";
@@ -135,10 +135,6 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
       return next;
     });
   }, []);
-
-  const handleInlineUpdate = useCallback((id: string, field: string, value: string) => {
-    updateContact.mutate({ id, [field]: value });
-  }, [updateContact]);
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -272,8 +268,10 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                         )} />
                       </div>
                     </TableHead>
+                    <TableHead className="hidden lg:table-cell">Email</TableHead>
+                    <TableHead className="hidden md:table-cell">Téléphone</TableHead>
                     <TableHead 
-                      className="hidden md:table-cell cursor-pointer hover:text-foreground"
+                      className="hidden sm:table-cell cursor-pointer hover:text-foreground"
                       onClick={() => handleSort("company")}
                     >
                       <div className="flex items-center gap-1">
@@ -284,8 +282,8 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                         )} />
                       </div>
                     </TableHead>
-                    <TableHead className="hidden sm:table-cell">Coordonnées</TableHead>
-                    <TableHead className="w-28">Type</TableHead>
+                    <TableHead className="hidden xl:table-cell w-16">Pays</TableHead>
+                    <TableHead className="w-24">Type</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -328,46 +326,43 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="py-2 hidden md:table-cell">
+                        <TableCell className="py-2 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
+                          {canViewSensitiveData && contact.email ? (
+                            <a
+                              href={`mailto:${contact.email}`}
+                              className="text-sm text-muted-foreground hover:text-primary transition-colors truncate block max-w-[180px]"
+                              title={contact.email}
+                            >
+                              {contact.email}
+                            </a>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground/50">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-2 hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
+                          {canViewSensitiveData && contact.phone ? (
+                            <a
+                              href={`tel:${contact.phone}`}
+                              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                            >
+                              {contact.phone}
+                            </a>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground/50">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-2 hidden sm:table-cell">
                           {contact.company ? (
                             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                               <Building2 className="h-3.5 w-3.5 shrink-0" />
-                              <span className="truncate">{contact.company.name}</span>
+                              <span className="truncate max-w-[120px]">{contact.company.name}</span>
                             </div>
                           ) : (
                             <span className="text-muted-foreground/50 text-xs">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="py-2 hidden sm:table-cell" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-1.5">
-                            {canViewSensitiveData ? (
-                              <>
-                                {contact.email && (
-                                  <a
-                                    href={`mailto:${contact.email}`}
-                                    className="p-1.5 rounded hover:bg-muted transition-colors"
-                                    title={contact.email}
-                                  >
-                                    <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                                  </a>
-                                )}
-                                {contact.phone && (
-                                  <a
-                                    href={`tel:${contact.phone}`}
-                                    className="p-1.5 rounded hover:bg-muted transition-colors"
-                                    title={contact.phone}
-                                  >
-                                    <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                                  </a>
-                                )}
-                                {!contact.email && !contact.phone && (
-                                  <span className="text-[11px] text-muted-foreground/50 italic">Aucun</span>
-                                )}
-                              </>
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground italic">Accès restreint</span>
-                            )}
-                          </div>
+                        <TableCell className="py-2 hidden xl:table-cell">
+                          <CountryFlag location={contact.location} size="sm" />
                         </TableCell>
                         <TableCell className="py-2">
                           {contact.contact_type && (
@@ -429,24 +424,24 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
             )}
           </div>
         </Card>
-
-        {/* Bulk actions */}
-        <CRMBulkActionsBar
-          selectedCount={selectedIds.size}
-          onClearSelection={() => setSelectedIds(new Set())}
-          onDelete={canDeleteContacts ? handleBulkDelete : undefined}
-          onExport={() => {}}
-          onSendEmail={() => {}}
-          entityType="contacts"
-        />
       </div>
 
+      {/* Bulk actions */}
+      <CRMBulkActionsBar
+        selectedCount={selectedIds.size}
+        onClearSelection={() => setSelectedIds(new Set())}
+        onDelete={handleBulkDelete}
+        entityType="contacts"
+      />
+
+      {/* Detail sheet */}
       <ContactDetailSheet
         contact={selectedContact}
         open={!!selectedContact}
         onOpenChange={(open) => !open && setSelectedContact(null)}
       />
 
+      {/* Edit dialog */}
       <EditContactDialog
         contact={editingContact}
         open={!!editingContact}
