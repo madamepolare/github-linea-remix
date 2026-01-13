@@ -1052,8 +1052,9 @@ serve(async (req) => {
     // Sort files by priority
     const sortedFiles = [...files].sort((a, b) => getPriority(a.name) - getPriority(b.name));
     
-    // Limit to first 5 most important documents to avoid CPU timeout
-    const MAX_DOCS = 5;
+    // Limit to most important documents to avoid function timeout
+    // We increase the cap for Communication because fields are often spread across RC/CCAP/CCTP/BPU.
+    const MAX_DOCS = discipline_slug === 'communication' ? 8 : 6;
     const filesToProcess = sortedFiles.slice(0, MAX_DOCS);
     
     console.log(`[DCE Analysis] Processing top ${filesToProcess.length} files (of ${files.length} total): ${filesToProcess.map((f: { name: string }) => f.name).join(', ')}`);
@@ -1081,10 +1082,10 @@ serve(async (req) => {
         console.log(`[DCE Analysis] Failed uploads: ${failedUploads.map(u => `${u.fileName}: ${u.error}`).join(', ')}`);
       }
       
-      // STEP 2: Poll for results with shorter timeouts
+      // STEP 2: Poll for results (give LlamaParse more time, especially for scanned PDFs)
       console.log('[DCE Analysis] Step 2: Retrieving parsed content...');
       const startTime = Date.now();
-      const maxTotalTime = 35000; // 35 seconds max for all polling (reduced from 45)
+      const maxTotalTime = discipline_slug === 'communication' ? 55000 : 45000; // keep under typical function timeout
       
       for (const upload of successfulUploads) {
         const elapsed = Date.now() - startTime;
@@ -1094,16 +1095,16 @@ serve(async (req) => {
           break;
         }
         
-        // Calculate remaining time, 6s per doc max
+        // Allocate remaining time, with sane bounds per document
         const remainingTime = maxTotalTime - elapsed;
         const docsRemaining = successfulUploads.length - parsingStats.success - parsingStats.failed;
-        const timePerDoc = Math.max(5000, Math.min(10000, remainingTime / docsRemaining));
+        const timePerDoc = Math.max(12000, Math.min(20000, Math.floor(remainingTime / Math.max(1, docsRemaining))));
         
         const result = await pollLlamaParseResult(upload.jobId!, upload.fileName, LLAMA_PARSE_API_KEY, timePerDoc);
         
         if (result.success && result.text) {
-          // Limit text size per document
-          const truncatedText = result.text.substring(0, 30000);
+          // Keep more text per document for better extraction, but still cap to avoid model context overflow
+          const truncatedText = result.text.substring(0, 45000);
           parsedTexts.push(`\n\n=== DOCUMENT: ${upload.fileName} ===\n\n${truncatedText}`);
           parsingStats.success++;
           console.log(`[DCE Analysis] ✓ ${upload.fileName} (${truncatedText.length} chars)`);
