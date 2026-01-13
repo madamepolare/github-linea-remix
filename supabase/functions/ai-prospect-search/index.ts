@@ -52,59 +52,68 @@ serve(async (req) => {
       );
     }
 
-    // Build enhanced prompt for structured prospect search with detailed contacts
-    const searchPrompt = `Tu es un assistant commercial expert en recherche de prospects B2B en France.
+    // Optimized prompt for maximum contact extraction
+    const systemPrompt = `Tu es un expert en prospection commerciale B2B. Ta mission: trouver le MAXIMUM de contacts professionnels nommés avec leurs coordonnées complètes.
 
-MISSION: Recherche des entreprises et leurs contacts clés correspondant à cette demande: "${query}"
-${region ? `Région ciblée: ${region}` : ""}
-${industry ? `Secteur: ${industry}` : ""}
+RÈGLES STRICTES:
+1. QUANTITÉ: Trouve 20-30 entreprises avec tous leurs contacts (vise 50+ contacts au total)
+2. PRIORITÉ: Les PERSONNES avec coordonnées sont plus importantes que les entreprises sans contacts
+3. QUALITÉ: Décideurs en priorité (DG, Directeurs, Responsables, Associés, Fondateurs, Gérants)
+4. EXHAUSTIVITÉ: Pour chaque entreprise, trouve TOUS les contacts disponibles, pas juste 1-2
 
-IMPORTANT: Tu dois trouver les CONTACTS NOMMÉS avec leurs coordonnées complètes. C'est essentiel.
+SOURCES À EXPLOITER SYSTÉMATIQUEMENT:
+- LinkedIn: profils publics, pages entreprises, liste des employés
+- Sites web officiels: pages équipe, à propos, contact, mentions légales, organigramme
+- Annuaires: Societe.com, Pappers.fr, Infogreffe, Manageo, Verif.com, Kompass
+- Fédérations et syndicats professionnels du secteur
+- Communiqués de presse, articles économiques (Les Echos, Le Moniteur, etc.)
+- Google avec opérateurs: "nom entreprise" + "directeur" + "email"
 
-Pour CHAQUE entreprise trouvée, fournis les informations suivantes au format JSON:
+FORMATS D'EMAIL À DÉDUIRE SI NON TROUVÉ:
+- prenom.nom@entreprise.fr
+- pnom@entreprise.fr
+- p.nom@entreprise.fr
+- prenom@entreprise.fr
 
-{
-  "company_name": "Nom complet de l'entreprise (obligatoire)",
-  "company_website": "Site web officiel",
-  "company_address": "Adresse postale complète",
-  "company_city": "Ville",
-  "company_postal_code": "Code postal",
-  "company_phone": "Téléphone standard",
-  "company_email": "Email général (contact@, info@, etc.)",
-  "company_industry": "Secteur d'activité précis",
-  "company_size": "Taille estimée (TPE, PME, ETI, GE)",
-  "contacts": [
-    {
-      "name": "Prénom NOM du contact (obligatoire)",
-      "email": "Email professionnel direct",
-      "phone": "Téléphone direct ou mobile",
-      "role": "Fonction/Poste dans l'entreprise",
-      "linkedin": "URL profil LinkedIn si disponible"
-    }
-  ],
-  "notes": "Informations utiles: spécialités, projets récents, chiffre d'affaires, etc.",
-  "source_url": "URL de la source principale",
-  "confidence_score": 0.85
-}
+RÉPONSE JSON UNIQUEMENT - PAS DE TEXTE AVANT OU APRÈS:`;
 
-CONSIGNES STRICTES:
-1. Trouve au MAXIMUM les contacts suivants pour chaque entreprise:
-   - Dirigeant/PDG/Gérant
-   - Directeur technique ou commercial
-   - Responsable projets/achats
-2. Recherche les emails et téléphones sur:
-   - Le site officiel de l'entreprise
-   - LinkedIn
-   - Annuaires professionnels (Societe.com, Pappers, etc.)
-   - Pages mentions légales
-3. Score de confiance: 
-   - 0.9+ = Informations vérifiées sur plusieurs sources
-   - 0.7-0.9 = Information trouvée mais source unique
-   - 0.5-0.7 = Information probable mais non vérifiée
-4. Maximum 8 entreprises avec le plus de détails possible
-5. Privilégie la QUALITÉ des informations à la quantité
+    const userPrompt = `RECHERCHE PROSPECTION B2B: "${query}"
+${region ? `RÉGION: ${region}` : ""}
+${industry ? `SECTEUR: ${industry}` : ""}
 
-Réponds UNIQUEMENT avec un tableau JSON valide. Si aucun résultat, renvoie [].`;
+OBJECTIF: Trouve le MAXIMUM d'entreprises et de contacts correspondant à cette recherche.
+- Minimum 15-20 entreprises
+- Pour chaque entreprise, trouve TOUS les contacts avec leurs coordonnées
+- Objectif: 50+ contacts au total avec emails/téléphones
+
+Réponds UNIQUEMENT avec ce format JSON (tableau):
+[
+  {
+    "company_name": "Nom Entreprise (obligatoire)",
+    "company_website": "https://...",
+    "company_address": "Adresse complète",
+    "company_city": "Ville",
+    "company_postal_code": "Code postal",
+    "company_phone": "Téléphone standard",
+    "company_email": "Email général",
+    "company_industry": "Secteur précis",
+    "company_size": "TPE/PME/ETI/GE",
+    "contacts": [
+      {
+        "name": "Prénom NOM (obligatoire)",
+        "role": "Fonction exacte",
+        "email": "email@direct.fr",
+        "phone": "06/07...",
+        "linkedin": "https://linkedin.com/in/..."
+      }
+    ],
+    "notes": "Infos utiles: projets récents, spécialités...",
+    "source_url": "https://source-principale.fr",
+    "confidence_score": 0.85
+  }
+]
+
+IMPORTANT: Maximise le nombre de contacts. Ne te limite pas. Trouve-en le plus possible.`;
 
     const response = await fetch("https://api.perplexity.ai/chat/completions", {
       method: "POST",
@@ -115,17 +124,11 @@ Réponds UNIQUEMENT avec un tableau JSON valide. Si aucun résultat, renvoie [].
       body: JSON.stringify({
         model: "sonar-pro",
         messages: [
-          {
-            role: "system",
-            content: "Tu es un assistant de prospection commerciale. Tu fournis UNIQUEMENT des réponses au format JSON valide."
-          },
-          {
-            role: "user",
-            content: searchPrompt
-          }
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
         ],
         temperature: 0.1,
-        max_tokens: 4000,
+        max_tokens: 8000,
       }),
     });
 
