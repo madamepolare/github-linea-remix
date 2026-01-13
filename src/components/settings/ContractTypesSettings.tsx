@@ -28,9 +28,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, Megaphone, Palette, Globe, FileText, Percent, List, Package, Calendar, FileCheck, Sparkles, Loader2, LayoutTemplate, Settings2, Building, Video } from 'lucide-react';
+import { Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, Megaphone, Palette, Globe, FileText, Percent, List, Package, Calendar, FileCheck, Sparkles, Loader2, LayoutTemplate, Settings2, Building, Video, Scale } from 'lucide-react';
 import { useContractTypes, ContractType, CreateContractTypeInput, ContractTypeFields, BuilderTab, DEFAULT_MOE_CONFIG, DEFAULT_COMMUNICATION_CONFIG } from '@/hooks/useContractTypes';
 import { ContractMOEConfig, MOEConfigData } from './ContractMOEConfig';
+import { ContractClausesEditor } from './ContractClausesEditor';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useWorkspaceDiscipline } from '@/hooks/useDiscipline';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -481,10 +482,14 @@ export function ContractTypesSettings() {
               <DialogTitle>Modifier le type de contrat</DialogTitle>
             </DialogHeader>
             <Tabs defaultValue="general" className="flex-1 flex flex-col min-h-0">
-              <TabsList className={`grid w-full ${MOE_CONTRACT_CODES.includes(editingType.code) ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="general" className="gap-2">
                   <Settings2 className="h-4 w-4" />
                   Paramètres
+                </TabsTrigger>
+                <TabsTrigger value="clauses" className="gap-2">
+                  <Scale className="h-4 w-4" />
+                  Clauses
                 </TabsTrigger>
                 {MOE_CONTRACT_CODES.includes(editingType.code) && (
                   <TabsTrigger value="moe" className="gap-2">
@@ -621,6 +626,17 @@ export function ContractTypesSettings() {
                     Par défaut
                   </label>
                 </div>
+              </TabsContent>
+              
+              <TabsContent value="clauses" className="flex-1 overflow-y-auto mt-4">
+                <ContractClausesEditor
+                  contractCode={editingType.code}
+                  defaultClauses={editingType.default_clauses as Record<string, unknown>}
+                  onChange={(clauses) => setEditingType({ 
+                    ...editingType, 
+                    default_clauses: clauses as unknown as Record<string, unknown>
+                  })}
+                />
               </TabsContent>
               
               {MOE_CONTRACT_CODES.includes(editingType.code) && (
