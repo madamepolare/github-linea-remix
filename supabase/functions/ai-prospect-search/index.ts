@@ -5,18 +5,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface ContactResult {
+  name: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  linkedin?: string;
+}
+
 interface ProspectResult {
   company_name: string;
   company_website?: string;
   company_address?: string;
   company_city?: string;
+  company_postal_code?: string;
   company_phone?: string;
   company_email?: string;
   company_industry?: string;
-  contact_name?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  contact_role?: string;
+  company_size?: string;
+  contacts: ContactResult[];
   notes?: string;
   source_url?: string;
   confidence_score?: number;
@@ -45,36 +52,59 @@ serve(async (req) => {
       );
     }
 
-    // Build enhanced prompt for structured prospect search
-    const searchPrompt = `Tu es un assistant commercial expert en recherche de prospects B2B pour le secteur de l'architecture et du BTP en France.
+    // Build enhanced prompt for structured prospect search with detailed contacts
+    const searchPrompt = `Tu es un assistant commercial expert en recherche de prospects B2B en France.
 
-Recherche des entreprises et contacts correspondant à cette demande: "${query}"
+MISSION: Recherche des entreprises et leurs contacts clés correspondant à cette demande: "${query}"
 ${region ? `Région ciblée: ${region}` : ""}
 ${industry ? `Secteur: ${industry}` : ""}
 
-Pour chaque prospect trouvé, fournis les informations suivantes au format JSON:
-- company_name: Nom de l'entreprise (obligatoire)
-- company_website: Site web
-- company_address: Adresse complète
-- company_city: Ville
-- company_phone: Téléphone entreprise
-- company_email: Email général
-- company_industry: Secteur d'activité
-- contact_name: Nom du contact principal (si disponible)
-- contact_email: Email du contact
-- contact_phone: Téléphone direct du contact
-- contact_role: Fonction du contact
-- notes: Notes utiles (spécialités, projets récents, etc.)
-- source_url: URL source de l'information
-- confidence_score: Score de confiance de 0 à 1
+IMPORTANT: Tu dois trouver les CONTACTS NOMMÉS avec leurs coordonnées complètes. C'est essentiel.
 
-Réponds UNIQUEMENT avec un tableau JSON valide de prospects. Maximum 10 résultats pertinents.
-Si tu ne trouves pas d'informations fiables, renvoie un tableau vide [].
+Pour CHAQUE entreprise trouvée, fournis les informations suivantes au format JSON:
 
-IMPORTANT: 
-- Ne fournis que des informations vérifiables depuis des sources publiques
-- Privilégie les entreprises avec des coordonnées complètes
-- Indique clairement quand une information est incertaine via le score de confiance`;
+{
+  "company_name": "Nom complet de l'entreprise (obligatoire)",
+  "company_website": "Site web officiel",
+  "company_address": "Adresse postale complète",
+  "company_city": "Ville",
+  "company_postal_code": "Code postal",
+  "company_phone": "Téléphone standard",
+  "company_email": "Email général (contact@, info@, etc.)",
+  "company_industry": "Secteur d'activité précis",
+  "company_size": "Taille estimée (TPE, PME, ETI, GE)",
+  "contacts": [
+    {
+      "name": "Prénom NOM du contact (obligatoire)",
+      "email": "Email professionnel direct",
+      "phone": "Téléphone direct ou mobile",
+      "role": "Fonction/Poste dans l'entreprise",
+      "linkedin": "URL profil LinkedIn si disponible"
+    }
+  ],
+  "notes": "Informations utiles: spécialités, projets récents, chiffre d'affaires, etc.",
+  "source_url": "URL de la source principale",
+  "confidence_score": 0.85
+}
+
+CONSIGNES STRICTES:
+1. Trouve au MAXIMUM les contacts suivants pour chaque entreprise:
+   - Dirigeant/PDG/Gérant
+   - Directeur technique ou commercial
+   - Responsable projets/achats
+2. Recherche les emails et téléphones sur:
+   - Le site officiel de l'entreprise
+   - LinkedIn
+   - Annuaires professionnels (Societe.com, Pappers, etc.)
+   - Pages mentions légales
+3. Score de confiance: 
+   - 0.9+ = Informations vérifiées sur plusieurs sources
+   - 0.7-0.9 = Information trouvée mais source unique
+   - 0.5-0.7 = Information probable mais non vérifiée
+4. Maximum 8 entreprises avec le plus de détails possible
+5. Privilégie la QUALITÉ des informations à la quantité
+
+Réponds UNIQUEMENT avec un tableau JSON valide. Si aucun résultat, renvoie [].`;
 
     const response = await fetch("https://api.perplexity.ai/chat/completions", {
       method: "POST",
@@ -122,12 +152,20 @@ IMPORTANT:
       }
     } catch (parseError) {
       console.error("Failed to parse prospects JSON:", parseError);
+      console.log("Raw content:", content);
       // Return empty array if parsing fails
       prospects = [];
     }
 
-    // Validate and clean prospects
-    prospects = prospects.filter(p => p.company_name && typeof p.company_name === "string");
+    // Validate and clean prospects, ensure contacts is always an array
+    prospects = prospects
+      .filter(p => p.company_name && typeof p.company_name === "string")
+      .map(p => ({
+        ...p,
+        contacts: Array.isArray(p.contacts) ? p.contacts : [],
+      }));
+
+    console.log(`Found ${prospects.length} prospects with ${prospects.reduce((acc, p) => acc + (p.contacts?.length || 0), 0)} total contacts`);
 
     return new Response(
       JSON.stringify({ 
