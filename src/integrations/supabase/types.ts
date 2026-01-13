@@ -8649,6 +8649,77 @@ export type Database = {
           },
         ]
       }
+      tender_type_configs: {
+        Row: {
+          ai_prompts: Json | null
+          color: string | null
+          created_at: string
+          default_criteria: Json | null
+          description: string | null
+          discipline_slug: string
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          label: string
+          particularities: Json | null
+          required_documents: Json | null
+          sort_order: number | null
+          specific_fields: Json | null
+          type_key: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          ai_prompts?: Json | null
+          color?: string | null
+          created_at?: string
+          default_criteria?: Json | null
+          description?: string | null
+          discipline_slug: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          label: string
+          particularities?: Json | null
+          required_documents?: Json | null
+          sort_order?: number | null
+          specific_fields?: Json | null
+          type_key: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          ai_prompts?: Json | null
+          color?: string | null
+          created_at?: string
+          default_criteria?: Json | null
+          description?: string | null
+          discipline_slug?: string
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          label?: string
+          particularities?: Json | null
+          required_documents?: Json | null
+          sort_order?: number | null
+          specific_fields?: Json | null
+          type_key?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_type_configs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenders: {
         Row: {
           allows_joint_venture: boolean | null
