@@ -208,7 +208,7 @@ export default function About() {
                   <ArrowRight className="ml-2" size={18} />
                 </Button>
               </Link>
-              <Link to="/auth">
+              <Link to="/onboarding">
                 <Button variant="outline" size="lg">
                   Essayer LINEA
                 </Button>

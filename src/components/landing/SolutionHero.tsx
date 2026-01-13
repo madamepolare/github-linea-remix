@@ -128,7 +128,7 @@ export const SolutionHero = ({ solution }: SolutionHeroProps) => {
               className="h-12 sm:h-14 px-6 sm:px-8 rounded-full bg-foreground text-background hover:bg-foreground/90 font-medium text-sm sm:text-base"
               asChild
             >
-              <Link to="/auth">
+              <Link to="/onboarding">
                 Démarrer gratuitement
                 <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
               </Link>
