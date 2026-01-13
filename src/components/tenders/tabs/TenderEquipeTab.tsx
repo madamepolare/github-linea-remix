@@ -478,7 +478,13 @@ Cordialement`);
               ...updates,
             });
           }}
-          isUpdating={updateTender.isPending}
+          onUpdateMemberFee={(memberId, feePercentage) => {
+            updateTeamMember.mutate({
+              id: memberId,
+              fee_percentage: feePercentage,
+            });
+          }}
+          isUpdating={updateTender.isPending || updateTeamMember.isPending}
         />
       )}
 
