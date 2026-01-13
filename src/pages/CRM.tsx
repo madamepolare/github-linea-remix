@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Target, Users, Building2, Layers, Search, Sparkles } from "lucide-react";
 import { CRMContactsTable } from "@/components/crm/CRMContactsTable";
+import { CRMLeadsTable } from "@/components/crm/CRMLeadsTable";
 import { CRMCompanyTable } from "@/components/crm/CRMCompanyTable";
 import { LeadPipeline } from "@/components/crm/LeadPipeline";
 import { ContactPipeline } from "@/components/crm/ContactPipeline";
@@ -21,13 +22,14 @@ import { useContacts } from "@/hooks/useContacts";
 import { useIsModuleEnabled } from "@/hooks/useModules";
 import { cn } from "@/lib/utils";
 
-type CRMView = "overview" | "leads" | "prospection" | "contacts" | "companies" | "development";
+type CRMView = "overview" | "leads" | "leads-table" | "prospection" | "contacts" | "companies" | "development";
 
 type PipelineMode = "all" | "single";
 
 const sectionDescriptions: Record<CRMView, string> = {
   overview: "Vue d'ensemble de votre activité commerciale",
   leads: "Gérez vos opportunités et pipelines",
+  "leads-table": "Liste de tous vos leads (manuels et IA)",
   prospection: "Pipelines de prospection contacts et sociétés",
   contacts: "Annuaire de vos contacts",
   companies: "Répertoire de vos entreprises",
@@ -264,6 +266,14 @@ export default function CRM() {
             search={searchQuery} 
             onCreateContact={() => setCreateContactOpen(true)} 
             onImportContacts={() => setImportContactsOpen(true)}
+          />
+        );
+
+      case "leads-table":
+        return (
+          <CRMLeadsTable 
+            search={searchQuery} 
+            onCreateLead={() => setCreateLeadOpen(true)}
           />
         );
 
