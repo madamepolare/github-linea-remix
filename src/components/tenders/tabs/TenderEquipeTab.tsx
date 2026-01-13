@@ -104,6 +104,7 @@ import { PartnerPrefilterPanel } from "@/components/tenders/PartnerPrefilterPane
 import { PartnerProposalEmailDialog } from "@/components/tenders/PartnerProposalEmailDialog";
 import { TeamDeliverablesEmailDialog } from "@/components/tenders/TeamDeliverablesEmailDialog";
 import { useTenderDeliverables } from "@/hooks/useTenderDeliverables";
+import { TenderFeeManagement } from "@/components/tenders/TenderFeeManagement";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -455,6 +456,27 @@ Cordialement`);
           )}
         </div>
       </div>
+
+      {/* Fee Management Section */}
+      {tender && (
+        <TenderFeeManagement
+          tender={{
+            id: tender.id,
+            estimated_budget: tender.estimated_budget,
+            moe_fee_percentage: tender.moe_fee_percentage,
+            moe_phases: tender.moe_phases,
+            moe_fee_amount: tender.moe_fee_amount,
+          }}
+          teamMembers={teamMembers}
+          onUpdate={(updates) => {
+            updateTender.mutate({
+              id: tenderId,
+              ...updates,
+            });
+          }}
+          isUpdating={updateTender.isPending}
+        />
+      )}
 
       {/* Missing Specialties Warning */}
       {missingSpecialties.length > 0 && (
