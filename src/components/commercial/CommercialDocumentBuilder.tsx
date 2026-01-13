@@ -14,6 +14,7 @@ import {
 import { ClientSelector } from './ClientSelector';
 import { FeesAndQuoteEditor } from './FeesAndQuoteEditor';
 import { TermsEditor } from './TermsEditor';
+import { MOEClausesEditor } from './MOEClausesEditor';
 import { ConstructionBudgetField } from './ConstructionBudgetField';
 import {
   CommercialDocument,
@@ -355,10 +356,19 @@ export function CommercialDocumentBuilder({
 
       {/* Terms Tab */}
       <TabsContent value="terms" className="space-y-4 sm:space-y-6">
-        <TermsEditor
-          document={document}
-          onDocumentChange={onDocumentChange}
-        />
+        {document.project_type === 'architecture' ? (
+          <MOEClausesEditor
+            document={document}
+            phases={phases}
+            onDocumentChange={onDocumentChange}
+            onPhasesChange={onPhasesChange}
+          />
+        ) : (
+          <TermsEditor
+            document={document}
+            onDocumentChange={onDocumentChange}
+          />
+        )}
       </TabsContent>
     </Tabs>
     </div>
