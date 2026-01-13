@@ -9049,6 +9049,65 @@ export type Database = {
           },
         ]
       }
+      user_checkins: {
+        Row: {
+          checked_in_at: string | null
+          checked_out_at: string | null
+          checkin_notes: string | null
+          checkout_mood: string | null
+          checkout_notes: string | null
+          created_at: string | null
+          date: string
+          day_quality: number | null
+          id: string
+          time_entries_validated: boolean | null
+          tomorrow_notes: string | null
+          updated_at: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          checked_in_at?: string | null
+          checked_out_at?: string | null
+          checkin_notes?: string | null
+          checkout_mood?: string | null
+          checkout_notes?: string | null
+          created_at?: string | null
+          date?: string
+          day_quality?: number | null
+          id?: string
+          time_entries_validated?: boolean | null
+          tomorrow_notes?: string | null
+          updated_at?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          checked_in_at?: string | null
+          checked_out_at?: string | null
+          checkin_notes?: string | null
+          checkout_mood?: string | null
+          checkout_notes?: string | null
+          created_at?: string | null
+          date?: string
+          day_quality?: number | null
+          id?: string
+          time_entries_validated?: boolean | null
+          tomorrow_notes?: string | null
+          updated_at?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_checkins_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null

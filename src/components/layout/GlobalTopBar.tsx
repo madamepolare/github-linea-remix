@@ -16,6 +16,8 @@ import {
   Settings,
   LogOut,
   CalendarPlus,
+  Sunrise,
+  Moon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +43,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationsSidebar } from "./NotificationsSidebar";
 import { differenceInMinutes } from "date-fns";
+import { useCheckinStore } from "@/hooks/useCheckinStore";
+import { useUserCheckins } from "@/hooks/useUserCheckins";
 
 // Quick actions config
 const quickActions = [
@@ -67,6 +71,17 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
   const { data: searchResults, isLoading: searchLoading } = useGlobalSearch(searchQuery);
   const { isRunning, elapsedSeconds, openTracker } = useTimeTrackerStore();
   const { user, profile, signOut } = useAuth();
+  
+  // Check-in/Check-out state
+  const { openCheckin, openCheckout } = useCheckinStore();
+  const { hasCheckedIn, hasCheckedOut } = useUserCheckins();
+  
+  // Determine if check-in/out buttons should show
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinutes = now.getMinutes();
+  const showCheckinButton = (currentHour > 9 || (currentHour === 9 && currentMinutes >= 45)) && !hasCheckedIn;
+  const showCheckoutButton = (currentHour > 17 || (currentHour === 17 && currentMinutes >= 50)) && hasCheckedIn && !hasCheckedOut;
   
   // Notifications state - use real notifications from hook
   const { notifications, unreadCount } = useNotifications();
@@ -225,8 +240,34 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
                 {action.label}
               </DropdownMenuItem>
             ))}
-          </DropdownMenuContent>
+        </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Check-in Button */}
+        {showCheckinButton && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={openCheckin}
+            className="gap-1.5 h-8 px-3 bg-amber-500 hover:bg-amber-600 text-white"
+          >
+            <Sunrise className="h-4 w-4" strokeWidth={THIN_STROKE} />
+            <span className="text-sm">Check-in</span>
+          </Button>
+        )}
+
+        {/* Check-out Button */}
+        {showCheckoutButton && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={openCheckout}
+            className="gap-1.5 h-8 px-3 bg-purple-500 hover:bg-purple-600 text-white"
+          >
+            <Moon className="h-4 w-4" strokeWidth={THIN_STROKE} />
+            <span className="text-sm">Check-out</span>
+          </Button>
+        )}
 
         {/* Post-it Button */}
         <Button
