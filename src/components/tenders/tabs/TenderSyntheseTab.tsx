@@ -46,6 +46,8 @@ import { useTenderCriteria } from "@/hooks/useTenderCriteria";
 import { useTenderDocuments } from "@/hooks/useTenderDocuments";
 import { toast } from "sonner";
 import type { Tender, TenderStatus } from "@/lib/tenderTypes";
+import type { DisciplineSlug } from "@/lib/disciplines";
+import { DynamicSynthesisBlocks } from "@/components/tenders/synthesis/DynamicSynthesisBlocks";
 
 interface TenderSyntheseTabProps {
   tender: Tender;
@@ -92,6 +94,11 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
   const [pendingDecision, setPendingDecision] = useState<"go" | "no_go" | null>(null);
   const [isChangingDecision, setIsChangingDecision] = useState(false);
   const [isEditingTeam, setIsEditingTeam] = useState(false);
+  
+  // Get discipline for dynamic blocks
+  const disciplineSlug = (tender.discipline_slug as DisciplineSlug) || 'architecture';
+  const isCommunication = disciplineSlug === 'communication';
+  const isScenographie = disciplineSlug === 'scenographie';
 
   const extendedTender = tender as any;
 
@@ -443,6 +450,11 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Dynamic discipline-specific blocks (Communication, Scénographie) */}
+      {(isCommunication || isScenographie) && (
+        <DynamicSynthesisBlocks tender={tender} disciplineSlug={disciplineSlug} />
       )}
 
       {/* Main Grid: 2 columns */}
