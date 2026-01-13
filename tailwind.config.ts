@@ -25,6 +25,16 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        // Pastel palette for landing pages
+        pastel: {
+          cream: "hsl(40 33% 96%)",
+          blue: "hsl(210 80% 94%)",
+          pink: "hsl(340 70% 95%)",
+          mint: "hsl(160 50% 93%)",
+          lavender: "hsl(270 60% 95%)",
+          peach: "hsl(30 80% 94%)",
+          coral: "hsl(10 70% 94%)",
+        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
