@@ -468,7 +468,6 @@ Cordialement`);
             id: tender.id,
             estimated_budget: tender.estimated_budget,
             moe_fee_percentage: tender.moe_fee_percentage,
-            moe_phases: tender.moe_phases,
             moe_fee_amount: tender.moe_fee_amount,
           }}
           teamMembers={teamMembers}
