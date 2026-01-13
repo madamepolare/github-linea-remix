@@ -238,39 +238,15 @@ export function RequiredTeamEditor({
         </div>
       )}
 
-      {/* Quick add for communication discipline */}
+      {/* Quick add for communication discipline - removed since team is now per-lot */}
       {team.length === 0 && disciplineSlug === 'communication' && (
         <div className="p-4 rounded-lg border border-dashed bg-muted/30 text-center">
-          <p className="text-sm text-muted-foreground mb-3">
-            Ajoutez rapidement une équipe type
+          <p className="text-sm text-muted-foreground">
+            💡 Pour la communication, l'équipe / les partenaires sont définis <strong>par lot</strong>.
           </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onChange([
-                { id: crypto.randomUUID(), specialty: 'directeur_artistique', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'concepteur_redacteur', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'chef_de_pub', is_mandatory: true, notes: '' },
-              ])}
-            >
-              Équipe créative base
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onChange([
-                { id: crypto.randomUUID(), specialty: 'directeur_artistique', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'concepteur_redacteur', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'planneur_strategique', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'chef_de_pub', is_mandatory: true, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'social_media_manager', is_mandatory: false, notes: '' },
-                { id: crypto.randomUUID(), specialty: 'motion_designer', is_mandatory: false, notes: '' },
-              ])}
-            >
-              Équipe 360°
-            </Button>
-          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Modifiez les lots pour ajouter les partenaires requis (imprimeurs, producteurs, agences partenaires...)
+          </p>
         </div>
       )}
     </div>
