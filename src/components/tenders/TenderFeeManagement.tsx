@@ -1,15 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
-import { Euro, Percent, Calculator, Layers, CheckCircle2, Info, Users, AlertCircle, RotateCcw, Save } from "lucide-react";
+import { Euro, Percent, Calculator, Info, Users, AlertCircle, RotateCcw, Save } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
-import { ARCHITECTURE_BASE_PHASES } from "@/lib/commercialTypes";
 import { cn } from "@/lib/utils";
 import type { TenderTeamMember } from "@/lib/tenderTypes";
 
@@ -18,11 +16,10 @@ interface TenderFeeManagementProps {
     id: string;
     estimated_budget?: number | null;
     moe_fee_percentage?: number | null;
-    moe_phases?: string[] | null;
     moe_fee_amount?: number | null;
   };
   teamMembers: TenderTeamMember[];
-  onUpdate: (updates: { moe_fee_percentage?: number; moe_phases?: string[]; moe_fee_amount?: number }) => void;
+  onUpdate: (updates: { moe_fee_percentage?: number; moe_fee_amount?: number }) => void;
   onUpdateMemberFee?: (memberId: string, feePercentage: number) => void;
   isUpdating?: boolean;
 }
@@ -39,9 +36,6 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMem
   // Local state for inputs
   const [feePercentage, setFeePercentage] = useState<string>(
     tender.moe_fee_percentage?.toString() || ""
-  );
-  const [selectedPhases, setSelectedPhases] = useState<Set<string>>(
-    new Set(Array.isArray(tender.moe_phases) ? tender.moe_phases : [])
   );
 
   // Local state for editable member fees
@@ -63,8 +57,7 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMem
   // Sync with props when tender changes
   useEffect(() => {
     setFeePercentage(tender.moe_fee_percentage?.toString() || "");
-    setSelectedPhases(new Set(Array.isArray(tender.moe_phases) ? tender.moe_phases : []));
-  }, [tender.moe_fee_percentage, tender.moe_phases]);
+  }, [tender.moe_fee_percentage]);
 
   // Calculate fee amount
   const feeAmount = useMemo(() => {
@@ -72,13 +65,6 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMem
     const budget = tender.estimated_budget || 0;
     return (budget * percentage) / 100;
   }, [feePercentage, tender.estimated_budget]);
-
-  // Calculate recommended percentage based on selected phases
-  const recommendedPercentage = useMemo(() => {
-    return ARCHITECTURE_BASE_PHASES
-      .filter(p => selectedPhases.has(p.code))
-      .reduce((sum, p) => sum + (p.defaultPercentage || 0), 0);
-  }, [selectedPhases]);
 
   // Team fee distribution - using local editable values
   const teamFeeDistribution = useMemo(() => {
@@ -140,17 +126,6 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMem
     setHasUnsavedChanges(false);
   };
 
-  const handlePhaseToggle = (phaseCode: string, checked: boolean) => {
-    const newPhases = new Set(selectedPhases);
-    if (checked) {
-      newPhases.add(phaseCode);
-    } else {
-      newPhases.delete(phaseCode);
-    }
-    setSelectedPhases(newPhases);
-    onUpdate({ moe_phases: Array.from(newPhases) });
-  };
-
   const handleFeeChange = (value: string) => {
     setFeePercentage(value);
     const numValue = parseFloat(value);
@@ -158,12 +133,6 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMem
       const amount = (tender.estimated_budget || 0) * numValue / 100;
       onUpdate({ moe_fee_percentage: numValue, moe_fee_amount: amount });
     }
-  };
-
-  const applyRecommendedPercentage = () => {
-    setFeePercentage(recommendedPercentage.toString());
-    const amount = (tender.estimated_budget || 0) * recommendedPercentage / 100;
-    onUpdate({ moe_fee_percentage: recommendedPercentage, moe_fee_amount: amount });
   };
 
   return (
@@ -174,10 +143,10 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMem
             <div className="p-2 rounded-lg bg-primary/10">
               <Euro className="h-5 w-5 text-primary" />
             </div>
-            <div>
+          <div>
               <CardTitle className="text-base">Honoraires MOE</CardTitle>
               <CardDescription>
-                Définissez les honoraires globaux et les phases de la mission
+                Définissez les honoraires globaux et leur répartition dans le groupement
               </CardDescription>
             </div>
           </div>
@@ -199,27 +168,10 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMem
         {/* Fee Percentage Input */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2">
-                <Percent className="h-4 w-4 text-muted-foreground" />
-                Taux d'honoraires global
-              </Label>
-              {recommendedPercentage > 0 && selectedPhases.size > 0 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={applyRecommendedPercentage}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Appliquer {recommendedPercentage}%
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Taux recommandé basé sur les phases sélectionnées</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
+            <Label className="flex items-center gap-2">
+              <Percent className="h-4 w-4 text-muted-foreground" />
+              Taux d'honoraires global
+            </Label>
             <div className="relative">
               <Input
                 type="number"
@@ -410,7 +362,7 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMem
                     <div className="flex items-center justify-between p-4 rounded-xl bg-primary/5 border-2 border-primary/30">
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-primary/10">
-                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                          <Users className="h-5 w-5 text-primary" />
                         </div>
                         <div>
                           <Badge variant="default" className="mb-1">Mandataire</Badge>
@@ -542,46 +494,6 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMem
             </div>
           </>
         )}
-
-        <Separator />
-
-        {/* Phase Selection - Collapsible/Secondary */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2">
-              <Layers className="h-4 w-4 text-muted-foreground" />
-              Phases de la mission (référence)
-            </Label>
-            <Badge variant="secondary">
-              {selectedPhases.size} phase{selectedPhases.size !== 1 ? 's' : ''} • {recommendedPercentage}%
-            </Badge>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {ARCHITECTURE_BASE_PHASES.map((phase) => (
-              <label
-                key={phase.code}
-                className={cn(
-                  "flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all",
-                  selectedPhases.has(phase.code)
-                    ? "bg-primary/5 border-primary/30"
-                    : "bg-card hover:bg-muted/50"
-                )}
-              >
-                <Checkbox
-                  checked={selectedPhases.has(phase.code)}
-                  onCheckedChange={(checked) => handlePhaseToggle(phase.code, !!checked)}
-                  disabled={isUpdating}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{phase.code}</p>
-                  <p className="text-xs text-muted-foreground truncate">{phase.name}</p>
-                </div>
-                <span className="text-xs text-muted-foreground">{phase.defaultPercentage}%</span>
-              </label>
-            ))}
-          </div>
-        </div>
 
         {/* Info message */}
         <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
