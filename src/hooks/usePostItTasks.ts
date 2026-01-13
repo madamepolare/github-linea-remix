@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,10 +30,38 @@ export function usePostItTasks() {
   const { data: quickTasks, isLoading } = useQuery({
     queryKey: ["quick_tasks", activeWorkspace?.id, user?.id],
     queryFn: async () => {
-      // Get tasks created by current user OR shared with current user
+      // Get tasks created by current user only (shared tasks will be fetched via quick_task_shares)
       const { data, error } = await supabase
         .from("quick_tasks")
         .select("*")
+        .eq("workspace_id", activeWorkspace!.id)
+        .eq("created_by", user!.id)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data as QuickTask[];
+    },
+    enabled: !!activeWorkspace?.id && !!user?.id,
+  });
+
+  // Fetch tasks shared WITH current user (others' tasks shared to me)
+  const { data: sharedWithMeTasks } = useQuery({
+    queryKey: ["quick_tasks_shared_with_me", activeWorkspace?.id, user?.id],
+    queryFn: async () => {
+      // Get tasks where current user is in the shares list
+      const { data: shares, error: sharesError } = await supabase
+        .from("quick_task_shares")
+        .select("quick_task_id")
+        .eq("shared_with_user_id", user!.id);
+      
+      if (sharesError) throw sharesError;
+      if (!shares || shares.length === 0) return [];
+      
+      const taskIds = shares.map(s => s.quick_task_id);
+      const { data, error } = await supabase
+        .from("quick_tasks")
+        .select("*")
+        .in("id", taskIds)
         .eq("workspace_id", activeWorkspace!.id)
         .order("created_at", { ascending: false });
       
@@ -92,6 +121,7 @@ export function usePostItTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["quick_tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["quick_tasks_shared_with_me"] });
       queryClient.invalidateQueries({ queryKey: ["quick_task_shares"] });
       toast.success("Post-it ajouté");
     },
@@ -114,6 +144,7 @@ export function usePostItTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["quick_tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["quick_tasks_shared_with_me"] });
       toast.success("Post-it terminé !");
     },
     onError: (error) => {
@@ -135,6 +166,7 @@ export function usePostItTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["quick_tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["quick_tasks_shared_with_me"] });
       toast.success("Post-it remis en attente");
     },
     onError: (error) => {
@@ -153,6 +185,7 @@ export function usePostItTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["quick_tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["quick_tasks_shared_with_me"] });
       queryClient.invalidateQueries({ queryKey: ["quick_task_shares"] });
     },
     onError: (error) => {
@@ -160,7 +193,27 @@ export function usePostItTasks() {
     },
   });
 
-  const pendingCount = quickTasks?.filter((t) => t.status === "pending").length || 0;
+  // Combine my tasks with tasks shared with me (removing duplicates)
+  const allTasks = useMemo(() => {
+    const myTasks = quickTasks || [];
+    const sharedTasks = sharedWithMeTasks || [];
+    
+    // Create a map to avoid duplicates (in case same task appears in both)
+    const taskMap = new Map<string, QuickTask>();
+    myTasks.forEach(t => taskMap.set(t.id, t));
+    sharedTasks.forEach(t => {
+      if (!taskMap.has(t.id)) {
+        taskMap.set(t.id, t);
+      }
+    });
+    
+    // Sort by created_at descending
+    return Array.from(taskMap.values()).sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [quickTasks, sharedWithMeTasks]);
+
+  const pendingCount = allTasks.filter((t) => t.status === "pending").length;
 
   // Check if a task is owned by current user
   const isTaskOwner = (task: QuickTask) => task.created_by === user?.id;
@@ -168,7 +221,7 @@ export function usePostItTasks() {
   // Check if a task is shared with current user (not owner)
   const isSharedTask = (task: QuickTask) => {
     if (task.created_by === user?.id) return false;
-    return taskShares?.some(s => s.quick_task_id === task.id && s.shared_with_user_id === user?.id);
+    return sharedWithMeTasks?.some(t => t.id === task.id) || false;
   };
 
   // Get shares for a specific task
@@ -177,7 +230,7 @@ export function usePostItTasks() {
   };
 
   return {
-    quickTasks,
+    quickTasks: allTasks,
     isLoading,
     pendingCount,
     createQuickTask,
@@ -188,5 +241,6 @@ export function usePostItTasks() {
     isSharedTask,
     getTaskShares,
     taskShares,
+    sharedWithMeTasks,
   };
 }
