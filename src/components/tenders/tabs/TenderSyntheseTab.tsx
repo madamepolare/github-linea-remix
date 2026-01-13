@@ -43,6 +43,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useTenders } from "@/hooks/useTenders";
 import { useTenderCriteria } from "@/hooks/useTenderCriteria";
+import { useTenderDocuments } from "@/hooks/useTenderDocuments";
 import { toast } from "sonner";
 import type { Tender, TenderStatus } from "@/lib/tenderTypes";
 
@@ -85,6 +86,7 @@ const SPECIALTY_LABELS: Record<string, string> = {
 export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTabProps) {
   const { updateStatus, updateTender } = useTenders();
   const { criteria, priceWeight, technicalWeight } = useTenderCriteria(tender.id);
+  const { documents } = useTenderDocuments(tender.id);
   const [showGoDialog, setShowGoDialog] = useState(false);
   const [goDecisionNotes, setGoDecisionNotes] = useState("");
   const [pendingDecision, setPendingDecision] = useState<"go" | "no_go" | null>(null);
@@ -145,12 +147,69 @@ export function TenderSyntheseTab({ tender, onNavigateToTab }: TenderSyntheseTab
 
   const mandatoryTeam = requiredTeam.filter((t: any) => t.is_mandatory);
 
-  // Critical alerts
+  // Critical alerts - merge from tender + documents extracted_data
   const criticalAlerts = useMemo(() => {
-    if (!extendedTender.critical_alerts) return [];
-    if (Array.isArray(extendedTender.critical_alerts)) return extendedTender.critical_alerts;
-    return [];
-  }, [extendedTender.critical_alerts]);
+    // Start with alerts stored in tender
+    const tenderAlerts: Array<{ type: string; message: string; severity: string; source?: string }> = [];
+    if (extendedTender.critical_alerts && Array.isArray(extendedTender.critical_alerts)) {
+      tenderAlerts.push(...extendedTender.critical_alerts);
+    }
+
+    // Also extract alerts from analyzed documents
+    const analyzedDocs = documents.filter((d: any) => d.is_analyzed);
+    analyzedDocs.forEach((doc: any) => {
+      if (doc.extracted_data && typeof doc.extracted_data === 'object') {
+        const data = doc.extracted_data as Record<string, unknown>;
+        
+        // Check for critical_alerts array
+        if (data.critical_alerts && Array.isArray(data.critical_alerts)) {
+          data.critical_alerts.forEach((alert: any) => {
+            // Avoid duplicates
+            if (!tenderAlerts.some(a => a.message === alert.message)) {
+              tenderAlerts.push({
+                type: alert.type || 'alert',
+                message: alert.message,
+                severity: alert.severity || 'warning',
+                source: alert.source || doc.file_name,
+              });
+            }
+          });
+        }
+        
+        // Check for points_vigilance array
+        if (data.points_vigilance && Array.isArray(data.points_vigilance)) {
+          data.points_vigilance.forEach((p: any) => {
+            const message = typeof p === 'string' ? p : p.message || p.description;
+            if (message && !tenderAlerts.some(a => a.message === message)) {
+              tenderAlerts.push({
+                type: 'vigilance',
+                message,
+                severity: 'warning',
+                source: doc.file_name,
+              });
+            }
+          });
+        }
+
+        // Check for alertes array (alternative naming)
+        if (data.alertes && Array.isArray(data.alertes)) {
+          data.alertes.forEach((alert: any) => {
+            const message = typeof alert === 'string' ? alert : alert.message || alert.description;
+            if (message && !tenderAlerts.some(a => a.message === message)) {
+              tenderAlerts.push({
+                type: alert.type || 'alert',
+                message,
+                severity: alert.severity || 'warning',
+                source: doc.file_name,
+              });
+            }
+          });
+        }
+      }
+    });
+
+    return tenderAlerts;
+  }, [extendedTender.critical_alerts, documents]);
 
   // Grouped criteria
   const groupedCriteria = useMemo(() => {
