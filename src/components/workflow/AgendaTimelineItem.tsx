@@ -274,12 +274,12 @@ export function AgendaTimelineItem({
     if (item.type === "task" && schedule) {
       onViewTask(schedule);
     } else if (item.type === "event" && item.originalData) {
-      // Navigate to the related entity (project or tender)
       const eventData = item.originalData as any;
+      // Navigate to the event's parent entity with event context
       if (eventData.project_id) {
-        window.location.href = `/projects/${eventData.project_id}`;
+        window.location.href = `/projects/${eventData.project_id}?tab=planning&event=${eventData.id}`;
       } else if (eventData.tender_id) {
-        window.location.href = `/tenders/${eventData.tender_id}`;
+        window.location.href = `/tenders/${eventData.tender_id}?tab=calendar&event=${eventData.id}`;
       } else if (onViewEvent) {
         onViewEvent(item.originalData);
       }

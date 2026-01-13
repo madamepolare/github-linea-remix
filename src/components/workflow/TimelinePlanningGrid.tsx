@@ -375,14 +375,14 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
 
       {/* Main grid - Single member view */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Member info column (sticky) */}
+        {/* Member info column (sticky) + Hour labels */}
         {displayedMember && (
           <div 
-            className="flex-shrink-0 border-r bg-muted/30"
+            className="flex-shrink-0 border-r bg-muted/30 flex flex-col"
             style={{ width: MEMBER_COLUMN_WIDTH }}
           >
             {/* Header with member info */}
-            <div className="h-16 border-b flex items-center gap-3 px-3 bg-card/50">
+            <div className="h-16 border-b flex items-center gap-3 px-3 bg-card/50 shrink-0">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={displayedMember.profile?.avatar_url || ""} />
                 <AvatarFallback className="text-sm">
@@ -399,16 +399,30 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
               </div>
             </div>
             
-            {/* Hour labels integrated into member column */}
-            <div className="h-[calc(100%-4rem)]">
-              <TimelineHourLabels />
+            {/* Hour labels - scrolls with timeline via ref sync */}
+            <div 
+              id="hour-labels-container"
+              className="flex-1 overflow-hidden"
+            >
+              <div style={{ height: TOTAL_HOURS * 60 * PIXELS_PER_MINUTE }}>
+                <TimelineHourLabels />
+              </div>
             </div>
           </div>
         )}
 
-        {/* Timeline area - full width distribution */}
-        <div className="flex-1 overflow-x-auto">
-          <div className="flex h-full" style={{ minWidth: DAYS_TO_SHOW * MIN_DAY_COLUMN_WIDTH }}>
+        {/* Timeline area - full width distribution with synced scroll */}
+        <div 
+          className="flex-1 overflow-auto"
+          onScroll={(e) => {
+            // Sync hour labels scroll with timeline scroll
+            const hourLabels = document.getElementById('hour-labels-container');
+            if (hourLabels) {
+              hourLabels.scrollTop = (e.target as HTMLElement).scrollTop;
+            }
+          }}
+        >
+          <div className="flex" style={{ minWidth: DAYS_TO_SHOW * MIN_DAY_COLUMN_WIDTH }}>
             {/* Days columns - distribute evenly */}
             {days.map(day => {
               const isToday = isSameDay(day, new Date());

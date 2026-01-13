@@ -19,17 +19,19 @@ export function useQuickTasksDB() {
   const queryClient = useQueryClient();
 
   const { data: quickTasks, isLoading } = useQuery({
-    queryKey: ["quick_tasks", activeWorkspace?.id],
+    queryKey: ["quick_tasks", activeWorkspace?.id, user?.id],
     queryFn: async () => {
+      // Get tasks created by current user only
       const { data, error } = await supabase
         .from("quick_tasks")
         .select("*")
         .eq("workspace_id", activeWorkspace!.id)
+        .eq("created_by", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as QuickTask[];
     },
-    enabled: !!activeWorkspace?.id,
+    enabled: !!activeWorkspace?.id && !!user?.id,
   });
 
   const pendingTasks = quickTasks?.filter(t => t.status === 'pending') || [];
