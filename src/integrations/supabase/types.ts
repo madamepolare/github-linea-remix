@@ -8722,10 +8722,15 @@ export type Database = {
       }
       tenders: {
         Row: {
+          accessibilite_requise: boolean | null
           allows_joint_venture: boolean | null
           allows_negotiation: boolean | null
           allows_variants: boolean | null
+          anciens_prestataires: Json | null
+          audition: Json | null
           budget_disclosed: boolean | null
+          cas_pratique: Json | null
+          cibles: string | null
           client_address: string | null
           client_contact_email: string | null
           client_contact_name: string | null
@@ -8733,34 +8738,52 @@ export type Database = {
           client_direction: string | null
           client_name: string | null
           client_type: string | null
+          commissaire_exposition: string | null
           consultation_number: string | null
           contracting_authority: string | null
+          contraintes_conservation: string | null
           created_at: string | null
           created_by: string | null
           critical_alerts: Json | null
+          date_debut_mission: string | null
           dce_delivery_deadline: string | null
           dce_delivery_duration_months: number | null
           dce_link: string | null
+          deliverables_candidature: Json | null
+          deliverables_offre: Json | null
           description: string | null
           discipline_slug: string | null
+          duree_exposition_mois: number | null
+          duree_initiale_mois: number | null
+          duree_reconduction_mois: number | null
           estimated_budget: number | null
           go_decision_by: string | null
           go_decision_date: string | null
           go_decision_notes: string | null
           group_code: string | null
           id: string
+          is_multi_attributaire: boolean | null
+          itinerance: boolean | null
           joint_venture_type: string | null
           jury_date: string | null
           lead_id: string | null
+          lieu_exposition: string | null
+          lieux_itinerance: Json | null
           location: string | null
+          lots: Json | null
           mandataire_must_be_solidary: boolean | null
           market_object: string | null
           moa_company_id: string | null
           moe_fee_amount: number | null
           moe_fee_percentage: number | null
           moe_phases: Json | null
+          montant_maximum: number | null
+          montant_minimum: number | null
+          nb_attributaires: number | null
+          nb_reconductions: number | null
           negotiation_candidates_count: number | null
           negotiation_method: string | null
+          oeuvres_estimees: number | null
           offer_validity_days: number | null
           pipeline_status: string | null
           procedure_other: string | null
@@ -8787,17 +8810,26 @@ export type Database = {
           submission_deadline: string | null
           submission_type: string | null
           surface_area: number | null
+          surface_exposition: number | null
           tender_type: string | null
           title: string
+          type_campagne: string | null
+          type_exposition: string | null
           updated_at: string | null
+          validite_offre_jours: number | null
           work_nature_tags: string[] | null
           workspace_id: string
         }
         Insert: {
+          accessibilite_requise?: boolean | null
           allows_joint_venture?: boolean | null
           allows_negotiation?: boolean | null
           allows_variants?: boolean | null
+          anciens_prestataires?: Json | null
+          audition?: Json | null
           budget_disclosed?: boolean | null
+          cas_pratique?: Json | null
+          cibles?: string | null
           client_address?: string | null
           client_contact_email?: string | null
           client_contact_name?: string | null
@@ -8805,34 +8837,52 @@ export type Database = {
           client_direction?: string | null
           client_name?: string | null
           client_type?: string | null
+          commissaire_exposition?: string | null
           consultation_number?: string | null
           contracting_authority?: string | null
+          contraintes_conservation?: string | null
           created_at?: string | null
           created_by?: string | null
           critical_alerts?: Json | null
+          date_debut_mission?: string | null
           dce_delivery_deadline?: string | null
           dce_delivery_duration_months?: number | null
           dce_link?: string | null
+          deliverables_candidature?: Json | null
+          deliverables_offre?: Json | null
           description?: string | null
           discipline_slug?: string | null
+          duree_exposition_mois?: number | null
+          duree_initiale_mois?: number | null
+          duree_reconduction_mois?: number | null
           estimated_budget?: number | null
           go_decision_by?: string | null
           go_decision_date?: string | null
           go_decision_notes?: string | null
           group_code?: string | null
           id?: string
+          is_multi_attributaire?: boolean | null
+          itinerance?: boolean | null
           joint_venture_type?: string | null
           jury_date?: string | null
           lead_id?: string | null
+          lieu_exposition?: string | null
+          lieux_itinerance?: Json | null
           location?: string | null
+          lots?: Json | null
           mandataire_must_be_solidary?: boolean | null
           market_object?: string | null
           moa_company_id?: string | null
           moe_fee_amount?: number | null
           moe_fee_percentage?: number | null
           moe_phases?: Json | null
+          montant_maximum?: number | null
+          montant_minimum?: number | null
+          nb_attributaires?: number | null
+          nb_reconductions?: number | null
           negotiation_candidates_count?: number | null
           negotiation_method?: string | null
+          oeuvres_estimees?: number | null
           offer_validity_days?: number | null
           pipeline_status?: string | null
           procedure_other?: string | null
@@ -8859,17 +8909,26 @@ export type Database = {
           submission_deadline?: string | null
           submission_type?: string | null
           surface_area?: number | null
+          surface_exposition?: number | null
           tender_type?: string | null
           title: string
+          type_campagne?: string | null
+          type_exposition?: string | null
           updated_at?: string | null
+          validite_offre_jours?: number | null
           work_nature_tags?: string[] | null
           workspace_id: string
         }
         Update: {
+          accessibilite_requise?: boolean | null
           allows_joint_venture?: boolean | null
           allows_negotiation?: boolean | null
           allows_variants?: boolean | null
+          anciens_prestataires?: Json | null
+          audition?: Json | null
           budget_disclosed?: boolean | null
+          cas_pratique?: Json | null
+          cibles?: string | null
           client_address?: string | null
           client_contact_email?: string | null
           client_contact_name?: string | null
@@ -8877,34 +8936,52 @@ export type Database = {
           client_direction?: string | null
           client_name?: string | null
           client_type?: string | null
+          commissaire_exposition?: string | null
           consultation_number?: string | null
           contracting_authority?: string | null
+          contraintes_conservation?: string | null
           created_at?: string | null
           created_by?: string | null
           critical_alerts?: Json | null
+          date_debut_mission?: string | null
           dce_delivery_deadline?: string | null
           dce_delivery_duration_months?: number | null
           dce_link?: string | null
+          deliverables_candidature?: Json | null
+          deliverables_offre?: Json | null
           description?: string | null
           discipline_slug?: string | null
+          duree_exposition_mois?: number | null
+          duree_initiale_mois?: number | null
+          duree_reconduction_mois?: number | null
           estimated_budget?: number | null
           go_decision_by?: string | null
           go_decision_date?: string | null
           go_decision_notes?: string | null
           group_code?: string | null
           id?: string
+          is_multi_attributaire?: boolean | null
+          itinerance?: boolean | null
           joint_venture_type?: string | null
           jury_date?: string | null
           lead_id?: string | null
+          lieu_exposition?: string | null
+          lieux_itinerance?: Json | null
           location?: string | null
+          lots?: Json | null
           mandataire_must_be_solidary?: boolean | null
           market_object?: string | null
           moa_company_id?: string | null
           moe_fee_amount?: number | null
           moe_fee_percentage?: number | null
           moe_phases?: Json | null
+          montant_maximum?: number | null
+          montant_minimum?: number | null
+          nb_attributaires?: number | null
+          nb_reconductions?: number | null
           negotiation_candidates_count?: number | null
           negotiation_method?: string | null
+          oeuvres_estimees?: number | null
           offer_validity_days?: number | null
           pipeline_status?: string | null
           procedure_other?: string | null
@@ -8931,9 +9008,13 @@ export type Database = {
           submission_deadline?: string | null
           submission_type?: string | null
           surface_area?: number | null
+          surface_exposition?: number | null
           tender_type?: string | null
           title?: string
+          type_campagne?: string | null
+          type_exposition?: string | null
           updated_at?: string | null
+          validite_offre_jours?: number | null
           work_nature_tags?: string[] | null
           workspace_id?: string
         }

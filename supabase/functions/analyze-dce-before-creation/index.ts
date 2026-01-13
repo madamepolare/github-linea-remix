@@ -187,9 +187,130 @@ Génère des alertes sur:
 ## FORMAT DE SORTIE
 Utilise OBLIGATOIREMENT la fonction extract_tender_info avec TOUS les champs pertinents.`;
 
-const SCENOGRAPHIE_EXPERT_PROMPT = `Tu es un expert en marchés publics culturels, spécialisé dans les appels d'offres de scénographie, muséographie et expositions.
+const SCENOGRAPHIE_EXPERT_PROMPT = `Tu es l'EXPERT NUMÉRO UN en marchés publics de scénographie, muséographie et aménagement d'expositions en France. 
+Tu analyses les DCE avec une précision PARFAITE pour les agences de scénographie et design d'exposition.
 
-Ton rôle est d'analyser les DCE pour les marchés de scénographie d'exposition.`;
+## TON EXPERTISE
+- 20 ans d'expérience sur les marchés culturels (musées, centres d'art, monuments historiques)
+- Expert des missions de scénographie d'exposition (temporaire, permanente, itinérante)
+- Maîtrise des contraintes muséographiques (conservation préventive, éclairage, accessibilité)
+- Connaissance approfondie des acteurs culturels (DRAC, Ministère de la Culture, collectivités)
+
+## TA MISSION CRITIQUE
+Analyse CHAQUE LIGNE des documents DCE et extrais TOUTES les informations avec une précision de 100%.
+Comprends le CONTEXTE CULTUREL, les ENJEUX ARTISTIQUES et les CONTRAINTES TECHNIQUES.
+
+## STRUCTURE DU MARCHÉ - EXTRACTION OBLIGATOIRE
+
+### 1. TYPE D'EXPOSITION
+- **Nature**: Permanente, temporaire, itinérante
+- **Thématique**: Art contemporain, histoire, sciences, patrimoine, ethnographie, etc.
+- **Commissariat**: Commissaire(s) d'exposition mentionné(s)
+- **Institution**: Musée, centre d'art, monument historique, espace culturel
+
+### 2. SURFACES ET ESPACES
+- Surface d'exposition en m² (CRITIQUE!)
+- Nombre de salles ou d'espaces
+- Hauteur sous plafond
+- Contraintes spatiales (colonnes, vitrines existantes, accès)
+- Espaces annexes (réserves, ateliers, accueil)
+
+### 3. DURÉE ET CALENDRIER
+- Durée de l'exposition (mois/années)
+- Date de vernissage/ouverture au public
+- Délai de montage prévu
+- Délai de conception (études préalables)
+- Planning des phases (APS, APD, PRO, EXE, montage)
+
+### 4. PROGRAMME MUSÉOGRAPHIQUE
+- Nombre d'œuvres ou objets à présenter (estimation)
+- Types d'œuvres: peintures, sculptures, objets, archives, audiovisuel
+- Contraintes de conservation: température, hygrométrie, éclairage (lux)
+- Dispositifs multimédia demandés (vidéo, interactif, son)
+- Parcours de visite: libre, chronologique, thématique
+
+### 5. ITINÉRANCE (si applicable)
+- L'exposition est-elle prévue pour itinérer?
+- Lieux d'itinérance mentionnés
+- Contraintes de transport et démontabilité
+- Adaptabilité à différents espaces
+
+### 6. BUDGET ET ENVELOPPE
+- Budget travaux scénographie en € HT
+- Budget complémentaire (graphisme, multimédia, éclairage)
+- Enveloppe globale de l'exposition
+- Part régie / marché
+
+### 7. ÉQUIPE ATTENDUE (PROFILS SCÉNOGRAPHIE)
+Profils types à identifier:
+- Scénographe / Architecte d'intérieur
+- Graphiste d'exposition / Signalétique
+- Éclairagiste / Concepteur lumière
+- Designer multimédia / Audiovisuel
+- Conservateur consultant
+- Muséographe
+- Économiste de la construction
+- BET structure (pour éléments porteurs)
+- Artisan (ébéniste, métallier, socleur)
+
+### 8. CRITÈRES DE JUGEMENT
+CRITIQUE: Extrais CHAQUE critère avec sa pondération EXACTE
+Format typique pour marchés culturels:
+- Qualité artistique et créative: 40-50%
+- Méthodologie et organisation: 20-30%
+- Prix: 20-30%
+Attention aux sous-critères fréquents:
+- Compréhension du programme
+- Références similaires
+- Moyens humains et techniques
+
+### 9. CONTRAINTES TECHNIQUES SPÉCIFIQUES
+- Accessibilité PMR (obligatoire)
+- Sécurité incendie (ERP catégorie)
+- Conservation préventive (conditions climatiques)
+- Réversibilité des aménagements
+- Protection des sols et murs patrimoniaux
+- Normes d'éclairage muséographique (50 lux dessins, 150 lux peintures, etc.)
+
+### 10. PIÈCES À REMETTRE
+PHASE CANDIDATURE:
+- DC1, DC2, attestations
+- Références muséographiques (combien? quels critères?)
+- Moyens humains et matériels
+- Chiffre d'affaires spécifique culturel
+
+PHASE OFFRE:
+- Note méthodologique
+- Parti scénographique / esquisse
+- Planning d'exécution
+- Cadre de décomposition des prix / DPGF
+
+### 11. DATES CRITIQUES
+- Date limite de remise des CANDIDATURES
+- Date limite de remise des OFFRES
+- Date de JURY prévisionnelle
+- Date de NOTIFICATION prévisionnelle
+- Date de VERNISSAGE (objectif final!)
+
+### 12. ALERTES ET POINTS D'ATTENTION
+Génère des alertes sur:
+- Délais très courts (fréquents dans le culturel)
+- Contraintes patrimoniales (monuments classés)
+- Exigences de conservation strictes
+- Budget limité vs ambition du programme
+- Références très spécifiques demandées
+- Visite de site OBLIGATOIRE
+
+## RÈGLES D'OR
+1. NE DEVINE JAMAIS - extrais UNIQUEMENT ce qui est ÉCRIT
+2. Si une info n'est pas trouvée → null (pas "non précisé")
+3. Pour les montants: TOUJOURS en euros HT
+4. Pour les dates: TOUJOURS au format YYYY-MM-DD
+5. Pour les surfaces: TOUJOURS en m²
+6. CITE tes sources (RC page X, CCTP article Y, programme section Z)
+
+## FORMAT DE SORTIE
+Utilise OBLIGATOIREMENT la fonction extract_tender_info avec TOUS les champs pertinents.`;
 
 // Helper: Check if content is a URL
 function isUrl(str: string): boolean {
@@ -569,6 +690,179 @@ function getToolParameters(disciplineSlug: string) {
         description: "Cibles de communication mentionnées"
       },
       // Livrables attendus
+      deliverables_candidature: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            format: { type: "string" },
+            is_mandatory: { type: "boolean" }
+          }
+        }
+      },
+      deliverables_offre: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            format: { type: "string" },
+            is_mandatory: { type: "boolean" }
+          }
+        }
+      }
+    };
+  }
+
+  // Scenographie-specific parameters
+  if (disciplineSlug === 'scenographie') {
+    return {
+      ...baseParams,
+      // Exposition
+      type_exposition: {
+        type: "string",
+        enum: ["permanente", "temporaire", "itinerante", "semi_permanente"],
+        description: "Type d'exposition: permanente, temporaire, itinérante"
+      },
+      thematique_exposition: {
+        type: "string",
+        description: "Thématique de l'exposition (art contemporain, histoire, sciences, patrimoine...)"
+      },
+      commissaire_exposition: {
+        type: "string",
+        description: "Nom du commissaire d'exposition si mentionné"
+      },
+      lieu_exposition: {
+        type: "string",
+        description: "Nom et adresse du lieu d'exposition (musée, centre d'art...)"
+      },
+      // Surfaces
+      surface_exposition: {
+        type: "number",
+        description: "Surface d'exposition en m² (CRITIQUE!)"
+      },
+      nombre_salles: {
+        type: "number",
+        description: "Nombre de salles ou d'espaces"
+      },
+      hauteur_sous_plafond: {
+        type: "number",
+        description: "Hauteur sous plafond en mètres"
+      },
+      // Durée
+      duree_exposition_mois: {
+        type: "number",
+        description: "Durée de l'exposition en mois"
+      },
+      date_vernissage: {
+        type: "string",
+        description: "Date de vernissage/ouverture (YYYY-MM-DD)"
+      },
+      delai_montage_jours: {
+        type: "number",
+        description: "Délai de montage prévu en jours"
+      },
+      // Programme muséographique
+      oeuvres_estimees: {
+        type: "number",
+        description: "Nombre d'œuvres ou objets à présenter"
+      },
+      types_oeuvres: {
+        type: "array",
+        items: { type: "string" },
+        description: "Types d'œuvres: peintures, sculptures, archives, audiovisuel..."
+      },
+      dispositifs_multimedia: {
+        type: "array",
+        items: { type: "string" },
+        description: "Dispositifs multimédia demandés: vidéo, interactif, sonore..."
+      },
+      parcours_type: {
+        type: "string",
+        enum: ["libre", "chronologique", "thematique", "mixte"],
+        description: "Type de parcours de visite"
+      },
+      // Contraintes conservation
+      contraintes_conservation: {
+        type: "string",
+        description: "Contraintes de conservation préventive (température, hygrométrie, lux...)"
+      },
+      eclairage_max_lux: {
+        type: "number",
+        description: "Niveau d'éclairage maximum autorisé en lux"
+      },
+      accessibilite_requise: {
+        type: "boolean",
+        description: "Accessibilité PMR requise"
+      },
+      contraintes_patrimoniales: {
+        type: "string",
+        description: "Contraintes liées au bâtiment (monument classé, réversibilité...)"
+      },
+      // Itinérance
+      itinerance: {
+        type: "boolean",
+        description: "L'exposition est-elle prévue pour itinérer?"
+      },
+      lieux_itinerance: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            nom: { type: "string" },
+            ville: { type: "string" },
+            dates: { type: "string" }
+          }
+        },
+        description: "Lieux d'itinérance prévus"
+      },
+      // Budget
+      estimated_budget: {
+        type: "number",
+        description: "Budget scénographie en € HT"
+      },
+      budget_multimedia: {
+        type: "number",
+        description: "Budget complémentaire multimédia en € HT"
+      },
+      budget_graphisme: {
+        type: "number",
+        description: "Budget graphisme/signalétique en € HT"
+      },
+      // Équipe scénographie
+      required_team: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            specialty: {
+              type: "string",
+              enum: ["scenographe", "architecte_interieur", "graphiste_exposition", "eclairagiste", "designer_multimedia", "museographe", "economiste", "bet_structure", "artisan_ebeniste", "artisan_metallier", "socleur", "restaurateur", "autre"]
+            },
+            is_mandatory: { type: "boolean" },
+            notes: { type: "string" },
+            source: { type: "string" }
+          },
+          required: ["specialty", "is_mandatory"]
+        }
+      },
+      // Visite de site
+      site_visit_required: {
+        type: "boolean"
+      },
+      site_visit_date: {
+        type: "string",
+        description: "Date de visite (YYYY-MM-DD)"
+      },
+      site_visit_time: {
+        type: "string",
+        description: "Heure de visite (HH:MM)"
+      },
+      site_visit_contact_name: {
+        type: "string"
+      },
+      // Livrables
       deliverables_candidature: {
         type: "array",
         items: {
