@@ -8,6 +8,7 @@ export interface BillingProfile {
   workspace_id: string;
   contact_id: string | null;
   company_id: string | null;
+  department_id: string | null;
   
   // Identification fiscale
   siret: string | null;
@@ -55,7 +56,9 @@ export interface BillingProfile {
 export type CreateBillingProfileInput = Omit<BillingProfile, "id" | "created_at" | "updated_at">;
 export type UpdateBillingProfileInput = Partial<BillingProfile> & { id: string };
 
-export function useBillingProfiles(entityType?: "contact" | "company", entityId?: string) {
+export type BillingEntityType = "contact" | "company" | "department";
+
+export function useBillingProfiles(entityType?: BillingEntityType, entityId?: string) {
   const { activeWorkspace } = useAuth();
   const queryClient = useQueryClient();
 
@@ -73,6 +76,8 @@ export function useBillingProfiles(entityType?: "contact" | "company", entityId?
         query = query.eq("contact_id", entityId);
       } else if (entityType === "company" && entityId) {
         query = query.eq("company_id", entityId);
+      } else if (entityType === "department" && entityId) {
+        query = query.eq("department_id", entityId);
       }
 
       const { data, error } = await query;
@@ -140,10 +145,13 @@ export function useBillingProfiles(entityType?: "contact" | "company", entityId?
   });
 
   // Get profile for specific entity
-  const getProfileForEntity = (type: "contact" | "company", id: string) => {
-    return profiles.find((p) => 
-      type === "contact" ? p.contact_id === id : p.company_id === id
-    );
+  const getProfileForEntity = (type: BillingEntityType, id: string) => {
+    return profiles.find((p) => {
+      if (type === "contact") return p.contact_id === id;
+      if (type === "company") return p.company_id === id;
+      if (type === "department") return p.department_id === id;
+      return false;
+    });
   };
 
   return {

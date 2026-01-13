@@ -207,6 +207,7 @@ export type Database = {
           contact_id: string | null
           created_at: string | null
           default_discount_percent: number | null
+          department_id: string | null
           iban: string | null
           id: string
           legal_form: string | null
@@ -238,6 +239,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string | null
           default_discount_percent?: number | null
+          department_id?: string | null
           iban?: string | null
           id?: string
           legal_form?: string | null
@@ -269,6 +271,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string | null
           default_discount_percent?: number | null
+          department_id?: string | null
           iban?: string | null
           id?: string
           legal_form?: string | null
@@ -297,6 +300,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "company_departments"
             referencedColumns: ["id"]
           },
           {
