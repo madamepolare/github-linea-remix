@@ -1,6 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, forwardRef } from "react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Quote } from "lucide-react";
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface Testimonial {
   quote: string;
@@ -40,7 +43,7 @@ const testimonials: Testimonial[] = [
   },
 ];
 
-export const TestimonialsCarousel = () => {
+export const TestimonialsCarousel = forwardRef<HTMLDivElement>((_, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -50,15 +53,26 @@ export const TestimonialsCarousel = () => {
     const track = trackRef.current;
     const totalWidth = track.scrollWidth / 2;
 
-    gsap.to(track, {
+    const tween = gsap.to(track, {
       x: -totalWidth,
-      duration: 40,
+      duration: 50,
       ease: "none",
       repeat: -1,
     });
 
+    // Pause on hover
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener("mouseenter", () => tween.pause());
+      container.addEventListener("mouseleave", () => tween.resume());
+    }
+
     return () => {
-      gsap.killTweensOf(track);
+      tween.kill();
+      if (container) {
+        container.removeEventListener("mouseenter", () => tween.pause());
+        container.removeEventListener("mouseleave", () => tween.resume());
+      }
     };
   }, []);
 
@@ -71,21 +85,21 @@ export const TestimonialsCarousel = () => {
         {duplicatedTestimonials.map((testimonial, index) => (
           <div
             key={index}
-            className="w-[400px] flex-shrink-0 p-8 rounded-2xl bg-card border border-border/50 hover:border-primary/30 transition-all duration-300"
+            className="w-[320px] sm:w-[380px] lg:w-[420px] flex-shrink-0 p-6 sm:p-8 rounded-3xl bg-white border border-border/30 hover:shadow-xl hover:shadow-black/5 transition-all duration-500"
           >
-            <Quote className="w-10 h-10 text-primary/30 mb-4" />
-            <p className="text-foreground mb-6 leading-relaxed">
+            <Quote className="w-8 h-8 text-pastel-blue mb-4" />
+            <p className="text-foreground mb-6 leading-relaxed text-sm sm:text-base">
               "{testimonial.quote}"
             </p>
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                <span className="text-primary-foreground font-semibold">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-foreground to-foreground/60 flex items-center justify-center">
+                <span className="text-background font-semibold text-lg">
                   {testimonial.author.charAt(0)}
                 </span>
               </div>
               <div>
-                <p className="font-semibold text-foreground">{testimonial.author}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-semibold text-foreground text-sm sm:text-base">{testimonial.author}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {testimonial.role} · {testimonial.company}
                 </p>
               </div>
@@ -95,4 +109,6 @@ export const TestimonialsCarousel = () => {
       </div>
     </div>
   );
-};
+});
+
+TestimonialsCarousel.displayName = "TestimonialsCarousel";

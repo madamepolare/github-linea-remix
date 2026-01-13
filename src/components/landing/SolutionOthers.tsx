@@ -1,42 +1,74 @@
-import { memo } from "react";
+import { useEffect, useRef, memo } from "react";
 import { Link } from "react-router-dom";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowRight } from "lucide-react";
-import { getAllSolutions, SolutionData } from "@/lib/solutionsData";
+import { getAllSolutions } from "@/lib/solutionsData";
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface SolutionOthersProps {
   currentSlug: string;
 }
 
+const solutionColors: Record<string, string> = {
+  architectes: "bg-pastel-blue",
+  "architectes-interieur": "bg-pastel-pink",
+  scenographes: "bg-pastel-lavender",
+  "agences-communication": "bg-pastel-peach",
+};
+
 export const SolutionOthers = memo(({ currentSlug }: SolutionOthersProps) => {
+  const sectionRef = useRef<HTMLDivElement>(null);
   const otherSolutions = getAllSolutions().filter((s) => s.slug !== currentSlug);
 
+  useEffect(() => {
+    if (!sectionRef.current) return;
+
+    const ctx = gsap.context(() => {
+      gsap.from(".other-solution", {
+        y: 30,
+        opacity: 0,
+        duration: 0.5,
+        stagger: 0.1,
+        ease: "power3.out",
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top 85%",
+        },
+      });
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, [currentSlug]);
+
   return (
-    <section className="py-16 bg-muted/30 border-t border-border/50">
+    <section ref={sectionRef} className="py-16 sm:py-20 bg-white border-t border-border/30">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-8">
-          <h2 className="text-xl font-semibold text-foreground">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-xl sm:text-2xl font-semibold text-foreground">
             Découvrez aussi
           </h2>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-4">
+        <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
           {otherSolutions.map((s) => {
             const SIcon = s.icon;
+            const bgColor = solutionColors[s.slug] || "bg-pastel-cream";
+            
             return (
               <Link
                 key={s.slug}
                 to={`/solutions/${s.slug}`}
-                className="group flex items-center gap-3 px-6 py-4 bg-card rounded-xl border border-border/50 hover:border-primary/30 hover:shadow-lg transition-all"
+                className={`other-solution group flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 ${bgColor} rounded-full hover:shadow-lg hover:shadow-black/5 transition-all duration-300`}
               >
-                <div
-                  className={`w-10 h-10 rounded-lg bg-gradient-to-br ${s.color} flex items-center justify-center group-hover:scale-110 transition-transform`}
-                >
-                  <SIcon className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/60 flex items-center justify-center">
+                  <SIcon className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
                 </div>
-                <span className="font-medium text-foreground group-hover:text-primary transition-colors">
-                  {s.title.replace("Linea Suite pour les ", "")}
+                <span className="font-medium text-foreground text-sm sm:text-base">
+                  {s.title.replace("Linea Suite pour les ", "").replace("LINEA pour les ", "")}
                 </span>
-                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                <ArrowRight className="w-4 h-4 text-foreground/50 group-hover:text-foreground group-hover:translate-x-1 transition-all" />
               </Link>
             );
           })}

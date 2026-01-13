@@ -1,8 +1,8 @@
-import { useParams, Navigate } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { useParams, Navigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import { getSolutionBySlug } from "@/lib/solutionsData";
-import { LandingNav } from "@/components/landing/LandingNav";
-import { Footer } from "@/components/landing/Footer";
+import { NewLandingNav } from "@/components/landing/NewLandingNav";
+import { NewFooter } from "@/components/landing/NewFooter";
 import { SEOHead } from "@/components/seo/SEOHead";
 import { SolutionHero } from "@/components/landing/SolutionHero";
 import { SolutionBenefits } from "@/components/landing/SolutionBenefits";
@@ -27,10 +27,10 @@ const SolutionDetail = () => {
         description={solution.description}
         canonicalUrl={`https://linea-suite.com/solutions/${solution.slug}`}
       />
-      <div className="min-h-screen bg-background">
-        <LandingNav />
+      <div className="min-h-screen bg-pastel-cream">
+        <NewLandingNav />
 
-        {/* Hero - same style as ModuleHero */}
+        {/* Hero - new pastel style */}
         <SolutionHero solution={solution} />
 
         {/* Benefits stats */}
@@ -51,7 +51,7 @@ const SolutionDetail = () => {
         {/* CTA */}
         <SolutionCTA color={solution.color} />
 
-        <Footer />
+        <NewFooter />
       </div>
     </>
   );
