@@ -597,13 +597,21 @@ export function TenderTypesSection() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ delay: idx * 0.05 }}
+                onClick={() => {
+                  if (isDefault) {
+                    // For default types, initialize first then edit
+                    handleInitialize();
+                  } else {
+                    handleEdit(type as TenderTypeConfig);
+                  }
+                }}
                 className={cn(
-                  "flex items-center gap-4 p-4 rounded-lg border transition-colors",
-                  type.is_active ? "bg-card" : "bg-muted/30 opacity-60"
+                  "flex items-center gap-4 p-4 rounded-lg border transition-colors cursor-pointer group",
+                  type.is_active ? "bg-card hover:bg-accent/50" : "bg-muted/30 opacity-60 hover:opacity-80"
                 )}
               >
                 <div
-                  className="p-2 rounded-lg"
+                  className="p-2 rounded-lg transition-transform group-hover:scale-110"
                   style={{ backgroundColor: `${type.color}20` }}
                 >
                   <Icon className="h-5 w-5" style={{ color: type.color }} />
@@ -638,26 +646,36 @@ export function TenderTypesSection() {
                   </Badge>
                 </div>
 
-                {!isDefault && (
-                  <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isDefault) {
+                        handleInitialize();
+                      } else {
+                        handleEdit(type as TenderTypeConfig);
+                      }
+                    }}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  {!isDefault && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleEdit(type as TenderTypeConfig)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(type.id)}
+                      className="h-8 w-8 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(type.id);
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </motion.div>
             );
           })}
