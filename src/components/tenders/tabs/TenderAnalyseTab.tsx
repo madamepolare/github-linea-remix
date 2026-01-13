@@ -140,10 +140,87 @@ export function TenderAnalyseTab({ tender, onNavigateToTab, pendingFiles, onFile
     e.target.value = '';
   };
 
-  // Merge all extracted data
+  // Merge all extracted data and normalize nested structures
   const mergedExtractedData = analyzedDocs.reduce((acc, doc) => {
     if (doc.extracted_data && typeof doc.extracted_data === 'object') {
-      return { ...acc, ...(doc.extracted_data as Record<string, unknown>) };
+      const data = doc.extracted_data as Record<string, unknown>;
+      
+      // Normalize site_visit object to flat fields
+      if (data.site_visit && typeof data.site_visit === 'object') {
+        const siteVisit = data.site_visit as Record<string, unknown>;
+        if (siteVisit.required !== undefined) data.site_visit_required = siteVisit.required;
+        if (siteVisit.date) {
+          // Combine date and time if available
+          let dateStr = siteVisit.date as string;
+          if (siteVisit.time) {
+            dateStr = `${dateStr}T${siteVisit.time}`;
+          }
+          data.site_visit_date = dateStr;
+        }
+        if (siteVisit.location) data.site_visit_location = siteVisit.location;
+        if (siteVisit.contact_name) data.site_visit_contact_name = siteVisit.contact_name;
+        if (siteVisit.contact_email) data.site_visit_contact_email = siteVisit.contact_email;
+        if (siteVisit.contact_phone) data.site_visit_contact_phone = siteVisit.contact_phone;
+      }
+      
+      // Normalize deadlines object
+      if (data.deadlines && typeof data.deadlines === 'object') {
+        const deadlines = data.deadlines as Record<string, unknown>;
+        if (deadlines.submission) {
+          let dateStr = deadlines.submission as string;
+          if (deadlines.submission_time) {
+            dateStr = `${dateStr}T${deadlines.submission_time}`;
+          }
+          data.submission_deadline = dateStr;
+        }
+        if (deadlines.jury) data.jury_date = deadlines.jury;
+        if (deadlines.results) data.results_date = deadlines.results;
+      }
+      
+      // Normalize client object
+      if (data.client && typeof data.client === 'object') {
+        const client = data.client as Record<string, unknown>;
+        if (client.name) data.client_name = client.name;
+        if (client.type) data.client_type = client.type;
+        if (client.contact_name) data.client_contact_name = client.contact_name;
+        if (client.contact_email) data.client_contact_email = client.contact_email;
+      }
+      
+      // Normalize project object
+      if (data.project && typeof data.project === 'object') {
+        const project = data.project as Record<string, unknown>;
+        if (project.location) data.location = project.location;
+        if (project.surface) data.surface_area = project.surface;
+        if (project.description) data.description = project.description;
+        if (project.region) data.region = project.region;
+      }
+      
+      // Normalize budget object
+      if (data.budget && typeof data.budget === 'object') {
+        const budget = data.budget as Record<string, unknown>;
+        if (budget.amount) data.estimated_budget = budget.amount;
+        if (budget.disclosed !== undefined) data.budget_disclosed = budget.disclosed;
+      }
+      
+      // Normalize consultation object
+      if (data.consultation && typeof data.consultation === 'object') {
+        const consultation = data.consultation as Record<string, unknown>;
+        if (consultation.number) data.consultation_number = consultation.number;
+        if (consultation.reference) data.reference = consultation.reference;
+        if (consultation.object) data.market_object = consultation.object;
+      }
+      
+      // Normalize procedure object
+      if (data.procedure && typeof data.procedure === 'object') {
+        const procedure = data.procedure as Record<string, unknown>;
+        if (procedure.type) data.procedure_type = procedure.type;
+        if (procedure.allows_variants !== undefined) data.allows_variants = procedure.allows_variants;
+        if (procedure.allows_joint_venture !== undefined) data.allows_joint_venture = procedure.allows_joint_venture;
+        if (procedure.joint_venture_type) data.joint_venture_type = procedure.joint_venture_type;
+        if (procedure.offer_validity_days) data.offer_validity_days = procedure.offer_validity_days;
+      }
+      
+      return { ...acc, ...data };
     }
     return acc;
   }, {} as Record<string, unknown>);
@@ -170,15 +247,30 @@ export function TenderAnalyseTab({ tender, onNavigateToTab, pendingFiles, onFile
       }
     }
     
-    // Map extracted fields
+    // Map extracted fields to tender
     if (mergedExtractedData.client_name && !tender.client_name) {
       updates.client_name = mergedExtractedData.client_name as string;
+    }
+    if (mergedExtractedData.client_type && !tender.client_type) {
+      (updates as any).client_type = mergedExtractedData.client_type as string;
+    }
+    if (mergedExtractedData.client_contact_name && !tender.client_contact_name) {
+      (updates as any).client_contact_name = mergedExtractedData.client_contact_name as string;
+    }
+    if (mergedExtractedData.client_contact_email && !tender.client_contact_email) {
+      (updates as any).client_contact_email = mergedExtractedData.client_contact_email as string;
     }
     if (mergedExtractedData.location && !tender.location) {
       updates.location = mergedExtractedData.location as string;
     }
+    if (mergedExtractedData.region && !tender.region) {
+      (updates as any).region = mergedExtractedData.region as string;
+    }
     if (mergedExtractedData.estimated_budget && !tender.estimated_budget) {
       updates.estimated_budget = mergedExtractedData.estimated_budget as number;
+    }
+    if (mergedExtractedData.budget_disclosed !== undefined && tender.budget_disclosed === null) {
+      (updates as any).budget_disclosed = mergedExtractedData.budget_disclosed as boolean;
     }
     if (mergedExtractedData.submission_deadline && !tender.submission_deadline) {
       updates.submission_deadline = mergedExtractedData.submission_deadline as string;
@@ -189,35 +281,79 @@ export function TenderAnalyseTab({ tender, onNavigateToTab, pendingFiles, onFile
     if (mergedExtractedData.site_visit_date && !tender.site_visit_date) {
       updates.site_visit_date = mergedExtractedData.site_visit_date as string;
     }
+    if (mergedExtractedData.site_visit_contact_name && !tender.site_visit_contact_name) {
+      (updates as any).site_visit_contact_name = mergedExtractedData.site_visit_contact_name as string;
+    }
+    if (mergedExtractedData.site_visit_contact_email && !tender.site_visit_contact_email) {
+      (updates as any).site_visit_contact_email = mergedExtractedData.site_visit_contact_email as string;
+    }
+    if (mergedExtractedData.site_visit_contact_phone && !tender.site_visit_contact_phone) {
+      (updates as any).site_visit_contact_phone = mergedExtractedData.site_visit_contact_phone as string;
+    }
     if (mergedExtractedData.procedure_type && !tender.procedure_type) {
       (updates as any).procedure_type = mergedExtractedData.procedure_type as string;
     }
     if (mergedExtractedData.description && !tender.description) {
       updates.description = mergedExtractedData.description as string;
     }
+    if (mergedExtractedData.market_object && !tender.market_object) {
+      (updates as any).market_object = mergedExtractedData.market_object as string;
+    }
     if (mergedExtractedData.surface_area && !tender.surface_area) {
       updates.surface_area = mergedExtractedData.surface_area as number;
+    }
+    if (mergedExtractedData.allows_variants !== undefined && tender.allows_variants === null) {
+      (updates as any).allows_variants = mergedExtractedData.allows_variants as boolean;
+    }
+    if (mergedExtractedData.allows_joint_venture !== undefined && tender.allows_joint_venture === null) {
+      (updates as any).allows_joint_venture = mergedExtractedData.allows_joint_venture as boolean;
+    }
+    if (mergedExtractedData.joint_venture_type && !tender.joint_venture_type) {
+      (updates as any).joint_venture_type = mergedExtractedData.joint_venture_type as string;
+    }
+    if (mergedExtractedData.offer_validity_days && !tender.offer_validity_days) {
+      (updates as any).offer_validity_days = mergedExtractedData.offer_validity_days as number;
+    }
+    if (mergedExtractedData.jury_date && !tender.jury_date) {
+      (updates as any).jury_date = mergedExtractedData.jury_date as string;
+    }
+    if (mergedExtractedData.results_date && !tender.results_date) {
+      (updates as any).results_date = mergedExtractedData.results_date as string;
+    }
+    
+    // Handle required_team/competencies
+    if (mergedExtractedData.required_competencies && Array.isArray(mergedExtractedData.required_competencies)) {
+      const team = (mergedExtractedData.required_competencies as any[]).map(comp => ({
+        specialty: comp.specialty,
+        is_mandatory: comp.mandatory !== false,
+        notes: comp.requirements || comp.notes,
+      }));
+      if (team.length > 0 && (!tender.required_team || (Array.isArray(tender.required_team) && tender.required_team.length === 0))) {
+        (updates as any).required_team = team;
+      }
     }
 
     if (Object.keys(updates).length > 0) {
       updateTender.mutate({ id: tender.id, ...updates } as any);
-      toast.success("Données appliquées à la synthèse");
+      toast.success(`${Object.keys(updates).length} champ(s) appliqué(s) à la synthèse`);
       onNavigateToTab('synthese');
     } else {
       toast.info("Aucune nouvelle donnée à appliquer");
     }
   };
 
-  // What was extracted
+  // What was extracted - enhanced list
   const extractedItems = [
     { key: 'client_name', label: 'Maître d\'ouvrage', found: !!mergedExtractedData.client_name },
-    { key: 'procedure_type', label: 'Type de marché', found: !!mergedExtractedData.procedure_type },
-    { key: 'location', label: 'Lieu', found: !!mergedExtractedData.location },
+    { key: 'procedure_type', label: 'Type de procédure', found: !!mergedExtractedData.procedure_type },
+    { key: 'location', label: 'Localisation', found: !!mergedExtractedData.location },
     { key: 'budget', label: 'Budget', found: !!(mergedExtractedData.estimated_budget || mergedExtractedData.budget) },
-    { key: 'deadline', label: 'Date de dépôt', found: !!mergedExtractedData.submission_deadline },
-    { key: 'site_visit', label: 'Visite obligatoire', found: mergedExtractedData.site_visit_required !== undefined },
-    { key: 'criteria', label: 'Critères de jugement', found: !!(mergedExtractedData.criteria || mergedExtractedData.judgment_criteria) },
-    { key: 'team', label: 'Compétences requises', found: !!(mergedExtractedData.required_competencies || mergedExtractedData.team_requirements) },
+    { key: 'deadline', label: 'Date limite de remise', found: !!mergedExtractedData.submission_deadline },
+    { key: 'site_visit_required', label: 'Visite de site', found: mergedExtractedData.site_visit_required !== undefined },
+    { key: 'site_visit_date', label: 'Date de visite', found: !!mergedExtractedData.site_visit_date },
+    { key: 'criteria', label: 'Critères de jugement', found: !!(mergedExtractedData.criteria || mergedExtractedData.judgment_criteria || mergedExtractedData.selection_criteria) },
+    { key: 'team', label: 'Compétences requises', found: !!(mergedExtractedData.required_competencies || mergedExtractedData.team_requirements || mergedExtractedData.required_team) },
+    { key: 'surface', label: 'Surface', found: !!mergedExtractedData.surface_area },
   ];
 
   const extractedCount = extractedItems.filter(i => i.found).length;

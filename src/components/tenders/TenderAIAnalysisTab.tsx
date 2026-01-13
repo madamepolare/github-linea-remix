@@ -153,10 +153,58 @@ export function TenderAIAnalysisTab({ tender, onNavigateToTab, pendingFiles, onF
     e.target.value = '';
   };
   
-  // Merge all extracted data
+  // Merge all extracted data and normalize nested structures
   const mergedExtractedData = analyzedDocs.reduce((acc, doc) => {
     if (doc.extracted_data && typeof doc.extracted_data === 'object') {
-      return { ...acc, ...(doc.extracted_data as Record<string, unknown>) };
+      const data = doc.extracted_data as Record<string, unknown>;
+      
+      // Normalize site_visit object to flat fields
+      if (data.site_visit && typeof data.site_visit === 'object') {
+        const siteVisit = data.site_visit as Record<string, unknown>;
+        if (siteVisit.required !== undefined) data.site_visit_required = siteVisit.required;
+        if (siteVisit.date) {
+          let dateStr = siteVisit.date as string;
+          if (siteVisit.time) dateStr = `${dateStr}T${siteVisit.time}`;
+          data.site_visit_date = dateStr;
+        }
+        if (siteVisit.location) data.site_visit_location = siteVisit.location;
+        if (siteVisit.contact_name) data.site_visit_contact_name = siteVisit.contact_name;
+        if (siteVisit.contact_email) data.site_visit_contact_email = siteVisit.contact_email;
+      }
+      
+      // Normalize deadlines object
+      if (data.deadlines && typeof data.deadlines === 'object') {
+        const deadlines = data.deadlines as Record<string, unknown>;
+        if (deadlines.submission) {
+          let dateStr = deadlines.submission as string;
+          if (deadlines.submission_time) dateStr = `${dateStr}T${deadlines.submission_time}`;
+          data.submission_deadline = dateStr;
+        }
+        if (deadlines.jury) data.jury_date = deadlines.jury;
+      }
+      
+      // Normalize client object
+      if (data.client && typeof data.client === 'object') {
+        const client = data.client as Record<string, unknown>;
+        if (client.name) data.client_name = client.name;
+        if (client.type) data.client_type = client.type;
+      }
+      
+      // Normalize project object
+      if (data.project && typeof data.project === 'object') {
+        const project = data.project as Record<string, unknown>;
+        if (project.location) data.location = project.location;
+        if (project.surface) data.surface_area = project.surface;
+        if (project.description) data.description = project.description;
+      }
+      
+      // Normalize budget object
+      if (data.budget && typeof data.budget === 'object') {
+        const budget = data.budget as Record<string, unknown>;
+        if (budget.amount) data.estimated_budget = budget.amount;
+      }
+      
+      return { ...acc, ...data };
     }
     return acc;
   }, {} as Record<string, unknown>);
