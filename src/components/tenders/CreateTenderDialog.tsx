@@ -145,6 +145,59 @@ interface ExtractionStats {
   alerts_found: number;
 }
 
+// Auto-detect document type from filename
+function detectDocumentType(filename: string): string {
+  const lowerName = filename.toLowerCase();
+  
+  if (lowerName.includes('rc') || lowerName.includes('reglement') || lowerName.includes('consultation')) {
+    return 'rc';
+  }
+  if (lowerName.includes('ccap') || lowerName.includes('clauses_administratives')) {
+    return 'ccap';
+  }
+  if (lowerName.includes('cctp') || lowerName.includes('clauses_techniques')) {
+    return 'cctp';
+  }
+  if (lowerName.includes('acte') && lowerName.includes('engagement') || lowerName.includes('_ae')) {
+    return 'ae';
+  }
+  if (lowerName.includes('dc1')) {
+    return 'dc1';
+  }
+  if (lowerName.includes('dc2')) {
+    return 'dc2';
+  }
+  if (lowerName.includes('dc4')) {
+    return 'dc4';
+  }
+  if (lowerName.includes('lettre') && lowerName.includes('consultation')) {
+    return 'lettre_consultation';
+  }
+  if (lowerName.includes('note') || lowerName.includes('programme')) {
+    return 'note_programme';
+  }
+  if (lowerName.includes('attestation') && lowerName.includes('visite')) {
+    return 'attestation_visite';
+  }
+  if (lowerName.includes('audit') || lowerName.includes('diagnostic')) {
+    return 'audit_technique';
+  }
+  if (lowerName.includes('dpgf') || lowerName.includes('bpu') || lowerName.includes('dqe')) {
+    return 'dpgf';
+  }
+  if (lowerName.includes('plan') || lowerName.match(/\.(dwg|dxf)$/)) {
+    return 'plan';
+  }
+  if (lowerName.includes('contrat')) {
+    return 'contrat';
+  }
+  if (lowerName.includes('annexe')) {
+    return 'annexe';
+  }
+  
+  return 'autre';
+}
+
 interface CreateTenderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -625,6 +678,54 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
       // Store required team to be created on detail page
       if (formData.required_team && formData.required_team.length > 0) {
         sessionStorage.setItem(`tender-team-${result.id}`, JSON.stringify(formData.required_team));
+      }
+
+      // Upload DCE documents that were analyzed
+      if (uploadedFiles.length > 0) {
+        // Store files to be uploaded on detail page (to avoid blocking creation)
+        sessionStorage.setItem(`tender-files-${result.id}`, JSON.stringify(
+          uploadedFiles.map(f => ({ name: f.name, type: safeMimeType(f), size: f.size }))
+        ));
+        
+        // Upload files to storage and create document records
+        for (const file of uploadedFiles) {
+          try {
+            const timestamp = Date.now();
+            const randomSuffix = Math.random().toString(36).substring(2, 8);
+            const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+            const fileName = `${result.id}/${timestamp}_${randomSuffix}_${safeName}`;
+            
+            // Detect document type from filename
+            const docType = detectDocumentType(file.name);
+            
+            const { error: uploadError } = await supabase.storage
+              .from("tender-documents")
+              .upload(fileName, file, { cacheControl: '3600', upsert: false });
+
+            if (uploadError) {
+              console.error(`Upload error for ${file.name}:`, uploadError);
+              continue;
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+              .from("tender-documents")
+              .getPublicUrl(fileName);
+
+            await supabase
+              .from("tender_documents")
+              .insert({
+                tender_id: result.id,
+                document_type: docType,
+                file_name: file.name,
+                file_url: publicUrl,
+                file_size: file.size,
+                is_analyzed: true, // Already analyzed during creation
+                analyzed_at: new Date().toISOString(),
+              } as any);
+          } catch (e) {
+            console.error(`Failed to save document ${file.name}:`, e);
+          }
+        }
       }
 
       handleClose();

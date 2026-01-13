@@ -43,14 +43,13 @@ export const COMMUNICATION_DISCIPLINE: DisciplineDefinition = {
     // === ONGLETS COMMUNICATION (pas d'honoraires MOE!) ===
     tabs: [
       { key: 'synthese', label: 'Synthèse', icon: 'LayoutDashboard', component: 'TenderSyntheseTab', visible: true, order: 1 },
-      { key: 'budget', label: 'Budget & Accord-cadre', icon: 'Euro', component: 'TenderBudgetCommTab', visible: true, order: 2 },
-      { key: 'cas_pratique', label: 'Cas pratique', icon: 'Lightbulb', component: 'TenderCasPratiqueTab', visible: true, order: 3 },
-      { key: 'calendrier', label: 'Calendrier', icon: 'Calendar', component: 'TenderCalendarTab', visible: true, order: 4 },
-      { key: 'tasks', label: 'Tâches', icon: 'CheckSquare', component: 'EntityTasksList', visible: true, order: 5 },
-      { key: 'documents', label: 'DCE', icon: 'FolderOpen', component: 'TenderDocumentsTab', visible: true, order: 6 },
-      { key: 'emails', label: 'Emails', icon: 'Mail', component: 'EntityEmailsTab', visible: true, order: 7 },
-      { key: 'livrables', label: 'Livrables', icon: 'ListTodo', component: 'TenderLivrablesTab', visible: true, order: 8 },
-      { key: 'memoire', label: 'Recommandation', icon: 'PenTool', component: 'TenderMemoireTab', visible: true, order: 9 },
+      { key: 'cas_pratique', label: 'Cas pratique', icon: 'Lightbulb', component: 'TenderCasPratiqueTab', visible: true, order: 2 },
+      { key: 'calendrier', label: 'Calendrier', icon: 'Calendar', component: 'TenderCalendarTab', visible: true, order: 3 },
+      { key: 'tasks', label: 'Tâches', icon: 'CheckSquare', component: 'EntityTasksList', visible: true, order: 4 },
+      { key: 'documents', label: 'DCE', icon: 'FolderOpen', component: 'TenderDocumentsTab', visible: true, order: 5 },
+      { key: 'emails', label: 'Emails', icon: 'Mail', component: 'EntityEmailsTab', visible: true, order: 6 },
+      { key: 'livrables', label: 'Livrables', icon: 'ListTodo', component: 'TenderLivrablesTab', visible: true, order: 7 },
+      { key: 'memoire', label: 'Recommandation', icon: 'PenTool', component: 'TenderMemoireTab', visible: true, order: 8 },
     ],
     
     // === BLOCS SYNTHÈSE COMMUNICATION (différent d'archi!) ===
