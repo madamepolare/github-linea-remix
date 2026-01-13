@@ -48,12 +48,15 @@ import {
   Phone,
   Crown,
   Briefcase,
+  CreditCard,
 } from "lucide-react";
 import { useCompanyDepartments, CompanyDepartment, CreateDepartmentInput } from "@/hooks/useCompanyDepartments";
 import { useContacts, Contact } from "@/hooks/useContacts";
+import { useAuth } from "@/contexts/AuthContext";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { DepartmentBillingDialog } from "./company/DepartmentBillingDialog";
 
 interface CompanyDepartmentsSectionProps {
   companyId: string;
@@ -83,6 +86,7 @@ export function CompanyDepartmentsSection({
   companyBillingContactId,
   onBillingContactChange,
 }: CompanyDepartmentsSectionProps) {
+  const { activeWorkspace } = useAuth();
   const { departments, isLoading, createDepartment, updateDepartment, deleteDepartment } = useCompanyDepartments(companyId);
   const { updateContact } = useContacts();
   
@@ -91,6 +95,8 @@ export function CompanyDepartmentsSection({
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("");
+  const [billingDialogOpen, setBillingDialogOpen] = useState(false);
+  const [selectedDeptForBilling, setSelectedDeptForBilling] = useState<CompanyDepartment | null>(null);
   const [formData, setFormData] = useState<CreateDepartmentInput>({
     company_id: companyId,
     name: "",
@@ -405,6 +411,14 @@ export function CompanyDepartmentsSection({
                                   <Pencil className="h-4 w-4 mr-2" />
                                   Modifier
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedDeptForBilling(dept);
+                                  setBillingDialogOpen(true);
+                                }}>
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                  Coordonnées facturation
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-destructive"
                                   onClick={() => deleteDepartment.mutate(dept.id)}
@@ -612,6 +626,20 @@ export function CompanyDepartmentsSection({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Department Billing Dialog */}
+      {selectedDeptForBilling && activeWorkspace && (
+        <DepartmentBillingDialog
+          open={billingDialogOpen}
+          onOpenChange={(open) => {
+            setBillingDialogOpen(open);
+            if (!open) setSelectedDeptForBilling(null);
+          }}
+          departmentId={selectedDeptForBilling.id}
+          departmentName={selectedDeptForBilling.name}
+          workspaceId={activeWorkspace.id}
+        />
+      )}
     </>
   );
 }
