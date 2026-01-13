@@ -123,24 +123,24 @@ export const SolutionHero = ({ solution }: SolutionHeroProps) => {
             transition={{ duration: 0.6, delay: 0.5 }}
             className="flex flex-col sm:flex-row gap-4 justify-center px-4"
           >
-            <Button
-              size="lg"
-              className="h-12 sm:h-14 px-6 sm:px-8 rounded-full bg-foreground text-background hover:bg-foreground/90 font-medium text-sm sm:text-base"
-              asChild
-            >
-              <Link to="/onboarding">
+            <Link to="/onboarding">
+              <Button
+                size="lg"
+                className="h-12 sm:h-14 px-6 sm:px-8 rounded-full bg-foreground text-background hover:bg-foreground/90 font-medium text-sm sm:text-base"
+              >
                 Démarrer gratuitement
                 <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
-              </Link>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-12 sm:h-14 px-6 sm:px-8 rounded-full border-2 hover:bg-white/50 font-medium text-sm sm:text-base"
-              asChild
-            >
-              <Link to="/welcome#pricing">Voir les tarifs</Link>
-            </Button>
+              </Button>
+            </Link>
+            <Link to="/welcome#pricing">
+              <Button
+                size="lg"
+                variant="outline"
+                className="h-12 sm:h-14 px-6 sm:px-8 rounded-full border-2 hover:bg-white/50 font-medium text-sm sm:text-base"
+              >
+                Voir les tarifs
+              </Button>
+            </Link>
           </motion.div>
         </div>
       </div>

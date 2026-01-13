@@ -103,12 +103,12 @@ export const ModuleHero = memo(({ module }: ModuleHeroProps) => {
 
           {/* CTA */}
           <div className="hero-cta flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="px-8" asChild>
-              <Link to="/onboarding">Essayer gratuitement</Link>
-            </Button>
-            <Button size="lg" variant="outline" className="px-8" asChild>
-              <Link to="/welcome#pricing">Voir les tarifs</Link>
-            </Button>
+            <Link to="/onboarding">
+              <Button size="lg" className="px-8">Essayer gratuitement</Button>
+            </Link>
+            <Link to="/welcome#pricing">
+              <Button size="lg" variant="outline" className="px-8">Voir les tarifs</Button>
+            </Link>
           </div>
         </div>
       </div>

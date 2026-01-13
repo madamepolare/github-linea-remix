@@ -52,25 +52,25 @@ export const ModuleCTA = ({ title, color }: ModuleCTAProps) => {
               Rejoignez des centaines d'agences qui ont déjà adopté Linea Suite pour simplifier leur quotidien.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                variant="secondary"
-                className="px-8 bg-white text-foreground hover:bg-white/90"
-                asChild
-              >
-                <Link to="/onboarding">
+              <Link to="/onboarding">
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="px-8 bg-white text-foreground hover:bg-white/90"
+                >
                   Commencer gratuitement
                   <ArrowRight className="w-4 h-4 ml-2" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="px-8 border-white/30 text-white hover:bg-white/10"
-                asChild
-              >
-                <Link to="/welcome#pricing">Voir les tarifs</Link>
-              </Button>
+                </Button>
+              </Link>
+              <Link to="/welcome#pricing">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="px-8 border-white/30 text-white hover:bg-white/10"
+                >
+                  Voir les tarifs
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

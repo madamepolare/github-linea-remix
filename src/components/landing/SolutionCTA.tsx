@@ -28,16 +28,15 @@ export const SolutionCTA = memo(({ color }: SolutionCTAProps) => {
             Rejoignez les professionnels qui ont déjà optimisé leur gestion avec
             LINEA.
           </p>
-          <Button
-            asChild
-            size="lg"
-            className="h-12 sm:h-14 px-6 sm:px-8 rounded-full bg-foreground text-background hover:bg-foreground/90 font-medium text-sm sm:text-base"
-          >
-            <Link to="/onboarding">
+          <Link to="/onboarding">
+            <Button
+              size="lg"
+              className="h-12 sm:h-14 px-6 sm:px-8 rounded-full bg-foreground text-background hover:bg-foreground/90 font-medium text-sm sm:text-base"
+            >
               Commencer gratuitement
               <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </motion.div>
       </div>
     </section>
