@@ -39,8 +39,7 @@ import { QuotePreviewPanel } from '@/components/commercial/quote-builder/QuotePr
 import { ContractPreviewPanel } from '@/components/commercial/quote-builder/ContractPreviewPanel';
 import { isArchitectureContractType, COMMUNICATION_CONTRACT_CODES, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
-import { generateQuotePDFSimple } from '@/lib/generateQuotePDFSimple';
-import { generateContractPDFFromPreview } from '@/lib/generateContractPDFFromPreview';
+import { generateCleanQuotePDF, generateCleanContractPDF } from '@/lib/generateCleanPDF';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { useAuth } from '@/contexts/AuthContext';
@@ -324,16 +323,16 @@ export default function QuoteBuilder() {
       let blob: Blob;
       
       if (document.document_type === 'contract') {
-        // Pour les contrats : utiliser le générateur qui reproduit la preview
-        blob = await generateContractPDFFromPreview(
+        // Pour les contrats : utiliser le template clean avec page de garde
+        blob = await generateCleanContractPDF(
           document,
           lines,
           agencyInfo,
           currentContractType?.code || null
         );
       } else {
-        // Pour les devis : utiliser le générateur simple
-        blob = await generateQuotePDFSimple(document, lines, agencyInfo);
+        // Pour les devis : utiliser le template clean avec page de garde
+        blob = await generateCleanQuotePDF(document, lines, agencyInfo);
       }
       
       const url = URL.createObjectURL(blob);
