@@ -1,13 +1,49 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Users } from "lucide-react";
+import { Package, Users, Euro } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface Lot {
+  numero?: number;
+  intitule?: string;
+  titre?: string;
+  domaine?: string;
+  description?: string;
+  budget_min?: number;
+  budget_max?: number;
+  is_multi_attributaire?: boolean;
+  nb_attributaires?: number;
+  duree_mois?: number;
+}
 
 interface LotsBlockProps {
   tender: any;
 }
 
+const DOMAINE_COLORS: Record<string, string> = {
+  graphisme: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300",
+  digital: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
+  evenementiel: "bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300",
+  video: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
+  impression: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300",
+  strategie: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300",
+  conseil: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300",
+  creation: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/50 dark:text-fuchsia-300",
+  production: "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300",
+  rp: "bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300",
+  signaletique: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300",
+  global: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+};
+
+const formatCurrency = (amount: number | null | undefined) => {
+  if (!amount) return null;
+  if (amount >= 1000000) return `${(amount / 1000000).toFixed(1)}M€`;
+  if (amount >= 1000) return `${Math.round(amount / 1000)}k€`;
+  return `${amount.toLocaleString()}€`;
+};
+
 export function LotsBlock({ tender }: LotsBlockProps) {
-  const lots = Array.isArray(tender.lots) ? tender.lots : [];
+  const lots: Lot[] = Array.isArray(tender.lots) ? tender.lots : [];
   
   if (lots.length === 0) return null;
 
@@ -21,22 +57,74 @@ export function LotsBlock({ tender }: LotsBlockProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
-          {lots.slice(0, 4).map((lot: any, i: number) => (
-            <div key={i} className="flex items-center justify-between text-sm p-2 bg-muted/50 rounded">
-              <span className="truncate">
-                <Badge variant="outline" className="mr-2 text-xs">
-                  {lot.numero || i + 1}
-                </Badge>
-                {lot.intitule || lot.titre || "Sans titre"}
-              </span>
-            </div>
-          ))}
-          {lots.length > 4 && (
-            <p className="text-xs text-muted-foreground text-center">
-              +{lots.length - 4} autres lots
-            </p>
-          )}
+        <div className="space-y-3">
+          {lots.map((lot, i) => {
+            const domaine = lot.domaine || 'autre';
+            const domaineColor = DOMAINE_COLORS[domaine] || DOMAINE_COLORS.global;
+            const hasBudget = lot.budget_min || lot.budget_max;
+            const isMulti = lot.is_multi_attributaire;
+            
+            return (
+              <div 
+                key={i} 
+                className="p-3 bg-muted/50 rounded-lg border border-border/50"
+              >
+                {/* Lot header */}
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="font-mono text-xs shrink-0">
+                      Lot {lot.numero || i + 1}
+                    </Badge>
+                    <span className="font-medium text-sm">
+                      {lot.intitule || lot.titre || "Sans titre"}
+                    </span>
+                  </div>
+                  <Badge className={cn("text-xs shrink-0", domaineColor)}>
+                    {domaine.charAt(0).toUpperCase() + domaine.slice(1)}
+                  </Badge>
+                </div>
+                
+                {/* Lot details */}
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  {/* Budget par lot */}
+                  {hasBudget && (
+                    <span className="inline-flex items-center gap-1 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded">
+                      <Euro className="h-3 w-3" />
+                      {lot.budget_min && lot.budget_max 
+                        ? `${formatCurrency(lot.budget_min)} - ${formatCurrency(lot.budget_max)}`
+                        : lot.budget_max 
+                          ? `Max ${formatCurrency(lot.budget_max)}`
+                          : `Min ${formatCurrency(lot.budget_min)}`
+                      }
+                    </span>
+                  )}
+                  
+                  {/* Multi-attributaire par lot */}
+                  {isMulti && (
+                    <span className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded">
+                      <Users className="h-3 w-3" />
+                      Multi-attr.
+                      {lot.nb_attributaires && ` (${lot.nb_attributaires})`}
+                    </span>
+                  )}
+                  
+                  {/* Durée spécifique */}
+                  {lot.duree_mois && (
+                    <span className="px-2 py-0.5 bg-muted rounded">
+                      {lot.duree_mois} mois
+                    </span>
+                  )}
+                </div>
+                
+                {/* Description if present */}
+                {lot.description && (
+                  <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                    {lot.description}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
@@ -63,7 +151,7 @@ export function SortantsBlock({ tender }: SortantsBlockProps) {
       <CardContent>
         <div className="flex flex-wrap gap-2">
           {sortants.map((p: any, i: number) => (
-            <Badge key={i} variant="secondary" className="bg-orange-100 text-orange-700">
+            <Badge key={i} variant="secondary" className="bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300">
               {typeof p === 'string' ? p : p.nom || p.name}
             </Badge>
           ))}

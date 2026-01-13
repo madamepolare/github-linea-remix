@@ -6,6 +6,7 @@ import type { DisciplineSlug } from "@/lib/disciplines";
 import { AccordCadreBlock } from "./AccordCadreBlock";
 import { CasPratiqueBlock, AuditionBlock } from "./CommunicationBlocks";
 import { LotsBlock, SortantsBlock } from "./LotsBlock";
+import { CriteresBlock } from "./CriteresBlock";
 
 // Architecture blocks (already exist or inline)
 import { TenderKeyMetrics } from "./TenderKeyMetrics";
@@ -24,6 +25,7 @@ const BLOCK_COMPONENTS: Record<string, React.ComponentType<{ tender: any }>> = {
   AuditionBlock,
   LotsBlock,
   SortantsBlock,
+  CriteresBlock,
   // Note: Architecture blocks like BudgetBlock, HonorairesBlock, SurfaceBlock
   // are rendered inline in TenderSyntheseTab for now
 };
