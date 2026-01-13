@@ -90,22 +90,24 @@ function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) 
   };
 
   return (
-    <div className="sticky top-0 z-30 bg-background border-b border-border">
+    <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40">
       <div className="flex items-center justify-between h-14 px-6">
         {/* Left: Module title + Sub-navigation */}
         <div className="flex items-center gap-6">
           {/* Module Title with Icon */}
           <div className="flex items-center gap-2.5">
-            <module.icon className="h-4 w-4 text-muted-foreground" strokeWidth={THIN_STROKE} />
-            <span className="text-sm font-semibold text-foreground">
+            <div className="flex items-center justify-center h-8 w-8 rounded-xl bg-muted/60">
+              <module.icon className="h-4 w-4 text-foreground/70" strokeWidth={THIN_STROKE} />
+            </div>
+            <span className="text-sm font-semibold text-foreground tracking-tight">
               {module.title}
             </span>
           </div>
 
-          {/* Module-level sub-navigation tabs */}
+          {/* Module-level sub-navigation tabs - Pill style */}
           {hasModuleSubNav && (
             <nav className="flex items-center">
-              <div className="flex items-center bg-muted/50 rounded-lg p-0.5">
+              <div className="flex items-center bg-muted/40 rounded-full p-1">
                 {filteredSubNav.map((item) => {
                   const isActive = isNavActive(item);
                   
@@ -114,7 +116,7 @@ function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) 
                       key={item.key}
                       to={item.href}
                       className={cn(
-                        "relative flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all duration-150",
+                        "relative flex items-center gap-1.5 px-4 py-1.5 text-sm rounded-full transition-all duration-200",
                         isActive
                           ? "text-foreground font-medium"
                           : "text-muted-foreground hover:text-foreground"
@@ -125,7 +127,7 @@ function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) 
                         <Badge 
                           variant="secondary" 
                           className={cn(
-                            "h-5 min-w-5 px-1.5 text-xs font-medium",
+                            "h-5 min-w-5 px-1.5 text-xs font-medium rounded-full",
                             isActive 
                               ? "bg-foreground text-background" 
                               : "bg-muted-foreground/20 text-muted-foreground"
@@ -137,7 +139,7 @@ function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) 
                       {isActive && (
                         <motion.div
                           layoutId="topbar-active-tab"
-                          className="absolute inset-0 bg-background rounded-md shadow-sm -z-10"
+                          className="absolute inset-0 bg-white rounded-full shadow-sm -z-10"
                           transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
                         />
                       )}
@@ -194,7 +196,7 @@ function EntityTopBar({ config, module }: EntityTopBarProps) {
   const hasTabs = config.tabs && config.tabs.length > 0;
 
   return (
-    <div className="sticky top-0 z-30 bg-background border-b border-border">
+    <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40">
       {/* Entity Header Row */}
       <div className="flex items-center justify-between h-14 px-6">
         {/* Left: Back + Entity info */}

@@ -232,11 +232,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     const content = (
       <div
         className={cn(
-          "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
+          "relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-all duration-200",
           "cursor-pointer select-none",
           active
-            ? "bg-foreground text-background font-medium"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            ? "bg-foreground text-background font-medium shadow-sm"
+            : "text-muted-foreground hover:bg-white hover:text-foreground hover:shadow-sm"
         )}
       >
         <item.icon
@@ -286,15 +286,15 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
       className={cn(
         "fixed left-0 top-0 z-40 flex h-screen flex-col",
-        "bg-gradient-to-b from-background to-background/98",
-        "border-r border-border/50"
+        "bg-background",
+        "border-r border-border/40"
       )}
     >
-      {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-muted/20 via-transparent to-transparent pointer-events-none" />
+      {/* Subtle gradient overlay for depth */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-muted/20 pointer-events-none" />
 
       {/* Workspace Switcher */}
-      <div className="relative flex items-center justify-between h-16 px-3 border-b border-border/50">
+      <div className="relative flex items-center justify-between h-16 px-3 border-b border-border/40">
         {activeWorkspace ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -419,7 +419,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         
         {/* Extensions */}
         {extensionNavigation.length > 0 && (
-          <div className="mt-6 pt-6 border-t border-border/50">
+          <div className="mt-6 pt-6 border-t border-border/40">
             {!collapsed && (
               <div className="flex items-center gap-2 px-3 mb-3">
                 <Sparkles className="h-3 w-3 text-muted-foreground" strokeWidth={THIN_STROKE} />
@@ -438,7 +438,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       </nav>
 
       {/* Bottom Section */}
-      <div className="relative border-t border-border/50 px-3 py-3 space-y-1">
+      <div className="relative border-t border-border/40 px-3 py-3 space-y-1">
         {/* Settings */}
         <NavItemComponent 
           item={{ title: "Paramètres", icon: Settings, href: buildWorkspacePath("/settings") }} 
@@ -474,7 +474,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       </div>
 
       {/* User Profile - Minimal design */}
-      <div className="relative border-t border-border/50 p-3">
+      <div className="relative border-t border-border/40 p-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <motion.button
