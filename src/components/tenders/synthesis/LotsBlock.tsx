@@ -3,6 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { Package, Users, Euro } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+interface LotTeamMember {
+  specialty: string;
+  is_mandatory: boolean;
+  notes?: string;
+}
+
 interface Lot {
   numero?: number;
   intitule?: string;
@@ -14,6 +20,7 @@ interface Lot {
   is_multi_attributaire?: boolean;
   nb_attributaires?: number;
   duree_mois?: number;
+  required_team?: LotTeamMember[];
 }
 
 interface LotsBlockProps {
@@ -35,11 +42,38 @@ const DOMAINE_COLORS: Record<string, string> = {
   global: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
 };
 
+// Team specialty labels for display
+const TEAM_SPECIALTY_LABELS: Record<string, string> = {
+  imprimeur: 'Imprimeur',
+  routeur: 'Routeur / Façonneur',
+  signaletique: 'Signalétique / Enseigniste',
+  producteur_video: 'Producteur vidéo',
+  photographe: 'Photographe',
+  studio_son: 'Studio son / Voix off',
+  agence_rp: 'Agence RP',
+  agence_influence: 'Agence influence',
+  agence_media: 'Agence média / Régie',
+  agence_digitale: 'Agence digitale / Web',
+  agence_evenementielle: 'Agence événementielle',
+  standiste: 'Standiste',
+  traiteur: 'Traiteur',
+  location_materiel: 'Location matériel',
+  traducteur: 'Traducteur',
+  redacteur: 'Rédacteur freelance',
+  graphiste_freelance: 'Graphiste freelance',
+  developpeur: 'Développeur',
+  autre: 'Autre partenaire',
+};
+
 const formatCurrency = (amount: number | null | undefined) => {
   if (!amount) return null;
   if (amount >= 1000000) return `${(amount / 1000000).toFixed(1)}M€`;
   if (amount >= 1000) return `${Math.round(amount / 1000)}k€`;
   return `${amount.toLocaleString()}€`;
+};
+
+const getSpecialtyLabel = (value: string) => {
+  return TEAM_SPECIALTY_LABELS[value] || value;
 };
 
 export function LotsBlock({ tender }: LotsBlockProps) {
@@ -63,6 +97,7 @@ export function LotsBlock({ tender }: LotsBlockProps) {
             const domaineColor = DOMAINE_COLORS[domaine] || DOMAINE_COLORS.global;
             const hasBudget = lot.budget_min || lot.budget_max;
             const isMulti = lot.is_multi_attributaire;
+            const hasTeam = lot.required_team && lot.required_team.length > 0;
             
             return (
               <div 
@@ -115,6 +150,35 @@ export function LotsBlock({ tender }: LotsBlockProps) {
                     </span>
                   )}
                 </div>
+                
+                {/* Required team for this lot */}
+                {hasTeam && (
+                  <div className="mt-3 pt-2 border-t border-border/50">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Users className="h-3.5 w-3.5 text-orange-600" />
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Équipe / Partenaires requis
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {lot.required_team!.map((member, j) => (
+                        <Badge 
+                          key={j}
+                          variant={member.is_mandatory ? "default" : "secondary"}
+                          className={cn(
+                            "text-xs",
+                            member.is_mandatory 
+                              ? "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300 border-orange-200"
+                              : ""
+                          )}
+                        >
+                          {getSpecialtyLabel(member.specialty)}
+                          {member.is_mandatory && <span className="ml-1 opacity-70">*</span>}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 
                 {/* Description if present */}
                 {lot.description && (
