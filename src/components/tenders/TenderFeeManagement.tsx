@@ -242,9 +242,85 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
         {teamMembers.length > 0 && feeAmount > 0 && (
           <>
             <Separator />
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Répartition équipe</Label>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Répartition du groupement</Label>
+                <Badge variant="outline" className="font-mono">
+                  Total : {formatCurrency(feeAmount)}
+                </Badge>
+              </div>
+
+              {/* Visual distribution bar */}
+              <div className="space-y-2">
+                <div className="h-8 rounded-lg overflow-hidden flex">
+                  {/* Mandataire portion */}
+                  <div 
+                    className="bg-primary flex items-center justify-center text-primary-foreground text-xs font-medium transition-all"
+                    style={{ width: `${teamFeeDistribution.remainingForMandataire}%` }}
+                    title={`Mandataire: ${teamFeeDistribution.remainingForMandataire.toFixed(1)}%`}
+                  >
+                    {teamFeeDistribution.remainingForMandataire > 15 && (
+                      <span>{teamFeeDistribution.remainingForMandataire.toFixed(0)}%</span>
+                    )}
+                  </div>
+                  {/* Partners portions */}
+                  {teamFeeDistribution.partnerAmounts.map(({ member, percentage }, idx) => {
+                    const colors = [
+                      'bg-blue-500',
+                      'bg-emerald-500',
+                      'bg-amber-500',
+                      'bg-purple-500',
+                      'bg-pink-500',
+                      'bg-cyan-500',
+                    ];
+                    return (
+                      <div 
+                        key={member.id}
+                        className={cn(
+                          colors[idx % colors.length],
+                          "flex items-center justify-center text-white text-xs font-medium transition-all"
+                        )}
+                        style={{ width: `${percentage}%` }}
+                        title={`${member.company?.name || 'Partenaire'}: ${percentage.toFixed(1)}%`}
+                      >
+                        {percentage > 10 && (
+                          <span>{percentage.toFixed(0)}%</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Legend */}
+                <div className="flex flex-wrap gap-3 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded bg-primary" />
+                    <span className="text-muted-foreground">Mandataire</span>
+                    <span className="font-medium">{formatCurrency(teamFeeDistribution.mandataireAmount)}</span>
+                  </div>
+                  {teamFeeDistribution.partnerAmounts.map(({ member, amount }, idx) => {
+                    const colors = [
+                      'bg-blue-500',
+                      'bg-emerald-500',
+                      'bg-amber-500',
+                      'bg-purple-500',
+                      'bg-pink-500',
+                      'bg-cyan-500',
+                    ];
+                    return (
+                      <div key={member.id} className="flex items-center gap-1.5">
+                        <div className={cn("w-3 h-3 rounded", colors[idx % colors.length])} />
+                        <span className="text-muted-foreground truncate max-w-[100px]">
+                          {member.company?.name || 'Partenaire'}
+                        </span>
+                        <span className="font-medium">{formatCurrency(amount)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
               
+              {/* Detailed list */}
               <div className="space-y-2">
                 {/* Mandataire */}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
@@ -266,6 +342,9 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-xs">Cotraitant</Badge>
                       <span className="text-sm">{member.company?.name || member.contact?.name || 'Partenaire'}</span>
+                      {member.specialty && (
+                        <span className="text-xs text-muted-foreground">({member.specialty})</span>
+                      )}
                     </div>
                     <div className="text-right">
                       <p className="font-medium">{formatCurrency(amount)}</p>
@@ -273,15 +352,6 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
                     </div>
                   </div>
                 ))}
-              </div>
-
-              {/* Progress bar */}
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Distribution totale</span>
-                  <span>{(100 - teamFeeDistribution.totalPartnerPercentage).toFixed(1)}% mandataire + {teamFeeDistribution.totalPartnerPercentage.toFixed(1)}% partenaires</span>
-                </div>
-                <Progress value={100} className="h-2" />
               </div>
             </div>
           </>
