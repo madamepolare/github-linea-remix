@@ -14,6 +14,7 @@ import {
   SubNavItem 
 } from "@/lib/navigationConfig";
 import { CRMAddDropdown } from "@/components/crm/CRMAddDropdown";
+import { useFilteredSubNav } from "@/hooks/useFilteredSubNav";
 
 interface TopBarProps {
   /** Override module config (useful for detail pages) */
@@ -57,7 +58,11 @@ interface ModuleTopBarProps {
 
 function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) {
   const location = useLocation();
-  const hasModuleSubNav = module.subNav.length > 0;
+  
+  // Filter sub-nav based on enabled modules
+  const filteredSubNav = useFilteredSubNav(module.slug, module.subNav);
+  
+  const hasModuleSubNav = filteredSubNav.length > 0;
   const hasQuickActions = !hideQuickActions && module.quickActions && module.quickActions.length > 0;
   const isCRM = module.slug === "crm";
   
@@ -101,7 +106,7 @@ function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) 
           {hasModuleSubNav && (
             <nav className="flex items-center">
               <div className="flex items-center bg-muted/50 rounded-lg p-0.5">
-                {module.subNav.map((item) => {
+                {filteredSubNav.map((item) => {
                   const isActive = isNavActive(item);
                   
                   return (

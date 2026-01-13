@@ -18,6 +18,7 @@ import { useLeads } from "@/hooks/useLeads";
 import { useCRMPipelines } from "@/hooks/useCRMPipelines";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
+import { useIsModuleEnabled } from "@/hooks/useModules";
 import { cn } from "@/lib/utils";
 
 type CRMView = "overview" | "leads" | "prospection" | "contacts" | "companies" | "development";
@@ -52,6 +53,16 @@ export default function CRM() {
   const [commandBarOpen, setCommandBarOpen] = useState(false);
 
   const prospectionAutoCreatedRef = useRef(false);
+  
+  // Check if AI Sales Agent module is enabled
+  const isAISalesAgentEnabled = useIsModuleEnabled("ai-sales-agent");
+  
+  // Redirect to overview if trying to access development view without the module
+  useEffect(() => {
+    if (view === "development" && !isAISalesAgentEnabled) {
+      navigate("/crm/overview", { replace: true });
+    }
+  }, [view, isAISalesAgentEnabled, navigate]);
 
   const { 
     opportunityPipelines, 

@@ -4,13 +4,17 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { getModuleFromPath, SubNavItem } from "@/lib/navigationConfig";
+import { useFilteredSubNav } from "@/hooks/useFilteredSubNav";
 
 export function MobileSubNav() {
   const location = useLocation();
   const module = getModuleFromPath(location.pathname);
+  
+  // Filter sub-nav based on enabled modules
+  const filteredSubNav = useFilteredSubNav(module?.slug || "", module?.subNav || []);
 
   // Only show if module has sub-navigation
-  if (!module || module.subNav.length === 0) {
+  if (!module || filteredSubNav.length === 0) {
     return null;
   }
 
@@ -23,7 +27,7 @@ export function MobileSubNav() {
     <div className="lg:hidden sticky top-12 z-30 bg-background/95 backdrop-blur-lg border-b border-border">
       <ScrollArea className="w-full">
         <div className="flex items-center gap-1 px-4 py-2">
-          {module.subNav.map((item) => {
+          {filteredSubNav.map((item) => {
             const isActive = isNavActive(item);
             
             return (
