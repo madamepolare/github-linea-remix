@@ -68,6 +68,7 @@ import { CasPratiqueEditor, type CasPratique } from "./CasPratiqueEditor";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useDisciplineConfig } from "@/hooks/useTenderDisciplineConfig";
+import { useWorkspaceDisciplines } from "@/hooks/useWorkspaceDisciplines";
 
 interface SiteVisitSlot {
   date: string;
@@ -156,12 +157,17 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
   const { createTender } = useTenders();
   const { companies, createCompany } = useCRMCompanies();
   const { data: members } = useTeamMembers();
+  const { activeDisciplines } = useWorkspaceDisciplines();
   
-  // Step management
-  const [step, setStep] = useState<Step>('discipline');
+  // Determine if we should skip discipline step (single discipline)
+  const hasSingleDiscipline = activeDisciplines.length === 1;
+  const defaultDiscipline = activeDisciplines[0] || 'architecture';
+  
+  // Step management - skip discipline step if only one active
+  const [step, setStep] = useState<Step>(hasSingleDiscipline ? 'upload' : 'discipline');
   
   // Discipline selection
-  const [disciplineSlug, setDisciplineSlug] = useState<DisciplineSlug>('architecture');
+  const [disciplineSlug, setDisciplineSlug] = useState<DisciplineSlug>(defaultDiscipline);
   
   // Get discipline config for dynamic labels
   const { config: disciplineConfig } = useDisciplineConfig(disciplineSlug);

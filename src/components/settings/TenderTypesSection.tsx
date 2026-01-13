@@ -59,6 +59,7 @@ import {
   type CreateTenderTypeInput,
 } from "@/hooks/useTenderTypeConfigs";
 import { type DisciplineSlug } from "@/lib/tenderDisciplineConfig";
+import { useWorkspaceDisciplines } from "@/hooks/useWorkspaceDisciplines";
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   FileText,
@@ -473,14 +474,20 @@ function TenderTypeEditor({ type, disciplineSlug, onSave, onCancel, isNew = fals
 }
 
 export function TenderTypesSection() {
-  const [activeDiscipline, setActiveDiscipline] = useState<DisciplineSlug>('architecture');
+  const { activeDisciplines, activeDisciplineConfigs: workspaceDisciplines } = useWorkspaceDisciplines();
+  const [activeDiscipline, setActiveDiscipline] = useState<DisciplineSlug>(activeDisciplines[0] || 'architecture');
   const { configs, isLoading, createConfig, updateConfig, deleteConfig, initializeDefaults } = useTenderTypeConfigs();
   
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingType, setEditingType] = useState<TenderTypeConfig | null>(null);
   const [isNew, setIsNew] = useState(false);
 
-  const disciplineConfigs = configs.filter(c => c.discipline_slug === activeDiscipline);
+  // Ensure activeDiscipline is in activeDisciplines
+  const effectiveDiscipline = activeDisciplines.includes(activeDiscipline) 
+    ? activeDiscipline 
+    : activeDisciplines[0] || 'architecture';
+
+  const disciplineConfigs = configs.filter(c => c.discipline_slug === effectiveDiscipline);
   const hasConfigs = disciplineConfigs.length > 0;
 
   const handleEdit = (type: TenderTypeConfig) => {
@@ -511,40 +518,55 @@ export function TenderTypesSection() {
   };
 
   const handleInitialize = async () => {
-    await initializeDefaults.mutateAsync(activeDiscipline);
+    await initializeDefaults.mutateAsync(effectiveDiscipline);
   };
 
   const displayTypes = hasConfigs 
     ? disciplineConfigs 
-    : DEFAULT_TENDER_TYPES[activeDiscipline].map((t, idx) => ({
+    : DEFAULT_TENDER_TYPES[effectiveDiscipline]?.map((t, idx) => ({
         ...t,
         id: `default-${idx}`,
         workspace_id: '',
-      }));
+      })) || [];
+
+  // Filter disciplines to only show active ones
+  const displayedDisciplines = DISCIPLINES.filter(d => activeDisciplines.includes(d.slug));
 
   return (
     <div className="space-y-6">
       {/* Discipline tabs */}
-      <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-lg w-fit">
-        {DISCIPLINES.map(d => {
-          const Icon = d.icon;
-          return (
-            <button
-              key={d.slug}
-              onClick={() => setActiveDiscipline(d.slug)}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
-                activeDiscipline === d.slug
-                  ? "bg-background shadow text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {d.label}
-            </button>
-          );
-        })}
-      </div>
+      {displayedDisciplines.length > 1 && (
+        <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-lg w-fit">
+          {displayedDisciplines.map(d => {
+            const Icon = d.icon;
+            return (
+              <button
+                key={d.slug}
+                onClick={() => setActiveDiscipline(d.slug)}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                  effectiveDiscipline === d.slug
+                    ? "bg-background shadow text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {d.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {displayedDisciplines.length === 1 && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {(() => {
+            const Icon = displayedDisciplines[0].icon;
+            return <Icon className="h-4 w-4" />;
+          })()}
+          <span>Configuration pour <strong>{displayedDisciplines[0].label}</strong></span>
+        </div>
+      )}
 
       {/* Types list */}
       <div className="space-y-3">
