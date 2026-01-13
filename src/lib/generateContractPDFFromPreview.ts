@@ -28,7 +28,12 @@ interface PDFContext {
 
 function formatCurrency(value?: number): string {
   if (value === undefined || value === null) return '-';
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
+  // Use simple formatting to avoid special Unicode spaces that render as "/" in PDF
+  const formatted = value.toLocaleString('fr-FR', { 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 2 
+  }).replace(/\u202F/g, ' ').replace(/\u00A0/g, ' ');
+  return `${formatted} €`;
 }
 
 function formatDatePDF(dateStr?: string): string {
@@ -141,10 +146,33 @@ export async function generateContractPDFFromPreview(
   // ===== HEADER =====
   let headerY = margin;
 
-  // Logo
+  // Logo - preserve aspect ratio
   if (logoBase64) {
     try {
-      pdf.addImage(logoBase64, 'PNG', margin, headerY, 30, 15);
+      // Get image dimensions to preserve aspect ratio
+      const img = new Image();
+      img.src = logoBase64;
+      const maxWidth = 40;
+      const maxHeight = 20;
+      
+      // Calculate dimensions preserving aspect ratio
+      let logoWidth = maxWidth;
+      let logoHeight = maxHeight;
+      
+      if (img.width && img.height) {
+        const ratio = img.width / img.height;
+        if (ratio > maxWidth / maxHeight) {
+          // Image is wider, constrain by width
+          logoWidth = maxWidth;
+          logoHeight = maxWidth / ratio;
+        } else {
+          // Image is taller, constrain by height
+          logoHeight = maxHeight;
+          logoWidth = maxHeight * ratio;
+        }
+      }
+      
+      pdf.addImage(logoBase64, 'PNG', margin, headerY, logoWidth, logoHeight);
     } catch (e) {
       console.warn('Could not add logo image');
     }
@@ -517,7 +545,27 @@ export async function generateContractPDFFromPreview(
   
   if (signatureBase64) {
     try {
-      pdf.addImage(signatureBase64, 'PNG', pageWidth - margin - 50, ctx.y + 8, 40, 20);
+      // Preserve signature aspect ratio
+      const sigImg = new Image();
+      sigImg.src = signatureBase64;
+      const sigMaxWidth = 45;
+      const sigMaxHeight = 22;
+      
+      let sigWidth = sigMaxWidth;
+      let sigHeight = sigMaxHeight;
+      
+      if (sigImg.width && sigImg.height) {
+        const sigRatio = sigImg.width / sigImg.height;
+        if (sigRatio > sigMaxWidth / sigMaxHeight) {
+          sigWidth = sigMaxWidth;
+          sigHeight = sigMaxWidth / sigRatio;
+        } else {
+          sigHeight = sigMaxHeight;
+          sigWidth = sigMaxHeight * sigRatio;
+        }
+      }
+      
+      pdf.addImage(signatureBase64, 'PNG', pageWidth - margin - sigWidth, ctx.y + 8, sigWidth, sigHeight);
     } catch (e) {
       console.warn('Could not add signature');
     }
