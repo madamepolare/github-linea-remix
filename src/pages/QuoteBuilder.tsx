@@ -37,8 +37,8 @@ import { QuoteMOETermsTab } from '@/components/commercial/quote-builder/QuoteMOE
 import { QuoteCommunicationTermsTab } from '@/components/commercial/quote-builder/QuoteCommunicationTermsTab';
 import { QuotePreviewPanel } from '@/components/commercial/quote-builder/QuotePreviewPanel';
 import { QuoteMOEPreviewPanel } from '@/components/commercial/quote-builder/QuoteMOEPreviewPanel';
-import { isArchitectureContractType, COMMUNICATION_CONTRACT_CODES } from '@/lib/moeContractDefaults';
-import { isCommunicationContractType } from '@/lib/communicationContractDefaults';
+import { isArchitectureContractType, COMMUNICATION_CONTRACT_CODES, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
+import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -169,6 +169,29 @@ export default function QuoteBuilder() {
       setActiveTab('general');
     }
   }, [enabledTabs, activeTab]);
+
+  // Initialize default conditions when contract type changes
+  useEffect(() => {
+    if (!currentContractType || document.general_conditions) return;
+    
+    const code = currentContractType.code || '';
+    
+    if (isArchitectureContractType(code)) {
+      // Initialize with MOE defaults if not already set
+      const moeDefaults = getDefaultMOEConfig();
+      setDocument(prev => ({
+        ...prev,
+        general_conditions: JSON.stringify(moeDefaults)
+      }));
+    } else if (isCommunicationContractType(code)) {
+      // Initialize with Communication defaults
+      const comDefaults = getDefaultCommunicationConfig();
+      setDocument(prev => ({
+        ...prev,
+        general_conditions: JSON.stringify(comDefaults)
+      }));
+    }
+  }, [currentContractType?.id]);
 
   const handleSave = async () => {
     // Wait for auth to be ready

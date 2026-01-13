@@ -5,12 +5,12 @@ import {
   MOEContractData, 
   MOEMissionPhase,
   MOEPaymentSchedule,
+  MOEHonoraireItem,
   DEFAULT_MOE_MISSION_PHASES,
   DEFAULT_MOE_PAYMENT_SCHEDULE,
   DEFAULT_MOE_CLAUSES
 } from './moeContractConfig';
-import { parseDocumentMOEConfig, getDefaultMOEConfig } from './moeContractDefaults';
-import { format } from 'date-fns';
+import { parseDocumentMOEConfig, getDefaultMOEConfig, MOEDefaultConfig } from './moeContractDefaults';
 
 interface AgencyInfoForPDF {
   name?: string;
@@ -45,56 +45,100 @@ export function buildMOEContractDataFromDocument(
   lines: QuoteLine[],
   agencyInfo?: AgencyInfoForPDF | null
 ): MOEContractData {
-  // Parse MOE config from document
-  const moeConfig = parseDocumentMOEConfig(document.general_conditions || null) 
-    || getDefaultMOEConfig();
+  // Parse MOE config from document's general_conditions
+  let moeConfig: MOEDefaultConfig;
+  
+  try {
+    const parsed = parseDocumentMOEConfig(document.general_conditions || null);
+    moeConfig = parsed ? { ...getDefaultMOEConfig(), ...parsed } : getDefaultMOEConfig();
+  } catch (e) {
+    console.error('Error parsing MOE config:', e);
+    moeConfig = getDefaultMOEConfig();
+  }
+  
+  // Get TVA rate
+  const tvaRate = (document.vat_rate || 20) / 100;
+  
+  // Build mission phases - prioritize lines, then config, then defaults
+  let missionPhases: MOEMissionPhase[] = [];
+  let honoraires: MOEHonoraireItem[] = [];
+  let totalHT = 0;
+  
+  if (lines && lines.length > 0) {
+    // Use lines from the document
+    const includedLines = lines.filter(l => l.is_included !== false);
+    totalHT = includedLines.reduce((sum, l) => sum + (l.amount || 0), 0);
+    
+    missionPhases = lines.map(line => ({
+      code: line.phase_code || line.id?.slice(0, 3).toUpperCase() || 'PHA',
+      name: line.phase_name || 'Phase',
+      short_name: line.phase_code || 'PHA',
+      description: line.phase_description || '',
+      percentage: line.percentage_fee || (totalHT > 0 ? ((line.amount || 0) / totalHT * 100) : 0),
+      is_included: line.is_included !== false,
+      is_optional: line.is_optional || false,
+      deliverables: line.deliverables || []
+    }));
+    
+    honoraires = lines.map(line => ({
+      name: line.phase_name || 'Prestation',
+      quantity: line.quantity || 1,
+      amount_ht: line.amount || 0,
+      tva_rate: tvaRate,
+      is_offered: false,
+      is_optional: line.is_optional || false
+    }));
+  } else if (moeConfig.mission_phases && moeConfig.mission_phases.length > 0) {
+    // Use phases from config
+    missionPhases = moeConfig.mission_phases;
+    
+    // Calculate amounts based on total from document or default
+    totalHT = document.total_amount || moeConfig.settings?.minimum_fee || 4000;
+    
+    honoraires = missionPhases
+      .filter(phase => phase.is_included)
+      .map(phase => ({
+        name: phase.name,
+        quantity: 1,
+        amount_ht: (phase.percentage / 100) * totalHT,
+        tva_rate: tvaRate,
+        is_offered: false,
+        is_optional: phase.is_optional || false
+      }));
+  } else {
+    // Use absolute defaults
+    missionPhases = DEFAULT_MOE_MISSION_PHASES;
+    totalHT = document.total_amount || 4000;
+    
+    honoraires = missionPhases
+      .filter(phase => phase.is_included)
+      .map(phase => ({
+        name: phase.name,
+        quantity: 1,
+        amount_ht: (phase.percentage / 100) * totalHT,
+        tva_rate: tvaRate,
+        is_offered: false,
+        is_optional: phase.is_optional || false
+      }));
+  }
   
   // Calculate totals
-  const includedLines = lines.filter(l => l.is_included !== false && !l.is_optional);
-  const totalHT = includedLines.reduce((sum, l) => sum + (l.amount || 0), 0);
-  const tvaRate = (document.vat_rate || 20) / 100;
   const tvaAmount = totalHT * tvaRate;
   const totalTTC = totalHT + tvaAmount;
   
-  // Build mission phases from lines
-  const missionPhases: MOEMissionPhase[] = lines.map(line => ({
-    code: line.phase_code || line.id?.slice(0, 3).toUpperCase() || 'PHA',
-    name: line.phase_name || 'Phase',
-    short_name: line.phase_code || 'PHA',
-    description: line.phase_description || '',
-    percentage: line.percentage_fee || (totalHT > 0 ? ((line.amount || 0) / totalHT * 100) : 0),
-    is_included: line.is_included !== false,
-    is_optional: line.is_optional || false,
-    deliverables: line.deliverables || []
-  }));
+  // Build payment schedule from config or defaults
+  const paymentSchedule: MOEPaymentSchedule[] = 
+    (moeConfig.payment_schedule && moeConfig.payment_schedule.length > 0)
+      ? moeConfig.payment_schedule
+      : DEFAULT_MOE_PAYMENT_SCHEDULE;
   
-  // If no lines, use defaults
-  if (missionPhases.length === 0 && moeConfig.mission_phases) {
-    missionPhases.push(...moeConfig.mission_phases);
-  }
-  
-  // Build honoraires from lines
-  const honoraires = lines.map(line => ({
-    name: line.phase_name || 'Prestation',
-    quantity: line.quantity || 1,
-    amount_ht: line.amount || 0,
-    tva_rate: tvaRate,
-    is_offered: false,
-    is_optional: line.is_optional || false
-  }));
-  
-  // Build payment schedule
-  const paymentSchedule: MOEPaymentSchedule[] = moeConfig.payment_schedule?.length > 0
-    ? moeConfig.payment_schedule
-    : DEFAULT_MOE_PAYMENT_SCHEDULE;
-  
-  // Build clauses
+  // Build clauses - merge defaults with config
   const clauses = {
     ...DEFAULT_MOE_CLAUSES,
     ...(moeConfig.clauses || {})
   };
   
-  // Get client info from document - use nested objects or direct fields
+  // Get client info from document
   const clientName = document.client_name 
     || document.client_contact?.name 
     || document.client_company?.name 
