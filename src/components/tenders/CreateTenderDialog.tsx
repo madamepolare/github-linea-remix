@@ -157,17 +157,17 @@ export function CreateTenderDialog({ open, onOpenChange }: CreateTenderDialogPro
   const { createTender } = useTenders();
   const { companies, createCompany } = useCRMCompanies();
   const { data: members } = useTeamMembers();
-  const { activeDisciplines } = useWorkspaceDisciplines();
+  const { activeDisciplines, defaultDiscipline } = useWorkspaceDisciplines();
   
   // Determine if we should skip discipline step (single discipline)
   const hasSingleDiscipline = activeDisciplines.length === 1;
-  const defaultDiscipline = activeDisciplines[0] || 'architecture';
+  const initialDiscipline = defaultDiscipline || activeDisciplines[0] || 'architecture';
   
   // Step management - skip discipline step if only one active
   const [step, setStep] = useState<Step>(hasSingleDiscipline ? 'upload' : 'discipline');
   
-  // Discipline selection
-  const [disciplineSlug, setDisciplineSlug] = useState<DisciplineSlug>(defaultDiscipline);
+  // Discipline selection - use the configured default
+  const [disciplineSlug, setDisciplineSlug] = useState<DisciplineSlug>(initialDiscipline);
   
   // Get discipline config for dynamic labels
   const { config: disciplineConfig } = useDisciplineConfig(disciplineSlug);

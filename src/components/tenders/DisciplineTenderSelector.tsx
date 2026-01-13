@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Building2, Theater, Megaphone, Frame, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type DisciplineSlug } from "@/lib/tenderDisciplineConfig";
@@ -16,14 +17,15 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 export function DisciplineTenderSelector({ value, onChange }: DisciplineTenderSelectorProps) {
-  const { activeDisciplineConfigs, isLoading } = useWorkspaceDisciplines();
+  const { activeDisciplineConfigs, defaultDiscipline, isLoading } = useWorkspaceDisciplines();
 
-  // Auto-select first discipline if current value is not active
-  const isValueActive = activeDisciplineConfigs.some(d => d.slug === value);
-  if (!isValueActive && activeDisciplineConfigs.length > 0 && activeDisciplineConfigs[0].slug !== value) {
-    // Schedule onChange for next tick to avoid setState during render
-    setTimeout(() => onChange(activeDisciplineConfigs[0].slug), 0);
-  }
+  // Auto-select default discipline if current value is not active
+  useEffect(() => {
+    const isValueActive = activeDisciplineConfigs.some(d => d.slug === value);
+    if (!isValueActive && activeDisciplineConfigs.length > 0) {
+      onChange(defaultDiscipline);
+    }
+  }, [activeDisciplineConfigs, value, defaultDiscipline, onChange]);
 
   if (isLoading) {
     return (
@@ -38,14 +40,22 @@ export function DisciplineTenderSelector({ value, onChange }: DisciplineTenderSe
     return null;
   }
 
+  // Sort by the configured order (first = default)
+  const sortedConfigs = [...activeDisciplineConfigs].sort((a, b) => {
+    if (a.slug === defaultDiscipline) return -1;
+    if (b.slug === defaultDiscipline) return 1;
+    return 0;
+  });
+
   return (
     <div className={cn(
       "grid gap-4",
-      activeDisciplineConfigs.length === 2 ? "grid-cols-2" : "grid-cols-3"
+      sortedConfigs.length === 2 ? "grid-cols-2" : "grid-cols-3"
     )}>
-      {activeDisciplineConfigs.map((discipline) => {
+      {sortedConfigs.map((discipline, idx) => {
         const Icon = ICONS[discipline.icon] || Building2;
         const isSelected = value === discipline.slug;
+        const isDefault = discipline.slug === defaultDiscipline;
         
         return (
           <button
@@ -82,6 +92,11 @@ export function DisciplineTenderSelector({ value, onChange }: DisciplineTenderSe
             </div>
             {isSelected && (
               <div className="absolute top-3 right-3 h-3 w-3 rounded-full bg-primary" />
+            )}
+            {isDefault && (
+              <div className="absolute top-2 left-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">
+                Par défaut
+              </div>
             )}
           </button>
         );
