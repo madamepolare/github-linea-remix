@@ -23,6 +23,7 @@ import { QuoteTemplatesSection } from "@/components/settings/sections/QuoteTempl
 import { PricingGridsSection } from "@/components/settings/sections/PricingGridsSection";
 import { QuoteThemesSettings } from "@/components/settings/QuoteThemesSettings";
 import { TenderSettings } from "@/components/settings/TenderSettings";
+import { CalendarIntegrationsSettings } from "@/components/settings/CalendarIntegrationsSettings";
 
 export default function Settings() {
   const [activeSection, setActiveSection] = useState("workspace");
@@ -71,6 +72,8 @@ export default function Settings() {
         return <CRMSettings />;
       case "tenders":
         return <TenderSettings />;
+      case "calendars":
+        return <CalendarIntegrationsSettings />;
       case "feedback":
         return <FeedbackSettings />;
       default:
