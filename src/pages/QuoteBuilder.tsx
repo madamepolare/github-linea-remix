@@ -616,15 +616,15 @@ export default function QuoteBuilder() {
               </div>
             </div>
             <div className="flex-1 overflow-auto p-4">
-              {/* Use document_type to determine preview: quote = simple, contract = PDF multi-page */}
-              {document.document_type === 'contract' ? (
-                isArchitectureContractType(currentContractType?.code || document.project_type || '') ? (
+              {/* Use document_type to determine preview: quote = simple HTML, contract = PDF multi-page */}
+              {document.document_type === 'contract' && currentContractType ? (
+                isArchitectureContractType(currentContractType.code || '') ? (
                   <QuoteMOEPreviewPanel
                     document={document}
                     lines={lines}
                     zoom={zoom / 100}
                   />
-                ) : isCommunicationContractType(currentContractType?.code || '') ? (
+                ) : isCommunicationContractType(currentContractType.code || '') ? (
                   <QuoteCommunicationPreviewPanel
                     document={document}
                     lines={lines}
