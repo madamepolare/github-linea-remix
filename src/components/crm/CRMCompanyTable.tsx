@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -19,21 +20,28 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  MoreVertical,
+  MoreHorizontal,
   Pencil,
   Trash2,
   Building2,
   ExternalLink,
-  List,
-  LayoutGrid,
+  Mail,
+  Phone,
   Globe,
+  MapPin,
+  ArrowUpDown,
+  ChevronDown,
 } from "lucide-react";
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { CompanyCategory } from "@/lib/crmTypes";
 import { EditCompanyDialog } from "./EditCompanyDialog";
+import { InlineEditCell } from "./InlineEditCell";
+import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
+import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
 import { cn } from "@/lib/utils";
 
 export interface CRMCompanyTableProps {
@@ -44,16 +52,20 @@ export interface CRMCompanyTableProps {
 
 export function CRMCompanyTable({ category = "all", search = "", onCreateCompany }: CRMCompanyTableProps) {
   const navigate = useNavigate();
-  const { companies, allCompanies, isLoading, deleteCompany, statsByCategory } = useCRMCompanies({ category, search });
+  const { companies, allCompanies, isLoading, deleteCompany, updateCompany, statsByCategory } = useCRMCompanies({ category, search });
   const { companyCategories, getCompanyTypeShortLabel, getCompanyTypeColor, getCategoryFromType } = useCRMSettings();
+  
   const [letterFilter, setLetterFilter] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [editingCompany, setEditingCompany] = useState<CRMCompanyEnriched | null>(null);
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [searchQuery, setSearchQuery] = useState(search);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<string>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-  // Filter companies by selected category and letter
+  // Filter companies
   const filteredCompanies = useMemo(() => {
     let result = allCompanies;
 
@@ -66,13 +78,14 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
     }
 
     // Filter by search
-    if (search) {
-      const searchLower = search.toLowerCase();
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
       result = result.filter(
         (c) =>
           c.name.toLowerCase().includes(searchLower) ||
           c.email?.toLowerCase().includes(searchLower) ||
-          c.city?.toLowerCase().includes(searchLower)
+          c.city?.toLowerCase().includes(searchLower) ||
+          c.primary_contact?.name?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -81,35 +94,97 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
       result = result.filter((c) => c.name.toUpperCase().startsWith(letterFilter));
     }
 
-    return result;
-  }, [allCompanies, selectedCategory, search, letterFilter, companyCategories]);
+    // Sort
+    result.sort((a, b) => {
+      let aVal: any = a[sortBy as keyof CRMCompanyEnriched];
+      let bVal: any = b[sortBy as keyof CRMCompanyEnriched];
+      if (typeof aVal === "string") aVal = aVal.toLowerCase();
+      if (typeof bVal === "string") bVal = bVal.toLowerCase();
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
 
-  // Category filter chips with counts
-  const categoryChips = useMemo(() => {
+    return result;
+  }, [allCompanies, selectedCategory, searchQuery, letterFilter, companyCategories, sortBy, sortDir]);
+
+  // Category filter chips
+  const categoryChips: FilterOption[] = useMemo(() => {
     const chips = [
       { id: "all", label: "Tous", count: allCompanies.length },
       ...companyCategories.map((cat) => ({
         id: cat.key,
         label: cat.label,
+        color: cat.color,
         count: (statsByCategory as Record<string, number>)[cat.key] || 0,
       })),
     ];
     return chips.filter((c) => c.count > 0 || c.id === "all");
   }, [statsByCategory, allCompanies.length, companyCategories]);
 
+  // Selection handlers
+  const handleSelectAll = useCallback((checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(filteredCompanies.map((c) => c.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  }, [filteredCompanies]);
+
+  const handleSelectOne = useCallback((id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleInlineUpdate = useCallback((id: string, field: string, value: string) => {
+    updateCompany.mutate({ id, [field]: value });
+  }, [updateCompany]);
+
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortDir("asc");
+    }
+  };
+
+  const handleBulkDelete = () => {
+    selectedIds.forEach((id) => {
+      deleteCompany.mutate(id);
+    });
+    setSelectedIds(new Set());
+  };
+
+  const isAllSelected = filteredCompanies.length > 0 && selectedIds.size === filteredCompanies.length;
+  const isSomeSelected = selectedIds.size > 0 && selectedIds.size < filteredCompanies.length;
+
   if (isLoading) {
     return (
-      <div className="p-6">
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-9 w-24" />
+        </div>
         <Card>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-3 w-1/4" />
+          <CardContent className="p-0">
+            <div className="divide-y">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-3">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-7 w-7 rounded" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skeleton className="h-3.5 w-32" />
+                    <Skeleton className="h-3 w-24" />
                   </div>
+                  <Skeleton className="h-5 w-12" />
                 </div>
               ))}
             </div>
@@ -121,217 +196,273 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
 
   if (allCompanies.length === 0) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardContent className="p-6">
-            <EmptyState
-              icon={Building2}
-              title="Aucune entreprise"
-              description="Ajoutez votre première entreprise pour commencer à gérer vos relations."
-              action={{ label: "Créer une entreprise", onClick: onCreateCompany }}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="p-6">
+          <EmptyState
+            icon={Building2}
+            title="Aucune entreprise"
+            description="Ajoutez votre première entreprise pour commencer à gérer vos relations."
+            action={{ label: "Créer une entreprise", onClick: onCreateCompany }}
+          />
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <>
-      <div className="p-3 sm:p-6 space-y-3 sm:space-y-4">
-        {/* Category filter chips */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {categoryChips.map((chip) => (
-            <Button
-              key={chip.id}
-              variant={selectedCategory === chip.id ? "default" : "outline"}
-              size="sm"
-              className="h-7 sm:h-8 text-xs sm:text-sm"
-              onClick={() => setSelectedCategory(chip.id)}
-            >
-              {chip.label}
-              <Badge
-                variant={selectedCategory === chip.id ? "secondary" : "outline"}
-                className="ml-1.5 sm:ml-2 text-2xs sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5"
+      <div className="space-y-3">
+        {/* Filters */}
+        <CRMQuickFilters
+          search={searchQuery}
+          onSearchChange={setSearchQuery}
+          categories={categoryChips}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          placeholder="Rechercher une entreprise..."
+          totalCount={allCompanies.length}
+          filteredCount={filteredCompanies.length}
+          onClearAllFilters={() => {
+            setSearchQuery("");
+            setSelectedCategory("all");
+            setLetterFilter(null);
+          }}
+        />
+
+        {/* Alphabet filter */}
+        <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-none pb-1">
+          {alphabet.map((letter) => {
+            const hasCompanies = filteredCompanies.some((c) =>
+              c.name.toUpperCase().startsWith(letter)
+            );
+            return (
+              <Button
+                key={letter}
+                variant={letterFilter === letter ? "default" : "ghost"}
+                size="sm"
+                className={cn(
+                  "h-6 w-6 p-0 text-[10px] font-medium shrink-0",
+                  !hasCompanies && "text-muted-foreground/30"
+                )}
+                onClick={() => setLetterFilter(letterFilter === letter ? null : letter)}
+                disabled={!hasCompanies}
               >
-                {chip.count}
-              </Badge>
-            </Button>
-          ))}
-        </div>
-
-        {/* Alphabet filter + view toggle */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap overflow-x-auto scrollbar-none">
-            {alphabet.map((letter) => {
-              const hasCompanies = filteredCompanies.some((c) =>
-                c.name.toUpperCase().startsWith(letter)
-              );
-              return (
-                <Button
-                  key={letter}
-                  variant={letterFilter === letter ? "default" : "ghost"}
-                  size="sm"
-                  className={cn(
-                    "h-6 w-6 sm:h-7 sm:w-7 p-0 text-2xs sm:text-xs font-medium",
-                    !hasCompanies && "text-muted-foreground/30"
-                  )}
-                  onClick={() => setLetterFilter(letterFilter === letter ? null : letter)}
-                  disabled={!hasCompanies}
-                >
-                  {letter}
-                </Button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center gap-1 border rounded-md p-0.5 shrink-0">
-            <Button
-              variant={viewMode === "list" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-6 w-6 sm:h-7 sm:w-7 p-0"
-              onClick={() => setViewMode("list")}
-            >
-              <List className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </Button>
-            <Button
-              variant={viewMode === "grid" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-6 w-6 sm:h-7 sm:w-7 p-0"
-              onClick={() => setViewMode("grid")}
-            >
-              <LayoutGrid className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </Button>
-          </div>
+                {letter}
+              </Button>
+            );
+          })}
         </div>
 
         {/* Table */}
-        <Card>
-          <CardContent className="p-0">
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
             {filteredCompanies.length === 0 ? (
-              <div className="text-center py-8 sm:py-12">
-                <p className="text-muted-foreground text-sm sm:text-base">Aucune entreprise trouvée</p>
+              <div className="text-center py-12 px-4">
+                <p className="text-sm text-muted-foreground">Aucune entreprise trouvée</p>
+                <Button variant="link" size="sm" onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategory("all");
+                  setLetterFilter(null);
+                }}>
+                  Effacer les filtres
+                </Button>
               </div>
             ) : (
-              <div className="rounded-md border overflow-x-auto">
-                <Table className="min-w-[600px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[80px] sm:w-[100px]">Type</TableHead>
-                      <TableHead>Société</TableHead>
-                      <TableHead className="hidden md:table-cell">Interlocuteur</TableHead>
-                      <TableHead className="hidden sm:table-cell">Ville</TableHead>
-                      <TableHead className="w-[50px] sm:w-[60px] text-center hidden lg:table-cell">
-                        <Globe className="h-4 w-4 mx-auto" />
-                      </TableHead>
-                      <TableHead className="hidden lg:table-cell">Facturé</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCompanies.map((company, index) => {
-                      const typeColor = getCompanyTypeColor(company.industry || "");
-                      const typeLabel = getCompanyTypeShortLabel(company.industry || "");
-                      return (
-                        <motion.tr
-                          key={company.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.02 }}
-                          className="group cursor-pointer hover:bg-muted/50"
-                          onClick={() => navigate(`/crm/companies/${company.id}`)}
-                        >
-                          <TableCell className="py-2 sm:py-4">
-                            <Badge
-                              variant="secondary"
-                              className="text-white text-2xs sm:text-xs"
-                              style={{ backgroundColor: typeColor }}
-                            >
-                              {typeLabel}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="py-2 sm:py-4">
-                            <div className="flex items-center gap-2 sm:gap-3">
-                              <div className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded bg-muted text-2xs sm:text-xs font-medium shrink-0">
-                                {company.name.slice(0, 2).toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-medium text-sm sm:text-base truncate">{company.name}</p>
-                                {company.email && (
-                                  <p className="text-2xs sm:text-xs text-muted-foreground truncate">{company.email}</p>
-                                )}
-                              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-10 pr-0">
+                      <Checkbox
+                        checked={isAllSelected}
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Sélectionner tout"
+                        className="translate-y-[2px]"
+                      />
+                    </TableHead>
+                    <TableHead className="w-14">Type</TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:text-foreground"
+                      onClick={() => handleSort("name")}
+                    >
+                      <div className="flex items-center gap-1">
+                        Entreprise
+                        <ArrowUpDown className={cn(
+                          "h-3 w-3",
+                          sortBy === "name" ? "text-foreground" : "text-muted-foreground/50"
+                        )} />
+                      </div>
+                    </TableHead>
+                    <TableHead className="hidden md:table-cell">Contact</TableHead>
+                    <TableHead 
+                      className="hidden sm:table-cell cursor-pointer hover:text-foreground"
+                      onClick={() => handleSort("city")}
+                    >
+                      <div className="flex items-center gap-1">
+                        Ville
+                        <ArrowUpDown className={cn(
+                          "h-3 w-3",
+                          sortBy === "city" ? "text-foreground" : "text-muted-foreground/50"
+                        )} />
+                      </div>
+                    </TableHead>
+                    <TableHead className="w-20 text-center hidden lg:table-cell">Actions</TableHead>
+                    <TableHead className="w-10"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCompanies.map((company, index) => {
+                    const typeColor = getCompanyTypeColor(company.industry || "");
+                    const typeLabel = getCompanyTypeShortLabel(company.industry || "");
+                    const isSelected = selectedIds.has(company.id);
+                    
+                    return (
+                      <motion.tr
+                        key={company.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: Math.min(index * 0.02, 0.2) }}
+                        className={cn(
+                          "group cursor-pointer transition-colors",
+                          isSelected ? "bg-primary/5" : "hover:bg-muted/40"
+                        )}
+                        onClick={() => navigate(`/crm/companies/${company.id}`)}
+                      >
+                        <TableCell className="py-2 pr-0" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={(checked) => handleSelectOne(company.id, checked as boolean)}
+                            aria-label={`Sélectionner ${company.name}`}
+                          />
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] font-medium text-white px-1.5 py-0"
+                            style={{ backgroundColor: typeColor }}
+                          >
+                            {typeLabel}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="flex h-7 w-7 items-center justify-center rounded bg-muted text-[10px] font-medium shrink-0">
+                              {company.name.slice(0, 2).toUpperCase()}
                             </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground italic text-sm hidden md:table-cell">
-                            {company.primary_contact?.name || "Aucun contact"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm hidden sm:table-cell">
-                            {company.city || "—"}
-                          </TableCell>
-                          <TableCell className="text-center text-muted-foreground hidden lg:table-cell">
-                            {company.website ? "✓" : "—"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground hidden lg:table-cell">—</TableCell>
-                          <TableCell className="py-2 sm:py-4">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7 sm:h-8 sm:w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/crm/companies/${company.id}`);
-                                  }}
-                                >
-                                  <ExternalLink className="h-4 w-4 mr-2" />
-                                  Voir détails
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingCompany(company);
-                                  }}
-                                >
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  Modifier
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    deleteCompany.mutate(company.id);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Supprimer
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </motion.tr>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate leading-tight">
+                                {company.name}
+                              </p>
+                              {company.email && (
+                                <p className="text-[11px] text-muted-foreground truncate">
+                                  {company.email}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2 hidden md:table-cell" onClick={(e) => e.stopPropagation()}>
+                          <InlineEditCell
+                            value={company.primary_contact?.name || ""}
+                            placeholder="Ajouter contact"
+                            onSave={() => {}}
+                            disabled
+                          />
+                        </TableCell>
+                        <TableCell className="py-2 hidden sm:table-cell" onClick={(e) => e.stopPropagation()}>
+                          <InlineEditCell
+                            value={company.city || ""}
+                            placeholder="—"
+                            onSave={(val) => handleInlineUpdate(company.id, "city", val)}
+                          />
+                        </TableCell>
+                        <TableCell className="py-2 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-1">
+                            {company.email && (
+                              <a
+                                href={`mailto:${company.email}`}
+                                className="p-1.5 rounded hover:bg-muted transition-colors"
+                                title={company.email}
+                              >
+                                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                              </a>
+                            )}
+                            {company.phone && (
+                              <a
+                                href={`tel:${company.phone}`}
+                                className="p-1.5 rounded hover:bg-muted transition-colors"
+                                title={company.phone}
+                              >
+                                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                              </a>
+                            )}
+                            {company.website && (
+                              <a
+                                href={company.website.startsWith("http") ? company.website : `https://${company.website}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 rounded hover:bg-muted transition-colors"
+                                title={company.website}
+                              >
+                                <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                              </a>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem onClick={() => navigate(`/crm/companies/${company.id}`)}>
+                                <ExternalLink className="h-4 w-4 mr-2" />
+                                Voir détails
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setEditingCompany(company)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Modifier
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => deleteCompany.mutate(company.id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </motion.tr>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             )}
-          </CardContent>
+          </div>
         </Card>
 
-        <EditCompanyDialog
-          company={editingCompany}
-          open={!!editingCompany}
-          onOpenChange={(open) => !open && setEditingCompany(null)}
+        {/* Bulk actions */}
+        <CRMBulkActionsBar
+          selectedCount={selectedIds.size}
+          onClearSelection={() => setSelectedIds(new Set())}
+          onDelete={handleBulkDelete}
+          onExport={() => {}}
+          entityType="companies"
         />
       </div>
+
+      <EditCompanyDialog
+        company={editingCompany}
+        open={!!editingCompany}
+        onOpenChange={(open) => !open && setEditingCompany(null)}
+      />
     </>
   );
 }

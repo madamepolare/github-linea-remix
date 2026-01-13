@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Check, X, Pencil } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface InlineEditCellProps {
@@ -11,6 +10,7 @@ interface InlineEditCellProps {
   className?: string;
   inputClassName?: string;
   disabled?: boolean;
+  type?: "text" | "email" | "tel" | "url";
 }
 
 export function InlineEditCell({
@@ -20,9 +20,11 @@ export function InlineEditCell({
   className,
   inputClassName,
   disabled = false,
+  type = "text",
 }: InlineEditCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
+  const [isHovered, setIsHovered] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -58,31 +60,36 @@ export function InlineEditCell({
 
   if (isEditing) {
     return (
-      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <div 
+        className="flex items-center gap-1 -mx-1" 
+        onClick={(e) => e.stopPropagation()}
+      >
         <Input
           ref={inputRef}
+          type={type}
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onBlur={handleSave}
-          className={cn("h-8 text-sm", inputClassName)}
+          className={cn(
+            "h-7 text-xs px-2 py-1 min-w-[100px]",
+            inputClassName
+          )}
         />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-primary"
+        <button
+          type="button"
+          className="p-1 rounded hover:bg-primary/10 text-primary transition-colors"
           onClick={handleSave}
         >
-          <Check className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-muted-foreground"
+          <Check className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          className="p-1 rounded hover:bg-muted text-muted-foreground transition-colors"
           onClick={handleCancel}
         >
-          <X className="h-3.5 w-3.5" />
-        </Button>
+          <X className="h-3 w-3" />
+        </button>
       </div>
     );
   }
@@ -90,8 +97,11 @@ export function InlineEditCell({
   return (
     <div
       className={cn(
-        "group/edit flex items-center gap-2 cursor-pointer rounded px-1 -mx-1 hover:bg-muted/50 transition-colors min-h-[32px]",
-        disabled && "cursor-default hover:bg-transparent",
+        "group/edit relative flex items-center cursor-pointer",
+        "rounded px-1.5 py-0.5 -mx-1.5 -my-0.5",
+        "transition-all duration-150",
+        !disabled && "hover:bg-muted/60",
+        disabled && "cursor-default",
         className
       )}
       onClick={(e) => {
@@ -100,12 +110,19 @@ export function InlineEditCell({
           setIsEditing(true);
         }
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <span className={cn("text-sm", !value && "text-muted-foreground")}>
+      <span 
+        className={cn(
+          "text-xs truncate",
+          !value && "text-muted-foreground/60 italic"
+        )}
+      >
         {value || placeholder}
       </span>
-      {!disabled && (
-        <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover/edit:opacity-100 transition-opacity" />
+      {!disabled && isHovered && (
+        <div className="absolute inset-0 border border-dashed border-muted-foreground/30 rounded pointer-events-none" />
       )}
     </div>
   );
