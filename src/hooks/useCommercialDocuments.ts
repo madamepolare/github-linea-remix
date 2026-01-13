@@ -23,6 +23,8 @@ export interface CreateDocumentInput {
   project_city?: string;
   project_surface?: number;
   project_budget?: number;
+  construction_budget?: number;
+  construction_budget_disclosed?: boolean;
   fee_mode?: FeeMode;
   fee_percentage?: number;
   hourly_rate?: number;
@@ -31,6 +33,11 @@ export interface CreateDocumentInput {
   special_conditions?: string;
   general_conditions?: string;
   contract_type_id?: string;
+  vat_rate?: number;
+  vat_type?: string;
+  header_text?: string;
+  footer_text?: string;
+  notes?: string;
 }
 
 export interface UpdateDocumentInput extends Partial<CreateDocumentInput> {

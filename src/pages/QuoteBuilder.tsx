@@ -248,17 +248,22 @@ export default function QuoteBuilder() {
         createdDocNumber = newDoc.document_number;
         console.info('[QuoteBuilder] Created new doc', documentId, createdDocNumber);
       } else if (id) {
-        // Update existing document
+        // Update existing document - include ALL fields
+        const projectType = ensureValidProjectType(document.project_type);
         await updateDocument.mutateAsync({
           id,
           title: document.title,
+          description: document.description,
           status: document.status,
+          project_type: projectType,
           fee_mode: document.fee_mode,
+          fee_percentage: document.fee_percentage,
+          hourly_rate: document.hourly_rate,
           total_amount: document.total_amount,
           project_id: linkedProjectId,
-          description: document.description,
           client_company_id: document.client_company_id,
           client_contact_id: document.client_contact_id,
+          validity_days: document.validity_days,
           payment_terms: document.payment_terms,
           special_conditions: document.special_conditions,
           general_conditions: document.general_conditions,
@@ -266,7 +271,13 @@ export default function QuoteBuilder() {
           project_city: document.project_city,
           project_surface: document.project_surface,
           project_budget: document.project_budget,
+          construction_budget: document.construction_budget,
+          construction_budget_disclosed: document.construction_budget_disclosed,
           contract_type_id: document.contract_type_id,
+          vat_rate: document.vat_rate,
+          vat_type: document.vat_type,
+          header_text: document.header_text,
+          footer_text: document.footer_text,
         });
       }
       
