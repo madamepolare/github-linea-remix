@@ -33,7 +33,10 @@ import { QuoteFeesTab } from '@/components/commercial/quote-builder/QuoteFeesTab
 import { QuoteProductionTab } from '@/components/commercial/quote-builder/QuoteProductionTab';
 import { QuotePlanningTab } from '@/components/commercial/quote-builder/QuotePlanningTab';
 import { QuoteTermsTab } from '@/components/commercial/quote-builder/QuoteTermsTab';
+import { QuoteMOETermsTab } from '@/components/commercial/quote-builder/QuoteMOETermsTab';
 import { QuotePreviewPanel } from '@/components/commercial/quote-builder/QuotePreviewPanel';
+import { QuoteMOEPreviewPanel } from '@/components/commercial/quote-builder/QuoteMOEPreviewPanel';
+import { isArchitectureContractType } from '@/lib/moeContractDefaults';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -511,10 +514,18 @@ export default function QuoteBuilder() {
 
               {enabledTabs.includes('terms') && (
                 <TabsContent value="terms" className="m-0 p-6">
-                  <QuoteTermsTab
-                    document={document}
-                    onDocumentChange={handleDocumentChange}
-                  />
+                  {isArchitectureContractType(currentContractType?.code || document.project_type || '') ? (
+                    <QuoteMOETermsTab
+                      document={document}
+                      onDocumentChange={handleDocumentChange}
+                      contractTypeConfig={currentContractType}
+                    />
+                  ) : (
+                    <QuoteTermsTab
+                      document={document}
+                      onDocumentChange={handleDocumentChange}
+                    />
+                  )}
                 </TabsContent>
               )}
             </ScrollArea>
@@ -547,11 +558,19 @@ export default function QuoteBuilder() {
               </div>
             </div>
             <div className="flex-1 overflow-auto p-4">
-              <QuotePreviewPanel
-                document={document}
-                lines={lines}
-                zoom={zoom}
-              />
+              {isArchitectureContractType(currentContractType?.code || document.project_type || '') ? (
+                <QuoteMOEPreviewPanel
+                  document={document}
+                  lines={lines}
+                  zoom={zoom / 100}
+                />
+              ) : (
+                <QuotePreviewPanel
+                  document={document}
+                  lines={lines}
+                  zoom={zoom}
+                />
+              )}
             </div>
           </div>
         )}
