@@ -448,6 +448,30 @@ export function TenderDocumentsTab({ tender, onNavigateToTab }: TenderDocumentsT
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {hasDocuments && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                // Download all documents
+                documents.forEach((doc: any) => {
+                  if (doc.file_url) {
+                    const link = document.createElement('a');
+                    link.href = doc.file_url;
+                    link.download = doc.file_name;
+                    link.target = '_blank';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }
+                });
+                toast.success(`Téléchargement de ${documents.length} document(s)`);
+              }}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Tout télécharger
+            </Button>
+          )}
           {hasDocuments && !allAnalyzed && (
             <Button
               onClick={() => runAnalysis(notAnalyzedDocs)}

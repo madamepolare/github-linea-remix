@@ -249,15 +249,15 @@ export function PhaseFormDialog({
                               ? "bg-primary/10 border border-primary/30"
                               : "hover:bg-muted/50"
                           )}
-                          onClick={() => toggleTemplate(template.code)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            toggleTemplate(template.code);
+                          }}
                         >
                           <Checkbox 
                             checked={isSelected} 
-                            onCheckedChange={(checked) => {
-                              // Prevent double toggle - let parent div handle it
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="shrink-0 pointer-events-none"
+                            onCheckedChange={() => toggleTemplate(template.code)}
+                            className="shrink-0"
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
