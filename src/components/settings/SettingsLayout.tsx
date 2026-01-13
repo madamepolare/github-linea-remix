@@ -30,6 +30,7 @@ import {
   Grid3X3,
   Gavel,
   Calendar,
+  Building,
 } from 'lucide-react';
 
 export interface SettingsSection {
@@ -82,6 +83,7 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
     label: 'Finance & Commercial',
     sections: [
       { id: 'contracts', label: 'Types de contrats', icon: <FileText className="h-4 w-4" />, description: 'Modèles de contrats' },
+      { id: 'moe-contract', label: 'Contrat MOE', icon: <Building className="h-4 w-4" />, description: 'Maîtrise d\'œuvre architecture', badge: 'Nouveau' },
       { id: 'skills', label: 'Compétences & Taux', icon: <UserCog className="h-4 w-4" />, description: 'Rôles et tarification' },
       { id: 'templates', label: 'Templates de devis', icon: <Grid3X3 className="h-4 w-4" />, description: 'Phases prédéfinies' },
       { id: 'pricing', label: 'Grilles tarifaires', icon: <Euro className="h-4 w-4" />, description: 'BPU et prix' },
