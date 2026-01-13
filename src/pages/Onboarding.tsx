@@ -1,532 +1,234 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Hexagon,
-  Building2,
-  Users,
-  ArrowRight,
-  ArrowLeft,
-  Loader2,
-  Check,
-  Briefcase,
-  MapPin,
-  Sofa,
-  Theater,
-  Megaphone,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useDisciplines } from "@/hooks/useDiscipline";
-import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { OnboardingLayout } from "@/components/onboarding/OnboardingLayout";
+import { WelcomeStep } from "@/components/onboarding/steps/WelcomeStep";
+import { WorkspaceStep } from "@/components/onboarding/steps/WorkspaceStep";
+import { ModulesStep } from "@/components/onboarding/steps/ModulesStep";
+import { InviteStep } from "@/components/onboarding/steps/InviteStep";
+import { CompleteStep } from "@/components/onboarding/steps/CompleteStep";
+import { Loader2 } from "lucide-react";
 
-const workspaceSchema = z.object({
-  companyName: z.string().min(2, "Company name must be at least 2 characters").max(100),
-  companySlug: z.string().min(2, "Slug must be at least 2 characters").max(50)
-    .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers, and hyphens"),
-  disciplineId: z.string().min(1, "Veuillez choisir une discipline"),
-});
-
-const profileSchema = z.object({
-  jobTitle: z.string().max(100).optional(),
-  phone: z.string().max(20).optional(),
-});
-
-type WorkspaceFormData = z.infer<typeof workspaceSchema>;
-type ProfileFormData = z.infer<typeof profileSchema>;
-
-const DISCIPLINE_ICONS: Record<string, React.ElementType> = {
-  architecture: Building2,
-  interior: Sofa,
-  scenography: Theater,
-  communication: Megaphone,
-};
-
-const DISCIPLINE_COLORS: Record<string, string> = {
-  architecture: "from-blue-500 to-cyan-500",
-  interior: "from-amber-500 to-orange-500",
-  scenography: "from-purple-500 to-pink-500",
-  communication: "from-emerald-500 to-teal-500",
-};
-
-const steps = [
-  { id: 1, title: "Espace de travail", description: "Configurez votre entreprise" },
-  { id: 2, title: "Votre profil", description: "Complétez vos informations" },
-  { id: 3, title: "Prêt !", description: "Commencez à gérer vos projets" },
-];
+interface Module {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  icon: string;
+  category: string;
+  is_core: boolean;
+  price_monthly: number;
+  features: string[];
+}
 
 export default function Onboarding() {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [createdWorkspaceId, setCreatedWorkspaceId] = useState<string | null>(null);
-  const [isInvitedMember, setIsInvitedMember] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
   const { user, profile, loading, refreshProfile, workspaces } = useAuth();
-  const { data: disciplines, isLoading: isLoadingDisciplines } = useDisciplines();
+  const { toast } = useToast();
+  
+  const [step, setStep] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modules, setModules] = useState<Module[]>([]);
+  
+  // Form data
+  const [workspaceData, setWorkspaceData] = useState({ name: "", type: "" });
+  const [selectedModules, setSelectedModules] = useState<string[]>([]);
+  const [inviteEmails, setInviteEmails] = useState<string[]>([]);
 
-  const workspaceForm = useForm<WorkspaceFormData>({
-    resolver: zodResolver(workspaceSchema),
-    defaultValues: { companyName: "", companySlug: "", disciplineId: "" },
-  });
+  const TOTAL_STEPS = 5;
 
-  const profileForm = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: { jobTitle: "", phone: "" },
-  });
-
-  const selectedDisciplineId = workspaceForm.watch("disciplineId");
-
-  // Auto-generate slug from company name
-  const companyName = workspaceForm.watch("companyName");
   useEffect(() => {
-    if (companyName) {
-      const slug = companyName
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .substring(0, 50);
-      workspaceForm.setValue("companySlug", slug);
-    }
-  }, [companyName, workspaceForm]);
-
-  // Redirect if not logged in or already onboarded
-  useEffect(() => {
-    if (!loading) {
+    const checkOnboardingStatus = async () => {
+      if (loading) return;
+      
       if (!user) {
         navigate("/auth");
         return;
       }
-      if (profile?.onboarding_completed) {
+
+      // Check if already has a workspace and onboarding completed
+      if (workspaces && workspaces.length > 0 && profile?.onboarding_completed) {
         navigate("/dashboard");
         return;
       }
-      // If user is already a member of a workspace (invited), skip to step 2
-      if (workspaces && workspaces.length > 0 && currentStep === 1) {
-        setIsInvitedMember(true);
-        setCurrentStep(2);
-        // Set active workspace if not already set
-        if (!profile?.active_workspace_id) {
-          supabase
-            .from("profiles")
-            .update({ active_workspace_id: workspaces[0].id })
-            .eq("user_id", user.id);
-        }
+
+      // If user is invited to a workspace but hasn't completed onboarding
+      if (workspaces && workspaces.length > 0 && !profile?.onboarding_completed) {
+        // Mark onboarding as completed for invited users
+        await supabase
+          .from("profiles")
+          .update({ onboarding_completed: true })
+          .eq("user_id", user.id);
+        
+        await refreshProfile();
+        navigate("/dashboard");
+        return;
       }
-    }
-  }, [user, profile, loading, navigate, workspaces, currentStep]);
 
-  const handleCreateWorkspace = async (data: WorkspaceFormData) => {
+      // Fetch modules
+      const { data: modulesData } = await supabase
+        .from("modules")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+
+      if (modulesData) {
+        setModules(modulesData as Module[]);
+        // Pre-select core modules
+        setSelectedModules(modulesData.filter((m: any) => m.is_core).map((m: any) => m.id));
+      }
+
+      setIsLoading(false);
+    };
+
+    checkOnboardingStatus();
+  }, [user, profile, loading, navigate, workspaces, refreshProfile]);
+
+  const handleComplete = async () => {
     if (!user) return;
-    setIsLoading(true);
-
+    
+    setIsSubmitting(true);
+    
     try {
-      // Create workspace with discipline
+      // 1. Create workspace
+      const slug = workspaceData.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+
       const { data: workspace, error: workspaceError } = await supabase
         .from("workspaces")
         .insert({
-          name: data.companyName,
-          slug: data.companySlug,
+          name: workspaceData.name,
+          slug: `${slug}-${Date.now()}`,
           created_by: user.id,
-          discipline_id: data.disciplineId,
         })
         .select()
         .single();
 
-        if (workspaceError) {
-          if (workspaceError.message.includes("duplicate")) {
-            toast({
-              variant: "destructive",
-              title: "URL déjà utilisée",
-              description: "Veuillez choisir une autre URL pour votre espace.",
-            });
-            setIsLoading(false);
-            return;
-          }
-          throw workspaceError;
-        }
+      if (workspaceError) throw workspaceError;
 
-      // Add user as owner
-      const { error: memberError } = await supabase
-        .from("workspace_members")
-        .insert({
-          workspace_id: workspace.id,
-          user_id: user.id,
-          role: "owner",
-        });
+      // 2. Add user as owner member
+      await supabase.from("workspace_members").insert({
+        workspace_id: workspace.id,
+        user_id: user.id,
+        role: "owner",
+      });
 
-      if (memberError) throw memberError;
-
-      // Update profile with active workspace
-      const { error: profileError } = await supabase
+      // 3. Update profile with active workspace
+      await supabase
         .from("profiles")
         .update({ active_workspace_id: workspace.id })
         .eq("user_id", user.id);
 
-      if (profileError) throw profileError;
+      // 4. Enable selected modules
+      const moduleInserts = selectedModules.map((moduleId) => ({
+        workspace_id: workspace.id,
+        module_id: moduleId,
+        enabled_by: user.id,
+      }));
 
-      setCreatedWorkspaceId(workspace.id);
-      setCurrentStep(2);
-      toast({
-        title: "Espace créé !",
-        description: `Bienvenue dans ${data.companyName}`,
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Erreur lors de la création",
-        description: error.message,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      if (moduleInserts.length > 0) {
+        await supabase.from("workspace_modules").insert(moduleInserts);
+      }
 
-  const handleUpdateProfile = async (data: ProfileFormData) => {
-    if (!user) return;
-    setIsLoading(true);
+      // 5. Send invitations
+      if (inviteEmails.length > 0) {
+        const invitations = inviteEmails.map((email) => ({
+          workspace_id: workspace.id,
+          email: email.toLowerCase(),
+          role: "member" as const,
+          invited_by: user.id,
+        }));
+        await supabase.from("workspace_invites").insert(invitations);
+      }
 
-    try {
-      const { error } = await supabase
+      // 6. Mark onboarding as completed
+      await supabase
         .from("profiles")
-        .update({
-          job_title: data.jobTitle || null,
-          phone: data.phone || null,
-          onboarding_completed: true,
-        })
+        .update({ onboarding_completed: true })
         .eq("user_id", user.id);
 
-      if (error) throw error;
-
       await refreshProfile();
-      setCurrentStep(3);
-    } catch (error: any) {
+
       toast({
+        title: "Bienvenue !",
+        description: `${workspaceData.name} a été créé avec succès`,
+      });
+
+      navigate("/dashboard");
+    } catch (error: any) {
+      console.error("Onboarding error:", error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue",
         variant: "destructive",
-        title: "Erreur lors de la mise à jour",
-        description: error.message,
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleComplete = () => {
-    navigate("/dashboard");
-  };
-
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Hexagon className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="font-display text-xl font-bold text-foreground">LINEA</span>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-12">
-        <div className="max-w-2xl mx-auto">
-          {/* Progress Steps */}
-          <div className="flex items-center justify-center mb-12">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all ${
-                      currentStep > step.id
-                        ? "bg-primary border-primary text-primary-foreground"
-                        : currentStep === step.id
-                        ? "border-primary text-primary"
-                        : "border-muted text-muted-foreground"
-                    }`}
-                  >
-                    {currentStep > step.id ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      <span className="font-semibold">{step.id}</span>
-                    )}
-                  </div>
-                  <span
-                    className={`mt-2 text-sm font-medium ${
-                      currentStep >= step.id ? "text-foreground" : "text-muted-foreground"
-                    }`}
-                  >
-                    {step.title}
-                  </span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div
-                    className={`w-20 h-0.5 mx-2 mt-[-20px] ${
-                      currentStep > step.id ? "bg-primary" : "bg-muted"
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Step Content */}
-          <AnimatePresence mode="wait">
-            {currentStep === 1 && (
-              <motion.div
-                key="step1"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="bg-card border border-border rounded-xl p-8"
-              >
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
-                    <Building2 className="h-7 w-7 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="font-display text-2xl font-bold text-foreground">
-                      Créer votre espace de travail
-                    </h2>
-                    <p className="text-muted-foreground">
-                      Configurez le hub central de votre entreprise
-                    </p>
-                  </div>
-                </div>
-
-                <form onSubmit={workspaceForm.handleSubmit(handleCreateWorkspace)} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="companyName">Nom de l'entreprise</Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="companyName"
-                        placeholder="Nom de votre agence"
-                        className="pl-10"
-                        {...workspaceForm.register("companyName")}
-                      />
-                    </div>
-                    {workspaceForm.formState.errors.companyName && (
-                      <p className="text-sm text-destructive">
-                        {workspaceForm.formState.errors.companyName.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="companySlug">URL de l'espace</Label>
-                    <div className="flex items-center">
-                      <span className="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-input bg-muted text-sm text-muted-foreground">
-                        linea.app/
-                      </span>
-                      <Input
-                        id="companySlug"
-                        placeholder="mon-agence"
-                        className="rounded-l-none"
-                        {...workspaceForm.register("companySlug")}
-                      />
-                    </div>
-                    {workspaceForm.formState.errors.companySlug && (
-                      <p className="text-sm text-destructive">
-                        {workspaceForm.formState.errors.companySlug.message}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Discipline Selection */}
-                  <div className="space-y-3">
-                    <Label>Votre discipline</Label>
-                    {isLoadingDisciplines ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-3">
-                        {disciplines?.filter(d => d.is_active).map((discipline) => {
-                          const Icon = DISCIPLINE_ICONS[discipline.slug] || Building2;
-                          const isSelected = selectedDisciplineId === discipline.id;
-                          const gradientClass = DISCIPLINE_COLORS[discipline.slug] || "from-gray-500 to-gray-600";
-                          
-                          return (
-                            <button
-                              key={discipline.id}
-                              type="button"
-                              onClick={() => workspaceForm.setValue("disciplineId", discipline.id)}
-                              className={cn(
-                                "relative flex items-center gap-3 p-3 rounded-lg border-2 transition-all text-left",
-                                isSelected
-                                  ? "border-primary bg-primary/5"
-                                  : "border-border hover:border-primary/50"
-                              )}
-                            >
-                              {isSelected && (
-                                <div className="absolute top-2 right-2">
-                                  <Check className="h-4 w-4 text-primary" />
-                                </div>
-                              )}
-                              <div className={cn(
-                                "flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br text-white shrink-0",
-                                gradientClass
-                              )}>
-                                <Icon className="h-5 w-5" />
-                              </div>
-                              <span className="text-sm font-medium">{discipline.name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {workspaceForm.formState.errors.disciplineId && (
-                      <p className="text-sm text-destructive">
-                        {workspaceForm.formState.errors.disciplineId.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={isLoading || !selectedDisciplineId}>
-                    {isLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <ArrowRight className="h-4 w-4 mr-2" />
-                    )}
-                    Créer l'espace de travail
-                  </Button>
-                </form>
-              </motion.div>
-            )}
-
-            {currentStep === 2 && (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="bg-card border border-border rounded-xl p-8"
-              >
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent/10">
-                    <Users className="h-7 w-7 text-accent" />
-                  </div>
-                  <div>
-                    <h2 className="font-display text-2xl font-bold text-foreground">
-                      Complétez votre profil
-                    </h2>
-                    <p className="text-muted-foreground">
-                      Parlez-nous un peu de vous
-                    </p>
-                  </div>
-                </div>
-
-                <form onSubmit={profileForm.handleSubmit(handleUpdateProfile)} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="jobTitle">Fonction (Optionnel)</Label>
-                    <div className="relative">
-                      <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="jobTitle"
-                        placeholder="Architecte principal"
-                        className="pl-10"
-                        {...profileForm.register("jobTitle")}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Téléphone (Optionnel)</Label>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="phone"
-                        placeholder="+33 1 23 45 67 89"
-                        className="pl-10"
-                        {...profileForm.register("phone")}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    {!isInvitedMember && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setCurrentStep(1)}
-                        className="flex-1"
-                      >
-                        <ArrowLeft className="h-4 w-4 mr-2" />
-                        Retour
-                      </Button>
-                    )}
-                    <Button type="submit" className={isInvitedMember ? "w-full" : "flex-1"} disabled={isLoading}>
-                      {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <ArrowRight className="h-4 w-4 mr-2" />
-                      )}
-                      Continuer
-                    </Button>
-                  </div>
-                </form>
-              </motion.div>
-            )}
-
-            {currentStep === 3 && (
-              <motion.div
-                key="step3"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-card border border-border rounded-xl p-8 text-center"
-              >
-                <div className="flex justify-center mb-6">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-success/10">
-                    <Check className="h-10 w-10 text-success" />
-                  </div>
-                </div>
-
-                <h2 className="font-display text-3xl font-bold text-foreground mb-2">
-                  Vous êtes prêt !
-                </h2>
-                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-                  Votre espace de travail est configuré. Créez votre premier projet, invitez votre équipe ou explorez le tableau de bord.
-                </p>
-
-                <div className="grid grid-cols-3 gap-4 mb-8">
-                  <div className="p-4 rounded-lg bg-muted/50">
-                    <Building2 className="h-6 w-6 text-primary mx-auto mb-2" />
-                    <span className="text-sm font-medium">Projets</span>
-                  </div>
-                  <div className="p-4 rounded-lg bg-muted/50">
-                    <Users className="h-6 w-6 text-accent mx-auto mb-2" />
-                    <span className="text-sm font-medium">Équipe</span>
-                  </div>
-                  <div className="p-4 rounded-lg bg-muted/50">
-                    <Briefcase className="h-6 w-6 text-success mx-auto mb-2" />
-                    <span className="text-sm font-medium">CRM</span>
-                  </div>
-                </div>
-
-                <Button onClick={handleComplete} size="lg" className="px-8">
-                  Accéder au tableau de bord
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </main>
-    </div>
+    <OnboardingLayout currentStep={step} totalSteps={TOTAL_STEPS}>
+      {step === 0 && (
+        <WelcomeStep
+          userName={profile?.full_name?.split(" ")[0] || ""}
+          onNext={() => setStep(1)}
+        />
+      )}
+      
+      {step === 1 && (
+        <WorkspaceStep
+          onNext={(data) => {
+            setWorkspaceData(data);
+            setStep(2);
+          }}
+          onBack={() => setStep(0)}
+        />
+      )}
+      
+      {step === 2 && (
+        <ModulesStep
+          modules={modules}
+          onNext={(mods) => {
+            setSelectedModules(mods);
+            setStep(3);
+          }}
+          onBack={() => setStep(1)}
+        />
+      )}
+      
+      {step === 3 && (
+        <InviteStep
+          onNext={(emails) => {
+            setInviteEmails(emails);
+            setStep(4);
+          }}
+          onBack={() => setStep(2)}
+        />
+      )}
+      
+      {step === 4 && (
+        <CompleteStep
+          workspaceName={workspaceData.name}
+          modulesCount={selectedModules.length}
+          invitesCount={inviteEmails.length}
+          onComplete={handleComplete}
+          isLoading={isSubmitting}
+        />
+      )}
+    </OnboardingLayout>
   );
 }
