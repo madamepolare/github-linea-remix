@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { THIN_STROKE } from "@/components/ui/icon";
 import { format, parseISO } from "date-fns";
@@ -33,7 +32,6 @@ export function CheckInModal() {
   const { createQuickTask } = usePostItTasks();
   const todayData = useTodayData(yesterdayCheckin?.tomorrow_notes);
   const [notes, setNotes] = useState("");
-  const [createPostIt, setCreatePostIt] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const firstName = profile?.full_name?.split(" ")[0] || "Vous";
@@ -44,8 +42,8 @@ export function CheckInModal() {
   const handleCheckin = async () => {
     setIsSubmitting(true);
     try {
-      // Create post-it if checked and notes exist
-      if (createPostIt && notes.trim()) {
+      // Auto-create post-it if notes exist
+      if (notes.trim()) {
         await createQuickTask.mutateAsync({ title: notes.trim() });
       }
       
@@ -268,21 +266,14 @@ export function CheckInModal() {
                 <Textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Une note pour toi ? (optionnel)"
+                  placeholder="Une note pour toi ? → crée un post-it automatiquement"
                   className="resize-none text-sm h-16"
                 />
                 {notes.trim() && (
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={createPostIt}
-                      onCheckedChange={(checked) => setCreatePostIt(checked as boolean)}
-                      className="h-4 w-4"
-                    />
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <StickyNote className="h-3 w-3 text-amber-500" />
-                      Créer un post-it avec cette note
-                    </span>
-                  </label>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <StickyNote className="h-3 w-3 text-amber-500" />
+                    Un post-it sera créé avec cette note
+                  </p>
                 )}
               </motion.div>
 
