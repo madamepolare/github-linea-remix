@@ -1018,6 +1018,67 @@ export type Database = {
           },
         ]
       }
+      company_departments: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          location: string | null
+          manager_contact_id: string | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          manager_contact_id?: string | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          manager_contact_id?: string | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_departments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_departments_manager_contact_id_fkey"
+            columns: ["manager_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_departments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_pipeline_emails: {
         Row: {
           body_html: string
@@ -1180,6 +1241,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           crm_company_id: string | null
+          department_id: string | null
           email: string | null
           first_name: string | null
           gender: string | null
@@ -1199,6 +1261,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           crm_company_id?: string | null
+          department_id?: string | null
           email?: string | null
           first_name?: string | null
           gender?: string | null
@@ -1218,6 +1281,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           crm_company_id?: string | null
+          department_id?: string | null
           email?: string | null
           first_name?: string | null
           gender?: string | null
@@ -1237,6 +1301,13 @@ export type Database = {
             columns: ["crm_company_id"]
             isOneToOne: false
             referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "company_departments"
             referencedColumns: ["id"]
           },
           {

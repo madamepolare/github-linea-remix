@@ -46,7 +46,7 @@ export function useContacts(options?: {
         .order("name");
 
       if (error) throw error;
-      return data as (Contact & { company: { id: string; name: string; logo_url: string | null; industry: string | null } | null })[];
+      return data as Contact[];
     },
     enabled: !!activeWorkspace?.id,
   });

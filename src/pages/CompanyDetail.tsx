@@ -62,6 +62,7 @@ import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 import { EntityCommunications } from "@/components/shared/EntityCommunications";
 import { EntityEmailsTab } from "@/components/shared/EntityEmailsTab";
 import { CreateContactDialog } from "@/components/crm/CreateContactDialog";
+import { CompanyDepartmentsSection } from "@/components/crm/CompanyDepartmentsSection";
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
@@ -659,59 +660,68 @@ export default function CompanyDetail() {
           )}
 
           {activeTab === "contacts" && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">Contacts</CardTitle>
-                <Button size="sm" onClick={() => setCreateContactOpen(true)}>
-                  <Plus className="h-4 w-4 mr-1" strokeWidth={1.5} />
-                  Ajouter
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {companyContacts.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-8 w-8 mx-auto mb-2" strokeWidth={1.5} />
-                    <p className="text-sm">Aucun contact</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {companyContacts.map((contact) => (
-                      <Link
-                        key={contact.id}
-                        to={`/crm/contacts/${contact.id}`}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={contact.avatar_url || undefined} />
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {contact.name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium">{contact.name}</p>
-                          {contact.role && (
-                            <p className="text-sm text-muted-foreground">{contact.role}</p>
+            <div className="space-y-6">
+              {/* Departments Section */}
+              <CompanyDepartmentsSection 
+                companyId={company.id} 
+                companyContacts={companyContacts} 
+              />
+
+              {/* All Contacts */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-base">Tous les contacts</CardTitle>
+                  <Button size="sm" onClick={() => setCreateContactOpen(true)}>
+                    <Plus className="h-4 w-4 mr-1" strokeWidth={1.5} />
+                    Ajouter
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {companyContacts.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Users className="h-8 w-8 mx-auto mb-2" strokeWidth={1.5} />
+                      <p className="text-sm">Aucun contact</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {companyContacts.map((contact) => (
+                        <Link
+                          key={contact.id}
+                          to={`/crm/contacts/${contact.id}`}
+                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                        >
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={contact.avatar_url || undefined} />
+                            <AvatarFallback className="bg-primary/10 text-primary">
+                              {contact.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium">{contact.name}</p>
+                            {contact.role && (
+                              <p className="text-sm text-muted-foreground">{contact.role}</p>
+                            )}
+                          </div>
+                          {contact.email && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                window.location.href = `mailto:${contact.email}`;
+                              }}
+                            >
+                              <Mail className="h-4 w-4" strokeWidth={1.5} />
+                            </Button>
                           )}
-                        </div>
-                        {contact.email && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              window.location.href = `mailto:${contact.email}`;
-                            }}
-                          >
-                            <Mail className="h-4 w-4" strokeWidth={1.5} />
-                          </Button>
-                        )}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {activeTab === "leads" && (

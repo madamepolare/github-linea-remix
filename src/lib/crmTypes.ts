@@ -254,11 +254,17 @@ export interface Contact {
   notes: string | null;
   avatar_url: string | null;
   crm_company_id: string | null;
+  department_id: string | null;
   created_by: string | null;
   workspace_id: string;
   created_at: string | null;
   updated_at: string | null;
-  company?: CRMCompany | null;
+  company?: {
+    id: string;
+    name: string;
+    logo_url: string | null;
+    industry: string | null;
+  } | null;
 }
 
 export interface CRMFilters {
