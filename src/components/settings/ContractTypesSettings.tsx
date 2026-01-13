@@ -28,8 +28,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, Megaphone, Palette, Globe, FileText, Percent, List, Package, Calendar, FileCheck, Sparkles, Loader2, LayoutTemplate, Settings2 } from 'lucide-react';
-import { useContractTypes, ContractType, CreateContractTypeInput, ContractTypeFields, BuilderTab } from '@/hooks/useContractTypes';
+import { Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, Megaphone, Palette, Globe, FileText, Percent, List, Package, Calendar, FileCheck, Sparkles, Loader2, LayoutTemplate, Settings2, Building } from 'lucide-react';
+import { useContractTypes, ContractType, CreateContractTypeInput, ContractTypeFields, BuilderTab, DEFAULT_MOE_CONFIG } from '@/hooks/useContractTypes';
+import { ContractMOEConfig, MOEConfigData } from './ContractMOEConfig';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useWorkspaceDiscipline } from '@/hooks/useDiscipline';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -49,12 +50,16 @@ const TAB_OPTIONS: { key: BuilderTab; label: string; icon: React.ComponentType<{
 const ICON_OPTIONS = [
   { value: 'FileText', label: 'Document', icon: FileText },
   { value: 'Building2', label: 'Bâtiment', icon: Building2 },
+  { value: 'Building', label: 'MOE', icon: Building },
   { value: 'Sofa', label: 'Intérieur', icon: Sofa },
   { value: 'Theater', label: 'Scène', icon: Theater },
   { value: 'Megaphone', label: 'Publicité', icon: Megaphone },
   { value: 'Palette', label: 'Design', icon: Palette },
   { value: 'Globe', label: 'Web', icon: Globe },
 ];
+
+// Contract types that support MOE configuration (architecture-based)
+const MOE_CONTRACT_CODES = ['MOE', 'ARCHI', 'INTERIOR'];
 
 const FIELD_OPTIONS: { key: keyof ContractTypeFields; label: string }[] = [
   { key: 'surface', label: 'Surface (m²)' },
@@ -470,11 +475,17 @@ export function ContractTypesSettings() {
               <DialogTitle>Modifier le type de contrat</DialogTitle>
             </DialogHeader>
             <Tabs defaultValue="general" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className={`grid w-full ${MOE_CONTRACT_CODES.includes(editingType.code) ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <TabsTrigger value="general" className="gap-2">
                   <Settings2 className="h-4 w-4" />
-                  Paramètres généraux
+                  Paramètres
                 </TabsTrigger>
+                {MOE_CONTRACT_CODES.includes(editingType.code) && (
+                  <TabsTrigger value="moe" className="gap-2">
+                    <Building className="h-4 w-4" />
+                    Config MOE
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="pdf" className="gap-2">
                   <LayoutTemplate className="h-4 w-4" />
                   Blocs PDF
@@ -605,6 +616,18 @@ export function ContractTypesSettings() {
                   </label>
                 </div>
               </TabsContent>
+              
+              {MOE_CONTRACT_CODES.includes(editingType.code) && (
+                <TabsContent value="moe" className="flex-1 overflow-y-auto mt-4">
+                  <ContractMOEConfig
+                    config={(editingType.default_clauses as unknown as MOEConfigData) || DEFAULT_MOE_CONFIG}
+                    onChange={(moeConfig) => setEditingType({ 
+                      ...editingType, 
+                      default_clauses: moeConfig as unknown as Record<string, unknown>
+                    })}
+                  />
+                </TabsContent>
+              )}
               
               <TabsContent value="pdf" className="flex-1 overflow-y-auto mt-4">
                 <PDFBlocksConfigurator

@@ -87,84 +87,91 @@ export const DEFAULT_MOE_MISSION_PHASES: MOEMissionPhase[] = [
     code: 'REL',
     name: 'Relevé de l\'existant',
     short_name: 'REL',
-    description: 'Relevé détaillé de l\'existant et établissement des plans',
+    description: 'Relevé de l\'existant si non fourni par le maître d\'ouvrage.',
     percentage: 0,
     is_included: false,
     is_optional: true,
-    deliverables: ['Plans de l\'existant', 'Diagnostic technique']
+    deliverables: ['Plans de l\'existant']
   },
   {
     code: 'ESQ',
     name: 'Esquisse',
     short_name: 'ESQ',
-    description: 'Proposition initiale de projet à partir du programme',
+    description: 'Proposition initiale de projet à partir du relevé fourni.',
     percentage: 15,
     is_included: true,
-    deliverables: ['Esquisses préliminaires', 'Note d\'intention', 'Estimation budgétaire indicative']
+    is_optional: false,
+    deliverables: ['Esquisses et principes d\'aménagement', 'Estimation préliminaire']
   },
   {
     code: 'AVP',
-    name: 'Avant-Projet',
+    name: 'Avant-projet',
     short_name: 'AVP',
-    description: 'Développement de l\'esquisse retenue avec précisions techniques',
-    percentage: 15,
+    description: 'Développement de l\'esquisse avec précisions techniques et budgétaires.',
+    percentage: 20,
     is_included: true,
-    deliverables: ['Plans AVP', 'Coupes et élévations', 'Descriptif sommaire', 'Estimation détaillée']
+    is_optional: false,
+    deliverables: ['Plans d\'avant-projet', 'Estimation détaillée des travaux']
   },
   {
     code: 'PRO',
     name: 'Projet',
     short_name: 'PRO',
-    description: 'Définition précise du projet avec tous les détails nécessaires',
+    description: 'Production des plans à l\'intention des entreprises.',
     percentage: 20,
     is_included: true,
-    deliverables: ['Plans définitifs', 'Détails techniques', 'Descriptif complet', 'Estimation précise']
+    is_optional: false,
+    deliverables: ['Plans détaillés', 'CCTP']
   },
   {
     code: 'DCE',
-    name: 'Dossier de Consultation des Entreprises',
+    name: 'Dossier de consultation',
     short_name: 'DCE',
-    description: 'Production des plans et documents à l\'intention des entreprises',
-    percentage: 10,
+    description: 'Dossier de consultation des entreprises.',
+    percentage: 5,
     is_included: true,
-    deliverables: ['Plans d\'exécution', 'CCTP', 'Quantitatif détaillé', 'Planning prévisionnel']
+    is_optional: false,
+    deliverables: ['DCE complet', 'Bordereaux quantitatifs']
   },
   {
     code: 'ACT',
-    name: 'Assistance pour la passation des Contrats de Travaux',
+    name: 'Assistance contrats travaux',
     short_name: 'ACT',
-    description: 'Consultation des entreprises et analyse des devis',
+    description: 'Consultation de trois entreprises et étude des devis.',
     percentage: 5,
     is_included: true,
-    deliverables: ['Analyse comparative des offres', 'Rapport d\'analyse', 'Recommandations']
+    is_optional: false,
+    deliverables: ['Analyse des offres', 'Recommandations']
   },
   {
     code: 'DET',
-    name: 'Direction de l\'Exécution des Travaux',
+    name: 'Direction exécution travaux',
     short_name: 'DET',
-    description: 'Réunions de chantier hebdomadaires et suivi de l\'exécution',
+    description: 'Réunions de chantier hebdomadaires.',
     percentage: 25,
     is_included: true,
-    deliverables: ['Comptes-rendus de chantier', 'Ordres de service', 'Visa des situations', 'Suivi financier']
+    is_optional: false,
+    deliverables: ['Comptes-rendus de réunions', 'Suivi de chantier']
   },
   {
     code: 'AOR',
-    name: 'Assistance aux Opérations de Réception',
+    name: 'Assistance réception',
     short_name: 'AOR',
-    description: 'Organisation et participation à la réception des travaux',
-    percentage: 5,
+    description: 'Assistance aux opérations de réception.',
+    percentage: 10,
     is_included: true,
-    deliverables: ['PV de réception', 'Liste des réserves', 'DOE', 'Levée des réserves']
+    is_optional: false,
+    deliverables: ['PV de réception', 'Liste des réserves']
   },
   {
     code: 'DECO',
-    name: 'Décoration - Accessoirisation',
+    name: 'Décoration',
     short_name: 'DECO',
-    description: 'Définition des choix d\'équipement mobiliers et appareillage',
+    description: 'Définition des choix d\'équipement, mobiliers et appareillage. Accessoirisation - choix de mobilier, revêtements, tissus.',
     percentage: 0,
     is_included: false,
     is_optional: true,
-    deliverables: ['Planches d\'ambiance', 'Sélection mobilier', 'Shopping list']
+    deliverables: ['Carnet de sélection mobilier', 'Palette matériaux']
   }
 ];
 

@@ -18,7 +18,6 @@ import { FeedbackSettings } from "@/components/settings/FeedbackSettings";
 import { StyleSettings } from "@/components/settings/StyleSettings";
 import { DisciplineSettings } from "@/components/settings/DisciplineSettings";
 import { ContractTypesSection } from "@/components/settings/sections/ContractTypesSection";
-import { MOEContractSection } from "@/components/settings/sections/MOEContractSection";
 import { SkillsSection } from "@/components/settings/sections/SkillsSection";
 import { QuoteTemplatesSection } from "@/components/settings/sections/QuoteTemplatesSection";
 import { PricingGridsSection } from "@/components/settings/sections/PricingGridsSection";
@@ -57,8 +56,6 @@ export default function Settings() {
         return <TasksSettings />;
       case "contracts":
         return <ContractTypesSection />;
-      case "moe-contract":
-        return <MOEContractSection />;
       case "skills":
         return <SkillsSection />;
       case "templates":
