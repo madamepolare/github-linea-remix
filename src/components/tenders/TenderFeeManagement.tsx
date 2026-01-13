@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
-import { Euro, Percent, Calculator, Layers, CheckCircle2, Info, Users } from "lucide-react";
+import { Euro, Percent, Calculator, Layers, CheckCircle2, Info, Users, AlertCircle, RotateCcw, Save } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -22,6 +23,7 @@ interface TenderFeeManagementProps {
   };
   teamMembers: TenderTeamMember[];
   onUpdate: (updates: { moe_fee_percentage?: number; moe_phases?: string[]; moe_fee_amount?: number }) => void;
+  onUpdateMemberFee?: (memberId: string, feePercentage: number) => void;
   isUpdating?: boolean;
 }
 
@@ -33,7 +35,7 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating }: TenderFeeManagementProps) {
+export function TenderFeeManagement({ tender, teamMembers, onUpdate, onUpdateMemberFee, isUpdating }: TenderFeeManagementProps) {
   // Local state for inputs
   const [feePercentage, setFeePercentage] = useState<string>(
     tender.moe_fee_percentage?.toString() || ""
@@ -41,6 +43,22 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
   const [selectedPhases, setSelectedPhases] = useState<Set<string>>(
     new Set(Array.isArray(tender.moe_phases) ? tender.moe_phases : [])
   );
+
+  // Local state for editable member fees
+  const [memberFees, setMemberFees] = useState<Record<string, string>>({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Initialize member fees from teamMembers
+  useEffect(() => {
+    const initialFees: Record<string, string> = {};
+    teamMembers
+      .filter(m => m.role === 'cotraitant')
+      .forEach(m => {
+        initialFees[m.id] = (m.fee_percentage || 0).toString();
+      });
+    setMemberFees(initialFees);
+    setHasUnsavedChanges(false);
+  }, [teamMembers]);
 
   // Sync with props when tender changes
   useEffect(() => {
@@ -62,24 +80,65 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
       .reduce((sum, p) => sum + (p.defaultPercentage || 0), 0);
   }, [selectedPhases]);
 
-  // Team fee distribution
+  // Team fee distribution - using local editable values
   const teamFeeDistribution = useMemo(() => {
-    const cotraitants = teamMembers.filter(m => m.role === 'cotraitant' && m.fee_percentage);
-    const totalPartnerPercentage = cotraitants.reduce((sum, m) => sum + (m.fee_percentage || 0), 0);
-    const remainingForMandataire = 100 - totalPartnerPercentage;
+    const cotraitants = teamMembers.filter(m => m.role === 'cotraitant');
+    const totalPartnerPercentage = cotraitants.reduce((sum, m) => {
+      const localFee = parseFloat(memberFees[m.id] || '0') || 0;
+      return sum + localFee;
+    }, 0);
+    const remainingForMandataire = Math.max(0, 100 - totalPartnerPercentage);
+    const isOverBudget = totalPartnerPercentage > 100;
 
     return {
       cotraitants,
       totalPartnerPercentage,
       remainingForMandataire,
+      isOverBudget,
       mandataireAmount: feeAmount * (remainingForMandataire / 100),
-      partnerAmounts: cotraitants.map(m => ({
-        member: m,
-        percentage: m.fee_percentage || 0,
-        amount: feeAmount * ((m.fee_percentage || 0) / 100),
-      })),
+      partnerAmounts: cotraitants.map(m => {
+        const localFee = parseFloat(memberFees[m.id] || '0') || 0;
+        return {
+          member: m,
+          percentage: localFee,
+          amount: feeAmount * (localFee / 100),
+          originalPercentage: m.fee_percentage || 0,
+          hasChanged: localFee !== (m.fee_percentage || 0),
+        };
+      }),
     };
-  }, [teamMembers, feeAmount]);
+  }, [teamMembers, feeAmount, memberFees]);
+
+  // Handle member fee change
+  const handleMemberFeeChange = (memberId: string, value: string) => {
+    // Allow empty input for easier editing
+    setMemberFees(prev => ({ ...prev, [memberId]: value }));
+    setHasUnsavedChanges(true);
+  };
+
+  // Save all member fees
+  const handleSaveAllFees = () => {
+    if (!onUpdateMemberFee) return;
+    
+    teamFeeDistribution.partnerAmounts.forEach(({ member, percentage, hasChanged }) => {
+      if (hasChanged) {
+        onUpdateMemberFee(member.id, percentage);
+      }
+    });
+    setHasUnsavedChanges(false);
+  };
+
+  // Reset all fees to original values
+  const handleResetFees = () => {
+    const resetFees: Record<string, string> = {};
+    teamMembers
+      .filter(m => m.role === 'cotraitant')
+      .forEach(m => {
+        resetFees[m.id] = (m.fee_percentage || 0).toString();
+      });
+    setMemberFees(resetFees);
+    setHasUnsavedChanges(false);
+  };
 
   const handlePhaseToggle = (phaseCode: string, checked: boolean) => {
     const newPhases = new Set(selectedPhases);
@@ -210,13 +269,52 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
                     Répartition du groupement
                   </Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Distribution des honoraires entre les membres de l'équipe
+                    Modifiez les pourcentages des cotraitants pour répartir les honoraires
                   </p>
                 </div>
-                <Badge variant="outline" className="font-mono">
-                  Total : {formatCurrency(feeAmount)}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  {teamFeeDistribution.isOverBudget && (
+                    <Badge variant="destructive" className="gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Dépassement
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="font-mono">
+                    Total : {formatCurrency(feeAmount)}
+                  </Badge>
+                </div>
               </div>
+
+              {/* Progress bar showing used percentage */}
+              {teamFeeDistribution.cotraitants.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Budget utilisé par les cotraitants</span>
+                    <span className={cn(
+                      "font-medium",
+                      teamFeeDistribution.isOverBudget ? "text-destructive" : "text-foreground"
+                    )}>
+                      {teamFeeDistribution.totalPartnerPercentage.toFixed(1)}% / 100%
+                    </span>
+                  </div>
+                  <Progress 
+                    value={Math.min(teamFeeDistribution.totalPartnerPercentage, 100)} 
+                    className={cn(
+                      "h-2",
+                      teamFeeDistribution.isOverBudget && "[&>div]:bg-destructive"
+                    )}
+                  />
+                  <p className={cn(
+                    "text-xs",
+                    teamFeeDistribution.isOverBudget ? "text-destructive" : "text-muted-foreground"
+                  )}>
+                    {teamFeeDistribution.isOverBudget 
+                      ? `Dépassement de ${(teamFeeDistribution.totalPartnerPercentage - 100).toFixed(1)}% - Réduisez les pourcentages des cotraitants`
+                      : `Restant pour le mandataire : ${teamFeeDistribution.remainingForMandataire.toFixed(1)}%`
+                    }
+                  </p>
+                </div>
+              )}
 
               {teamMembers.length > 0 ? (
                 <>
@@ -327,8 +425,8 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
                       </div>
                     </div>
 
-                    {/* Cotraitants cards */}
-                    {teamFeeDistribution.partnerAmounts.map(({ member, percentage, amount }, idx) => {
+                    {/* Cotraitants cards - EDITABLE */}
+                    {teamFeeDistribution.partnerAmounts.map(({ member, percentage, amount, hasChanged }, idx) => {
                       const bgColors = [
                         'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800',
                         'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800',
@@ -349,8 +447,9 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
                         <div 
                           key={member.id} 
                           className={cn(
-                            "flex items-center justify-between p-4 rounded-xl border",
-                            bgColors[idx % bgColors.length]
+                            "flex items-center justify-between p-4 rounded-xl border transition-all",
+                            bgColors[idx % bgColors.length],
+                            hasChanged && "ring-2 ring-primary/50"
                           )}
                         >
                           <div className="flex items-center gap-3">
@@ -360,15 +459,39 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
                                 {member.specialty && (
                                   <Badge variant="secondary" className="text-xs">{member.specialty}</Badge>
                                 )}
+                                {hasChanged && (
+                                  <Badge variant="default" className="text-xs bg-primary/80">Modifié</Badge>
+                                )}
                               </div>
                               <p className="font-medium">{member.company?.name || member.contact?.name || 'Partenaire'}</p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className={cn("text-2xl font-bold", textColors[idx % textColors.length])}>
-                              {formatCurrency(amount)}
-                            </p>
-                            <p className="text-sm text-muted-foreground">{percentage.toFixed(1)}% des honoraires</p>
+                          <div className="flex items-center gap-4">
+                            {/* Editable percentage input */}
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs text-muted-foreground sr-only">Pourcentage</Label>
+                              <div className="relative w-24">
+                                <Input
+                                  type="number"
+                                  value={memberFees[member.id] || '0'}
+                                  onChange={(e) => handleMemberFeeChange(member.id, e.target.value)}
+                                  step="0.5"
+                                  min="0"
+                                  max="100"
+                                  className={cn(
+                                    "pr-7 text-right font-medium h-9",
+                                    hasChanged && "border-primary"
+                                  )}
+                                  disabled={isUpdating}
+                                />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                              </div>
+                            </div>
+                            <div className="text-right min-w-[120px]">
+                              <p className={cn("text-xl font-bold", textColors[idx % textColors.length])}>
+                                {formatCurrency(amount)}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       );
@@ -378,8 +501,31 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
                     {teamFeeDistribution.partnerAmounts.length === 0 && (
                       <div className="text-center py-6 text-muted-foreground">
                         <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Aucun cotraitant avec pourcentage défini</p>
-                        <p className="text-xs">Ajoutez des membres dans l'onglet "Équipe confirmée"</p>
+                        <p className="text-sm">Aucun cotraitant dans l'équipe</p>
+                        <p className="text-xs">Ajoutez des cotraitants dans l'onglet "Équipe confirmée" pour répartir les honoraires</p>
+                      </div>
+                    )}
+
+                    {/* Save/Reset buttons */}
+                    {teamFeeDistribution.partnerAmounts.length > 0 && onUpdateMemberFee && (
+                      <div className="flex items-center justify-end gap-2 pt-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleResetFees}
+                          disabled={!hasUnsavedChanges || isUpdating}
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Annuler
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={handleSaveAllFees}
+                          disabled={!hasUnsavedChanges || teamFeeDistribution.isOverBudget || isUpdating}
+                        >
+                          <Save className="h-4 w-4 mr-2" />
+                          Enregistrer la répartition
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -441,7 +587,7 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
         <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
           <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
           <p className="text-xs text-blue-800 dark:text-blue-300">
-            Le pourcentage d'honoraires des cotraitants est défini dans leur fiche équipe et calculé sur la base des honoraires globaux MOE.
+            Modifiez les pourcentages de chaque cotraitant ci-dessus. Le mandataire reçoit automatiquement le pourcentage restant après déduction des cotraitants.
           </p>
         </div>
       </CardContent>
