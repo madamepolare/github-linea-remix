@@ -25,6 +25,7 @@ import {
   Building2,
   X,
 } from "lucide-react";
+import { CompanyLogoSearch } from "./CompanyLogoSearch";
 import { CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
@@ -248,12 +249,34 @@ export function CompanyInfoPanel({
               </div>
             )}
             <div>
-              <label className="text-xs text-muted-foreground">URL du logo</label>
-              <Input
-                value={editData.logo_url || ""}
-                onChange={(e) => onEditDataChange({ ...editData, logo_url: e.target.value })}
-                placeholder="https://..."
-              />
+              <label className="text-xs text-muted-foreground">Logo</label>
+              <div className="flex items-center gap-2 mt-1">
+                {editData.logo_url && (
+                  <div className="h-10 w-10 rounded-lg bg-white border overflow-hidden shrink-0">
+                    <img
+                      src={editData.logo_url}
+                      alt="Logo preview"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <Input
+                    value={editData.logo_url || ""}
+                    onChange={(e) => onEditDataChange({ ...editData, logo_url: e.target.value })}
+                    placeholder="https://..."
+                    className="text-xs"
+                  />
+                </div>
+              </div>
+              <div className="mt-2">
+                <CompanyLogoSearch
+                  companyName={company.name}
+                  website={editData.website || company.website}
+                  currentLogo={editData.logo_url || company.logo_url}
+                  onLogoFound={(url) => onEditDataChange({ ...editData, logo_url: url })}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
