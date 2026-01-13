@@ -37,8 +37,11 @@ import { QuoteMOETermsTab } from '@/components/commercial/quote-builder/QuoteMOE
 import { QuoteCommunicationTermsTab } from '@/components/commercial/quote-builder/QuoteCommunicationTermsTab';
 import { QuotePreviewPanel } from '@/components/commercial/quote-builder/QuotePreviewPanel';
 import { QuoteMOEPreviewPanel } from '@/components/commercial/quote-builder/QuoteMOEPreviewPanel';
+import { QuoteCommunicationPreviewPanel } from '@/components/commercial/quote-builder/QuoteCommunicationPreviewPanel';
 import { isArchitectureContractType, COMMUNICATION_CONTRACT_CODES, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
+import { generateQuotePDFSimple } from '@/lib/generateQuotePDFSimple';
+import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -66,6 +69,7 @@ export default function QuoteBuilder() {
   const documentType = searchParams.get('type') || 'quote';
   
   const { createDocument, updateDocument, getDocument, getDocumentPhases, createPhase, updatePhase, deletePhase } = useCommercialDocuments();
+  const { agencyInfo } = useAgencyInfo();
   
   // Use getDocument from the hook for existing documents
   const documentQuery = getDocument(isNew ? '' : (id || ''));
@@ -313,8 +317,21 @@ export default function QuoteBuilder() {
     }
   };
 
-  const handleDownloadPDF = () => {
-    toast.info('Génération PDF à venir');
+  const handleDownloadPDF = async () => {
+    try {
+      toast.info('Génération du PDF...');
+      const blob = await generateQuotePDFSimple(document, lines, agencyInfo);
+      const url = URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = `${document.document_type === 'quote' ? 'devis' : 'contrat'}-${document.document_number || 'brouillon'}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('PDF téléchargé');
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      toast.error('Erreur lors de la génération du PDF');
+    }
   };
 
   const handleBack = () => {
@@ -599,12 +616,27 @@ export default function QuoteBuilder() {
               </div>
             </div>
             <div className="flex-1 overflow-auto p-4">
-              {isArchitectureContractType(currentContractType?.code || document.project_type || '') ? (
-                <QuoteMOEPreviewPanel
-                  document={document}
-                  lines={lines}
-                  zoom={zoom / 100}
-                />
+              {/* Use document_type to determine preview: quote = simple, contract = PDF multi-page */}
+              {document.document_type === 'contract' ? (
+                isArchitectureContractType(currentContractType?.code || document.project_type || '') ? (
+                  <QuoteMOEPreviewPanel
+                    document={document}
+                    lines={lines}
+                    zoom={zoom / 100}
+                  />
+                ) : isCommunicationContractType(currentContractType?.code || '') ? (
+                  <QuoteCommunicationPreviewPanel
+                    document={document}
+                    lines={lines}
+                    zoom={zoom / 100}
+                  />
+                ) : (
+                  <QuotePreviewPanel
+                    document={document}
+                    lines={lines}
+                    zoom={zoom}
+                  />
+                )
               ) : (
                 <QuotePreviewPanel
                   document={document}
