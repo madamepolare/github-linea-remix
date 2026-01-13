@@ -54,26 +54,28 @@ export function QuoteFeesAndLinesTab({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Summary header */}
-      <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
-        <div className="text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 sm:p-4 bg-muted/30 rounded-lg border">
+        <div className="text-xs sm:text-sm text-muted-foreground">
           {lines.length} ligne{lines.length > 1 ? 's' : ''} • Budget: {formatCurrency(document.construction_budget || 0)}
         </div>
-        <div className="text-lg font-semibold">
+        <div className="text-base sm:text-lg font-semibold">
           Total HT: {formatCurrency(totals.total)}
         </div>
       </div>
 
       <Tabs value={activeSubTab} onValueChange={(v) => setActiveSubTab(v as 'fees' | 'lines')}>
-        <TabsList className="w-full grid grid-cols-2">
-          <TabsTrigger value="fees" className="gap-2">
-            <Calculator className="h-4 w-4" />
-            Répartition %
+        <TabsList className="w-full grid grid-cols-2 h-9 sm:h-10">
+          <TabsTrigger value="fees" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+            <Calculator className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Répartition %</span>
+            <span className="xs:hidden">%</span>
           </TabsTrigger>
-          <TabsTrigger value="lines" className="gap-2">
-            <List className="h-4 w-4" />
-            Lignes détaillées
+          <TabsTrigger value="lines" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+            <List className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Lignes détaillées</span>
+            <span className="xs:hidden">Lignes</span>
           </TabsTrigger>
         </TabsList>
 

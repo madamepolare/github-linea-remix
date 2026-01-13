@@ -198,22 +198,33 @@ export function QuoteLinesEditor({
   const allPricingItems = activePricingGrids.flatMap(grid => (grid.items || []).map((item: any) => ({ name: item.name, unit_price: item.unit_price, unit: item.unit })));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Tabs defaultValue="manual" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="manual" className="gap-2"><List className="h-4 w-4" />Manuel</TabsTrigger>
-          <TabsTrigger value="ai" className="gap-2"><Sparkles className="h-4 w-4" />Génération IA</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 h-9 sm:h-10">
+          <TabsTrigger value="manual" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+            <List className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Manuel</span>
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+            <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Génération IA</span>
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="ai" className="mt-4">
+        <TabsContent value="ai" className="mt-3 sm:mt-4">
           <AIQuoteGenerator document={document} existingLines={lines} onLinesGenerated={onLinesChange} onDocumentChange={onDocumentChange} pricingItems={allPricingItems} />
         </TabsContent>
 
-        <TabsContent value="manual" className="mt-4 space-y-4">
+        <TabsContent value="manual" className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
           <div className="flex items-center gap-2">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Ajouter</Button></DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="h-8 sm:h-9 text-xs sm:text-sm">
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  Ajouter
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 sm:w-64">
                 <DropdownMenuItem onClick={addGroup}><FolderPlus className="h-4 w-4 mr-2" />Nouveau groupe</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => addLine('service')}><Package className="h-4 w-4 mr-2" />Ligne libre</DropdownMenuItem>
@@ -231,7 +242,7 @@ export function QuoteLinesEditor({
       </Tabs>
 
       {lines.length === 0 ? (
-        <Card><CardContent className="py-12 text-center"><FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" /><p className="text-muted-foreground">Aucune ligne dans ce devis</p></CardContent></Card>
+        <Card><CardContent className="py-8 sm:py-12 text-center"><FileText className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" /><p className="text-sm sm:text-base text-muted-foreground">Aucune ligne dans ce devis</p></CardContent></Card>
       ) : (
         <div className="space-y-2">
           {groups.map((group) => {
@@ -240,22 +251,22 @@ export function QuoteLinesEditor({
             return (
               <Collapsible key={group.id} open={isGroupExpanded}>
                 <div className={`border-2 rounded-lg ${LINE_TYPE_COLORS.group}`}>
-                  <div className="flex items-center gap-2 p-3 bg-muted/30">
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                    <Folder className="h-4 w-4 text-slate-600" />
-                    <Input value={group.phase_name} onChange={(e) => updateLine(group.id, { phase_name: e.target.value })} className="flex-1 h-9 font-medium" placeholder="Nom du groupe..." />
-                    <Badge variant="secondary">{groupLines.length} ligne{groupLines.length > 1 ? 's' : ''}</Badge>
-                    <span className="font-medium min-w-[100px] text-right">{formatCurrency(getGroupSubtotal(group.id))}</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteLine(group.id)}><Trash2 className="h-4 w-4" /></Button>
-                    <CollapsibleTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleGroupExpanded(group.id)}>{isGroupExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</Button></CollapsibleTrigger>
+                  <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-muted/30 flex-wrap sm:flex-nowrap">
+                    <GripVertical className="h-4 w-4 text-muted-foreground hidden sm:block" />
+                    <Folder className="h-4 w-4 text-slate-600 shrink-0" />
+                    <Input value={group.phase_name} onChange={(e) => updateLine(group.id, { phase_name: e.target.value })} className="flex-1 h-8 sm:h-9 font-medium text-sm min-w-[120px]" placeholder="Nom du groupe..." />
+                    <Badge variant="secondary" className="text-xs shrink-0">{groupLines.length}</Badge>
+                    <span className="font-medium text-sm min-w-[80px] sm:min-w-[100px] text-right shrink-0">{formatCurrency(getGroupSubtotal(group.id))}</span>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-destructive shrink-0" onClick={() => deleteLine(group.id)}><Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></Button>
+                    <CollapsibleTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => toggleGroupExpanded(group.id)}>{isGroupExpanded ? <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}</Button></CollapsibleTrigger>
                   </div>
                   <CollapsibleContent>
                     <div className="p-2 space-y-2">
-                      {groupLines.length === 0 ? <div className="text-center py-4 text-sm text-muted-foreground">Aucune ligne</div> : groupLines.map((line, index) => (
+                      {groupLines.length === 0 ? <div className="text-center py-3 sm:py-4 text-xs sm:text-sm text-muted-foreground">Aucune ligne</div> : groupLines.map((line, index) => (
                         <QuoteLineItemCompact key={line.id} line={line} index={index} isInGroup={true} groups={groups} isExpanded={expandedLines.has(line.id)} draggedIndex={draggedIndex} teamMembers={teamMembers} document={document} toggleExpanded={toggleExpanded} updateLine={updateLine} duplicateLine={duplicateLine} deleteLine={deleteLine} assignToGroup={assignToGroup} handleDragStart={handleDragStart} handleDragOver={handleDragOver} handleDragEnd={handleDragEnd} formatCurrency={formatCurrency} />
                       ))}
-                      <Button variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={() => addLine('service', group.id)}><Plus className="h-4 w-4 mr-2" />Ajouter une ligne</Button>
-                      {groupLines.length > 0 && <Card className="bg-slate-50 border-slate-200"><CardContent className="py-2 px-4"><div className="flex justify-between text-sm"><span className="text-muted-foreground font-medium">Sous-total {group.phase_name}</span><span className="font-semibold">{formatCurrency(getGroupSubtotal(group.id))}</span></div></CardContent></Card>}
+                      <Button variant="ghost" size="sm" className="w-full text-muted-foreground text-xs sm:text-sm h-8" onClick={() => addLine('service', group.id)}><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />Ajouter une ligne</Button>
+                      {groupLines.length > 0 && <Card className="bg-slate-50 border-slate-200"><CardContent className="py-2 px-3 sm:px-4"><div className="flex justify-between text-xs sm:text-sm"><span className="text-muted-foreground font-medium truncate mr-2">Sous-total {group.phase_name}</span><span className="font-semibold shrink-0">{formatCurrency(getGroupSubtotal(group.id))}</span></div></CardContent></Card>}
                     </div>
                   </CollapsibleContent>
                 </div>
@@ -273,15 +284,15 @@ export function QuoteLinesEditor({
           {/* Résumé des marges - conditionnel */}
           {features.showMarginSummary && <QuoteMarginSummary lines={lines} />}
           
-          <Card><CardContent className="py-4">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Sous-total</span><span>{formatCurrency(subtotal)}</span></div>
-              {totalDiscount > 0 && <div className="flex justify-between text-sm text-red-600"><span>Remises</span><span>-{formatCurrency(totalDiscount)}</span></div>}
+          <Card><CardContent className="py-3 sm:py-4 px-3 sm:px-6">
+            <div className="space-y-1.5 sm:space-y-2">
+              <div className="flex justify-between text-xs sm:text-sm"><span className="text-muted-foreground">Sous-total</span><span>{formatCurrency(subtotal)}</span></div>
+              {totalDiscount > 0 && <div className="flex justify-between text-xs sm:text-sm text-red-600"><span>Remises</span><span>-{formatCurrency(totalDiscount)}</span></div>}
               <Separator />
-              <div className="flex justify-between font-medium"><span>Total HT</span><span>{formatCurrency(totalHT)}</span></div>
-              <div className="flex justify-between text-sm text-muted-foreground"><span>TVA (20%)</span><span>{formatCurrency(tva)}</span></div>
+              <div className="flex justify-between font-medium text-sm sm:text-base"><span>Total HT</span><span>{formatCurrency(totalHT)}</span></div>
+              <div className="flex justify-between text-xs sm:text-sm text-muted-foreground"><span>TVA (20%)</span><span>{formatCurrency(tva)}</span></div>
               <Separator />
-              <div className="flex justify-between text-lg font-semibold"><span>Total TTC</span><span>{formatCurrency(totalTTC)}</span></div>
+              <div className="flex justify-between text-base sm:text-lg font-semibold"><span>Total TTC</span><span>{formatCurrency(totalTTC)}</span></div>
             </div>
           </CardContent></Card>
         </>
