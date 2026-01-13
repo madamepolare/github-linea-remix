@@ -78,7 +78,7 @@ export default function Auth() {
       }
       // Otherwise check if onboarding is completed
       if (profile?.onboarding_completed) {
-        navigate("/");
+        navigate("/dashboard");
       } else {
         navigate("/onboarding");
       }

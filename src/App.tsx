@@ -78,7 +78,8 @@ const App = () => (
           <ScrollToTop />
           <AuthProvider>
               <Routes>
-                {/* Public routes (no layout) */}
+              {/* Public routes (no layout) */}
+                <Route path="/" element={<Suspense fallback={<PageLoader />}><Welcome /></Suspense>} />
                 <Route path="/welcome" element={<Suspense fallback={<PageLoader />}><Welcome /></Suspense>} />
                 <Route path="/modules/:slug" element={<Suspense fallback={<PageLoader />}><ModuleDetail /></Suspense>} />
                 <Route path="/solutions/:slug" element={<Suspense fallback={<PageLoader />}><SolutionDetail /></Suspense>} />
@@ -104,7 +105,7 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 >
-                  <Route path="/" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
+                  <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
                   <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
                   <Route path="/crm" element={<Suspense fallback={<PageLoader />}><CRM /></Suspense>} />
                   <Route path="/crm/:section" element={<Suspense fallback={<PageLoader />}><CRM /></Suspense>} />

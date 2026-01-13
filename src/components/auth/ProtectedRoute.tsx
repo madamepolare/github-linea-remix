@@ -20,7 +20,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    // If trying to access protected route, redirect to auth
+    // But if coming from root, don't pass state (it's the public homepage now)
+    const fromState = location.pathname === "/" ? undefined : { from: location };
+    return <Navigate to="/auth" state={fromState} replace />;
   }
 
   // Redirect to onboarding if not completed

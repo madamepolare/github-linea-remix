@@ -76,7 +76,7 @@ export default function AcceptInvite() {
                 title: "Déjà membre",
                 description: `Vous êtes déjà membre de ${result.workspace_name}`,
               });
-              navigate("/");
+              navigate("/dashboard");
             } else if (result?.success) {
               toast({
                 title: "Bienvenue dans l'équipe !",
@@ -177,7 +177,7 @@ export default function AcceptInvite() {
           title: "Déjà membre",
           description: `Vous êtes déjà membre de ${result.workspace_name}`,
         });
-        navigate("/");
+        navigate("/dashboard");
       } else {
         toast({
           title: "Bienvenue dans l'équipe !",
@@ -199,7 +199,7 @@ export default function AcceptInvite() {
   };
 
   const handleDecline = () => {
-    navigate("/");
+    navigate("/dashboard");
   };
 
   if (isLoading || authLoading) {
@@ -280,7 +280,7 @@ export default function AcceptInvite() {
               </div>
               <h2 className="text-xl font-semibold mb-2">Invalid Invitation</h2>
               <p className="text-muted-foreground mb-6">{error}</p>
-              <Button onClick={() => navigate("/")} variant="outline" className="w-full">
+              <Button onClick={() => navigate("/dashboard")} variant="outline" className="w-full">
                 Go to Dashboard
               </Button>
             </CardContent>

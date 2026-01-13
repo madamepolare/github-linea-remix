@@ -105,7 +105,7 @@ export default function Onboarding() {
         return;
       }
       if (profile?.onboarding_completed) {
-        navigate("/");
+        navigate("/dashboard");
         return;
       }
       // If user is already a member of a workspace (invited), skip to step 2
@@ -219,7 +219,7 @@ export default function Onboarding() {
   };
 
   const handleComplete = () => {
-    navigate("/");
+    navigate("/dashboard");
   };
 
   if (loading) {
