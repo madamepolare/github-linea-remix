@@ -5,17 +5,14 @@ import {
   Moon,
   CheckCircle2,
   Clock,
-  AlertTriangle,
   Sparkles,
-  ListChecks,
-  CalendarCheck,
   ChevronDown,
   ChevronUp,
+  Star,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { THIN_STROKE } from "@/components/ui/icon";
 import { useTodayData } from "@/hooks/useTodayData";
@@ -28,7 +25,6 @@ import { DayQualityVote } from "./DayQualityVote";
 import { QuickTimeEntry } from "./QuickTimeEntry";
 import { useQueryClient } from "@tanstack/react-query";
 
-// Recommended hours - warning only, not blocking
 const RECOMMENDED_HOURS = 7;
 
 export function CheckOutModal() {
@@ -45,43 +41,34 @@ export function CheckOutModal() {
 
   const firstName = profile?.full_name?.split(" ")[0] || "Vous";
 
-  // Refetch time entries after adding
   const handleTimeAdded = () => {
     queryClient.invalidateQueries({ queryKey: ["team-time-entries"] });
   };
 
-  // Calculate stats
   const stats = useMemo(() => {
     const completedTasks = todayData.todaySchedules.filter(
       (s) => s.task?.status === "done"
     ).length;
     const totalTasks = todayData.todaySchedules.length;
-    const totalEvents = todayData.todayEvents.length;
     const timeLoggedHours = Math.round((todayData.totalTimeLoggedMinutes / 60) * 10) / 10;
     const recommendedMinutes = RECOMMENDED_HOURS * 60;
-    const timeProgress = Math.min((todayData.totalTimeLoggedMinutes / recommendedMinutes) * 100, 100);
     const missingMinutes = Math.max(0, recommendedMinutes - todayData.totalTimeLoggedMinutes);
-    
-    // Warning if less than recommended, but never blocking
     const hasTimeWarning = todayData.totalTimeLoggedMinutes < recommendedMinutes;
 
     return {
       completedTasks,
       totalTasks,
-      totalEvents,
       timeLoggedHours,
-      timeProgress,
       missingMinutes,
       hasTimeWarning,
     };
   }, [todayData]);
 
-  // Can checkout if day quality is set (time is just a warning, not blocking)
   const canCheckout = dayQuality !== null;
 
   const handleCheckout = async () => {
     if (!dayQuality) {
-      toast.error("Veuillez noter votre journée");
+      toast.error("Note ta journée pour continuer");
       return;
     }
 
@@ -93,16 +80,15 @@ export function CheckOutModal() {
         time_entries_validated: true,
       });
 
-      // Celebration confetti!
       confetti({
-        particleCount: 150,
-        spread: 100,
-        origin: { y: 0.6 },
-        colors: ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981"],
+        particleCount: 100,
+        spread: 80,
+        origin: { y: 0.7 },
+        colors: ["#8b5cf6", "#a78bfa", "#c4b5fd"],
       });
 
-      toast.success("Bonne soirée ! À demain 🌙");
-      setTimeout(() => closeCheckout(), 500);
+      toast.success("Bonne soirée ! 🌙");
+      setTimeout(() => closeCheckout(), 400);
     } catch (error) {
       toast.error("Erreur lors du check-out");
     } finally {
@@ -118,150 +104,135 @@ export function CheckOutModal() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] bg-gradient-to-br from-background via-background to-purple-500/5"
+        className="fixed inset-0 z-[100] bg-gradient-to-br from-violet-50/90 via-background to-purple-50/50 dark:from-violet-950/30 dark:via-background dark:to-purple-950/20"
       >
-        {/* Animated stars background */}
+        {/* Stars animation */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(30)].map((_, i) => (
+          {[...Array(20)].map((_, i) => (
             <motion.div
               key={i}
-              className="absolute w-1 h-1 rounded-full bg-purple-400/30"
-              initial={{
-                x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
-                y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
+              className="absolute"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 60}%`,
               }}
               animate={{
-                opacity: [0.2, 0.8, 0.2],
-                scale: [1, 1.5, 1],
+                opacity: [0.2, 0.7, 0.2],
+                scale: [0.8, 1.2, 0.8],
               }}
               transition={{
                 duration: 2 + Math.random() * 2,
                 repeat: Infinity,
                 delay: Math.random() * 2,
               }}
-            />
+            >
+              <Star className="h-2 w-2 text-purple-400/50 fill-purple-400/30" />
+            </motion.div>
           ))}
         </div>
 
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col max-w-2xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between p-6">
-            <div />
+          <div className="flex items-center justify-end p-4">
             <Button
               variant="ghost"
               size="icon"
               onClick={closeCheckout}
-              className="h-10 w-10 rounded-full"
+              className="h-9 w-9 rounded-full hover:bg-purple-100 dark:hover:bg-purple-900/30"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Content */}
-          <ScrollArea className="flex-1 px-6">
-            <div className="max-w-3xl mx-auto pb-8 space-y-8">
-              {/* Welcome header */}
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <div className="space-y-5">
+              {/* Welcome */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="text-center space-y-2"
+                className="text-center pt-2 pb-4"
               >
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <motion.div
-                    animate={{ rotate: [0, 5, -5, 0] }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                  >
-                    <Moon className="h-12 w-12 text-purple-500" />
-                  </motion.div>
-                </div>
-                <h1 className="text-4xl font-bold">
+                <motion.div
+                  animate={{ rotate: [0, 5, -5, 0] }}
+                  transition={{ duration: 4, repeat: Infinity }}
+                  className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 mb-4 shadow-lg shadow-purple-500/30"
+                >
+                  <Moon className="h-8 w-8 text-white" />
+                </motion.div>
+                <h1 className="text-2xl font-bold text-foreground">
                   Fin de journée, {firstName}
                 </h1>
-                <p className="text-xl text-muted-foreground">
-                  Tu as travaillé sur {stats.totalTasks} tâche{stats.totalTasks > 1 ? "s" : ""} aujourd'hui
+                <p className="text-sm text-muted-foreground mt-1">
+                  Bravo pour le travail accompli
                 </p>
               </motion.div>
 
-              {/* Day recap */}
+              {/* Quick stats */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-card border border-border rounded-2xl p-6 shadow-lg"
+                transition={{ delay: 0.1 }}
+                className="grid grid-cols-2 gap-3"
               >
-                <div className="flex items-center gap-2 mb-4">
-                  <ListChecks className="h-5 w-5 text-primary" strokeWidth={THIN_STROKE} />
-                  <h2 className="font-semibold text-lg">Récapitulatif du jour</h2>
+                <div className="bg-card border rounded-xl p-4 text-center">
+                  <div className="flex items-center justify-center gap-1.5 mb-1">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <span className="text-xl font-bold text-green-600 dark:text-green-400">
+                      {stats.completedTasks}/{stats.totalTasks}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">tâches terminées</div>
                 </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="text-center p-4 rounded-xl bg-green-50 dark:bg-green-900/20">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {stats.completedTasks}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      tâche{stats.completedTasks > 1 ? "s" : ""} terminée{stats.completedTasks > 1 ? "s" : ""}
-                    </p>
-                  </div>
-
-                  <div className="text-center p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                <div className={cn(
+                  "bg-card border rounded-xl p-4 text-center",
+                  stats.hasTimeWarning && "border-amber-300 dark:border-amber-700"
+                )}>
+                  <div className="flex items-center justify-center gap-1.5 mb-1">
+                    <Clock className={cn("h-4 w-4", stats.hasTimeWarning ? "text-amber-500" : "text-blue-500")} />
+                    <span className={cn(
+                      "text-xl font-bold",
+                      stats.hasTimeWarning ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"
+                    )}>
                       {stats.timeLoggedHours}h
-                    </p>
-                    <p className="text-xs text-muted-foreground">temps saisi</p>
+                    </span>
                   </div>
-
-                  <div className="text-center p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                      <CalendarCheck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                      {stats.totalEvents}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      réunion{stats.totalEvents > 1 ? "s" : ""}
-                    </p>
+                  <div className="text-xs text-muted-foreground">
+                    {stats.hasTimeWarning ? `/ ${RECOMMENDED_HOURS}h recommandées` : "temps saisi"}
                   </div>
                 </div>
               </motion.div>
 
-              {/* Quick Time Entry - Always visible for easy access */}
+              {/* Quick Time Entry */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
+                transition={{ delay: 0.15 }}
                 className={cn(
-                  "bg-card border rounded-2xl p-6 shadow-lg",
-                  stats.hasTimeWarning ? "border-amber-300 dark:border-amber-700" : "border-border"
+                  "bg-card border rounded-xl overflow-hidden",
+                  stats.hasTimeWarning ? "border-amber-300 dark:border-amber-700" : ""
                 )}
               >
                 <button
                   onClick={() => setShowQuickEntry(!showQuickEntry)}
-                  className="w-full flex items-center justify-between"
+                  className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <Clock className={cn(
-                      "h-5 w-5",
+                    <Zap className={cn(
+                      "h-4 w-4",
                       stats.hasTimeWarning ? "text-amber-500" : "text-blue-500"
-                    )} strokeWidth={THIN_STROKE} />
-                    <h2 className="font-semibold text-lg">Saisie rapide des temps</h2>
-                    {stats.hasTimeWarning && (
-                      <span className="text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">
-                        {stats.timeLoggedHours}h / {RECOMMENDED_HOURS}h
-                      </span>
-                    )}
+                    )} />
+                    <span className="font-medium text-sm">
+                      {stats.hasTimeWarning 
+                        ? `Compléter les temps (${Math.floor(stats.missingMinutes / 60)}h manquantes)`
+                        : "Saisie rapide des temps"
+                      }
+                    </span>
                   </div>
                   {showQuickEntry ? (
-                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   )}
                 </button>
 
@@ -271,103 +242,74 @@ export function CheckOutModal() {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
+                      className="overflow-hidden border-t"
                     >
-                      <div className="pt-4">
+                      <div className="p-4">
                         <QuickTimeEntry onEntryAdded={handleTimeAdded} />
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
-
-                {!showQuickEntry && (
-                  <p className={cn(
-                    "text-sm mt-2",
-                    stats.hasTimeWarning ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
-                  )}>
-                    {stats.hasTimeWarning 
-                      ? `Il manque ~${Math.floor(stats.missingMinutes / 60)}h. Clique pour compléter.`
-                      : "Clique pour ajouter rapidement tes temps de la journée"
-                    }
-                  </p>
-                )}
               </motion.div>
 
-              {/* Day quality vote */}
+              {/* Day quality - compact */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-card border border-border rounded-2xl p-6 shadow-lg"
+                transition={{ delay: 0.2 }}
+                className="bg-card border rounded-xl p-4"
               >
-                <div className="flex items-center gap-2 mb-6">
-                  <Sparkles className="h-5 w-5 text-purple-500" strokeWidth={THIN_STROKE} />
-                  <h2 className="font-semibold text-lg">Comment était ta journée ?</h2>
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="h-4 w-4 text-purple-500" strokeWidth={THIN_STROKE} />
+                  <span className="font-medium text-sm">Comment était ta journée ?</span>
                 </div>
-
                 <DayQualityVote value={dayQuality} onChange={setDayQuality} />
-
-                {!dayQuality && (
-                  <p className="text-sm text-muted-foreground text-center mt-4">
-                    Choisis une émotion pour continuer
-                  </p>
-                )}
               </motion.div>
 
               {/* Tomorrow notes */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="space-y-2"
+                transition={{ delay: 0.25 }}
               >
-                <label className="text-sm text-muted-foreground">
-                  Une note pour demain ? (optionnel)
-                </label>
                 <Textarea
                   value={tomorrowNotes}
                   onChange={(e) => setTomorrowNotes(e.target.value)}
-                  placeholder="Ce que tu dois absolument penser à faire demain..."
-                  className="resize-none"
-                  rows={2}
+                  placeholder="Une note pour demain ? (optionnel)"
+                  className="resize-none text-sm h-16"
                 />
               </motion.div>
 
-              {/* CTA Button */}
+              {/* CTA */}
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.6 }}
-                className="flex justify-center pt-4"
+                transition={{ delay: 0.3 }}
+                className="pt-2"
               >
                 <Button
                   size="lg"
                   onClick={handleCheckout}
                   disabled={!canCheckout || isSubmitting}
                   className={cn(
-                    "gap-3 h-14 px-10 text-lg rounded-full transition-all",
+                    "w-full h-12 gap-2 text-base rounded-xl transition-all",
                     canCheckout
-                      ? "shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/30"
-                      : "opacity-50"
+                      ? "bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 shadow-lg shadow-purple-500/25"
+                      : "bg-muted text-muted-foreground"
                   )}
                 >
                   <Moon className="h-5 w-5" />
                   Bonne soirée !
                   <Sparkles className="h-5 w-5" />
                 </Button>
+                {!canCheckout && (
+                  <p className="text-xs text-center text-muted-foreground mt-2">
+                    Note ta journée pour continuer
+                  </p>
+                )}
               </motion.div>
-
-              {!canCheckout && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-center text-sm text-muted-foreground"
-                >
-                  Note ta journée pour continuer
-                </motion.p>
-              )}
             </div>
-          </ScrollArea>
+          </div>
         </div>
       </motion.div>
     </AnimatePresence>
