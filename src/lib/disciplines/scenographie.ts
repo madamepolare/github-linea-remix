@@ -40,6 +40,41 @@ export const SCENOGRAPHIE_DISCIPLINE: DisciplineDefinition = {
   
   // === Configuration Tenders ===
   tenders: {
+    // === ONGLETS SCÉNOGRAPHIE ===
+    tabs: [
+      { key: 'synthese', label: 'Synthèse', icon: 'LayoutDashboard', component: 'TenderSyntheseTab', visible: true, order: 1 },
+      { key: 'equipe', label: 'Équipe & Budget', icon: 'Users', component: 'TenderEquipeTab', visible: true, order: 2 },
+      { key: 'calendrier', label: 'Calendrier', icon: 'Calendar', component: 'TenderCalendarTab', visible: true, order: 3 },
+      { key: 'tasks', label: 'Tâches', icon: 'CheckSquare', component: 'EntityTasksList', visible: true, order: 4 },
+      { key: 'documents', label: 'DCE', icon: 'FolderOpen', component: 'TenderDocumentsTab', visible: true, order: 5 },
+      { key: 'emails', label: 'Emails', icon: 'Mail', component: 'EntityEmailsTab', visible: true, order: 6 },
+      { key: 'livrables', label: 'Livrables', icon: 'ListTodo', component: 'TenderLivrablesTab', visible: true, order: 7 },
+      { key: 'memoire', label: 'Note d\'intention', icon: 'PenTool', component: 'TenderMemoireTab', visible: true, order: 8 },
+    ],
+    
+    // === BLOCS SYNTHÈSE SCÉNOGRAPHIE ===
+    synthesisBlocks: [
+      { key: 'exposition', label: 'Exposition', component: 'ExpositionBlock', visible: true, order: 1 },
+      { key: 'budget', label: 'Budget', component: 'BudgetBlock', visible: true, order: 2 },
+      { key: 'surface', label: 'Surface & Espaces', component: 'SurfaceBlock', visible: true, order: 3 },
+      { key: 'itinerance', label: 'Itinérance', component: 'ItineranceBlock', visible: true, order: 4 },
+      { key: 'contraintes', label: 'Contraintes', component: 'ContraintesBlock', visible: true, order: 5 },
+      { key: 'criteres', label: 'Critères', component: 'CriteresBlock', visible: true, order: 6 },
+      { key: 'equipe_requise', label: 'Équipe requise', component: 'EquipeRequisBlock', visible: true, order: 7 },
+      { key: 'visite', label: 'Visite', component: 'VisiteBlock', visible: true, order: 8 },
+    ],
+    
+    // === SECTIONS FORMULAIRE SCÉNOGRAPHIE ===
+    formSections: [
+      { key: 'general', label: 'Informations générales', fields: ['title', 'reference', 'description'], visible: true, order: 1 },
+      { key: 'client', label: 'Commanditaire', fields: ['client_name', 'client_type', 'commissaire_exposition'], visible: true, order: 2 },
+      { key: 'exposition', label: 'Exposition', fields: ['lieu_exposition', 'type_exposition', 'thematique_exposition', 'surface_exposition', 'duree_exposition_mois', 'date_vernissage'], visible: true, order: 3 },
+      { key: 'programme', label: 'Programme', fields: ['oeuvres_estimees', 'dispositifs_multimedia', 'parcours_type'], visible: true, order: 4 },
+      { key: 'contraintes', label: 'Contraintes', fields: ['contraintes_conservation', 'accessibilite_requise', 'itinerance', 'contraintes_patrimoniales'], visible: true, order: 5 },
+      { key: 'financial', label: 'Budget', fields: ['estimated_budget', 'budget_multimedia', 'budget_graphisme'], visible: true, order: 6 },
+      { key: 'dates', label: 'Dates', fields: ['submission_deadline', 'site_visit_date', 'jury_date', 'date_vernissage'], visible: true, order: 7 },
+    ],
+    
     teamSpecialties: [
       { value: 'scenographe', label: 'Scénographe', category: 'creation' },
       { value: 'graphiste', label: 'Graphiste', category: 'creation' },

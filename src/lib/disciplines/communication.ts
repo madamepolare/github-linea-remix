@@ -40,6 +40,40 @@ export const COMMUNICATION_DISCIPLINE: DisciplineDefinition = {
   
   // === Configuration Tenders ===
   tenders: {
+    // === ONGLETS COMMUNICATION (pas d'honoraires MOE!) ===
+    tabs: [
+      { key: 'synthese', label: 'Synthèse', icon: 'LayoutDashboard', component: 'TenderSyntheseTab', visible: true, order: 1 },
+      { key: 'budget', label: 'Budget & Accord-cadre', icon: 'Euro', component: 'TenderBudgetCommTab', visible: true, order: 2 },
+      { key: 'cas_pratique', label: 'Cas pratique', icon: 'Lightbulb', component: 'TenderCasPratiqueTab', visible: true, order: 3 },
+      { key: 'calendrier', label: 'Calendrier', icon: 'Calendar', component: 'TenderCalendarTab', visible: true, order: 4 },
+      { key: 'tasks', label: 'Tâches', icon: 'CheckSquare', component: 'EntityTasksList', visible: true, order: 5 },
+      { key: 'documents', label: 'DCE', icon: 'FolderOpen', component: 'TenderDocumentsTab', visible: true, order: 6 },
+      { key: 'emails', label: 'Emails', icon: 'Mail', component: 'EntityEmailsTab', visible: true, order: 7 },
+      { key: 'livrables', label: 'Livrables', icon: 'ListTodo', component: 'TenderLivrablesTab', visible: true, order: 8 },
+      { key: 'memoire', label: 'Recommandation', icon: 'PenTool', component: 'TenderMemoireTab', visible: true, order: 9 },
+    ],
+    
+    // === BLOCS SYNTHÈSE COMMUNICATION (différent d'archi!) ===
+    synthesisBlocks: [
+      { key: 'accord_cadre', label: 'Accord-cadre', component: 'AccordCadreBlock', visible: true, order: 1 },
+      { key: 'lots', label: 'Lots', component: 'LotsBlock', visible: true, order: 2 },
+      { key: 'cas_pratique', label: 'Cas pratique', component: 'CasPratiqueBlock', visible: true, order: 3 },
+      { key: 'audition', label: 'Audition', component: 'AuditionBlock', visible: true, order: 4 },
+      { key: 'criteres', label: 'Critères', component: 'CriteresBlock', visible: true, order: 5 },
+      { key: 'equipe_requise', label: 'Équipe requise', component: 'EquipeRequisBlock', visible: true, order: 6 },
+      { key: 'anciens_titulaires', label: 'Sortants', component: 'AnciensTitulairesBlock', visible: true, order: 7 },
+    ],
+    
+    // === SECTIONS FORMULAIRE COMMUNICATION ===
+    formSections: [
+      { key: 'general', label: 'Informations générales', fields: ['title', 'reference', 'description', 'type_campagne', 'cibles'], visible: true, order: 1 },
+      { key: 'client', label: 'Annonceur', fields: ['client_name', 'client_type', 'client_address', 'client_contact_name', 'client_contact_email'], visible: true, order: 2 },
+      { key: 'accord_cadre', label: 'Accord-cadre', fields: ['montant_minimum', 'montant_maximum', 'duree_initiale_mois', 'nb_reconductions', 'is_multi_attributaire', 'nb_attributaires'], visible: true, order: 3 },
+      { key: 'cas_pratique', label: 'Cas pratique', fields: ['cas_pratique_requis', 'cas_pratique_brief', 'cas_pratique_delai'], visible: true, order: 4 },
+      { key: 'procedure', label: 'Procédure', fields: ['procedure_type', 'submission_type', 'validite_offre_jours'], visible: true, order: 5 },
+      { key: 'dates', label: 'Dates', fields: ['submission_deadline', 'candidature_deadline', 'audition_date', 'results_date'], visible: true, order: 6 },
+    ],
+    
     teamSpecialties: [
       { value: 'directeur_conseil', label: 'Directeur conseil', category: 'direction' },
       { value: 'directeur_creation', label: 'Directeur de création', category: 'direction' },

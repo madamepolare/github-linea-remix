@@ -22,6 +22,9 @@ import type {
   DisciplineMetricDef,
   DisciplinePhase,
   DisciplineProjectType,
+  TenderTabDef,
+  TenderSynthesisBlockDef,
+  TenderSectionDef,
 } from "./types";
 
 // Export des configurations individuelles
@@ -54,6 +57,9 @@ export type {
   DisciplineMetricDef,
   DisciplinePhase,
   DisciplineProjectType,
+  TenderTabDef,
+  TenderSynthesisBlockDef,
+  TenderSectionDef,
 };
 
 // ============================================

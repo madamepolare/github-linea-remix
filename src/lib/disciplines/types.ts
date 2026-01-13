@@ -126,38 +126,71 @@ export interface DisciplineAIPrompts {
 }
 
 // ============================================
+// Configuration des onglets Tender
+// ============================================
+
+export interface TenderTabDef {
+  key: string;
+  label: string;
+  icon: string; // nom de l'icône Lucide
+  component: string; // nom du composant à rendre
+  visible: boolean;
+  order: number;
+}
+
+export interface TenderSectionDef {
+  key: string;
+  label: string;
+  fields: string[]; // champs à afficher dans cette section
+  visible: boolean;
+  order: number;
+}
+
+// Pour la page de synthèse : quels blocs afficher
+export interface TenderSynthesisBlockDef {
+  key: string;
+  label: string;
+  component: string; // 'budget' | 'honoraires' | 'accord_cadre' | 'exposition' | etc.
+  visible: boolean;
+  order: number;
+}
+
+// ============================================
 // Configuration Tender complète
 // ============================================
 
 export interface TenderConfig {
-  // Spécialités d'équipe
+  // === ONGLETS ===
+  tabs: TenderTabDef[];
+  
+  // === BLOCS SYNTHÈSE ===
+  synthesisBlocks: TenderSynthesisBlockDef[];
+  
+  // === SECTIONS FORMULAIRE ===
+  formSections: TenderSectionDef[];
+  
+  // === ÉQUIPE ===
   teamSpecialties: TeamSpecialty[];
-  
-  // Documents requis
-  requiredDocuments: RequiredDocuments;
-  
-  // Types de critères
-  criterionTypes: CriterionTypeDef[];
-  
-  // Sections mémoire technique
-  memoireSections: MemoireSectionDef[];
-  
-  // Types de clients
-  clientTypes: ClientTypeDef[];
-  
-  // Types de procédures
-  procedureTypes: ProcedureTypeDef[];
-  
-  // Rôles d'équipe
   teamRoles: TeamRoleDef[];
   
-  // Champs spécifiques à la discipline
+  // === DOCUMENTS ===
+  requiredDocuments: RequiredDocuments;
+  
+  // === CRITÈRES & PROCÉDURES ===
+  criterionTypes: CriterionTypeDef[];
+  clientTypes: ClientTypeDef[];
+  procedureTypes: ProcedureTypeDef[];
+  
+  // === MÉMOIRE TECHNIQUE ===
+  memoireSections: MemoireSectionDef[];
+  
+  // === CHAMPS SPÉCIFIQUES ===
   specificFields: DisciplineFieldDef[];
   
-  // Métriques affichées sur la synthèse
+  // === MÉTRIQUES SYNTHÈSE ===
   keyMetrics: DisciplineMetricDef[];
   
-  // Prompts IA
+  // === IA ===
   aiPrompts: DisciplineAIPrompts;
 }
 
