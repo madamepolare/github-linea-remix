@@ -49,7 +49,7 @@ export interface CRMCompanyTableProps {
 export function CRMCompanyTable({ category = "all", search = "", onCreateCompany }: CRMCompanyTableProps) {
   const navigate = useNavigate();
   const { companies, allCompanies, isLoading, deleteCompany, updateCompany, statsByCategory } = useCRMCompanies({ category, search });
-  const { companyCategories, getCompanyTypeShortLabel, getCompanyTypeColor, getCategoryFromType } = useCRMSettings();
+  const { companyCategories, companyTypes, getCategoryFromType } = useCRMSettings();
   
   const [letterFilter, setLetterFilter] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -306,8 +306,11 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                 </TableHeader>
                 <TableBody>
                   {filteredCompanies.map((company, index) => {
-                    const typeColor = getCompanyTypeColor(company.industry || "");
-                    const typeLabel = getCompanyTypeShortLabel(company.industry || "");
+                    // Determine the display type - use industry if it's a known type, otherwise show abbreviation
+                    const industryKey = company.industry || "";
+                    const typeConfig = companyTypes.find(t => t.key === industryKey);
+                    const typeLabel = typeConfig?.shortLabel || (industryKey.length > 10 ? industryKey.slice(0, 8) + "…" : industryKey) || "—";
+                    const typeColor = typeConfig?.color || "#6B7280";
                     const isSelected = selectedIds.has(company.id);
                     
                     return (
@@ -332,8 +335,9 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                         <TableCell className="py-2">
                           <Badge
                             variant="secondary"
-                            className="text-[10px] font-medium text-white px-1.5 py-0"
+                            className="text-[10px] font-medium text-white px-1.5 py-0 max-w-[80px] truncate"
                             style={{ backgroundColor: typeColor }}
+                            title={company.industry || undefined}
                           >
                             {typeLabel}
                           </Badge>
