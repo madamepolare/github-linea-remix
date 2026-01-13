@@ -55,11 +55,11 @@ import { useAIProspects, ProspectSearchResult, ProspectContact, AIProspect } fro
 import { cn } from "@/lib/utils";
 
 const EXAMPLE_PROMPTS = [
-  "Promoteurs immobiliers en Île-de-France",
-  "Bureaux d'études structure béton à Lyon",
-  "Architectes spécialisés rénovation patrimoine Paris",
-  "Maîtres d'ouvrage publics région PACA",
-  "Constructeurs maisons individuelles Bordeaux",
+  "Directeurs commerciaux et responsables développement chez les promoteurs immobiliers Île-de-France avec emails et téléphones",
+  "Architectes associés et directeurs d'agences d'architecture Paris Lyon Marseille, emails LinkedIn",
+  "Dirigeants et responsables projets des bureaux d'études structure fluides région parisienne",
+  "Responsables achats prescription maîtres d'ouvrage publics Hauts-de-France, coordonnées complètes",
+  "Directeurs de programmes et développeurs fonciers promoteurs immobiliers Rhône-Alpes",
 ];
 
 export function AIProspectingPanel() {
@@ -181,30 +181,33 @@ export function AIProspectingPanel() {
                 Agent de Prospection AI
               </CardTitle>
               <CardDescription>
-                Décrivez le type de prospects que vous recherchez et l'IA trouvera des entreprises et contacts pertinents.
+                Soyez précis sur les <strong>fonctions</strong> (directeur commercial, gérant...), le <strong>secteur</strong> et la <strong>localisation</strong>. Plus votre demande est détaillée, plus l'IA trouvera de contacts.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Textarea
-                  placeholder="Ex: Chercher tous les promoteurs immobiliers en Île-de-France avec leurs contacts..."
+                  placeholder="Ex: Directeurs commerciaux et responsables développement chez les promoteurs immobiliers en Île-de-France, avec leurs emails et numéros de téléphone directs..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   rows={3}
                   className="resize-none"
                 />
-                <div className="flex flex-wrap gap-2">
-                  {EXAMPLE_PROMPTS.map((prompt) => (
-                    <Button
-                      key={prompt}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-7"
-                      onClick={() => setSearchQuery(prompt)}
-                    >
-                      {prompt}
-                    </Button>
-                  ))}
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">💡 Exemples de prompts efficaces :</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {EXAMPLE_PROMPTS.map((prompt) => (
+                      <Button
+                        key={prompt}
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-auto py-1 px-2 text-muted-foreground hover:text-foreground whitespace-normal text-left justify-start"
+                        onClick={() => setSearchQuery(prompt)}
+                      >
+                        {prompt.length > 60 ? prompt.substring(0, 60) + "..." : prompt}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -233,13 +236,19 @@ export function AIProspectingPanel() {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div>
-                    <CardTitle className="text-base">
-                      {searchResults.length} entreprise{searchResults.length > 1 ? "s" : ""} trouvée{searchResults.length > 1 ? "s" : ""}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      {searchResults.reduce((acc, r) => acc + (r.contacts?.length || 0), 0)} contact(s) identifié(s)
-                    </p>
+                  <div className="flex items-center gap-4">
+                    <div className="text-center px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
+                      <div className="text-2xl font-bold text-primary">
+                        {searchResults.reduce((acc, r) => acc + (r.contacts?.length || 0), 0)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">contacts</div>
+                    </div>
+                    <div className="text-center px-4 py-2 rounded-lg bg-muted">
+                      <div className="text-2xl font-bold">
+                        {searchResults.length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">entreprises</div>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={toggleAll}>
