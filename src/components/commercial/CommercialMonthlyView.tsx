@@ -68,7 +68,6 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
     switch (type) {
       case 'quote': return FileText;
       case 'contract': return FileSignature;
-      case 'proposal': return FileCheck;
     }
   };
 

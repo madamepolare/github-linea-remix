@@ -34,8 +34,7 @@ export async function generateUnifiedPDF(
   const blocks = getBlocksForDocumentType(pdfConfig, docType);
   
   // Determine orientation based on document type
-  const isLandscape = docType === 'proposal';
-  const pdf = new jsPDF(isLandscape ? 'l' : 'p', 'mm', 'a4');
+  const pdf = new jsPDF('p', 'mm', 'a4');
   
   // Load images
   const logoBase64 = agencyInfo?.logo_url 
@@ -82,7 +81,7 @@ export async function generateUnifiedPDF(
   let y = 20;
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = isLandscape ? 20 : 15;
+  const margin = 15;
   const contentWidth = pageWidth - margin * 2;
 
   // Track if we need pagination helper
@@ -101,7 +100,7 @@ export async function generateUnifiedPDF(
     switch (block.block_type) {
       case 'cover':
         y = renderCoverBlock(pdf, context, margin, pageWidth, pageHeight, docType);
-        if (docType === 'proposal' || docType === 'contract') {
+        if (docType === 'contract') {
           pdf.addPage();
           y = 20;
         }
@@ -129,7 +128,7 @@ export async function generateUnifiedPDF(
         
       case 'totals':
         addPageIfNeeded(40);
-        y = renderTotalsBlock(pdf, context, margin, pageWidth, y, isLandscape);
+        y = renderTotalsBlock(pdf, context, margin, pageWidth, y, false);
         break;
         
       case 'payment':
@@ -171,12 +170,6 @@ function renderCoverBlock(
 ): number {
   const { document, agencyInfo, logoBase64, total, formatCurrency } = ctx;
   
-  // Dark background for proposal
-  if (docType === 'proposal') {
-    pdf.setFillColor(35, 35, 40);
-    pdf.rect(0, 0, pageWidth, pageHeight, 'F');
-  }
-
   // Logo
   let y = 30;
   if (logoBase64) {
@@ -192,21 +185,20 @@ function renderCoverBlock(
   // Document type label
   pdf.setFontSize(14);
   pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(docType === 'proposal' ? 120 : 100);
+  pdf.setTextColor(100);
   
   const typeLabels: Record<DocumentType, string> = {
     quote: 'DEVIS',
-    contract: 'CONTRAT DE MAÎTRISE D\'ŒUVRE',
-    proposal: 'PROPOSITION COMMERCIALE'
+    contract: 'CONTRAT DE MAÎTRISE D\'ŒUVRE'
   };
   pdf.text(typeLabels[docType], margin, y);
 
   y += 20;
   
   // Title
-  pdf.setFontSize(docType === 'proposal' ? 36 : 24);
+  pdf.setFontSize(24);
   pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(docType === 'proposal' ? 255 : 0);
+  pdf.setTextColor(0);
   pdf.text((document as any).title || 'Projet', margin, y);
 
   y += 15;
@@ -216,47 +208,16 @@ function renderCoverBlock(
   if (location) {
     pdf.setFontSize(16);
     pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(docType === 'proposal' ? 180 : 80);
+    pdf.setTextColor(80);
     pdf.text(location, margin, y);
-  }
-
-  // Info cards for proposal
-  if (docType === 'proposal') {
-    const cardY = 130;
-    const cardWidth = 60;
-    const cardGap = 15;
-    
-    const cards = [
-      { label: 'TYPE', value: PROJECT_TYPE_LABELS[(document as any).project_type || 'interior'] },
-      { label: 'SURFACE', value: (document as any).project_surface ? `${(document as any).project_surface} m²` : '-' },
-      { label: 'BUDGET TRAVAUX', value: (document as any).construction_budget ? formatCurrency((document as any).construction_budget) : '-' },
-      { label: 'HONORAIRES', value: formatCurrency(total) }
-    ];
-    
-    cards.forEach((card, i) => {
-      const x = margin + (cardWidth + cardGap) * i;
-      
-      pdf.setFillColor(50, 50, 55);
-      pdf.roundedRect(x, cardY, cardWidth, 40, 3, 3, 'F');
-      
-      pdf.setFontSize(8);
-      pdf.setTextColor(120);
-      pdf.text(card.label, x + 8, cardY + 12);
-      
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(255);
-      pdf.text(card.value, x + 8, cardY + 28);
-      pdf.setFont('helvetica', 'normal');
-    });
   }
 
   // Client & date
   pdf.setFontSize(10);
-  pdf.setTextColor(docType === 'proposal' ? 100 : 60);
+  pdf.setTextColor(60);
   pdf.text('POUR', margin, pageHeight - 40);
   pdf.setFontSize(14);
-  pdf.setTextColor(docType === 'proposal' ? 255 : 0);
+  pdf.setTextColor(0);
   pdf.text((document as any).client_company?.name || 'Client', margin, pageHeight - 30);
 
   pdf.setFontSize(10);
@@ -265,7 +226,7 @@ function renderCoverBlock(
   
   if (agencyInfo?.name) {
     pdf.setFontSize(12);
-    pdf.setTextColor(docType === 'proposal' ? 180 : 60);
+    pdf.setTextColor(60);
     pdf.text(agencyInfo.name, pageWidth - margin, pageHeight - 25, { align: 'right' });
   }
 
@@ -686,31 +647,3 @@ export async function generateContractPDFUnified(
   return generateUnifiedPDF(document, lines, total, agencyInfo, pdfConfig, 'contract');
 }
 
-export async function generateProposalPDFUnified(
-  document: Partial<CommercialDocument>,
-  phases: CommercialDocumentPhase[],
-  total: number,
-  agencyInfo?: AgencyPDFInfo,
-  pdfConfig?: PDFDocumentConfig | null
-): Promise<Blob> {
-  const lines: QuoteLine[] = phases.map((p, i) => ({
-    id: p.id,
-    document_id: p.document_id,
-    phase_code: p.phase_code,
-    phase_name: p.phase_name,
-    phase_description: p.phase_description,
-    line_type: 'phase' as const,
-    quantity: 1,
-    unit: 'forfait',
-    unit_price: p.amount,
-    amount: p.amount,
-    percentage_fee: p.percentage_fee,
-    billing_type: 'one_time' as const,
-    is_optional: !p.is_included,
-    is_included: p.is_included,
-    deliverables: p.deliverables,
-    sort_order: p.sort_order,
-  }));
-  
-  return generateUnifiedPDF(document, lines, total, agencyInfo, pdfConfig, 'proposal');
-}

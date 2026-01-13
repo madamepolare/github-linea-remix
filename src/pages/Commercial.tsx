@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, FileText, FileSignature, FileCheck, Search, LayoutList, Kanban, Calendar } from 'lucide-react';
+import { Plus, FileText, FileSignature, Search, LayoutList, Kanban, Calendar } from 'lucide-react';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,8 +38,7 @@ const Commercial = () => {
   const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'monthly'>('list');
   const typeFilter: DocumentType | 'all' = 
     view === 'quotes' ? 'quote' : 
-    view === 'contracts' ? 'contract' : 
-    view === 'proposals' ? 'proposal' : 'all';
+    view === 'contracts' ? 'contract' : 'all';
 
   const filteredDocuments = documents.filter(doc => {
     const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -84,14 +83,13 @@ const Commercial = () => {
     switch (type) {
       case 'quote': return FileText;
       case 'contract': return FileSignature;
-      case 'proposal': return FileCheck;
     }
   };
 
   return (
     <PageLayout
       title={activeWorkspace ? `Business · ${activeWorkspace.name}` : 'Business'}
-      description="Gérez vos devis, contrats et propositions commerciales"
+      description="Gérez vos devis et contrats commerciaux"
       actions={
         <div className="flex items-center gap-2">
           <div className="flex items-center border rounded-lg p-1">
@@ -132,10 +130,6 @@ const Commercial = () => {
               <DropdownMenuItem onClick={() => handleNewDocument('contract')}>
                 <FileSignature className="h-4 w-4 mr-2" />
                 Contrat
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleNewDocument('proposal')}>
-                <FileCheck className="h-4 w-4 mr-2" />
-                Proposition
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -194,7 +188,6 @@ const Commercial = () => {
                 if (v === 'all') navigate('/commercial/all');
                 else if (v === 'quote') navigate('/commercial/quotes');
                 else if (v === 'contract') navigate('/commercial/contracts');
-                else if (v === 'proposal') navigate('/commercial/proposals');
               }}
             >
               <SelectTrigger className="w-full sm:w-[140px]">
@@ -204,7 +197,6 @@ const Commercial = () => {
                 <SelectItem value="all">Tous les types</SelectItem>
                 <SelectItem value="quote">Devis</SelectItem>
                 <SelectItem value="contract">Contrats</SelectItem>
-                <SelectItem value="proposal">Propositions</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as DocumentStatus | 'all')}>

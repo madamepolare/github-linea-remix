@@ -211,8 +211,8 @@ export function CommercialDocumentBuilder({
             <CardTitle className="text-base sm:text-lg">Type de document</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
-              {(['quote', 'contract', 'proposal'] as DocumentType[]).map((type) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+              {(['quote', 'contract'] as DocumentType[]).map((type) => (
                 <button
                   key={type}
                   onClick={() => onDocumentChange({ ...document, document_type: type })}

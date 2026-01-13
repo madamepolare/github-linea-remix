@@ -125,7 +125,7 @@ const App = () => (
                   <Route path="/commercial/all" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
                   <Route path="/commercial/quotes" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
                   <Route path="/commercial/contracts" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
-                  <Route path="/commercial/proposals" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
+                  
                   <Route path="/commercial/:id" element={<Suspense fallback={<PageLoader />}><CommercialDocument /></Suspense>} />
                   <Route path="/commercial/quote/new" element={<Suspense fallback={<PageLoader />}><QuoteBuilder /></Suspense>} />
                   <Route path="/commercial/quote/:id" element={<Suspense fallback={<PageLoader />}><QuoteBuilder /></Suspense>} />

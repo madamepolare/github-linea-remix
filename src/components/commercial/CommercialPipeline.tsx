@@ -176,7 +176,6 @@ function CommercialKanbanCard({ document: doc, stageColor, onClick, onDuplicate,
     switch (type) {
       case 'quote': return FileText;
       case 'contract': return FileSignature;
-      case 'proposal': return FileCheck;
     }
   };
 

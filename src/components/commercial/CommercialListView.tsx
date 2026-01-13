@@ -53,7 +53,6 @@ export const CommercialListView = ({
     switch (type) {
       case 'quote': return FileText;
       case 'contract': return FileSignature;
-      case 'proposal': return FileCheck;
     }
   };
 

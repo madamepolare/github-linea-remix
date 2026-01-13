@@ -82,14 +82,14 @@ export default function QuoteBuilder() {
   const [hasChanges, setHasChanges] = useState(false);
   
   const [document, setDocument] = useState<Partial<QuoteDocument>>({
-    document_type: documentType as 'quote' | 'contract' | 'proposal',
+    document_type: (documentType === 'quote' || documentType === 'contract') ? documentType : 'contract',
     title: '',
     status: 'draft',
     fee_mode: 'fixed',
     currency: 'EUR',
     validity_days: 30,
     total_amount: 0,
-    project_type: 'interior' // Valid default
+    project_type: 'architecture' // Default to architecture for contracts
   });
   
   const [lines, setLines] = useState<QuoteLine[]>([]);
@@ -116,7 +116,9 @@ export default function QuoteBuilder() {
     if (!isNew && existingDoc) {
       setDocument({
         ...existingDoc,
-        document_type: existingDoc.document_type as 'quote' | 'contract' | 'proposal',
+        document_type: (existingDoc.document_type === 'quote' || existingDoc.document_type === 'contract') 
+          ? existingDoc.document_type 
+          : 'contract',
         // Ensure valid project_type
         project_type: ensureValidProjectType(existingDoc.project_type)
       });

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileDown, Loader2, FileText, PresentationIcon, FileSignature } from 'lucide-react';
+import { FileDown, Loader2, FileText, FileSignature } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,7 @@ import { type ContractType } from '@/hooks/useContractTypes';
 import { type PDFDocumentConfig } from '@/lib/pdfBlockTypes';
 import { type QuoteLine } from '@/types/quoteTypes';
 
-type PDFTemplate = 'quote' | 'contract' | 'proposal';
+type PDFTemplate = 'quote' | 'contract';
 
 interface PDFPreviewDialogProps {
   open: boolean;
@@ -43,12 +43,6 @@ const TEMPLATES: { id: PDFTemplate; label: string; description: string; icon: Re
     label: 'Contrat',
     description: 'Document complet multi-pages',
     icon: <FileSignature className="h-5 w-5" />
-  },
-  {
-    id: 'proposal',
-    label: 'Proposition',
-    description: 'Format paysage, style présentation',
-    icon: <PresentationIcon className="h-5 w-5" />
   }
 ];
 
