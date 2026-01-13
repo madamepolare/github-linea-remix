@@ -40,6 +40,7 @@ import { ContractPreviewPanel } from '@/components/commercial/quote-builder/Cont
 import { isArchitectureContractType, COMMUNICATION_CONTRACT_CODES, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
 import { generateQuotePDFSimple } from '@/lib/generateQuotePDFSimple';
+import { generateContractPDFFromPreview } from '@/lib/generateContractPDFFromPreview';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { useAuth } from '@/contexts/AuthContext';
@@ -319,7 +320,22 @@ export default function QuoteBuilder() {
   const handleDownloadPDF = async () => {
     try {
       toast.info('Génération du PDF...');
-      const blob = await generateQuotePDFSimple(document, lines, agencyInfo);
+      
+      let blob: Blob;
+      
+      if (document.document_type === 'contract') {
+        // Pour les contrats : utiliser le générateur qui reproduit la preview
+        blob = await generateContractPDFFromPreview(
+          document,
+          lines,
+          agencyInfo,
+          currentContractType?.code || null
+        );
+      } else {
+        // Pour les devis : utiliser le générateur simple
+        blob = await generateQuotePDFSimple(document, lines, agencyInfo);
+      }
+      
       const url = URL.createObjectURL(blob);
       const link = window.document.createElement('a');
       link.href = url;
