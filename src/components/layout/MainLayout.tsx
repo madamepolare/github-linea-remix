@@ -23,6 +23,8 @@ import { getModuleFromPath } from "@/lib/navigationConfig";
 import { THIN_STROKE } from "@/components/ui/icon";
 import { usePostItTasks } from "@/hooks/usePostItTasks";
 import { EventSchedulerDialog } from "@/components/workflow/EventSchedulerDialog";
+import { CheckInModal } from "@/components/checkin/CheckInModal";
+import { CheckOutModal } from "@/components/checkin/CheckOutModal";
 
 export function MainLayout() {
   // Guard: redirect to home if current module not enabled in new workspace
@@ -201,6 +203,10 @@ export function MainLayout() {
         open={eventSchedulerOpen} 
         onOpenChange={setEventSchedulerOpen} 
       />
+
+      {/* Check-in / Check-out Modals */}
+      <CheckInModal />
+      <CheckOutModal />
     </div>
   );
 }
