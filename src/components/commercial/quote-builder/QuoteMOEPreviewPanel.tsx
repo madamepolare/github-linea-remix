@@ -1,0 +1,176 @@
+// MOE Contract PDF Preview Panel
+// Renders a real PDF preview for architecture contracts
+
+import React, { useEffect, useState, useRef } from 'react';
+import { QuoteDocument, QuoteLine } from '@/types/quoteTypes';
+import { Button } from '@/components/ui/button';
+import { FileText, Download, RefreshCw, AlertCircle } from 'lucide-react';
+import { generateMOEContractPDF } from '@/lib/generateMOEContractPDF';
+import { useAgencyInfo } from '@/hooks/useAgencyInfo';
+import { buildMOEContractDataFromDocument } from '@/lib/moeContractBuilder';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface QuoteMOEPreviewPanelProps {
+  document: Partial<QuoteDocument>;
+  lines: QuoteLine[];
+  zoom?: number;
+  onPDFGenerated?: (blob: Blob) => void;
+}
+
+export function QuoteMOEPreviewPanel({
+  document,
+  lines,
+  zoom = 1,
+  onPDFGenerated
+}: QuoteMOEPreviewPanelProps) {
+  const { agencyInfo, isLoading: agencyLoading } = useAgencyInfo();
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Generate PDF when document or lines change
+  const generatePDF = async () => {
+    if (agencyLoading) return;
+    
+    setIsGenerating(true);
+    setError(null);
+    
+    try {
+      // Build MOE contract data from document
+      const moeData = buildMOEContractDataFromDocument(document, lines, agencyInfo);
+      
+      // Generate PDF
+      const pdfBlob = await generateMOEContractPDF(moeData, agencyInfo ? {
+        name: agencyInfo.name,
+        address: agencyInfo.address,
+        postal_code: agencyInfo.postal_code,
+        city: agencyInfo.city,
+        phone: agencyInfo.phone,
+        email: agencyInfo.email,
+        logo_url: agencyInfo.logo_url,
+        signature_url: agencyInfo.signature_url
+      } : undefined);
+      
+      // Create URL for preview
+      const url = URL.createObjectURL(pdfBlob);
+      
+      // Cleanup previous URL
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+      
+      setPdfUrl(url);
+      
+      if (onPDFGenerated) {
+        onPDFGenerated(pdfBlob);
+      }
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      setError('Erreur lors de la génération du PDF');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Cleanup URL on unmount
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
+
+  // Download PDF
+  const handleDownload = () => {
+    if (!pdfUrl) return;
+    
+    const link = window.document.createElement('a');
+    link.href = pdfUrl;
+    link.download = `${document.document_number || 'contrat'}-${document.title || 'moe'}.pdf`;
+    link.click();
+  };
+
+  if (agencyLoading) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-8">
+        <Skeleton className="w-full h-[600px]" />
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="h-full flex flex-col bg-muted/30"
+      style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}
+    >
+      {/* Actions bar */}
+      <div className="flex items-center justify-between p-3 border-b bg-background">
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Aperçu du contrat MOE</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={generatePDF}
+            disabled={isGenerating}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`} />
+            {isGenerating ? 'Génération...' : 'Générer'}
+          </Button>
+          {pdfUrl && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleDownload}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Télécharger
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* PDF Preview */}
+      <div className="flex-1 overflow-hidden">
+        {error ? (
+          <div className="h-full flex flex-col items-center justify-center gap-4 p-8 text-center">
+            <AlertCircle className="h-12 w-12 text-destructive" />
+            <p className="text-sm text-destructive">{error}</p>
+            <Button variant="outline" onClick={generatePDF}>
+              Réessayer
+            </Button>
+          </div>
+        ) : pdfUrl ? (
+          <iframe
+            ref={iframeRef}
+            src={pdfUrl}
+            className="w-full h-full border-0"
+            title="Aperçu du contrat"
+          />
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center gap-6 p-8 text-center">
+            <div className="w-24 h-32 bg-muted rounded-lg flex items-center justify-center">
+              <FileText className="h-12 w-12 text-muted-foreground" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-semibold">Aperçu du contrat MOE</h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                Cliquez sur "Générer" pour créer un aperçu PDF de votre contrat d'architecture avec toutes les clauses et informations.
+              </p>
+            </div>
+            <Button onClick={generatePDF} disabled={isGenerating} className="gap-2">
+              <FileText className="h-4 w-4" />
+              {isGenerating ? 'Génération en cours...' : 'Générer l\'aperçu PDF'}
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
