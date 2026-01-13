@@ -1,6 +1,7 @@
-import { Building2, Theater, Megaphone } from "lucide-react";
+import { Building2, Theater, Megaphone, Frame, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getAvailableDisciplines, type DisciplineSlug } from "@/lib/tenderDisciplineConfig";
+import { type DisciplineSlug } from "@/lib/tenderDisciplineConfig";
+import { useWorkspaceDisciplines } from "@/hooks/useWorkspaceDisciplines";
 
 interface DisciplineTenderSelectorProps {
   value: DisciplineSlug;
@@ -10,15 +11,39 @@ interface DisciplineTenderSelectorProps {
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Building2,
   Theater,
+  Frame,
   Megaphone,
 };
 
 export function DisciplineTenderSelector({ value, onChange }: DisciplineTenderSelectorProps) {
-  const disciplines = getAvailableDisciplines();
+  const { activeDisciplineConfigs, isLoading } = useWorkspaceDisciplines();
+
+  // Auto-select first discipline if current value is not active
+  const isValueActive = activeDisciplineConfigs.some(d => d.slug === value);
+  if (!isValueActive && activeDisciplineConfigs.length > 0 && activeDisciplineConfigs[0].slug !== value) {
+    // Schedule onChange for next tick to avoid setState during render
+    setTimeout(() => onChange(activeDisciplineConfigs[0].slug), 0);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Single discipline: auto-select and don't show selector
+  if (activeDisciplineConfigs.length === 1) {
+    return null;
+  }
 
   return (
-    <div className="grid grid-cols-3 gap-4">
-      {disciplines.map((discipline) => {
+    <div className={cn(
+      "grid gap-4",
+      activeDisciplineConfigs.length === 2 ? "grid-cols-2" : "grid-cols-3"
+    )}>
+      {activeDisciplineConfigs.map((discipline) => {
         const Icon = ICONS[discipline.icon] || Building2;
         const isSelected = value === discipline.slug;
         

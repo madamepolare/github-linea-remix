@@ -13,6 +13,7 @@ import {
   Settings2,
   Columns,
   FolderKanban,
+  Compass,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import {
   type TenderPipelineColumn,
 } from "@/hooks/useTenderSettings";
 import { TenderTypesSection } from "./TenderTypesSection";
+import { DisciplinesSection } from "./DisciplinesSection";
 
 // ============= PHASES SECTION =============
 
@@ -650,8 +652,12 @@ export function TenderSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="types" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
+          <Tabs defaultValue="disciplines" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-7">
+              <TabsTrigger value="disciplines" className="gap-2">
+                <Compass className="h-4 w-4" />
+                <span className="hidden sm:inline">Disciplines</span>
+              </TabsTrigger>
               <TabsTrigger value="types" className="gap-2">
                 <FolderKanban className="h-4 w-4" />
                 <span className="hidden sm:inline">Types</span>
@@ -677,6 +683,10 @@ export function TenderSettings() {
                 <span className="hidden sm:inline">Domaines</span>
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="disciplines">
+              <DisciplinesSection />
+            </TabsContent>
 
             <TabsContent value="types">
               <TenderTypesSection />

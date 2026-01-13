@@ -9116,6 +9116,44 @@ export type Database = {
           },
         ]
       }
+      workspace_disciplines: {
+        Row: {
+          created_at: string
+          discipline_slug: string
+          id: string
+          is_active: boolean
+          sort_order: number | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          discipline_slug: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          discipline_slug?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_disciplines_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_invites: {
         Row: {
           created_at: string
