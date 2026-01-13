@@ -220,6 +220,17 @@ export interface CRMCompany {
   notes: string | null;
   logo_url: string | null;
   bet_specialties: string[] | null;
+  // Fiscal fields from crm_companies table
+  siret: string | null;
+  siren: string | null;
+  vat_number: string | null;
+  code_naf: string | null;
+  forme_juridique: string | null;
+  capital_social: number | null;
+  rcs_city: string | null;
+  vat_type: string | null;
+  vat_rate: number | null;
+  billing_contact_id: string | null;
   created_by: string | null;
   workspace_id: string;
   created_at: string | null;
