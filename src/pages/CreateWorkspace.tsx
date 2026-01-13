@@ -90,12 +90,15 @@ export default function CreateWorkspace() {
       await setActiveWorkspace(workspace.id);
       await refreshProfile();
 
+      const newSlug = generateSlug(data.name);
+      
       toast({
         title: "Workspace créé",
         description: `${data.name} a été créé avec succès`,
       });
 
-      navigate("/");
+      // Navigate to the new workspace
+      navigate(`/${newSlug}`);
     } catch (error: any) {
       console.error("Error creating workspace:", error);
       toast({
