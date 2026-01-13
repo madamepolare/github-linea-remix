@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Euro, Percent, Calculator, Layers, CheckCircle2, Info } from "lucide-react";
+import { Euro, Percent, Calculator, Layers, CheckCircle2, Info, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -198,14 +198,213 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
           </div>
         </div>
 
+        {/* Team Distribution - PRIORITY SECTION */}
+        {feeAmount > 0 && (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    Répartition du groupement
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Distribution des honoraires entre les membres de l'équipe
+                  </p>
+                </div>
+                <Badge variant="outline" className="font-mono">
+                  Total : {formatCurrency(feeAmount)}
+                </Badge>
+              </div>
+
+              {teamMembers.length > 0 ? (
+                <>
+                  {/* Visual distribution bar */}
+                  <div className="space-y-3">
+                    <div className="h-10 rounded-lg overflow-hidden flex shadow-sm">
+                      {/* Mandataire portion */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className="bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium transition-all cursor-pointer hover:brightness-110"
+                            style={{ width: `${Math.max(teamFeeDistribution.remainingForMandataire, 5)}%` }}
+                          >
+                            {teamFeeDistribution.remainingForMandataire > 12 && (
+                              <span>{teamFeeDistribution.remainingForMandataire.toFixed(0)}%</span>
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="font-medium">Mandataire: {teamFeeDistribution.remainingForMandataire.toFixed(1)}%</p>
+                          <p className="text-xs opacity-80">{formatCurrency(teamFeeDistribution.mandataireAmount)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      {/* Partners portions */}
+                      {teamFeeDistribution.partnerAmounts.map(({ member, percentage, amount }, idx) => {
+                        const colors = [
+                          'bg-blue-500 hover:bg-blue-600',
+                          'bg-emerald-500 hover:bg-emerald-600',
+                          'bg-amber-500 hover:bg-amber-600',
+                          'bg-purple-500 hover:bg-purple-600',
+                          'bg-pink-500 hover:bg-pink-600',
+                          'bg-cyan-500 hover:bg-cyan-600',
+                        ];
+                        return (
+                          <Tooltip key={member.id}>
+                            <TooltipTrigger asChild>
+                              <div 
+                                className={cn(
+                                  colors[idx % colors.length],
+                                  "flex items-center justify-center text-white text-sm font-medium transition-all cursor-pointer"
+                                )}
+                                style={{ width: `${Math.max(percentage, 3)}%` }}
+                              >
+                                {percentage > 8 && (
+                                  <span>{percentage.toFixed(0)}%</span>
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="font-medium">{member.company?.name || member.contact?.name || 'Partenaire'}: {percentage.toFixed(1)}%</p>
+                              <p className="text-xs opacity-80">{formatCurrency(amount)}</p>
+                              {member.specialty && <p className="text-xs opacity-60">{member.specialty}</p>}
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Legend */}
+                    <div className="flex flex-wrap gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded bg-primary" />
+                        <span className="text-muted-foreground">Mandataire</span>
+                        <span className="font-semibold">{formatCurrency(teamFeeDistribution.mandataireAmount)}</span>
+                        <span className="text-muted-foreground">({teamFeeDistribution.remainingForMandataire.toFixed(1)}%)</span>
+                      </div>
+                      {teamFeeDistribution.partnerAmounts.map(({ member, amount, percentage }, idx) => {
+                        const colors = [
+                          'bg-blue-500',
+                          'bg-emerald-500',
+                          'bg-amber-500',
+                          'bg-purple-500',
+                          'bg-pink-500',
+                          'bg-cyan-500',
+                        ];
+                        return (
+                          <div key={member.id} className="flex items-center gap-2">
+                            <div className={cn("w-4 h-4 rounded", colors[idx % colors.length])} />
+                            <span className="text-muted-foreground truncate max-w-[120px]">
+                              {member.company?.name || member.contact?.name || 'Partenaire'}
+                            </span>
+                            <span className="font-semibold">{formatCurrency(amount)}</span>
+                            <span className="text-muted-foreground">({percentage.toFixed(1)}%)</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Detailed member cards */}
+                  <div className="grid gap-3 mt-4">
+                    {/* Mandataire card */}
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-primary/5 border-2 border-primary/30">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <Badge variant="default" className="mb-1">Mandataire</Badge>
+                          <p className="font-medium">
+                            {teamMembers.find(m => m.role === 'mandataire')?.company?.name || 'Notre agence'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-primary">{formatCurrency(teamFeeDistribution.mandataireAmount)}</p>
+                        <p className="text-sm text-muted-foreground">{teamFeeDistribution.remainingForMandataire.toFixed(1)}% des honoraires</p>
+                      </div>
+                    </div>
+
+                    {/* Cotraitants cards */}
+                    {teamFeeDistribution.partnerAmounts.map(({ member, percentage, amount }, idx) => {
+                      const bgColors = [
+                        'bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800',
+                        'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800',
+                        'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800',
+                        'bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800',
+                        'bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800',
+                        'bg-cyan-50 dark:bg-cyan-950/20 border-cyan-200 dark:border-cyan-800',
+                      ];
+                      const textColors = [
+                        'text-blue-600 dark:text-blue-400',
+                        'text-emerald-600 dark:text-emerald-400',
+                        'text-amber-600 dark:text-amber-400',
+                        'text-purple-600 dark:text-purple-400',
+                        'text-pink-600 dark:text-pink-400',
+                        'text-cyan-600 dark:text-cyan-400',
+                      ];
+                      return (
+                        <div 
+                          key={member.id} 
+                          className={cn(
+                            "flex items-center justify-between p-4 rounded-xl border",
+                            bgColors[idx % bgColors.length]
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="outline" className="text-xs">Cotraitant</Badge>
+                                {member.specialty && (
+                                  <Badge variant="secondary" className="text-xs">{member.specialty}</Badge>
+                                )}
+                              </div>
+                              <p className="font-medium">{member.company?.name || member.contact?.name || 'Partenaire'}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={cn("text-2xl font-bold", textColors[idx % textColors.length])}>
+                              {formatCurrency(amount)}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{percentage.toFixed(1)}% des honoraires</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* No cotraitants message */}
+                    {teamFeeDistribution.partnerAmounts.length === 0 && (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Aucun cotraitant avec pourcentage défini</p>
+                        <p className="text-xs">Ajoutez des membres dans l'onglet "Équipe confirmée"</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 border-2 border-dashed rounded-xl">
+                  <Users className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">Aucun membre dans l'équipe</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ajoutez des membres dans l'onglet "Équipe confirmée" pour voir la répartition
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
         <Separator />
 
-        {/* Phase Selection */}
+        {/* Phase Selection - Collapsible/Secondary */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="flex items-center gap-2">
               <Layers className="h-4 w-4 text-muted-foreground" />
-              Phases de la mission
+              Phases de la mission (référence)
             </Label>
             <Badge variant="secondary">
               {selectedPhases.size} phase{selectedPhases.size !== 1 ? 's' : ''} • {recommendedPercentage}%
@@ -237,125 +436,6 @@ export function TenderFeeManagement({ tender, teamMembers, onUpdate, isUpdating 
             ))}
           </div>
         </div>
-
-        {/* Team Distribution */}
-        {teamMembers.length > 0 && feeAmount > 0 && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Répartition du groupement</Label>
-                <Badge variant="outline" className="font-mono">
-                  Total : {formatCurrency(feeAmount)}
-                </Badge>
-              </div>
-
-              {/* Visual distribution bar */}
-              <div className="space-y-2">
-                <div className="h-8 rounded-lg overflow-hidden flex">
-                  {/* Mandataire portion */}
-                  <div 
-                    className="bg-primary flex items-center justify-center text-primary-foreground text-xs font-medium transition-all"
-                    style={{ width: `${teamFeeDistribution.remainingForMandataire}%` }}
-                    title={`Mandataire: ${teamFeeDistribution.remainingForMandataire.toFixed(1)}%`}
-                  >
-                    {teamFeeDistribution.remainingForMandataire > 15 && (
-                      <span>{teamFeeDistribution.remainingForMandataire.toFixed(0)}%</span>
-                    )}
-                  </div>
-                  {/* Partners portions */}
-                  {teamFeeDistribution.partnerAmounts.map(({ member, percentage }, idx) => {
-                    const colors = [
-                      'bg-blue-500',
-                      'bg-emerald-500',
-                      'bg-amber-500',
-                      'bg-purple-500',
-                      'bg-pink-500',
-                      'bg-cyan-500',
-                    ];
-                    return (
-                      <div 
-                        key={member.id}
-                        className={cn(
-                          colors[idx % colors.length],
-                          "flex items-center justify-center text-white text-xs font-medium transition-all"
-                        )}
-                        style={{ width: `${percentage}%` }}
-                        title={`${member.company?.name || 'Partenaire'}: ${percentage.toFixed(1)}%`}
-                      >
-                        {percentage > 10 && (
-                          <span>{percentage.toFixed(0)}%</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                
-                {/* Legend */}
-                <div className="flex flex-wrap gap-3 text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded bg-primary" />
-                    <span className="text-muted-foreground">Mandataire</span>
-                    <span className="font-medium">{formatCurrency(teamFeeDistribution.mandataireAmount)}</span>
-                  </div>
-                  {teamFeeDistribution.partnerAmounts.map(({ member, amount }, idx) => {
-                    const colors = [
-                      'bg-blue-500',
-                      'bg-emerald-500',
-                      'bg-amber-500',
-                      'bg-purple-500',
-                      'bg-pink-500',
-                      'bg-cyan-500',
-                    ];
-                    return (
-                      <div key={member.id} className="flex items-center gap-1.5">
-                        <div className={cn("w-3 h-3 rounded", colors[idx % colors.length])} />
-                        <span className="text-muted-foreground truncate max-w-[100px]">
-                          {member.company?.name || 'Partenaire'}
-                        </span>
-                        <span className="font-medium">{formatCurrency(amount)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              
-              {/* Detailed list */}
-              <div className="space-y-2">
-                {/* Mandataire */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="default" className="text-xs">Mandataire</Badge>
-                    <span className="text-sm font-medium">
-                      {teamMembers.find(m => m.role === 'mandataire')?.company?.name || 'Notre agence'}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold">{formatCurrency(teamFeeDistribution.mandataireAmount)}</p>
-                    <p className="text-xs text-muted-foreground">{teamFeeDistribution.remainingForMandataire.toFixed(1)}%</p>
-                  </div>
-                </div>
-
-                {/* Cotraitants */}
-                {teamFeeDistribution.partnerAmounts.map(({ member, percentage, amount }) => (
-                  <div key={member.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">Cotraitant</Badge>
-                      <span className="text-sm">{member.company?.name || member.contact?.name || 'Partenaire'}</span>
-                      {member.specialty && (
-                        <span className="text-xs text-muted-foreground">({member.specialty})</span>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(amount)}</p>
-                      <p className="text-xs text-muted-foreground">{percentage.toFixed(1)}%</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
 
         {/* Info message */}
         <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
