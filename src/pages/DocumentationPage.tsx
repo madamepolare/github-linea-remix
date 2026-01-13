@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -53,7 +54,7 @@ import { THIN_STROKE } from "@/components/ui/icon";
 
 export default function DocumentationPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const { page, isLoading, updatePage } = useDocumentationPage(id);
   const { deletePage } = useDocumentationPages();
 

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import {
   CommandDialog,
   CommandEmpty,
@@ -43,7 +43,7 @@ const typeIcons = {
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const { signOut } = useAuth();
   
   const { data: searchResults, isLoading: isSearching } = useGlobalSearch(search);

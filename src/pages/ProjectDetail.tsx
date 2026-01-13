@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 
 import { useProject, useProjects, useProjectMembers } from "@/hooks/useProjects";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
@@ -91,7 +92,7 @@ const CONSTRUCTION_ONLY_TABS = ["permits", "insurances", "chantier"];
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const queryClient = useQueryClient();
   const { setEntityConfig } = useTopBar();
   const { data: project, isLoading } = useProject(id || null);

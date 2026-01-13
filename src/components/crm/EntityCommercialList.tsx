@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +45,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export function EntityCommercialList({ entityType, entityId }: EntityCommercialListProps) {
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const { documents, isLoading } = useCommercialDocuments();
   const [search, setSearch] = useState("");
 

@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import { Button } from "@/components/ui/button";
 import {
   FolderPlus,
@@ -19,7 +19,7 @@ const actions = [
 ];
 
 export function QuickActionsWidget() {
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
 
   return (
     <div className="flex flex-wrap gap-2">

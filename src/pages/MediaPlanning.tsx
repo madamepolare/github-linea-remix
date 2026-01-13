@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import { SEOHead } from "@/components/seo/SEOHead";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 export default function MediaPlanning() {
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const [search, setSearch] = useState("");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');

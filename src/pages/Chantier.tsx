@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 
 import { useProjectsWithModule, useProjectModules } from "@/hooks/useProjectModules";
 import { useProjects, useProject } from "@/hooks/useProjects";
@@ -41,7 +42,7 @@ import { toast } from "sonner";
 
 export default function Chantier() {
   const { projectId, section } = useParams<{ projectId?: string; section?: string }>();
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   
   // If we have a projectId, show the project chantier view
   if (projectId) {
@@ -57,7 +58,7 @@ function ChantierList() {
   const { projects, isLoading: projectsLoading } = useProjects();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"chantiers" | "projets">("chantiers");
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
 
   // Get project IDs that already have chantier enabled
   const projectsWithChantierIds = new Set(projectsWithChantier.map(p => p.project_id));
@@ -248,7 +249,7 @@ function ChantierList() {
 
 // Component for activating chantier on a project
 function ProjectCardWithActivation({ project }: { project: any }) {
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const { enableModule } = useProjectModules(project.id);
   const [isActivating, setIsActivating] = useState(false);
 
@@ -317,7 +318,7 @@ interface ChantierProjectProps {
 }
 
 function ChantierProject({ projectId, section = "overview" }: ChantierProjectProps) {
-  const navigate = useNavigate();
+  const { navigate } = useWorkspaceNavigation();
   const { data: project, isLoading } = useProject(projectId);
   const [activeTab, setActiveTab] = useState(section);
   const [selectedReportForEdit, setSelectedReportForEdit] = useState<MeetingReport | null>(null);
