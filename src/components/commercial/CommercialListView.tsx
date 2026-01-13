@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, FileSignature, FileCheck, MoreVertical, Trash2, Copy, Send, Eye, MessageCircle, X } from 'lucide-react';
+import { FileText, FileSignature, MoreVertical, Trash2, Copy, Send, Eye, MessageCircle, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,7 @@ export const CommercialListView = ({
     switch (type) {
       case 'quote': return FileText;
       case 'contract': return FileSignature;
+      default: return FileText;
     }
   };
 
