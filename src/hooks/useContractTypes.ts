@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { PDFDocumentConfig, isValidPDFConfig, DEFAULT_PDF_CONFIG } from '@/lib/pdfBlockTypes';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface ContractTypeFields {
   surface?: boolean;
@@ -25,7 +26,7 @@ export interface ContractType {
   icon?: string;
   color?: string;
   default_fields: ContractTypeFields;
-  default_clauses: Record<string, string>;
+  default_clauses: Record<string, unknown>; // Can contain MOE config or simple string clauses
   builder_tabs: BuilderTab[];
   pdf_config: PDFDocumentConfig;
   sort_order: number;
@@ -42,7 +43,7 @@ export interface CreateContractTypeInput {
   icon?: string;
   color?: string;
   default_fields?: ContractTypeFields;
-  default_clauses?: Record<string, string>;
+  default_clauses?: Record<string, unknown>;
   builder_tabs?: BuilderTab[];
   sort_order?: number;
   is_default?: boolean;
@@ -56,15 +57,30 @@ export interface UpdateContractTypeInput extends Partial<CreateContractTypeInput
 }
 
 // Default contract types to initialize workspaces with
+import { 
+  DEFAULT_MOE_MISSION_PHASES, 
+  DEFAULT_MOE_PAYMENT_SCHEDULE, 
+  DEFAULT_MOE_CLAUSES 
+} from '@/lib/moeContractConfig';
+
+// Default MOE configuration for architecture contracts
+export const DEFAULT_MOE_CONFIG = {
+  mission_phases: DEFAULT_MOE_MISSION_PHASES,
+  payment_schedule: DEFAULT_MOE_PAYMENT_SCHEDULE,
+  clauses: DEFAULT_MOE_CLAUSES,
+  minimum_fee: 4000,
+  extra_meeting_rate: 250
+};
+
 export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 'created_at' | 'updated_at'>[] = [
   {
-    name: 'Architecture',
-    code: 'ARCHI',
-    description: 'Missions de maîtrise d\'œuvre selon loi MOP',
+    name: 'Architecture / MOE',
+    code: 'MOE',
+    description: 'Contrat de Maîtrise d\'Œuvre - Missions selon loi MOP',
     icon: 'Building2',
     color: '#3B82F6',
     default_fields: { surface: true, construction_budget: true, address: true, city: true },
-    default_clauses: {},
+    default_clauses: DEFAULT_MOE_CONFIG,
     builder_tabs: ['general', 'fees', 'planning', 'terms'],
     pdf_config: DEFAULT_PDF_CONFIG,
     sort_order: 0,
@@ -178,12 +194,19 @@ export function useContractTypes() {
 
       const { data, error } = await supabase
         .from('contract_types')
-        .insert({
-          ...input,
+        .insert([{
           workspace_id: activeWorkspace.id,
-          default_fields: input.default_fields || {},
-          default_clauses: input.default_clauses || {}
-        })
+          name: input.name,
+          code: input.code,
+          description: input.description,
+          icon: input.icon,
+          color: input.color,
+          default_fields: (input.default_fields || {}) as unknown as Json,
+          default_clauses: (input.default_clauses || {}) as unknown as Json,
+          builder_tabs: input.builder_tabs as unknown as Json,
+          sort_order: input.sort_order ?? 0,
+          is_default: input.is_default ?? false
+        }])
         .select()
         .single();
 
