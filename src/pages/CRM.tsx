@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Target, Users, Building2, Layers, Search } from "lucide-react";
+import { Loader2, Plus, Target, Users, Building2, Layers, Search, Sparkles } from "lucide-react";
 import { CRMContactsTable } from "@/components/crm/CRMContactsTable";
 import { CRMCompanyTable } from "@/components/crm/CRMCompanyTable";
 import { LeadPipeline } from "@/components/crm/LeadPipeline";
@@ -13,13 +13,14 @@ import { CreateLeadDialog } from "@/components/crm/CreateLeadDialog";
 import { ImportContactsDialog } from "@/components/crm/ImportContactsDialog";
 import { CRMOverview } from "@/components/crm/CRMOverview";
 import { CRMCommandBar } from "@/components/crm/CRMCommandBar";
+import { AIProspectingPanel } from "@/components/crm/AIProspectingPanel";
 import { useLeads } from "@/hooks/useLeads";
 import { useCRMPipelines } from "@/hooks/useCRMPipelines";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
 import { cn } from "@/lib/utils";
 
-type CRMView = "overview" | "leads" | "prospection" | "contacts" | "companies";
+type CRMView = "overview" | "leads" | "prospection" | "contacts" | "companies" | "development";
 
 type PipelineMode = "all" | "single";
 
@@ -29,6 +30,7 @@ const sectionDescriptions: Record<CRMView, string> = {
   prospection: "Pipelines de prospection contacts et sociétés",
   contacts: "Annuaire de vos contacts",
   companies: "Répertoire de vos entreprises",
+  development: "Agent AI de développement commercial",
 };
 
 export default function CRM() {
@@ -402,6 +404,9 @@ export default function CRM() {
         }
 
         return null;
+
+      case "development":
+        return <AIProspectingPanel />;
 
       default:
         return null;

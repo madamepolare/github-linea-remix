@@ -128,6 +128,119 @@ export type Database = {
           },
         ]
       }
+      ai_prospects: {
+        Row: {
+          company_address: string | null
+          company_city: string | null
+          company_email: string | null
+          company_industry: string | null
+          company_name: string
+          company_phone: string | null
+          company_postal_code: string | null
+          company_website: string | null
+          confidence_score: number | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          contact_role: string | null
+          converted_company_id: string | null
+          converted_contact_id: string | null
+          converted_lead_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          source_query: string
+          source_url: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          company_address?: string | null
+          company_city?: string | null
+          company_email?: string | null
+          company_industry?: string | null
+          company_name: string
+          company_phone?: string | null
+          company_postal_code?: string | null
+          company_website?: string | null
+          confidence_score?: number | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_role?: string | null
+          converted_company_id?: string | null
+          converted_contact_id?: string | null
+          converted_lead_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          source_query: string
+          source_url?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          company_address?: string | null
+          company_city?: string | null
+          company_email?: string | null
+          company_industry?: string | null
+          company_name?: string
+          company_phone?: string | null
+          company_postal_code?: string | null
+          company_website?: string | null
+          confidence_score?: number | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_role?: string | null
+          converted_company_id?: string | null
+          converted_contact_id?: string | null
+          converted_lead_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          source_query?: string
+          source_url?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_prospects_converted_company_id_fkey"
+            columns: ["converted_company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_prospects_converted_contact_id_fkey"
+            columns: ["converted_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_prospects_converted_lead_id_fkey"
+            columns: ["converted_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_prospects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       apprentice_schedules: {
         Row: {
           company_days_per_week: number | null
