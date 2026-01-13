@@ -76,12 +76,17 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
   const { openCheckin, openCheckout } = useCheckinStore();
   const { hasCheckedIn, hasCheckedOut } = useUserCheckins();
   
-  // Determine if check-in/out buttons should show
-  const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinutes = now.getMinutes();
-  const showCheckinButton = (currentHour > 9 || (currentHour === 9 && currentMinutes >= 45)) && !hasCheckedIn;
-  const showCheckoutButton = (currentHour > 17 || (currentHour === 17 && currentMinutes >= 50)) && hasCheckedIn && !hasCheckedOut;
+  // For testing: show both buttons always (remove time constraints later for production)
+  // In production, uncomment time-based logic:
+  // const now = new Date();
+  // const currentHour = now.getHours();
+  // const currentMinutes = now.getMinutes();
+  // const showCheckinButton = (currentHour > 9 || (currentHour === 9 && currentMinutes >= 45)) && !hasCheckedIn;
+  // const showCheckoutButton = (currentHour > 17 || (currentHour === 17 && currentMinutes >= 50)) && hasCheckedIn && !hasCheckedOut;
+  
+  // TEST MODE: Always show buttons
+  const showCheckinButton = !hasCheckedIn;
+  const showCheckoutButton = !hasCheckedOut;
   
   // Notifications state - use real notifications from hook
   const { notifications, unreadCount } = useNotifications();
