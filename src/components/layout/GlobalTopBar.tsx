@@ -45,6 +45,7 @@ import { NotificationsSidebar } from "./NotificationsSidebar";
 import { differenceInMinutes } from "date-fns";
 import { useCheckinStore } from "@/hooks/useCheckinStore";
 import { useUserCheckins } from "@/hooks/useUserCheckins";
+import { useIsModuleEnabled } from "@/hooks/useModules";
 
 // Quick actions config
 const quickActions = [
@@ -75,18 +76,19 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
   // Check-in/Check-out state
   const { openCheckin, openCheckout } = useCheckinStore();
   const { hasCheckedIn, hasCheckedOut } = useUserCheckins();
+  const isCheckinModuleEnabled = useIsModuleEnabled("checkin");
   
   // For testing: show both buttons always (remove time constraints later for production)
   // In production, uncomment time-based logic:
   // const now = new Date();
   // const currentHour = now.getHours();
   // const currentMinutes = now.getMinutes();
-  // const showCheckinButton = (currentHour > 9 || (currentHour === 9 && currentMinutes >= 45)) && !hasCheckedIn;
-  // const showCheckoutButton = (currentHour > 17 || (currentHour === 17 && currentMinutes >= 50)) && hasCheckedIn && !hasCheckedOut;
+  // const showCheckinButton = isCheckinModuleEnabled && (currentHour > 9 || (currentHour === 9 && currentMinutes >= 45)) && !hasCheckedIn;
+  // const showCheckoutButton = isCheckinModuleEnabled && (currentHour > 17 || (currentHour === 17 && currentMinutes >= 50)) && hasCheckedIn && !hasCheckedOut;
   
-  // TEST MODE: Always show both buttons regardless of status
-  const showCheckinButton = true;
-  const showCheckoutButton = true;
+  // TEST MODE: Always show both buttons if module is enabled
+  const showCheckinButton = isCheckinModuleEnabled;
+  const showCheckoutButton = isCheckinModuleEnabled;
   
   // Notifications state - use real notifications from hook
   const { notifications, unreadCount } = useNotifications();
