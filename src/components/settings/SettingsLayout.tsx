@@ -29,6 +29,7 @@ import {
   UserCog,
   Grid3X3,
   Gavel,
+  Calendar,
 } from 'lucide-react';
 
 export interface SettingsSection {
@@ -100,6 +101,13 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
     label: 'Appels d\'offres',
     sections: [
       { id: 'tenders', label: 'Configuration AO', icon: <Gavel className="h-4 w-4" />, description: 'Phases, critères, rappels' },
+    ],
+  },
+  {
+    id: 'integrations',
+    label: 'Intégrations',
+    sections: [
+      { id: 'calendars', label: 'Calendriers', icon: <Calendar className="h-4 w-4" />, description: 'Google, Outlook, iCal' },
     ],
   },
   {

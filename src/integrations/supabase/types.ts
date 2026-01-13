@@ -190,6 +190,83 @@ export type Database = {
           },
         ]
       }
+      calendar_connections: {
+        Row: {
+          access_token: string | null
+          calendar_color: string | null
+          calendar_name: string
+          created_at: string
+          id: string
+          is_shared: boolean
+          last_sync_at: string | null
+          provider: string
+          provider_account_email: string | null
+          provider_account_name: string | null
+          refresh_token: string | null
+          settings: Json | null
+          sync_direction: string
+          sync_enabled: boolean
+          sync_error: string | null
+          sync_status: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          calendar_color?: string | null
+          calendar_name?: string
+          created_at?: string
+          id?: string
+          is_shared?: boolean
+          last_sync_at?: string | null
+          provider: string
+          provider_account_email?: string | null
+          provider_account_name?: string | null
+          refresh_token?: string | null
+          settings?: Json | null
+          sync_direction?: string
+          sync_enabled?: boolean
+          sync_error?: string | null
+          sync_status?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          access_token?: string | null
+          calendar_color?: string | null
+          calendar_name?: string
+          created_at?: string
+          id?: string
+          is_shared?: boolean
+          last_sync_at?: string | null
+          provider?: string
+          provider_account_email?: string | null
+          provider_account_name?: string | null
+          refresh_token?: string | null
+          settings?: Json | null
+          sync_direction?: string
+          sync_enabled?: boolean
+          sync_error?: string | null
+          sync_status?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_connections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_deliverables: {
         Row: {
           assigned_to: string | null
@@ -7039,6 +7116,93 @@ export type Database = {
           },
         ]
       }
+      synced_calendar_events: {
+        Row: {
+          attendees: Json | null
+          connection_id: string
+          created_at: string
+          description: string | null
+          end_datetime: string | null
+          external_event_id: string
+          html_link: string | null
+          id: string
+          is_all_day: boolean | null
+          location: string | null
+          meeting_link: string | null
+          organizer: Json | null
+          raw_data: Json | null
+          recurrence_rule: string | null
+          start_datetime: string
+          status: string | null
+          synced_at: string
+          title: string
+          updated_at: string
+          visibility: string | null
+          workspace_id: string
+        }
+        Insert: {
+          attendees?: Json | null
+          connection_id: string
+          created_at?: string
+          description?: string | null
+          end_datetime?: string | null
+          external_event_id: string
+          html_link?: string | null
+          id?: string
+          is_all_day?: boolean | null
+          location?: string | null
+          meeting_link?: string | null
+          organizer?: Json | null
+          raw_data?: Json | null
+          recurrence_rule?: string | null
+          start_datetime: string
+          status?: string | null
+          synced_at?: string
+          title: string
+          updated_at?: string
+          visibility?: string | null
+          workspace_id: string
+        }
+        Update: {
+          attendees?: Json | null
+          connection_id?: string
+          created_at?: string
+          description?: string | null
+          end_datetime?: string | null
+          external_event_id?: string
+          html_link?: string | null
+          id?: string
+          is_all_day?: boolean | null
+          location?: string | null
+          meeting_link?: string | null
+          organizer?: Json | null
+          raw_data?: Json | null
+          recurrence_rule?: string | null
+          start_datetime?: string
+          status?: string | null
+          synced_at?: string
+          title?: string
+          updated_at?: string
+          visibility?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "synced_calendar_events_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "synced_calendar_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_comments: {
         Row: {
           author_id: string | null
@@ -8749,6 +8913,131 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "user_roles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_calendar_events: {
+        Row: {
+          attendees: Json | null
+          calendar_id: string
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_datetime: string | null
+          event_type: string | null
+          id: string
+          is_all_day: boolean | null
+          location: string | null
+          recurrence_end_date: string | null
+          recurrence_rule: string | null
+          start_datetime: string
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          attendees?: Json | null
+          calendar_id: string
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_datetime?: string | null
+          event_type?: string | null
+          id?: string
+          is_all_day?: boolean | null
+          location?: string | null
+          recurrence_end_date?: string | null
+          recurrence_rule?: string | null
+          start_datetime: string
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          attendees?: Json | null
+          calendar_id?: string
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_datetime?: string | null
+          event_type?: string | null
+          id?: string
+          is_all_day?: boolean | null
+          location?: string | null
+          recurrence_end_date?: string | null
+          recurrence_rule?: string | null
+          start_datetime?: string
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_calendar_events_calendar_id_fkey"
+            columns: ["calendar_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_calendars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workspace_calendar_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_calendars: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          updated_at: string
+          visibility: string | null
+          workspace_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          updated_at?: string
+          visibility?: string | null
+          workspace_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          updated_at?: string
+          visibility?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_calendars_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
