@@ -29,7 +29,7 @@ import {
 import { QuoteDocument, QuoteLine, phaseToQuoteLine, quoteLineToPhase, DOCUMENT_STATUS_LABELS } from '@/types/quoteTypes';
 import { QuoteGeneralTab } from '@/components/commercial/quote-builder/QuoteGeneralTab';
 import { QuoteLinesEditor } from '@/components/commercial/quote-builder/QuoteLinesEditor';
-import { QuoteFeesTab } from '@/components/commercial/quote-builder/QuoteFeesTab';
+import { QuoteFeesAndLinesTab } from '@/components/commercial/quote-builder/QuoteFeesAndLinesTab';
 import { QuoteProductionTab } from '@/components/commercial/quote-builder/QuoteProductionTab';
 import { QuotePlanningTab } from '@/components/commercial/quote-builder/QuotePlanningTab';
 import { QuoteTermsTab } from '@/components/commercial/quote-builder/QuoteTermsTab';
@@ -112,6 +112,12 @@ export default function QuoteBuilder() {
   // Get enabled tabs from current contract type
   const currentContractType = activeContractTypes.find(t => t.id === document.contract_type_id);
   const enabledTabs: BuilderTab[] = currentContractType?.builder_tabs || ['general', 'lines', 'terms'];
+
+  // Merge fees and lines into single tab when both are enabled
+  const hasBothFeesAndLines = currentContractType?.builder_tabs?.includes('fees') && currentContractType?.builder_tabs?.includes('lines');
+  const processedTabs: BuilderTab[] = hasBothFeesAndLines
+    ? enabledTabs.filter(tab => tab !== 'lines') // Remove 'lines', keep 'fees' which will show combined UI
+    : enabledTabs;
   
   // Store project_id separately for the save operation
   const [linkedProjectId, setLinkedProjectId] = useState<string | undefined>(projectId || undefined);
@@ -165,10 +171,10 @@ export default function QuoteBuilder() {
 
   // Reset active tab if it becomes unavailable
   useEffect(() => {
-    if (!enabledTabs.includes(activeTab as BuilderTab)) {
+    if (!processedTabs.includes(activeTab as BuilderTab)) {
       setActiveTab('general');
     }
-  }, [enabledTabs, activeTab]);
+  }, [processedTabs, activeTab]);
 
   // Initialize default conditions when contract type changes
   useEffect(() => {
@@ -463,14 +469,17 @@ export default function QuoteBuilder() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1">
             <div className="px-4 pt-4 pb-0 border-b bg-muted/30 shrink-0">
               <TabsList className="h-10">
-                {enabledTabs.map(tabId => {
+                {processedTabs.map(tabId => {
                   const config = TAB_CONFIG[tabId];
                   const Icon = config.icon;
+                  // Show line count for fees tab when it includes lines
+                  const showLineCount = tabId === 'fees' && hasBothFeesAndLines && lines.length > 0;
+                  const showLinesCount = tabId === 'lines' && lines.length > 0;
                   return (
                     <TabsTrigger key={tabId} value={tabId} className="gap-2 px-4">
                       <Icon className="h-4 w-4" />
                       <span className="hidden sm:inline">{config.label}</span>
-                      {tabId === 'lines' && lines.length > 0 && (
+                      {(showLineCount || showLinesCount) && (
                         <span className="ml-1 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
                           {lines.length}
                         </span>
@@ -482,7 +491,7 @@ export default function QuoteBuilder() {
             </div>
 
             <ScrollArea className="flex-1">
-              {enabledTabs.includes('general') && (
+              {processedTabs.includes('general') && (
                 <TabsContent value="general" className="m-0 p-6">
                   <QuoteGeneralTab 
                     document={document}
@@ -493,18 +502,19 @@ export default function QuoteBuilder() {
                 </TabsContent>
               )}
 
-              {enabledTabs.includes('fees') && (
+              {processedTabs.includes('fees') && (
                 <TabsContent value="fees" className="m-0 p-6">
-                  <QuoteFeesTab 
+                  <QuoteFeesAndLinesTab 
                     document={document}
                     onDocumentChange={handleDocumentChange}
                     lines={lines}
                     onLinesChange={handleLinesChange}
+                    showFeesSubTab={hasBothFeesAndLines}
                   />
                 </TabsContent>
               )}
 
-              {enabledTabs.includes('lines') && (
+              {processedTabs.includes('lines') && !hasBothFeesAndLines && (
                 <TabsContent value="lines" className="m-0 p-6">
                   <QuoteLinesEditor
                     lines={lines}
@@ -515,7 +525,7 @@ export default function QuoteBuilder() {
                 </TabsContent>
               )}
 
-              {enabledTabs.includes('production') && (
+              {processedTabs.includes('production') && (
                 <TabsContent value="production" className="m-0 p-6">
                   <QuoteProductionTab 
                     document={document}
@@ -526,7 +536,7 @@ export default function QuoteBuilder() {
                 </TabsContent>
               )}
 
-              {enabledTabs.includes('planning') && (
+              {processedTabs.includes('planning') && (
                 <TabsContent value="planning" className="m-0 p-6">
                   <QuotePlanningTab 
                     document={document}
@@ -537,7 +547,7 @@ export default function QuoteBuilder() {
                 </TabsContent>
               )}
 
-              {enabledTabs.includes('terms') && (
+              {processedTabs.includes('terms') && (
                 <TabsContent value="terms" className="m-0 p-6">
                   {isArchitectureContractType(currentContractType?.code || document.project_type || '') ? (
                     <QuoteMOETermsTab

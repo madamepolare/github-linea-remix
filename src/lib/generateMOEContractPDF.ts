@@ -43,7 +43,7 @@ export async function generateMOEContractPDF(
 ): Promise<Blob> {
   const pdf = new jsPDF('p', 'mm', 'a4');
   
-  // Load images
+  // Load images with aspect ratio preservation
   const logoBase64 = agencyInfo?.logo_url 
     ? await loadImageAsBase64(agencyInfo.logo_url) 
     : null;
@@ -51,13 +51,19 @@ export async function generateMOEContractPDF(
     ? await loadImageAsBase64(agencyInfo.signature_url) 
     : null;
 
+  // Consistent margins (20mm on all sides)
+  const margin = 20;
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const contentWidth = pageWidth - (margin * 2);
+
   const ctx: PDFContext = {
     pdf,
-    margin: 20,
-    pageWidth: pdf.internal.pageSize.getWidth(),
-    pageHeight: pdf.internal.pageSize.getHeight(),
-    contentWidth: pdf.internal.pageSize.getWidth() - 40,
-    y: 20,
+    margin,
+    pageWidth,
+    pageHeight,
+    contentWidth,
+    y: margin,
     logoBase64,
     signatureBase64,
     pageCount: 1
@@ -132,17 +138,20 @@ export async function generateMOEContractPDF(
 function renderCoverPage(ctx: PDFContext, data: MOEContractData, agencyInfo?: AgencyPDFInfo) {
   const { pdf, margin, pageWidth, pageHeight, logoBase64 } = ctx;
 
-  // Logo en haut à gauche
+  // Logo en haut à gauche - preserve aspect ratio, max height 35mm, max width 50mm
   if (logoBase64) {
     try {
-      pdf.addImage(logoBase64, 'PNG', margin, 20, 40, 40);
+      // Add logo with fixed max dimensions to prevent deformation
+      const maxLogoWidth = 50;
+      const maxLogoHeight = 35;
+      pdf.addImage(logoBase64, 'AUTO', margin, margin, maxLogoWidth, maxLogoHeight, undefined, 'FAST');
     } catch (e) {
       console.error('Error adding logo:', e);
     }
   }
 
-  // Nom de l'agence
-  let y = 75;
+  // Nom de l'agence - positioned after logo space
+  let y = margin + 45;
   if (agencyInfo?.name) {
     setTextStyle(pdf, 'h4', 'bold', 'secondary');
     pdf.text(agencyInfo.name.toUpperCase(), margin, y);
@@ -150,7 +159,7 @@ function renderCoverPage(ctx: PDFContext, data: MOEContractData, agencyInfo?: Ag
   }
 
   // Titre principal - PROPOSITION DE MISSION
-  y = 110;
+  y = 100;
   setTextStyle(pdf, 'h1', 'bold', 'primary');
   pdf.text('PROPOSITION DE MISSION', margin, y);
 
@@ -162,31 +171,37 @@ function renderCoverPage(ctx: PDFContext, data: MOEContractData, agencyInfo?: Ag
   // Informations projet
   y += 30;
   setTextStyle(pdf, 'h2', 'bold', 'primary');
-  pdf.text(`Projet : ${data.project.name}`, margin, y);
+  const projectTitle = data.project.name || 'Projet';
+  const projectTitleLines = pdf.splitTextToSize(`Projet : ${projectTitle}`, ctx.contentWidth);
+  projectTitleLines.forEach((line: string) => {
+    pdf.text(line, margin, y);
+    y += 10;
+  });
 
-  y += 12;
   setTextStyle(pdf, 'h4', 'normal', 'secondary');
   const address = [data.project.address, data.project.postal_code, data.project.city].filter(Boolean).join(', ');
-  pdf.text(`Lieu : ${address}`, margin, y);
+  if (address) {
+    pdf.text(`Lieu : ${address}`, margin, y);
+    y += 8;
+  }
 
-  y += 8;
   pdf.text(`MOA : ${data.moa.name}`, margin, y);
 
   // Coordonnées agence en bas de page
   if (agencyInfo) {
-    const bottomY = pageHeight - 55;
+    const bottomY = pageHeight - 50;
     setTextStyle(pdf, 'small', 'normal', 'muted');
     
     const agencyAddress = [agencyInfo.address, agencyInfo.postal_code, agencyInfo.city].filter(Boolean).join(', ');
     pdf.text(agencyAddress || '', margin, bottomY);
     
     // Ordre des architectes
-    pdf.text('Société d\'architecture inscrite à l\'Ordre des Architectes', margin, bottomY + 6);
+    pdf.text('Société d\'architecture inscrite à l\'Ordre des Architectes', margin, bottomY + 5);
     
     // Contact info
     if (agencyInfo.phone || agencyInfo.email) {
       const contactLine = [agencyInfo.phone, agencyInfo.email].filter(Boolean).join(' • ');
-      pdf.text(contactLine, margin, bottomY + 12);
+      pdf.text(contactLine, margin, bottomY + 10);
     }
   }
 }
