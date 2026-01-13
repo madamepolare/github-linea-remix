@@ -40,6 +40,39 @@ export const ARCHITECTURE_DISCIPLINE: DisciplineDefinition = {
   
   // === Configuration Tenders ===
   tenders: {
+    // === ONGLETS ARCHITECTURE ===
+    tabs: [
+      { key: 'synthese', label: 'Synthèse', icon: 'LayoutDashboard', component: 'TenderSyntheseTab', visible: true, order: 1 },
+      { key: 'equipe', label: 'Honoraires & Équipe', icon: 'Users', component: 'TenderEquipeTab', visible: true, order: 2 },
+      { key: 'calendrier', label: 'Calendrier', icon: 'Calendar', component: 'TenderCalendarTab', visible: true, order: 3 },
+      { key: 'tasks', label: 'Tâches', icon: 'CheckSquare', component: 'EntityTasksList', visible: true, order: 4 },
+      { key: 'documents', label: 'DCE', icon: 'FolderOpen', component: 'TenderDocumentsTab', visible: true, order: 5 },
+      { key: 'emails', label: 'Emails', icon: 'Mail', component: 'EntityEmailsTab', visible: true, order: 6 },
+      { key: 'livrables', label: 'Livrables', icon: 'ListTodo', component: 'TenderLivrablesTab', visible: true, order: 7 },
+      { key: 'memoire', label: 'Mémoire', icon: 'PenTool', component: 'TenderMemoireTab', visible: true, order: 8 },
+    ],
+    
+    // === BLOCS SYNTHÈSE ARCHITECTURE ===
+    synthesisBlocks: [
+      { key: 'budget', label: 'Budget travaux', component: 'BudgetBlock', visible: true, order: 1 },
+      { key: 'honoraires', label: 'Honoraires MOE', component: 'HonorairesBlock', visible: true, order: 2 },
+      { key: 'missions', label: 'Missions', component: 'MissionsBlock', visible: true, order: 3 },
+      { key: 'surface', label: 'Surface', component: 'SurfaceBlock', visible: true, order: 4 },
+      { key: 'criteres', label: 'Critères', component: 'CriteresBlock', visible: true, order: 5 },
+      { key: 'equipe_requise', label: 'Équipe requise', component: 'EquipeRequisBlock', visible: true, order: 6 },
+      { key: 'visite', label: 'Visite de site', component: 'VisiteBlock', visible: true, order: 7 },
+    ],
+    
+    // === SECTIONS FORMULAIRE ARCHITECTURE ===
+    formSections: [
+      { key: 'general', label: 'Informations générales', fields: ['title', 'reference', 'description', 'tender_type'], visible: true, order: 1 },
+      { key: 'client', label: 'Maître d\'ouvrage', fields: ['client_name', 'client_type', 'client_address', 'client_contact_name', 'client_contact_email'], visible: true, order: 2 },
+      { key: 'projet', label: 'Projet', fields: ['location', 'surface_area', 'project_type', 'work_nature_tags'], visible: true, order: 3 },
+      { key: 'financial', label: 'Budget & Honoraires', fields: ['estimated_budget', 'moe_fee_percentage', 'moe_fee_amount', 'moe_phases'], visible: true, order: 4 },
+      { key: 'procedure', label: 'Procédure', fields: ['procedure_type', 'submission_type', 'allows_variants', 'allows_joint_venture'], visible: true, order: 5 },
+      { key: 'dates', label: 'Dates', fields: ['submission_deadline', 'site_visit_date', 'jury_date', 'results_date'], visible: true, order: 6 },
+    ],
+    
     teamSpecialties: [
       { value: 'architecte', label: 'Architecte', category: 'moe' },
       { value: 'bet_structure', label: 'BET Structure', category: 'bet' },
