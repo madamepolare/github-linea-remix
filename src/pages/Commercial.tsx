@@ -83,6 +83,7 @@ const Commercial = () => {
     switch (type) {
       case 'quote': return FileText;
       case 'contract': return FileSignature;
+      default: return FileText;
     }
   };
 

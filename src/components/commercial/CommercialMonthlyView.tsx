@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO, startOfYear, addMonths, isSameMonth, subYears, addYears } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, FileText, FileSignature, FileCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, FileSignature } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -68,6 +68,7 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
     switch (type) {
       case 'quote': return FileText;
       case 'contract': return FileSignature;
+      default: return FileText;
     }
   };
 
