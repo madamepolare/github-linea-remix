@@ -5,7 +5,6 @@ import {
   Clock,
   Bell,
   Target,
-  Layers,
   Plus,
   X,
   GripVertical,
@@ -407,97 +406,7 @@ function CriteriaSection() {
   );
 }
 
-// ============= LOT DOMAINS SECTION =============
-
-function LotDomainsSection() {
-  const { tenderSettings, updateLotDomain, removeLotDomain, addLotDomain } = useTenderSettings();
-  const [newDomainName, setNewDomainName] = useState("");
-  const [newDomainColor, setNewDomainColor] = useState("#8B5CF6");
-
-  const handleAddDomain = () => {
-    if (!newDomainName.trim()) return;
-    addLotDomain({
-      name: newDomainName,
-      color: newDomainColor,
-      is_default: false,
-    });
-    setNewDomainName("");
-    setNewDomainColor("#8B5CF6");
-  };
-
-  const colorOptions = [
-    "#8B5CF6", "#F59E0B", "#3B82F6", "#EC4899",
-    "#EF4444", "#10B981", "#6366F1", "#14B8A6",
-  ];
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <h4 className="font-medium">Domaines / Types de lots</h4>
-        <p className="text-sm text-muted-foreground">
-          Domaines proposés pour les marchés multi-lots (communication)
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        {tenderSettings.default_lot_domains.map((domain) => (
-          <div
-            key={domain.id}
-            className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg group"
-          >
-            <div
-              className="w-4 h-4 rounded-full shrink-0"
-              style={{ backgroundColor: domain.color || "#8B5CF6" }}
-            />
-            <Input
-              value={domain.name}
-              onChange={(e) => updateLotDomain(domain.id, { name: e.target.value })}
-              className="h-9 flex-1"
-            />
-            <Switch
-              checked={domain.is_default}
-              onCheckedChange={(checked) => updateLotDomain(domain.id, { is_default: checked })}
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 opacity-0 group-hover:opacity-100"
-              onClick={() => removeLotDomain(domain.id)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center gap-3 p-3 border border-dashed rounded-lg">
-        <Plus className="h-4 w-4 text-muted-foreground" />
-        <div className="flex gap-1">
-          {colorOptions.map((color) => (
-            <button
-              key={color}
-              className={cn(
-                "w-6 h-6 rounded-full transition-transform",
-                newDomainColor === color && "ring-2 ring-offset-2 ring-primary scale-110"
-              )}
-              style={{ backgroundColor: color }}
-              onClick={() => setNewDomainColor(color)}
-            />
-          ))}
-        </div>
-        <Input
-          placeholder="Nouveau domaine..."
-          value={newDomainName}
-          onChange={(e) => setNewDomainName(e.target.value)}
-          className="h-9 flex-1"
-        />
-        <Button size="sm" onClick={handleAddDomain} disabled={!newDomainName.trim()}>
-          Ajouter
-        </Button>
-      </div>
-    </div>
-  );
-}
+// ============= LOT DOMAINS SECTION (removed - now managed in tender type configs) =============
 
 // ============= PIPELINE COLUMNS SECTION =============
 
@@ -653,7 +562,7 @@ export function TenderSettings() {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="disciplines" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="disciplines" className="gap-2">
                 <Compass className="h-4 w-4" />
                 <span className="hidden sm:inline">Disciplines</span>
@@ -677,10 +586,6 @@ export function TenderSettings() {
               <TabsTrigger value="criteria" className="gap-2">
                 <Target className="h-4 w-4" />
                 <span className="hidden sm:inline">Critères</span>
-              </TabsTrigger>
-              <TabsTrigger value="domains" className="gap-2">
-                <Layers className="h-4 w-4" />
-                <span className="hidden sm:inline">Domaines</span>
               </TabsTrigger>
             </TabsList>
 
@@ -706,10 +611,6 @@ export function TenderSettings() {
 
             <TabsContent value="criteria">
               <CriteriaSection />
-            </TabsContent>
-
-            <TabsContent value="domains">
-              <LotDomainsSection />
             </TabsContent>
           </Tabs>
         </CardContent>
