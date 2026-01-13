@@ -1,5 +1,5 @@
 // Générateur PDF pour Contrat de Maîtrise d'Œuvre (MOE) Architecture
-// Design professionnel avec typographie système
+// Design professionnel avec typographie système Inter-like
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -12,6 +12,14 @@ import {
   DEFAULT_MOE_CLAUSES 
 } from './moeContractConfig';
 import { AgencyPDFInfo, loadImageAsBase64, addPDFFooter } from './pdfUtils';
+import { 
+  PDF_FONTS, 
+  PDF_COLORS, 
+  PDF_STYLES, 
+  setTextStyle, 
+  addPageParaphes,
+  formatCurrencyPDF 
+} from './pdfFonts';
 
 // ============= Types =============
 
@@ -127,64 +135,59 @@ function renderCoverPage(ctx: PDFContext, data: MOEContractData, agencyInfo?: Ag
   // Logo en haut à gauche
   if (logoBase64) {
     try {
-      pdf.addImage(logoBase64, 'PNG', margin, 20, 35, 35);
+      pdf.addImage(logoBase64, 'PNG', margin, 20, 40, 40);
     } catch (e) {
       console.error('Error adding logo:', e);
     }
   }
 
   // Nom de l'agence
-  let y = 70;
+  let y = 75;
   if (agencyInfo?.name) {
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(80);
+    setTextStyle(pdf, 'h4', 'bold', 'secondary');
     pdf.text(agencyInfo.name.toUpperCase(), margin, y);
-    y += 10;
+    y += 12;
   }
 
-  // Titre principal
-  y = 100;
-  pdf.setFontSize(28);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(30);
+  // Titre principal - PROPOSITION DE MISSION
+  y = 110;
+  setTextStyle(pdf, 'h1', 'bold', 'primary');
   pdf.text('PROPOSITION DE MISSION', margin, y);
 
   // Référence
-  y += 15;
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(100);
+  y += 18;
+  setTextStyle(pdf, 'h4', 'normal', 'muted');
   pdf.text(`Référence : ${data.reference}`, margin, y);
 
   // Informations projet
-  y += 25;
-  pdf.setFontSize(16);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(30);
+  y += 30;
+  setTextStyle(pdf, 'h2', 'bold', 'primary');
   pdf.text(`Projet : ${data.project.name}`, margin, y);
 
-  y += 10;
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(60);
+  y += 12;
+  setTextStyle(pdf, 'h4', 'normal', 'secondary');
   const address = [data.project.address, data.project.postal_code, data.project.city].filter(Boolean).join(', ');
   pdf.text(`Lieu : ${address}`, margin, y);
 
-  y += 10;
+  y += 8;
   pdf.text(`MOA : ${data.moa.name}`, margin, y);
 
-  // Coordonnées agence en bas
+  // Coordonnées agence en bas de page
   if (agencyInfo) {
-    const bottomY = pageHeight - 50;
-    pdf.setFontSize(10);
-    pdf.setTextColor(80);
+    const bottomY = pageHeight - 55;
+    setTextStyle(pdf, 'small', 'normal', 'muted');
     
     const agencyAddress = [agencyInfo.address, agencyInfo.postal_code, agencyInfo.city].filter(Boolean).join(', ');
     pdf.text(agencyAddress || '', margin, bottomY);
     
-    // Note: ordre_number should be stored in agency settings if needed
+    // Ordre des architectes
     pdf.text('Société d\'architecture inscrite à l\'Ordre des Architectes', margin, bottomY + 6);
+    
+    // Contact info
+    if (agencyInfo.phone || agencyInfo.email) {
+      const contactLine = [agencyInfo.phone, agencyInfo.email].filter(Boolean).join(' • ');
+      pdf.text(contactLine, margin, bottomY + 12);
+    }
   }
 }
 
@@ -195,14 +198,11 @@ function renderContractantsSection(ctx: PDFContext, data: MOEContractData) {
   ctx.y = renderSectionTitle(ctx, '1.1 CONTRACTANTS');
 
   // MOA
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(30);
+  setTextStyle(pdf, 'h4', 'bold', 'primary');
   pdf.text('Le maître d\'ouvrage', margin, ctx.y);
-  ctx.y += 6;
+  ctx.y += 7;
 
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(60);
+  setTextStyle(pdf, 'body', 'normal', 'secondary');
   
   const moaInfo = [
     `Représenté par : ${data.moa.name}`,
@@ -213,22 +213,18 @@ function renderContractantsSection(ctx: PDFContext, data: MOEContractData) {
   ].filter(Boolean);
 
   moaInfo.forEach(line => {
-    pdf.setFontSize(9);
     pdf.text(line as string, margin, ctx.y);
     ctx.y += 5;
   });
 
-  ctx.y += 8;
+  ctx.y += 10;
 
   // MOE
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(30);
+  setTextStyle(pdf, 'h4', 'bold', 'primary');
   pdf.text('L\'architecte', margin, ctx.y);
-  ctx.y += 6;
+  ctx.y += 7;
 
-  pdf.setFont('helvetica', 'normal');
-  pdf.setTextColor(60);
+  setTextStyle(pdf, 'body', 'normal', 'secondary');
   
   const moeInfo = [
     `La société : ${data.moe.company_name || data.moe.name}`,
@@ -239,12 +235,11 @@ function renderContractantsSection(ctx: PDFContext, data: MOEContractData) {
   ].filter(Boolean);
 
   moeInfo.forEach(line => {
-    pdf.setFontSize(9);
     pdf.text(line as string, margin, ctx.y);
     ctx.y += 5;
   });
 
-  ctx.y += 10;
+  ctx.y += 12;
 }
 
 function renderObjetSection(ctx: PDFContext, data: MOEContractData) {
@@ -260,17 +255,14 @@ function renderObjetSection(ctx: PDFContext, data: MOEContractData) {
   ];
 
   projectInfo.forEach(item => {
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(60);
+    setTextStyle(pdf, 'body', 'bold', 'secondary');
     pdf.text(item.label, margin, ctx.y);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(30);
-    pdf.text(item.value, margin + 40, ctx.y);
+    setTextStyle(pdf, 'body', 'normal', 'primary');
+    pdf.text(item.value, margin + 45, ctx.y);
     ctx.y += 6;
   });
 
-  ctx.y += 10;
+  ctx.y += 12;
 }
 
 function renderProgrammeSection(ctx: PDFContext, data: MOEContractData) {
@@ -280,65 +272,63 @@ function renderProgrammeSection(ctx: PDFContext, data: MOEContractData) {
 
   // Contraintes
   if (data.project.constraints) {
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(60);
+    setTextStyle(pdf, 'body', 'bold', 'secondary');
     pdf.text('Contraintes', margin, ctx.y);
     ctx.y += 5;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(30);
+    setTextStyle(pdf, 'body', 'normal', 'primary');
     const constraintLines = pdf.splitTextToSize(data.project.constraints, contentWidth);
     constraintLines.forEach((line: string) => {
       pdf.text(line, margin, ctx.y);
       ctx.y += 4;
     });
-    ctx.y += 3;
+    ctx.y += 5;
   }
 
   // Exigences
   if (data.project.requirements) {
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(60);
+    setTextStyle(pdf, 'body', 'bold', 'secondary');
     pdf.text('Exigences', margin, ctx.y);
     ctx.y += 5;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(30);
+    setTextStyle(pdf, 'body', 'normal', 'primary');
     const requirementLines = pdf.splitTextToSize(data.project.requirements, contentWidth);
     requirementLines.forEach((line: string) => {
       pdf.text(line, margin, ctx.y);
       ctx.y += 4;
     });
-    ctx.y += 3;
+    ctx.y += 5;
   }
 
   // Budget
   if (data.project.budget_travaux) {
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(60);
+    setTextStyle(pdf, 'body', 'bold', 'secondary');
     pdf.text('Budget global de l\'opération', margin, ctx.y);
     ctx.y += 5;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(30);
+    setTextStyle(pdf, 'body', 'normal', 'primary');
     const budgetText = `Le maître d'ouvrage informe l'architecte que son enveloppe financière pour l'opération décrite ci-dessus est de ${formatCurrency(data.project.budget_travaux)} HT hors honoraires de l'Architecte.`;
     const budgetLines = pdf.splitTextToSize(budgetText, contentWidth);
     budgetLines.forEach((line: string) => {
       pdf.text(line, margin, ctx.y);
       ctx.y += 4;
     });
+    ctx.y += 3;
+    
+    // Note sur le budget
+    setTextStyle(pdf, 'small', 'normal', 'muted');
+    const budgetNota = 'NOTA : En cas de non-définition par le Maître d\'ouvrage du budget global au début de l\'opération, celui-ci sera arrêté à la fin de la phase AVP (Avant-projet), en accord avec les estimations obtenues à cette étape.';
+    const notaLines = pdf.splitTextToSize(budgetNota, contentWidth);
+    notaLines.forEach((line: string) => {
+      pdf.text(line, margin, ctx.y);
+      ctx.y += 3.5;
+    });
   }
 
-  // Notes
+  // Notes complémentaires
   if (data.project.additional_notes) {
     ctx.y += 5;
-    pdf.setFontSize(9);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(60);
-    pdf.text('Autres détails', margin, ctx.y);
+    setTextStyle(pdf, 'body', 'bold', 'secondary');
+    pdf.text('Autres détails de l\'opération', margin, ctx.y);
     ctx.y += 5;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(30);
+    setTextStyle(pdf, 'body', 'normal', 'primary');
     const noteLines = pdf.splitTextToSize(data.project.additional_notes, contentWidth);
     noteLines.forEach((line: string) => {
       pdf.text(line, margin, ctx.y);
@@ -693,31 +683,19 @@ function renderSignaturesSection(ctx: PDFContext, data: MOEContractData, agencyI
 function renderSectionTitle(ctx: PDFContext, title: string): number {
   const { pdf, margin } = ctx;
   
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setTextColor(30);
+  setTextStyle(pdf, 'h3', 'bold', 'primary');
   pdf.text(title, margin, ctx.y);
   
-  return ctx.y + 10;
+  return ctx.y + 12;
 }
 
 function addPageFooter(ctx: PDFContext, data: MOEContractData) {
   const { pdf, margin, pageWidth, pageHeight } = ctx;
-  
-  pdf.setFontSize(7);
-  pdf.setTextColor(150);
-  
-  // Paraphe note
-  pdf.text('Paraphe MOE ____________', margin, pageHeight - 15);
-  pdf.text('Paraphe MOA ____________', pageWidth - margin - 40, pageHeight - 15);
+  addPageParaphes(pdf, pageWidth, pageHeight, margin, 'MOE', 'MOA');
 }
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('fr-FR', { 
-    style: 'currency', 
-    currency: 'EUR',
-    minimumFractionDigits: 2
-  }).format(amount);
+  return formatCurrencyPDF(amount);
 }
 
 // ============= Export Helper =============
