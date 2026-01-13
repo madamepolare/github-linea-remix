@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
-import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
+import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -39,7 +38,7 @@ import { SEOHead } from "@/components/seo/SEOHead";
 
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
 
   const { data: campaign, isLoading } = useCampaign(id);

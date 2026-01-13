@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
+import { useNavigate } from "react-router-dom";
 import {
   CommandDialog,
   CommandInput,
@@ -34,7 +34,7 @@ interface CRMCommandBarProps {
 }
 
 export function CRMCommandBar({ open, onOpenChange }: CRMCommandBarProps) {
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   
   const { allCompanies } = useCRMCompanies();

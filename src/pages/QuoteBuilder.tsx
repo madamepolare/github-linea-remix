@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { useWorkspaceNavigation } from '@/hooks/useWorkspaceNavigation';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -60,7 +59,7 @@ import {
 export default function QuoteBuilder() {
   const { id } = useParams<{ id?: string }>();
   const [searchParams] = useSearchParams();
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const { activeWorkspace, loading: authLoading } = useAuth();
   
   // Route "/commercial/quote/new" has no :id param, so treat missing id as a new document.

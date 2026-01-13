@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
-import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Target, Users, Building2, Layers, Search, Sparkles } from "lucide-react";
@@ -39,7 +38,7 @@ const sectionDescriptions: Record<CRMView, string> = {
 
 export default function CRM() {
   const { section } = useParams();
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const view = (section as CRMView) || "overview";
   const [searchQuery, setSearchQuery] = useState("");
 

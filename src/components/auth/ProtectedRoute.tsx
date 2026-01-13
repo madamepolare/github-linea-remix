@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Navigate, useLocation, useParams } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -8,9 +8,8 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, profile, workspaces, activeWorkspace, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const location = useLocation();
-  const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
 
   if (loading) {
     return (
@@ -27,15 +26,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Redirect to onboarding if not completed
   if (!profile?.onboarding_completed && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" replace />;
-  }
-
-  // If user has completed onboarding but is accessing root without workspace slug
-  // Redirect to their active workspace
-  if (profile?.onboarding_completed && !workspaceSlug && location.pathname === "/") {
-    const targetWorkspace = activeWorkspace || workspaces.find(w => !w.is_hidden) || workspaces[0];
-    if (targetWorkspace) {
-      return <Navigate to={`/${targetWorkspace.slug}`} replace />;
-    }
   }
 
   return <>{children}</>;

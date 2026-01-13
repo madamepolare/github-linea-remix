@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useWorkspaceNavigation } from '@/hooks/useWorkspaceNavigation';
+import { useNavigate, useParams } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +30,7 @@ const sectionDescriptions: Record<DocumentSection, string> = {
 };
 
 export default function Documents() {
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const { section } = useParams();
   const activeTab = (section as DocumentSection) || 'dashboard';
   const [searchQuery, setSearchQuery] = useState('');

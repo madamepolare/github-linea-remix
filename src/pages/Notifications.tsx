@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Bell, 
@@ -184,7 +184,7 @@ function getInitials(name: string | null) {
 }
 
 export default function NotificationsPage() {
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const { 
     notifications, 
     isLoading, 

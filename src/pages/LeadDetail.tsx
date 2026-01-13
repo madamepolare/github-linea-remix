@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
@@ -87,7 +86,7 @@ const sourceLabels: Record<string, string> = {
 
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const { activeWorkspace } = useAuth();
   const { leads, isLoading, updateLead } = useLeads();
   const { pipelines } = usePipelines();

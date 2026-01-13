@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
+import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
@@ -59,7 +59,7 @@ export function CRMActivityFeed({
   leads = [],
   maxItems = 10,
 }: CRMActivityFeedProps) {
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
 
   const activities = useMemo(() => {
     const items: Activity[] = [];

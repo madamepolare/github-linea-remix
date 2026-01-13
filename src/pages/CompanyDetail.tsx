@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams } from "react-router-dom";
-import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
+import { useParams, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,7 +39,7 @@ import { ContactLeadsSection } from "@/components/crm/contact/ContactLeadsSectio
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const { setEntityConfig } = useTopBar();
   const { activeWorkspace } = useAuth();
   const { allCompanies, isLoading, updateCompany } = useCRMCompanies();

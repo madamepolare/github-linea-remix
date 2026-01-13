@@ -82,23 +82,23 @@ export function MainLayout() {
       {/* Load and apply workspace-specific styles */}
       <WorkspaceStylesLoader />
       
-      {/* Mobile Header - Refined with blur */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-center h-14 px-4 bg-background/80 backdrop-blur-xl border-b border-border/40">
-        <div className="flex items-center gap-3">
+      {/* Mobile Header - Simplified */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-center h-12 px-4 bg-background/95 backdrop-blur-lg border-b border-border">
+        <div className="flex items-center gap-2">
           {activeWorkspace?.logo_url ? (
             <img 
               src={activeWorkspace.logo_url} 
               alt={activeWorkspace.name}
-              className="h-7 w-7 rounded-xl object-cover shadow-sm"
+              className="h-6 w-6 rounded-md object-cover"
             />
           ) : (
-            <div className="h-7 w-7 rounded-xl bg-foreground flex items-center justify-center shadow-sm">
+            <div className="h-6 w-6 rounded-md bg-foreground flex items-center justify-center">
               <span className="text-xs font-semibold text-background">
                 {activeWorkspace?.name?.slice(0, 1).toUpperCase() || "L"}
               </span>
             </div>
           )}
-          <span className="font-semibold text-sm tracking-tight">
+          <span className="font-semibold text-sm">
             {activeWorkspace?.name || "Linea"}
           </span>
         </div>
@@ -118,13 +118,13 @@ export function MainLayout() {
               onClick={() => setMobileMenuOpen(false)}
             />
             
-            {/* Sidebar Panel - Refined */}
+            {/* Sidebar Panel */}
             <motion.div
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 32, stiffness: 350 }}
-              className="lg:hidden fixed inset-y-0 left-0 z-50 w-[280px] bg-background shadow-2xl border-r border-border/30"
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="lg:hidden fixed inset-y-0 left-0 z-50 w-[280px] bg-background shadow-2xl"
             >
               {/* Close button */}
               <Button
@@ -150,13 +150,13 @@ export function MainLayout() {
       {/* Main content with TopBar */}
       <div 
         className={cn(
-          "min-h-screen flex flex-col transition-all duration-250 ease-smooth",
-          "pt-14 pb-16 lg:pt-0 lg:pb-0", // Account for mobile header + bottom nav
+          "min-h-screen flex flex-col transition-all duration-200 ease-out",
+          "pt-12 pb-16 lg:pt-0 lg:pb-0", // Account for mobile header + bottom nav
           collapsed ? "lg:pl-[72px]" : "lg:pl-[260px]"
         )}
       >
-        {/* Global TopBar with search, actions, post-it, timer - refined */}
-        <div className="hidden lg:block sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/40">
+        {/* Global TopBar with search, actions, post-it, timer - hidden on mobile */}
+        <div className="hidden lg:block sticky top-0 z-40 bg-background">
           <GlobalTopBar 
             onOpenPostIt={() => setPostItOpen(true)} 
             postItCount={pendingCount} 

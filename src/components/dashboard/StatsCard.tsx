@@ -15,11 +15,11 @@ interface StatsCardProps {
 }
 
 const iconColorClasses = {
-  primary: "bg-foreground/5 text-foreground",
-  accent: "bg-pastel-lavender text-accent",
-  success: "bg-pastel-mint text-success",
-  warning: "bg-pastel-peach text-warning",
-  info: "bg-pastel-blue text-info",
+  primary: "bg-primary/10 text-primary",
+  accent: "bg-accent/10 text-accent",
+  success: "bg-success/10 text-success",
+  warning: "bg-warning/10 text-warning",
+  info: "bg-info/10 text-info",
 };
 
 export function StatsCard({
@@ -32,10 +32,10 @@ export function StatsCard({
 }: StatsCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: delay * 0.1, ease: "easeOut" }}
-      className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-card transition-all duration-300 hover:shadow-pastel-hover hover:-translate-y-0.5"
+      className="group relative overflow-hidden rounded-xl border border-border bg-card p-6 transition-all duration-200 hover:border-muted-foreground/20"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 min-w-0 flex-1">
@@ -63,9 +63,6 @@ export function StatsCard({
               <span className="text-sm text-muted-foreground">vs last month</span>
             </div>
           )}
-        </div>
-        <div className={cn("flex h-12 w-12 items-center justify-center rounded-2xl", iconColorClasses[iconColor])}>
-          <Icon className="h-5 w-5" />
         </div>
       </div>
     </motion.div>

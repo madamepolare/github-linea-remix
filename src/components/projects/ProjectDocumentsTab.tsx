@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +47,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export function ProjectDocumentsTab({ projectId }: ProjectDocumentsTabProps) {
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const { documents, isLoading } = useAgencyDocuments();
   const [search, setSearch] = useState("");
 

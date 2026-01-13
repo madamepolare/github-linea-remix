@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useLocation } from "react-router-dom";
-import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { format, formatDistanceToNow, isPast, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
@@ -65,7 +64,7 @@ function formatBudget(amount: number | null): string {
 }
 
 export default function Tenders() {
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const location = useLocation();
   const { "*": splat } = useParams();
   const { tenders, tendersByPipeline, stats, isLoading, deleteTender, updateTender } = useTenders();

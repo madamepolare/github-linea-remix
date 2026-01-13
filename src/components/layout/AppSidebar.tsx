@@ -90,30 +90,20 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     return workspaceModules.some((wm) => wm.module?.slug === slug);
   };
 
-  // Helper to build workspace-prefixed paths
-  const buildWorkspacePath = (path: string): string => {
-    if (!activeWorkspace?.slug) return path;
-    // Don't prefix if it's the root
-    if (path === "/") return `/${activeWorkspace.slug}`;
-    const cleanPath = path.startsWith("/") ? path.slice(1) : path;
-    return `/${activeWorkspace.slug}/${cleanPath}`;
-  };
-
   // Build navigation based on enabled modules
   const { coreNavigation, extensionNavigation } = useMemo(() => {
     const core: NavItem[] = [
-      { title: "Dashboard", icon: LayoutDashboard, href: buildWorkspacePath("/") },
+      { title: "Dashboard", icon: LayoutDashboard, href: "/" },
     ];
     const extensions: NavItem[] = [];
 
     CORE_MODULES.forEach((slug) => {
       const config = MODULE_CONFIG[slug];
       if (config && isModuleEnabled(slug)) {
-        const basePath = config.subNav.length > 0 ? config.subNav[0].href : config.href;
         core.push({
           title: config.title,
           icon: config.icon,
-          href: buildWorkspacePath(basePath),
+          href: config.subNav.length > 0 ? config.subNav[0].href : config.href,
           moduleSlug: slug,
         });
       }
@@ -122,11 +112,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     EXTENSION_MODULES.forEach((slug) => {
       const config = MODULE_CONFIG[slug];
       if (config && isModuleEnabled(slug)) {
-        const basePath = config.subNav.length > 0 ? config.subNav[0].href : config.href;
         extensions.push({
           title: config.title,
           icon: config.icon,
-          href: buildWorkspacePath(basePath),
+          href: config.subNav.length > 0 ? config.subNav[0].href : config.href,
           moduleSlug: slug,
           isExtension: true,
         });
@@ -134,19 +123,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     });
 
     return { coreNavigation: core, extensionNavigation: extensions };
-  }, [modules, workspaceModules, activeWorkspace?.slug]);
+  }, [modules, workspaceModules]);
 
   const isActive = (href: string, moduleSlug?: string) => {
-    const workspacePrefix = activeWorkspace?.slug ? `/${activeWorkspace.slug}` : "";
-    
-    // Dashboard case
-    if (moduleSlug === undefined && (href === "/" || href === workspacePrefix)) {
-      return location.pathname === "/" || location.pathname === workspacePrefix;
-    }
-    
+    if (href === "/" && !moduleSlug) return location.pathname === "/";
     if (moduleSlug) {
-      // Check if path contains the module slug
-      return location.pathname.includes(`/${moduleSlug}`);
+      return location.pathname.startsWith(`/${moduleSlug}`);
     }
     return location.pathname.startsWith(href);
   };
@@ -219,9 +201,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
     setTimeout(() => {
       setSwitchingWorkspace(null);
-      // Redirect to new workspace's dashboard after switch
-      const targetWs = workspaces.find(w => w.id === workspaceId);
-      window.location.href = targetWs ? `/${targetWs.slug}` : "/";
+      window.location.href = "/";
     }, 100);
   };
 
@@ -232,11 +212,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     const content = (
       <div
         className={cn(
-          "relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition-all duration-200",
+          "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
           "cursor-pointer select-none",
           active
-            ? "bg-foreground text-background font-medium shadow-sm"
-            : "text-muted-foreground hover:bg-white hover:text-foreground hover:shadow-sm"
+            ? "bg-foreground text-background font-medium"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
       >
         <item.icon
@@ -286,15 +266,15 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
       className={cn(
         "fixed left-0 top-0 z-40 flex h-screen flex-col",
-        "bg-background",
-        "border-r border-border/40"
+        "bg-gradient-to-b from-background to-background/98",
+        "border-r border-border/50"
       )}
     >
-      {/* Subtle gradient overlay for depth */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-muted/20 pointer-events-none" />
+      {/* Subtle gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-muted/20 via-transparent to-transparent pointer-events-none" />
 
       {/* Workspace Switcher */}
-      <div className="relative flex items-center justify-between h-16 px-3 border-b border-border/40">
+      <div className="relative flex items-center justify-between h-16 px-3 border-b border-border/50">
         {activeWorkspace ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -419,7 +399,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         
         {/* Extensions */}
         {extensionNavigation.length > 0 && (
-          <div className="mt-6 pt-6 border-t border-border/40">
+          <div className="mt-6 pt-6 border-t border-border/50">
             {!collapsed && (
               <div className="flex items-center gap-2 px-3 mb-3">
                 <Sparkles className="h-3 w-3 text-muted-foreground" strokeWidth={THIN_STROKE} />
@@ -438,10 +418,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       </nav>
 
       {/* Bottom Section */}
-      <div className="relative border-t border-border/40 px-3 py-3 space-y-1">
+      <div className="relative border-t border-border/50 px-3 py-3 space-y-1">
         {/* Settings */}
         <NavItemComponent 
-          item={{ title: "Paramètres", icon: Settings, href: buildWorkspacePath("/settings") }} 
+          item={{ title: "Paramètres", icon: Settings, href: "/settings" }} 
           onClick={onNavigate} 
         />
         
@@ -474,7 +454,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       </div>
 
       {/* User Profile - Minimal design */}
-      <div className="relative border-t border-border/40 p-3">
+      <div className="relative border-t border-border/50 p-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <motion.button

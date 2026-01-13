@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useWorkspaceNavigation } from '@/hooks/useWorkspaceNavigation';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, FileText, FileSignature, Search, LayoutList, Kanban, Calendar } from 'lucide-react';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -30,7 +29,7 @@ import {
 } from '@/lib/commercialTypes';
 
 const Commercial = () => {
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const { view } = useParams();
   const { activeWorkspace } = useAuth();
   const { documents, isLoading, deleteDocument, duplicateDocument, updateDocument } = useCommercialDocuments();

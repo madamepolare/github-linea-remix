@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
-import { useWorkspaceNavigation } from '@/hooks/useWorkspaceNavigation';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save, Send, FileDown, Eye, FileText, CheckCircle, FolderPlus, ExternalLink, Sparkles, Calendar, History } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,7 @@ import {
 const CommercialDocument = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const isNew = id === 'new';
   const initialType = (searchParams.get('type') as DocumentType) || 'quote';
 

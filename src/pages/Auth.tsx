@@ -63,9 +63,6 @@ export default function Auth() {
     defaultValues: { fullName: "", email: suggestedEmail, password: "", confirmPassword: "" },
   });
 
-  // Get workspaces from auth context
-  const { workspaces, activeWorkspace } = useAuth();
-
   // Redirect if already logged in
   useEffect(() => {
     if (!loading && user) {
@@ -81,19 +78,12 @@ export default function Auth() {
       }
       // Otherwise check if onboarding is completed
       if (profile?.onboarding_completed) {
-        // Redirect to workspace-scoped URL
-        const targetWorkspace = activeWorkspace || workspaces.find(w => !w.is_hidden) || workspaces[0];
-        if (targetWorkspace) {
-          navigate(`/${targetWorkspace.slug}`);
-        } else {
-          // No workspace yet, go to onboarding
-          navigate("/onboarding");
-        }
+        navigate("/");
       } else {
         navigate("/onboarding");
       }
     }
-  }, [user, profile, workspaces, activeWorkspace, loading, navigate, redirectTo, pendingInviteToken]);
+  }, [user, profile, loading, navigate, redirectTo, pendingInviteToken]);
 
   const handleLogin = async (data: LoginFormData) => {
     setIsLoading(true);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
+import { useNavigate } from "react-router-dom";
 import { SEOHead } from "@/components/seo/SEOHead";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 export default function Campaigns() {
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);

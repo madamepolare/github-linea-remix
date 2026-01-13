@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useProjects, Project, ProjectPhase } from "@/hooks/useProjects";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
@@ -46,7 +46,7 @@ interface ProjectWithCurrentPhase extends Project {
 }
 
 export function ProjectPipelineManager() {
-  const { navigate } = useWorkspaceNavigation();
+  const navigate = useNavigate();
   const { projects, isLoading, updateProject } = useProjects();
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
