@@ -229,6 +229,26 @@ export function TenderAnalyseTab({ tender, onNavigateToTab, pendingFiles, onFile
   const hasAnalyzedDocs = analyzedDocs.length > 0;
   const allAnalyzed = hasDocuments && notAnalyzedDocs.length === 0;
 
+  // Extract critical alerts from analyzed documents
+  const extractedAlerts = analyzedDocs.reduce((acc, doc) => {
+    if (doc.extracted_data && typeof doc.extracted_data === 'object') {
+      const data = doc.extracted_data as Record<string, unknown>;
+      if (data.critical_alerts && Array.isArray(data.critical_alerts)) {
+        return [...acc, ...data.critical_alerts];
+      }
+      // Also check for points_vigilance or alerts fields
+      if (data.points_vigilance && Array.isArray(data.points_vigilance)) {
+        return [...acc, ...data.points_vigilance.map((p: any) => ({
+          type: 'vigilance',
+          message: typeof p === 'string' ? p : p.message || p.description,
+          severity: 'warning',
+          source: doc.file_name
+        }))];
+      }
+    }
+    return acc;
+  }, [] as Array<{ type: string; message: string; severity: string; source?: string }>);
+
   // Apply extracted data to tender
   const handleApplyExtractedData = async () => {
     const updates: Partial<Tender> = {};
@@ -330,6 +350,18 @@ export function TenderAnalyseTab({ tender, onNavigateToTab, pendingFiles, onFile
       }));
       if (team.length > 0 && (!tender.required_team || (Array.isArray(tender.required_team) && tender.required_team.length === 0))) {
         (updates as any).required_team = team;
+      }
+    }
+
+    // CRITICAL: Save extracted alerts to the tender
+    if (extractedAlerts.length > 0) {
+      const existingAlerts = (tender.critical_alerts as any[]) || [];
+      // Merge with existing, avoiding duplicates based on message
+      const newAlerts = extractedAlerts.filter(
+        (newAlert) => !existingAlerts.some((existing: any) => existing.message === newAlert.message)
+      );
+      if (newAlerts.length > 0) {
+        (updates as any).critical_alerts = [...existingAlerts, ...newAlerts];
       }
     }
 

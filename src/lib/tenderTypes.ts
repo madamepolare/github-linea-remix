@@ -397,6 +397,8 @@ export interface Tender {
   dce_link: string | null;
   // Required team (stored as JSON, typed at runtime)
   required_team: unknown;
+  // Critical alerts from AI analysis (stored as JSON)
+  critical_alerts: unknown;
   // Timestamps
   created_at: string;
   updated_at: string;
