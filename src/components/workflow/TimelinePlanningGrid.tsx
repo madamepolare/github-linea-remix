@@ -403,10 +403,9 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
             <div 
               id="hour-labels-container"
               className="flex-1 overflow-hidden"
+              style={{ overflowY: 'hidden' }}
             >
-              <div style={{ height: TOTAL_HOURS * 60 * PIXELS_PER_MINUTE }}>
-                <TimelineHourLabels />
-              </div>
+              <TimelineHourLabels />
             </div>
           </div>
         )}
