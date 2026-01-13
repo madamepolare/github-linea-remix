@@ -53,7 +53,8 @@ export const CRMDemo = () => {
         ease: "power3.out",
         scrollTrigger: {
           trigger: demoRef.current,
-          start: "top 70%",
+          start: "top 80%",
+          once: true,
         },
       });
 
@@ -66,7 +67,8 @@ export const CRMDemo = () => {
         ease: "power3.out",
         scrollTrigger: {
           trigger: demoRef.current,
-          start: "top 70%",
+          start: "top 80%",
+          once: true,
         },
       });
     }, demoRef);

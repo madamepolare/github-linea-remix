@@ -24,6 +24,7 @@ export const CommercialDemo = () => {
 
   useEffect(() => {
     if (!demoRef.current) return;
+    let totalAnimated = false;
 
     const ctx = gsap.context(() => {
       gsap.from(".quote-section", {
@@ -34,7 +35,8 @@ export const CommercialDemo = () => {
         ease: "power3.out",
         scrollTrigger: {
           trigger: demoRef.current,
-          start: "top 70%",
+          start: "top 80%",
+          once: true,
         },
       });
 
@@ -47,31 +49,30 @@ export const CommercialDemo = () => {
         ease: "power3.out",
         scrollTrigger: {
           trigger: demoRef.current,
-          start: "top 70%",
+          start: "top 80%",
+          once: true,
         },
       });
 
-      // Animate total
-      gsap.to({}, {
-        duration: 1.5,
-        delay: 0.5,
-        ease: "power2.out",
-        scrollTrigger: {
-          trigger: demoRef.current,
-          start: "top 70%",
-          onEnter: () => {
-            let start = 0;
-            const increment = totalFees / 60;
-            const timer = setInterval(() => {
-              start += increment;
-              if (start >= totalFees) {
-                setAnimatedTotal(totalFees);
-                clearInterval(timer);
-              } else {
-                setAnimatedTotal(start);
-              }
-            }, 25);
-          },
+      // Animate total - once only
+      ScrollTrigger.create({
+        trigger: demoRef.current,
+        start: "top 80%",
+        once: true,
+        onEnter: () => {
+          if (totalAnimated) return;
+          totalAnimated = true;
+          let start = 0;
+          const increment = totalFees / 60;
+          const timer = setInterval(() => {
+            start += increment;
+            if (start >= totalFees) {
+              setAnimatedTotal(totalFees);
+              clearInterval(timer);
+            } else {
+              setAnimatedTotal(start);
+            }
+          }, 25);
         },
       });
     }, demoRef);

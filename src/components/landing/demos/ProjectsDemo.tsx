@@ -22,7 +22,7 @@ export const ProjectsDemo = () => {
     if (!demoRef.current) return;
 
     const ctx = gsap.context(() => {
-      // Animate bars
+      // Animate bars - once only
       gsap.from(".gantt-bar", {
         scaleX: 0,
         transformOrigin: "left",
@@ -31,20 +31,15 @@ export const ProjectsDemo = () => {
         ease: "power3.out",
         scrollTrigger: {
           trigger: demoRef.current,
-          start: "top 70%",
+          start: "top 80%",
+          once: true,
         },
       });
 
-      // Pulse today indicator
-      gsap.to(".today-indicator", {
-        opacity: 0.5,
-        repeat: -1,
-        yoyo: true,
-        duration: 1,
-        ease: "power1.inOut",
-      });
+      // Pulse today indicator - simple CSS animation instead
+      gsap.set(".today-indicator", { opacity: 1 });
 
-      // Animate floating cards
+      // Animate floating cards - once only
       gsap.from(".floating-card", {
         opacity: 0,
         y: 20,
@@ -54,7 +49,8 @@ export const ProjectsDemo = () => {
         ease: "back.out(1.7)",
         scrollTrigger: {
           trigger: demoRef.current,
-          start: "top 70%",
+          start: "top 80%",
+          once: true,
         },
       });
     }, demoRef);
@@ -96,7 +92,7 @@ export const ProjectsDemo = () => {
       <div className="relative space-y-3">
         {/* Today indicator */}
         <div 
-          className="today-indicator absolute top-0 bottom-0 w-0.5 bg-primary z-10"
+          className="today-indicator absolute top-0 bottom-0 w-0.5 bg-primary z-10 animate-pulse"
           style={{ left: "45%" }}
         >
           <div className="absolute -top-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-primary rounded text-[10px] text-white font-medium whitespace-nowrap">
