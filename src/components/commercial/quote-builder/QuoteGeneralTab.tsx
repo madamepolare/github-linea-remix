@@ -51,16 +51,16 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Document Type & Contract Type */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div className="space-y-2">
-          <Label>Type de document</Label>
+          <Label className="text-sm">Type de document</Label>
           <Select
             value={document.document_type || 'quote'}
             onValueChange={(v) => onDocumentChange({ ...document, document_type: v as any })}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-9 sm:h-10">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -74,12 +74,12 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
         </div>
 
         <div className="space-y-2">
-          <Label>Type de contrat</Label>
+          <Label className="text-sm">Type de contrat</Label>
           <Select
             value={document.contract_type_id || ''}
             onValueChange={handleContractTypeChange}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-9 sm:h-10">
               <SelectValue placeholder="Sélectionner un type..." />
             </SelectTrigger>
             <SelectContent>
@@ -87,11 +87,11 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                 <SelectItem key={type.id} value={type.id}>
                   <div className="flex items-center gap-2">
                     <div 
-                      className="w-2 h-2 rounded-full"
+                      className="w-2 h-2 rounded-full shrink-0"
                       style={{ backgroundColor: type.color }}
                     />
-                    {type.name}
-                    <Badge variant="outline" className="ml-1 text-xs">
+                    <span className="truncate">{type.name}</span>
+                    <Badge variant="outline" className="ml-1 text-xs shrink-0 hidden sm:inline-flex">
                       {type.code}
                     </Badge>
                   </div>
@@ -154,13 +154,13 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
 
       {/* Client Selection */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Client
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 sm:px-6">
           <ClientSelector
             selectedCompanyId={document.client_company_id}
             selectedContactId={document.client_contact_id}
@@ -172,37 +172,39 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
 
       {/* Project Details */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Projet
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
           <div className="space-y-2">
-            <Label>Titre du projet</Label>
+            <Label className="text-sm">Titre du projet</Label>
             <Input
               value={document.title || ''}
               onChange={(e) => onDocumentChange({ ...document, title: e.target.value })}
               placeholder="Ex: Rénovation appartement Paris 16e"
+              className="h-9 sm:h-10"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Description</Label>
+            <Label className="text-sm">Description</Label>
             <Textarea
               value={document.description || ''}
               onChange={(e) => onDocumentChange({ ...document, description: e.target.value })}
               placeholder="Description du projet..."
               rows={3}
+              className="text-sm"
             />
           </div>
 
           {/* Dynamic fields based on contract type */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {fields.address && (
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
+                <Label className="flex items-center gap-2 text-sm">
                   <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                   Adresse
                 </Label>
@@ -210,24 +212,26 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                   value={document.project_address || ''}
                   onChange={(e) => onDocumentChange({ ...document, project_address: e.target.value })}
                   placeholder="Adresse du projet"
+                  className="h-9 sm:h-10"
                 />
               </div>
             )}
 
             {fields.city && (
               <div className="space-y-2">
-                <Label>Ville</Label>
+                <Label className="text-sm">Ville</Label>
                 <Input
                   value={document.project_city || ''}
                   onChange={(e) => onDocumentChange({ ...document, project_city: e.target.value })}
                   placeholder="Ville"
+                  className="h-9 sm:h-10"
                 />
               </div>
             )}
 
             {fields.surface && (
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
+                <Label className="flex items-center gap-2 text-sm">
                   <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
                   Surface (m²)
                 </Label>
@@ -236,13 +240,14 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                   value={document.project_surface || ''}
                   onChange={(e) => onDocumentChange({ ...document, project_surface: parseFloat(e.target.value) || undefined })}
                   placeholder="0"
+                  className="h-9 sm:h-10"
                 />
               </div>
             )}
 
             {fields.budget && (
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
+                <Label className="flex items-center gap-2 text-sm">
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                   Budget global
                 </Label>
@@ -251,13 +256,14 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                   value={document.project_budget || ''}
                   onChange={(e) => onDocumentChange({ ...document, project_budget: parseFloat(e.target.value) || undefined })}
                   placeholder="0"
+                  className="h-9 sm:h-10"
                 />
               </div>
             )}
 
             {fields.construction_budget && (
-              <div className="col-span-2 space-y-2">
-                <Label className="flex items-center gap-2">
+              <div className="col-span-1 sm:col-span-2 space-y-2">
+                <Label className="flex items-center gap-2 text-sm">
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
                   Budget travaux (base honoraires)
                 </Label>
@@ -266,6 +272,7 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                   value={document.construction_budget || ''}
                   onChange={(e) => onDocumentChange({ ...document, construction_budget: parseFloat(e.target.value) || undefined })}
                   placeholder="0"
+                  className="h-9 sm:h-10"
                 />
                 {document.construction_budget && document.fee_percentage && (
                   <p className="text-xs text-muted-foreground">
@@ -281,21 +288,21 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
       {/* Fee Mode - Only show if construction_budget field is active */}
       {fields.construction_budget && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
+          <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
               <Euro className="h-4 w-4" />
               Mode de calcul des honoraires
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-3 gap-4">
+          <CardContent className="px-3 sm:px-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="space-y-2">
-                <Label>Mode</Label>
+                <Label className="text-sm">Mode</Label>
                 <Select
                   value={document.fee_mode || 'fixed'}
                   onValueChange={(v) => onDocumentChange({ ...document, fee_mode: v as any })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9 sm:h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -309,25 +316,27 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
 
               {document.fee_mode === 'percentage' && (
                 <div className="space-y-2">
-                  <Label>Pourcentage (%)</Label>
+                  <Label className="text-sm">Pourcentage (%)</Label>
                   <Input
                     type="number"
                     value={document.fee_percentage || ''}
                     onChange={(e) => onDocumentChange({ ...document, fee_percentage: parseFloat(e.target.value) || undefined })}
                     placeholder="12"
                     step="0.5"
+                    className="h-9 sm:h-10"
                   />
                 </div>
               )}
 
               {document.fee_mode === 'hourly' && (
                 <div className="space-y-2">
-                  <Label>Taux horaire (€)</Label>
+                  <Label className="text-sm">Taux horaire (€)</Label>
                   <Input
                     type="number"
                     value={document.hourly_rate || ''}
                     onChange={(e) => onDocumentChange({ ...document, hourly_rate: parseFloat(e.target.value) || undefined })}
                     placeholder="85"
+                    className="h-9 sm:h-10"
                   />
                 </div>
               )}

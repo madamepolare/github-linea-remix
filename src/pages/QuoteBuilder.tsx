@@ -416,29 +416,29 @@ export default function QuoteBuilder() {
     <LineFeatureProvider contractType={currentContractType}>
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b bg-background shrink-0">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={handleBack}>
+      <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b bg-background shrink-0 gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+          <Button variant="ghost" size="icon" onClick={handleBack} className="shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <Separator orientation="vertical" className="h-6" />
-          <FileText className="h-5 w-5 text-primary" />
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="font-semibold">
+          <Separator orientation="vertical" className="h-6 hidden sm:block" />
+          <FileText className="h-5 w-5 text-primary hidden sm:block shrink-0" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="font-semibold text-sm sm:text-base truncate">
                 {isNew ? 'Nouveau devis' : document.title || 'Édition du devis'}
               </h1>
               {document.status && (
-                <Badge variant={statusVariant} className="text-xs">
+                <Badge variant={statusVariant} className="text-xs shrink-0">
                   {DOCUMENT_STATUS_LABELS[document.status]}
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">
               {document.document_number || 'Brouillon'}
             </p>
             {(authLoading || !activeWorkspace) && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground truncate">
                 {authLoading
                   ? 'Session en cours de chargement…'
                   : 'Aucun workspace actif — veuillez vous reconnecter.'}
@@ -447,7 +447,7 @@ export default function QuoteBuilder() {
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <Button 
             variant="ghost" 
             size="sm"
@@ -464,8 +464,9 @@ export default function QuoteBuilder() {
             variant="outline" 
             size="sm"
             onClick={handleDownloadPDF}
+            className="h-8 sm:h-9 px-2 sm:px-3"
           >
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">PDF</span>
           </Button>
           
@@ -474,9 +475,10 @@ export default function QuoteBuilder() {
             onClick={handleSave}
             disabled={!canClickSave}
             title={!activeWorkspace ? 'Aucun workspace actif' : authLoading ? 'Chargement de session…' : undefined}
+            className="h-8 sm:h-9 px-2 sm:px-3"
           >
-            <Save className="h-4 w-4 mr-2" />
-            {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+            <Save className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{isSaving ? 'Enregistrement...' : 'Enregistrer'}</span>
           </Button>
           
           <DropdownMenu>
@@ -509,8 +511,8 @@ export default function QuoteBuilder() {
         {/* Editor Panel */}
         <div className={`flex flex-col ${showPreview ? 'w-full lg:w-[60%]' : 'w-full'} border-r`}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1">
-            <div className="px-4 pt-4 pb-0 border-b bg-muted/30 shrink-0">
-              <TabsList className="h-10">
+            <div className="px-2 sm:px-4 pt-2 sm:pt-4 pb-0 border-b bg-muted/30 shrink-0 overflow-x-auto">
+              <TabsList className="h-9 sm:h-10 w-max sm:w-auto">
                 {processedTabs.map(tabId => {
                   const config = TAB_CONFIG[tabId];
                   const Icon = config.icon;
@@ -518,9 +520,9 @@ export default function QuoteBuilder() {
                   const showLineCount = tabId === 'fees' && hasBothFeesAndLines && lines.length > 0;
                   const showLinesCount = tabId === 'lines' && lines.length > 0;
                   return (
-                    <TabsTrigger key={tabId} value={tabId} className="gap-2 px-4">
-                      <Icon className="h-4 w-4" />
-                      <span className="hidden sm:inline">{config.label}</span>
+                    <TabsTrigger key={tabId} value={tabId} className="gap-1 sm:gap-2 px-2 sm:px-4 text-xs sm:text-sm">
+                      <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="hidden xs:inline sm:inline">{config.label}</span>
                       {(showLineCount || showLinesCount) && (
                         <span className="ml-1 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
                           {lines.length}
@@ -534,7 +536,7 @@ export default function QuoteBuilder() {
 
             <ScrollArea className="flex-1">
               {processedTabs.includes('general') && (
-                <TabsContent value="general" className="m-0 p-6">
+                <TabsContent value="general" className="m-0 p-3 sm:p-6">
                   <QuoteGeneralTab 
                     document={document}
                     onDocumentChange={handleDocumentChange}
@@ -545,7 +547,7 @@ export default function QuoteBuilder() {
               )}
 
               {processedTabs.includes('fees') && (
-                <TabsContent value="fees" className="m-0 p-6">
+                <TabsContent value="fees" className="m-0 p-3 sm:p-6">
                   <QuoteFeesAndLinesTab 
                     document={document}
                     onDocumentChange={handleDocumentChange}
@@ -557,7 +559,7 @@ export default function QuoteBuilder() {
               )}
 
               {processedTabs.includes('lines') && !hasBothFeesAndLines && (
-                <TabsContent value="lines" className="m-0 p-6">
+                <TabsContent value="lines" className="m-0 p-3 sm:p-6">
                   <QuoteLinesEditor
                     lines={lines}
                     onLinesChange={handleLinesChange}
@@ -568,7 +570,7 @@ export default function QuoteBuilder() {
               )}
 
               {processedTabs.includes('production') && (
-                <TabsContent value="production" className="m-0 p-6">
+                <TabsContent value="production" className="m-0 p-3 sm:p-6">
                   <QuoteProductionTab 
                     document={document}
                     onDocumentChange={handleDocumentChange}
@@ -579,7 +581,7 @@ export default function QuoteBuilder() {
               )}
 
               {processedTabs.includes('planning') && (
-                <TabsContent value="planning" className="m-0 p-6">
+                <TabsContent value="planning" className="m-0 p-3 sm:p-6">
                   <QuotePlanningTab 
                     document={document}
                     onDocumentChange={handleDocumentChange}
@@ -590,7 +592,7 @@ export default function QuoteBuilder() {
               )}
 
               {processedTabs.includes('terms') && (
-                <TabsContent value="terms" className="m-0 p-6">
+                <TabsContent value="terms" className="m-0 p-3 sm:p-6">
                   {isArchitectureContractType(currentContractType?.code || document.project_type || '') ? (
                     <QuoteMOETermsTab
                       document={document}
