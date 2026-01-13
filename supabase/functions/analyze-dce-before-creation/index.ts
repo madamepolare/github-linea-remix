@@ -574,10 +574,10 @@ function getToolParameters(disciplineSlug: string) {
         type: "number",
         description: "Nombre total d'agences qui seront retenues (si multi-attributaire global)"
       },
-      // Lots - ENRICHIS avec multi-attributaire et budgets par lot
+      // Lots - ENRICHIS avec multi-attributaire, budgets et équipe par lot
       lots: {
         type: "array",
-        description: "Liste EXHAUSTIVE des lots du marché avec TOUTES leurs caractéristiques",
+        description: "Liste EXHAUSTIVE des lots du marché avec TOUTES leurs caractéristiques. IMPORTANT: Pour chaque lot, extrais aussi les partenaires/fournisseurs requis spécifiquement pour ce lot!",
         items: {
           type: "object",
           properties: {
@@ -597,7 +597,25 @@ function getToolParameters(disciplineSlug: string) {
             nb_attributaires: { type: "number", description: "Nombre d'attributaires pour CE LOT spécifique" },
             // Durée spécifique au lot si différente
             duree_mois: { type: "number", description: "Durée spécifique du lot en mois (si différente du marché global)" },
-            nb_reconductions: { type: "number", description: "Nombre de reconductions pour ce lot (si différent)" }
+            nb_reconductions: { type: "number", description: "Nombre de reconductions pour ce lot (si différent)" },
+            // ÉQUIPE/PARTENAIRES PAR LOT
+            required_team: {
+              type: "array",
+              description: "Partenaires/fournisseurs/sous-traitants requis spécifiquement pour CE LOT",
+              items: {
+                type: "object",
+                properties: {
+                  specialty: { 
+                    type: "string", 
+                    enum: ["imprimeur", "routeur", "signaletique", "producteur_video", "photographe", "studio_son", "agence_rp", "agence_influence", "agence_media", "agence_digitale", "agence_evenementielle", "standiste", "traiteur", "location_materiel", "traducteur", "redacteur", "graphiste_freelance", "developpeur", "autre"],
+                    description: "Type de partenaire/fournisseur"
+                  },
+                  is_mandatory: { type: "boolean", description: "Ce partenaire est-il obligatoire pour ce lot?" },
+                  notes: { type: "string", description: "Précisions ou exigences" }
+                },
+                required: ["specialty", "is_mandatory"]
+              }
+            }
           },
           required: ["numero", "intitule", "domaine"]
         }
@@ -1363,16 +1381,84 @@ Utilise la fonction extract_tender_info pour retourner les données structurées
       });
     }
 
+    // =============================================
+    // GENERATE AUTOMATIC ALERTS FOR MISSING FIELDS
+    // =============================================
+    const autoAlerts: Array<{ type: string; message: string; severity: string; source?: string; extract?: string }> = [];
+    const existingAlerts = Array.isArray(extractedData.critical_alerts) ? extractedData.critical_alerts : [];
+    
+    // Define critical fields by discipline
+    const criticalFieldsComm = [
+      { field: 'submission_deadline', label: 'Date limite de remise', severity: 'critical' },
+      { field: 'montant_maximum', label: 'Montant maximum', severity: 'warning' },
+      { field: 'lots', label: 'Lots du marché', severity: 'warning', checkArray: true },
+      { field: 'criteria', label: 'Critères de jugement', severity: 'warning', checkArray: true },
+      { field: 'duree_initiale_mois', label: 'Durée initiale', severity: 'info' },
+      { field: 'validite_offre_jours', label: 'Validité des offres', severity: 'info' },
+    ];
+    
+    const criticalFieldsArchi = [
+      { field: 'submission_deadline', label: 'Date limite de remise', severity: 'critical' },
+      { field: 'estimated_budget', label: 'Budget travaux', severity: 'warning' },
+      { field: 'location', label: 'Localisation du projet', severity: 'warning' },
+      { field: 'surface_area', label: 'Surface', severity: 'info' },
+      { field: 'criteria', label: 'Critères de jugement', severity: 'warning', checkArray: true },
+      { field: 'required_team', label: 'Équipe MOE requise', severity: 'info', checkArray: true },
+    ];
+    
+    const fieldsToCheck = discipline_slug === 'communication' ? criticalFieldsComm : criticalFieldsArchi;
+    
+    for (const { field, label, severity, checkArray } of fieldsToCheck) {
+      const value = extractedData[field];
+      const isMissing = checkArray 
+        ? (!Array.isArray(value) || value.length === 0)
+        : (value === null || value === undefined || value === '');
+      
+      if (isMissing) {
+        autoAlerts.push({
+          type: 'missing_field',
+          message: `⚠️ Champ "${label}" non trouvé dans les documents DCE. Vérifiez manuellement le RC ou le CCAP.`,
+          severity: severity,
+          source: 'Analyse automatique'
+        });
+      }
+    }
+
+    // Communication-specific: Check for lots with no budget
+    if (discipline_slug === 'communication' && Array.isArray(extractedData.lots)) {
+      const lotsWithoutBudget = (extractedData.lots as Array<{ numero: number; intitule: string; budget_min?: number; budget_max?: number }>)
+        .filter(lot => !lot.budget_min && !lot.budget_max);
+      
+      if (lotsWithoutBudget.length > 0 && lotsWithoutBudget.length < (extractedData.lots as Array<unknown>).length) {
+        autoAlerts.push({
+          type: 'incomplete_data',
+          message: `${lotsWithoutBudget.length} lot(s) sans budget identifié: ${lotsWithoutBudget.map(l => `Lot ${l.numero}`).join(', ')}`,
+          severity: 'info',
+          source: 'Analyse automatique'
+        });
+      }
+    }
+
+    // Add auto-generated alerts to existing ones (avoid duplicates)
+    const allAlerts = [...existingAlerts];
+    for (const alert of autoAlerts) {
+      if (!allAlerts.some((a: any) => a.message === alert.message)) {
+        allAlerts.push(alert);
+      }
+    }
+    extractedData.critical_alerts = allAlerts;
+
     // Count what was extracted for feedback
     const extractionStats = {
       files_analyzed: parsingStats.success > 0 ? parsingStats.success : files.length,
       files_skipped: parsingStats.failed,
       criteria_found: Array.isArray(extractedData.criteria) ? extractedData.criteria.length : 0,
       team_requirements: Array.isArray(extractedData.required_team) ? extractedData.required_team.length : 0,
-      alerts_found: Array.isArray(extractedData.critical_alerts) ? extractedData.critical_alerts.length : 0,
+      alerts_found: allAlerts.length,
       lots_found: Array.isArray(extractedData.lots) ? extractedData.lots.length : 0,
       cas_pratique_found: !!(extractedData.cas_pratique && (extractedData.cas_pratique as Record<string, unknown>).requis),
       parsing_method: LLAMA_PARSE_API_KEY ? 'llamaparse' : 'filename_only',
+      missing_fields: autoAlerts.filter(a => a.type === 'missing_field').length,
     };
 
     console.log("[DCE Analysis] Extraction stats:", extractionStats);
