@@ -190,6 +190,124 @@ export type Database = {
           },
         ]
       }
+      billing_profiles: {
+        Row: {
+          bank_name: string | null
+          bic: string | null
+          billing_address: string | null
+          billing_city: string | null
+          billing_country: string | null
+          billing_email: string | null
+          billing_name: string | null
+          billing_phone: string | null
+          billing_postal_code: string | null
+          capital_social: number | null
+          code_naf: string | null
+          company_id: string | null
+          contact_id: string | null
+          created_at: string | null
+          default_discount_percent: number | null
+          iban: string | null
+          id: string
+          legal_form: string | null
+          notes: string | null
+          payment_method: string | null
+          payment_terms: string | null
+          rcs_city: string | null
+          siren: string | null
+          siret: string | null
+          updated_at: string | null
+          vat_number: string | null
+          vat_rate: number | null
+          vat_type: string | null
+          workspace_id: string
+        }
+        Insert: {
+          bank_name?: string | null
+          bic?: string | null
+          billing_address?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_email?: string | null
+          billing_name?: string | null
+          billing_phone?: string | null
+          billing_postal_code?: string | null
+          capital_social?: number | null
+          code_naf?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          default_discount_percent?: number | null
+          iban?: string | null
+          id?: string
+          legal_form?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          payment_terms?: string | null
+          rcs_city?: string | null
+          siren?: string | null
+          siret?: string | null
+          updated_at?: string | null
+          vat_number?: string | null
+          vat_rate?: number | null
+          vat_type?: string | null
+          workspace_id: string
+        }
+        Update: {
+          bank_name?: string | null
+          bic?: string | null
+          billing_address?: string | null
+          billing_city?: string | null
+          billing_country?: string | null
+          billing_email?: string | null
+          billing_name?: string | null
+          billing_phone?: string | null
+          billing_postal_code?: string | null
+          capital_social?: number | null
+          code_naf?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          default_discount_percent?: number | null
+          iban?: string | null
+          id?: string
+          legal_form?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          payment_terms?: string | null
+          rcs_city?: string | null
+          siren?: string | null
+          siret?: string | null
+          updated_at?: string | null
+          vat_number?: string | null
+          vat_rate?: number | null
+          vat_type?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_profiles_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_profiles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_connections: {
         Row: {
           access_token: string | null
@@ -1020,6 +1138,7 @@ export type Database = {
       }
       company_departments: {
         Row: {
+          billing_contact_id: string | null
           company_id: string
           created_at: string
           description: string | null
@@ -1032,6 +1151,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          billing_contact_id?: string | null
           company_id: string
           created_at?: string
           description?: string | null
@@ -1044,6 +1164,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          billing_contact_id?: string | null
           company_id?: string
           created_at?: string
           description?: string | null
@@ -1056,6 +1177,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "company_departments_billing_contact_id_fkey"
+            columns: ["billing_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "company_departments_company_id_fkey"
             columns: ["company_id"]
@@ -1242,6 +1370,7 @@ export type Database = {
           created_by: string | null
           crm_company_id: string | null
           department_id: string | null
+          department_role: string | null
           email: string | null
           first_name: string | null
           gender: string | null
@@ -1262,6 +1391,7 @@ export type Database = {
           created_by?: string | null
           crm_company_id?: string | null
           department_id?: string | null
+          department_role?: string | null
           email?: string | null
           first_name?: string | null
           gender?: string | null
@@ -1282,6 +1412,7 @@ export type Database = {
           created_by?: string | null
           crm_company_id?: string | null
           department_id?: string | null
+          department_role?: string | null
           email?: string | null
           first_name?: string | null
           gender?: string | null
@@ -1388,6 +1519,7 @@ export type Database = {
         Row: {
           address: string | null
           bet_specialties: string[] | null
+          billing_contact_id: string | null
           billing_email: string | null
           capital_social: number | null
           city: string | null
@@ -1417,6 +1549,7 @@ export type Database = {
         Insert: {
           address?: string | null
           bet_specialties?: string[] | null
+          billing_contact_id?: string | null
           billing_email?: string | null
           capital_social?: number | null
           city?: string | null
@@ -1446,6 +1579,7 @@ export type Database = {
         Update: {
           address?: string | null
           bet_specialties?: string[] | null
+          billing_contact_id?: string | null
           billing_email?: string | null
           capital_social?: number | null
           city?: string | null
@@ -1473,6 +1607,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_companies_billing_contact_id_fkey"
+            columns: ["billing_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_companies_workspace_id_fkey"
             columns: ["workspace_id"]
