@@ -31,18 +31,25 @@ export interface AIProspect {
   created_by: string | null;
 }
 
+export interface ProspectContact {
+  name: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  linkedin?: string;
+}
+
 export interface ProspectSearchResult {
   company_name: string;
   company_website?: string;
   company_address?: string;
   company_city?: string;
+  company_postal_code?: string;
   company_phone?: string;
   company_email?: string;
   company_industry?: string;
-  contact_name?: string;
-  contact_email?: string;
-  contact_phone?: string;
-  contact_role?: string;
+  company_size?: string;
+  contacts: ProspectContact[];
   notes?: string;
   source_url?: string;
   confidence_score?: number;
@@ -82,31 +89,75 @@ export function useAIProspects() {
     },
   });
 
-  // Save prospects to database
+  // Save prospects to database - one row per contact
   const saveProspects = useMutation({
     mutationFn: async ({ prospects: newProspects, sourceQuery }: { prospects: ProspectSearchResult[]; sourceQuery: string }) => {
       if (!activeWorkspace?.id) throw new Error("No workspace");
 
-      const prospectsToInsert = newProspects.map((p) => ({
-        workspace_id: activeWorkspace.id,
-        company_name: p.company_name,
-        company_website: p.company_website || null,
-        company_address: p.company_address || null,
-        company_city: p.company_city || null,
-        company_phone: p.company_phone || null,
-        company_email: p.company_email || null,
-        company_industry: p.company_industry || null,
-        contact_name: p.contact_name || null,
-        contact_email: p.contact_email || null,
-        contact_phone: p.contact_phone || null,
-        contact_role: p.contact_role || null,
-        source_query: sourceQuery,
-        source_url: p.source_url || null,
-        confidence_score: p.confidence_score || null,
-        notes: p.notes || null,
-        status: "new" as const,
-        created_by: user?.id || null,
-      }));
+      // Flatten prospects: one row per contact (or one row for company without contacts)
+      const prospectsToInsert: Array<{
+        workspace_id: string;
+        company_name: string;
+        company_website: string | null;
+        company_address: string | null;
+        company_city: string | null;
+        company_postal_code: string | null;
+        company_phone: string | null;
+        company_email: string | null;
+        company_industry: string | null;
+        contact_name: string | null;
+        contact_email: string | null;
+        contact_phone: string | null;
+        contact_role: string | null;
+        source_query: string;
+        source_url: string | null;
+        confidence_score: number | null;
+        notes: string | null;
+        status: "new";
+        created_by: string | null;
+      }> = [];
+
+      for (const p of newProspects) {
+        const baseProspect = {
+          workspace_id: activeWorkspace.id,
+          company_name: p.company_name,
+          company_website: p.company_website || null,
+          company_address: p.company_address || null,
+          company_city: p.company_city || null,
+          company_postal_code: p.company_postal_code || null,
+          company_phone: p.company_phone || null,
+          company_email: p.company_email || null,
+          company_industry: p.company_industry || null,
+          source_query: sourceQuery,
+          source_url: p.source_url || null,
+          confidence_score: p.confidence_score || null,
+          notes: p.notes || null,
+          status: "new" as const,
+          created_by: user?.id || null,
+        };
+
+        if (p.contacts && p.contacts.length > 0) {
+          // Create one row per contact
+          for (const contact of p.contacts) {
+            prospectsToInsert.push({
+              ...baseProspect,
+              contact_name: contact.name || null,
+              contact_email: contact.email || null,
+              contact_phone: contact.phone || null,
+              contact_role: contact.role || null,
+            });
+          }
+        } else {
+          // Company without contacts
+          prospectsToInsert.push({
+            ...baseProspect,
+            contact_name: null,
+            contact_email: null,
+            contact_phone: null,
+            contact_role: null,
+          });
+        }
+      }
 
       const { data, error } = await supabase
         .from("ai_prospects")
@@ -116,9 +167,9 @@ export function useAIProspects() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["ai-prospects"] });
-      toast.success("Prospects enregistrés");
+      toast.success(`${data.length} prospect(s) enregistré(s)`);
     },
     onError: () => {
       toast.error("Erreur lors de l'enregistrement");

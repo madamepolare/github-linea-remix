@@ -51,7 +51,7 @@ import {
   Target,
   RefreshCw,
 } from "lucide-react";
-import { useAIProspects, ProspectSearchResult, AIProspect } from "@/hooks/useAIProspects";
+import { useAIProspects, ProspectSearchResult, ProspectContact, AIProspect } from "@/hooks/useAIProspects";
 import { cn } from "@/lib/utils";
 
 const EXAMPLE_PROMPTS = [
@@ -232,10 +232,15 @@ export function AIProspectingPanel() {
           {searchResults.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">
-                    {searchResults.length} prospect(s) trouvé(s)
-                  </CardTitle>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <CardTitle className="text-base">
+                      {searchResults.length} entreprise{searchResults.length > 1 ? "s" : ""} trouvée{searchResults.length > 1 ? "s" : ""}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {searchResults.reduce((acc, r) => acc + (r.contacts?.length || 0), 0)} contact(s) identifié(s)
+                    </p>
+                  </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={toggleAll}>
                       {selectedResults.size === searchResults.length ? "Désélectionner" : "Tout sélectionner"}
@@ -256,85 +261,144 @@ export function AIProspectingPanel() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="h-[400px]">
-                  <div className="space-y-3">
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-4">
                     {searchResults.map((result, index) => (
                       <div
                         key={index}
                         className={cn(
-                          "p-4 rounded-lg border transition-colors cursor-pointer",
+                          "rounded-lg border transition-colors",
                           selectedResults.has(index)
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-primary/50"
                         )}
-                        onClick={() => toggleResult(index)}
                       >
-                        <div className="flex items-start gap-3">
-                          <Checkbox
-                            checked={selectedResults.has(index)}
-                            onCheckedChange={() => toggleResult(index)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <div className="flex-1 min-w-0 space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                              <span className="font-semibold">{result.company_name}</span>
-                              {result.confidence_score && (
-                                <Badge variant="outline" className="text-[10px]">
-                                  {Math.round(result.confidence_score * 100)}%
-                                </Badge>
+                        {/* Company Header */}
+                        <div 
+                          className="p-4 cursor-pointer"
+                          onClick={() => toggleResult(index)}
+                        >
+                          <div className="flex items-start gap-3">
+                            <Checkbox
+                              checked={selectedResults.has(index)}
+                              onCheckedChange={() => toggleResult(index)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <div className="flex-1 min-w-0 space-y-3">
+                              {/* Company info */}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Building2 className="h-4 w-4 text-primary shrink-0" />
+                                <span className="font-semibold text-base">{result.company_name}</span>
+                                {result.company_industry && (
+                                  <Badge variant="secondary" className="text-[10px]">
+                                    {result.company_industry}
+                                  </Badge>
+                                )}
+                                {result.confidence_score && (
+                                  <Badge variant="outline" className="text-[10px]">
+                                    Confiance: {Math.round(result.confidence_score * 100)}%
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Company details grid */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
+                                {result.company_city && (
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                                    <span>{result.company_postal_code} {result.company_city}</span>
+                                  </div>
+                                )}
+                                {result.company_phone && (
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Phone className="h-3.5 w-3.5 shrink-0" />
+                                    <span>{result.company_phone}</span>
+                                  </div>
+                                )}
+                                {result.company_email && (
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="truncate">{result.company_email}</span>
+                                  </div>
+                                )}
+                                {result.company_website && (
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Globe className="h-3.5 w-3.5 shrink-0" />
+                                    <a
+                                      href={result.company_website.startsWith("http") ? result.company_website : `https://${result.company_website}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="hover:text-primary truncate"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {result.company_website}
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Contacts section */}
+                              {result.contacts && result.contacts.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-border/50">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                      {result.contacts.length} contact{result.contacts.length > 1 ? "s" : ""} trouvé{result.contacts.length > 1 ? "s" : ""}
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                    {result.contacts.map((contact, cIdx) => (
+                                      <div 
+                                        key={cIdx}
+                                        className="p-2.5 rounded-md bg-muted/30 border border-border/50 space-y-1"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium text-sm">{contact.name}</span>
+                                          {contact.role && (
+                                            <Badge variant="outline" className="text-[10px] h-5">
+                                              {contact.role}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                                          {contact.email && (
+                                            <div className="flex items-center gap-1">
+                                              <Mail className="h-3 w-3" />
+                                              <span>{contact.email}</span>
+                                            </div>
+                                          )}
+                                          {contact.phone && (
+                                            <div className="flex items-center gap-1">
+                                              <Phone className="h-3 w-3" />
+                                              <span>{contact.phone}</span>
+                                            </div>
+                                          )}
+                                          {contact.linkedin && (
+                                            <a
+                                              href={contact.linkedin}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="flex items-center gap-1 hover:text-primary"
+                                              onClick={(e) => e.stopPropagation()}
+                                            >
+                                              <ExternalLink className="h-3 w-3" />
+                                              <span>LinkedIn</span>
+                                            </a>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Notes */}
+                              {result.notes && (
+                                <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2 mt-2">
+                                  💡 {result.notes}
+                                </p>
                               )}
                             </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                              {result.contact_name && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <User className="h-3.5 w-3.5" />
-                                  <span>{result.contact_name}</span>
-                                  {result.contact_role && (
-                                    <span className="text-xs">({result.contact_role})</span>
-                                  )}
-                                </div>
-                              )}
-                              {(result.contact_email || result.company_email) && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Mail className="h-3.5 w-3.5" />
-                                  <span>{result.contact_email || result.company_email}</span>
-                                </div>
-                              )}
-                              {(result.contact_phone || result.company_phone) && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Phone className="h-3.5 w-3.5" />
-                                  <span>{result.contact_phone || result.company_phone}</span>
-                                </div>
-                              )}
-                              {result.company_city && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <MapPin className="h-3.5 w-3.5" />
-                                  <span>{result.company_city}</span>
-                                </div>
-                              )}
-                              {result.company_website && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Globe className="h-3.5 w-3.5" />
-                                  <a
-                                    href={result.company_website}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:text-primary truncate"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {result.company_website}
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-
-                            {result.notes && (
-                              <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
-                                {result.notes}
-                              </p>
-                            )}
                           </div>
                         </div>
                       </div>
