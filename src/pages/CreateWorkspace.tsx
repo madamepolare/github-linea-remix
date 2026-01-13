@@ -95,7 +95,7 @@ export default function CreateWorkspace() {
         description: `${data.name} a été créé avec succès`,
       });
 
-      navigate("/");
+      navigate("/dashboard");
     } catch (error: any) {
       console.error("Error creating workspace:", error);
       toast({

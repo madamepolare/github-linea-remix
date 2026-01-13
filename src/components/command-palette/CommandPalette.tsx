@@ -62,7 +62,7 @@ export function CommandPalette() {
       id: "dashboard",
       label: "Dashboard",
       icon: LayoutDashboard,
-      action: () => navigate("/"),
+      action: () => navigate("/dashboard"),
       keywords: ["home", "accueil", "tableau de bord"],
       group: "navigation",
     },
