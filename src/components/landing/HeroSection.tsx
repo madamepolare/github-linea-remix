@@ -78,7 +78,7 @@ export const HeroSection = () => {
               transition={{ duration: 0.6, delay: 0.5 }}
               className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12"
             >
-              <Link to="/auth">
+              <Link to="/onboarding">
                 <Button
                   size="lg"
                   className="w-full sm:w-auto text-base px-8 h-14 bg-foreground text-background hover:bg-foreground/90 rounded-full font-medium shadow-lg shadow-black/10"

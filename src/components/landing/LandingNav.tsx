@@ -123,7 +123,7 @@ export const LandingNav = () => {
                 Se connecter
               </Button>
             </Link>
-            <Link to="/auth" className="nav-item">
+            <Link to="/onboarding" className="nav-item">
               <Button className="font-medium bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 transition-opacity">
                 Commencer gratuitement
               </Button>
@@ -214,7 +214,7 @@ export const LandingNav = () => {
                   Se connecter
                 </Button>
               </Link>
-              <Link to="/auth" className="block" onClick={() => setIsMobileMenuOpen(false)}>
+              <Link to="/onboarding" className="block" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button className="w-full">Commencer gratuitement</Button>
               </Link>
             </div>
