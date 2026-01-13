@@ -117,7 +117,7 @@ export const NewLandingNav = () => {
                 Se connecter
               </Button>
             </Link>
-            <Link to="/auth">
+            <Link to="/onboarding">
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button className="font-medium h-10 px-5 bg-foreground text-background hover:bg-foreground/90 rounded-full">
                   Démarrer
@@ -231,7 +231,7 @@ export const NewLandingNav = () => {
                     Se connecter
                   </Button>
                 </Link>
-                <Link to="/auth" className="block" onClick={() => setIsMobileMenuOpen(false)}>
+                <Link to="/onboarding" className="block" onClick={() => setIsMobileMenuOpen(false)}>
                   <Button className="w-full bg-foreground text-background rounded-full">
                     Démarrer
                   </Button>

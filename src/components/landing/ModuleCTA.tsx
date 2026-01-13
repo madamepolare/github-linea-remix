@@ -58,7 +58,7 @@ export const ModuleCTA = ({ title, color }: ModuleCTAProps) => {
                 className="px-8 bg-white text-foreground hover:bg-white/90"
                 asChild
               >
-                <Link to="/auth">
+                <Link to="/onboarding">
                   Commencer gratuitement
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>

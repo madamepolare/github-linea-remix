@@ -33,7 +33,7 @@ export const SolutionCTA = memo(({ color }: SolutionCTAProps) => {
             size="lg"
             className="h-12 sm:h-14 px-6 sm:px-8 rounded-full bg-foreground text-background hover:bg-foreground/90 font-medium text-sm sm:text-base"
           >
-            <Link to="/auth">
+            <Link to="/onboarding">
               Commencer gratuitement
               <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
             </Link>

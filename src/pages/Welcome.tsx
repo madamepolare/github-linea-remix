@@ -253,7 +253,7 @@ const Welcome = () => {
                 Rejoignez plus de 500 agences créatives qui utilisent
                 LINEA pour gérer leurs projets.
               </p>
-              <Link to="/auth">
+              <Link to="/onboarding">
                 <Button
                   size="lg"
                   className="text-base px-10 h-14 bg-foreground text-background hover:bg-foreground/90 rounded-full font-medium shadow-lg shadow-black/10"

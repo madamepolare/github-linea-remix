@@ -74,7 +74,7 @@ export const PricingCard = ({
       </ul>
 
       {/* CTA */}
-      <Link to="/auth" className="block">
+      <Link to="/onboarding" className="block">
         <Button
           className={`w-full font-medium ${
             highlighted

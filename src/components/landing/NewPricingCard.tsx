@@ -68,7 +68,7 @@ export const NewPricingCard = ({
       </div>
 
       {/* CTA */}
-      <Link to="/auth" className="block mb-8">
+      <Link to="/onboarding" className="block mb-8">
         <Button
           className={`w-full h-12 rounded-full font-medium ${
             highlighted
