@@ -25,7 +25,7 @@ export const PlanningDemo = () => {
     if (!demoRef.current) return;
 
     const ctx = gsap.context(() => {
-      // Animate rows
+      // Animate rows - once only
       gsap.from(".lot-row", {
         opacity: 0,
         x: -20,
@@ -34,11 +34,12 @@ export const PlanningDemo = () => {
         ease: "power3.out",
         scrollTrigger: {
           trigger: demoRef.current,
-          start: "top 70%",
+          start: "top 80%",
+          once: true,
         },
       });
 
-      // Animate intervention bars
+      // Animate intervention bars - once only
       gsap.from(".intervention-bar", {
         scaleX: 0,
         transformOrigin: "left",
@@ -48,17 +49,9 @@ export const PlanningDemo = () => {
         ease: "power3.out",
         scrollTrigger: {
           trigger: demoRef.current,
-          start: "top 70%",
+          start: "top 80%",
+          once: true,
         },
-      });
-
-      // Pulse today indicator
-      gsap.to(".today-line", {
-        opacity: 0.5,
-        repeat: -1,
-        yoyo: true,
-        duration: 1,
-        ease: "power1.inOut",
       });
     }, demoRef);
 
@@ -97,7 +90,7 @@ export const PlanningDemo = () => {
       <div className="relative">
         {/* Today indicator */}
         <div
-          className="today-line absolute top-0 bottom-0 w-0.5 bg-primary z-10"
+          className="today-line absolute top-0 bottom-0 w-0.5 bg-primary z-10 animate-pulse"
           style={{ left: "calc(200px + 50%)" }}
         >
           <div className="absolute -top-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-primary rounded text-[10px] text-white font-medium whitespace-nowrap">
