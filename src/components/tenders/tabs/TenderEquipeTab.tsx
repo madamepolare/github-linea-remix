@@ -167,7 +167,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   };
 
   // UI State
-  const [activeView, setActiveView] = useState<"pipeline" | "team">("team");
+  const [activeView, setActiveView] = useState<"pipeline" | "team">("pipeline");
   const [showAddCandidateDialog, setShowAddCandidateDialog] = useState(false);
   const [showAddTeamMemberDialog, setShowAddTeamMemberDialog] = useState(false);
   const [showBulkInviteDialog, setShowBulkInviteDialog] = useState(false);

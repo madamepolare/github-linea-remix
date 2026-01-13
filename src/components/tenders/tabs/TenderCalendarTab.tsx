@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -100,6 +100,7 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<TenderEvent | null>(null);
   const [calendarView, setCalendarView] = useState<"dayGridMonth" | "timeGridWeek" | "listMonth">("dayGridMonth");
+  const [hasAutoSynced, setHasAutoSynced] = useState(false);
   
   // Form state
   const [formTitle, setFormTitle] = useState("");
@@ -262,6 +263,48 @@ export function TenderCalendarTab({ tenderId, tender }: TenderCalendarTabProps) 
   // Check if site visit or deadline is missing and needs to be synced
   const hasSiteVisit = events.some((e: any) => e.event_type === "site_visit");
   const hasDeadline = events.some((e: any) => e.event_type === "deadline");
+
+  // Auto-sync site visit if required and not yet synced
+  React.useEffect(() => {
+    if (hasAutoSynced || isLoading) return;
+    
+    const autoSync = async () => {
+      let synced = false;
+      
+      // Auto-sync mandatory site visit
+      if (tender.site_visit_required && tender.site_visit_date && !hasSiteVisit) {
+        await syncSiteVisit({
+          id: tender.id,
+          title: tender.title,
+          location: tender.location,
+          site_visit_date: tender.site_visit_date,
+          site_visit_required: tender.site_visit_required,
+          site_visit_contact_name: tender.site_visit_contact_name,
+          site_visit_contact_email: tender.site_visit_contact_email,
+          site_visit_contact_phone: tender.site_visit_contact_phone,
+          site_visit_assigned_users: tender.site_visit_assigned_users,
+        });
+        synced = true;
+      }
+      
+      // Auto-sync deadline if present
+      if (tender.submission_deadline && !hasDeadline) {
+        await syncDeadline({
+          id: tender.id,
+          title: tender.title,
+          submission_deadline: tender.submission_deadline,
+        });
+        synced = true;
+      }
+      
+      if (synced) {
+        toast.success("Événements synchronisés automatiquement");
+      }
+    };
+    
+    autoSync();
+    setHasAutoSynced(true);
+  }, [tender, hasSiteVisit, hasDeadline, isLoading, hasAutoSynced, syncSiteVisit, syncDeadline]);
 
   // Sync buttons for missing events
   const handleSyncSiteVisit = async () => {

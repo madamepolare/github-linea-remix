@@ -3,8 +3,6 @@ import {
   Plus,
   FileCheck,
   Loader2,
-  ChevronDown,
-  ChevronUp,
   Download,
 } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -27,11 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { useTenderDeliverables } from "@/hooks/useTenderDeliverables";
 import { useTenderTeam } from "@/hooks/useTenderTeam";
 import { useTender } from "@/hooks/useTenders";
@@ -39,7 +32,6 @@ import { DELIVERABLE_TYPES } from "@/lib/tenderTypes";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { DeliverableQuickAdd } from "../deliverables/DeliverableQuickAdd";
-import { DeliverableAIExtract } from "../deliverables/DeliverableAIExtract";
 import { DeliverableMemberGrid } from "../deliverables/DeliverableMemberGrid";
 
 interface TenderLivrablesTabProps {
@@ -57,17 +49,8 @@ const RESPONSIBLE_TYPES = [
 export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
   const { teamMembers } = useTenderTeam(tenderId);
   const { data: tender } = useTender(tenderId);
-  const { 
-    deliverables, 
-    isLoading, 
-    addDeliverable, 
-    updateDeliverable,
-    toggleMemberComplete,
-    deleteDeliverable 
-  } = useTenderDeliverables(tenderId, teamMembers);
+  const { deliverables, isLoading, addDeliverable, updateDeliverable, toggleMemberComplete, deleteDeliverable } = useTenderDeliverables(tenderId, teamMembers);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showQuickAdd, setShowQuickAdd] = useState(true);
-  const [showAIExtract, setShowAIExtract] = useState(false);
   const [newDeliverable, setNewDeliverable] = useState({
     deliverable_type: '',
     name: '',
@@ -242,13 +225,6 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
     addDeliverable.mutate(item);
   };
 
-  const handleAIImport = (items: { deliverable_type: string; name: string; responsible_type: string }[]) => {
-    items.forEach(item => {
-      addDeliverable.mutate(item);
-    });
-    toast.success(`${items.length} livrable${items.length > 1 ? 's' : ''} importé${items.length > 1 ? 's' : ''}`);
-  };
-
   const handleToggleMemberComplete = (deliverableId: string, companyId: string, currentValue: boolean) => {
     toggleMemberComplete.mutate({ deliverableId, companyId, currentValue });
   };
@@ -263,8 +239,8 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Progress Card */}
-      <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+      {/* Progress Card - Simplified */}
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -272,82 +248,53 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
                 <FileCheck className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-base">Progression des livrables</CardTitle>
+                <CardTitle className="text-base">Livrables à produire</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {deliverables.length} livrable{deliverables.length > 1 ? 's' : ''} à produire
+                  {deliverables.length} livrable{deliverables.length !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
-            <span className={cn(
-              "text-3xl font-bold tabular-nums",
-              progressPercent === 100 ? "text-green-600" : "text-foreground"
-            )}>
-              {progressPercent}%
-            </span>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <span className={cn(
+                  "text-2xl font-bold tabular-nums",
+                  progressPercent === 100 ? "text-green-600" : "text-foreground"
+                )}>
+                  {progressPercent}%
+                </span>
+              </div>
+              <div className="flex gap-2">
+                {deliverables.length > 0 && (
+                  <Button size="sm" variant="outline" onClick={handleExportExcel}>
+                    <Download className="h-4 w-4 mr-1.5" />
+                    Excel
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => setShowAddDialog(true)}>
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Ajouter
+                </Button>
+              </div>
+            </div>
           </div>
+          {deliverables.length > 0 && (
+            <Progress 
+              value={progressPercent} 
+              className={cn(
+                "h-2 mt-4",
+                progressPercent === 100 && "[&>div]:bg-green-500"
+              )} 
+            />
+          )}
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Progress 
-            value={progressPercent} 
-            className={cn(
-              "h-3",
-              progressPercent === 100 && "[&>div]:bg-green-500"
-            )} 
-          />
-          <div className="flex items-center justify-end gap-2">
-            {deliverables.length > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleExportExcel}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export Excel
-              </Button>
-            )}
-            <Button
-              size="sm"
-              onClick={() => setShowAddDialog(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter
-            </Button>
-          </div>
-        </CardContent>
       </Card>
 
-      {/* Quick Add Section */}
-      <Collapsible open={showQuickAdd} onOpenChange={setShowQuickAdd}>
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" className="w-full justify-between px-4 py-2 h-auto">
-            <span className="text-sm font-medium">⚡ Ajout rapide</span>
-            {showQuickAdd ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2">
-          <DeliverableQuickAdd
-            existingTypes={existingTypes}
-            onAdd={handleQuickAdd}
-            isLoading={addDeliverable.isPending}
-          />
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* AI Extract Section */}
-      <Collapsible open={showAIExtract} onOpenChange={setShowAIExtract}>
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" className="w-full justify-between px-4 py-2 h-auto">
-            <span className="text-sm font-medium">🤖 Extraction IA depuis le RC</span>
-            {showAIExtract ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2">
-          <DeliverableAIExtract
-            existingTypes={existingTypes}
-            onImport={handleAIImport}
-          />
-        </CollapsibleContent>
-      </Collapsible>
+      {/* Quick Add - Simplified inline */}
+      <DeliverableQuickAdd
+        existingTypes={existingTypes}
+        onAdd={handleQuickAdd}
+        isLoading={addDeliverable.isPending}
+      />
 
       {/* Main Grid */}
       {deliverables.length === 0 ? (
@@ -356,7 +303,7 @@ export function TenderLivrablesTab({ tenderId }: TenderLivrablesTabProps) {
             <FileCheck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">Aucun livrable défini</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Utilisez les boutons rapides ci-dessus ou importez depuis le RC
+              Cliquez sur les boutons rapides ci-dessus pour ajouter des livrables
             </p>
           </CardContent>
         </Card>
