@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ArrowLeft, Check, Star, Crown } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, Star, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import * as LucideIcons from "lucide-react";
+import { IsometricIllustration } from "../IsometricIllustration";
 
 interface Module {
   id: string;
@@ -21,26 +22,19 @@ interface ModulesStepProps {
   modules: Module[];
   onNext: (selectedModules: string[]) => void;
   onBack: () => void;
+  recommendedSlugs?: string[];
 }
 
-const categoryLabels: Record<string, string> = {
-  core: "Essentiels",
-  finance: "Finance",
-  business: "Business",
-  productivity: "Productivité",
-  hr: "Ressources Humaines",
-  premium: "Premium",
-};
-
-const categoryOrder = ["core", "productivity", "finance", "business", "hr", "premium"];
-
-export function ModulesStep({ modules, onNext, onBack }: ModulesStepProps) {
-  const [selected, setSelected] = useState<string[]>(
-    modules.filter((m) => m.is_core).map((m) => m.id)
-  );
+export function ModulesStep({ modules, onNext, onBack, recommendedSlugs = [] }: ModulesStepProps) {
+  const [selected, setSelected] = useState<string[]>(() => {
+    // Pre-select core modules and recommended ones
+    const coreIds = modules.filter((m) => m.is_core).map((m) => m.id);
+    const recommendedIds = modules.filter((m) => recommendedSlugs.includes(m.slug)).map((m) => m.id);
+    return [...new Set([...coreIds, ...recommendedIds])];
+  });
 
   const toggleModule = (moduleId: string, isCore: boolean) => {
-    if (isCore) return; // Can't toggle core modules
+    if (isCore) return;
     setSelected((prev) =>
       prev.includes(moduleId)
         ? prev.filter((id) => id !== moduleId)
@@ -53,118 +47,196 @@ export function ModulesStep({ modules, onNext, onBack }: ModulesStepProps) {
     return Icon || LucideIcons.Box;
   };
 
-  const groupedModules = categoryOrder
-    .map((cat) => ({
-      category: cat,
-      label: categoryLabels[cat] || cat,
-      modules: modules.filter((m) => m.category === cat),
-    }))
-    .filter((g) => g.modules.length > 0);
+  // Group modules: core first, then recommended, then others
+  const coreModules = modules.filter((m) => m.is_core);
+  const recommendedModules = modules.filter((m) => !m.is_core && recommendedSlugs.includes(m.slug));
+  const otherModules = modules.filter((m) => !m.is_core && !recommendedSlugs.includes(m.slug));
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 50 }}
+      initial={{ opacity: 0, x: 30 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -50 }}
-      transition={{ duration: 0.4 }}
-      className="flex-1 flex flex-col px-4 py-8 sm:py-12"
+      exit={{ opacity: 0, x: -30 }}
+      className="flex-1 flex flex-col px-4 py-8"
     >
       <div className="text-center mb-8">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center"
+        <motion.span
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="inline-block text-sm font-medium text-muted-foreground mb-3"
         >
-          <Star className="w-8 h-8 text-primary-foreground" />
-        </motion.div>
-        <h2 className="text-3xl sm:text-4xl font-bold mb-3">Choisissez vos modules</h2>
-        <p className="text-muted-foreground max-w-lg mx-auto">
-          Sélectionnez les fonctionnalités dont vous avez besoin. Vous pourrez modifier ce choix plus tard.
-        </p>
+          Étape 3/4
+        </motion.span>
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-3xl sm:text-4xl font-bold text-foreground mb-4"
+        >
+          Choisissez vos modules
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-muted-foreground max-w-md mx-auto"
+        >
+          Nous avons pré-sélectionné les modules adaptés à votre discipline
+        </motion.p>
       </div>
 
-      <div className="flex-1 overflow-y-auto max-w-4xl mx-auto w-full">
-        <div className="space-y-8 pb-4">
-          {groupedModules.map((group) => (
-            <div key={group.category}>
-              <div className="flex items-center gap-2 mb-4">
-                <h3 className="text-lg font-semibold">{group.label}</h3>
-                {group.category === "premium" && (
-                  <Crown className="w-4 h-4 text-amber-500" />
-                )}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {group.modules.map((module, idx) => {
-                  const Icon = getIcon(module.icon);
-                  const isSelected = selected.includes(module.id);
-                  const isCore = module.is_core;
-
-                  return (
-                    <motion.button
-                      key={module.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      whileHover={{ scale: isCore ? 1 : 1.02 }}
-                      whileTap={{ scale: isCore ? 1 : 0.98 }}
-                      onClick={() => toggleModule(module.id, isCore)}
-                      disabled={isCore}
-                      className={cn(
-                        "relative p-4 rounded-xl border-2 text-left transition-all",
-                        isSelected
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50",
-                        isCore && "opacity-80 cursor-default"
-                      )}
-                    >
-                      {isSelected && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center"
-                        >
-                          <Check className="w-4 h-4 text-primary-foreground" />
-                        </motion.div>
-                      )}
-                      {isCore && (
-                        <span className="absolute top-2 right-2 text-xs bg-muted px-2 py-0.5 rounded-full">
-                          Inclus
-                        </span>
-                      )}
-                      <Icon className={cn("w-6 h-6 mb-2", isSelected ? "text-primary" : "text-muted-foreground")} />
-                      <div className="font-semibold text-sm">{module.name}</div>
-                      <div className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                        {module.description}
-                      </div>
-                      {module.price_monthly > 0 && (
-                        <div className="mt-2 text-xs font-medium text-primary">
-                          {module.price_monthly}€/mois
-                        </div>
-                      )}
-                    </motion.button>
-                  );
-                })}
-              </div>
+      <div className="flex-1 overflow-y-auto max-w-4xl mx-auto w-full pb-4">
+        {/* Core modules */}
+        {coreModules.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-foreground" />
+              Modules essentiels (inclus)
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {coreModules.map((module, idx) => {
+                const Icon = getIcon(module.icon);
+                return (
+                  <motion.div
+                    key={module.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 + idx * 0.05 }}
+                    className="relative p-4 rounded-xl border-2 border-foreground/20 bg-foreground/5 text-left"
+                  >
+                    <div className="absolute top-2 right-2">
+                      <Check className="w-4 h-4 text-foreground" />
+                    </div>
+                    <Icon className="w-5 h-5 text-foreground mb-2" />
+                    <div className="font-medium text-sm">{module.name}</div>
+                  </motion.div>
+                );
+              })}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
+
+        {/* Recommended modules */}
+        {recommendedModules.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              Recommandés pour vous
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {recommendedModules.map((module, idx) => {
+                const Icon = getIcon(module.icon);
+                const isSelected = selected.includes(module.id);
+                return (
+                  <motion.button
+                    key={module.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 + idx * 0.05 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => toggleModule(module.id, false)}
+                    className={cn(
+                      "relative p-4 rounded-xl border-2 text-left transition-all bg-white/50 backdrop-blur-sm",
+                      isSelected
+                        ? "border-amber-500 shadow-md"
+                        : "border-border/50 hover:border-amber-500/50"
+                    )}
+                  >
+                    {isSelected && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute top-2 right-2 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center"
+                      >
+                        <Check className="w-3 h-3 text-white" />
+                      </motion.div>
+                    )}
+                    <Icon className={cn("w-5 h-5 mb-2", isSelected ? "text-amber-600" : "text-muted-foreground")} />
+                    <div className="font-medium text-sm">{module.name}</div>
+                    <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{module.description}</div>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Other modules */}
+        {otherModules.length > 0 && (
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-4">
+              Autres modules disponibles
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {otherModules.map((module, idx) => {
+                const Icon = getIcon(module.icon);
+                const isSelected = selected.includes(module.id);
+                return (
+                  <motion.button
+                    key={module.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 + idx * 0.03 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => toggleModule(module.id, false)}
+                    className={cn(
+                      "relative p-4 rounded-xl border-2 text-left transition-all bg-white/30",
+                      isSelected
+                        ? "border-foreground bg-white/50"
+                        : "border-border/30 hover:border-foreground/30 hover:bg-white/40"
+                    )}
+                  >
+                    {isSelected && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute top-2 right-2 w-5 h-5 rounded-full bg-foreground flex items-center justify-center"
+                      >
+                        <Check className="w-3 h-3 text-background" />
+                      </motion.div>
+                    )}
+                    <Icon className={cn("w-5 h-5 mb-2", isSelected ? "text-foreground" : "text-muted-foreground")} />
+                    <div className="font-medium text-sm">{module.name}</div>
+                    {module.price_monthly > 0 && (
+                      <div className="text-xs text-primary mt-1">{module.price_monthly}€/mois</div>
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="flex justify-between mt-6 pt-4 border-t">
-        <Button variant="ghost" onClick={onBack} className="gap-2">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="flex justify-between items-center pt-6 border-t border-border/50 max-w-4xl mx-auto w-full"
+      >
+        <Button 
+          variant="ghost" 
+          onClick={onBack} 
+          className="gap-2 text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="w-4 h-4" />
           Retour
         </Button>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground hidden sm:block">
-            {selected.length} modules sélectionnés
+            {selected.length} modules
           </span>
-          <Button onClick={() => onNext(selected)} className="gap-2 h-12 px-6 rounded-xl">
+          <Button
+            onClick={() => onNext(selected)}
+            className="gap-2 h-12 px-8 rounded-full bg-foreground text-background hover:bg-foreground/90"
+          >
             Continuer
             <ArrowRight className="w-4 h-4" />
           </Button>
         </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
