@@ -28,8 +28,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, Megaphone, Palette, Globe, FileText, Percent, List, Package, Calendar, FileCheck, Sparkles, Loader2, LayoutTemplate, Settings2, Building } from 'lucide-react';
-import { useContractTypes, ContractType, CreateContractTypeInput, ContractTypeFields, BuilderTab, DEFAULT_MOE_CONFIG } from '@/hooks/useContractTypes';
+import { Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, Megaphone, Palette, Globe, FileText, Percent, List, Package, Calendar, FileCheck, Sparkles, Loader2, LayoutTemplate, Settings2, Building, Video } from 'lucide-react';
+import { useContractTypes, ContractType, CreateContractTypeInput, ContractTypeFields, BuilderTab, DEFAULT_MOE_CONFIG, DEFAULT_COMMUNICATION_CONFIG } from '@/hooks/useContractTypes';
 import { ContractMOEConfig, MOEConfigData } from './ContractMOEConfig';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useWorkspaceDiscipline } from '@/hooks/useDiscipline';
@@ -37,6 +37,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { PDFBlocksConfigurator } from './PDFBlocksConfigurator';
 import { type PDFDocumentConfig } from '@/lib/pdfBlockTypes';
+import { isArchitectureContractType } from '@/lib/moeContractDefaults';
+import { isCommunicationContractType } from '@/lib/communicationContractDefaults';
 
 const TAB_OPTIONS: { key: BuilderTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: 'general', label: 'Général', icon: FileText },
@@ -56,10 +58,14 @@ const ICON_OPTIONS = [
   { value: 'Megaphone', label: 'Publicité', icon: Megaphone },
   { value: 'Palette', label: 'Design', icon: Palette },
   { value: 'Globe', label: 'Web', icon: Globe },
+  { value: 'Video', label: 'Vidéo', icon: Video },
+  { value: 'Calendar', label: 'Événement', icon: Calendar },
 ];
 
 // Contract types that support MOE configuration (architecture-based)
 const MOE_CONTRACT_CODES = ['MOE', 'ARCHI', 'INTERIOR'];
+// Contract types for communication
+const COMMUNICATION_CONTRACT_CODES = ['CAMP360', 'BRAND', 'DIGITAL', 'EVENT', 'VIDEO', 'ACCORD', 'PUB', 'COM'];
 
 const FIELD_OPTIONS: { key: keyof ContractTypeFields; label: string }[] = [
   { key: 'surface', label: 'Surface (m²)' },

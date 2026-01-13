@@ -86,6 +86,11 @@ export function mergeMOEConfig(existingConfig: any): MOEDefaultConfig {
 export const ARCHITECTURE_CONTRACT_CODES = ['ARCHI', 'MOE', 'INTERIOR', 'SCENO'];
 
 /**
+ * Communication-based contract type codes
+ */
+export const COMMUNICATION_CONTRACT_CODES = ['CAMP360', 'BRAND', 'DIGITAL', 'EVENT', 'VIDEO', 'ACCORD', 'PUB', 'COM'];
+
+/**
  * Check if a contract type code is architecture-based
  */
 export function isArchitectureContractType(code: string): boolean {

@@ -62,14 +62,39 @@ import {
   DEFAULT_MOE_PAYMENT_SCHEDULE, 
   DEFAULT_MOE_CLAUSES 
 } from '@/lib/moeContractConfig';
+import {
+  DEFAULT_COMMUNICATION_PHASES,
+  DEFAULT_COMMUNICATION_PAYMENT_SCHEDULE,
+  DEFAULT_COMMUNICATION_CLAUSES
+} from '@/lib/communicationContractDefaults';
 
 // Default MOE configuration for architecture contracts
 export const DEFAULT_MOE_CONFIG = {
+  template: 'moe_architecture_contract',
+  version: 1,
   mission_phases: DEFAULT_MOE_MISSION_PHASES,
   payment_schedule: DEFAULT_MOE_PAYMENT_SCHEDULE,
   clauses: DEFAULT_MOE_CLAUSES,
-  minimum_fee: 4000,
-  extra_meeting_rate: 250
+  settings: {
+    minimum_fee: 4000,
+    extra_meeting_rate: 250,
+    insurance_company: '',
+    insurance_policy_number: ''
+  }
+};
+
+// Default Communication configuration
+export const DEFAULT_COMMUNICATION_CONFIG = {
+  template: 'communication_contract',
+  version: 1,
+  phases: DEFAULT_COMMUNICATION_PHASES,
+  payment_schedule: DEFAULT_COMMUNICATION_PAYMENT_SCHEDULE,
+  clauses: DEFAULT_COMMUNICATION_CLAUSES,
+  settings: {
+    daily_rate: 800,
+    minimum_project: 5000,
+    currency: 'EUR'
+  }
 };
 
 export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 'created_at' | 'updated_at'>[] = [
@@ -116,44 +141,72 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     is_active: true
   },
   {
-    name: 'Campagne publicitaire',
-    code: 'PUB',
-    description: 'Campagnes de communication et publicité',
+    name: 'Campagne 360°',
+    code: 'CAMP360',
+    description: 'Campagne de communication multi-canal',
     icon: 'Megaphone',
-    color: '#F59E0B',
+    color: '#EC4899',
     default_fields: { budget: true },
-    default_clauses: {},
-    builder_tabs: ['general', 'lines', 'production', 'terms'],
+    default_clauses: DEFAULT_COMMUNICATION_CONFIG,
+    builder_tabs: ['general', 'fees', 'lines', 'terms'],
     pdf_config: DEFAULT_PDF_CONFIG,
     sort_order: 3,
     is_default: false,
     is_active: true
   },
   {
-    name: 'Branding',
+    name: 'Branding / Identité',
     code: 'BRAND',
-    description: 'Identité visuelle et charte graphique',
+    description: 'Création ou refonte d\'identité visuelle',
     icon: 'Palette',
-    color: '#10B981',
+    color: '#8B5CF6',
     default_fields: { budget: true },
-    default_clauses: {},
-    builder_tabs: ['general', 'lines', 'production', 'terms'],
+    default_clauses: DEFAULT_COMMUNICATION_CONFIG,
+    builder_tabs: ['general', 'fees', 'lines', 'terms'],
     pdf_config: DEFAULT_PDF_CONFIG,
     sort_order: 4,
     is_default: false,
     is_active: true
   },
   {
-    name: 'Web & Digital',
-    code: 'WEB',
-    description: 'Sites web, applications, digital',
+    name: 'Digital / Social Media',
+    code: 'DIGITAL',
+    description: 'Stratégie digitale et réseaux sociaux',
     icon: 'Globe',
     color: '#06B6D4',
     default_fields: { budget: true },
-    default_clauses: {},
-    builder_tabs: ['general', 'lines', 'production', 'terms'],
+    default_clauses: DEFAULT_COMMUNICATION_CONFIG,
+    builder_tabs: ['general', 'fees', 'lines', 'terms'],
     pdf_config: DEFAULT_PDF_CONFIG,
     sort_order: 5,
+    is_default: false,
+    is_active: true
+  },
+  {
+    name: 'Événementiel',
+    code: 'EVENT',
+    description: 'Conception et production d\'événements',
+    icon: 'Calendar',
+    color: '#F59E0B',
+    default_fields: { budget: true },
+    default_clauses: DEFAULT_COMMUNICATION_CONFIG,
+    builder_tabs: ['general', 'fees', 'lines', 'planning', 'terms'],
+    pdf_config: DEFAULT_PDF_CONFIG,
+    sort_order: 6,
+    is_default: false,
+    is_active: true
+  },
+  {
+    name: 'Production vidéo',
+    code: 'VIDEO',
+    description: 'Films, vidéos et contenus audiovisuels',
+    icon: 'Video',
+    color: '#EF4444',
+    default_fields: { budget: true },
+    default_clauses: DEFAULT_COMMUNICATION_CONFIG,
+    builder_tabs: ['general', 'fees', 'lines', 'terms'],
+    pdf_config: DEFAULT_PDF_CONFIG,
+    sort_order: 7,
     is_default: false,
     is_active: true
   }
