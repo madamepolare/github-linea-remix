@@ -168,7 +168,7 @@ export function TenderEquipeTab({ tenderId, requiredCompetencies = [] }: TenderE
   };
 
   // UI State
-  const [activeView, setActiveView] = useState<"pipeline" | "team">("pipeline");
+  const [activeView, setActiveView] = useState<"honoraires" | "team" | "pipeline">("honoraires");
   const [showAddCandidateDialog, setShowAddCandidateDialog] = useState(false);
   const [showAddTeamMemberDialog, setShowAddTeamMemberDialog] = useState(false);
   const [showBulkInviteDialog, setShowBulkInviteDialog] = useState(false);
@@ -386,8 +386,12 @@ Cordialement`);
     <div className="space-y-6">
       {/* Header with view toggle */}
       <div className="flex items-center justify-between">
-        <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "pipeline" | "team")}>
+        <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "honoraires" | "team" | "pipeline")}>
           <TabsList>
+            <TabsTrigger value="honoraires" className="gap-2">
+              <Euro className="h-4 w-4" />
+              Honoraires
+            </TabsTrigger>
             <TabsTrigger value="team" className="gap-2">
               <Users className="h-4 w-4" />
               Équipe confirmée
@@ -457,8 +461,8 @@ Cordialement`);
         </div>
       </div>
 
-      {/* Fee Management Section */}
-      {tender && (
+      {/* Honoraires Sub-Tab Content */}
+      {activeView === "honoraires" && tender && (
         <TenderFeeManagement
           tender={{
             id: tender.id,
@@ -478,158 +482,163 @@ Cordialement`);
         />
       )}
 
-      {/* Missing Specialties Warning */}
-      {missingSpecialties.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
-          <CardContent className="pt-4">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                  Compétences manquantes détectées
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Ajoutez des partenaires avec ces spécialités pour constituer un groupement complet.
-                </p>
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {missingSpecialties.map(s => (
-                    <Button
-                      key={s}
-                      variant="outline"
-                      size="sm"
-                      className="border-amber-400 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/50"
-                      onClick={() => openAddDialogWithSpecialty(s)}
+      {/* Team & Pipeline Content */}
+      {(activeView === "team" || activeView === "pipeline") && (
+        <>
+          {/* Missing Specialties Warning */}
+          {missingSpecialties.length > 0 && (
+            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
+              <CardContent className="pt-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                      Compétences manquantes détectées
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Ajoutez des partenaires avec ces spécialités pour constituer un groupement complet.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {missingSpecialties.map(s => (
+                        <Button
+                          key={s}
+                          variant="outline"
+                          size="sm"
+                          className="border-amber-400 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                          onClick={() => openAddDialogWithSpecialty(s)}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          {getSpecialtyLabel(s)}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="border-amber-400 text-amber-700 dark:text-amber-300">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    IA
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Required Specialties Management */}
+          {requiredTeam.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <ClipboardList className="h-4 w-4" />
+                    Spécialités requises
+                    <Badge variant="secondary">{requiredTeam.length}</Badge>
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {requiredTeam.map((member: any) => (
+                    <div
+                      key={member.id}
+                      className="group flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-sm"
                     >
-                      <Plus className="h-3 w-3 mr-1" />
-                      {getSpecialtyLabel(s)}
-                    </Button>
+                      <span className={member.is_mandatory ? "font-medium" : ""}>
+                        {getSpecialtyLabel(member.specialty)}
+                      </span>
+                      {member.is_mandatory && (
+                        <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">
+                          Obligatoire
+                        </Badge>
+                      )}
+                      <button
+                        onClick={() => handleRemoveRequiredSpecialty(member.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
+                        title="Retirer cette spécialité"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
                   ))}
                 </div>
-              </div>
-              <Badge variant="outline" className="border-amber-400 text-amber-700 dark:text-amber-300">
-                <Sparkles className="h-3 w-3 mr-1" />
-                IA
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Required Specialties Management */}
-      {requiredTeam.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <ClipboardList className="h-4 w-4" />
-                Spécialités requises
-                <Badge variant="secondary">{requiredTeam.length}</Badge>
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {requiredTeam.map((member: any) => (
-                <div
-                  key={member.id}
-                  className="group flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-sm"
-                >
-                  <span className={member.is_mandatory ? "font-medium" : ""}>
-                    {getSpecialtyLabel(member.specialty)}
-                  </span>
-                  {member.is_mandatory && (
-                    <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">
-                      Obligatoire
-                    </Badge>
-                  )}
-                  <button
-                    onClick={() => handleRemoveRequiredSpecialty(member.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive"
-                    title="Retirer cette spécialité"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {activeView === "pipeline" ? (
-        <PipelineView
-          candidates={filteredCandidates}
-          candidatesBySpecialty={filteredCandidatesBySpecialty}
-          stats={stats}
-          search={pipelineSearch}
-          onSearchChange={setPipelineSearch}
-          statusFilter={pipelineStatusFilter}
-          onStatusFilterChange={setPipelineStatusFilter}
-          estimatedBudget={tender?.estimated_budget}
-          selectedCandidates={selectedCandidates}
-          onSelectionChange={setSelectedCandidates}
-          onAddCandidate={() => setShowAddCandidateDialog(true)}
-          onAddWithSpecialty={openAddDialogWithSpecialty}
-          onEditCandidate={setEditingCandidate}
-          onUpdateCandidate={(id, updates) => updateCandidate.mutate({ id, ...updates })}
-          onBulkUpdateStatus={(ids, status) => {
-            ids.forEach(id => updateCandidate.mutate({ id, status: status as any }));
-            setSelectedCandidates(new Set());
-          }}
-          onBulkRemove={(ids) => {
-            ids.forEach(id => removeCandidate.mutate(id));
-            setSelectedCandidates(new Set());
-          }}
-          onBulkConfirm={(ids) => {
-            ids.forEach(id => confirmToTeam.mutate(id));
-            setSelectedCandidates(new Set());
-          }}
-          onRemoveCandidate={(id, name) => setDeleteConfirm({ type: 'candidate', id, name })}
-          onConfirmToTeam={(id) => confirmToTeam.mutate(id)}
-           onSendInvite={(candidate) => {
-             const email = candidate.contact?.email || candidate.company?.email;
-             if (email) {
-               setProposalEmailTarget({
-                 id: candidate.id,
-                 companyName: candidate.company?.name || candidate.contact?.name || "Partenaire",
-                 contactEmail: email,
-                 contactName: candidate.contact?.name,
-                 specialty: candidate.specialty,
-                 proposedFeePercentage: candidate.fee_percentage || undefined,
-               });
-             } else {
-               toast.error("Pas d'email pour ce partenaire (contact ou entreprise)");
-             }
-           }}
-           onBulkInvite={() => setShowBulkInviteDialog(true)}
-          isLoading={isLoading}
-          requiredSpecialties={requiredSpecialties}
-          getSpecialtyLabel={getSpecialtyLabel}
-        />
-      ) : (
-        <TeamView
-          teamMembers={teamMembers}
-          teamByRole={teamByRole}
-          estimatedBudget={tender?.estimated_budget}
-          onEditMember={setEditingTeamMember}
-          onRemoveMember={(id, name) => setDeleteConfirm({ type: 'team', id, name })}
-          onSendInvite={(member) => {
-            const email = member.contact?.email || member.company?.email;
-            if (email) {
-              setProposalEmailTarget({
-                id: member.id,
-                companyName: member.company?.name || member.contact?.name || "Partenaire",
-                contactEmail: email,
-                contactName: member.contact?.name,
-                specialty: member.specialty || "",
-              });
-            } else {
-              toast.error("Pas d'email pour ce partenaire (contact ou entreprise)");
-            }
-          }}
-          isLoading={isLoading}
-          getSpecialtyLabel={getSpecialtyLabel}
-        />
+          {activeView === "pipeline" ? (
+            <PipelineView
+              candidates={filteredCandidates}
+              candidatesBySpecialty={filteredCandidatesBySpecialty}
+              stats={stats}
+              search={pipelineSearch}
+              onSearchChange={setPipelineSearch}
+              statusFilter={pipelineStatusFilter}
+              onStatusFilterChange={setPipelineStatusFilter}
+              estimatedBudget={tender?.estimated_budget}
+              selectedCandidates={selectedCandidates}
+              onSelectionChange={setSelectedCandidates}
+              onAddCandidate={() => setShowAddCandidateDialog(true)}
+              onAddWithSpecialty={openAddDialogWithSpecialty}
+              onEditCandidate={setEditingCandidate}
+              onUpdateCandidate={(id, updates) => updateCandidate.mutate({ id, ...updates })}
+              onBulkUpdateStatus={(ids, status) => {
+                ids.forEach(id => updateCandidate.mutate({ id, status: status as any }));
+                setSelectedCandidates(new Set());
+              }}
+              onBulkRemove={(ids) => {
+                ids.forEach(id => removeCandidate.mutate(id));
+                setSelectedCandidates(new Set());
+              }}
+              onBulkConfirm={(ids) => {
+                ids.forEach(id => confirmToTeam.mutate(id));
+                setSelectedCandidates(new Set());
+              }}
+              onRemoveCandidate={(id, name) => setDeleteConfirm({ type: 'candidate', id, name })}
+              onConfirmToTeam={(id) => confirmToTeam.mutate(id)}
+              onSendInvite={(candidate) => {
+                const email = candidate.contact?.email || candidate.company?.email;
+                if (email) {
+                  setProposalEmailTarget({
+                    id: candidate.id,
+                    companyName: candidate.company?.name || candidate.contact?.name || "Partenaire",
+                    contactEmail: email,
+                    contactName: candidate.contact?.name,
+                    specialty: candidate.specialty,
+                    proposedFeePercentage: candidate.fee_percentage || undefined,
+                  });
+                } else {
+                  toast.error("Pas d'email pour ce partenaire (contact ou entreprise)");
+                }
+              }}
+              onBulkInvite={() => setShowBulkInviteDialog(true)}
+              isLoading={isLoading}
+              requiredSpecialties={requiredSpecialties}
+              getSpecialtyLabel={getSpecialtyLabel}
+            />
+          ) : (
+            <TeamView
+              teamMembers={teamMembers}
+              teamByRole={teamByRole}
+              estimatedBudget={tender?.estimated_budget}
+              onEditMember={setEditingTeamMember}
+              onRemoveMember={(id, name) => setDeleteConfirm({ type: 'team', id, name })}
+              onSendInvite={(member) => {
+                const email = member.contact?.email || member.company?.email;
+                if (email) {
+                  setProposalEmailTarget({
+                    id: member.id,
+                    companyName: member.company?.name || member.contact?.name || "Partenaire",
+                    contactEmail: email,
+                    contactName: member.contact?.name,
+                    specialty: member.specialty || "",
+                  });
+                } else {
+                  toast.error("Pas d'email pour ce partenaire (contact ou entreprise)");
+                }
+              }}
+              isLoading={isLoading}
+              getSpecialtyLabel={getSpecialtyLabel}
+            />
+          )}
+        </>
       )}
 
       {/* Add Candidate Dialog */}
