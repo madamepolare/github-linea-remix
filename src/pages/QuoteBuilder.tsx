@@ -617,32 +617,35 @@ export default function QuoteBuilder() {
             </div>
             <div className="flex-1 overflow-auto p-4">
               {/* Use document_type to determine preview: quote = simple HTML, contract = PDF multi-page */}
-              {document.document_type === 'contract' && currentContractType ? (
-                isArchitectureContractType(currentContractType.code || '') ? (
-                  <QuoteMOEPreviewPanel
-                    document={document}
-                    lines={lines}
-                    zoom={zoom / 100}
-                  />
-                ) : isCommunicationContractType(currentContractType.code || '') ? (
-                  <QuoteCommunicationPreviewPanel
-                    document={document}
-                    lines={lines}
-                    zoom={zoom / 100}
-                  />
+              {document.document_type === 'contract' ? (
+                currentContractType ? (
+                  isArchitectureContractType(currentContractType.code || '') ? (
+                    <QuoteMOEPreviewPanel
+                      document={document}
+                      lines={lines}
+                      zoom={zoom / 100}
+                    />
+                  ) : isCommunicationContractType(currentContractType.code || '') ? (
+                    <QuoteCommunicationPreviewPanel
+                      document={document}
+                      lines={lines}
+                      zoom={zoom / 100}
+                    />
+                  ) : (
+                    <QuotePreviewPanel document={document} lines={lines} zoom={zoom} />
+                  )
                 ) : (
-                  <QuotePreviewPanel
-                    document={document}
-                    lines={lines}
-                    zoom={zoom}
-                  />
+                  <div className="h-full min-h-[420px] rounded-lg border bg-background flex items-center justify-center p-8 text-center">
+                    <div className="max-w-sm space-y-2">
+                      <p className="text-sm font-medium">Aperçu du contrat indisponible</p>
+                      <p className="text-sm text-muted-foreground">
+                        Sélectionne un <span className="font-medium">type de contrat</span> dans l’onglet “Général” pour générer l’aperçu PDF.
+                      </p>
+                    </div>
+                  </div>
                 )
               ) : (
-                <QuotePreviewPanel
-                  document={document}
-                  lines={lines}
-                  zoom={zoom}
-                />
+                <QuotePreviewPanel document={document} lines={lines} zoom={zoom} />
               )}
             </div>
           </div>
