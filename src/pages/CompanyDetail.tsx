@@ -34,6 +34,7 @@ import { LinkedEntitiesPanel } from "@/components/shared/LinkedEntitiesPanel";
 import { CompanyInfoPanel } from "@/components/crm/company/CompanyInfoPanel";
 import { CompanyStatsCards } from "@/components/crm/company/CompanyStatsCards";
 import { CompanyContactsSection } from "@/components/crm/company/CompanyContactsSection";
+import { CompanyBillingPanel } from "@/components/crm/company/CompanyBillingPanel";
 import { ContactLeadsSection } from "@/components/crm/contact/ContactLeadsSection";
 
 export default function CompanyDetail() {
@@ -241,8 +242,8 @@ export default function CompanyDetail() {
 
             {/* Main Content - 2 columns */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column - Info Panel */}
-              <div className="lg:col-span-1">
+              {/* Left Column - Info Panel & Billing */}
+              <div className="lg:col-span-1 space-y-6">
                 <CompanyInfoPanel
                   company={company}
                   isEditing={isEditing}
@@ -253,6 +254,7 @@ export default function CompanyDetail() {
                   selectedSpecialties={selectedSpecialties}
                   onSpecialtiesChange={setSelectedSpecialties}
                 />
+                <CompanyBillingPanel company={company} />
               </div>
 
               {/* Right Column - Contacts, Leads, Activity */}
