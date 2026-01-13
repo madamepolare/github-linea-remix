@@ -5,36 +5,39 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SolutionData } from "@/lib/solutionsData";
+import { ModuleData } from "@/lib/modulesData";
 
 gsap.registerPlugin(ScrollTrigger);
 
-interface SolutionHeroProps {
-  solution: SolutionData;
+interface ModuleHeroProps {
+  module: ModuleData;
 }
 
-// Get pastel background color based on solution
-const getSolutionBgColor = (color: string): string => {
-  if (color.includes("blue")) return "bg-pastel-blue";
-  if (color.includes("pink") || color.includes("rose")) return "bg-pastel-pink";
-  if (color.includes("green") || color.includes("emerald")) return "bg-pastel-mint";
-  if (color.includes("purple") || color.includes("violet")) return "bg-pastel-lavender";
-  if (color.includes("orange") || color.includes("amber")) return "bg-pastel-peach";
-  return "bg-pastel-cream";
+// Get pastel background color based on module
+const getModuleBgColor = (slug: string): string => {
+  const colors: Record<string, string> = {
+    projets: "bg-pastel-blue",
+    crm: "bg-pastel-pink",
+    commercial: "bg-pastel-mint",
+    planning: "bg-pastel-lavender",
+    "appels-offres": "bg-pastel-peach",
+    collaboration: "bg-pastel-coral",
+  };
+  return colors[slug] || "bg-pastel-cream";
 };
 
-export const SolutionHero = ({ solution }: SolutionHeroProps) => {
+export const NewModuleHero = ({ module }: ModuleHeroProps) => {
   const heroRef = useRef<HTMLDivElement>(null);
-  const Icon = solution.icon;
-  const bgColor = getSolutionBgColor(solution.color);
+  const Icon = module.icon;
+  const bgColor = getModuleBgColor(module.slug);
 
   useEffect(() => {
     if (!heroRef.current) return;
 
     const ctx = gsap.context(() => {
-      // Parallax effect on scroll
-      gsap.to(".hero-bg-shape", {
-        y: 100,
+      // Parallax effect
+      gsap.to(".hero-shape", {
+        y: 80,
         scrollTrigger: {
           trigger: heroRef.current,
           start: "top top",
@@ -45,7 +48,7 @@ export const SolutionHero = ({ solution }: SolutionHeroProps) => {
     }, heroRef);
 
     return () => ctx.revert();
-  }, [solution.slug]);
+  }, [module.slug]);
 
   return (
     <section
@@ -53,8 +56,8 @@ export const SolutionHero = ({ solution }: SolutionHeroProps) => {
       className={`relative min-h-[70vh] lg:min-h-[80vh] flex items-center justify-center overflow-hidden pt-20 sm:pt-24 pb-16 ${bgColor}`}
     >
       {/* Background shapes */}
-      <div className="hero-bg-shape absolute top-1/4 -left-20 w-[300px] sm:w-[400px] h-[300px] sm:h-[400px] rounded-full bg-white/30 blur-3xl" />
-      <div className="hero-bg-shape absolute bottom-0 right-0 w-[250px] sm:w-[350px] h-[250px] sm:h-[350px] rounded-full bg-white/20 blur-3xl" />
+      <div className="hero-shape absolute top-20 -right-20 w-[300px] sm:w-[400px] h-[300px] sm:h-[400px] rounded-full bg-white/40 blur-3xl" />
+      <div className="hero-shape absolute bottom-0 left-0 w-[250px] sm:w-[350px] h-[250px] sm:h-[350px] rounded-full bg-white/30 blur-3xl" />
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Back link */}
@@ -81,7 +84,7 @@ export const SolutionHero = ({ solution }: SolutionHeroProps) => {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/60 backdrop-blur-sm border border-white/50 mb-6"
           >
             <span className="w-2 h-2 rounded-full bg-foreground animate-pulse" />
-            <span className="text-sm font-medium text-foreground/80">{solution.subtitle}</span>
+            <span className="text-sm font-medium text-foreground/80">Module</span>
           </motion.div>
 
           {/* Icon */}
@@ -103,7 +106,7 @@ export const SolutionHero = ({ solution }: SolutionHeroProps) => {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6 tracking-tight leading-tight"
           >
-            {solution.title}
+            {module.title}
           </motion.h1>
 
           {/* Description */}
@@ -113,7 +116,7 @@ export const SolutionHero = ({ solution }: SolutionHeroProps) => {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-base sm:text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed px-4"
           >
-            {solution.description}
+            {module.description}
           </motion.p>
 
           {/* CTA */}
@@ -129,7 +132,7 @@ export const SolutionHero = ({ solution }: SolutionHeroProps) => {
               asChild
             >
               <Link to="/auth">
-                Démarrer gratuitement
+                Essayer gratuitement
                 <ArrowRight className="ml-2 w-4 h-4 sm:w-5 sm:h-5" />
               </Link>
             </Button>
@@ -139,7 +142,7 @@ export const SolutionHero = ({ solution }: SolutionHeroProps) => {
               className="h-12 sm:h-14 px-6 sm:px-8 rounded-full border-2 hover:bg-white/50 font-medium text-sm sm:text-base"
               asChild
             >
-              <Link to="/welcome#pricing">Voir les tarifs</Link>
+              <Link to="/welcome#features">Voir tous les modules</Link>
             </Button>
           </motion.div>
         </div>
