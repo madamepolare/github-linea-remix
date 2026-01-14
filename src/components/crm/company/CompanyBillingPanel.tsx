@@ -28,7 +28,9 @@ import {
   Save,
   X,
   Plus,
+  Search,
 } from "lucide-react";
+import { SiretSearchDialog } from "../SiretSearchDialog";
 import { useBillingProfiles, BillingProfile, CreateBillingProfileInput } from "@/hooks/useBillingProfiles";
 import { useAuth } from "@/contexts/AuthContext";
 import { CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
@@ -303,6 +305,30 @@ export function CompanyBillingPanel({ company }: CompanyBillingPanelProps) {
         <Collapsible open={expandedSections.includes("fiscal")}>
           <SectionHeader icon={FileText} title="Identification fiscale" section="fiscal" />
           <CollapsibleContent className="pt-3 space-y-3">
+            {/* SIRET Search Button */}
+            {isEditing && (
+              <SiretSearchDialog
+                onSelect={(result) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    siren: result.siren,
+                    siret: result.siret,
+                    billing_name: result.name || prev.billing_name,
+                    billing_address: result.address || prev.billing_address,
+                    billing_postal_code: result.postal_code || prev.billing_postal_code,
+                    billing_city: result.city || prev.billing_city,
+                    code_naf: result.code_naf || prev.code_naf,
+                    legal_form: result.forme_juridique || prev.legal_form,
+                  }));
+                }}
+                trigger={
+                  <Button type="button" variant="outline" size="sm" className="w-full gap-2 mb-2">
+                    <Search className="h-4 w-4" />
+                    Rechercher dans le registre national
+                  </Button>
+                }
+              />
+            )}
             <div className="grid grid-cols-2 gap-3">
               {renderField("SIRET", "siret", "12345678901234")}
               {renderField("SIREN", "siren", "123456789")}
