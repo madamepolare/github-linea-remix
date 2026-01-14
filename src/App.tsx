@@ -11,6 +11,7 @@ import { CommandPalette } from "@/components/command-palette/CommandPalette";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import '@/i18n/config';
 
 // Lazy load pages for better performance
 const Dashboard = lazy(() => import("./pages/Dashboard"));

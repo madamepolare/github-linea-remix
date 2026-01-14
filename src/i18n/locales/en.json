@@ -1,0 +1,177 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "add": "Add",
+    "search": "Search",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "yes": "Yes",
+    "no": "No",
+    "all": "All",
+    "none": "None",
+    "select": "Select",
+    "optional": "Optional",
+    "required": "Required"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "tasks": "Tasks",
+    "crm": "CRM",
+    "commercial": "Commercial",
+    "invoicing": "Invoicing",
+    "documents": "Documents",
+    "team": "Team",
+    "settings": "Settings",
+    "planning": "Planning",
+    "campaigns": "Campaigns",
+    "tenders": "Tenders",
+    "references": "References",
+    "materials": "Materials",
+    "notifications": "Notifications"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Workspace configuration",
+    "language": "Language",
+    "languageDescription": "Choose the interface language",
+    "languageChanged": "Language changed",
+    "languageChangedDescription": "The interface is now in {language}",
+    "groups": {
+      "workspace": "Workspace",
+      "team": "Team",
+      "projects": "Projects",
+      "commercial": "Finance & Commercial",
+      "documents": "Documents",
+      "tenders": "Tenders",
+      "integrations": "Integrations",
+      "crm": "CRM",
+      "feedback": "Feedback"
+    },
+    "sections": {
+      "workspace": "Information",
+      "workspaceDesc": "Name, logo, contact details",
+      "discipline": "Discipline",
+      "disciplineDesc": "Profession and specialization",
+      "style": "Visual style",
+      "styleDesc": "Colors, fonts, theme",
+      "modules": "Modules",
+      "modulesDesc": "Enabled features",
+      "plan": "Plan & Billing",
+      "planDesc": "Current subscription",
+      "members": "Members",
+      "membersDesc": "User management",
+      "permissions": "Permissions",
+      "permissionsDesc": "Roles and access",
+      "profile": "My profile",
+      "profileDesc": "Personal settings",
+      "language": "Language",
+      "languageDesc": "Interface language",
+      "projectsConfig": "Configuration",
+      "projectsConfigDesc": "Statuses, project types",
+      "phases": "Phases",
+      "phasesDesc": "Phase templates",
+      "lots": "Lots",
+      "lotsDesc": "Lot templates",
+      "tasks": "Tasks",
+      "tasksDesc": "Categories and workflows",
+      "contracts": "Contract types",
+      "contractsDesc": "Contract templates and MOE config",
+      "skills": "Skills & Rates",
+      "skillsDesc": "Roles and pricing",
+      "templates": "Quote templates",
+      "templatesDesc": "Predefined phases",
+      "pricing": "Pricing grids",
+      "pricingDesc": "BPU and prices",
+      "quoteThemes": "Quote themes",
+      "quoteThemesDesc": "Visual styles",
+      "documentsConfig": "Configuration",
+      "documentsConfigDesc": "Types and templates",
+      "emails": "Emails",
+      "emailsDesc": "Email templates",
+      "tendersConfig": "Tender configuration",
+      "tendersConfigDesc": "Phases, criteria, reminders",
+      "calendars": "Calendars",
+      "calendarsDesc": "Google, Outlook, iCal",
+      "pipeline": "Pipeline",
+      "pipelineDesc": "Prospecting stages",
+      "feedback": "User feedback",
+      "feedbackDesc": "Suggestions and bugs"
+    }
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "signup": "Sign up",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "resetPassword": "Reset password",
+    "confirmPassword": "Confirm password"
+  },
+  "dashboard": {
+    "welcome": "Welcome",
+    "overview": "Overview of your activity"
+  },
+  "landing": {
+    "hero": {
+      "title": "Manage your architecture projects with excellence",
+      "subtitle": "The all-in-one platform for modern architects",
+      "cta": "Get started for free",
+      "demo": "Watch demo"
+    },
+    "features": {
+      "title": "Features",
+      "subtitle": "Everything you need"
+    },
+    "pricing": {
+      "title": "Pricing",
+      "subtitle": "Prices adapted to your business"
+    },
+    "contact": {
+      "title": "Contact",
+      "subtitle": "Have a question? Contact us"
+    },
+    "footer": {
+      "legal": "Legal notice",
+      "privacy": "Privacy policy",
+      "terms": "Terms of service",
+      "about": "About",
+      "blog": "Blog"
+    }
+  },
+  "projects": {
+    "title": "Projects",
+    "new": "New project",
+    "active": "Active",
+    "completed": "Completed",
+    "archived": "Archived"
+  },
+  "crm": {
+    "contacts": "Contacts",
+    "companies": "Companies",
+    "leads": "Leads",
+    "newContact": "New contact",
+    "newCompany": "New company",
+    "newLead": "New lead"
+  },
+  "invoicing": {
+    "invoices": "Invoices",
+    "quotes": "Quotes",
+    "new": "New invoice",
+    "draft": "Draft",
+    "sent": "Sent",
+    "paid": "Paid",
+    "overdue": "Overdue"
+  }
+}

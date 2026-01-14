@@ -1,0 +1,177 @@
+{
+  "common": {
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "create": "Crea",
+    "add": "Aggiungi",
+    "search": "Cerca",
+    "loading": "Caricamento...",
+    "error": "Errore",
+    "success": "Successo",
+    "confirm": "Conferma",
+    "close": "Chiudi",
+    "back": "Indietro",
+    "next": "Avanti",
+    "previous": "Precedente",
+    "yes": "Sì",
+    "no": "No",
+    "all": "Tutto",
+    "none": "Nessuno",
+    "select": "Seleziona",
+    "optional": "Opzionale",
+    "required": "Obbligatorio"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Progetti",
+    "tasks": "Attività",
+    "crm": "CRM",
+    "commercial": "Commerciale",
+    "invoicing": "Fatturazione",
+    "documents": "Documenti",
+    "team": "Team",
+    "settings": "Impostazioni",
+    "planning": "Pianificazione",
+    "campaigns": "Campagne",
+    "tenders": "Gare d'appalto",
+    "references": "Referenze",
+    "materials": "Materiali",
+    "notifications": "Notifiche"
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "description": "Configurazione del workspace",
+    "language": "Lingua",
+    "languageDescription": "Scegli la lingua dell'interfaccia",
+    "languageChanged": "Lingua modificata",
+    "languageChangedDescription": "L'interfaccia è ora in {language}",
+    "groups": {
+      "workspace": "Workspace",
+      "team": "Team",
+      "projects": "Progetti",
+      "commercial": "Finanza & Commerciale",
+      "documents": "Documenti",
+      "tenders": "Gare d'appalto",
+      "integrations": "Integrazioni",
+      "crm": "CRM",
+      "feedback": "Feedback"
+    },
+    "sections": {
+      "workspace": "Informazioni",
+      "workspaceDesc": "Nome, logo, contatti",
+      "discipline": "Disciplina",
+      "disciplineDesc": "Professione e specializzazione",
+      "style": "Stile visivo",
+      "styleDesc": "Colori, font, tema",
+      "modules": "Moduli",
+      "modulesDesc": "Funzionalità attivate",
+      "plan": "Piano & Fatturazione",
+      "planDesc": "Abbonamento attuale",
+      "members": "Membri",
+      "membersDesc": "Gestione utenti",
+      "permissions": "Permessi",
+      "permissionsDesc": "Ruoli e accessi",
+      "profile": "Il mio profilo",
+      "profileDesc": "Impostazioni personali",
+      "language": "Lingua",
+      "languageDesc": "Lingua dell'interfaccia",
+      "projectsConfig": "Configurazione",
+      "projectsConfigDesc": "Stati, tipi di progetto",
+      "phases": "Fasi",
+      "phasesDesc": "Template delle fasi",
+      "lots": "Lotti",
+      "lotsDesc": "Template dei lotti",
+      "tasks": "Attività",
+      "tasksDesc": "Categorie e workflow",
+      "contracts": "Tipi di contratto",
+      "contractsDesc": "Modelli di contratto e config MOE",
+      "skills": "Competenze & Tariffe",
+      "skillsDesc": "Ruoli e prezzi",
+      "templates": "Template preventivi",
+      "templatesDesc": "Fasi predefinite",
+      "pricing": "Griglie tariffarie",
+      "pricingDesc": "BPU e prezzi",
+      "quoteThemes": "Temi preventivi",
+      "quoteThemesDesc": "Stili visivi",
+      "documentsConfig": "Configurazione",
+      "documentsConfigDesc": "Tipi e template",
+      "emails": "Email",
+      "emailsDesc": "Template email",
+      "tendersConfig": "Configurazione gare",
+      "tendersConfigDesc": "Fasi, criteri, promemoria",
+      "calendars": "Calendari",
+      "calendarsDesc": "Google, Outlook, iCal",
+      "pipeline": "Pipeline",
+      "pipelineDesc": "Fasi di prospezione",
+      "feedback": "Feedback utenti",
+      "feedbackDesc": "Suggerimenti e bug"
+    }
+  },
+  "auth": {
+    "login": "Accedi",
+    "logout": "Esci",
+    "signup": "Registrati",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Password dimenticata?",
+    "resetPassword": "Reimposta password",
+    "confirmPassword": "Conferma password"
+  },
+  "dashboard": {
+    "welcome": "Benvenuto",
+    "overview": "Panoramica della tua attività"
+  },
+  "landing": {
+    "hero": {
+      "title": "Gestisci i tuoi progetti di architettura con eccellenza",
+      "subtitle": "La piattaforma all-in-one per gli architetti moderni",
+      "cta": "Inizia gratuitamente",
+      "demo": "Guarda la demo"
+    },
+    "features": {
+      "title": "Funzionalità",
+      "subtitle": "Tutto ciò di cui hai bisogno"
+    },
+    "pricing": {
+      "title": "Prezzi",
+      "subtitle": "Prezzi adatti alla tua attività"
+    },
+    "contact": {
+      "title": "Contatto",
+      "subtitle": "Hai una domanda? Contattaci"
+    },
+    "footer": {
+      "legal": "Note legali",
+      "privacy": "Privacy policy",
+      "terms": "Termini di servizio",
+      "about": "Chi siamo",
+      "blog": "Blog"
+    }
+  },
+  "projects": {
+    "title": "Progetti",
+    "new": "Nuovo progetto",
+    "active": "Attivi",
+    "completed": "Completati",
+    "archived": "Archiviati"
+  },
+  "crm": {
+    "contacts": "Contatti",
+    "companies": "Aziende",
+    "leads": "Lead",
+    "newContact": "Nuovo contatto",
+    "newCompany": "Nuova azienda",
+    "newLead": "Nuovo lead"
+  },
+  "invoicing": {
+    "invoices": "Fatture",
+    "quotes": "Preventivi",
+    "new": "Nuova fattura",
+    "draft": "Bozza",
+    "sent": "Inviata",
+    "paid": "Pagata",
+    "overdue": "Scaduta"
+  }
+}

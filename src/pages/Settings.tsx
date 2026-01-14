@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { SettingsLayout } from "@/components/settings/SettingsLayout";
 import { WorkspaceSettings } from "@/components/settings/WorkspaceSettings";
@@ -24,8 +25,10 @@ import { PricingGridsSection } from "@/components/settings/sections/PricingGrids
 import { QuoteThemesSettings } from "@/components/settings/QuoteThemesSettings";
 import { TenderSettings } from "@/components/settings/TenderSettings";
 import { CalendarIntegrationsSettings } from "@/components/settings/CalendarIntegrationsSettings";
+import { LanguageSettings } from "@/components/settings/LanguageSettings";
 
 export default function Settings() {
+  const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState("workspace");
 
   const renderContent = () => {
@@ -46,6 +49,8 @@ export default function Settings() {
         return <PermissionsSettings />;
       case "profile":
         return <ProfileSettings />;
+      case "language":
+        return <LanguageSettings />;
       case "projects":
         return <ProjectsSettings />;
       case "phases":
@@ -83,8 +88,8 @@ export default function Settings() {
 
   return (
     <PageLayout
-      title="Paramètres"
-      description="Configuration du workspace"
+      title={t('settings.title')}
+      description={t('settings.description')}
     >
       <SettingsLayout
         activeSection={activeSection}

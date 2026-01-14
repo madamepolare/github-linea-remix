@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,6 +32,7 @@ import {
   Gavel,
   Calendar,
   Building,
+  Globe,
 } from 'lucide-react';
 
 export interface SettingsSection {
@@ -47,85 +49,88 @@ export interface SettingsGroup {
   sections: SettingsSection[];
 }
 
-export const SETTINGS_GROUPS: SettingsGroup[] = [
-  {
-    id: 'workspace',
-    label: 'Workspace',
-    sections: [
-      { id: 'workspace', label: 'Informations', icon: <Building2 className="h-4 w-4" />, description: 'Nom, logo, coordonnées' },
-      { id: 'discipline', label: 'Discipline', icon: <Compass className="h-4 w-4" />, description: 'Métier et spécialisation' },
-      { id: 'style', label: 'Style visuel', icon: <Palette className="h-4 w-4" />, description: 'Couleurs, polices, thème' },
-      { id: 'modules', label: 'Modules', icon: <Puzzle className="h-4 w-4" />, description: 'Fonctionnalités activées' },
-      { id: 'plan', label: 'Plan & Facturation', icon: <CreditCard className="h-4 w-4" />, description: 'Abonnement actuel' },
-    ],
-  },
-  {
-    id: 'team',
-    label: 'Équipe',
-    sections: [
-      { id: 'members', label: 'Membres', icon: <Users className="h-4 w-4" />, description: 'Gestion des utilisateurs' },
-      { id: 'permissions', label: 'Permissions', icon: <Shield className="h-4 w-4" />, description: 'Rôles et accès' },
-      { id: 'profile', label: 'Mon profil', icon: <User className="h-4 w-4" />, description: 'Paramètres personnels' },
-    ],
-  },
-  {
-    id: 'projects',
-    label: 'Projets',
-    sections: [
-      { id: 'projects', label: 'Configuration', icon: <FolderKanban className="h-4 w-4" />, description: 'Statuts, types de projets' },
-      { id: 'phases', label: 'Phases', icon: <Layers className="h-4 w-4" />, description: 'Templates de phases' },
-      { id: 'lots', label: 'Lots', icon: <Hammer className="h-4 w-4" />, description: 'Templates de lots' },
-      { id: 'tasks', label: 'Tâches', icon: <CheckSquare className="h-4 w-4" />, description: 'Catégories et workflows' },
-    ],
-  },
-  {
-    id: 'commercial',
-    label: 'Finance & Commercial',
-    sections: [
-      { id: 'contracts', label: 'Types de contrats', icon: <FileText className="h-4 w-4" />, description: 'Modèles de contrats et config MOE' },
-      { id: 'skills', label: 'Compétences & Taux', icon: <UserCog className="h-4 w-4" />, description: 'Rôles et tarification' },
-      { id: 'templates', label: 'Templates de devis', icon: <Grid3X3 className="h-4 w-4" />, description: 'Phases prédéfinies' },
-      { id: 'pricing', label: 'Grilles tarifaires', icon: <Euro className="h-4 w-4" />, description: 'BPU et prix' },
-      { id: 'quote-themes', label: 'Thèmes de devis', icon: <Palette className="h-4 w-4" />, description: 'Styles visuels', badge: 'Nouveau' },
-    ],
-  },
-  {
-    id: 'documents',
-    label: 'Documents',
-    sections: [
-      { id: 'documents', label: 'Configuration', icon: <FileStack className="h-4 w-4" />, description: 'Types et templates' },
-      { id: 'emails', label: 'Emails', icon: <Mail className="h-4 w-4" />, description: 'Templates email' },
-    ],
-  },
-  {
-    id: 'tenders',
-    label: 'Appels d\'offres',
-    sections: [
-      { id: 'tenders', label: 'Configuration AO', icon: <Gavel className="h-4 w-4" />, description: 'Phases, critères, rappels' },
-    ],
-  },
-  {
-    id: 'integrations',
-    label: 'Intégrations',
-    sections: [
-      { id: 'calendars', label: 'Calendriers', icon: <Calendar className="h-4 w-4" />, description: 'Google, Outlook, iCal' },
-    ],
-  },
-  {
-    id: 'crm',
-    label: 'CRM',
-    sections: [
-      { id: 'crm', label: 'Pipeline', icon: <Target className="h-4 w-4" />, description: 'Étapes de prospection' },
-    ],
-  },
-  {
-    id: 'feedback',
-    label: 'Feedback',
-    sections: [
-      { id: 'feedback', label: 'Retours utilisateurs', icon: <MessageSquarePlus className="h-4 w-4" />, description: 'Suggestions et bugs' },
-    ],
-  },
-];
+export function getSettingsGroups(t: (key: string) => string): SettingsGroup[] {
+  return [
+    {
+      id: 'workspace',
+      label: t('settings.groups.workspace'),
+      sections: [
+        { id: 'workspace', label: t('settings.sections.workspace'), icon: <Building2 className="h-4 w-4" />, description: t('settings.sections.workspaceDesc') },
+        { id: 'discipline', label: t('settings.sections.discipline'), icon: <Compass className="h-4 w-4" />, description: t('settings.sections.disciplineDesc') },
+        { id: 'style', label: t('settings.sections.style'), icon: <Palette className="h-4 w-4" />, description: t('settings.sections.styleDesc') },
+        { id: 'modules', label: t('settings.sections.modules'), icon: <Puzzle className="h-4 w-4" />, description: t('settings.sections.modulesDesc') },
+        { id: 'plan', label: t('settings.sections.plan'), icon: <CreditCard className="h-4 w-4" />, description: t('settings.sections.planDesc') },
+      ],
+    },
+    {
+      id: 'team',
+      label: t('settings.groups.team'),
+      sections: [
+        { id: 'members', label: t('settings.sections.members'), icon: <Users className="h-4 w-4" />, description: t('settings.sections.membersDesc') },
+        { id: 'permissions', label: t('settings.sections.permissions'), icon: <Shield className="h-4 w-4" />, description: t('settings.sections.permissionsDesc') },
+        { id: 'profile', label: t('settings.sections.profile'), icon: <User className="h-4 w-4" />, description: t('settings.sections.profileDesc') },
+        { id: 'language', label: t('settings.sections.language'), icon: <Globe className="h-4 w-4" />, description: t('settings.sections.languageDesc') },
+      ],
+    },
+    {
+      id: 'projects',
+      label: t('settings.groups.projects'),
+      sections: [
+        { id: 'projects', label: t('settings.sections.projectsConfig'), icon: <FolderKanban className="h-4 w-4" />, description: t('settings.sections.projectsConfigDesc') },
+        { id: 'phases', label: t('settings.sections.phases'), icon: <Layers className="h-4 w-4" />, description: t('settings.sections.phasesDesc') },
+        { id: 'lots', label: t('settings.sections.lots'), icon: <Hammer className="h-4 w-4" />, description: t('settings.sections.lotsDesc') },
+        { id: 'tasks', label: t('settings.sections.tasks'), icon: <CheckSquare className="h-4 w-4" />, description: t('settings.sections.tasksDesc') },
+      ],
+    },
+    {
+      id: 'commercial',
+      label: t('settings.groups.commercial'),
+      sections: [
+        { id: 'contracts', label: t('settings.sections.contracts'), icon: <FileText className="h-4 w-4" />, description: t('settings.sections.contractsDesc') },
+        { id: 'skills', label: t('settings.sections.skills'), icon: <UserCog className="h-4 w-4" />, description: t('settings.sections.skillsDesc') },
+        { id: 'templates', label: t('settings.sections.templates'), icon: <Grid3X3 className="h-4 w-4" />, description: t('settings.sections.templatesDesc') },
+        { id: 'pricing', label: t('settings.sections.pricing'), icon: <Euro className="h-4 w-4" />, description: t('settings.sections.pricingDesc') },
+        { id: 'quote-themes', label: t('settings.sections.quoteThemes'), icon: <Palette className="h-4 w-4" />, description: t('settings.sections.quoteThemesDesc'), badge: 'Nouveau' },
+      ],
+    },
+    {
+      id: 'documents',
+      label: t('settings.groups.documents'),
+      sections: [
+        { id: 'documents', label: t('settings.sections.documentsConfig'), icon: <FileStack className="h-4 w-4" />, description: t('settings.sections.documentsConfigDesc') },
+        { id: 'emails', label: t('settings.sections.emails'), icon: <Mail className="h-4 w-4" />, description: t('settings.sections.emailsDesc') },
+      ],
+    },
+    {
+      id: 'tenders',
+      label: t('settings.groups.tenders'),
+      sections: [
+        { id: 'tenders', label: t('settings.sections.tendersConfig'), icon: <Gavel className="h-4 w-4" />, description: t('settings.sections.tendersConfigDesc') },
+      ],
+    },
+    {
+      id: 'integrations',
+      label: t('settings.groups.integrations'),
+      sections: [
+        { id: 'calendars', label: t('settings.sections.calendars'), icon: <Calendar className="h-4 w-4" />, description: t('settings.sections.calendarsDesc') },
+      ],
+    },
+    {
+      id: 'crm',
+      label: t('settings.groups.crm'),
+      sections: [
+        { id: 'crm', label: t('settings.sections.pipeline'), icon: <Target className="h-4 w-4" />, description: t('settings.sections.pipelineDesc') },
+      ],
+    },
+    {
+      id: 'feedback',
+      label: t('settings.groups.feedback'),
+      sections: [
+        { id: 'feedback', label: t('settings.sections.feedback'), icon: <MessageSquarePlus className="h-4 w-4" />, description: t('settings.sections.feedbackDesc') },
+      ],
+    },
+  ];
+}
 
 interface SettingsLayoutProps {
   activeSection: string;
@@ -134,13 +139,16 @@ interface SettingsLayoutProps {
 }
 
 export function SettingsLayout({ activeSection, onSectionChange, children }: SettingsLayoutProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const settingsGroups = getSettingsGroups(t);
 
   // Get the current section info
-  const currentSection = SETTINGS_GROUPS.flatMap(g => g.sections).find(s => s.id === activeSection);
+  const currentSection = settingsGroups.flatMap(g => g.sections).find(s => s.id === activeSection);
 
   // Filter sections based on search
-  const filteredGroups = SETTINGS_GROUPS.map(group => ({
+  const filteredGroups = settingsGroups.map(group => ({
     ...group,
     sections: group.sections.filter(
       section =>
