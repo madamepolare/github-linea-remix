@@ -39,7 +39,7 @@ export function AIQuoteGenerator({
   const [generatedQuote, setGeneratedQuote] = useState<GeneratedQuote | null>(null);
   const [selectedLines, setSelectedLines] = useState<Set<string>>(new Set());
   const [mode, setMode] = useState<'idle' | 'generating' | 'review'>('idle');
-
+  const [replaceExisting, setReplaceExisting] = useState(false);
   const handleGenerate = async () => {
     if (!document.project_type && !document.description) {
       toast.error('Veuillez renseigner le type de projet ou une description');
@@ -102,8 +102,16 @@ export function AIQuoteGenerator({
 
     const linesToAdd = generatedQuote.lines.filter(l => selectedLines.has(l.id));
     
-    // Merge with existing lines or replace
-    if (existingLines.length > 0) {
+    // Replace existing lines or merge based on user choice
+    if (replaceExisting || existingLines.length === 0) {
+      // Replace all lines with generated ones
+      const newLines = linesToAdd.map((line, idx) => ({
+        ...line,
+        id: `line-${Date.now()}-${idx}`,
+        sort_order: idx
+      }));
+      onLinesGenerated(newLines);
+    } else {
       // Add to existing lines
       const maxSortOrder = Math.max(...existingLines.map(l => l.sort_order || 0), -1);
       const newLines = linesToAdd.map((line, idx) => ({
@@ -112,19 +120,15 @@ export function AIQuoteGenerator({
         sort_order: maxSortOrder + idx + 1
       }));
       onLinesGenerated([...existingLines, ...newLines]);
-    } else {
-      // Replace all lines
-      const newLines = linesToAdd.map((line, idx) => ({
-        ...line,
-        id: `line-${Date.now()}-${idx}`,
-        sort_order: idx
-      }));
-      onLinesGenerated(newLines);
     }
 
     setMode('idle');
     setGeneratedQuote(null);
-    toast.success(`${linesToAdd.length} lignes ajoutées au devis`);
+    setReplaceExisting(false);
+    toast.success(replaceExisting 
+      ? `${linesToAdd.length} lignes remplacent les existantes` 
+      : `${linesToAdd.length} lignes ajoutées au devis`
+    );
   };
 
   const formatCurrency = (value: number) =>
@@ -196,6 +200,19 @@ export function AIQuoteGenerator({
             </div>
           </ScrollArea>
 
+          {existingLines.length > 0 && (
+            <div className="flex items-center gap-2 pt-2 border-t mb-2">
+              <Checkbox
+                id="replace-existing"
+                checked={replaceExisting}
+                onCheckedChange={(checked) => setReplaceExisting(checked === true)}
+              />
+              <Label htmlFor="replace-existing" className="text-sm font-normal cursor-pointer">
+                Remplacer les {existingLines.length} lignes existantes
+              </Label>
+            </div>
+          )}
+
           <div className="flex items-center justify-between pt-2 border-t">
             <div>
               <p className="text-sm text-muted-foreground">
@@ -209,6 +226,7 @@ export function AIQuoteGenerator({
                 onClick={() => {
                   setMode('idle');
                   setGeneratedQuote(null);
+                  setReplaceExisting(false);
                 }}
               >
                 Annuler
@@ -216,9 +234,10 @@ export function AIQuoteGenerator({
               <Button
                 onClick={applySelectedLines}
                 disabled={selectedLines.size === 0}
+                variant={replaceExisting ? "destructive" : "default"}
               >
                 <FileText className="h-4 w-4 mr-2" />
-                Appliquer ({selectedLines.size})
+                {replaceExisting ? 'Remplacer' : 'Ajouter'} ({selectedLines.size})
               </Button>
             </div>
           </div>
