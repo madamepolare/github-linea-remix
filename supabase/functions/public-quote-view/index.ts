@@ -104,14 +104,15 @@ serve(async (req) => {
       .eq('document_id', link.document_id)
       .order('sort_order');
 
-    // Get agency info
+    // Get agency info (including style_settings for typography)
     const { data: workspace } = await supabase
       .from('workspaces')
       .select(`
         id,
         name,
         logo_url,
-        settings
+        settings,
+        style_settings
       `)
       .eq('id', link.workspace_id)
       .single();
@@ -132,6 +133,7 @@ serve(async (req) => {
         name: workspace?.name,
         logo_url: workspace?.logo_url,
         settings: workspace?.settings,
+        style_settings: workspace?.style_settings,
         ...agencyProfile
       },
       link: {

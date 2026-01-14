@@ -482,16 +482,6 @@ export default function QuoteBuilder() {
   return (
     <LineFeatureProvider contractType={currentContractType}>
     <div className="h-full flex flex-col bg-background">
-      {/* Agency Logo Banner - Full Width */}
-      {agencyInfo?.logo_url && (
-        <div className="w-full bg-card border-b flex items-center justify-center py-4 px-6">
-          <img 
-            src={agencyInfo.logo_url} 
-            alt={agencyInfo.name || 'Logo agence'} 
-            className="h-12 max-h-12 w-auto object-contain"
-          />
-        </div>
-      )}
       
       {/* Header */}
       <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b bg-card shrink-0 gap-2">
