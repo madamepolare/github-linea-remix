@@ -5894,6 +5894,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          envelope_type: string | null
           id: string
           name: string
           project_id: string
@@ -5913,6 +5914,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          envelope_type?: string | null
           id?: string
           name: string
           project_id: string
@@ -5932,6 +5934,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          envelope_type?: string | null
           id?: string
           name?: string
           project_id?: string
@@ -5960,6 +5963,67 @@ export type Database = {
           },
           {
             foreignKeyName: "project_budget_envelopes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_budget_history: {
+        Row: {
+          change_reason: string | null
+          change_type: string | null
+          changed_by: string | null
+          created_at: string | null
+          id: string
+          new_budget: number | null
+          previous_budget: number | null
+          project_id: string
+          reference_document_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          change_reason?: string | null
+          change_type?: string | null
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_budget?: number | null
+          previous_budget?: number | null
+          project_id: string
+          reference_document_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          change_reason?: string | null
+          change_type?: string | null
+          changed_by?: string | null
+          created_at?: string | null
+          id?: string
+          new_budget?: number | null
+          previous_budget?: number | null
+          project_id?: string
+          reference_document_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_budget_history_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_budget_history_reference_document_id_fkey"
+            columns: ["reference_document_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_budget_history_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
@@ -8262,7 +8326,10 @@ export type Database = {
           description: string | null
           duration_minutes: number
           ended_at: string | null
+          hourly_rate: number | null
           id: string
+          invoice_id: string | null
+          invoiced_at: string | null
           is_billable: boolean | null
           started_at: string | null
           task_id: string
@@ -8275,7 +8342,10 @@ export type Database = {
           description?: string | null
           duration_minutes: number
           ended_at?: string | null
+          hourly_rate?: number | null
           id?: string
+          invoice_id?: string | null
+          invoiced_at?: string | null
           is_billable?: boolean | null
           started_at?: string | null
           task_id: string
@@ -8288,7 +8358,10 @@ export type Database = {
           description?: string | null
           duration_minutes?: number
           ended_at?: string | null
+          hourly_rate?: number | null
           id?: string
+          invoice_id?: string | null
+          invoiced_at?: string | null
           is_billable?: boolean | null
           started_at?: string | null
           task_id?: string
@@ -8296,6 +8369,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "task_time_entries_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "task_time_entries_task_id_fkey"
             columns: ["task_id"]
@@ -8672,12 +8752,16 @@ export type Database = {
       }
       team_time_entries: {
         Row: {
+          budget_envelope_id: string | null
           created_at: string
           date: string
           description: string | null
           duration_minutes: number
           ended_at: string | null
+          hourly_rate: number | null
           id: string
+          invoice_id: string | null
+          invoiced_at: string | null
           is_billable: boolean | null
           project_id: string | null
           rejection_reason: string | null
@@ -8691,12 +8775,16 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          budget_envelope_id?: string | null
           created_at?: string
           date?: string
           description?: string | null
           duration_minutes?: number
           ended_at?: string | null
+          hourly_rate?: number | null
           id?: string
+          invoice_id?: string | null
+          invoiced_at?: string | null
           is_billable?: boolean | null
           project_id?: string | null
           rejection_reason?: string | null
@@ -8710,12 +8798,16 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          budget_envelope_id?: string | null
           created_at?: string
           date?: string
           description?: string | null
           duration_minutes?: number
           ended_at?: string | null
+          hourly_rate?: number | null
           id?: string
+          invoice_id?: string | null
+          invoiced_at?: string | null
           is_billable?: boolean | null
           project_id?: string | null
           rejection_reason?: string | null
@@ -8729,6 +8821,20 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "team_time_entries_budget_envelope_id_fkey"
+            columns: ["budget_envelope_id"]
+            isOneToOne: false
+            referencedRelation: "project_budget_envelopes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_time_entries_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "team_time_entries_project_id_fkey"
             columns: ["project_id"]
@@ -10564,6 +10670,10 @@ export type Database = {
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
+      }
+      recalculate_envelope_consumption: {
+        Args: { envelope_id: string }
+        Returns: undefined
       }
     }
     Enums: {
