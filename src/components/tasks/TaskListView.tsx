@@ -42,10 +42,10 @@ type SortColumn = "title" | "status" | "due_date" | "priority" | "relation";
 type SortDirection = "asc" | "desc";
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }> = {
-  todo: { bg: "bg-slate-50 dark:bg-slate-900/30", border: "border-l-slate-400", text: "text-slate-600" },
-  in_progress: { bg: "bg-blue-50/50 dark:bg-blue-900/20", border: "border-l-blue-500", text: "text-blue-600" },
-  review: { bg: "bg-amber-50/50 dark:bg-amber-900/20", border: "border-l-amber-500", text: "text-amber-600" },
-  done: { bg: "bg-green-50/50 dark:bg-green-900/20", border: "border-l-green-500", text: "text-green-600" },
+  todo: { bg: "bg-muted/50 dark:bg-muted/30", border: "border-l-muted-foreground", text: "text-muted-foreground" },
+  in_progress: { bg: "bg-info/10 dark:bg-info/20", border: "border-l-info", text: "text-info" },
+  review: { bg: "bg-warning/10 dark:bg-warning/20", border: "border-l-warning", text: "text-warning" },
+  done: { bg: "bg-success/10 dark:bg-success/20", border: "border-l-success", text: "text-success" },
 };
 
 export function TaskListView({ entityFilter = "all", projectId }: TaskListViewProps) {

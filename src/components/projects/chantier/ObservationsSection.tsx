@@ -232,10 +232,10 @@ export function ObservationsSection({ projectId }: ObservationsSectionProps) {
                         variant="outline" 
                         className={cn(
                           "text-xs",
-                          obs.priority === "critical" && "bg-red-100 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400",
-                          obs.priority === "high" && "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-400",
-                          obs.priority === "normal" && "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300",
-                          obs.priority === "low" && "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400"
+                          obs.priority === "critical" && "bg-destructive/10 text-destructive border-destructive/20",
+                          obs.priority === "high" && "bg-warning/10 text-warning border-warning/20",
+                          obs.priority === "normal" && "bg-muted text-muted-foreground border-border",
+                          obs.priority === "low" && "bg-secondary text-secondary-foreground border-border"
                         )}
                       >
                         {priorityConfig.label}

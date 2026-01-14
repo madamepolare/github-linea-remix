@@ -9,9 +9,9 @@ interface OnboardingLayoutProps {
 
 export function OnboardingLayout({ children, currentStep, totalSteps }: OnboardingLayoutProps) {
   return (
-    <div className="min-h-screen bg-[#FAF9F7] relative overflow-hidden">
-      {/* Background gradient like homepage */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#FAF9F7] via-[#F5F3EF] to-[#EDE8E3]" />
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-muted/30 to-muted/50" />
       
       {/* Decorative blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
