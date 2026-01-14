@@ -291,10 +291,22 @@ export function QuoteLineItemCompact({
             min={0}
           />
 
-          {/* Unit type label */}
-          <span className="text-sm text-muted-foreground w-16 shrink-0 truncate">
-            {line.unit || 'Forfait'}
-          </span>
+          {/* Unit type dropdown */}
+          <Select
+            value={line.unit || 'forfait'}
+            onValueChange={(value) => updateLine(line.id, { unit: value })}
+          >
+            <SelectTrigger className="h-8 w-20 text-xs shrink-0 border-0 bg-transparent hover:bg-muted/50 px-2">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-background z-50">
+              {UNIT_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* Amount with € */}
           <div className="flex items-center gap-1 shrink-0">
