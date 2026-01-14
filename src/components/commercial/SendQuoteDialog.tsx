@@ -234,8 +234,6 @@ export function SendQuoteDialog({
       const url = await getOrCreatePublicQuoteLink({
         documentId: document.id,
         workspaceId: document.workspace_id,
-        requiresDeposit: document.requires_deposit || false,
-        depositPercentage: document.deposit_percentage || 30,
       });
       setGeneratedLink(url);
       return url;
