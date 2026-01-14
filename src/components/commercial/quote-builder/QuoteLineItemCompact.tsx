@@ -217,14 +217,14 @@ export function QuoteLineItemCompact({
           isExpanded && 'shadow-md ring-1 ring-primary/10'
         )}
       >
-        {/* Compact header - improved list view */}
-        <div className="flex items-center gap-1.5 sm:gap-2 p-2.5 sm:p-3">
+        {/* Compact header - improved list view matching design */}
+        <div className="flex items-center gap-2 p-3">
           {/* Drag handle */}
-          <div className="cursor-grab shrink-0 p-1 hover:bg-muted rounded hidden sm:block">
+          <div className="cursor-grab shrink-0 p-1 hover:bg-muted rounded">
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
           
-          {/* Type icon */}
+          {/* Type icon with color */}
           <Tooltip>
             <TooltipTrigger asChild>
               <div className={cn("p-1.5 rounded-lg shrink-0 cursor-default", LINE_TYPE_COLORS[line.line_type])}>
@@ -242,7 +242,7 @@ export function QuoteLineItemCompact({
               value={line.phase_code || '__none__'}
               onValueChange={handlePhaseCodeChange}
             >
-              <SelectTrigger className="h-8 w-[80px] text-xs font-mono shrink-0 px-2">
+              <SelectTrigger className="h-8 w-[90px] text-xs font-mono shrink-0 px-2">
                 <SelectValue placeholder="—" />
               </SelectTrigger>
               <SelectContent>
@@ -272,7 +272,7 @@ export function QuoteLineItemCompact({
             </Badge>
           )}
 
-          {/* Title + reference below */}
+          {/* Title */}
           <div className="flex-1 min-w-0">
             <Input
               value={line.phase_name}
@@ -280,60 +280,43 @@ export function QuoteLineItemCompact({
               className="h-8 font-medium border-transparent hover:border-input focus:border-input bg-transparent text-sm"
               placeholder="Désignation..."
             />
-            {line.pricing_ref && (
-              <p className="text-[10px] text-muted-foreground mt-0.5 pl-2 truncate">
-                Réf: {line.pricing_ref}
-              </p>
-            )}
           </div>
 
-          {/* Quantity x Unit compact */}
-          <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-            <Input
-              type="number"
-              value={line.quantity || 1}
-              onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 1 })}
-              className="h-7 w-12 text-center text-xs border-0 bg-muted/50 rounded px-1"
-              min={0}
-            />
-            <span className="text-muted-foreground">{line.unit || 'u'}</span>
-          </div>
+          {/* Quantity */}
+          <Input
+            type="number"
+            value={line.quantity || 1}
+            onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 1 })}
+            className="h-8 w-14 text-center text-sm border-0 bg-muted/50 rounded tabular-nums shrink-0"
+            min={0}
+          />
 
-          {/* Percentage fee for phases */}
-          {features.showPercentageFee && line.line_type === 'phase' && line.percentage_fee !== undefined && (
-            <div className="hidden sm:flex items-center gap-0.5 px-2 py-1 rounded-lg bg-muted/50 shrink-0">
-              <Input
-                type="number"
-                value={line.percentage_fee}
-                onChange={(e) => updateLine(line.id, { percentage_fee: parseFloat(e.target.value) || 0 })}
-                className="h-6 w-12 text-right tabular-nums text-xs border-0 bg-transparent p-0"
-                min={0}
-              />
-              <Percent className="h-3 w-3 text-muted-foreground" />
-            </div>
-          )}
+          {/* Unit type label */}
+          <span className="text-sm text-muted-foreground w-16 shrink-0 truncate">
+            {line.unit || 'Forfait'}
+          </span>
 
-          {/* Amount */}
-          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/5 border border-primary/10 shrink-0">
+          {/* Amount with € */}
+          <div className="flex items-center gap-1 shrink-0">
             <Input
               type="number"
               value={line.amount || 0}
               onChange={(e) => updateLine(line.id, { amount: parseFloat(e.target.value) || 0, unit_price: parseFloat(e.target.value) || 0 })}
-              className="h-7 w-16 sm:w-20 text-right tabular-nums font-semibold text-sm border-0 bg-transparent p-0"
+              className="h-8 w-20 text-right tabular-nums font-semibold text-sm border rounded-lg bg-background px-2"
               placeholder="0"
             />
-            <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">€</span>
           </div>
 
-          {/* Quick margin indicator */}
+          {/* Margin indicator */}
           {features.showCostAndMargin && effectivePurchasePrice > 0 && line.amount > 0 && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className={cn(
-                  "flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium shrink-0",
-                  effectiveMarginPercentage < 15 ? 'bg-red-100 text-red-700' :
-                  effectiveMarginPercentage < 30 ? 'bg-amber-100 text-amber-700' :
-                  'bg-green-100 text-green-700'
+                  "flex items-center gap-1 px-2 py-1 rounded text-xs font-medium shrink-0",
+                  effectiveMarginPercentage < 15 ? 'text-red-600' :
+                  effectiveMarginPercentage < 30 ? 'text-amber-600' :
+                  'text-green-600'
                 )}>
                   <TrendingUp className="h-3 w-3" />
                   {effectiveMarginPercentage.toFixed(0)}%
@@ -348,11 +331,11 @@ export function QuoteLineItemCompact({
             </Tooltip>
           )}
 
+          {/* Status badges */}
           {!line.is_included && (
             <Badge variant="secondary" className="shrink-0 text-xs">Exclu</Badge>
           )}
 
-          {/* External indicator */}
           {isExternalLine && (
             <Badge variant="outline" className="shrink-0 text-xs bg-rose-50 text-rose-600 border-rose-200">
               <ExternalLink className="h-3 w-3 mr-1" />
@@ -360,6 +343,7 @@ export function QuoteLineItemCompact({
             </Badge>
           )}
 
+          {/* Actions dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
@@ -408,6 +392,7 @@ export function QuoteLineItemCompact({
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Expand/collapse */}
           <CollapsibleTrigger asChild>
             <Button 
               variant="ghost" 
