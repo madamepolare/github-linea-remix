@@ -236,16 +236,16 @@ export function QuoteLineItemCompact({
             </TooltipContent>
           </Tooltip>
 
-          {/* Phase code dropdown */}
+          {/* Phase code dropdown - for phase/service types */}
           {activeTemplates.length > 0 && (line.line_type === 'phase' || line.line_type === 'service') && (
             <Select
               value={line.phase_code || '__none__'}
               onValueChange={handlePhaseCodeChange}
             >
-              <SelectTrigger className="h-8 w-[90px] text-xs font-mono shrink-0 px-2">
+              <SelectTrigger className="h-8 w-[90px] text-xs font-mono shrink-0 px-2 bg-muted/30 border-muted">
                 <SelectValue placeholder="—" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background z-50">
                 <SelectItem value="__none__">
                   <span className="text-muted-foreground">—</span>
                 </SelectItem>
@@ -265,9 +265,18 @@ export function QuoteLineItemCompact({
             </Select>
           )}
 
-          {/* Phase code badge for non-editable display */}
-          {(activeTemplates.length === 0 || (line.line_type !== 'phase' && line.line_type !== 'service')) && line.phase_code && (
-            <Badge variant="outline" className="shrink-0 text-xs font-mono">
+          {/* Option code badge - show "OPT X" for option types */}
+          {line.line_type === 'option' && (
+            <Badge variant="outline" className="shrink-0 text-xs font-mono bg-amber-50 text-amber-700 border-amber-200 px-2">
+              OPT {line.sort_order !== undefined ? line.sort_order + 1 : ''}
+            </Badge>
+          )}
+
+          {/* Phase code badge for non-editable display (not phase/service/option) */}
+          {(activeTemplates.length === 0 || (line.line_type !== 'phase' && line.line_type !== 'service')) && 
+           line.line_type !== 'option' && 
+           line.phase_code && (
+            <Badge variant="outline" className="shrink-0 text-xs font-mono bg-muted/50">
               {line.phase_code}
             </Badge>
           )}
@@ -283,55 +292,56 @@ export function QuoteLineItemCompact({
           </div>
 
           {/* Financial columns - fixed widths for table alignment */}
-          <div className="flex items-center gap-0 shrink-0">
-            {/* Quantity */}
-            <Input
-              type="number"
-              value={line.quantity || 1}
-              onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 1 })}
-              className="h-8 w-20 text-center text-sm border-0 bg-muted/50 rounded-l tabular-nums"
-              min={0}
-            />
-
-            {/* Unit type dropdown */}
-            <Select
-              value={line.unit || 'forfait'}
-              onValueChange={(value) => updateLine(line.id, { unit: value })}
-            >
-              <SelectTrigger className="h-8 w-20 text-xs border-0 bg-muted/50 hover:bg-muted/70 px-2 rounded-none border-l border-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-background z-50">
-                {UNIT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Quantity + Unit group */}
+            <div className="flex items-center h-8 bg-muted/40 rounded-lg overflow-hidden">
+              <Input
+                type="number"
+                value={line.quantity || 1}
+                onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 1 })}
+                className="h-8 w-16 text-center text-sm border-0 bg-transparent tabular-nums focus:bg-muted/60"
+                min={0}
+              />
+              <div className="h-5 w-px bg-border/50" />
+              <Select
+                value={line.unit || 'forfait'}
+                onValueChange={(value) => updateLine(line.id, { unit: value })}
+              >
+                <SelectTrigger className="h-8 w-20 text-xs border-0 bg-transparent hover:bg-muted/60 px-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  {UNIT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Amount with € */}
-            <div className="flex items-center h-8 bg-background border rounded-r ml-2">
+            <div className="flex items-center h-8 bg-background border rounded-lg overflow-hidden shadow-sm">
               <Input
                 type="number"
                 value={line.amount || 0}
                 onChange={(e) => updateLine(line.id, { amount: parseFloat(e.target.value) || 0, unit_price: parseFloat(e.target.value) || 0 })}
-                className="h-8 w-20 text-right tabular-nums font-semibold text-sm border-0 bg-transparent px-2"
+                className="h-8 w-24 text-right tabular-nums font-semibold text-sm border-0 bg-transparent px-3"
                 placeholder="0"
               />
-              <span className="text-sm text-muted-foreground pr-2">€</span>
+              <span className="text-sm text-muted-foreground pr-3 font-medium">€</span>
             </div>
 
             {/* Margin indicator - fixed width */}
-            <div className="w-16 flex justify-center">
+            <div className="w-14 flex justify-center">
               {features.showCostAndMargin && effectivePurchasePrice > 0 && line.amount > 0 ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className={cn(
-                      "flex items-center gap-1 px-2 py-1 rounded text-xs font-medium",
-                      effectiveMarginPercentage < 15 ? 'text-red-600' :
-                      effectiveMarginPercentage < 30 ? 'text-amber-600' :
-                      'text-green-600'
+                      "flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-xs font-medium",
+                      effectiveMarginPercentage < 15 ? 'text-red-600 bg-red-50' :
+                      effectiveMarginPercentage < 30 ? 'text-amber-600 bg-amber-50' :
+                      'text-green-600 bg-green-50'
                     )}>
                       <TrendingUp className="h-3 w-3" />
                       {effectiveMarginPercentage.toFixed(0)}%
@@ -350,7 +360,7 @@ export function QuoteLineItemCompact({
             {/* Status badges - fixed width container */}
             <div className="w-16 flex justify-center">
               {!line.is_included && (
-                <Badge variant="secondary" className="text-xs">Exclu</Badge>
+                <Badge variant="secondary" className="text-xs bg-slate-100 text-slate-600">Exclu</Badge>
               )}
               {isExternalLine && line.is_included && (
                 <Badge variant="outline" className="text-xs bg-rose-50 text-rose-600 border-rose-200">
