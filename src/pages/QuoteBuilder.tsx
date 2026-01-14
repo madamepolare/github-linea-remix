@@ -61,6 +61,7 @@ import { useContractTypes, BuilderTab } from '@/hooks/useContractTypes';
 import { LineFeatureProvider } from '@/contexts/LineFeatureContext';
 import type { Json } from '@/integrations/supabase/types';
 import { ConvertQuoteToProjectDialog } from '@/components/commercial/ConvertQuoteToProjectDialog';
+import { SendQuoteDialog } from '@/components/commercial/SendQuoteDialog';
 import { Rocket, ExternalLink } from 'lucide-react';
 import {
   DropdownMenu,
