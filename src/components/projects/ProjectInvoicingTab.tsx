@@ -91,7 +91,15 @@ export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicing
             <TabsContent value="overview" className="mt-0">
               <InvoicingOverviewTab 
                 projectId={projectId} 
-                onNavigateToTab={setActiveTab}
+                onNavigateToTab={(tab) => {
+                  // Map tab names to actual tab values
+                  const tabMap: Record<string, string> = {
+                    'factures': 'invoices',
+                    'avoirs': 'credit-notes',
+                    'echeancier': 'schedule',
+                  };
+                  setActiveTab(tabMap[tab] || tab);
+                }}
               />
             </TabsContent>
 
