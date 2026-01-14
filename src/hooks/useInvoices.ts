@@ -430,26 +430,94 @@ export function useInvoiceStats() {
     queryFn: async () => {
       if (!workspaceId) return null;
 
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
       const { data, error } = await supabase
         .from('invoices')
-        .select('status, total_ttc, amount_due')
+        .select('id, status, document_type, total_ttc, amount_due, amount_paid, invoice_date, due_date, paid_at, sent_at')
         .eq('workspace_id', workspaceId);
 
       if (error) throw error;
 
+      // Filter invoices vs credit notes
+      const invoices = data.filter(i => i.document_type !== 'credit_note');
+      const creditNotes = data.filter(i => i.document_type === 'credit_note');
+
+      // Current month stats
+      const thisMonthInvoices = invoices.filter(i => 
+        new Date(i.invoice_date) >= startOfMonth
+      );
+      const thisMonthPaid = invoices.filter(i => 
+        i.paid_at && new Date(i.paid_at) >= startOfMonth
+      );
+
+      // Last month stats for comparison
+      const lastMonthPaid = invoices.filter(i => 
+        i.paid_at && 
+        new Date(i.paid_at) >= startOfLastMonth && 
+        new Date(i.paid_at) <= endOfLastMonth
+      );
+
+      // Overdue calculation (due date passed and not fully paid)
+      const overdueInvoices = invoices.filter(i => {
+        if (!i.due_date || i.status === 'paid' || i.status === 'cancelled') return false;
+        return new Date(i.due_date) < now && (i.amount_due || 0) > 0;
+      });
+
       const stats = {
-        total: data.length,
-        draft: data.filter(i => i.status === 'draft').length,
-        pending: data.filter(i => i.status === 'pending' || i.status === 'sent').length,
-        paid: data.filter(i => i.status === 'paid').length,
-        overdue: data.filter(i => i.status === 'overdue').length,
-        totalAmount: data.reduce((sum, i) => sum + (i.total_ttc || 0), 0),
-        pendingAmount: data
+        // Counts
+        total: invoices.length,
+        draft: invoices.filter(i => i.status === 'draft').length,
+        pending: invoices.filter(i => i.status === 'pending' || i.status === 'sent').length,
+        paid: invoices.filter(i => i.status === 'paid').length,
+        overdue: overdueInvoices.length,
+        cancelled: invoices.filter(i => i.status === 'cancelled').length,
+        creditNotesCount: creditNotes.length,
+
+        // Amounts
+        totalAmount: invoices.reduce((sum, i) => sum + (i.total_ttc || 0), 0),
+        pendingAmount: invoices
           .filter(i => i.status === 'pending' || i.status === 'sent')
           .reduce((sum, i) => sum + (i.amount_due || 0), 0),
-        overdueAmount: data
-          .filter(i => i.status === 'overdue')
-          .reduce((sum, i) => sum + (i.amount_due || 0), 0),
+        overdueAmount: overdueInvoices.reduce((sum, i) => sum + (i.amount_due || 0), 0),
+        paidAmount: invoices
+          .filter(i => i.status === 'paid')
+          .reduce((sum, i) => sum + (i.total_ttc || 0), 0),
+        creditNotesAmount: creditNotes.reduce((sum, i) => sum + (i.total_ttc || 0), 0),
+
+        // This month
+        thisMonthTotal: thisMonthInvoices.reduce((sum, i) => sum + (i.total_ttc || 0), 0),
+        thisMonthPaidAmount: thisMonthPaid.reduce((sum, i) => sum + (i.total_ttc || 0), 0),
+        thisMonthPaidCount: thisMonthPaid.length,
+
+        // Comparison with last month
+        lastMonthPaidAmount: lastMonthPaid.reduce((sum, i) => sum + (i.total_ttc || 0), 0),
+        paidAmountChange: thisMonthPaid.reduce((sum, i) => sum + (i.total_ttc || 0), 0) - 
+                         lastMonthPaid.reduce((sum, i) => sum + (i.total_ttc || 0), 0),
+
+        // Average payment time (in days)
+        averagePaymentDays: (() => {
+          const paidWithDates = invoices.filter(i => i.paid_at && i.invoice_date);
+          if (paidWithDates.length === 0) return 0;
+          const totalDays = paidWithDates.reduce((sum, i) => {
+            const invoiceDate = new Date(i.invoice_date);
+            const paidDate = new Date(i.paid_at!);
+            return sum + Math.max(0, Math.floor((paidDate.getTime() - invoiceDate.getTime()) / (1000 * 60 * 60 * 24)));
+          }, 0);
+          return Math.round(totalDays / paidWithDates.length);
+        })(),
+
+        // Collection rate
+        collectionRate: (() => {
+          const sentInvoices = invoices.filter(i => i.status !== 'draft' && i.status !== 'cancelled');
+          if (sentInvoices.length === 0) return 100;
+          const totalSent = sentInvoices.reduce((sum, i) => sum + (i.total_ttc || 0), 0);
+          const totalPaid = sentInvoices.reduce((sum, i) => sum + (i.amount_paid || 0), 0);
+          return totalSent > 0 ? Math.round((totalPaid / totalSent) * 100) : 100;
+        })(),
       };
 
       return stats;
