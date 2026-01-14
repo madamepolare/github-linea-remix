@@ -31,12 +31,19 @@ import {
   Loader2,
   CheckCircle2,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Plus
 } from 'lucide-react';
 import { QuoteDocument } from '@/types/quoteTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+
+interface SuggestedContact {
+  email: string;
+  name: string;
+  role: string;
+}
 
 interface SendQuoteDialogProps {
   open: boolean;
@@ -109,6 +116,27 @@ export function SendQuoteDialog({
   const [isSending, setIsSending] = useState(false);
   const [sentSuccessfully, setSentSuccessfully] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+
+  // Build suggested contacts list
+  const suggestedContacts: SuggestedContact[] = [];
+  
+  // Client contact (main recipient)
+  if (document.client_contact?.email) {
+    suggestedContacts.push({
+      email: document.client_contact.email,
+      name: document.client_contact.name || '',
+      role: 'Contact principal'
+    });
+  }
+  
+  // Billing contact
+  if (document.billing_contact?.email && document.billing_contact.email !== document.client_contact?.email) {
+    suggestedContacts.push({
+      email: document.billing_contact.email,
+      name: document.billing_contact.name || '',
+      role: 'Contact facturation'
+    });
+  }
 
   // Initialize email from contact
   useEffect(() => {
@@ -271,26 +299,54 @@ export function SendQuoteDialog({
           </div>
 
           {/* Recipients */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="to">Destinataire *</Label>
-              <Input
-                id="to"
-                type="email"
-                value={toEmail}
-                onChange={(e) => setToEmail(e.target.value)}
-                placeholder="email@exemple.com"
-              />
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="to">Destinataire *</Label>
+                <Input
+                  id="to"
+                  type="email"
+                  value={toEmail}
+                  onChange={(e) => setToEmail(e.target.value)}
+                  placeholder="email@exemple.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cc">Copie (CC)</Label>
+                <Input
+                  id="cc"
+                  value={ccEmails}
+                  onChange={(e) => setCcEmails(e.target.value)}
+                  placeholder="email1@ex.com, email2@ex.com"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="cc">Copie (CC)</Label>
-              <Input
-                id="cc"
-                value={ccEmails}
-                onChange={(e) => setCcEmails(e.target.value)}
-                placeholder="email1@ex.com, email2@ex.com"
-              />
-            </div>
+            
+            {/* Suggested contacts */}
+            {suggestedContacts.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground">Ajouter en copie :</span>
+                {suggestedContacts
+                  .filter(c => c.email !== toEmail && !ccEmails.includes(c.email))
+                  .map((contact) => (
+                    <Badge
+                      key={contact.email}
+                      variant="outline"
+                      className="cursor-pointer hover:bg-primary/10 transition-colors"
+                      onClick={() => {
+                        const currentCc = ccEmails ? ccEmails.split(',').map(e => e.trim()).filter(Boolean) : [];
+                        if (!currentCc.includes(contact.email)) {
+                          setCcEmails([...currentCc, contact.email].join(', '));
+                        }
+                      }}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      {contact.name || contact.email}
+                      <span className="ml-1 text-muted-foreground">({contact.role})</span>
+                    </Badge>
+                  ))}
+              </div>
+            )}
           </div>
 
           {/* Subject */}
