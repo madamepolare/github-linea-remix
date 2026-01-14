@@ -66,14 +66,20 @@ export function RecordPaymentDialog({
   });
 
   // Reset form when invoice changes
-  useState(() => {
-    if (invoice) {
-      setFormData(prev => ({
-        ...prev,
-        amount: invoice.amount_due || 0,
-      }));
-    }
-  });
+  const [initialized, setInitialized] = useState(false);
+  
+  if (invoice && !initialized && open) {
+    setFormData(prev => ({
+      ...prev,
+      amount: invoice.amount_due || 0,
+    }));
+    setInitialized(true);
+  }
+  
+  // Reset when dialog closes
+  if (!open && initialized) {
+    setInitialized(false);
+  }
 
   const formatCurrency = (value: number | null | undefined) => {
     if (!value) return '0,00 €';
