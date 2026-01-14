@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { format, isPast } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useInvoices, Invoice } from "@/hooks/useInvoices";
+import { useInvoices, useInvoice, Invoice } from "@/hooks/useInvoices";
+import { useAgencyInfo } from "@/hooks/useAgencyInfo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,8 +37,12 @@ import {
   Copy,
   RefreshCw,
   Building2,
+  FileCode,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CreateCreditNoteDialog } from "@/components/invoicing/CreateCreditNoteDialog";
+import { generateFacturXXML, downloadFacturXXML, FacturXAgencyInfo } from "@/lib/facturx";
+import { toast } from "sonner";
 
 interface InvoicesListTabProps {
   projectId: string;
@@ -65,9 +70,12 @@ const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secon
 
 export function InvoicesListTab({ projectId, onCreateInvoice, onEditInvoice }: InvoicesListTabProps) {
   const { data: allInvoices = [], isLoading } = useInvoices();
+  const { agencyInfo } = useAgencyInfo();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [creditNoteDialogOpen, setCreditNoteDialogOpen] = useState(false);
+  const [selectedInvoiceForCreditNote, setSelectedInvoiceForCreditNote] = useState<string | undefined>();
 
   // Filter invoices for this project
   const projectInvoices = allInvoices.filter(inv => inv.project_id === projectId);
@@ -90,6 +98,49 @@ export function InvoicesListTab({ projectId, onCreateInvoice, onEditInvoice }: I
       style: "currency",
       currency: "EUR",
     }).format(value);
+  };
+
+  const handleExportFacturX = async (invoice: Invoice) => {
+    if (!agencyInfo) {
+      toast.error("Informations de l'agence manquantes");
+      return;
+    }
+
+    try {
+      // Fetch invoice items
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: items } = await supabase
+        .from('invoice_items')
+        .select('*')
+        .eq('invoice_id', invoice.id)
+        .order('sort_order');
+
+      const agency: FacturXAgencyInfo = {
+        name: agencyInfo.name || '',
+        siret: agencyInfo.siret || '',
+        vatNumber: agencyInfo.vat_number,
+        address: agencyInfo.address || '',
+        city: agencyInfo.city || '',
+        postalCode: agencyInfo.postal_code || '',
+        country: 'France',
+        email: agencyInfo.email,
+        phone: agencyInfo.phone,
+        rcsCity: agencyInfo.rcs_city,
+        capitalSocial: agencyInfo.capital_social,
+      };
+
+      const xml = generateFacturXXML(invoice, items || [], agency);
+      downloadFacturXXML(xml, `${invoice.invoice_number}_facturx.xml`);
+      toast.success("Fichier Factur-X exporté");
+    } catch (error) {
+      console.error('Error exporting Factur-X:', error);
+      toast.error("Erreur lors de l'export");
+    }
+  };
+
+  const handleCreateCreditNote = (invoiceId: string) => {
+    setSelectedInvoiceForCreditNote(invoiceId);
+    setCreditNoteDialogOpen(true);
   };
 
   if (isLoading) {
@@ -248,6 +299,10 @@ export function InvoicesListTab({ projectId, onCreateInvoice, onEditInvoice }: I
                           Télécharger PDF
                         </DropdownMenuItem>
                       )}
+                      <DropdownMenuItem onClick={() => handleExportFacturX(invoice)}>
+                        <FileCode className="h-4 w-4 mr-2" />
+                        Export Factur-X
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {invoice.status === "draft" && (
                         <DropdownMenuItem>
@@ -261,6 +316,12 @@ export function InvoicesListTab({ projectId, onCreateInvoice, onEditInvoice }: I
                           Enregistrer paiement
                         </DropdownMenuItem>
                       )}
+                      {(invoice as any).document_type !== 'credit_note' && invoice.status !== 'draft' && (
+                        <DropdownMenuItem onClick={() => handleCreateCreditNote(invoice.id)}>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Créer un avoir
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </CardContent>
@@ -269,6 +330,15 @@ export function InvoicesListTab({ projectId, onCreateInvoice, onEditInvoice }: I
           })}
         </div>
       )}
+
+      <CreateCreditNoteDialog
+        open={creditNoteDialogOpen}
+        onOpenChange={setCreditNoteDialogOpen}
+        invoiceId={selectedInvoiceForCreditNote}
+        onSuccess={(creditNoteId) => {
+          onEditInvoice(creditNoteId);
+        }}
+      />
     </div>
   );
 }

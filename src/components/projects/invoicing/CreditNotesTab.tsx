@@ -13,14 +13,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -41,6 +33,7 @@ import {
   Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CreateCreditNoteDialog } from "@/components/invoicing/CreateCreditNoteDialog";
 
 interface CreditNotesTabProps {
   projectId: string;
@@ -51,7 +44,7 @@ export function CreditNotesTab({ projectId, onEditInvoice }: CreditNotesTabProps
   const { data: allInvoices = [], isLoading } = useInvoices();
   const [search, setSearch] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>("");
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | undefined>();
 
   // Filter credit notes for this project
   const projectCreditNotes = allInvoices.filter(
@@ -124,92 +117,51 @@ export function CreditNotesTab({ projectId, onEditInvoice }: CreditNotesTabProps
           />
         </div>
         
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Créer un avoir
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Créer un avoir</DialogTitle>
-              <DialogDescription>
-                Sélectionnez la facture sur laquelle vous souhaitez émettre un avoir.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Facture d'origine</label>
-                <Select
-                  value={selectedInvoiceId}
-                  onValueChange={setSelectedInvoiceId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner une facture" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {invoicesForCreditNote.map(invoice => (
-                      <SelectItem key={invoice.id} value={invoice.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{invoice.invoice_number}</span>
-                          <span className="text-muted-foreground">
-                            - {formatCurrency(invoice.total_ttc)}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        <Button onClick={() => {
+          if (invoicesForCreditNote.length > 0) {
+            setSelectedInvoiceId(invoicesForCreditNote[0].id);
+          }
+          setCreateDialogOpen(true);
+        }}>
+          <Plus className="h-4 w-4 mr-2" />
+          Créer un avoir
+        </Button>
 
-              {selectedInvoiceId && (
-                <Card className="bg-muted/50">
-                  <CardContent className="p-4">
-                    {(() => {
-                      const invoice = invoicesForCreditNote.find(i => i.id === selectedInvoiceId);
-                      if (!invoice) return null;
-                      return (
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Client</span>
-                            <span className="text-sm font-medium">{invoice.client_name || "—"}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Date</span>
-                            <span className="text-sm font-medium">
-                              {format(new Date(invoice.invoice_date), "d MMM yyyy", { locale: fr })}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Montant TTC</span>
-                            <span className="text-sm font-medium">{formatCurrency(invoice.total_ttc)}</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </CardContent>
-                </Card>
-              )}
+        {/* Invoice selection dialog if multiple invoices */}
+        {invoicesForCreditNote.length > 1 ? (
+          <Select 
+            value={selectedInvoiceId}
+            onValueChange={(id) => {
+              setSelectedInvoiceId(id);
+              setCreateDialogOpen(true);
+            }}
+          >
+            <SelectTrigger className="w-auto">
+              <span className="sr-only">Sélectionner une facture</span>
+            </SelectTrigger>
+            <SelectContent>
+              {invoicesForCreditNote.map(invoice => (
+                <SelectItem key={invoice.id} value={invoice.id}>
+                  <div className="flex items-center gap-2">
+                    <span>{invoice.invoice_number}</span>
+                    <span className="text-muted-foreground">
+                      - {formatCurrency(invoice.total_ttc)}
+                    </span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
 
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                  Annuler
-                </Button>
-                <Button 
-                  disabled={!selectedInvoiceId}
-                  onClick={() => {
-                    // TODO: Create credit note from invoice
-                    setCreateDialogOpen(false);
-                  }}
-                >
-                  Créer l'avoir
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <CreateCreditNoteDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          invoiceId={selectedInvoiceId}
+          onSuccess={(creditNoteId) => {
+            onEditInvoice(creditNoteId);
+          }}
+        />
       </div>
 
       {/* Credit Notes list */}
