@@ -103,7 +103,10 @@ export function ElementCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h4 className="font-medium text-sm truncate">{element.title}</h4>
-              {isRestricted && (
+              {element.is_sensitive && (
+                <Lock className="h-3 w-3 text-amber-500 flex-shrink-0" />
+              )}
+              {isRestricted && !element.is_sensitive && (
                 <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />
               )}
             </div>

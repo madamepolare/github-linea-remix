@@ -28,6 +28,11 @@ import {
   User,
   FileText,
   Image as ImageIcon,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
+  Key,
 } from "lucide-react";
 import { ProjectElement, UpdateElementData } from "@/hooks/useProjectElements";
 import {
@@ -63,6 +68,8 @@ export function ElementDetailSheet({
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<ProjectElement>>({});
   const [tagInput, setTagInput] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   if (!element) return null;
 
@@ -133,6 +140,18 @@ export function ElementDetailSheet({
 
   const isImage = element.file_type?.startsWith("image/");
   const isPdf = element.file_type === "application/pdf";
+  const isCredential = element.element_type === "credential";
+  const credential = element.credential_data;
+
+  const copyToClipboard = async (text: string, fieldName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -255,6 +274,94 @@ export function ElementDetailSheet({
               </Button>
             )}
           </div>
+
+          {/* Credential display */}
+          {isCredential && credential && (
+            <div className="space-y-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="flex items-center gap-2 mb-3">
+                <Key className="h-4 w-4 text-amber-600" />
+                <span className="font-medium text-sm">Informations d'accès</span>
+                {element.is_sensitive && (
+                  <Badge variant="outline" className="text-xs text-amber-600 border-amber-500/30">
+                    <Lock className="h-3 w-3 mr-1" />
+                    Sensible
+                  </Badge>
+                )}
+              </div>
+
+              {credential.service && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Service</Label>
+                  <p className="text-sm font-medium">{credential.service}</p>
+                </div>
+              )}
+
+              {credential.username && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Identifiant</Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 px-2 py-1 rounded bg-background text-sm font-mono">
+                      {credential.username}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => copyToClipboard(credential.username!, "username")}
+                    >
+                      {copiedField === "username" ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {credential.password && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Mot de passe</Label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 px-2 py-1 rounded bg-background text-sm font-mono">
+                      {showPassword ? credential.password : "••••••••••••"}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => copyToClipboard(credential.password!, "password")}
+                    >
+                      {copiedField === "password" ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {credential.notes && (
+                <div className="space-y-1 pt-2 border-t border-amber-500/20">
+                  <Label className="text-xs text-muted-foreground">Notes</Label>
+                  <p className="text-sm text-muted-foreground">{credential.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* URL for links */}
           {element.element_type === "link" && element.url && (

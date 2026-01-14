@@ -36,6 +36,7 @@ import {
   ShoppingCart,
   Sparkles,
   Users,
+  BookOpen,
 } from "lucide-react";
 import { format, parseISO, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -76,7 +77,7 @@ const PROJECT_TABS = [
   { key: "budget", label: "Budget", icon: Receipt },
   { key: "emails", label: "Emails", icon: Mail },
   { key: "communications", label: "Communications", icon: MessageCircle },
-  { key: "elements", label: "Knowledge", icon: FolderKanban },
+  { key: "elements", label: "Knowledge", icon: BookOpen },
   { key: "orders", label: "Commandes", icon: ShoppingCart },
   { key: "permits", label: "Autorisations", icon: FileCheck },
   { key: "insurances", label: "Assurances", icon: Shield },
