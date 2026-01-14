@@ -51,7 +51,7 @@ export function CompanyStatsCards({
       bgColor: "bg-emerald-500/10",
     },
     {
-      label: "Départements",
+      label: "Groupes",
       value: departmentsCount,
       icon: Building,
       color: "text-amber-600",

@@ -66,7 +66,7 @@ export function useCompanyDepartments(companyId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      toast({ title: "Département créé" });
+      toast({ title: "Groupe créé" });
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Erreur", description: error.message });
@@ -87,7 +87,7 @@ export function useCompanyDepartments(companyId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
-      toast({ title: "Département mis à jour" });
+      toast({ title: "Groupe mis à jour" });
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Erreur", description: error.message });
@@ -105,7 +105,7 @@ export function useCompanyDepartments(companyId?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      toast({ title: "Département supprimé" });
+      toast({ title: "Groupe supprimé" });
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Erreur", description: error.message });

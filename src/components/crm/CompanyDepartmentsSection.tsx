@@ -327,7 +327,7 @@ export function CompanyDepartmentsSection({
         <CardHeader className="flex flex-row items-center justify-between py-4">
           <CardTitle className="text-base flex items-center gap-2">
             <Building className="h-4 w-4 text-muted-foreground" />
-            Départements / Directions
+            Groupes
             <Badge variant="secondary" className="ml-1 text-xs">
               Glisser-déposer
             </Badge>
@@ -341,8 +341,8 @@ export function CompanyDepartmentsSection({
           {departments.length === 0 && unassignedContacts.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Building className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Aucun département</p>
-              <p className="text-xs mt-1">Créez des départements pour organiser vos contacts</p>
+              <p className="text-sm">Aucun groupe</p>
+              <p className="text-xs mt-1">Créez des groupes pour organiser vos contacts</p>
             </div>
           ) : (
             <DragDropContext onDragEnd={handleDragEnd}>
@@ -526,7 +526,7 @@ export function CompanyDepartmentsSection({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingDepartment ? "Modifier le département" : "Nouveau département"}
+              {editingDepartment ? "Modifier le groupe" : "Nouveau groupe"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -543,7 +543,7 @@ export function CompanyDepartmentsSection({
               <Textarea
                 value={formData.description || ""}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Description du département..."
+                placeholder="Description du groupe..."
                 rows={2}
               />
             </div>
@@ -598,7 +598,7 @@ export function CompanyDepartmentsSection({
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Rôle dans le département</DialogTitle>
+            <DialogTitle>Rôle dans le groupe</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <label className="text-sm font-medium">Rôle de {editingContact?.name}</label>
