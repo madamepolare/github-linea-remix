@@ -24,6 +24,7 @@ import {
   Shield,
   FileCheck,
   Mail,
+  Globe,
 } from "lucide-react";
 
 export interface EntityTab {
@@ -91,6 +92,7 @@ export const COMPANY_TABS: EntityTab[] = [
   { key: "documents", label: "Documents", icon: FileText },
   { key: "invoicing", label: "Facturation", icon: Receipt },
   { key: "commercial", label: "Commercial", icon: Briefcase },
+  { key: "portal", label: "Portail", icon: Globe },
 ];
 
 // Chantier detail tabs
