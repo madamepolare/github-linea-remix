@@ -58,6 +58,7 @@ import { Badge } from '@/components/ui/badge';
 import { ensureValidProjectType } from '@/lib/projectTypeMapping';
 import { useContractTypes, BuilderTab } from '@/hooks/useContractTypes';
 import { LineFeatureProvider } from '@/contexts/LineFeatureContext';
+import type { Json } from '@/integrations/supabase/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -269,7 +270,7 @@ export default function QuoteBuilder() {
         createdDocNumber = newDoc.document_number;
         console.info('[QuoteBuilder] Created new doc', documentId, createdDocNumber);
       } else if (id) {
-        // Update existing document - include ALL fields including document_type
+        // Update existing document - include ALL fields including document_type and invoice_schedule
         const projectType = ensureValidProjectType(document.project_type);
         await updateDocument.mutateAsync({
           id,
@@ -300,6 +301,7 @@ export default function QuoteBuilder() {
           vat_type: document.vat_type,
           header_text: document.header_text,
           footer_text: document.footer_text,
+          invoice_schedule: (document.invoice_schedule || []) as Json,
         });
       }
       

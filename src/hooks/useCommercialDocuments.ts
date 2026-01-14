@@ -11,6 +11,7 @@ import type {
   DocumentStatus,
   FeeMode
 } from '@/lib/commercialTypes';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface CreateDocumentInput {
   document_type: DocumentType;
@@ -49,6 +50,7 @@ export interface UpdateDocumentInput extends Partial<CreateDocumentInput> {
   accepted_at?: string;
   signed_at?: string;
   project_id?: string;
+  invoice_schedule?: Json;
 }
 
 export interface CreatePhaseInput {
