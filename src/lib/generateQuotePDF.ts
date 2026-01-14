@@ -13,6 +13,23 @@ import {
   addPDFFooter 
 } from './pdfUtils';
 
+// Style settings interface for PDF
+interface PDFStyleSettings {
+  headingFont?: string;
+  bodyFont?: string;
+  colorTheme?: string;
+}
+
+// Color themes mapping (simplified for PDF)
+const PDF_COLOR_THEMES: Record<string, { primary: [number, number, number]; accent: [number, number, number] }> = {
+  default: { primary: [10, 10, 10], accent: [124, 58, 237] },
+  ocean: { primary: [3, 105, 161], accent: [14, 165, 233] },
+  forest: { primary: [22, 101, 52], accent: [34, 197, 94] },
+  sunset: { primary: [194, 65, 12], accent: [236, 72, 153] },
+  purple: { primary: [124, 58, 237], accent: [168, 85, 247] },
+  rose: { primary: [190, 18, 60], accent: [244, 114, 182] },
+};
+
 /**
  * Génère un devis compact (A4 portrait, 1 page max)
  */
@@ -20,7 +37,8 @@ export async function generateQuotePDF(
   document: Partial<CommercialDocument>,
   phases: CommercialDocumentPhase[],
   total: number,
-  agencyInfo?: AgencyPDFInfo
+  agencyInfo?: AgencyPDFInfo,
+  styleSettings?: PDFStyleSettings
 ): Promise<Blob> {
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -30,6 +48,10 @@ export async function generateQuotePDF(
 
   const formatCurrency = (amount: number) => 
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
+
+  // Get theme colors
+  const themeId = styleSettings?.colorTheme || 'default';
+  const themeColors = PDF_COLOR_THEMES[themeId] || PDF_COLOR_THEMES.default;
 
   // Load images
   let logoBase64: string | null = null;
@@ -145,7 +167,7 @@ export async function generateQuotePDF(
     body: tableData,
     theme: 'plain',
     headStyles: { 
-      fillColor: [60, 60, 60], 
+      fillColor: themeColors.primary, 
       textColor: 255,
       fontStyle: 'bold',
       fontSize: 8,

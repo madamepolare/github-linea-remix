@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
+import { FONT_OPTIONS, COLOR_THEMES } from '@/hooks/useWorkspaceStyles';
 
 interface QuoteData {
   document: {
@@ -70,6 +71,15 @@ interface QuoteData {
     billing_postal_code?: string;
     siret?: string;
     vat_number?: string;
+    style_settings?: {
+      headingFont?: string;
+      bodyFont?: string;
+      baseFontSize?: number;
+      headingWeight?: string;
+      bodyWeight?: string;
+      borderRadius?: number;
+      colorTheme?: string;
+    };
   };
   link: {
     id: string;
@@ -93,6 +103,60 @@ export default function PublicQuote() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Load workspace fonts dynamically
+  const loadWorkspaceFonts = (styleSettings: QuoteData['agency']['style_settings']) => {
+    if (!styleSettings) return;
+    
+    const loadFont = (fontId: string) => {
+      const fontData = FONT_OPTIONS.find(f => f.id === fontId);
+      if (fontData && !document.querySelector(`link[href="${fontData.googleUrl}"]`)) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = fontData.googleUrl;
+        document.head.appendChild(link);
+      }
+      return fontData;
+    };
+    
+    // Load heading and body fonts
+    loadFont(styleSettings.headingFont || 'inter');
+    loadFont(styleSettings.bodyFont || 'inter');
+  };
+
+  // Apply workspace styles to container
+  const applyWorkspaceStyles = (styleSettings: QuoteData['agency']['style_settings']) => {
+    if (!containerRef.current || !styleSettings) return;
+    
+    const container = containerRef.current;
+    
+    // Get font families
+    const headingFontData = FONT_OPTIONS.find(f => f.id === styleSettings.headingFont);
+    const bodyFontData = FONT_OPTIONS.find(f => f.id === styleSettings.bodyFont);
+    
+    // Get color theme
+    const theme = COLOR_THEMES.find(t => t.id === styleSettings.colorTheme);
+    
+    // Apply CSS variables to container
+    if (headingFontData) {
+      container.style.setProperty('--font-heading', headingFontData.family);
+    }
+    if (bodyFontData) {
+      container.style.setProperty('--font-body', bodyFontData.family);
+    }
+    if (styleSettings.baseFontSize) {
+      container.style.setProperty('--font-size-base', `${styleSettings.baseFontSize}px`);
+    }
+    if (styleSettings.borderRadius !== undefined) {
+      container.style.setProperty('--radius', `${styleSettings.borderRadius}px`);
+    }
+    if (theme) {
+      container.style.setProperty('--primary', theme.primary);
+      container.style.setProperty('--accent', theme.accent);
+    }
+  };
 
   // Fetch quote data
   useEffect(() => {
@@ -123,6 +187,11 @@ export default function PublicQuote() {
         const quoteData = await response.json();
         setData(quoteData);
 
+        // Load workspace fonts
+        if (quoteData.agency?.style_settings) {
+          loadWorkspaceFonts(quoteData.agency.style_settings);
+        }
+
         // Initialize options from phases
         const initialOptions: Record<string, boolean> = {};
         quoteData.phases.forEach((phase: any) => {
@@ -151,6 +220,16 @@ export default function PublicQuote() {
 
     fetchQuote();
   }, [token]);
+
+  // Apply styles when data changes
+  useEffect(() => {
+    if (data?.agency?.style_settings) {
+      // Small delay to ensure fonts are loaded
+      setTimeout(() => {
+        applyWorkspaceStyles(data.agency.style_settings);
+      }, 100);
+    }
+  }, [data]);
 
   // Calculate total based on selected options
   const calculateTotal = () => {
@@ -304,7 +383,7 @@ export default function PublicQuote() {
   // Success screen
   if (step === 'success') {
     return (
-      <div className="min-h-screen flex flex-col bg-white">
+      <div ref={containerRef} className="min-h-screen flex flex-col bg-white" style={{ fontFamily: 'var(--font-body)' }}>
         {/* Logo Banner */}
         <header className="w-full border-b">
           <div className="w-full flex items-center justify-center py-8 px-6">
@@ -373,7 +452,7 @@ export default function PublicQuote() {
   // Sign screen
   if (step === 'sign') {
     return (
-      <div className="min-h-screen flex flex-col bg-white">
+      <div ref={containerRef} className="min-h-screen flex flex-col bg-white" style={{ fontFamily: 'var(--font-body)' }}>
         {/* Logo Banner */}
         <header className="w-full border-b">
           <div className="w-full flex items-center justify-center py-8 px-6">
@@ -497,7 +576,7 @@ export default function PublicQuote() {
 
   // View screen - Main quote display
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div ref={containerRef} className="min-h-screen flex flex-col bg-white" style={{ fontFamily: 'var(--font-body)' }}>
       {/* Logo Banner - Full Width */}
       <header className="w-full border-b sticky top-0 z-10 bg-white">
         <div className="w-full flex items-center justify-center py-8 px-6">
