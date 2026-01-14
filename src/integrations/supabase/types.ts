@@ -1090,6 +1090,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           currency: string | null
+          deposit_percentage: number | null
           description: string | null
           document_number: string
           document_type: string
@@ -1105,6 +1106,9 @@ export type Database = {
           id: string
           internal_owner_id: string | null
           invoice_schedule: Json | null
+          is_amendment: boolean | null
+          is_public_market: boolean | null
+          market_reference: string | null
           notes: string | null
           payment_terms: string | null
           pdf_url: string | null
@@ -1117,6 +1121,7 @@ export type Database = {
           project_type: string
           quote_theme_id: string | null
           reference_client: string | null
+          requires_deposit: boolean | null
           sent_at: string | null
           signed_at: string | null
           special_conditions: string | null
@@ -1141,6 +1146,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
+          deposit_percentage?: number | null
           description?: string | null
           document_number: string
           document_type?: string
@@ -1156,6 +1162,9 @@ export type Database = {
           id?: string
           internal_owner_id?: string | null
           invoice_schedule?: Json | null
+          is_amendment?: boolean | null
+          is_public_market?: boolean | null
+          market_reference?: string | null
           notes?: string | null
           payment_terms?: string | null
           pdf_url?: string | null
@@ -1168,6 +1177,7 @@ export type Database = {
           project_type?: string
           quote_theme_id?: string | null
           reference_client?: string | null
+          requires_deposit?: boolean | null
           sent_at?: string | null
           signed_at?: string | null
           special_conditions?: string | null
@@ -1192,6 +1202,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
+          deposit_percentage?: number | null
           description?: string | null
           document_number?: string
           document_type?: string
@@ -1207,6 +1218,9 @@ export type Database = {
           id?: string
           internal_owner_id?: string | null
           invoice_schedule?: Json | null
+          is_amendment?: boolean | null
+          is_public_market?: boolean | null
+          market_reference?: string | null
           notes?: string | null
           payment_terms?: string | null
           pdf_url?: string | null
@@ -1219,6 +1233,7 @@ export type Database = {
           project_type?: string
           quote_theme_id?: string | null
           reference_client?: string | null
+          requires_deposit?: boolean | null
           sent_at?: string | null
           signed_at?: string | null
           special_conditions?: string | null
@@ -1856,6 +1871,7 @@ export type Database = {
           billing_email: string | null
           capital_social: number | null
           city: string | null
+          client_reference: string | null
           code_naf: string | null
           country: string | null
           created_at: string | null
@@ -1886,6 +1902,7 @@ export type Database = {
           billing_email?: string | null
           capital_social?: number | null
           city?: string | null
+          client_reference?: string | null
           code_naf?: string | null
           country?: string | null
           created_at?: string | null
@@ -1916,6 +1933,7 @@ export type Database = {
           billing_email?: string | null
           capital_social?: number | null
           city?: string | null
+          client_reference?: string | null
           code_naf?: string | null
           country?: string | null
           created_at?: string | null
@@ -7857,6 +7875,90 @@ export type Database = {
           },
           {
             foreignKeyName: "quote_line_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quote_public_links: {
+        Row: {
+          created_at: string | null
+          deposit_paid: boolean | null
+          deposit_paid_at: string | null
+          document_id: string | null
+          expires_at: string | null
+          final_amount: number | null
+          id: string
+          is_active: boolean | null
+          options_selected: Json | null
+          signature_data: string | null
+          signed_at: string | null
+          signed_pdf_url: string | null
+          signer_email: string | null
+          signer_ip: string | null
+          signer_name: string | null
+          stripe_payment_intent_id: string | null
+          token: string
+          updated_at: string | null
+          viewed_at: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deposit_paid?: boolean | null
+          deposit_paid_at?: string | null
+          document_id?: string | null
+          expires_at?: string | null
+          final_amount?: number | null
+          id?: string
+          is_active?: boolean | null
+          options_selected?: Json | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_pdf_url?: string | null
+          signer_email?: string | null
+          signer_ip?: string | null
+          signer_name?: string | null
+          stripe_payment_intent_id?: string | null
+          token: string
+          updated_at?: string | null
+          viewed_at?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deposit_paid?: boolean | null
+          deposit_paid_at?: string | null
+          document_id?: string | null
+          expires_at?: string | null
+          final_amount?: number | null
+          id?: string
+          is_active?: boolean | null
+          options_selected?: Json | null
+          signature_data?: string | null
+          signed_at?: string | null
+          signed_pdf_url?: string | null
+          signer_email?: string | null
+          signer_ip?: string | null
+          signer_name?: string | null
+          stripe_payment_intent_id?: string | null
+          token?: string
+          updated_at?: string | null
+          viewed_at?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_public_links_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_public_links_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"

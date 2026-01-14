@@ -14,7 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, User, MapPin, Ruler, Euro, FileText, FolderKanban, Link2, CalendarIcon, UserCircle, Hash, Receipt } from 'lucide-react';
+import { Building2, User, MapPin, Ruler, Euro, FileText, FolderKanban, Link2, CalendarIcon, UserCircle, Hash, Receipt, Landmark, FileEdit } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { isArchitectureContractType } from '@/lib/moeContractDefaults';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -42,6 +44,11 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
   // Get current contract type
   const currentContractType = activeContractTypes.find(t => t.id === document.contract_type_id);
   const fields = currentContractType?.default_fields || {};
+
+  // Determine if this is an architecture/scenography type (for showing location/surface)
+  const isArchitectureType = isArchitectureContractType(
+    currentContractType?.code || document.project_type || ''
+  );
 
   // Filter contacts for billing contact (only those linked to the selected company)
   const billingContacts = contacts?.filter(c => 
@@ -131,53 +138,76 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
         </CardContent>
       </Card>
 
-      {/* Link to existing project (Avenant) */}
+      {/* Avenant toggle + Link to existing project */}
       {onLinkedProjectChange && (
         <Card className="border-dashed">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Link2 className="h-4 w-4" />
-              Rattacher à un projet existant
-            </CardTitle>
-            <CardDescription>
-              Transforme ce devis en avenant d'un projet existant
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileEdit className="h-4 w-4" />
+                Avenant
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="is_amendment"
+                  checked={document.is_amendment || false}
+                  onCheckedChange={(checked) => {
+                    onDocumentChange({ ...document, is_amendment: checked });
+                    if (!checked) {
+                      onLinkedProjectChange(undefined);
+                    }
+                  }}
+                />
+                <Label htmlFor="is_amendment" className="text-sm cursor-pointer">
+                  Ce document est un avenant
+                </Label>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <Select
-              value={linkedProjectId || 'none'}
-              onValueChange={(v) => onLinkedProjectChange(v === 'none' ? undefined : v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Aucun projet lié" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Aucun (nouveau projet)</SelectItem>
-                {projects?.filter(p => !p.is_archived).map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: project.color }}
-                      />
-                      <span>{project.name}</span>
-                      {project.crm_company?.name && (
-                        <Badge variant="outline" className="ml-1 text-xs">
-                          {project.crm_company.name}
-                        </Badge>
-                      )}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {linkedProjectId && (
-              <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                <FolderKanban className="h-3 w-3" />
-                Ce devis sera enregistré comme avenant au projet sélectionné
-              </p>
-            )}
-          </CardContent>
+          
+          {document.is_amendment && (
+            <CardContent>
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2 text-sm">
+                  <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                  Rattacher à un projet existant
+                </Label>
+                <Select
+                  value={linkedProjectId || 'none'}
+                  onValueChange={(v) => onLinkedProjectChange(v === 'none' ? undefined : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un projet..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucun projet lié</SelectItem>
+                    {projects?.filter(p => !p.is_archived).map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: project.color }}
+                          />
+                          <span>{project.name}</span>
+                          {project.crm_company?.name && (
+                            <Badge variant="outline" className="ml-1 text-xs">
+                              {project.crm_company.name}
+                            </Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {linkedProjectId && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <FolderKanban className="h-3 w-3" />
+                    Ce devis sera enregistré comme avenant au projet sélectionné
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          )}
         </Card>
       )}
 
@@ -193,9 +223,42 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
           <ClientSelector
             selectedCompanyId={document.client_company_id}
             selectedContactId={document.client_contact_id}
-            onCompanyChange={(id) => onDocumentChange({ ...document, client_company_id: id })}
+            onCompanyChange={(id, companyName, billingInfo) => {
+              // Auto-fill reference_client from CRM if available
+              onDocumentChange({ 
+                ...document, 
+                client_company_id: id,
+                reference_client: billingInfo?.client_reference || document.reference_client
+              });
+            }}
             onContactChange={(id) => onDocumentChange({ ...document, client_contact_id: id })}
           />
+          
+          {/* Marché public toggle + N° Réf Marché */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="is_public_market"
+                checked={document.is_public_market || false}
+                onCheckedChange={(checked) => onDocumentChange({ ...document, is_public_market: checked })}
+              />
+              <Label htmlFor="is_public_market" className="flex items-center gap-2 text-sm cursor-pointer">
+                <Landmark className="h-3.5 w-3.5 text-muted-foreground" />
+                Marché public
+              </Label>
+            </div>
+            
+            {document.is_public_market && (
+              <div className="flex-1">
+                <Input
+                  value={document.market_reference || ''}
+                  onChange={(e) => onDocumentChange({ ...document, market_reference: e.target.value })}
+                  placeholder="N° Réf Marché"
+                  className="h-9 sm:h-10"
+                />
+              </div>
+            )}
+          </div>
           
           {/* Contact facturation juste après */}
           <div className="space-y-2 pt-2 border-t">
@@ -269,7 +332,8 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
         </CardContent>
       </Card>
 
-      {/* Project Details */}
+      {/* Project Details - Only for architecture/scenography types */}
+      {isArchitectureType && (
       <Card>
         <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
           <CardTitle className="text-sm sm:text-base flex items-center gap-2">
@@ -369,6 +433,7 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Dates prévisionnelles */}
       <Card>
