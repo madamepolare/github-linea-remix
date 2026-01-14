@@ -49,9 +49,9 @@ export function useAgencyDocuments() {
         .from('agency_documents')
         .select(`
           *,
-          project:projects(id, name),
-          contact:contacts(id, name),
-          company:crm_companies(id, name)
+          project:projects!agency_documents_project_id_fkey(id, name),
+          contact:contacts!agency_documents_contact_id_fkey(id, name),
+          company:crm_companies!agency_documents_company_id_fkey(id, name)
         `)
         .eq('workspace_id', activeWorkspace.id)
         .order('created_at', { ascending: false });
@@ -73,9 +73,9 @@ export function useAgencyDocuments() {
           .from('agency_documents')
           .select(`
             *,
-            project:projects(id, name),
-            contact:contacts(id, name),
-            company:crm_companies(id, name)
+            project:projects!agency_documents_project_id_fkey(id, name),
+            contact:contacts!agency_documents_contact_id_fkey(id, name),
+            company:crm_companies!agency_documents_company_id_fkey(id, name)
           `)
           .eq('workspace_id', activeWorkspace.id)
           .eq('category', category)
@@ -195,23 +195,27 @@ export function useAgencyDocuments() {
   // Get single document
   const getDocument = (id: string) => {
     return useQuery({
-      queryKey: ['agency-document', id],
+      queryKey: ['agency-document', id, activeWorkspace?.id],
       queryFn: async () => {
+        if (!activeWorkspace?.id) throw new Error('Aucun workspace actif');
+        
         const { data, error } = await supabase
           .from('agency_documents')
           .select(`
             *,
-            project:projects(id, name),
-            contact:contacts(id, name),
-            company:crm_companies(id, name)
+            project:projects!agency_documents_project_id_fkey(id, name),
+            contact:contacts!agency_documents_contact_id_fkey(id, name),
+            company:crm_companies!agency_documents_company_id_fkey(id, name)
           `)
           .eq('id', id)
-          .single();
+          .eq('workspace_id', activeWorkspace.id)
+          .maybeSingle();
 
         if (error) throw error;
+        if (!data) throw new Error('Document introuvable dans ce workspace');
         return data as AgencyDocument;
       },
-      enabled: !!id,
+      enabled: !!id && !!activeWorkspace?.id,
     });
   };
 
