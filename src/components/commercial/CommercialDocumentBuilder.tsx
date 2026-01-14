@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ClientSelector } from './ClientSelector';
+import { ClientBillingInfo } from '@/hooks/useClientBilling';
 import { FeesAndQuoteEditor } from './FeesAndQuoteEditor';
 import { TermsEditor } from './TermsEditor';
 import { MOEClausesEditor } from './MOEClausesEditor';
@@ -238,8 +239,22 @@ export function CommercialDocumentBuilder({
               <ClientSelector
                 selectedCompanyId={document.client_company_id}
                 selectedContactId={document.client_contact_id}
-                onCompanyChange={(id, companyName) => {
-                  const newDoc = { ...document, client_company_id: id };
+                onCompanyChange={(id, companyName, billingInfo) => {
+                  const newDoc: Partial<CommercialDocument> = { ...document, client_company_id: id };
+                  
+                  // Apply billing info (VAT, payment terms) from client
+                  if (billingInfo) {
+                    if (billingInfo.vat_type) {
+                      newDoc.vat_type = billingInfo.vat_type;
+                    }
+                    if (billingInfo.vat_rate !== undefined) {
+                      newDoc.vat_rate = billingInfo.vat_rate;
+                    }
+                    if (billingInfo.payment_terms && !document.payment_terms) {
+                      newDoc.payment_terms = billingInfo.payment_terms;
+                    }
+                  }
+                  
                   // Auto-generate title if we have a project name
                   if (document.title && companyName) {
                     const projectName = document.description?.split('\n')[0] || document.title;

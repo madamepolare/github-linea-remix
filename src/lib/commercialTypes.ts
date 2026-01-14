@@ -47,6 +47,14 @@ export interface CommercialDocument {
   general_conditions?: string;
   header_text?: string;
   footer_text?: string;
+  // VAT settings
+  vat_type?: string;
+  vat_rate?: number;
+  // Contract type
+  contract_type_id?: string;
+  quote_theme_id?: string;
+  notes?: string;
+  // Timestamps and tracking
   sent_at?: string;
   accepted_at?: string;
   signed_at?: string;

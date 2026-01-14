@@ -1,32 +1,56 @@
 import { useState, useEffect } from 'react';
-import { Building2, User, Search } from 'lucide-react';
+import { Building2, User, Search, Receipt, Info } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useCRMCompanies } from '@/hooks/useCRMCompanies';
 import { useContacts } from '@/hooks/useContacts';
+import { useApplyClientBilling, ClientBillingInfo } from '@/hooks/useClientBilling';
 
 interface ClientSelectorProps {
   selectedCompanyId?: string;
   selectedContactId?: string;
-  onCompanyChange: (id: string | undefined, companyName?: string) => void;
+  onCompanyChange: (id: string | undefined, companyName?: string, billingInfo?: ClientBillingInfo) => void;
   onContactChange: (id: string | undefined) => void;
+  showBillingInfo?: boolean;
 }
 
 export function ClientSelector({
   selectedCompanyId,
   selectedContactId,
   onCompanyChange,
-  onContactChange
+  onContactChange,
+  showBillingInfo = true
 }: ClientSelectorProps) {
   const { companies } = useCRMCompanies();
   const { contacts } = useContacts();
+  const { fetchBillingInfo } = useApplyClientBilling();
   const [searchCompany, setSearchCompany] = useState('');
   const [searchContact, setSearchContact] = useState('');
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [showContactDropdown, setShowContactDropdown] = useState(false);
+  const [currentBillingInfo, setCurrentBillingInfo] = useState<ClientBillingInfo | null>(null);
 
   const selectedCompany = companies.find(c => c.id === selectedCompanyId);
   const selectedContact = contacts.find(c => c.id === selectedContactId);
+
+  // Load billing info when company changes
+  useEffect(() => {
+    const loadBillingInfo = async () => {
+      if (selectedCompanyId) {
+        const info = await fetchBillingInfo(selectedCompanyId);
+        setCurrentBillingInfo(info);
+      } else {
+        setCurrentBillingInfo(null);
+      }
+    };
+    loadBillingInfo();
+  }, [selectedCompanyId]);
 
   const filteredCompanies = companies.filter(c => 
     c.name.toLowerCase().includes(searchCompany.toLowerCase())
@@ -37,6 +61,30 @@ export function ClientSelector({
     const matchesCompany = !selectedCompanyId || c.crm_company_id === selectedCompanyId;
     return matchesSearch && matchesCompany;
   }).slice(0, 5);
+
+  const handleCompanySelect = async (companyId: string, companyName: string) => {
+    const billingInfo = await fetchBillingInfo(companyId);
+    setCurrentBillingInfo(billingInfo);
+    onCompanyChange(companyId, companyName, billingInfo || undefined);
+    setSearchCompany('');
+    setShowCompanyDropdown(false);
+  };
+
+  const getVATLabel = (vatType?: string, vatRate?: number) => {
+    if (!vatType && !vatRate) return null;
+    const rate = vatRate ?? 20;
+    const typeLabels: Record<string, string> = {
+      standard: 'Standard',
+      normal: 'Normal',
+      reduced: 'Réduit',
+      super_reduced: 'Super réduit',
+      exempt: 'Exonéré',
+      intra: 'Intra-UE',
+      intra_eu: 'Intra-UE',
+      export: 'Export',
+    };
+    return `TVA ${typeLabels[vatType || 'standard'] || 'Standard'} (${rate}%)`;
+  };
 
   return (
     <div className="space-y-4">
@@ -52,7 +100,8 @@ export function ClientSelector({
                 setSearchCompany(e.target.value);
                 setShowCompanyDropdown(true);
                 if (!e.target.value) {
-                  onCompanyChange(undefined, undefined);
+                  onCompanyChange(undefined, undefined, undefined);
+                  setCurrentBillingInfo(null);
                 }
               }}
               onFocus={() => setShowCompanyDropdown(true)}
@@ -67,11 +116,7 @@ export function ClientSelector({
               {filteredCompanies.map((company) => (
                 <button
                   key={company.id}
-                  onClick={() => {
-                    onCompanyChange(company.id, company.name);
-                    setSearchCompany('');
-                    setShowCompanyDropdown(false);
-                  }}
+                  onClick={() => handleCompanySelect(company.id, company.name)}
                   className="w-full px-4 py-2 text-left hover:bg-accent flex items-center gap-3"
                 >
                   {company.logo_url ? (
@@ -81,12 +126,17 @@ export function ClientSelector({
                       <Building2 className="h-4 w-4 text-muted-foreground" />
                     </div>
                   )}
-                  <div>
+                  <div className="flex-1">
                     <div className="font-medium">{company.name}</div>
                     {company.industry && (
                       <div className="text-xs text-muted-foreground">{company.industry}</div>
                     )}
                   </div>
+                  {company.vat_type && (
+                    <Badge variant="outline" className="text-xs">
+                      TVA {company.vat_rate ?? 20}%
+                    </Badge>
+                  )}
                 </button>
               ))}
             </div>
@@ -104,12 +154,38 @@ export function ClientSelector({
             )}
             <div className="flex-1">
               <div className="font-medium text-sm">{selectedCompany.name}</div>
-              {selectedCompany.city && (
-                <div className="text-xs text-muted-foreground">{selectedCompany.city}</div>
-              )}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {selectedCompany.city && <span>{selectedCompany.city}</span>}
+                {showBillingInfo && currentBillingInfo && (
+                  <>
+                    {currentBillingInfo.vat_type && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="secondary" className="text-xs cursor-help">
+                            <Receipt className="h-3 w-3 mr-1" />
+                            {getVATLabel(currentBillingInfo.vat_type, currentBillingInfo.vat_rate)}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="font-medium">Conditions de facturation</p>
+                          {currentBillingInfo.payment_terms && (
+                            <p className="text-xs">Délai: {currentBillingInfo.payment_terms}</p>
+                          )}
+                          {currentBillingInfo.vat_number && (
+                            <p className="text-xs">N° TVA: {currentBillingInfo.vat_number}</p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
             <button 
-              onClick={() => onCompanyChange(undefined, undefined)}
+              onClick={() => {
+                onCompanyChange(undefined, undefined, undefined);
+                setCurrentBillingInfo(null);
+              }}
               className="text-xs text-muted-foreground hover:text-foreground"
             >
               Changer

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Trash2, Receipt } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -19,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useApplyClientBilling } from '@/hooks/useClientBilling';
 
 interface Project {
   id: string;
@@ -31,6 +33,9 @@ interface Company {
   name: string;
   address?: string | null;
   city?: string | null;
+  postal_code?: string | null;
+  siret?: string | null;
+  vat_number?: string | null;
 }
 
 interface InvoicePhase {
@@ -48,12 +53,14 @@ interface InvoiceEditorProps {
 }
 
 export function InvoiceEditor({ content, onChange, projects, companies }: InvoiceEditorProps) {
+  const { fetchBillingInfo } = useApplyClientBilling();
+  
   const updateField = (key: string, value: unknown) => {
     onChange({ ...content, [key]: value });
   };
 
   const phases = (content.phases as InvoicePhase[]) || [];
-  const tvaRate = (content.tva_rate as number) || 20;
+  const tvaRate = (content.tva_rate as number) ?? 20;
 
   const addPhase = () => {
     updateField('phases', [...phases, { code: '', name: '', amount: 0, percentage_invoiced: 100 }]);
@@ -67,14 +74,14 @@ export function InvoiceEditor({ content, onChange, projects, companies }: Invoic
     const updated = [...phases];
     updated[index] = { ...updated[index], [field]: value };
     updateField('phases', updated);
-    recalculateTotals(updated);
+    recalculateTotals(updated, tvaRate);
   };
 
-  const recalculateTotals = (updatedPhases: InvoicePhase[]) => {
+  const recalculateTotals = (updatedPhases: InvoicePhase[], rate: number) => {
     const subtotal = updatedPhases.reduce((sum, phase) => {
       return sum + (phase.amount * phase.percentage_invoiced / 100);
     }, 0);
-    const tvaAmount = subtotal * (tvaRate / 100);
+    const tvaAmount = subtotal * (rate / 100);
     const total = subtotal + tvaAmount;
     
     onChange({
@@ -83,6 +90,7 @@ export function InvoiceEditor({ content, onChange, projects, companies }: Invoic
       subtotal,
       tva_amount: tvaAmount,
       total,
+      tva_rate: rate,
     });
   };
 
@@ -94,17 +102,63 @@ export function InvoiceEditor({ content, onChange, projects, companies }: Invoic
     }
   };
 
-  const handleCompanyChange = (companyId: string) => {
+  const handleCompanyChange = async (companyId: string) => {
     const company = companies.find(c => c.id === companyId);
     if (company) {
       updateField('company_id', companyId);
       updateField('client_name', company.name);
       updateField('client_address', [company.address, company.city].filter(Boolean).join(', '));
+      updateField('client_siret', company.siret || '');
+      updateField('client_vat_number', company.vat_number || '');
+      
+      // Fetch billing profile for VAT and payment info
+      const billingInfo = await fetchBillingInfo(companyId);
+      if (billingInfo) {
+        // Apply VAT settings from billing profile
+        if (billingInfo.vat_rate !== undefined) {
+          updateField('tva_rate', billingInfo.vat_rate);
+          recalculateTotals(phases, billingInfo.vat_rate);
+        }
+        if (billingInfo.vat_type) {
+          updateField('vat_type', billingInfo.vat_type);
+        }
+        // Apply payment terms
+        if (billingInfo.payment_terms) {
+          updateField('payment_terms', billingInfo.payment_terms);
+        }
+        // Apply bank details if available
+        if (billingInfo.iban) {
+          updateField('bank_iban', billingInfo.iban);
+        }
+        if (billingInfo.bic) {
+          updateField('bank_bic', billingInfo.bic);
+        }
+        if (billingInfo.bank_name) {
+          updateField('bank_name', billingInfo.bank_name);
+        }
+        // Apply billing address if different from company address
+        if (billingInfo.billing_address) {
+          updateField('client_address', [billingInfo.billing_address, billingInfo.billing_postal_code, billingInfo.billing_city].filter(Boolean).join(', '));
+        }
+      }
     }
   };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
+  };
+
+  const getVATLabel = (vatType?: string) => {
+    const typeLabels: Record<string, string> = {
+      standard: 'Standard',
+      normal: 'Normal',
+      reduced: 'Réduit',
+      super_reduced: 'Super réduit',
+      exempt: 'Exonéré',
+      intra: 'Intra-UE',
+      export: 'Export',
+    };
+    return typeLabels[vatType || 'standard'] || 'Standard';
   };
 
   return (
@@ -284,7 +338,7 @@ export function InvoiceEditor({ content, onChange, projects, companies }: Invoic
               onChange={(e) => {
                 const rate = parseFloat(e.target.value) || 0;
                 updateField('tva_rate', rate);
-                recalculateTotals(phases);
+                recalculateTotals(phases, rate);
               }}
               className="w-16 h-7"
             />
