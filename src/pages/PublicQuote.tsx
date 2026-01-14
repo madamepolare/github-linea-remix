@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
-import { FONT_OPTIONS, COLOR_THEMES } from '@/hooks/useWorkspaceStyles';
+import { FONT_OPTIONS, applyStyles } from '@/hooks/useWorkspaceStyles';
 
 // Interface for custom fonts stored in workspace
 interface CustomFont {
@@ -123,21 +123,31 @@ export default function PublicQuote() {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [themeColors, setThemeColors] = useState<{ primary: string; accent: string; preview?: { bg: string; fg: string; accent: string } } | null>(null);
+  // UI uses CSS variables (same tokens as the app). These helpers keep the JSX readable.
+  const themeColors = {
+    primary: 'var(--primary)',
+    accent: 'var(--accent)',
+    preview: {
+      bg: 'hsl(var(--background))',
+      fg: 'hsl(var(--foreground))',
+      accent: 'hsl(var(--accent))',
+    },
+  };
+
   const [fontFamilies, setFontFamilies] = useState<{ heading: string; body: string }>({
     heading: "'Inter', sans-serif",
-    body: "'Inter', sans-serif"
+    body: "'Inter', sans-serif",
   });
 
   // Load workspace fonts dynamically (supports both Google Fonts and custom fonts)
   const loadWorkspaceFonts = async (styleSettings: StyleSettings) => {
     if (!styleSettings) return { heading: "'Inter', sans-serif", body: "'Inter', sans-serif" };
-    
+
     const customFonts = styleSettings.customFonts || [];
-    
+
     const loadFont = async (fontId: string): Promise<string> => {
       // First check Google Fonts
-      const googleFont = FONT_OPTIONS.find(f => f.id === fontId);
+      const googleFont = FONT_OPTIONS.find((f) => f.id === fontId);
       if (googleFont) {
         if (!document.querySelector(`link[href="${googleFont.googleUrl}"]`)) {
           const link = document.createElement('link');
@@ -147,9 +157,9 @@ export default function PublicQuote() {
         }
         return googleFont.family;
       }
-      
+
       // Then check custom fonts
-      const customFont = customFonts.find(f => f.id === fontId);
+      const customFont = customFonts.find((f) => f.id === fontId);
       if (customFont && customFont.dataUrl) {
         try {
           const fontFace = new FontFace(customFont.fontFamily, `url(${customFont.dataUrl})`);
@@ -160,49 +170,15 @@ export default function PublicQuote() {
           console.error('Error loading custom font:', err);
         }
       }
-      
+
       return "'Inter', sans-serif";
     };
-    
+
     // Load both fonts
     const headingFamily = await loadFont(styleSettings.headingFont || 'inter');
     const bodyFamily = await loadFont(styleSettings.bodyFont || 'inter');
-    
-    return { heading: headingFamily, body: bodyFamily };
-  };
 
-  // Apply workspace styles to document root
-  const applyWorkspaceStyles = (styleSettings: StyleSettings, fonts: { heading: string; body: string }) => {
-    if (!styleSettings) return;
-    
-    const root = document.documentElement;
-    
-    // Get color theme - default to "default" theme if not found
-    const theme = COLOR_THEMES.find(t => t.id === styleSettings.colorTheme) || COLOR_THEMES[0];
-    
-    console.log('Applying theme:', styleSettings.colorTheme, theme);
-    
-    // Apply CSS variables to :root for global effect
-    root.style.setProperty('--font-heading', fonts.heading);
-    root.style.setProperty('--font-body', fonts.body);
-    
-    if (styleSettings.baseFontSize) {
-      root.style.setProperty('--font-size-base', `${styleSettings.baseFontSize}px`);
-    }
-    if (styleSettings.borderRadius !== undefined) {
-      root.style.setProperty('--radius', `${styleSettings.borderRadius}px`);
-    }
-    
-    // Always apply theme colors
-    root.style.setProperty('--primary', theme.primary);
-    root.style.setProperty('--accent', theme.accent);
-    setThemeColors({ 
-      primary: theme.primary, 
-      accent: theme.accent,
-      preview: theme.preview 
-    });
-    
-    setFontFamilies(fonts);
+    return { heading: headingFamily, body: bodyFamily };
   };
 
   // Fetch quote data
@@ -234,10 +210,11 @@ export default function PublicQuote() {
         const quoteData = await response.json();
         setData(quoteData);
 
-        // Load workspace fonts and apply styles
+        // Load workspace fonts and apply styles (same mechanism as the app)
         if (quoteData.agency?.style_settings) {
           const fonts = await loadWorkspaceFonts(quoteData.agency.style_settings);
-          applyWorkspaceStyles(quoteData.agency.style_settings, fonts);
+          setFontFamilies(fonts);
+          applyStyles(quoteData.agency.style_settings as any);
         }
 
         // Initialize options from phases
