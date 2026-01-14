@@ -2,11 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { 
@@ -15,11 +12,11 @@ import {
   CalendarIcon, 
   Wand2, 
   AlertCircle,
-  ChevronUp,
-  ChevronDown,
+  GripVertical,
   Receipt,
   PieChart,
-  Euro
+  Euro,
+  Percent
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -57,7 +54,6 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
     const includedLines = lines.filter(l => l.is_included && l.line_type !== 'discount');
     
     if (includedLines.length === 0) {
-      // No phases, create single invoice
       const invoice: PlannedInvoice = {
         id: crypto.randomUUID(),
         schedule_number: 1,
@@ -72,7 +68,6 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
       return;
     }
     
-    // Create one invoice per major phase
     const majorPhases = includedLines.filter(l => l.line_type === 'phase');
     const newInvoices: PlannedInvoice[] = majorPhases.map((phase, index) => ({
       id: crypto.randomUUID(),
@@ -154,25 +149,6 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
       
       return newInv;
     });
-    updateSchedule(updated);
-  };
-  
-  // Move invoice up/down
-  const moveInvoice = (id: string, direction: 'up' | 'down') => {
-    const index = plannedInvoices.findIndex(i => i.id === id);
-    if (index === -1) return;
-    
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= plannedInvoices.length) return;
-    
-    const updated = [...plannedInvoices];
-    [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
-    
-    // Update schedule numbers
-    updated.forEach((inv, idx) => {
-      inv.schedule_number = idx + 1;
-    });
-    
     updateSchedule(updated);
   };
   
@@ -281,7 +257,7 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
         </CardContent>
       </Card>
       
-      {/* Invoice schedule table */}
+      {/* Invoice schedule - Card-based layout */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -305,136 +281,148 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
               <p className="text-sm">Utilisez la génération automatique ou ajoutez manuellement</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>Titre</TableHead>
-                    <TableHead>Jalon</TableHead>
-                    <TableHead className="w-24 text-right">%</TableHead>
-                    <TableHead className="w-32 text-right">Montant HT</TableHead>
-                    <TableHead className="w-32 text-right">Montant TTC</TableHead>
-                    <TableHead className="w-40">Date planifiée</TableHead>
-                    <TableHead className="w-24"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {plannedInvoices.map((invoice, index) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="h-5 w-5"
-                            disabled={index === 0}
-                            onClick={() => moveInvoice(invoice.id, 'up')}
-                          >
-                            <ChevronUp className="h-3 w-3" />
-                          </Button>
-                          <span className="text-center text-sm">{invoice.schedule_number}</span>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="h-5 w-5"
-                            disabled={index === plannedInvoices.length - 1}
-                            onClick={() => moveInvoice(invoice.id, 'down')}
-                          >
-                            <ChevronDown className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Input 
-                          value={invoice.title}
-                          onChange={(e) => updateInvoice(invoice.id, { title: e.target.value })}
-                          className="h-8"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input 
-                          value={invoice.milestone || ''}
-                          onChange={(e) => updateInvoice(invoice.id, { milestone: e.target.value })}
-                          placeholder="Ex: Validation APD"
-                          className="h-8"
-                        />
-                      </TableCell>
-                      <TableCell>
+            <div className="space-y-3">
+              {plannedInvoices.map((invoice, index) => (
+                <div 
+                  key={invoice.id}
+                  className="border rounded-lg p-4 bg-muted/30 hover:bg-muted/50 transition-colors"
+                >
+                  {/* Header row */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="flex items-center gap-2 shrink-0">
+                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                      <Badge variant="outline" className="font-mono">
+                        #{invoice.schedule_number}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <Input 
+                        value={invoice.title}
+                        onChange={(e) => updateInvoice(invoice.id, { title: e.target.value })}
+                        className="font-medium h-9 bg-background"
+                        placeholder="Titre de l'échéance..."
+                      />
+                    </div>
+                    
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-9 w-9 text-destructive hover:text-destructive shrink-0"
+                      onClick={() => removeInvoice(invoice.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Fields grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {/* Milestone */}
+                    <div className="col-span-2 md:col-span-1">
+                      <label className="text-xs text-muted-foreground mb-1 block">Jalon</label>
+                      <Input 
+                        value={invoice.milestone || ''}
+                        onChange={(e) => updateInvoice(invoice.id, { milestone: e.target.value })}
+                        placeholder="Ex: Validation APD"
+                        className="h-9 bg-background"
+                      />
+                    </div>
+                    
+                    {/* Percentage */}
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Pourcentage</label>
+                      <div className="relative">
                         <Input 
                           type="number"
                           value={invoice.percentage || 0}
                           onChange={(e) => updateInvoice(invoice.id, { percentage: parseFloat(e.target.value) || 0 })}
-                          className="h-8 text-right"
+                          className="h-9 pr-8 bg-background"
                           min={0}
                           max={100}
                         />
-                      </TableCell>
-                      <TableCell className="text-right">
+                        <Percent className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                    
+                    {/* Amount HT */}
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Montant HT</label>
+                      <div className="relative">
                         <Input 
                           type="number"
                           value={Math.round(invoice.amount_ht) || 0}
                           onChange={(e) => updateInvoice(invoice.id, { amount_ht: parseFloat(e.target.value) || 0 })}
-                          className="h-8 text-right"
+                          className="h-9 pr-8 bg-background"
                         />
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(invoice.amount_ttc || 0)}
-                      </TableCell>
-                      <TableCell>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="w-full h-8 justify-start">
-                              <CalendarIcon className="h-3 w-3 mr-2" />
+                        <Euro className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                    
+                    {/* Planned date */}
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Date planifiée</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className={cn(
+                              "w-full h-9 justify-start font-normal bg-background",
+                              !invoice.planned_date && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="h-4 w-4 mr-2 shrink-0" />
+                            <span className="truncate">
                               {invoice.planned_date 
-                                ? format(new Date(invoice.planned_date), 'dd/MM/yyyy', { locale: fr })
-                                : 'Date...'}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={invoice.planned_date ? new Date(invoice.planned_date) : undefined}
-                              onSelect={(date) => updateInvoice(invoice.id, { 
-                                planned_date: date?.toISOString().split('T')[0] 
-                              })}
-                              locale={fr}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => removeInvoice(invoice.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                                ? format(new Date(invoice.planned_date), 'dd MMM yyyy', { locale: fr })
+                                : 'Choisir...'}
+                            </span>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={invoice.planned_date ? new Date(invoice.planned_date) : undefined}
+                            onSelect={(date) => updateInvoice(invoice.id, { 
+                              planned_date: date?.toISOString().split('T')[0] 
+                            })}
+                            locale={fr}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                  
+                  {/* Amount TTC display */}
+                  <div className="mt-3 pt-3 border-t flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Montant TTC (TVA {vatRate}%)</span>
+                    <span className="font-semibold text-lg">{formatCurrency(invoice.amount_ttc || 0)}</span>
+                  </div>
+                </div>
+              ))}
               
-              {/* Totals row */}
-              <Separator className="my-2" />
-              <div className="flex items-center justify-end gap-6 px-4 py-2 text-sm">
-                <div className={cn(!isBalanced && "text-amber-500 font-medium")}>
-                  Total: {totalPercentage.toFixed(1)}%
+              {/* Totals */}
+              <Separator className="my-4" />
+              <div className="flex flex-wrap items-center justify-end gap-4 text-sm">
+                <div className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg",
+                  isBalanced ? "bg-green-500/10 text-green-700" : "bg-amber-500/10 text-amber-700"
+                )}>
+                  <span className="font-medium">Total:</span>
+                  <span className="font-bold">{totalPercentage.toFixed(1)}%</span>
                 </div>
-                <div className="font-medium">
-                  {formatCurrency(totalHT)} HT
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted">
+                  <span className="text-muted-foreground">HT:</span>
+                  <span className="font-medium">{formatCurrency(totalHT)}</span>
                 </div>
-                <div className="font-bold text-lg">
-                  {formatCurrency(totalTTC)} TTC
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10">
+                  <span className="text-muted-foreground">TTC:</span>
+                  <span className="font-bold text-lg">{formatCurrency(totalTTC)}</span>
                 </div>
               </div>
               
               {!isBalanced && (
-                <div className="flex items-center gap-2 px-4 py-2 text-amber-600 text-sm">
-                  <AlertCircle className="h-4 w-4" />
+                <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm mt-4">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
                   <span>
                     Le total des pourcentages doit être égal à 100% 
                     (actuellement {totalPercentage.toFixed(1)}%)

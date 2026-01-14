@@ -93,7 +93,7 @@ export default function QuoteBuilder() {
   // Get contract types for dynamic tabs
   const { activeContractTypes } = useContractTypes();
   
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState('lines');
   const [showPreview, setShowPreview] = useState(true);
   const [zoom, setZoom] = useState(70);
   const [isSaving, setIsSaving] = useState(false);
