@@ -23,6 +23,7 @@ import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { QuoteDocument, QuoteLine } from '@/types/quoteTypes';
 import { PlannedInvoice } from '@/lib/commercialTypes';
+import { QuoteSharingSettings } from './QuoteSharingSettings';
 
 interface QuoteInvoicingTabProps {
   document: Partial<QuoteDocument>;
@@ -467,6 +468,12 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
           )}
         </CardContent>
       </Card>
+      
+      {/* Quote sharing settings */}
+      <QuoteSharingSettings 
+        document={document}
+        onDocumentChange={onDocumentChange}
+      />
     </div>
   );
 }
