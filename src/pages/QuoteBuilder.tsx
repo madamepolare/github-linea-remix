@@ -24,6 +24,7 @@ import {
   Percent,
   Package,
   Calendar,
+  Receipt,
   LucideIcon
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, phaseToQuoteLine, quoteLineToPhase, DOCUMENT_STATUS_LABELS } from '@/types/quoteTypes';
@@ -109,6 +110,7 @@ export default function QuoteBuilder() {
     lines: { label: 'Lignes', icon: List },
     production: { label: 'Production', icon: Package },
     planning: { label: 'Planning', icon: Calendar },
+    invoicing: { label: 'Facturation', icon: FileCheck },
     terms: { label: 'Conditions', icon: FileCheck }
   };
   

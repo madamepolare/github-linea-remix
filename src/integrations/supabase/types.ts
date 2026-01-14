@@ -955,6 +955,78 @@ export type Database = {
           },
         ]
       }
+      commercial_document_schedule: {
+        Row: {
+          amount_ht: number
+          amount_ttc: number | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          document_id: string
+          id: string
+          milestone: string | null
+          percentage: number | null
+          phase_ids: Json | null
+          planned_date: string | null
+          schedule_number: number
+          title: string
+          updated_at: string | null
+          vat_rate: number | null
+          workspace_id: string
+        }
+        Insert: {
+          amount_ht?: number
+          amount_ttc?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          document_id: string
+          id?: string
+          milestone?: string | null
+          percentage?: number | null
+          phase_ids?: Json | null
+          planned_date?: string | null
+          schedule_number?: number
+          title: string
+          updated_at?: string | null
+          vat_rate?: number | null
+          workspace_id: string
+        }
+        Update: {
+          amount_ht?: number
+          amount_ttc?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          document_id?: string
+          id?: string
+          milestone?: string | null
+          percentage?: number | null
+          phase_ids?: Json | null
+          planned_date?: string | null
+          schedule_number?: number
+          title?: string
+          updated_at?: string | null
+          vat_rate?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_document_schedule_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_document_schedule_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_document_versions: {
         Row: {
           created_at: string | null
@@ -1009,6 +1081,7 @@ export type Database = {
       commercial_documents: {
         Row: {
           accepted_at: string | null
+          billing_contact_id: string | null
           client_company_id: string | null
           client_contact_id: string | null
           construction_budget: number | null
@@ -1020,6 +1093,9 @@ export type Database = {
           description: string | null
           document_number: string
           document_type: string
+          expected_end_date: string | null
+          expected_signature_date: string | null
+          expected_start_date: string | null
           fee_mode: string
           fee_percentage: number | null
           footer_text: string | null
@@ -1027,9 +1103,12 @@ export type Database = {
           header_text: string | null
           hourly_rate: number | null
           id: string
+          internal_owner_id: string | null
+          invoice_schedule: Json | null
           notes: string | null
           payment_terms: string | null
           pdf_url: string | null
+          postal_code: string | null
           project_address: string | null
           project_budget: number | null
           project_city: string | null
@@ -1037,6 +1116,7 @@ export type Database = {
           project_surface: number | null
           project_type: string
           quote_theme_id: string | null
+          reference_client: string | null
           sent_at: string | null
           signed_at: string | null
           special_conditions: string | null
@@ -1052,6 +1132,7 @@ export type Database = {
         }
         Insert: {
           accepted_at?: string | null
+          billing_contact_id?: string | null
           client_company_id?: string | null
           client_contact_id?: string | null
           construction_budget?: number | null
@@ -1063,6 +1144,9 @@ export type Database = {
           description?: string | null
           document_number: string
           document_type?: string
+          expected_end_date?: string | null
+          expected_signature_date?: string | null
+          expected_start_date?: string | null
           fee_mode?: string
           fee_percentage?: number | null
           footer_text?: string | null
@@ -1070,9 +1154,12 @@ export type Database = {
           header_text?: string | null
           hourly_rate?: number | null
           id?: string
+          internal_owner_id?: string | null
+          invoice_schedule?: Json | null
           notes?: string | null
           payment_terms?: string | null
           pdf_url?: string | null
+          postal_code?: string | null
           project_address?: string | null
           project_budget?: number | null
           project_city?: string | null
@@ -1080,6 +1167,7 @@ export type Database = {
           project_surface?: number | null
           project_type?: string
           quote_theme_id?: string | null
+          reference_client?: string | null
           sent_at?: string | null
           signed_at?: string | null
           special_conditions?: string | null
@@ -1095,6 +1183,7 @@ export type Database = {
         }
         Update: {
           accepted_at?: string | null
+          billing_contact_id?: string | null
           client_company_id?: string | null
           client_contact_id?: string | null
           construction_budget?: number | null
@@ -1106,6 +1195,9 @@ export type Database = {
           description?: string | null
           document_number?: string
           document_type?: string
+          expected_end_date?: string | null
+          expected_signature_date?: string | null
+          expected_start_date?: string | null
           fee_mode?: string
           fee_percentage?: number | null
           footer_text?: string | null
@@ -1113,9 +1205,12 @@ export type Database = {
           header_text?: string | null
           hourly_rate?: number | null
           id?: string
+          internal_owner_id?: string | null
+          invoice_schedule?: Json | null
           notes?: string | null
           payment_terms?: string | null
           pdf_url?: string | null
+          postal_code?: string | null
           project_address?: string | null
           project_budget?: number | null
           project_city?: string | null
@@ -1123,6 +1218,7 @@ export type Database = {
           project_surface?: number | null
           project_type?: string
           quote_theme_id?: string | null
+          reference_client?: string | null
           sent_at?: string | null
           signed_at?: string | null
           special_conditions?: string | null
@@ -1137,6 +1233,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "commercial_documents_billing_contact_id_fkey"
+            columns: ["billing_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "commercial_documents_client_company_id_fkey"
             columns: ["client_company_id"]
@@ -7504,6 +7607,7 @@ export type Database = {
           city: string | null
           client: string | null
           color: string | null
+          commercial_document_id: string | null
           created_at: string | null
           created_by: string | null
           crm_company_id: string | null
@@ -7517,6 +7621,7 @@ export type Database = {
           lead_id: string | null
           name: string
           phase: string | null
+          postal_code: string | null
           project_type: string | null
           start_date: string | null
           status: string | null
@@ -7532,6 +7637,7 @@ export type Database = {
           city?: string | null
           client?: string | null
           color?: string | null
+          commercial_document_id?: string | null
           created_at?: string | null
           created_by?: string | null
           crm_company_id?: string | null
@@ -7545,6 +7651,7 @@ export type Database = {
           lead_id?: string | null
           name: string
           phase?: string | null
+          postal_code?: string | null
           project_type?: string | null
           start_date?: string | null
           status?: string | null
@@ -7560,6 +7667,7 @@ export type Database = {
           city?: string | null
           client?: string | null
           color?: string | null
+          commercial_document_id?: string | null
           created_at?: string | null
           created_by?: string | null
           crm_company_id?: string | null
@@ -7573,6 +7681,7 @@ export type Database = {
           lead_id?: string | null
           name?: string
           phase?: string | null
+          postal_code?: string | null
           project_type?: string | null
           start_date?: string | null
           status?: string | null
@@ -7582,6 +7691,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "projects_commercial_document_id_fkey"
+            columns: ["commercial_document_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "projects_crm_company_id_fkey"
             columns: ["crm_company_id"]

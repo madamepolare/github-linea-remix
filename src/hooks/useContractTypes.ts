@@ -15,7 +15,7 @@ export interface ContractTypeFields {
 }
 
 // Available tabs in the quote builder
-export type BuilderTab = 'general' | 'fees' | 'lines' | 'production' | 'planning' | 'terms';
+export type BuilderTab = 'general' | 'fees' | 'lines' | 'production' | 'planning' | 'invoicing' | 'terms';
 
 export interface ContractType {
   id: string;

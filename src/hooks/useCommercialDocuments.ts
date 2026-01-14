@@ -96,7 +96,8 @@ export const useCommercialDocuments = () => {
         .select(`
           *,
           client_company:crm_companies(id, name, logo_url),
-          client_contact:contacts(id, name, email),
+          client_contact:contacts!commercial_documents_client_contact_id_fkey(id, name, email),
+          billing_contact:contacts!commercial_documents_billing_contact_id_fkey(id, name, email),
           project:projects(id, name)
         `)
         .eq('workspace_id', activeWorkspace.id)
@@ -117,7 +118,8 @@ export const useCommercialDocuments = () => {
           .select(`
             *,
             client_company:crm_companies(id, name, logo_url),
-            client_contact:contacts(id, name, email),
+            client_contact:contacts!commercial_documents_client_contact_id_fkey(id, name, email),
+            billing_contact:contacts!commercial_documents_billing_contact_id_fkey(id, name, email),
             project:projects(id, name)
           `)
           .eq('id', id)
