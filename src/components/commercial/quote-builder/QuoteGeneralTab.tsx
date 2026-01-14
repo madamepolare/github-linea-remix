@@ -4,6 +4,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -11,10 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, User, MapPin, Ruler, Euro, FileText, FolderKanban, Link2 } from 'lucide-react';
+import { Building2, User, MapPin, Ruler, Euro, FileText, FolderKanban, Link2, CalendarIcon, UserCircle, Hash } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import { QuoteDocument, DOCUMENT_TYPE_LABELS } from '@/types/quoteTypes';
 import { useContractTypes, ContractType } from '@/hooks/useContractTypes';
 import { useProjects } from '@/hooks/useProjects';
+import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useContacts } from '@/hooks/useContacts';
 import { ClientSelector } from '../ClientSelector';
 import { getProjectTypeFromCode } from '@/lib/projectTypeMapping';
 
@@ -28,10 +36,17 @@ interface QuoteGeneralTabProps {
 export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, onLinkedProjectChange }: QuoteGeneralTabProps) {
   const { activeContractTypes, isLoading: isLoadingTypes } = useContractTypes();
   const { projects, isLoading: isLoadingProjects } = useProjects();
+  const { data: members } = useTeamMembers();
+  const { contacts } = useContacts();
 
   // Get current contract type
   const currentContractType = activeContractTypes.find(t => t.id === document.contract_type_id);
   const fields = currentContractType?.default_fields || {};
+
+  // Filter contacts for billing contact (only those linked to the selected company)
+  const billingContacts = contacts?.filter(c => 
+    !document.client_company_id || c.crm_company_id === document.client_company_id
+  ) || [];
 
   // When contract type changes, update project_type using centralized mapping
   const handleContractTypeChange = (typeId: string) => {
@@ -170,6 +185,178 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
         </CardContent>
       </Card>
 
+      {/* Billing Contact & Internal Owner */}
+      <Card>
+        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+            <UserCircle className="h-4 w-4" />
+            Responsables
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Responsable interne</Label>
+              <Select
+                value={document.internal_owner_id || ''}
+                onValueChange={(v) => onDocumentChange({ ...document, internal_owner_id: v || undefined })}
+              >
+                <SelectTrigger className="h-9 sm:h-10">
+                  <SelectValue placeholder="Choisir un responsable..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {members?.map((member) => (
+                    <SelectItem key={member.user_id} value={member.user_id}>
+                      <div className="flex items-center gap-2">
+                        <User className="h-3 w-3 text-muted-foreground" />
+                        <span>{member.profile?.full_name || 'Sans nom'}</span>
+                        {member.profile?.job_title && (
+                          <Badge variant="outline" className="ml-1 text-xs">
+                            {member.profile.job_title}
+                          </Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Contact facturation</Label>
+              <Select
+                value={document.billing_contact_id || ''}
+                onValueChange={(v) => onDocumentChange({ ...document, billing_contact_id: v || undefined })}
+              >
+                <SelectTrigger className="h-9 sm:h-10">
+                  <SelectValue placeholder="Même que contact principal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Même que contact principal</SelectItem>
+                  {billingContacts.map((contact) => (
+                    <SelectItem key={contact.id} value={contact.id}>
+                      <div className="flex items-center gap-2">
+                        <User className="h-3 w-3 text-muted-foreground" />
+                        <span>{contact.name}</span>
+                        {contact.email && (
+                          <span className="text-xs text-muted-foreground">({contact.email})</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Dates prévisionnelles */}
+      <Card>
+        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+            <CalendarIcon className="h-4 w-4" />
+            Dates prévisionnelles
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Date signature attendue</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full h-9 sm:h-10 justify-start text-left font-normal",
+                      !document.expected_signature_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {document.expected_signature_date
+                      ? format(new Date(document.expected_signature_date), 'dd MMM yyyy', { locale: fr })
+                      : 'Sélectionner...'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={document.expected_signature_date ? new Date(document.expected_signature_date) : undefined}
+                    onSelect={(date) => onDocumentChange({ 
+                      ...document, 
+                      expected_signature_date: date?.toISOString().split('T')[0] 
+                    })}
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Date début projet</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full h-9 sm:h-10 justify-start text-left font-normal",
+                      !document.expected_start_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {document.expected_start_date
+                      ? format(new Date(document.expected_start_date), 'dd MMM yyyy', { locale: fr })
+                      : 'Sélectionner...'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={document.expected_start_date ? new Date(document.expected_start_date) : undefined}
+                    onSelect={(date) => onDocumentChange({ 
+                      ...document, 
+                      expected_start_date: date?.toISOString().split('T')[0] 
+                    })}
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Date fin projet</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full h-9 sm:h-10 justify-start text-left font-normal",
+                      !document.expected_end_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {document.expected_end_date
+                      ? format(new Date(document.expected_end_date), 'dd MMM yyyy', { locale: fr })
+                      : 'Sélectionner...'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={document.expected_end_date ? new Date(document.expected_end_date) : undefined}
+                    onSelect={(date) => onDocumentChange({ 
+                      ...document, 
+                      expected_end_date: date?.toISOString().split('T')[0] 
+                    })}
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Project Details */}
       <Card>
         <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
@@ -179,14 +366,29 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
-          <div className="space-y-2">
-            <Label className="text-sm">Titre du projet</Label>
-            <Input
-              value={document.title || ''}
-              onChange={(e) => onDocumentChange({ ...document, title: e.target.value })}
-              placeholder="Ex: Rénovation appartement Paris 16e"
-              className="h-9 sm:h-10"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Titre du projet</Label>
+              <Input
+                value={document.title || ''}
+                onChange={(e) => onDocumentChange({ ...document, title: e.target.value })}
+                placeholder="Ex: Rénovation appartement Paris 16e"
+                className="h-9 sm:h-10"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-sm">
+                <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                Référence client
+              </Label>
+              <Input
+                value={document.reference_client || ''}
+                onChange={(e) => onDocumentChange({ ...document, reference_client: e.target.value })}
+                placeholder="Référence interne du client"
+                className="h-9 sm:h-10"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
