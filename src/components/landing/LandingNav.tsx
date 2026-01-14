@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { MegaMenu } from "./MegaMenu";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import gsap from "gsap";
 import {
   NavigationMenu,
@@ -118,6 +119,7 @@ export const LandingNav = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
+            <LanguageSwitcher variant="button" />
             <Link to="/auth" className="nav-item">
               <Button variant="ghost" className="font-medium">
                 Se connecter
@@ -209,6 +211,9 @@ export const LandingNav = () => {
             </a>
 
             <div className="pt-4 space-y-3 border-t border-border">
+              <div className="flex justify-center pb-2">
+                <LanguageSwitcher variant="button" />
+              </div>
               <Link to="/auth" className="block" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button variant="outline" className="w-full">
                   Se connecter
