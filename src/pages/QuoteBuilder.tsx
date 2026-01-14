@@ -303,8 +303,10 @@ export default function QuoteBuilder() {
         });
       }
       
-      // Save lines/phases for both new and existing documents
+      // Save lines/phases for both new and existing documents - PARALLEL for performance
       if (documentId && lines.length > 0) {
+        const saveOperations: Promise<unknown>[] = [];
+        
         for (const line of lines) {
           const phaseData = quoteLineToPhase(line);
           phaseData.document_id = documentId;
@@ -313,11 +315,11 @@ export default function QuoteBuilder() {
           const existsInDb = phases?.some(p => p.id === line.id);
           
           if (existsInDb) {
-            await updatePhase.mutateAsync({ id: line.id, ...phaseData });
+            saveOperations.push(updatePhase.mutateAsync({ id: line.id, ...phaseData }));
           } else {
             // Create new line (remove id to let DB generate)
             const { id: _lineId, ...phaseDataWithoutId } = phaseData;
-            await createPhase.mutateAsync(phaseDataWithoutId);
+            saveOperations.push(createPhase.mutateAsync(phaseDataWithoutId));
           }
         }
         
@@ -326,9 +328,12 @@ export default function QuoteBuilder() {
           const currentLineIds = lines.map(l => l.id).filter(Boolean);
           const linesToDelete = phases.filter(p => !currentLineIds.includes(p.id));
           for (const line of linesToDelete) {
-            await deletePhase.mutateAsync({ id: line.id, documentId });
+            saveOperations.push(deletePhase.mutateAsync({ id: line.id, documentId }));
           }
         }
+        
+        // Execute all save operations in parallel
+        await Promise.all(saveOperations);
       }
       
       setHasChanges(false);
