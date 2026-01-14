@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, Receipt, Clock, CreditCard, Send } from "lucide-react";
+import { LayoutDashboard, Calendar, Receipt, Clock, RefreshCw, Building2 } from "lucide-react";
 import { InvoicingOverviewTab } from "./invoicing/InvoicingOverviewTab";
 import { InvoiceScheduleTab } from "./invoicing/InvoiceScheduleTab";
 import { InvoiceBuilderSheet } from "@/components/invoicing/InvoiceBuilderSheet";
-import { ChorusProPanel } from "@/components/invoicing/ChorusProPanel";
+import { ChorusProPanel } from "./invoicing/ChorusProPanel";
 import { BillableTimeTab } from "./invoicing/BillableTimeTab";
+import { InvoicesListTab } from "./invoicing/InvoicesListTab";
+import { CreditNotesTab } from "./invoicing/CreditNotesTab";
 import { BillableTimeEntry } from "@/hooks/useBillableTime";
 
 interface ProjectInvoicingTabProps {

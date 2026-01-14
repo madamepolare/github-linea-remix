@@ -451,7 +451,6 @@ export function BudgetOverviewTab({ projectId }: BudgetOverviewTabProps) {
           </Card>
         )}
       </div>
-      </div>
     </div>
   );
 }
