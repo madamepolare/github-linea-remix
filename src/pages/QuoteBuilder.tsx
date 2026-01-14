@@ -104,6 +104,7 @@ export default function QuoteBuilder() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
   
   const [document, setDocument] = useState<Partial<QuoteDocument>>({
     document_type: (documentType === 'quote' || documentType === 'contract') ? documentType : 'contract',
@@ -617,7 +618,7 @@ export default function QuoteBuilder() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowSendDialog(true)} disabled={isNew}>
                 <Send className="h-4 w-4 mr-2" />
                 Envoyer au client
               </DropdownMenuItem>
@@ -828,6 +829,17 @@ export default function QuoteBuilder() {
         document={document as QuoteDocument}
         lines={lines}
         onConvert={handleConvertToProject}
+      />
+      
+      {/* Send quote dialog */}
+      <SendQuoteDialog
+        open={showSendDialog}
+        onOpenChange={setShowSendDialog}
+        document={document as QuoteDocument}
+        onSent={() => {
+          // Refresh document to get updated sent_at status
+          documentQuery.refetch();
+        }}
       />
     </div>
     </LineFeatureProvider>
