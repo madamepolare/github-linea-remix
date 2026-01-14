@@ -11,12 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, X, ChevronDown } from "lucide-react";
+import { Loader2, X, ChevronDown, Building2, Search } from "lucide-react";
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { COMPANY_CATEGORIES, COMPANY_TYPE_CONFIG, CompanyCategory, CompanyType } from "@/lib/crmTypes";
 import { cn } from "@/lib/utils";
 import { SiretSearchInput } from "./SiretSearchInput";
+import { SiretSearchDialog } from "./SiretSearchDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -198,6 +199,33 @@ export function EditCompanyDialog({ company, open, onOpenChange }: EditCompanyDi
         </DialogHeader>
         <ScrollArea className="flex-1 -mx-6 px-6">
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
+            {/* Quick SIRET Search */}
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <Building2 className="h-5 w-5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Recherche SIRET</p>
+                <p className="text-xs text-muted-foreground">Mettre à jour depuis le registre national</p>
+              </div>
+              <SiretSearchDialog
+                onSelect={(company) => {
+                  form.setValue("name", company.name);
+                  form.setValue("siren", company.siren);
+                  form.setValue("siret", company.siret);
+                  if (company.address) form.setValue("address", company.address);
+                  if (company.postal_code) form.setValue("postal_code", company.postal_code);
+                  if (company.city) form.setValue("city", company.city);
+                  if (company.code_naf) form.setValue("code_naf", company.code_naf);
+                  if (company.forme_juridique) form.setValue("forme_juridique", company.forme_juridique);
+                }}
+                trigger={
+                  <Button type="button" variant="default" size="sm" className="gap-2">
+                    <Search className="h-4 w-4" />
+                    Rechercher
+                  </Button>
+                }
+              />
+            </div>
+
             {/* Name */}
             <div className="space-y-2">
               <Label>Nom de l'entreprise *</Label>
