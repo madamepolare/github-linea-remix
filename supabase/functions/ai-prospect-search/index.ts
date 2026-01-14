@@ -5,37 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type FirecrawlSearchResult = {
-  url?: string;
-  title?: string;
-  description?: string;
-  markdown?: string;
-};
-
-type FirecrawlSearchResponse = {
-  success: boolean;
-  data?: FirecrawlSearchResult[];
-  error?: string;
-};
-
-type FirecrawlMapResponse = {
-  success: boolean;
-  links?: string[];
-  error?: string;
-};
-
-type FirecrawlScrapeResponse = {
-  success: boolean;
-  data?: {
-    title?: string;
-    markdown?: string;
-    html?: string;
-    links?: string[];
-    metadata?: Record<string, unknown>;
-  };
-  error?: string;
-};
-
 interface ContactResult {
   name: string;
   email?: string;
@@ -60,159 +29,91 @@ interface ProspectResult {
   confidence_score?: number;
 }
 
-function safeUrl(input: string | undefined | null): string | null {
-  if (!input) return null;
-  const s = input.trim();
-  if (!s) return null;
-  try {
-    if (s.startsWith("http://") || s.startsWith("https://")) return s;
-    return `https://${s}`;
-  } catch {
-    return null;
-  }
-}
-
-function getRootWebsite(url: string): string | null {
-  try {
-    const u = new URL(url);
-    return `${u.protocol}//${u.hostname}`;
-  } catch {
-    return null;
-  }
-}
-
 function normalizeEmail(email: string): string {
   return email.trim().replace(/^mailto:/i, "").split("?")[0].toLowerCase();
+}
+
+function isValidEmail(email: string): boolean {
+  return (
+    email.includes("@") &&
+    !email.includes("example.com") &&
+    !email.includes("test.com") &&
+    !email.includes("placeholder") &&
+    !email.includes("@sentry") &&
+    !email.includes("@wix") &&
+    !email.endsWith(".png") &&
+    !email.endsWith(".jpg") &&
+    email.length < 80 &&
+    email.length > 5
+  );
 }
 
 function isLikelyGenericEmail(email: string): boolean {
   const local = email.split("@")[0] || "";
   return [
-    "contact",
-    "info",
-    "bonjour",
-    "hello",
-    "commercial",
-    "sales",
-    "support",
-    "service",
-    "communication",
-    "presse",
-    "admin",
-    "rh",
+    "contact", "info", "bonjour", "hello", "commercial", "sales",
+    "support", "service", "communication", "presse", "admin", "rh",
+    "accueil", "direction", "secretariat", "comptabilite", "webmaster"
   ].includes(local.toLowerCase());
 }
 
-function extractEmailsFromHtml(html: string): string[] {
+function extractEmailsFromText(text: string): string[] {
   const out: string[] = [];
 
-  // mailto:
-  const mailtoRegex = /href\s*=\s*["']mailto:([^"'>\s]+)["']/gi;
+  // mailto: links
+  const mailtoRegex = /mailto:([^"'\s>]+)/gi;
   let m: RegExpExecArray | null;
-  while ((m = mailtoRegex.exec(html)) !== null) {
+  while ((m = mailtoRegex.exec(text)) !== null) {
     out.push(normalizeEmail(m[1]));
   }
 
   // visible emails
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  const matches = html.match(emailRegex) || [];
+  const matches = text.match(emailRegex) || [];
   for (const e of matches) out.push(normalizeEmail(e));
 
-  // Remove obvious placeholders
-  return [...new Set(out)].filter((e) =>
-    e.includes("@") &&
-    !e.includes("example.com") &&
-    !e.includes("test.com") &&
-    !e.includes("placeholder") &&
-    e.length < 80
-  );
+  return [...new Set(out)].filter(isValidEmail);
 }
 
 function extractPhonesFromText(text: string): string[] {
   const phones = new Set<string>();
-
   const patterns = [
     /(?:\+33|0033)\s*[1-9](?:[\s.-]*\d{2}){4}/g,
     /\b0[1-9](?:[\s.-]*\d{2}){4}\b/g,
   ];
-
   for (const p of patterns) {
     const m = text.match(p) || [];
     for (const raw of m) phones.add(raw.replace(/\s+/g, " ").trim());
   }
-
   return [...phones];
 }
 
-function pickRelevantUrls(root: string, urls: string[]): string[] {
-  // Keep only same-origin links
-  const candidates = urls.filter((u) => u.startsWith(root));
-
-  // Prioritize contact/team/about/legal pages
-  const keywords = [
-    "contact",
-    "contacts",
-    "equipe",
-    "team",
-    "about",
-    "a-propos",
-    "apropos",
-    "notre-equipe",
-    "gouvernance",
-    "organisation",
-    "mentions-legales",
-    "legal",
-    "presse",
-    "communication",
-    "direction",
-    "fondation",
-    "nous-contacter",
-  ];
-
-  const scored = candidates
-    .map((u) => {
-      const path = u.toLowerCase();
-      const score = keywords.reduce((acc, k) => acc + (path.includes(k) ? 1 : 0), 0);
-      return { u, score };
-    })
-    .filter((x) => x.score > 0)
-    .sort((a, b) => b.score - a.score);
-
-  // Always include root homepage scrape too (first)
-  const unique = new Set<string>();
-  const selected: string[] = [];
-  const homepage = root.endsWith("/") ? root : `${root}/`;
-  unique.add(homepage);
-  selected.push(homepage);
-
-  for (const s of scored) {
-    if (selected.length >= 8) break;
-    if (!unique.has(s.u)) {
-      unique.add(s.u);
-      selected.push(s.u);
-    }
+function extractAddressFromText(text: string): { city?: string; postalCode?: string } {
+  const match = text.match(/\b(\d{5})\s+([A-ZÀÂÄÉÈÊËÏÎÔÙÛÇ][a-zàâäéèêëïîôùûç]+(?:[\s-][A-ZÀÂÄÉÈÊËÏÎÔÙÛÇ]?[a-zàâäéèêëïîôùûç]+)*)/);
+  if (match) {
+    return { postalCode: match[1], city: match[2] };
   }
-
-  return selected;
+  return {};
 }
 
-function tryInferNameAndRoleFromMarkdown(markdown: string, email: string): { name?: string; role?: string } {
-  const lines = markdown.split(/\r?\n/);
+function tryInferNameAndRoleFromContext(text: string, email: string): { name?: string; role?: string } {
+  const lines = text.split(/\r?\n/);
   const target = email.toLowerCase();
+  const emailLocal = email.split("@")[0];
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (!line.toLowerCase().includes(target)) continue;
+    if (!line.toLowerCase().includes(target) && !line.toLowerCase().includes(emailLocal)) continue;
 
-    // Look around the line (previous + same + next)
-    const window = [lines[i - 1], line, lines[i + 1]].filter(Boolean).join(" \n ");
+    // Look around the line
+    const window = [lines[i - 2], lines[i - 1], line, lines[i + 1], lines[i + 2]].filter(Boolean).join(" ");
 
     // Role keywords (French)
-    const roleRegex = /(directeur|directrice|responsable|chef\.?|charg[ée]e?|head|manager)\s+([\p{L}’' -]{2,60})/iu;
+    const roleRegex = /(directeur|directrice|responsable|chef\.?|chargé\.?e?|head|manager|président\.?e?|délégué\.?e?|coordinat(?:eur|rice))\s+(?:de\s+(?:la\s+)?|du\s+|des\s+)?([\p{L}'' -]{2,40})/iu;
     const roleMatch = window.match(roleRegex);
 
-    // Name heuristic: 2-3 capitalized words
-    const nameRegex = /\b([A-ZÀÂÄÉÈÊËÏÎÔÙÛÇ][\p{L}’'-]+\s+[A-ZÀÂÄÉÈÊËÏÎÔÙÛÇ][\p{L}’'-]+(?:\s+[A-ZÀÂÄÉÈÊËÏÎÔÙÛÇ][\p{L}’'-]+)?)\b/u;
+    // Name heuristic: 2-3 capitalized words near email
+    const nameRegex = /\b([A-ZÀÂÄÉÈÊËÏÎÔÙÛÇ][\p{L}''-]+\s+[A-ZÀÂÄÉÈÊËÏÎÔÙÛÇ][\p{L}''-]+(?:\s+[A-ZÀÂÄÉÈÊËÏÎÔÙÛÇ][\p{L}''-]+)?)\b/u;
     const nameMatch = window.match(nameRegex);
 
     return {
@@ -224,69 +125,33 @@ function tryInferNameAndRoleFromMarkdown(markdown: string, email: string): { nam
   return {};
 }
 
-async function firecrawlSearch(apiKey: string, query: string): Promise<FirecrawlSearchResponse> {
-  const res = await fetch("https://api.firecrawl.dev/v1/search", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      query,
-      limit: 12,
-      lang: "fr",
-      country: "FR",
-    }),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    return { success: false, error: data?.error || `Search failed: ${res.status}` };
+function getRootWebsite(url: string): string | null {
+  try {
+    const u = new URL(url);
+    return `${u.protocol}//${u.hostname}`;
+  } catch {
+    return null;
   }
-  return data as FirecrawlSearchResponse;
 }
 
-async function firecrawlMap(apiKey: string, rootUrl: string): Promise<FirecrawlMapResponse> {
-  const res = await fetch("https://api.firecrawl.dev/v1/map", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      url: rootUrl,
-      includeSubdomains: false,
-      limit: 1500,
-    }),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    return { success: false, error: data?.error || `Map failed: ${res.status}` };
+function getCompanyNameFromTitle(title: string, url: string): string {
+  // Clean title
+  let name = (title || "").split(/[-–|:]/)[0]?.trim();
+  
+  // Remove common suffixes
+  name = name.replace(/\s*(accueil|home|contact|nous contacter|bienvenue)$/i, "").trim();
+  
+  if (!name || name.length < 2) {
+    try {
+      const hostname = new URL(url).hostname.replace(/^www\./, "");
+      name = hostname.split(".")[0];
+      name = name.charAt(0).toUpperCase() + name.slice(1);
+    } catch {
+      name = url;
+    }
   }
-  return data as FirecrawlMapResponse;
-}
-
-async function firecrawlScrape(apiKey: string, url: string): Promise<FirecrawlScrapeResponse> {
-  const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      url,
-      formats: ["markdown", "html", "links"],
-      onlyMainContent: false,
-      waitFor: 1500,
-    }),
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    return { success: false, error: data?.error || `Scrape failed: ${res.status}` };
-  }
-  return data as FirecrawlScrapeResponse;
+  
+  return name;
 }
 
 serve(async (req) => {
@@ -312,124 +177,125 @@ serve(async (req) => {
       });
     }
 
-    // IMPORTANT: no hallucination — we only return what we can extract from pages.
-    let q = query;
-    if (region) q += ` ${region}`;
-    if (industry) q += ` ${industry}`;
+    // Build search query
+    let searchQuery = query;
+    if (region) searchQuery += ` ${region}`;
+    if (industry) searchQuery += ` ${industry}`;
+    
+    // Add terms to find contact pages with real emails
+    searchQuery += ` (contact OR "nous contacter" OR équipe OR direction) email`;
 
-    // Encourage finding official sites + contact pages.
-    const searchQuery = `${q} site:.fr (contact OR "nous contacter" OR équipe OR gouvernance OR direction)`;
+    console.log("Searching:", searchQuery);
 
-    const search = await firecrawlSearch(apiKey, searchQuery);
-    if (!search.success) {
-      return new Response(JSON.stringify({ error: "Search failed", details: search.error }), {
+    // Step 1: Search with Firecrawl (with scrape to get content)
+    const searchRes = await fetch("https://api.firecrawl.dev/v1/search", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: searchQuery,
+        limit: 15,
+        lang: "fr",
+        country: "FR",
+        scrapeOptions: {
+          formats: ["markdown", "html"],
+        },
+      }),
+    });
+
+    if (!searchRes.ok) {
+      const err = await searchRes.text();
+      console.error("Search failed:", err);
+      return new Response(JSON.stringify({ error: "Search failed", details: err }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const urls = (search.data || [])
-      .map((r) => safeUrl(r.url))
-      .filter(Boolean) as string[];
-
-    // Convert to root websites
-    const roots = [...new Set(urls.map(getRootWebsite).filter(Boolean) as string[])].slice(0, 6);
+    const searchData = await searchRes.json();
+    console.log("Search returned", searchData?.data?.length || 0, "results");
 
     const prospects: ProspectResult[] = [];
+    const seenDomains = new Set<string>();
 
-    for (const root of roots) {
-      // 1) Map the site to find contact pages
-      const map = await firecrawlMap(apiKey, root);
-      const mapped = map.success ? map.links || [] : [];
-      const pagesToScrape = pickRelevantUrls(root, mapped.length ? mapped : [root]);
+    if (searchData.success && searchData.data) {
+      for (const result of searchData.data) {
+        const url = result.url || "";
+        const title = result.title || "";
+        const markdown = result.markdown || result.description || "";
+        const html = result.html || "";
+        const combinedText = `${markdown}\n${html}`;
 
-      // 2) Scrape selected pages
-      const scrapeResults: FirecrawlScrapeResponse[] = [];
-      for (const page of pagesToScrape) {
-        const scraped = await firecrawlScrape(apiKey, page);
-        if (scraped.success && scraped.data) scrapeResults.push(scraped);
-      }
+        if (!url || combinedText.length < 50) continue;
 
-      // 3) Extract emails/phones from real HTML/markdown (including mailto)
-      const allEmails = new Set<string>();
-      const allPhones = new Set<string>();
-      let bestTitle: string | undefined;
-      let bestSourceUrl: string | undefined;
-      let combinedMarkdown = "";
+        const rootSite = getRootWebsite(url);
+        if (!rootSite || seenDomains.has(rootSite)) continue;
+        seenDomains.add(rootSite);
 
-      for (let i = 0; i < scrapeResults.length; i++) {
-        const d = scrapeResults[i].data!;
-        if (!bestTitle && d.title) bestTitle = d.title;
-        if (!bestSourceUrl && pagesToScrape[i]) bestSourceUrl = pagesToScrape[i];
+        // Extract data from the scraped content
+        const emails = extractEmailsFromText(combinedText);
+        const phones = extractPhonesFromText(combinedText);
+        const address = extractAddressFromText(combinedText);
+        const companyName = getCompanyNameFromTitle(title, url);
 
-        if (d.html) {
-          for (const e of extractEmailsFromHtml(d.html)) allEmails.add(e);
+        // Build contacts from non-generic emails
+        const personalEmails = emails.filter(e => !isLikelyGenericEmail(e));
+        const genericEmails = emails.filter(e => isLikelyGenericEmail(e));
+
+        const contacts: ContactResult[] = [];
+        
+        // Personal emails -> contacts with inferred names
+        for (const email of personalEmails.slice(0, 5)) {
+          const inferred = tryInferNameAndRoleFromContext(combinedText, email);
+          contacts.push({
+            name: inferred.name || email.split("@")[0].replace(/[._-]/g, " "),
+            email,
+            role: inferred.role,
+          });
         }
-        if (d.markdown) {
-          combinedMarkdown += `\n\n${d.markdown}`;
-          for (const p of extractPhonesFromText(d.markdown)) allPhones.add(p);
+
+        // Skip if no useful data at all
+        if (emails.length === 0 && phones.length === 0) {
+          console.log("Skipping", companyName, "- no emails or phones found");
+          continue;
         }
-      }
 
-      // Build contacts from emails, prioritizing non-generic emails
-      const emailsSorted = [...allEmails].sort((a, b) => {
-        const ag = isLikelyGenericEmail(a) ? 1 : 0;
-        const bg = isLikelyGenericEmail(b) ? 1 : 0;
-        return ag - bg;
-      });
+        const confidence = contacts.length > 0 ? 0.9 : (emails.length > 0 ? 0.7 : 0.5);
 
-      const contacts: ContactResult[] = [];
-      for (const email of emailsSorted.slice(0, 8)) {
-        const inferred = combinedMarkdown ? tryInferNameAndRoleFromMarkdown(combinedMarkdown, email) : {};
-        contacts.push({
-          name: inferred.name || email.split("@")[0],
-          email,
-          role: inferred.role,
+        prospects.push({
+          company_name: companyName,
+          company_website: rootSite,
+          company_city: address.city,
+          company_postal_code: address.postalCode,
+          company_phone: phones[0],
+          company_email: genericEmails[0] || emails[0],
+          contacts,
+          notes: `Données extraites de: ${url}`,
+          source_url: url,
+          confidence_score: confidence,
         });
+
+        console.log(`Added: ${companyName} - ${contacts.length} contacts, ${emails.length} emails`);
       }
-
-      // Company name: derive from title (without hallucination)
-      let companyName = (bestTitle || "").split(/[-–|]/)[0]?.trim();
-      if (!companyName) {
-        // fallback to hostname
-        try {
-          companyName = new URL(root).hostname.replace(/^www\./, "");
-        } catch {
-          companyName = root;
-        }
-      }
-
-      const phones = [...allPhones];
-
-      // If we only got generic emails and nothing else, skip (too low signal)
-      const hasUseful = contacts.length > 0 || phones.length > 0;
-      if (!hasUseful) continue;
-
-      prospects.push({
-        company_name: companyName,
-        company_website: root,
-        company_phone: phones[0],
-        company_email: emailsSorted.find((e) => isLikelyGenericEmail(e)) || emailsSorted[0],
-        contacts,
-        notes: `Données extraites depuis pages du site (mailto + pages contact/équipe).` ,
-        source_url: bestSourceUrl || root,
-        confidence_score: contacts.length > 0 ? 0.85 : 0.6,
-      });
     }
+
+    console.log(`Total: ${prospects.length} prospects with verified data`);
 
     return new Response(
       JSON.stringify({
         prospects,
-        citations: prospects.map((p) => p.source_url).filter(Boolean),
+        citations: prospects.map(p => p.source_url).filter(Boolean),
         query,
         count: prospects.length,
-        source: "firecrawl_crawl_verified",
+        source: "firecrawl_verified",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error in ai-prospect-search:", error);
+    console.error("Error:", error);
     return new Response(JSON.stringify({ error: "Internal server error", details: msg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
