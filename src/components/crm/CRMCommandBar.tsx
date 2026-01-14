@@ -116,7 +116,7 @@ export function CRMCommandBar({ open, onOpenChange }: CRMCommandBarProps) {
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput 
-        placeholder="Rechercher contacts, entreprises, opportunités..." 
+        placeholder="Rechercher contacts, entreprises, leads..." 
         value={search}
         onValueChange={setSearch}
       />
@@ -279,7 +279,7 @@ export function CRMCommandBar({ open, onOpenChange }: CRMCommandBarProps) {
 
         {/* Leads */}
         {filteredLeads.length > 0 && (
-          <CommandGroup heading={`Opportunités ${search ? `(${filteredLeads.length})` : ""}`}>
+          <CommandGroup heading={`Leads ${search ? `(${filteredLeads.length})` : ""}`}>
             {filteredLeads.map((lead) => (
               <CommandItem
                 key={lead.id}
@@ -339,7 +339,7 @@ export function CRMCommandBar({ open, onOpenChange }: CRMCommandBarProps) {
               </CommandItem>
               <CommandItem onSelect={() => handleSelect("/crm/leads")}>
                 <Target className="mr-2 h-4 w-4" />
-                Opportunités & Pipelines
+                Leads & Pipelines
               </CommandItem>
             </CommandGroup>
           </>

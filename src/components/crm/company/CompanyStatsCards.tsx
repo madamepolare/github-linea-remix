@@ -37,7 +37,7 @@ export function CompanyStatsCards({
       bgColor: "bg-primary/10",
     },
     {
-      label: "Opportunités",
+      label: "Leads",
       value: leadsCount,
       icon: Target,
       color: "text-chart-2",
