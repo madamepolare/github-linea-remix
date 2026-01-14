@@ -150,13 +150,17 @@ export function CompanyInfoPanel({
                 Type d'entreprise
               </CardTitle>
               <SiretSearchDialog
-                onSelect={(company) => {
+                onSelect={(result) => {
                   onEditDataChange({
                     ...editData,
-                    name: company.name,
-                    address: company.address || editData.address,
-                    postal_code: company.postal_code || editData.postal_code,
-                    city: company.city || editData.city,
+                    name: result.name || editData.name,
+                    address: result.address || editData.address,
+                    postal_code: result.postal_code || editData.postal_code,
+                    city: result.city || editData.city,
+                    siret: result.siret || editData.siret,
+                    siren: result.siren || editData.siren,
+                    code_naf: result.code_naf || editData.code_naf,
+                    forme_juridique: result.forme_juridique || editData.forme_juridique,
                   });
                 }}
                 trigger={
