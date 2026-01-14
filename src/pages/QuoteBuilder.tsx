@@ -27,7 +27,15 @@ import {
   Receipt,
   LucideIcon
 } from 'lucide-react';
-import { QuoteDocument, QuoteLine, phaseToQuoteLine, quoteLineToPhase, DOCUMENT_STATUS_LABELS } from '@/types/quoteTypes';
+import { QuoteDocument, QuoteLine, phaseToQuoteLine, quoteLineToPhase, DOCUMENT_STATUS_LABELS, DocumentStatus } from '@/types/quoteTypes';
+import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { QuoteGeneralTab } from '@/components/commercial/quote-builder/QuoteGeneralTab';
 import { QuoteLinesEditor } from '@/components/commercial/quote-builder/QuoteLinesEditor';
 import { QuoteFeesAndLinesTab } from '@/components/commercial/quote-builder/QuoteFeesAndLinesTab';
@@ -117,7 +125,12 @@ export default function QuoteBuilder() {
   
   // Get enabled tabs from current contract type
   const currentContractType = activeContractTypes.find(t => t.id === document.contract_type_id);
-  const enabledTabs: BuilderTab[] = currentContractType?.builder_tabs || ['general', 'lines', 'terms'];
+  const baseTabs: BuilderTab[] = currentContractType?.builder_tabs || ['general', 'lines', 'terms'];
+  
+  // Always include 'invoicing' tab for invoice scheduling
+  const enabledTabs: BuilderTab[] = baseTabs.includes('invoicing') 
+    ? baseTabs 
+    : [...baseTabs.filter(t => t !== 'terms'), 'invoicing', 'terms'];
 
   // Merge fees and lines into single tab when both are enabled
   const hasBothFeesAndLines = currentContractType?.builder_tabs?.includes('fees') && currentContractType?.builder_tabs?.includes('lines');
@@ -437,11 +450,32 @@ export default function QuoteBuilder() {
               <h1 className="font-semibold text-sm sm:text-base truncate">
                 {isNew ? 'Nouveau devis' : document.title || 'Édition du devis'}
               </h1>
-              {document.status && (
-                <Badge variant={statusVariant} className="text-xs shrink-0">
-                  {DOCUMENT_STATUS_LABELS[document.status]}
-                </Badge>
-              )}
+              <Select
+                value={document.status || 'draft'}
+                onValueChange={(v) => handleDocumentChange({ status: v as DocumentStatus })}
+              >
+                <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(DOCUMENT_STATUS_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "w-2 h-2 rounded-full",
+                          value === 'draft' && "bg-muted-foreground",
+                          value === 'sent' && "bg-blue-500",
+                          value === 'accepted' && "bg-green-500",
+                          value === 'rejected' && "bg-destructive",
+                          value === 'expired' && "bg-amber-500",
+                          value === 'signed' && "bg-primary"
+                        )} />
+                        {label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground truncate">
               {document.document_number || 'Brouillon'}
