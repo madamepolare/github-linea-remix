@@ -16,9 +16,14 @@ import { PipelineStage } from "@/hooks/useCRMPipelines";
 import { PipelineEntry, useContactPipeline } from "@/hooks/useContactPipeline";
 import { useEmailTemplates } from "@/hooks/useEmailTemplates";
 import { useGmailConnection } from "@/hooks/useGmailConnection";
-import { Send, SkipForward, Mail, AlertCircle, Settings } from "lucide-react";
+import { Send, SkipForward, Mail, AlertCircle, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface PipelineEmailModalProps {
   open: boolean;
@@ -46,9 +51,13 @@ export function PipelineEmailModal({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [showAiPrompt, setShowAiPrompt] = useState(false);
 
   // Get recipient info
   const recipientName = entry?.contact?.name || entry?.company?.name || "Contact";
+  const companyName = entry?.company?.name;
   const recipientEmail = entry?.contact?.email || entry?.company?.email;
 
   // Load template when stage changes
@@ -88,6 +97,42 @@ export function PipelineEmailModal({
       setBody(`Bonjour ${recipientName},\n\n[Votre message ici]\n\nCordialement,\nL'équipe`);
     }
   }, [stage, templates, entry, recipientName]);
+
+  const handleGenerateWithAI = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error("Veuillez entrer une instruction pour l'IA");
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-email-content', {
+        body: {
+          prompt: aiPrompt,
+          recipientName,
+          companyName,
+          senderName: "L'équipe",
+          context: stage?.name ? `Étape du pipeline: ${stage.name}` : undefined,
+          tone: 'professional',
+          language: 'fr',
+        },
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setSubject(data.subject);
+      setBody(data.body);
+      setShowAiPrompt(false);
+      setAiPrompt("");
+      toast.success("Email généré avec succès");
+    } catch (error) {
+      console.error("Error generating email:", error);
+      toast.error(error instanceof Error ? error.message : "Erreur lors de la génération");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleSend = async () => {
     if (!entry || !stage || !recipientEmail) {
@@ -144,6 +189,52 @@ export function PipelineEmailModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* AI Generation Section */}
+          <Collapsible open={showAiPrompt} onOpenChange={setShowAiPrompt}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2"
+                type="button"
+              >
+                <Sparkles className="h-4 w-4 text-primary" />
+                Générer avec l'IA
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3 space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="ai-prompt" className="text-sm">
+                  Décrivez le contenu souhaité
+                </Label>
+                <Textarea
+                  id="ai-prompt"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="Ex: Proposer une collaboration pour un projet de rénovation, mentionner notre expertise en architecture d'intérieur..."
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
+              <Button
+                onClick={handleGenerateWithAI}
+                disabled={isGenerating || !aiPrompt.trim()}
+                size="sm"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Génération...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Générer
+                  </>
+                )}
+              </Button>
+            </CollapsibleContent>
+          </Collapsible>
+
           {/* Recipient */}
           <div className="space-y-2">
             <Label>Destinataire</Label>
