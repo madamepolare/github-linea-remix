@@ -444,17 +444,41 @@ export default function QuoteBuilder() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
-          <FileText className="h-5 w-5 text-primary hidden sm:block shrink-0" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="font-semibold text-sm sm:text-base truncate">
-                {isNew ? 'Nouveau devis' : document.title || 'Édition du devis'}
-              </h1>
+          
+          {/* Document type toggle */}
+          <div className="flex items-center bg-muted rounded-lg p-0.5 shrink-0">
+            <Button
+              variant={document.document_type === 'quote' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2.5 text-xs"
+              onClick={() => handleDocumentChange({ document_type: 'quote' })}
+            >
+              Devis
+            </Button>
+            <Button
+              variant={document.document_type === 'contract' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2.5 text-xs"
+              onClick={() => handleDocumentChange({ document_type: 'contract' })}
+            >
+              Contrat
+            </Button>
+          </div>
+          
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={document.title || ''}
+                onChange={(e) => handleDocumentChange({ title: e.target.value })}
+                placeholder={isNew ? 'Titre du projet...' : 'Édition du devis'}
+                className="font-semibold text-sm sm:text-base bg-transparent border-0 focus:ring-0 focus:outline-none w-full min-w-0 placeholder:text-muted-foreground"
+              />
               <Select
                 value={document.status || 'draft'}
                 onValueChange={(v) => handleDocumentChange({ status: v as DocumentStatus })}
               >
-                <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs">
+                <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -477,16 +501,9 @@ export default function QuoteBuilder() {
                 </SelectContent>
               </Select>
             </div>
-            <p className="text-xs sm:text-sm text-muted-foreground truncate">
+            <p className="text-xs text-muted-foreground truncate">
               {document.document_number || 'Brouillon'}
             </p>
-            {(authLoading || !activeWorkspace) && (
-              <p className="text-xs text-muted-foreground truncate">
-                {authLoading
-                  ? 'Session en cours de chargement…'
-                  : 'Aucun workspace actif — veuillez vous reconnecter.'}
-              </p>
-            )}
           </div>
         </div>
         

@@ -14,12 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, User, MapPin, Ruler, Euro, FileText, FolderKanban, Link2, CalendarIcon, UserCircle, Hash } from 'lucide-react';
+import { Building2, User, MapPin, Ruler, Euro, FileText, FolderKanban, Link2, CalendarIcon, UserCircle, Hash, Receipt } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { QuoteDocument, DOCUMENT_TYPE_LABELS } from '@/types/quoteTypes';
-import { useContractTypes, ContractType } from '@/hooks/useContractTypes';
+import { QuoteDocument } from '@/types/quoteTypes';
+import { useContractTypes } from '@/hooks/useContractTypes';
 import { useProjects } from '@/hooks/useProjects';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useContacts } from '@/hooks/useContacts';
@@ -51,7 +51,6 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
   // When contract type changes, update project_type using centralized mapping
   const handleContractTypeChange = (typeId: string) => {
     const contractType = activeContractTypes.find(t => t.id === typeId);
-    // Use centralized mapping for consistent project_type
     const mappedProjectType = getProjectTypeFromCode(contractType?.code);
     
     onDocumentChange({
@@ -67,55 +66,70 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Document Type & Contract Type */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <div className="space-y-2">
-          <Label className="text-sm">Type de document</Label>
-          <Select
-            value={document.document_type || 'quote'}
-            onValueChange={(v) => onDocumentChange({ ...document, document_type: v as any })}
-          >
-            <SelectTrigger className="h-9 sm:h-10">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Type de contrat + Description projet */}
+      <Card>
+        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Type & Description
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Type de contrat</Label>
+              <Select
+                value={document.contract_type_id || ''}
+                onValueChange={handleContractTypeChange}
+              >
+                <SelectTrigger className="h-9 sm:h-10">
+                  <SelectValue placeholder="Sélectionner un type..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeContractTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: type.color }}
+                        />
+                        <span className="truncate">{type.name}</span>
+                        <Badge variant="outline" className="ml-1 text-xs shrink-0 hidden sm:inline-flex">
+                          {type.code}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="space-y-2">
-          <Label className="text-sm">Type de contrat</Label>
-          <Select
-            value={document.contract_type_id || ''}
-            onValueChange={handleContractTypeChange}
-          >
-            <SelectTrigger className="h-9 sm:h-10">
-              <SelectValue placeholder="Sélectionner un type..." />
-            </SelectTrigger>
-            <SelectContent>
-              {activeContractTypes.map((type) => (
-                <SelectItem key={type.id} value={type.id}>
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: type.color }}
-                    />
-                    <span className="truncate">{type.name}</span>
-                    <Badge variant="outline" className="ml-1 text-xs shrink-0 hidden sm:inline-flex">
-                      {type.code}
-                    </Badge>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2 text-sm">
+                <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                Référence client
+              </Label>
+              <Input
+                value={document.reference_client || ''}
+                onChange={(e) => onDocumentChange({ ...document, reference_client: e.target.value })}
+                placeholder="Référence interne du client"
+                className="h-9 sm:h-10"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm">Description du projet</Label>
+            <Textarea
+              value={document.description || ''}
+              onChange={(e) => onDocumentChange({ ...document, description: e.target.value })}
+              placeholder="Décrivez brièvement le projet, son contexte et ses enjeux..."
+              rows={3}
+              className="text-sm"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Link to existing project (Avenant) */}
       {onLinkedProjectChange && (
@@ -167,92 +181,192 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
         </Card>
       )}
 
-      {/* Client Selection */}
+      {/* Client + Contact facturation ensemble */}
       <Card>
         <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
           <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            Client
+            Client & Facturation
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-3 sm:px-6">
+        <CardContent className="space-y-4 px-3 sm:px-6">
           <ClientSelector
             selectedCompanyId={document.client_company_id}
             selectedContactId={document.client_contact_id}
             onCompanyChange={(id) => onDocumentChange({ ...document, client_company_id: id })}
             onContactChange={(id) => onDocumentChange({ ...document, client_contact_id: id })}
           />
+          
+          {/* Contact facturation juste après */}
+          <div className="space-y-2 pt-2 border-t">
+            <Label className="flex items-center gap-2 text-sm">
+              <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
+              Contact facturation
+            </Label>
+            <Select
+              value={document.billing_contact_id || ''}
+              onValueChange={(v) =>
+                onDocumentChange({
+                  ...document,
+                  billing_contact_id: v === '__same_as_primary__' ? undefined : v,
+                })
+              }
+            >
+              <SelectTrigger className="h-9 sm:h-10">
+                <SelectValue placeholder="Même que contact principal" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__same_as_primary__">Même que contact principal</SelectItem>
+                {billingContacts.map((contact) => (
+                  <SelectItem key={contact.id} value={contact.id}>
+                    <div className="flex items-center gap-2">
+                      <User className="h-3 w-3 text-muted-foreground" />
+                      <span>{contact.name}</span>
+                      {contact.email && (
+                        <span className="text-xs text-muted-foreground">({contact.email})</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Billing Contact & Internal Owner */}
+      {/* Responsable interne */}
       <Card>
         <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
           <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <UserCircle className="h-4 w-4" />
-            Responsables
+            Responsable interne
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 sm:px-6">
+          <Select
+            value={document.internal_owner_id || ''}
+            onValueChange={(v) => onDocumentChange({ ...document, internal_owner_id: v || undefined })}
+          >
+            <SelectTrigger className="h-9 sm:h-10">
+              <SelectValue placeholder="Choisir un responsable..." />
+            </SelectTrigger>
+            <SelectContent>
+              {members?.map((member) => (
+                <SelectItem key={member.user_id} value={member.user_id}>
+                  <div className="flex items-center gap-2">
+                    <User className="h-3 w-3 text-muted-foreground" />
+                    <span>{member.profile?.full_name || 'Sans nom'}</span>
+                    {member.profile?.job_title && (
+                      <Badge variant="outline" className="ml-1 text-xs">
+                        {member.profile.job_title}
+                      </Badge>
+                    )}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      {/* Project Details */}
+      <Card>
+        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            Localisation & Surface
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm">Responsable interne</Label>
-              <Select
-                value={document.internal_owner_id || ''}
-                onValueChange={(v) => onDocumentChange({ ...document, internal_owner_id: v || undefined })}
-              >
-                <SelectTrigger className="h-9 sm:h-10">
-                  <SelectValue placeholder="Choisir un responsable..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {members?.map((member) => (
-                    <SelectItem key={member.user_id} value={member.user_id}>
-                      <div className="flex items-center gap-2">
-                        <User className="h-3 w-3 text-muted-foreground" />
-                        <span>{member.profile?.full_name || 'Sans nom'}</span>
-                        {member.profile?.job_title && (
-                          <Badge variant="outline" className="ml-1 text-xs">
-                            {member.profile.job_title}
-                          </Badge>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {fields.address !== false && (
+              <div className="space-y-2">
+                <Label className="text-sm">Adresse</Label>
+                <Input
+                  value={document.project_address || ''}
+                  onChange={(e) => onDocumentChange({ ...document, project_address: e.target.value })}
+                  placeholder="Adresse du projet"
+                  className="h-9 sm:h-10"
+                />
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label className="text-sm">Code postal</Label>
+                <Input
+                  value={document.postal_code || ''}
+                  onChange={(e) => onDocumentChange({ ...document, postal_code: e.target.value })}
+                  placeholder="75001"
+                  className="h-9 sm:h-10"
+                />
+              </div>
+              {fields.city !== false && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Ville</Label>
+                  <Input
+                    value={document.project_city || ''}
+                    onChange={(e) => onDocumentChange({ ...document, project_city: e.target.value })}
+                    placeholder="Ville"
+                    className="h-9 sm:h-10"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm">Contact facturation</Label>
-              <Select
-                value={document.billing_contact_id || ''}
-                onValueChange={(v) =>
-                  onDocumentChange({
-                    ...document,
-                    billing_contact_id: v === '__same_as_primary__' ? undefined : v,
-                  })
-                }
-              >
-                <SelectTrigger className="h-9 sm:h-10">
-                  <SelectValue placeholder="Même que contact principal" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__same_as_primary__">Même que contact principal</SelectItem>
-                  {billingContacts.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      <div className="flex items-center gap-2">
-                        <User className="h-3 w-3 text-muted-foreground" />
-                        <span>{contact.name}</span>
-                        {contact.email && (
-                          <span className="text-xs text-muted-foreground">({contact.email})</span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {fields.surface !== false && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm">
+                  <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
+                  Surface (m²)
+                </Label>
+                <Input
+                  type="number"
+                  value={document.project_surface || ''}
+                  onChange={(e) => onDocumentChange({ ...document, project_surface: parseFloat(e.target.value) || undefined })}
+                  placeholder="0"
+                  className="h-9 sm:h-10"
+                />
+              </div>
+            )}
+
+            {fields.budget && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-sm">
+                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                  Budget global
+                </Label>
+                <Input
+                  type="number"
+                  value={document.project_budget || ''}
+                  onChange={(e) => onDocumentChange({ ...document, project_budget: parseFloat(e.target.value) || undefined })}
+                  placeholder="0"
+                  className="h-9 sm:h-10"
+                />
+              </div>
+            )}
           </div>
+
+          {fields.construction_budget && (
+            <div className="space-y-2 pt-2 border-t">
+              <Label className="flex items-center gap-2 text-sm">
+                <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                Budget travaux (base honoraires)
+              </Label>
+              <Input
+                type="number"
+                value={document.construction_budget || ''}
+                onChange={(e) => onDocumentChange({ ...document, construction_budget: parseFloat(e.target.value) || undefined })}
+                placeholder="0"
+                className="h-9 sm:h-10"
+              />
+              {document.construction_budget && document.fee_percentage && (
+                <p className="text-xs text-muted-foreground">
+                  Honoraires estimés : {formatCurrency(document.construction_budget * (document.fee_percentage / 100))}
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -358,136 +472,6 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                 </PopoverContent>
               </Popover>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Project Details */}
-      <Card>
-        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
-          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Projet
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm">Titre du projet</Label>
-              <Input
-                value={document.title || ''}
-                onChange={(e) => onDocumentChange({ ...document, title: e.target.value })}
-                placeholder="Ex: Rénovation appartement Paris 16e"
-                className="h-9 sm:h-10"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm">
-                <Hash className="h-3.5 w-3.5 text-muted-foreground" />
-                Référence client
-              </Label>
-              <Input
-                value={document.reference_client || ''}
-                onChange={(e) => onDocumentChange({ ...document, reference_client: e.target.value })}
-                placeholder="Référence interne du client"
-                className="h-9 sm:h-10"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm">Description</Label>
-            <Textarea
-              value={document.description || ''}
-              onChange={(e) => onDocumentChange({ ...document, description: e.target.value })}
-              placeholder="Description du projet..."
-              rows={3}
-              className="text-sm"
-            />
-          </div>
-
-          {/* Dynamic fields based on contract type */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {fields.address && (
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm">
-                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                  Adresse
-                </Label>
-                <Input
-                  value={document.project_address || ''}
-                  onChange={(e) => onDocumentChange({ ...document, project_address: e.target.value })}
-                  placeholder="Adresse du projet"
-                  className="h-9 sm:h-10"
-                />
-              </div>
-            )}
-
-            {fields.city && (
-              <div className="space-y-2">
-                <Label className="text-sm">Ville</Label>
-                <Input
-                  value={document.project_city || ''}
-                  onChange={(e) => onDocumentChange({ ...document, project_city: e.target.value })}
-                  placeholder="Ville"
-                  className="h-9 sm:h-10"
-                />
-              </div>
-            )}
-
-            {fields.surface && (
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm">
-                  <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
-                  Surface (m²)
-                </Label>
-                <Input
-                  type="number"
-                  value={document.project_surface || ''}
-                  onChange={(e) => onDocumentChange({ ...document, project_surface: parseFloat(e.target.value) || undefined })}
-                  placeholder="0"
-                  className="h-9 sm:h-10"
-                />
-              </div>
-            )}
-
-            {fields.budget && (
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm">
-                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
-                  Budget global
-                </Label>
-                <Input
-                  type="number"
-                  value={document.project_budget || ''}
-                  onChange={(e) => onDocumentChange({ ...document, project_budget: parseFloat(e.target.value) || undefined })}
-                  placeholder="0"
-                  className="h-9 sm:h-10"
-                />
-              </div>
-            )}
-
-            {fields.construction_budget && (
-              <div className="col-span-1 sm:col-span-2 space-y-2">
-                <Label className="flex items-center gap-2 text-sm">
-                  <Euro className="h-3.5 w-3.5 text-muted-foreground" />
-                  Budget travaux (base honoraires)
-                </Label>
-                <Input
-                  type="number"
-                  value={document.construction_budget || ''}
-                  onChange={(e) => onDocumentChange({ ...document, construction_budget: parseFloat(e.target.value) || undefined })}
-                  placeholder="0"
-                  className="h-9 sm:h-10"
-                />
-                {document.construction_budget && document.fee_percentage && (
-                  <p className="text-xs text-muted-foreground">
-                    Honoraires estimés : {formatCurrency(document.construction_budget * (document.fee_percentage / 100))}
-                  </p>
-                )}
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
