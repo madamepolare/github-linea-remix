@@ -36,6 +36,7 @@ import { CompanyStatsCards } from "@/components/crm/company/CompanyStatsCards";
 import { CompanyContactsSection } from "@/components/crm/company/CompanyContactsSection";
 import { CompanyBillingPanel } from "@/components/crm/company/CompanyBillingPanel";
 import { ContactLeadsSection } from "@/components/crm/contact/ContactLeadsSection";
+import { CompanyPortalSettings } from "@/components/crm/company/CompanyPortalSettings";
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
@@ -332,6 +333,8 @@ export default function CompanyDetail() {
         return <EntityInvoicesList entityType="company" entityId={company.id} />;
       case "commercial":
         return <EntityCommercialList entityType="company" entityId={company.id} />;
+      case "portal":
+        return <CompanyPortalSettings companyId={company.id} companyName={company.name} />;
       default:
         return null;
     }
