@@ -299,7 +299,7 @@ export function QuoteLineItemCompact({
                 type="number"
                 value={line.quantity || 1}
                 onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 1 })}
-                className="h-8 w-16 text-center text-sm border-0 bg-transparent tabular-nums focus:bg-muted/60"
+                className="h-8 w-14 text-center text-sm border-0 bg-transparent tabular-nums focus:bg-muted/60"
                 min={0}
               />
               <div className="h-5 w-px bg-border/50" />
@@ -320,12 +320,39 @@ export function QuoteLineItemCompact({
               </Select>
             </div>
 
-            {/* Amount with € */}
+            {/* Unit price (PU) */}
+            <div className="flex items-center h-8 bg-muted/30 border border-dashed rounded-lg overflow-hidden">
+              <span className="text-xs text-muted-foreground pl-2">PU</span>
+              <Input
+                type="number"
+                value={line.unit_price || 0}
+                onChange={(e) => {
+                  const unitPrice = parseFloat(e.target.value) || 0;
+                  const quantity = line.quantity || 1;
+                  updateLine(line.id, { 
+                    unit_price: unitPrice, 
+                    amount: unitPrice * quantity 
+                  });
+                }}
+                className="h-8 w-20 text-right tabular-nums text-sm border-0 bg-transparent px-2"
+                placeholder="0"
+              />
+              <span className="text-xs text-muted-foreground pr-2">€</span>
+            </div>
+
+            {/* Total amount */}
             <div className="flex items-center h-8 bg-background border rounded-lg overflow-hidden shadow-sm">
               <Input
                 type="number"
                 value={line.amount || 0}
-                onChange={(e) => updateLine(line.id, { amount: parseFloat(e.target.value) || 0, unit_price: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => {
+                  const amount = parseFloat(e.target.value) || 0;
+                  const quantity = line.quantity || 1;
+                  updateLine(line.id, { 
+                    amount: amount, 
+                    unit_price: quantity > 0 ? amount / quantity : amount 
+                  });
+                }}
                 className="h-8 w-24 text-right tabular-nums font-semibold text-sm border-0 bg-transparent px-3"
                 placeholder="0"
               />
