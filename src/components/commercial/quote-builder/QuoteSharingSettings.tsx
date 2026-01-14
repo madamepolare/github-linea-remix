@@ -63,7 +63,9 @@ export function QuoteSharingSettings({ document, onDocumentChange }: QuoteSharin
 
       if (error) throw error;
 
-      const publicUrl = `${window.location.origin}/q/${token}`;
+      // Use the published URL for public access (preview URLs are protected)
+      const publishedUrl = 'https://archigood.lovable.app';
+      const publicUrl = `${publishedUrl}/q/${token}`;
       setGeneratedLink(publicUrl);
       toast.success('Lien de consultation créé');
     } catch (error) {
