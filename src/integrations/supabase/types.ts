@@ -6786,6 +6786,134 @@ export type Database = {
           },
         ]
       }
+      project_purchases: {
+        Row: {
+          amount_ht: number
+          amount_ttc: number | null
+          assigned_to: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          file_url: string | null
+          files: Json | null
+          id: string
+          invoice_date: string | null
+          invoice_number: string | null
+          margin_percentage: number | null
+          notes: string | null
+          payment_date: string | null
+          payment_reference: string | null
+          phase_id: string | null
+          project_id: string
+          purchase_category: Database["public"]["Enums"]["purchase_category"]
+          purchase_type: Database["public"]["Enums"]["purchase_type"]
+          received_date: string | null
+          selling_price: number | null
+          sort_order: number | null
+          status: Database["public"]["Enums"]["purchase_status"]
+          supplier_id: string | null
+          supplier_name: string | null
+          title: string
+          updated_at: string | null
+          vat_rate: number | null
+          workspace_id: string
+        }
+        Insert: {
+          amount_ht?: number
+          amount_ttc?: number | null
+          assigned_to?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          file_url?: string | null
+          files?: Json | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          margin_percentage?: number | null
+          notes?: string | null
+          payment_date?: string | null
+          payment_reference?: string | null
+          phase_id?: string | null
+          project_id: string
+          purchase_category?: Database["public"]["Enums"]["purchase_category"]
+          purchase_type?: Database["public"]["Enums"]["purchase_type"]
+          received_date?: string | null
+          selling_price?: number | null
+          sort_order?: number | null
+          status?: Database["public"]["Enums"]["purchase_status"]
+          supplier_id?: string | null
+          supplier_name?: string | null
+          title: string
+          updated_at?: string | null
+          vat_rate?: number | null
+          workspace_id: string
+        }
+        Update: {
+          amount_ht?: number
+          amount_ttc?: number | null
+          assigned_to?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          file_url?: string | null
+          files?: Json | null
+          id?: string
+          invoice_date?: string | null
+          invoice_number?: string | null
+          margin_percentage?: number | null
+          notes?: string | null
+          payment_date?: string | null
+          payment_reference?: string | null
+          phase_id?: string | null
+          project_id?: string
+          purchase_category?: Database["public"]["Enums"]["purchase_category"]
+          purchase_type?: Database["public"]["Enums"]["purchase_type"]
+          received_date?: string | null
+          selling_price?: number | null
+          sort_order?: number | null
+          status?: Database["public"]["Enums"]["purchase_status"]
+          supplier_id?: string | null
+          supplier_name?: string | null
+          title?: string
+          updated_at?: string | null
+          vat_rate?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_purchases_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "project_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_purchases_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_purchases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_purchases_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_references: {
         Row: {
           awards: string[] | null
@@ -10126,6 +10254,23 @@ export type Database = {
         | "appel_offres_ouvert"
         | "appel_offres_restreint"
         | "negociee"
+      purchase_category:
+        | "subcontract"
+        | "printing"
+        | "rental"
+        | "transport"
+        | "material"
+        | "service"
+        | "other"
+      purchase_status:
+        | "draft"
+        | "pending_validation"
+        | "validated"
+        | "invoice_received"
+        | "payment_pending"
+        | "paid"
+        | "cancelled"
+      purchase_type: "provision" | "supplier_invoice"
       tender_status:
         | "repere"
         | "en_analyse"
@@ -10319,6 +10464,25 @@ export const Constants = {
         "appel_offres_restreint",
         "negociee",
       ],
+      purchase_category: [
+        "subcontract",
+        "printing",
+        "rental",
+        "transport",
+        "material",
+        "service",
+        "other",
+      ],
+      purchase_status: [
+        "draft",
+        "pending_validation",
+        "validated",
+        "invoice_received",
+        "payment_pending",
+        "paid",
+        "cancelled",
+      ],
+      purchase_type: ["provision", "supplier_invoice"],
       tender_status: [
         "repere",
         "en_analyse",
