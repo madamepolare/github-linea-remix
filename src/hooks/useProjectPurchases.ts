@@ -31,6 +31,7 @@ export interface ProjectPurchase {
   files: any[];
   notes: string | null;
   phase_id: string | null;
+  budget_envelope_id: string | null;
   sort_order: number;
   created_by: string | null;
   created_at: string;
@@ -42,6 +43,10 @@ export interface ProjectPurchase {
     logo_url: string | null;
   } | null;
   phase?: {
+    id: string;
+    name: string;
+  } | null;
+  budget_envelope?: {
     id: string;
     name: string;
   } | null;
@@ -70,6 +75,7 @@ export interface CreatePurchaseInput {
   files?: any[];
   notes?: string;
   phase_id?: string;
+  budget_envelope_id?: string;
 }
 
 export interface UpdatePurchaseInput extends Partial<CreatePurchaseInput> {
@@ -97,7 +103,8 @@ export function useProjectPurchases(projectId: string) {
         .select(`
           *,
           supplier:crm_companies(id, name, logo_url),
-          phase:project_phases(id, name)
+          phase:project_phases(id, name),
+          budget_envelope:project_budget_envelopes(id, name)
         `)
         .eq("project_id", projectId)
         .eq("workspace_id", activeWorkspace.id)
