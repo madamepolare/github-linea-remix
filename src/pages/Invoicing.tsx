@@ -28,6 +28,8 @@ import {
   RefreshCw,
   FileDown,
   Zap,
+  Bell,
+  FileCode,
 } from 'lucide-react';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -59,8 +61,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useInvoices, useInvoiceStats, useDeleteInvoice } from '@/hooks/useInvoices';
+import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { InvoiceBuilderSheet } from '@/components/invoicing/InvoiceBuilderSheet';
+import { InvoiceRemindersPanel } from '@/components/invoicing/InvoiceRemindersPanel';
+import { RecordPaymentDialog } from '@/components/invoicing/RecordPaymentDialog';
+import { CreateCreditNoteDialog } from '@/components/invoicing/CreateCreditNoteDialog';
+import { generateFacturXXML, downloadFacturXXML, FacturXAgencyInfo } from '@/lib/facturx';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
   draft: { label: 'Brouillon', color: 'bg-muted text-muted-foreground', icon: FileText },
@@ -88,9 +96,14 @@ export default function Invoicing() {
   const [statusFilter, setStatusFilter] = useState<string>(filter || 'all');
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | undefined>();
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | undefined>();
+  const [creditNoteDialogOpen, setCreditNoteDialogOpen] = useState(false);
+  const [creditNoteInvoiceId, setCreditNoteInvoiceId] = useState<string | undefined>();
 
   const { data: invoices, isLoading } = useInvoices();
   const { data: stats, isLoading: statsLoading } = useInvoiceStats();
+  const { agencyInfo } = useAgencyInfo();
   const deleteInvoice = useDeleteInvoice();
 
   const formatCurrency = (amount: number) => {
@@ -126,6 +139,53 @@ export default function Invoicing() {
   const handleDeleteInvoice = (id: string) => {
     if (confirm('Supprimer cette facture ?')) {
       deleteInvoice.mutate(id);
+    }
+  };
+
+  const handleRecordPayment = (invoiceId: string) => {
+    setPaymentInvoiceId(invoiceId);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleCreateCreditNote = (invoiceId: string) => {
+    setCreditNoteInvoiceId(invoiceId);
+    setCreditNoteDialogOpen(true);
+  };
+
+  const handleExportFacturX = async (invoice: NonNullable<typeof invoices>[number]) => {
+    if (!agencyInfo) {
+      toast.error("Informations de l'agence manquantes");
+      return;
+    }
+
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: items } = await supabase
+        .from('invoice_items')
+        .select('*')
+        .eq('invoice_id', invoice.id)
+        .order('sort_order');
+
+      const agency: FacturXAgencyInfo = {
+        name: agencyInfo.name || '',
+        siret: agencyInfo.siret || '',
+        vatNumber: agencyInfo.vat_number,
+        address: agencyInfo.address || '',
+        city: agencyInfo.city || '',
+        postalCode: agencyInfo.postal_code || '',
+        country: 'France',
+        email: agencyInfo.email,
+        phone: agencyInfo.phone,
+        rcsCity: agencyInfo.rcs_city,
+        capitalSocial: agencyInfo.capital_social,
+      };
+
+      const xml = generateFacturXXML(invoice, items || [], agency);
+      downloadFacturXXML(xml, `${invoice.invoice_number}_facturx.xml`);
+      toast.success("Fichier Factur-X exporté");
+    } catch (error) {
+      console.error('Error exporting Factur-X:', error);
+      toast.error("Erreur lors de l'export");
     }
   };
 
@@ -605,15 +665,19 @@ export default function Invoicing() {
                                 <Send className="h-4 w-4 mr-2" />
                                 Envoyer par email
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleRecordPayment(invoice.id)}>
                                 <CreditCard className="h-4 w-4 mr-2" />
                                 Enregistrer un paiement
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleExportFacturX(invoice)}>
+                                <FileCode className="h-4 w-4 mr-2" />
+                                Export Factur-X
                               </DropdownMenuItem>
                               <DropdownMenuItem>
                                 <Copy className="h-4 w-4 mr-2" />
                                 Dupliquer
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleCreateCreditNote(invoice.id)}>
                                 <RefreshCw className="h-4 w-4 mr-2" />
                                 Créer un avoir
                               </DropdownMenuItem>
@@ -773,6 +837,21 @@ export default function Invoicing() {
         open={isBuilderOpen}
         onOpenChange={setIsBuilderOpen}
         invoiceId={editingInvoiceId}
+      />
+
+      {/* Record Payment Dialog */}
+      <RecordPaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        invoiceId={paymentInvoiceId}
+      />
+
+      {/* Create Credit Note Dialog */}
+      <CreateCreditNoteDialog
+        open={creditNoteDialogOpen}
+        onOpenChange={setCreditNoteDialogOpen}
+        invoiceId={creditNoteInvoiceId}
+        onSuccess={(id) => handleEditInvoice(id)}
       />
     </PageLayout>
   );
