@@ -11,10 +11,12 @@ import {
   Briefcase,
   Scale,
   BookOpen,
+  Key,
+  Image,
   LucideIcon,
 } from "lucide-react";
 
-export type ElementType = 'link' | 'file' | 'email' | 'note' | 'order' | 'letter' | 'other';
+export type ElementType = 'link' | 'file' | 'email' | 'note' | 'order' | 'letter' | 'credential' | 'image_ref' | 'other';
 export type ElementVisibility = 'all' | 'admin' | 'owner';
 
 export interface ElementTypeConfig {
@@ -67,6 +69,18 @@ export const ELEMENT_TYPE_CONFIG: Record<ElementType, ElementTypeConfig> = {
     color: "orange",
     description: "Courrier scanné ou document officiel",
   },
+  credential: {
+    label: "Code d'accès",
+    icon: Key,
+    color: "amber",
+    description: "Identifiants, mots de passe, codes",
+  },
+  image_ref: {
+    label: "Référence",
+    icon: Image,
+    color: "pink",
+    description: "Image de référence ou inspiration",
+  },
   other: {
     label: "Autre",
     icon: Folder,
@@ -82,6 +96,7 @@ export const ELEMENT_CATEGORIES: ElementCategoryConfig[] = [
   { value: "legal", label: "Juridique", icon: Scale },
   { value: "communication", label: "Communication", icon: Mail },
   { value: "reference", label: "Référence", icon: BookOpen },
+  { value: "access", label: "Accès", icon: Key },
   { value: "other", label: "Autre", icon: Folder },
 ];
 
@@ -108,6 +123,8 @@ export function getElementTypeColor(type: ElementType): string {
     yellow: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
     green: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
     orange: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    pink: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400",
   };
   return colorMap[ELEMENT_TYPE_CONFIG[type].color] || colorMap.gray;
 }

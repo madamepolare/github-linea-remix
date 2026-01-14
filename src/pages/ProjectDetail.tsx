@@ -76,7 +76,7 @@ const PROJECT_TABS = [
   { key: "budget", label: "Budget", icon: Receipt },
   { key: "emails", label: "Emails", icon: Mail },
   { key: "communications", label: "Communications", icon: MessageCircle },
-  { key: "elements", label: "Éléments", icon: FolderKanban },
+  { key: "elements", label: "Knowledge", icon: FolderKanban },
   { key: "orders", label: "Commandes", icon: ShoppingCart },
   { key: "permits", label: "Autorisations", icon: FileCheck },
   { key: "insurances", label: "Assurances", icon: Shield },
