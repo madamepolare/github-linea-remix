@@ -40,18 +40,30 @@ const LEGAL_FORMS = [
 ];
 
 const VAT_TYPES = [
-  { value: "normal", label: "TVA normale" },
-  { value: "reduced", label: "TVA réduite" },
-  { value: "exempt", label: "Exonéré de TVA" },
-  { value: "intra", label: "TVA intracommunautaire" },
+  { value: "standard", label: "TVA standard (20%)", rate: 20 },
+  { value: "reduced", label: "TVA réduite (10%)", rate: 10 },
+  { value: "super_reduced", label: "TVA super réduite (5.5%)", rate: 5.5 },
+  { value: "exempt", label: "Exonéré de TVA (0%)", rate: 0 },
+  { value: "intra", label: "TVA intracommunautaire (0%)", rate: 0 },
+  { value: "export", label: "Export (0%)", rate: 0 },
+];
+
+const PAYMENT_METHODS = [
+  { value: "virement", label: "Virement bancaire" },
+  { value: "cheque", label: "Chèque" },
+  { value: "prelevement", label: "Prélèvement" },
+  { value: "carte", label: "Carte bancaire" },
 ];
 
 const PAYMENT_TERMS = [
   { value: "immediate", label: "Paiement immédiat" },
+  { value: "15_days", label: "15 jours" },
   { value: "30_days", label: "30 jours" },
   { value: "30_days_end", label: "30 jours fin de mois" },
   { value: "45_days", label: "45 jours" },
+  { value: "45_days_end", label: "45 jours fin de mois" },
   { value: "60_days", label: "60 jours" },
+  { value: "60_days_end", label: "60 jours fin de mois" },
 ];
 
 export function DepartmentBillingDialog({
@@ -281,10 +293,36 @@ export function DepartmentBillingDialog({
                   </Select>
                 </div>
                 <div className="space-y-1.5">
+                  <Label className="text-xs">Mode de paiement</Label>
+                  <Select
+                    value={formData.payment_method || ""}
+                    onValueChange={(v) => updateField("payment_method", v)}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Sélectionner..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_METHODS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
                   <Label className="text-xs">Type de TVA</Label>
                   <Select
                     value={formData.vat_type || ""}
-                    onValueChange={(v) => updateField("vat_type", v)}
+                    onValueChange={(v) => {
+                      const vatConfig = VAT_TYPES.find(t => t.value === v);
+                      updateField("vat_type", v);
+                      if (vatConfig) {
+                        updateField("vat_rate", vatConfig.rate);
+                      }
+                    }}
                   >
                     <SelectTrigger className="h-8 text-sm">
                       <SelectValue placeholder="Sélectionner..." />
@@ -298,28 +336,26 @@ export function DepartmentBillingDialog({
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Taux TVA (%)</Label>
                   <Input
                     type="number"
-                    value={formData.vat_rate || ""}
+                    value={formData.vat_rate ?? ""}
                     onChange={(e) => updateField("vat_rate", parseFloat(e.target.value) || null)}
                     placeholder="20"
                     className="h-8 text-sm"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Remise par défaut (%)</Label>
-                  <Input
-                    type="number"
-                    value={formData.default_discount_percent || ""}
-                    onChange={(e) => updateField("default_discount_percent", parseFloat(e.target.value) || null)}
-                    placeholder="0"
-                    className="h-8 text-sm"
-                  />
-                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Remise par défaut (%)</Label>
+                <Input
+                  type="number"
+                  value={formData.default_discount_percent || ""}
+                  onChange={(e) => updateField("default_discount_percent", parseFloat(e.target.value) || null)}
+                  placeholder="0"
+                  className="h-8 text-sm w-1/2"
+                />
               </div>
             </div>
           </div>

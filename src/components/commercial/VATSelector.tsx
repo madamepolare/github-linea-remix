@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
-export type VATType = 'standard' | 'reduced' | 'super_reduced' | 'exempt' | 'intra_eu' | 'export';
+export type VATType = 'standard' | 'normal' | 'reduced' | 'super_reduced' | 'exempt' | 'intra' | 'intra_eu' | 'export';
 
 export interface VATConfig {
   vat_type: VATType;
@@ -25,7 +25,13 @@ export interface VATConfig {
 
 export const VAT_TYPE_CONFIG: Record<VATType, { label: string; rate: number; description: string; color: string }> = {
   standard: { 
-    label: 'Standard', 
+    label: 'Standard (20%)', 
+    rate: 20, 
+    description: 'Taux normal de TVA',
+    color: 'bg-blue-100 text-blue-700 border-blue-200'
+  },
+  normal: { 
+    label: 'Normal (20%)', 
     rate: 20, 
     description: 'Taux normal de TVA',
     color: 'bg-blue-100 text-blue-700 border-blue-200'
@@ -48,8 +54,14 @@ export const VAT_TYPE_CONFIG: Record<VATType, { label: string; rate: number; des
     description: 'Non assujetti à la TVA',
     color: 'bg-gray-100 text-gray-700 border-gray-200'
   },
+  intra: { 
+    label: 'Intra-UE (0%)', 
+    rate: 0, 
+    description: 'Livraison intracommunautaire',
+    color: 'bg-purple-100 text-purple-700 border-purple-200'
+  },
   intra_eu: { 
-    label: 'Intra-UE', 
+    label: 'Intra-UE (0%)', 
     rate: 0, 
     description: 'Livraison intracommunautaire',
     color: 'bg-purple-100 text-purple-700 border-purple-200'
