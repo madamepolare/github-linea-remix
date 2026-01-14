@@ -289,7 +289,7 @@ export function QuoteLineItemCompact({
               type="number"
               value={line.quantity || 1}
               onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 1 })}
-              className="h-8 w-12 text-center text-sm border-0 bg-muted/50 rounded-l tabular-nums"
+              className="h-8 w-16 text-center text-sm border-0 bg-muted/50 rounded-l tabular-nums"
               min={0}
             />
 
