@@ -13,17 +13,9 @@ function getPublicBaseUrl() {
 export async function getOrCreatePublicQuoteLink(params: {
   documentId: string;
   workspaceId: string;
-  requiresDeposit?: boolean;
-  depositPercentage?: number;
   expiresInDays?: number;
 }): Promise<string> {
-  const {
-    documentId,
-    workspaceId,
-    requiresDeposit = false,
-    depositPercentage = 30,
-    expiresInDays = 30,
-  } = params;
+  const { documentId, workspaceId, expiresInDays = 30 } = params;
 
   // Try to reuse an existing active link
   const { data: existing, error: existingError } = await supabase
@@ -47,8 +39,7 @@ export async function getOrCreatePublicQuoteLink(params: {
     document_id: documentId,
     workspace_id: workspaceId,
     token,
-    requires_deposit: requiresDeposit,
-    deposit_percentage: depositPercentage,
+    is_active: true,
     expires_at: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString(),
   });
 

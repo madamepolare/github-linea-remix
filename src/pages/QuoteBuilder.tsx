@@ -630,8 +630,6 @@ export default function QuoteBuilder() {
                     const url = await getOrCreatePublicQuoteLink({
                       documentId: document.id,
                       workspaceId: document.workspace_id,
-                      requiresDeposit: document.requires_deposit || false,
-                      depositPercentage: document.deposit_percentage || 30,
                     });
                     await navigator.clipboard.writeText(url);
                     toast.success('Lien client copié !');
