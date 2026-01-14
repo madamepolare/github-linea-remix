@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Eye, EyeOff } from "lucide-react";
 
 import { useAgencyInfo } from "@/hooks/useAgencyInfo";
 import { QuoteDocument, QuoteLine } from "@/types/quoteTypes";
@@ -10,6 +11,8 @@ import { buildMOEContractDataFromDocument } from "@/lib/moeContractBuilder";
 import { buildCommunicationContractDataFromDocument } from "@/lib/communicationContractBuilder";
 import { MOEContractData, MOE_PROJECT_TYPES, MOE_FEE_METHODS } from "@/lib/moeContractConfig";
 import { CommunicationContractData } from "@/lib/generateCommunicationContractPDF";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ContractPreviewPanelProps {
   document: Partial<QuoteDocument>;
@@ -63,6 +66,7 @@ export function ContractPreviewPanel({
   contractTypeCode,
 }: ContractPreviewPanelProps) {
   const { agencyInfo } = useAgencyInfo();
+  const [hideDescriptions, setHideDescriptions] = useState(false);
 
   const scale = zoom / 100;
 
@@ -94,14 +98,35 @@ export function ContractPreviewPanel({
   const com = contractData?.kind === "communication" ? (contractData.data as CommunicationContractData) : null;
 
   return (
-    <div
-      className="bg-white shadow-lg rounded-lg overflow-hidden origin-top-left"
-      style={{
-        transform: `scale(${scale})`,
-        width: `${100 / scale}%`,
-        minHeight: "297mm",
-      }}
-    >
+    <div className="relative">
+      {/* Toggle descriptions button */}
+      <div className="absolute top-2 right-2 z-10">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setHideDescriptions(!hideDescriptions)}
+              className="h-8 gap-1.5 bg-white/90 backdrop-blur-sm shadow-sm"
+            >
+              {hideDescriptions ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              <span className="text-xs">{hideDescriptions ? "Afficher" : "Masquer"} textes</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {hideDescriptions ? "Afficher les descriptions des phases" : "Masquer les descriptions des phases"}
+          </TooltipContent>
+        </Tooltip>
+      </div>
+
+      <div
+        className="bg-white shadow-lg rounded-lg overflow-hidden origin-top-left"
+        style={{
+          transform: `scale(${scale})`,
+          width: `${100 / scale}%`,
+          minHeight: "297mm",
+        }}
+      >
       <div className="p-8 text-sm text-gray-800" style={{ fontFamily: "system-ui, sans-serif" }}>
         {/* ===== HEADER ===== */}
         <div className="flex justify-between items-start mb-8">
@@ -284,8 +309,8 @@ export function ContractPreviewPanel({
                       <td className="py-2 text-xs text-gray-500 font-mono">{p.code}</td>
                       <td className="py-2">
                         <div className="font-medium">{p.name}</div>
-                        {p.description && <div className="text-xs text-gray-500 mt-0.5">{p.description}</div>}
-                        {Array.isArray(p.deliverables) && p.deliverables.length > 0 && (
+                        {!hideDescriptions && p.description && <div className="text-xs text-gray-500 mt-0.5">{p.description}</div>}
+                        {!hideDescriptions && Array.isArray(p.deliverables) && p.deliverables.length > 0 && (
                           <div className="text-xs text-gray-500 mt-1">📦 {p.deliverables.join(", ")}</div>
                         )}
                       </td>
@@ -422,6 +447,7 @@ export function ContractPreviewPanel({
           {agencyInfo?.siret && ` - SIRET: ${agencyInfo.siret}`}
           {agencyInfo?.vat_number && ` - TVA: ${agencyInfo.vat_number}`}
         </div>
+      </div>
       </div>
     </div>
   );
