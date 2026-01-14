@@ -202,6 +202,12 @@ export function AuthStep({ onAuthenticated, onBack, workspaceName, modulesCount 
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
+                  <a
+                    href="/auth"
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Mot de passe oublié ?
+                  </a>
                 </div>
 
                 <Button

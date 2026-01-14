@@ -38,6 +38,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   setActiveWorkspace: (workspaceId: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -262,6 +264,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setActiveWorkspaceInternal(workspaceId, user.id);
   };
 
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    return { error: error as Error | null };
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    return { error: error as Error | null };
+  };
+
   // Only consider non-hidden workspaces for auto-selection
   const visibleWorkspaces = workspaces.filter((w) => !w.is_hidden);
   const activeWorkspace =
@@ -283,6 +299,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         refreshProfile,
         setActiveWorkspace,
+        resetPassword,
+        updatePassword,
       }}
     >
       {children}

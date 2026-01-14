@@ -15,6 +15,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 // Lazy load pages for better performance
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Auth = lazy(() => import("./pages/Auth"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Settings = lazy(() => import("./pages/Settings"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
@@ -90,9 +91,10 @@ const App = () => (
                 <Route path="/legal/cgv" element={<Suspense fallback={<PageLoader />}><CGV /></Suspense>} />
                 <Route path="/legal/privacy" element={<Suspense fallback={<PageLoader />}><Privacy /></Suspense>} />
                 <Route path="/legal/mentions" element={<Suspense fallback={<PageLoader />}><Legal /></Suspense>} />
-                <Route path="/auth" element={<Suspense fallback={<PageLoader />}><Auth /></Suspense>} />
-                <Route path="/onboarding" element={<Suspense fallback={<PageLoader />}><Onboarding /></Suspense>} />
-                <Route path="/invite" element={<Suspense fallback={<PageLoader />}><AcceptInvite /></Suspense>} />
+              <Route path="/auth" element={<Suspense fallback={<PageLoader />}><Auth /></Suspense>} />
+              <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />
+              <Route path="/onboarding" element={<Suspense fallback={<PageLoader />}><Onboarding /></Suspense>} />
+              <Route path="/invite" element={<Suspense fallback={<PageLoader />}><AcceptInvite /></Suspense>} />
 
                 {/* Protected routes with shared MainLayout */}
                 <Route
