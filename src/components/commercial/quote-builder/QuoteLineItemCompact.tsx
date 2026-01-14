@@ -292,14 +292,21 @@ export function QuoteLineItemCompact({
           </div>
 
           {/* Financial columns - fixed widths for table alignment */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Quantity + Unit group */}
             <div className="flex items-center h-8 bg-muted/40 rounded-lg overflow-hidden">
               <Input
                 type="number"
                 value={line.quantity || 1}
-                onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 1 })}
-                className="h-8 w-14 text-center text-sm border-0 bg-transparent tabular-nums focus:bg-muted/60"
+                onChange={(e) => {
+                  const quantity = parseFloat(e.target.value) || 1;
+                  const unitPrice = line.unit_price || 0;
+                  updateLine(line.id, { 
+                    quantity: quantity, 
+                    amount: unitPrice * quantity 
+                  });
+                }}
+                className="h-8 w-16 text-center text-sm border-0 bg-transparent tabular-nums focus:bg-muted/60"
                 min={0}
               />
               <div className="h-5 w-px bg-border/50" />
@@ -307,7 +314,7 @@ export function QuoteLineItemCompact({
                 value={line.unit || 'forfait'}
                 onValueChange={(value) => updateLine(line.id, { unit: value })}
               >
-                <SelectTrigger className="h-8 w-20 text-xs border-0 bg-transparent hover:bg-muted/60 px-2">
+                <SelectTrigger className="h-8 w-24 text-xs border-0 bg-transparent hover:bg-muted/60 px-2">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-background z-50">
@@ -322,7 +329,7 @@ export function QuoteLineItemCompact({
 
             {/* Unit price (PU) */}
             <div className="flex items-center h-8 bg-muted/30 border border-dashed rounded-lg overflow-hidden">
-              <span className="text-xs text-muted-foreground pl-2">PU</span>
+              <span className="text-xs text-muted-foreground pl-2 shrink-0">PU</span>
               <Input
                 type="number"
                 value={line.unit_price || 0}
@@ -334,29 +341,18 @@ export function QuoteLineItemCompact({
                     amount: unitPrice * quantity 
                   });
                 }}
-                className="h-8 w-20 text-right tabular-nums text-sm border-0 bg-transparent px-2"
+                className="h-8 w-24 text-right tabular-nums text-sm border-0 bg-transparent px-2"
                 placeholder="0"
               />
-              <span className="text-xs text-muted-foreground pr-2">€</span>
+              <span className="text-xs text-muted-foreground pr-2 shrink-0">€</span>
             </div>
 
-            {/* Total amount */}
-            <div className="flex items-center h-8 bg-background border rounded-lg overflow-hidden shadow-sm">
-              <Input
-                type="number"
-                value={line.amount || 0}
-                onChange={(e) => {
-                  const amount = parseFloat(e.target.value) || 0;
-                  const quantity = line.quantity || 1;
-                  updateLine(line.id, { 
-                    amount: amount, 
-                    unit_price: quantity > 0 ? amount / quantity : amount 
-                  });
-                }}
-                className="h-8 w-24 text-right tabular-nums font-semibold text-sm border-0 bg-transparent px-3"
-                placeholder="0"
-              />
-              <span className="text-sm text-muted-foreground pr-3 font-medium">€</span>
+            {/* Total amount - read-only, calculated */}
+            <div className="flex items-center h-8 bg-primary/5 border border-primary/20 rounded-lg overflow-hidden px-3 min-w-[100px]">
+              <span className="tabular-nums font-semibold text-sm text-primary">
+                {((line.quantity || 1) * (line.unit_price || 0)).toLocaleString('fr-FR')}
+              </span>
+              <span className="text-sm text-primary/70 ml-1 font-medium">€</span>
             </div>
 
             {/* Margin indicator - fixed width */}
