@@ -46,7 +46,7 @@ export function CRMBulkActionsBar({
   const entityLabels = {
     contacts: { singular: "contact", plural: "contacts" },
     companies: { singular: "entreprise", plural: "entreprises" },
-    leads: { singular: "opportunité", plural: "opportunités" },
+    leads: { singular: "lead", plural: "leads" },
   };
 
   const label = entityLabels[entityType];

@@ -150,8 +150,8 @@ export function CRMOverview({
       action: () => onNavigate("contacts"),
     },
     {
-      id: "opportunities",
-      title: "Opportunités",
+      id: "leads",
+      title: "Leads",
       value: leadStats.total,
       change: leadStats.total > 0 ? Math.round(Math.random() * 10 + 1) : 0,
       trend: "up",

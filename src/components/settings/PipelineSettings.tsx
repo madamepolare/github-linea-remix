@@ -492,7 +492,7 @@ export function PipelineSettings() {
               <TabsList>
                 <TabsTrigger value="opportunity" className="gap-1.5">
                   <Target className="h-3.5 w-3.5" />
-                  Opportunités
+                  Pipelines
                 </TabsTrigger>
                 <TabsTrigger value="contact" className="gap-1.5">
                   <Users className="h-3.5 w-3.5" />

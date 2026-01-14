@@ -134,7 +134,7 @@ export function CompanyDetailSheet({ company, open, onOpenChange }: CompanyDetai
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-2xl font-semibold">{companyLeads.length}</p>
-              <p className="text-xs text-muted-foreground">Opportunités</p>
+              <p className="text-xs text-muted-foreground">Leads</p>
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-2xl font-semibold">

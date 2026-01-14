@@ -94,7 +94,7 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
       { key: "contacts", label: "Contacts", href: "/crm/contacts" },
       { key: "companies", label: "Entreprises", href: "/crm/companies" },
       { key: "leads-table", label: "Leads", href: "/crm/leads-table" },
-      { key: "leads", label: "Opportunités", href: "/crm/leads" },
+      { key: "leads", label: "Pipelines", href: "/crm/leads" },
       { key: "prospection", label: "Prospection", href: "/crm/prospection" },
       { key: "development", label: "Dév. Commercial", href: "/crm/development" },
     ],

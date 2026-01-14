@@ -28,7 +28,7 @@ type PipelineMode = "all" | "single";
 
 const sectionDescriptions: Record<CRMView, string> = {
   overview: "Vue d'ensemble de votre activité commerciale",
-  leads: "Gérez vos opportunités et pipelines",
+  leads: "Gérez vos leads et pipelines commerciaux",
   "leads-table": "Liste de tous vos leads (manuels et IA)",
   prospection: "Pipelines de prospection contacts et sociétés",
   contacts: "Annuaire de vos contacts",
@@ -387,7 +387,7 @@ export default function CRM() {
                       }}
                     >
                       <Plus className="h-4 w-4 sm:mr-1.5" />
-                      <span className="hidden sm:inline">Nouvelle opportunité</span>
+                      <span className="hidden sm:inline">Nouveau lead</span>
                     </Button>
                   </header>
 

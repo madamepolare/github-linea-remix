@@ -27,7 +27,7 @@ export function ContactStatsCards({ leads, emailsCount = 0, tasksCount = 0 }: Co
 
   const stats = [
     {
-      label: "Opportunités",
+      label: "Leads",
       value: leads.length,
       icon: Target,
       color: "text-chart-2",

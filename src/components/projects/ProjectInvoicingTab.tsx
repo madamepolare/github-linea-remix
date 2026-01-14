@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Calendar, Receipt, Clock, RefreshCw, Building2 } from "lucide-react";
+import { LayoutDashboard, Calendar, Clock, RefreshCw, Building2 } from "lucide-react";
 import { InvoicingOverviewTab } from "./invoicing/InvoicingOverviewTab";
 import { InvoiceScheduleTab } from "./invoicing/InvoiceScheduleTab";
 import { InvoiceBuilderSheet } from "@/components/invoicing/InvoiceBuilderSheet";
 import { ChorusProPanel } from "./invoicing/ChorusProPanel";
 import { BillableTimeTab } from "./invoicing/BillableTimeTab";
-import { InvoicesListTab } from "./invoicing/InvoicesListTab";
 import { CreditNotesTab } from "./invoicing/CreditNotesTab";
 import { BillableTimeEntry } from "@/hooks/useBillableTime";
 
@@ -43,8 +42,6 @@ export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicing
 
   const handleNavigateToTab = (tab: string) => {
     const tabMap: Record<string, string> = {
-      'factures': 'invoices',
-      'invoices': 'invoices',
       'avoirs': 'credit-notes',
       'credit-notes': 'credit-notes',
       'echeancier': 'schedule',
@@ -78,14 +75,7 @@ export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicing
               className="data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
             >
               <Calendar className="h-4 w-4 mr-2" />
-              Échéancier
-            </TabsTrigger>
-            <TabsTrigger
-              value="invoices"
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
-            >
-              <Receipt className="h-4 w-4 mr-2" />
-              Factures
+              Échéancier & Factures
             </TabsTrigger>
             <TabsTrigger
               value="credit-notes"
@@ -118,9 +108,8 @@ export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicing
               <InvoicingOverviewTab 
                 projectId={projectId} 
                 onNavigateToTab={(tab) => {
-                  // Map tab names to actual tab values
                   const tabMap: Record<string, string> = {
-                    'factures': 'invoices',
+                    'factures': 'schedule',
                     'avoirs': 'credit-notes',
                     'echeancier': 'schedule',
                   };
@@ -137,17 +126,8 @@ export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicing
                 }}
                 onViewInvoice={handleEditInvoice}
                 onAdjustBudget={() => {
-                  // Navigate to budget tab or open budget dialog
                   handleNavigateToTab('overview');
                 }}
-              />
-            </TabsContent>
-
-            <TabsContent value="invoices" className="mt-0">
-              <InvoicesListTab
-                projectId={projectId}
-                onCreateInvoice={handleCreateInvoice}
-                onEditInvoice={handleEditInvoice}
               />
             </TabsContent>
 

@@ -81,7 +81,7 @@ export function LeadPipeline({ pipeline, onCreateLead, kanbanHeightClass, hideHe
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50 text-sm">
                 <span className="h-2 w-2 rounded-full bg-primary" />
                 <span className="font-medium">{stats.total}</span>
-                <span className="text-muted-foreground hidden sm:inline">opportunités</span>
+                <span className="text-muted-foreground hidden sm:inline">leads</span>
               </div>
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/50 text-sm">
                 <span className="text-muted-foreground">€</span>
