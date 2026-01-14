@@ -83,7 +83,7 @@ export function mergeMOEConfig(existingConfig: any): MOEDefaultConfig {
 /**
  * Architecture-based contract type codes
  */
-export const ARCHITECTURE_CONTRACT_CODES = ['ARCHI', 'MOE', 'INTERIOR', 'SCENO'];
+export const ARCHITECTURE_CONTRACT_CODES = ['ARCHI', 'MOE', 'INTERIOR', 'SCENO', 'ARCHITECTURE', 'SCENOGRAPHY', 'SCENOGRAPHIE'];
 
 /**
  * Communication-based contract type codes
