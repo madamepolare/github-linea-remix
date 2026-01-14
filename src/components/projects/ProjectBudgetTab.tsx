@@ -16,6 +16,9 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronRight,
+  ShoppingCart,
+  Receipt,
+  LayoutDashboard,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -50,14 +53,18 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProject, useProjectMembers } from "@/hooks/useProjects";
 import { useTeamTimeEntries } from "@/hooks/useTeamTimeEntries";
 import { useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { useAllMemberEmploymentInfo } from "@/hooks/useMemberEmploymentInfo";
+import { useProjectPurchases } from "@/hooks/useProjectPurchases";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { BudgetPurchasesTab } from "./budget/BudgetPurchasesTab";
+import { BudgetSummaryCards } from "./budget/BudgetSummaryCards";
 
 // Stacked Avatars Component
 function StackedAvatars({ 
