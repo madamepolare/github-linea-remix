@@ -83,3 +83,9 @@ verify_jwt = false
 
 [functions.generate-signed-pdf]
 verify_jwt = false
+
+[functions.client-portal-view]
+verify_jwt = false
+
+[functions.client-portal-actions]
+verify_jwt = false
