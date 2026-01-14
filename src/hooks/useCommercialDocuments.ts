@@ -111,8 +111,10 @@ export const useCommercialDocuments = () => {
 
   const getDocument = (id: string) => {
     return useQuery({
-      queryKey: ['commercial-document', id],
+      queryKey: ['commercial-document', id, activeWorkspace?.id],
       queryFn: async () => {
+        if (!activeWorkspace?.id) throw new Error('Aucun workspace actif');
+        
         const { data, error } = await supabase
           .from('commercial_documents')
           .select(`
@@ -123,13 +125,14 @@ export const useCommercialDocuments = () => {
             project:projects!commercial_documents_project_id_fkey(id, name)
           `)
           .eq('id', id)
+          .eq('workspace_id', activeWorkspace.id)
           .maybeSingle();
 
         if (error) throw error;
-        if (!data) throw new Error('Document introuvable');
+        if (!data) throw new Error('Document introuvable dans ce workspace');
         return data as CommercialDocument;
       },
-      enabled: !!id
+      enabled: !!id && !!activeWorkspace?.id
     });
   };
 

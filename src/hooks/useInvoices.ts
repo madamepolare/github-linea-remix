@@ -117,7 +117,7 @@ export function useInvoices(statusFilter?: string) {
         .select(`
           *,
           client_company:crm_companies(id, name, address, city, postal_code),
-          project:projects(id, name)
+          project:projects!invoices_project_id_fkey(id, name)
         `)
         .eq('workspace_id', workspaceId)
         .order('invoice_date', { ascending: false });
@@ -137,23 +137,26 @@ export function useInvoices(statusFilter?: string) {
 
 export function useInvoice(invoiceId: string | undefined) {
   const { activeWorkspace } = useAuth();
+  const workspaceId = activeWorkspace?.id;
 
   return useQuery({
-    queryKey: ['invoice', invoiceId],
+    queryKey: ['invoice', invoiceId, workspaceId],
     queryFn: async () => {
-      if (!invoiceId) return null;
+      if (!invoiceId || !workspaceId) return null;
 
       const { data: invoice, error } = await supabase
         .from('invoices')
         .select(`
           *,
           client_company:crm_companies(id, name, address, city, postal_code, siret, vat_number),
-          project:projects(id, name)
+          project:projects!invoices_project_id_fkey(id, name)
         `)
         .eq('id', invoiceId)
-        .single();
+        .eq('workspace_id', workspaceId)
+        .maybeSingle();
 
       if (error) throw error;
+      if (!invoice) throw new Error('Facture introuvable dans ce workspace');
 
       // Fetch items
       const { data: items, error: itemsError } = await supabase
@@ -166,7 +169,7 @@ export function useInvoice(invoiceId: string | undefined) {
 
       return { ...invoice, items } as Invoice;
     },
-    enabled: !!invoiceId && !!activeWorkspace?.id,
+    enabled: !!invoiceId && !!workspaceId,
   });
 }
 
