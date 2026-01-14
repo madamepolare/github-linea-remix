@@ -94,6 +94,13 @@ export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicing
               <RefreshCw className="h-4 w-4 mr-2" />
               Avoirs
             </TabsTrigger>
+            <TabsTrigger
+              value="time"
+              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
+            >
+              <Clock className="h-4 w-4 mr-2" />
+              Temps facturable
+            </TabsTrigger>
           </TabsList>
 
           <button
@@ -144,6 +151,14 @@ export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicing
               <CreditNotesTab
                 projectId={projectId}
                 onEditInvoice={handleEditInvoice}
+              />
+            </TabsContent>
+
+            <TabsContent value="time" className="mt-0">
+              <BillableTimeTab
+                projectId={projectId}
+                projectName={projectName}
+                onCreateInvoice={handleCreateInvoiceFromTime}
               />
             </TabsContent>
           </div>
