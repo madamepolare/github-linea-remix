@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, phaseToQuoteLine, quoteLineToPhase, DOCUMENT_STATUS_LABELS, DocumentStatus } from '@/types/quoteTypes';
 import { cn } from '@/lib/utils';
+import { getOrCreatePublicQuoteLink } from '@/lib/publicQuoteLink';
 import {
   Select,
   SelectContent,
@@ -623,10 +624,21 @@ export default function QuoteBuilder() {
                 Envoyer au client
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onClick={() => {
-                  const url = `${window.location.origin}/commercial/quote/${id}`;
-                  navigator.clipboard.writeText(url);
-                  toast.success('Lien copié !');
+                onClick={async () => {
+                  try {
+                    if (!document.id || !document.workspace_id) return;
+                    const url = await getOrCreatePublicQuoteLink({
+                      documentId: document.id,
+                      workspaceId: document.workspace_id,
+                      requiresDeposit: document.requires_deposit || false,
+                      depositPercentage: document.deposit_percentage || 30,
+                    });
+                    await navigator.clipboard.writeText(url);
+                    toast.success('Lien client copié !');
+                  } catch (e) {
+                    console.error(e);
+                    toast.error('Impossible de générer le lien');
+                  }
                 }}
                 disabled={isNew}
               >
