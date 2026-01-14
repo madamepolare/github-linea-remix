@@ -396,10 +396,10 @@ export function EntityCommunications({
                               variant="secondary"
                               className={cn(
                                 "ml-1.5 text-[9px] px-1 py-0 h-4",
-                                comm.source_entity_status === "done" && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-                                comm.source_entity_status === "in_progress" && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-                                comm.source_entity_status === "todo" && "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
-                                comm.source_entity_status === "blocked" && "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                comm.source_entity_status === "done" && "bg-success/10 text-success",
+                                comm.source_entity_status === "in_progress" && "bg-info/10 text-info",
+                                comm.source_entity_status === "todo" && "bg-muted text-muted-foreground",
+                                comm.source_entity_status === "blocked" && "bg-destructive/10 text-destructive"
                               )}
                             >
                               {comm.source_entity_status === "done" ? "Terminée" :

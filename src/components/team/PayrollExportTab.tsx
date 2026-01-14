@@ -59,11 +59,11 @@ const MONTHS = [
 ];
 
 const STATUS_CONFIG: Record<PayrollPeriod["status"], { label: string; color: string; icon: typeof Clock }> = {
-  draft: { label: "Brouillon", color: "bg-gray-100 text-gray-700", icon: FileText },
-  pending: { label: "En attente", color: "bg-yellow-100 text-yellow-700", icon: Clock },
-  validated: { label: "Validé", color: "bg-green-100 text-green-700", icon: CheckCircle },
-  exported: { label: "Exporté", color: "bg-blue-100 text-blue-700", icon: Download },
-  closed: { label: "Clôturé", color: "bg-purple-100 text-purple-700", icon: CheckCircle },
+  draft: { label: "Brouillon", color: "bg-muted text-muted-foreground", icon: FileText },
+  pending: { label: "En attente", color: "bg-warning/10 text-warning", icon: Clock },
+  validated: { label: "Validé", color: "bg-success/10 text-success", icon: CheckCircle },
+  exported: { label: "Exporté", color: "bg-info/10 text-info", icon: Download },
+  closed: { label: "Clôturé", color: "bg-accent/10 text-accent", icon: CheckCircle },
 };
 
 export function PayrollExportTab() {

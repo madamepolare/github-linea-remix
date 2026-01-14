@@ -180,7 +180,7 @@ export default function Onboarding() {
 
   if (loading || isLoading || isLoadingDisciplines) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF9F7]">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-foreground" />
       </div>
     );
