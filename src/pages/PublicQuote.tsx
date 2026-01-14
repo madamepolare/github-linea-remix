@@ -23,6 +23,26 @@ import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 import { FONT_OPTIONS, COLOR_THEMES } from '@/hooks/useWorkspaceStyles';
 
+// Interface for custom fonts stored in workspace
+interface CustomFont {
+  id: string;
+  name: string;
+  fileName: string;
+  fontFamily: string;
+  dataUrl?: string;
+}
+
+interface StyleSettings {
+  headingFont?: string;
+  bodyFont?: string;
+  baseFontSize?: number;
+  headingWeight?: string;
+  bodyWeight?: string;
+  borderRadius?: number;
+  colorTheme?: string;
+  customFonts?: CustomFont[];
+}
+
 interface QuoteData {
   document: {
     id: string;
@@ -71,15 +91,7 @@ interface QuoteData {
     billing_postal_code?: string;
     siret?: string;
     vat_number?: string;
-    style_settings?: {
-      headingFont?: string;
-      bodyFont?: string;
-      baseFontSize?: number;
-      headingWeight?: string;
-      bodyWeight?: string;
-      borderRadius?: number;
-      colorTheme?: string;
-    };
+    style_settings?: StyleSettings;
   };
   link: {
     id: string;
@@ -106,56 +118,80 @@ export default function PublicQuote() {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load workspace fonts dynamically
-  const loadWorkspaceFonts = (styleSettings: QuoteData['agency']['style_settings']) => {
-    if (!styleSettings) return;
+  const [themeColors, setThemeColors] = useState<{ primary: string; accent: string } | null>(null);
+  const [fontFamilies, setFontFamilies] = useState<{ heading: string; body: string }>({
+    heading: "'Inter', sans-serif",
+    body: "'Inter', sans-serif"
+  });
+
+  // Load workspace fonts dynamically (supports both Google Fonts and custom fonts)
+  const loadWorkspaceFonts = async (styleSettings: StyleSettings) => {
+    if (!styleSettings) return { heading: "'Inter', sans-serif", body: "'Inter', sans-serif" };
     
-    const loadFont = (fontId: string) => {
-      const fontData = FONT_OPTIONS.find(f => f.id === fontId);
-      if (fontData && !document.querySelector(`link[href="${fontData.googleUrl}"]`)) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = fontData.googleUrl;
-        document.head.appendChild(link);
+    const customFonts = styleSettings.customFonts || [];
+    
+    const loadFont = async (fontId: string): Promise<string> => {
+      // First check Google Fonts
+      const googleFont = FONT_OPTIONS.find(f => f.id === fontId);
+      if (googleFont) {
+        if (!document.querySelector(`link[href="${googleFont.googleUrl}"]`)) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = googleFont.googleUrl;
+          document.head.appendChild(link);
+        }
+        return googleFont.family;
       }
-      return fontData;
+      
+      // Then check custom fonts
+      const customFont = customFonts.find(f => f.id === fontId);
+      if (customFont && customFont.dataUrl) {
+        try {
+          const fontFace = new FontFace(customFont.fontFamily, `url(${customFont.dataUrl})`);
+          await fontFace.load();
+          document.fonts.add(fontFace);
+          return `'${customFont.fontFamily}', sans-serif`;
+        } catch (err) {
+          console.error('Error loading custom font:', err);
+        }
+      }
+      
+      return "'Inter', sans-serif";
     };
     
-    // Load heading and body fonts
-    loadFont(styleSettings.headingFont || 'inter');
-    loadFont(styleSettings.bodyFont || 'inter');
+    // Load both fonts
+    const headingFamily = await loadFont(styleSettings.headingFont || 'inter');
+    const bodyFamily = await loadFont(styleSettings.bodyFont || 'inter');
+    
+    return { heading: headingFamily, body: bodyFamily };
   };
 
-  // Apply workspace styles to container
-  const applyWorkspaceStyles = (styleSettings: QuoteData['agency']['style_settings']) => {
-    if (!containerRef.current || !styleSettings) return;
+  // Apply workspace styles to document root
+  const applyWorkspaceStyles = (styleSettings: StyleSettings, fonts: { heading: string; body: string }) => {
+    if (!styleSettings) return;
     
-    const container = containerRef.current;
-    
-    // Get font families
-    const headingFontData = FONT_OPTIONS.find(f => f.id === styleSettings.headingFont);
-    const bodyFontData = FONT_OPTIONS.find(f => f.id === styleSettings.bodyFont);
+    const root = document.documentElement;
     
     // Get color theme
     const theme = COLOR_THEMES.find(t => t.id === styleSettings.colorTheme);
     
-    // Apply CSS variables to container
-    if (headingFontData) {
-      container.style.setProperty('--font-heading', headingFontData.family);
-    }
-    if (bodyFontData) {
-      container.style.setProperty('--font-body', bodyFontData.family);
-    }
+    // Apply CSS variables to :root for global effect
+    root.style.setProperty('--font-heading', fonts.heading);
+    root.style.setProperty('--font-body', fonts.body);
+    
     if (styleSettings.baseFontSize) {
-      container.style.setProperty('--font-size-base', `${styleSettings.baseFontSize}px`);
+      root.style.setProperty('--font-size-base', `${styleSettings.baseFontSize}px`);
     }
     if (styleSettings.borderRadius !== undefined) {
-      container.style.setProperty('--radius', `${styleSettings.borderRadius}px`);
+      root.style.setProperty('--radius', `${styleSettings.borderRadius}px`);
     }
     if (theme) {
-      container.style.setProperty('--primary', theme.primary);
-      container.style.setProperty('--accent', theme.accent);
+      root.style.setProperty('--primary', theme.primary);
+      root.style.setProperty('--accent', theme.accent);
+      setThemeColors({ primary: theme.primary, accent: theme.accent });
     }
+    
+    setFontFamilies(fonts);
   };
 
   // Fetch quote data
@@ -187,9 +223,10 @@ export default function PublicQuote() {
         const quoteData = await response.json();
         setData(quoteData);
 
-        // Load workspace fonts
+        // Load workspace fonts and apply styles
         if (quoteData.agency?.style_settings) {
-          loadWorkspaceFonts(quoteData.agency.style_settings);
+          const fonts = await loadWorkspaceFonts(quoteData.agency.style_settings);
+          applyWorkspaceStyles(quoteData.agency.style_settings, fonts);
         }
 
         // Initialize options from phases
@@ -220,16 +257,6 @@ export default function PublicQuote() {
 
     fetchQuote();
   }, [token]);
-
-  // Apply styles when data changes
-  useEffect(() => {
-    if (data?.agency?.style_settings) {
-      // Small delay to ensure fonts are loaded
-      setTimeout(() => {
-        applyWorkspaceStyles(data.agency.style_settings);
-      }, 100);
-    }
-  }, [data]);
 
   // Calculate total based on selected options
   const calculateTotal = () => {
@@ -394,17 +421,20 @@ export default function PublicQuote() {
                 className="h-16 max-h-16 w-auto object-contain"
               />
             ) : (
-              <h1 className="text-3xl font-bold tracking-tight uppercase">{agency.name}</h1>
+              <h1 className="text-3xl font-bold tracking-tight uppercase" style={{ fontFamily: fontFamilies.heading }}>{agency.name}</h1>
             )}
           </div>
         </header>
 
         <main className="flex-1 flex items-center justify-center p-6">
           <div className="max-w-md w-full text-center">
-            <div className="w-20 h-20 rounded-full bg-foreground flex items-center justify-center mx-auto mb-8">
-              <PartyPopper className="h-10 w-10 text-background" />
+            <div 
+              className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-8"
+              style={{ backgroundColor: themeColors ? `hsl(${themeColors.primary})` : 'hsl(var(--foreground))' }}
+            >
+              <PartyPopper className="h-10 w-10 text-white" />
             </div>
-            <h2 className="text-3xl font-bold tracking-tight mb-4">Merci !</h2>
+            <h2 className="text-3xl font-bold tracking-tight mb-4" style={{ fontFamily: fontFamilies.heading }}>Merci !</h2>
             <p className="text-muted-foreground mb-8">
               Votre signature a bien été enregistrée pour le devis {doc.document_number}.
             </p>
@@ -423,7 +453,13 @@ export default function PublicQuote() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Un acompte de {formatCurrency(depositAmount)} est requis.
                 </p>
-                <Button className="w-full h-12 text-base font-medium">
+                <Button 
+                  className="w-full h-12 text-base font-medium text-white"
+                  style={{ 
+                    backgroundColor: themeColors ? `hsl(${themeColors.primary})` : 'hsl(var(--primary))',
+                    fontFamily: fontFamilies.heading 
+                  }}
+                >
                   Payer l'acompte
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
@@ -463,14 +499,14 @@ export default function PublicQuote() {
                 className="h-16 max-h-16 w-auto object-contain"
               />
             ) : (
-              <h1 className="text-3xl font-bold tracking-tight uppercase">{agency.name}</h1>
+              <h1 className="text-3xl font-bold tracking-tight uppercase" style={{ fontFamily: fontFamilies.heading }}>{agency.name}</h1>
             )}
           </div>
         </header>
 
         <main className="flex-1 max-w-lg mx-auto w-full p-6">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold tracking-tight mb-2 flex items-center gap-3">
+            <h2 className="text-2xl font-bold tracking-tight mb-2 flex items-center gap-3" style={{ fontFamily: fontFamilies.heading }}>
               <Pen className="h-6 w-6" />
               Signer le devis
             </h2>
@@ -551,9 +587,13 @@ export default function PublicQuote() {
                 Retour
               </Button>
               <Button 
-                className="flex-1 h-12 font-medium"
+                className="flex-1 h-12 font-medium text-white"
                 onClick={handleSign}
                 disabled={isSigning || !signerName || !signerEmail || !hasSignature}
+                style={{ 
+                  backgroundColor: themeColors ? `hsl(${themeColors.primary})` : 'hsl(var(--primary))',
+                  fontFamily: fontFamilies.heading 
+                }}
               >
                 {isSigning ? (
                   <>
@@ -587,7 +627,7 @@ export default function PublicQuote() {
               className="h-16 max-h-16 w-auto object-contain"
             />
           ) : (
-            <h1 className="text-3xl font-bold tracking-tight uppercase">{agency.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight uppercase" style={{ fontFamily: fontFamilies.heading }}>{agency.name}</h1>
           )}
         </div>
       </header>
@@ -617,9 +657,9 @@ export default function PublicQuote() {
       <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10 space-y-10">
         {/* Document Title & Description */}
         <section>
-          <h2 className="text-3xl font-bold tracking-tight mb-3">{doc.title}</h2>
+          <h2 className="text-3xl font-bold tracking-tight mb-3" style={{ fontFamily: fontFamilies.heading }}>{doc.title}</h2>
           {doc.description && (
-            <p className="text-muted-foreground text-lg leading-relaxed">{doc.description}</p>
+            <p className="text-muted-foreground text-lg leading-relaxed" style={{ fontFamily: fontFamilies.body }}>{doc.description}</p>
           )}
         </section>
 
@@ -655,7 +695,7 @@ export default function PublicQuote() {
 
         {/* Phases / Lines */}
         <section>
-          <h3 className="text-xl font-semibold tracking-tight mb-6">Détail de la proposition</h3>
+          <h3 className="text-xl font-semibold tracking-tight mb-6" style={{ fontFamily: fontFamilies.heading }}>Détail de la proposition</h3>
           <div className="space-y-3">
             {phases.map((phase) => {
               const isOptional = phase.line_type === 'option' || !phase.is_included;
@@ -674,7 +714,7 @@ export default function PublicQuote() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-base">{phase.phase_name}</span>
+                        <span className="font-medium text-base" style={{ fontFamily: fontFamilies.heading }}>{phase.phase_name}</span>
                         {isOptional && (
                           <Badge variant="outline" className="text-xs font-normal">Option</Badge>
                         )}
@@ -713,23 +753,26 @@ export default function PublicQuote() {
         </section>
 
         {/* Summary */}
-        <section className="bg-foreground text-background rounded-xl p-8">
+        <section 
+          className="rounded-xl p-8 text-white"
+          style={{ backgroundColor: themeColors ? `hsl(${themeColors.primary})` : 'hsl(var(--foreground))' }}
+        >
           <div className="space-y-3">
-            <div className="flex justify-between text-background/70">
+            <div className="flex justify-between text-white/70">
               <span>Total HT</span>
               <span className="font-medium">{formatCurrency(total)}</span>
             </div>
-            <div className="flex justify-between text-background/70">
+            <div className="flex justify-between text-white/70">
               <span>TVA ({doc.vat_rate || 20}%)</span>
               <span className="font-medium">{formatCurrency(vatAmount)}</span>
             </div>
-            <Separator className="bg-background/20" />
-            <div className="flex justify-between text-2xl font-bold pt-2">
+            <Separator className="bg-white/20" />
+            <div className="flex justify-between text-2xl font-bold pt-2" style={{ fontFamily: fontFamilies.heading }}>
               <span>Total TTC</span>
               <span>{formatCurrency(totalTTC)}</span>
             </div>
             {doc.requires_deposit && (
-              <div className="flex justify-between text-background/70 pt-2">
+              <div className="flex justify-between text-white/70 pt-2">
                 <span>Acompte à la signature ({doc.deposit_percentage || 30}%)</span>
                 <span className="font-medium">{formatCurrency(depositAmount)}</span>
               </div>
@@ -741,8 +784,12 @@ export default function PublicQuote() {
         <div className="sticky bottom-0 bg-gradient-to-t from-white via-white to-transparent pt-4 pb-8">
           <Button 
             size="lg" 
-            className="w-full h-14 text-base font-medium shadow-lg"
+            className="w-full h-14 text-base font-medium shadow-lg text-white"
             onClick={() => setStep('sign')}
+            style={{ 
+              backgroundColor: themeColors ? `hsl(${themeColors.primary})` : 'hsl(var(--primary))',
+              fontFamily: fontFamilies.heading 
+            }}
           >
             <Pen className="h-5 w-5 mr-2" />
             Accepter et signer ce devis
