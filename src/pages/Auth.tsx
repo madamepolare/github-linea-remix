@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, UserPlus } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, UserPlus, ArrowLeft, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,10 +34,13 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { signIn, signUp, user, profile, loading } = useAuth();
+  const { signIn, signUp, user, profile, loading, resetPassword } = useAuth();
   
   // Get redirect parameter for invitation flow
   const redirectTo = searchParams.get('redirect');
@@ -97,6 +100,35 @@ export default function Auth() {
         description: error.message === "Invalid login credentials" 
           ? "Invalid email or password. Please try again."
           : error.message,
+      });
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotPasswordEmail) {
+      toast({
+        variant: "destructive",
+        title: "Email requis",
+        description: "Veuillez entrer votre adresse email.",
+      });
+      return;
+    }
+    setIsLoading(true);
+    const { error } = await resetPassword(forgotPasswordEmail);
+    setIsLoading(false);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: error.message,
+      });
+    } else {
+      setForgotPasswordSent(true);
+      toast({
+        title: "Email envoyé",
+        description: "Si un compte existe avec cet email, vous recevrez un lien de réinitialisation.",
       });
     }
   };
@@ -257,29 +289,105 @@ export default function Auth() {
               </p>
             </div>
 
-            {/* Tab Switcher */}
-            <div className="flex bg-muted rounded-lg p-1">
-              <button
-                onClick={() => setIsLogin(true)}
-                className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-all ${
-                  isLogin
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+            {/* Forgot Password Mode */}
+            {showForgotPassword ? (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
               >
-                Connexion
-              </button>
-              <button
-                onClick={() => setIsLogin(false)}
-                className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-all ${
-                  !isLogin
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Inscription
-              </button>
-            </div>
+                {forgotPasswordSent ? (
+                  <div className="text-center space-y-4">
+                    <div className="flex justify-center">
+                      <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                        <CheckCircle className="h-8 w-8 text-primary" />
+                      </div>
+                    </div>
+                    <h3 className="font-display text-xl font-bold text-foreground">
+                      Email envoyé !
+                    </h3>
+                    <p className="text-muted-foreground">
+                      Si un compte existe avec l'adresse <strong>{forgotPasswordEmail}</strong>, vous recevrez un lien de réinitialisation.
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        setShowForgotPassword(false);
+                        setForgotPasswordSent(false);
+                        setForgotPasswordEmail("");
+                      }}
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Retour à la connexion
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="forgot-email">Adresse email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="forgot-email"
+                          type="email"
+                          placeholder="vous@agence.com"
+                          className="pl-10"
+                          value={forgotPasswordEmail}
+                          onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Entrez l'email associé à votre compte pour recevoir un lien de réinitialisation.
+                      </p>
+                    </div>
+
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <ArrowRight className="h-4 w-4 mr-2" />
+                      )}
+                      Envoyer le lien
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => setShowForgotPassword(false)}
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Retour
+                    </Button>
+                  </form>
+                )}
+              </motion.div>
+            ) : (
+              <>
+                {/* Tab Switcher */}
+                <div className="flex bg-muted rounded-lg p-1">
+                  <button
+                    onClick={() => setIsLogin(true)}
+                    className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-all ${
+                      isLogin
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Connexion
+                  </button>
+                  <button
+                    onClick={() => setIsLogin(false)}
+                    className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-all ${
+                      !isLogin
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Inscription
+                  </button>
+                </div>
 
             <AnimatePresence mode="wait">
               {isLogin ? (
@@ -330,6 +438,13 @@ export default function Auth() {
                     {loginForm.formState.errors.password && (
                       <p className="text-sm text-destructive">{loginForm.formState.errors.password.message}</p>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotPassword(true)}
+                      className="text-sm text-primary hover:underline"
+                    >
+                      Mot de passe oublié ?
+                    </button>
                   </div>
 
                   <Button type="submit" className="w-full" disabled={isLoading}>
@@ -443,6 +558,8 @@ export default function Auth() {
                 </motion.form>
               )}
             </AnimatePresence>
+              </>
+            )}
           </motion.div>
         </div>
       </div>
