@@ -9403,6 +9403,113 @@ export type Database = {
           },
         ]
       }
+      tender_lot_criteria: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          lot_id: string
+          name: string
+          sort_order: number | null
+          type: string | null
+          weight: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          lot_id: string
+          name: string
+          sort_order?: number | null
+          type?: string | null
+          weight: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          lot_id?: string
+          name?: string
+          sort_order?: number | null
+          type?: string | null
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_lot_criteria_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "tender_lots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tender_lots: {
+        Row: {
+          attribution_type: string | null
+          budget_max: number | null
+          budget_min: number | null
+          created_at: string | null
+          description: string | null
+          domaine: string | null
+          id: string
+          intitule: string
+          nb_attributaires: number | null
+          numero: number
+          sort_order: number | null
+          tender_id: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          attribution_type?: string | null
+          budget_max?: number | null
+          budget_min?: number | null
+          created_at?: string | null
+          description?: string | null
+          domaine?: string | null
+          id?: string
+          intitule: string
+          nb_attributaires?: number | null
+          numero: number
+          sort_order?: number | null
+          tender_id: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          attribution_type?: string | null
+          budget_max?: number | null
+          budget_min?: number | null
+          created_at?: string | null
+          description?: string | null
+          domaine?: string | null
+          id?: string
+          intitule?: string
+          nb_attributaires?: number | null
+          numero?: number
+          sort_order?: number | null
+          tender_id?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tender_lots_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tender_lots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tender_partner_candidates: {
         Row: {
           company_id: string | null
@@ -9979,6 +10086,7 @@ export type Database = {
           go_decision_date: string | null
           go_decision_notes: string | null
           group_code: string | null
+          has_allotissement: boolean | null
           id: string
           is_multi_attributaire: boolean | null
           itinerance: boolean | null
@@ -9998,6 +10106,7 @@ export type Database = {
           montant_maximum: number | null
           montant_minimum: number | null
           nb_attributaires: number | null
+          nb_lots: number | null
           nb_reconductions: number | null
           negotiation_candidates_count: number | null
           negotiation_method: string | null
@@ -10035,6 +10144,8 @@ export type Database = {
           type_exposition: string | null
           updated_at: string | null
           validite_offre_jours: number | null
+          validity_reminder_enabled: boolean | null
+          validity_reminder_months: number | null
           work_nature_tags: string[] | null
           workspace_id: string
         }
@@ -10078,6 +10189,7 @@ export type Database = {
           go_decision_date?: string | null
           go_decision_notes?: string | null
           group_code?: string | null
+          has_allotissement?: boolean | null
           id?: string
           is_multi_attributaire?: boolean | null
           itinerance?: boolean | null
@@ -10097,6 +10209,7 @@ export type Database = {
           montant_maximum?: number | null
           montant_minimum?: number | null
           nb_attributaires?: number | null
+          nb_lots?: number | null
           nb_reconductions?: number | null
           negotiation_candidates_count?: number | null
           negotiation_method?: string | null
@@ -10134,6 +10247,8 @@ export type Database = {
           type_exposition?: string | null
           updated_at?: string | null
           validite_offre_jours?: number | null
+          validity_reminder_enabled?: boolean | null
+          validity_reminder_months?: number | null
           work_nature_tags?: string[] | null
           workspace_id: string
         }
@@ -10177,6 +10292,7 @@ export type Database = {
           go_decision_date?: string | null
           go_decision_notes?: string | null
           group_code?: string | null
+          has_allotissement?: boolean | null
           id?: string
           is_multi_attributaire?: boolean | null
           itinerance?: boolean | null
@@ -10196,6 +10312,7 @@ export type Database = {
           montant_maximum?: number | null
           montant_minimum?: number | null
           nb_attributaires?: number | null
+          nb_lots?: number | null
           nb_reconductions?: number | null
           negotiation_candidates_count?: number | null
           negotiation_method?: string | null
@@ -10233,6 +10350,8 @@ export type Database = {
           type_exposition?: string | null
           updated_at?: string | null
           validite_offre_jours?: number | null
+          validity_reminder_enabled?: boolean | null
+          validity_reminder_months?: number | null
           work_nature_tags?: string[] | null
           workspace_id?: string
         }

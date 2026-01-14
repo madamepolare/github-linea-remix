@@ -164,12 +164,12 @@ export function CreateCategoryDialog({ open, onOpenChange }: CreateCategoryDialo
           {categories.length > 0 && (
             <div className="space-y-2">
               <Label>Catégorie parente (optionnel)</Label>
-              <Select value={parentId} onValueChange={setParentId}>
+              <Select value={parentId || "__none__"} onValueChange={(v) => setParentId(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Aucune (racine)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucune (racine)</SelectItem>
+                  <SelectItem value="__none__">Aucune (racine)</SelectItem>
                   {categories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}
