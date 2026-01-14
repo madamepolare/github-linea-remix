@@ -123,7 +123,7 @@ export default function PublicQuote() {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [themeColors, setThemeColors] = useState<{ primary: string; accent: string } | null>(null);
+  const [themeColors, setThemeColors] = useState<{ primary: string; accent: string; preview?: { bg: string; fg: string; accent: string } } | null>(null);
   const [fontFamilies, setFontFamilies] = useState<{ heading: string; body: string }>({
     heading: "'Inter', sans-serif",
     body: "'Inter', sans-serif"
@@ -177,8 +177,10 @@ export default function PublicQuote() {
     
     const root = document.documentElement;
     
-    // Get color theme
-    const theme = COLOR_THEMES.find(t => t.id === styleSettings.colorTheme);
+    // Get color theme - default to "default" theme if not found
+    const theme = COLOR_THEMES.find(t => t.id === styleSettings.colorTheme) || COLOR_THEMES[0];
+    
+    console.log('Applying theme:', styleSettings.colorTheme, theme);
     
     // Apply CSS variables to :root for global effect
     root.style.setProperty('--font-heading', fonts.heading);
@@ -190,11 +192,15 @@ export default function PublicQuote() {
     if (styleSettings.borderRadius !== undefined) {
       root.style.setProperty('--radius', `${styleSettings.borderRadius}px`);
     }
-    if (theme) {
-      root.style.setProperty('--primary', theme.primary);
-      root.style.setProperty('--accent', theme.accent);
-      setThemeColors({ primary: theme.primary, accent: theme.accent });
-    }
+    
+    // Always apply theme colors
+    root.style.setProperty('--primary', theme.primary);
+    root.style.setProperty('--accent', theme.accent);
+    setThemeColors({ 
+      primary: theme.primary, 
+      accent: theme.accent,
+      preview: theme.preview 
+    });
     
     setFontFamilies(fonts);
   };
@@ -462,18 +468,30 @@ export default function PublicQuote() {
   // Success screen
   if (step === 'success') {
     return (
-      <div ref={containerRef} className="min-h-screen flex flex-col bg-white" style={{ fontFamily: 'var(--font-body)' }}>
+      <div 
+        ref={containerRef} 
+        className="min-h-screen flex flex-col" 
+        style={{ 
+          fontFamily: fontFamilies.body,
+          backgroundColor: themeColors?.preview?.bg || '#fafafa'
+        }}
+      >
         {/* Logo Banner */}
-        <header className="w-full border-b">
+        <header className="w-full border-b bg-white/80 backdrop-blur-sm">
           <div className="w-full flex items-center justify-center py-8 px-6">
             {agency.logo_url ? (
               <img 
                 src={agency.logo_url} 
                 alt={agency.name} 
-                className="h-16 max-h-16 w-auto object-contain"
+                className="h-14 max-h-14 w-auto object-contain"
               />
             ) : (
-              <h1 className="text-3xl font-bold tracking-tight uppercase" style={{ fontFamily: fontFamilies.heading }}>{agency.name}</h1>
+              <h1 
+                className="text-2xl font-bold tracking-tight" 
+                style={{ fontFamily: fontFamilies.heading, color: themeColors?.preview?.fg }}
+              >
+                {agency.name}
+              </h1>
             )}
           </div>
         </header>
@@ -564,18 +582,30 @@ export default function PublicQuote() {
   // Sign screen
   if (step === 'sign') {
     return (
-      <div ref={containerRef} className="min-h-screen flex flex-col bg-white" style={{ fontFamily: 'var(--font-body)' }}>
+      <div 
+        ref={containerRef} 
+        className="min-h-screen flex flex-col" 
+        style={{ 
+          fontFamily: fontFamilies.body,
+          backgroundColor: themeColors?.preview?.bg || '#fafafa'
+        }}
+      >
         {/* Logo Banner */}
-        <header className="w-full border-b">
+        <header className="w-full border-b bg-white/80 backdrop-blur-sm">
           <div className="w-full flex items-center justify-center py-8 px-6">
             {agency.logo_url ? (
               <img 
                 src={agency.logo_url} 
                 alt={agency.name} 
-                className="h-16 max-h-16 w-auto object-contain"
+                className="h-14 max-h-14 w-auto object-contain"
               />
             ) : (
-              <h1 className="text-3xl font-bold tracking-tight uppercase" style={{ fontFamily: fontFamilies.heading }}>{agency.name}</h1>
+              <h1 
+                className="text-2xl font-bold tracking-tight" 
+                style={{ fontFamily: fontFamilies.heading, color: themeColors?.preview?.fg }}
+              >
+                {agency.name}
+              </h1>
             )}
           </div>
         </header>
@@ -692,38 +722,50 @@ export default function PublicQuote() {
 
   // View screen - Main quote display
   return (
-    <div ref={containerRef} className="min-h-screen flex flex-col bg-white" style={{ fontFamily: 'var(--font-body)' }}>
+    <div 
+      ref={containerRef} 
+      className="min-h-screen flex flex-col" 
+      style={{ 
+        fontFamily: fontFamilies.body,
+        backgroundColor: themeColors?.preview?.bg || '#fafafa'
+      }}
+    >
       {/* Logo Banner - Full Width */}
-      <header className="w-full border-b sticky top-0 z-10 bg-white">
-        <div className="w-full flex items-center justify-center py-8 px-6">
+      <header className="w-full border-b sticky top-0 z-10 bg-white/80 backdrop-blur-sm">
+        <div className="w-full flex items-center justify-center py-6 px-6">
           {agency.logo_url ? (
             <img 
               src={agency.logo_url} 
               alt={agency.name} 
-              className="h-16 max-h-16 w-auto object-contain"
+              className="h-12 max-h-12 w-auto object-contain"
             />
           ) : (
-            <h1 className="text-3xl font-bold tracking-tight uppercase" style={{ fontFamily: fontFamilies.heading }}>{agency.name}</h1>
+            <h1 
+              className="text-2xl font-bold tracking-tight" 
+              style={{ fontFamily: fontFamilies.heading, color: themeColors?.preview?.fg }}
+            >
+              {agency.name}
+            </h1>
           )}
         </div>
       </header>
 
       {/* Agency Info Bar */}
-      <div className="w-full border-b bg-muted/30">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="w-full border-b bg-white/50">
+        <div className="max-w-4xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-6 text-sm">
             <span className="text-muted-foreground">
-              Devis <span className="font-medium text-foreground">{doc.document_number}</span>
+              Devis <span className="font-semibold" style={{ color: themeColors?.preview?.fg }}>{doc.document_number}</span>
             </span>
             {doc.valid_until && (
               <span className="text-muted-foreground">
-                Valide jusqu'au <span className="font-medium text-foreground">{new Date(doc.valid_until).toLocaleDateString('fr-FR')}</span>
+                Valide jusqu'au <span className="font-medium">{new Date(doc.valid_until).toLocaleDateString('fr-FR')}</span>
               </span>
             )}
           </div>
           <Badge 
-            variant={doc.status === 'signed' ? 'default' : 'secondary'}
-            className="font-medium"
+            className="font-medium text-white"
+            style={{ backgroundColor: themeColors ? `hsl(${themeColors.primary})` : undefined }}
           >
             {doc.status === 'signed' ? 'Signé' : doc.status === 'sent' ? 'En attente' : doc.status}
           </Badge>
@@ -740,12 +782,12 @@ export default function PublicQuote() {
         </section>
 
         {/* Client & Project Info */}
-        <section className="grid sm:grid-cols-2 gap-6">
+        <section className="grid sm:grid-cols-2 gap-4">
           {doc.client_company && (
-            <div className="flex items-start gap-3 p-4 bg-muted/30 rounded-lg border">
-              <Building2 className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+            <div className="flex items-start gap-3 p-4 bg-white rounded-lg border shadow-sm">
+              <Building2 className="h-5 w-5 mt-0.5 shrink-0" style={{ color: themeColors?.preview?.fg }} />
               <div>
-                <p className="font-medium">{doc.client_company.name}</p>
+                <p className="font-medium" style={{ fontFamily: fontFamilies.heading }}>{doc.client_company.name}</p>
                 {doc.client_company.address && (
                   <p className="text-sm text-muted-foreground mt-1">
                     {doc.client_company.address}<br />
@@ -756,10 +798,10 @@ export default function PublicQuote() {
             </div>
           )}
           {doc.project_address && (
-            <div className="flex items-start gap-3 p-4 bg-muted/30 rounded-lg border">
-              <MapPin className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+            <div className="flex items-start gap-3 p-4 bg-white rounded-lg border shadow-sm">
+              <MapPin className="h-5 w-5 mt-0.5 shrink-0" style={{ color: themeColors?.preview?.fg }} />
               <div>
-                <p className="font-medium">Lieu du projet</p>
+                <p className="font-medium" style={{ fontFamily: fontFamilies.heading }}>Lieu du projet</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {doc.project_address}<br />
                   {doc.postal_code} {doc.project_city}
@@ -771,8 +813,8 @@ export default function PublicQuote() {
 
         {/* Phases / Lines */}
         <section>
-          <h3 className="text-xl font-semibold tracking-tight mb-6" style={{ fontFamily: fontFamilies.heading }}>Détail de la proposition</h3>
-          <div className="space-y-3">
+          <h3 className="text-xl font-semibold tracking-tight mb-4" style={{ fontFamily: fontFamilies.heading }}>Détail de la proposition</h3>
+          <div className="space-y-2">
             {phases.map((phase) => {
               const isOptional = phase.line_type === 'option' || !phase.is_included;
               const isSelected = optionsSelected[phase.id];
@@ -781,28 +823,35 @@ export default function PublicQuote() {
                 <div
                   key={phase.id}
                   className={cn(
-                    "p-5 rounded-lg border transition-all",
-                    isOptional && !isSelected && "opacity-60 bg-muted/20",
-                    isOptional && isSelected && "border-foreground bg-muted/10",
+                    "p-4 rounded-lg border transition-all shadow-sm",
+                    isOptional && !isSelected && "opacity-50 bg-white/50",
+                    isOptional && isSelected && "bg-white border-2",
                     !isOptional && "bg-white"
                   )}
+                  style={isOptional && isSelected ? { borderColor: themeColors?.preview?.fg } : undefined}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-base" style={{ fontFamily: fontFamilies.heading }}>{phase.phase_name}</span>
+                        <span className="font-medium" style={{ fontFamily: fontFamilies.heading }}>{phase.phase_name}</span>
                         {isOptional && (
-                          <Badge variant="outline" className="text-xs font-normal">Option</Badge>
+                          <Badge 
+                            variant="outline" 
+                            className="text-xs font-normal"
+                            style={{ borderColor: themeColors?.preview?.accent, color: themeColors?.preview?.fg }}
+                          >
+                            Option
+                          </Badge>
                         )}
                       </div>
                       {phase.phase_description && (
                         <p className="text-sm text-muted-foreground leading-relaxed">{phase.phase_description}</p>
                       )}
                       {phase.deliverables && phase.deliverables.length > 0 && (
-                        <ul className="mt-3 text-sm text-muted-foreground space-y-1.5">
+                        <ul className="mt-2 text-sm text-muted-foreground space-y-1">
                           {phase.deliverables.map((d, i) => (
                             <li key={i} className="flex items-center gap-2">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />
+                              <CheckCircle2 className="h-3.5 w-3.5" style={{ color: themeColors?.preview?.accent }} />
                               {d}
                             </li>
                           ))}
@@ -810,7 +859,7 @@ export default function PublicQuote() {
                       )}
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="font-semibold text-lg">{formatCurrency(phase.amount || 0)}</p>
+                      <p className="font-semibold text-lg" style={{ fontFamily: fontFamilies.heading }}>{formatCurrency(phase.amount || 0)}</p>
                       {isOptional && (
                         <Switch
                           checked={isSelected}
@@ -857,7 +906,7 @@ export default function PublicQuote() {
         </section>
 
         {/* Action button */}
-        <div className="sticky bottom-0 bg-gradient-to-t from-white via-white to-transparent pt-4 pb-8">
+        <div className="sticky bottom-0 pt-4 pb-8" style={{ background: `linear-gradient(to top, ${themeColors?.preview?.bg || '#fafafa'}, transparent)` }}>
           <Button 
             size="lg" 
             className="w-full h-14 text-base font-medium shadow-lg text-white"
@@ -875,9 +924,9 @@ export default function PublicQuote() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t py-8 bg-muted/30">
+      <footer className="border-t py-6 bg-white/50">
         <div className="max-w-4xl mx-auto px-6 text-center text-xs text-muted-foreground space-y-1">
-          <p className="font-medium text-foreground">{agency.billing_name || agency.name}</p>
+          <p className="font-medium" style={{ color: themeColors?.preview?.fg }}>{agency.billing_name || agency.name}</p>
           {agency.billing_address && (
             <p>{agency.billing_address}, {agency.billing_postal_code} {agency.billing_city}</p>
           )}
