@@ -59,6 +59,8 @@ import { ensureValidProjectType } from '@/lib/projectTypeMapping';
 import { useContractTypes, BuilderTab } from '@/hooks/useContractTypes';
 import { LineFeatureProvider } from '@/contexts/LineFeatureContext';
 import type { Json } from '@/integrations/supabase/types';
+import { ConvertQuoteToProjectDialog } from '@/components/commercial/ConvertQuoteToProjectDialog';
+import { Rocket, ExternalLink } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,7 +80,7 @@ export default function QuoteBuilder() {
   const projectId = searchParams.get('project');
   const documentType = searchParams.get('type') || 'quote';
   
-  const { createDocument, updateDocument, getDocument, getDocumentPhases, createPhase, updatePhase, deletePhase } = useCommercialDocuments();
+  const { createDocument, updateDocument, getDocument, getDocumentPhases, createPhase, updatePhase, deletePhase, acceptAndCreateProject } = useCommercialDocuments();
   const { agencyInfo } = useAgencyInfo();
   
   // Use getDocument from the hook for existing documents
@@ -99,6 +101,7 @@ export default function QuoteBuilder() {
   const [zoom, setZoom] = useState(70);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showConvertDialog, setShowConvertDialog] = useState(false);
   
   const [document, setDocument] = useState<Partial<QuoteDocument>>({
     document_type: (documentType === 'quote' || documentType === 'contract') ? documentType : 'contract',
@@ -395,6 +398,37 @@ export default function QuoteBuilder() {
     navigate(-1);
   };
 
+  // Handler for converting quote to project
+  const handleConvertToProject = async (params: {
+    useAIPlanning: boolean;
+    projectStartDate?: string;
+    projectEndDate?: string;
+    selectedPhases: string[];
+  }) => {
+    if (!id || !phasesQuery.data) throw new Error('No document or phases');
+    
+    // Filter phases based on selection
+    const selectedPhases = phasesQuery.data.filter(p => params.selectedPhases.includes(p.id));
+    
+    const result = await acceptAndCreateProject.mutateAsync({
+      documentId: id,
+      phases: selectedPhases,
+      useAIPlanning: params.useAIPlanning,
+      projectStartDate: params.projectStartDate,
+      projectEndDate: params.projectEndDate
+    });
+    
+    // Update local state to reflect accepted status
+    setDocument(prev => ({ ...prev, status: 'accepted', accepted_at: new Date().toISOString() }));
+    
+    return result;
+  };
+
+  // Check if document is already linked to a project
+  const isLinkedToProject = !!document.project?.id;
+  const isAcceptedOrSigned = document.status === 'accepted' || document.status === 'signed';
+  const canConvertToProject = !isNew && !isLinkedToProject && !isAcceptedOrSigned;
+
   const statusVariant = document.status === 'accepted' ? 'default' : 
                         document.status === 'sent' ? 'secondary' : 
                         document.status === 'rejected' ? 'destructive' : 'outline';
@@ -548,6 +582,32 @@ export default function QuoteBuilder() {
             <span className="hidden sm:inline">{isSaving ? 'Enregistrement...' : 'Enregistrer'}</span>
           </Button>
           
+          {/* Convert to project button */}
+          {canConvertToProject && (
+            <Button 
+              variant="default"
+              size="sm"
+              onClick={() => setShowConvertDialog(true)}
+              className="h-8 sm:h-9 px-2 sm:px-3 bg-green-600 hover:bg-green-700"
+            >
+              <Rocket className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Créer projet</span>
+            </Button>
+          )}
+          
+          {/* Link to project if already converted */}
+          {isLinkedToProject && document.project?.id && (
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/projects/${document.project?.id}`)}
+              className="h-8 sm:h-9 px-2 sm:px-3"
+            >
+              <ExternalLink className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Voir projet</span>
+            </Button>
+          )}
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -572,6 +632,30 @@ export default function QuoteBuilder() {
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Locked document banner */}
+      {isLinkedToProject && (
+        <div className="px-3 sm:px-6 py-2 bg-green-50 border-b border-green-200 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-green-700">
+            <Badge variant="outline" className="bg-green-100 border-green-300 text-green-700">
+              <Rocket className="h-3 w-3 mr-1" />
+              Projet créé
+            </Badge>
+            <span className="text-sm">
+              Ce devis est lié au projet <strong>{document.project?.name || 'Sans nom'}</strong>
+            </span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate(`/projects/${document.project?.id}`)}
+            className="text-green-700 hover:text-green-800 hover:bg-green-100"
+          >
+            <ExternalLink className="h-4 w-4 mr-1" />
+            Voir le projet
+          </Button>
+        </div>
+      )}
 
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
@@ -734,6 +818,15 @@ export default function QuoteBuilder() {
           </div>
         )}
       </div>
+      
+      {/* Convert to project dialog */}
+      <ConvertQuoteToProjectDialog
+        open={showConvertDialog}
+        onOpenChange={setShowConvertDialog}
+        document={document as QuoteDocument}
+        lines={lines}
+        onConvert={handleConvertToProject}
+      />
     </div>
     </LineFeatureProvider>
   );
