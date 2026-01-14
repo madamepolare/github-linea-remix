@@ -45,6 +45,9 @@ export function BudgetOverviewTab({ projectId }: BudgetOverviewTabProps) {
   const { schedules, isLoading: schedulesLoading } = useTaskSchedules({ taskId: undefined });
   const { data: employmentInfo, isLoading: employmentLoading } = useAllMemberEmploymentInfo();
   const { purchases, isLoading: purchasesLoading, totals: purchaseTotals, byStatus } = useProjectPurchases(projectId);
+  
+  // State must be declared before any conditional returns
+  const [increaseDialogOpen, setIncreaseDialogOpen] = useState(false);
 
   // Check if current user is admin/owner
   const { data: currentUserRole } = useQuery({
@@ -202,8 +205,6 @@ export function BudgetOverviewTab({ projectId }: BudgetOverviewTabProps) {
       </div>
     );
   }
-
-  const [increaseDialogOpen, setIncreaseDialogOpen] = useState(false);
 
   return (
     <div className="space-y-6">
