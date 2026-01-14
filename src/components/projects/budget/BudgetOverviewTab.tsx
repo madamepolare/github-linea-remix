@@ -38,7 +38,7 @@ export function BudgetOverviewTab({ projectId }: BudgetOverviewTabProps) {
   const { data: timeEntries, isLoading: entriesLoading } = useTeamTimeEntries({ projectId });
   const { schedules, isLoading: schedulesLoading } = useTaskSchedules({ taskId: undefined });
   const { data: employmentInfo, isLoading: employmentLoading } = useAllMemberEmploymentInfo();
-  const { purchases, isLoading: purchasesLoading, totals: purchaseTotals } = useProjectPurchases(projectId);
+  const { purchases, isLoading: purchasesLoading, totals: purchaseTotals, byStatus } = useProjectPurchases(projectId);
 
   // Check if current user is admin/owner
   const { data: currentUserRole } = useQuery({
@@ -258,14 +258,14 @@ export function BudgetOverviewTab({ projectId }: BudgetOverviewTabProps) {
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(purchaseTotals.totalHT)}</div>
             <div className="flex gap-2 mt-2 flex-wrap">
-              {purchaseTotals.provisionTotal > 0 && (
+              {purchaseTotals.provisionsHT > 0 && (
                 <Badge variant="outline" className="text-xs">
-                  Provisions: {formatCurrency(purchaseTotals.provisionTotal)}
+                  Provisions: {formatCurrency(purchaseTotals.provisionsHT)}
                 </Badge>
               )}
-              {purchaseTotals.invoiceTotal > 0 && (
+              {purchaseTotals.invoicesHT > 0 && (
                 <Badge variant="secondary" className="text-xs">
-                  Factures: {formatCurrency(purchaseTotals.invoiceTotal)}
+                  Factures: {formatCurrency(purchaseTotals.invoicesHT)}
                 </Badge>
               )}
             </div>
@@ -316,28 +316,38 @@ export function BudgetOverviewTab({ projectId }: BudgetOverviewTabProps) {
                 <Hourglass className="h-4 w-4 text-amber-500" />
                 <span className="text-sm">En attente</span>
               </div>
-              <span className="font-medium">{formatCurrency(purchaseTotals.byStatus.pending_validation + purchaseTotals.byStatus.draft)}</span>
+              <span className="font-medium">{formatCurrency(
+                (byStatus.pending_validation || []).reduce((s, p) => s + (p.amount_ht || 0), 0) +
+                (byStatus.draft || []).reduce((s, p) => s + (p.amount_ht || 0), 0)
+              )}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-blue-500" />
                 <span className="text-sm">Validées</span>
               </div>
-              <span className="font-medium">{formatCurrency(purchaseTotals.byStatus.validated + purchaseTotals.byStatus.invoice_received)}</span>
+              <span className="font-medium">{formatCurrency(
+                (byStatus.validated || []).reduce((s, p) => s + (p.amount_ht || 0), 0) +
+                (byStatus.invoice_received || []).reduce((s, p) => s + (p.amount_ht || 0), 0)
+              )}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-orange-500" />
                 <span className="text-sm">À payer</span>
               </div>
-              <span className="font-medium">{formatCurrency(purchaseTotals.byStatus.payment_pending)}</span>
+              <span className="font-medium">{formatCurrency(
+                (byStatus.payment_pending || []).reduce((s, p) => s + (p.amount_ht || 0), 0)
+              )}</span>
             </div>
             <div className="flex items-center justify-between border-t pt-3">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                 <span className="text-sm">Payées</span>
               </div>
-              <span className="font-medium text-emerald-600">{formatCurrency(purchaseTotals.byStatus.paid)}</span>
+              <span className="font-medium text-emerald-600">{formatCurrency(
+                (byStatus.paid || []).reduce((s, p) => s + (p.amount_ht || 0), 0)
+              )}</span>
             </div>
           </CardContent>
         </Card>
