@@ -1,28 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   CheckCircle2, 
   Building2, 
   MapPin, 
   Calendar, 
-  Euro,
-  FileText,
   Loader2,
   AlertCircle,
   Pen,
   RotateCcw,
   Check,
-  PartyPopper
+  PartyPopper,
+  ArrowRight
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 
@@ -108,8 +104,6 @@ export default function PublicQuote() {
       }
 
       try {
-        // Use fetch directly without auth headers for public access
-        // Must include apikey for Supabase edge functions
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/public-quote-view?token=${token}`,
           {
@@ -197,7 +191,7 @@ export default function PublicQuote() {
 
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#1a1a1a';
+    ctx.strokeStyle = '#0a0a0a';
     ctx.lineTo(x, y);
     ctx.stroke();
     setHasSignature(true);
@@ -272,29 +266,29 @@ export default function PublicQuote() {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
 
+  // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 to-orange-50">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-amber-600" />
-          <p className="text-muted-foreground">Chargement du devis...</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-foreground" />
+          <p className="text-muted-foreground text-sm tracking-wide">Chargement du devis...</p>
         </div>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-orange-50 p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="h-8 w-8 text-red-600" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Devis inaccessible</h2>
-            <p className="text-muted-foreground">{error}</p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-white p-6">
+        <div className="max-w-md w-full text-center">
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="h-8 w-8 text-foreground" />
+          </div>
+          <h2 className="text-2xl font-semibold tracking-tight mb-3">Devis inaccessible</h2>
+          <p className="text-muted-foreground">{error}</p>
+        </div>
       </div>
     );
   }
@@ -310,32 +304,68 @@ export default function PublicQuote() {
   // Success screen
   if (step === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-emerald-50 p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-8 pb-8 text-center">
-            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-              <PartyPopper className="h-10 w-10 text-green-600" />
+      <div className="min-h-screen flex flex-col bg-white">
+        {/* Logo Banner */}
+        <header className="w-full border-b">
+          <div className="w-full flex items-center justify-center py-8 px-6">
+            {agency.logo_url ? (
+              <img 
+                src={agency.logo_url} 
+                alt={agency.name} 
+                className="h-16 max-h-16 w-auto object-contain"
+              />
+            ) : (
+              <h1 className="text-3xl font-bold tracking-tight uppercase">{agency.name}</h1>
+            )}
+          </div>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center p-6">
+          <div className="max-w-md w-full text-center">
+            <div className="w-20 h-20 rounded-full bg-foreground flex items-center justify-center mx-auto mb-8">
+              <PartyPopper className="h-10 w-10 text-background" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Merci !</h2>
-            <p className="text-muted-foreground mb-6">
+            <h2 className="text-3xl font-bold tracking-tight mb-4">Merci !</h2>
+            <p className="text-muted-foreground mb-8">
               Votre signature a bien été enregistrée pour le devis {doc.document_number}.
             </p>
-            <div className="bg-muted/50 rounded-lg p-4 text-left space-y-2">
-              <p><strong>Montant HT :</strong> {formatCurrency(link.final_amount || total)}</p>
-              <p><strong>Signé le :</strong> {link.signed_at ? new Date(link.signed_at).toLocaleString('fr-FR') : 'Maintenant'}</p>
+            <div className="bg-muted/30 border rounded-lg p-6 text-left space-y-3">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Montant HT</span>
+                <span className="font-semibold">{formatCurrency(link.final_amount || total)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Signé le</span>
+                <span className="font-semibold">{link.signed_at ? new Date(link.signed_at).toLocaleString('fr-FR') : 'Maintenant'}</span>
+              </div>
             </div>
             {doc.requires_deposit && !link.deposit_paid && (
-              <div className="mt-6">
-                <p className="text-sm text-muted-foreground mb-3">
+              <div className="mt-8">
+                <p className="text-sm text-muted-foreground mb-4">
                   Un acompte de {formatCurrency(depositAmount)} est requis.
                 </p>
-                <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600">
+                <Button className="w-full h-12 text-base font-medium">
                   Payer l'acompte
+                  <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="border-t py-8">
+          <div className="max-w-4xl mx-auto px-6 text-center text-xs text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">{agency.billing_name || agency.name}</p>
+            {agency.billing_address && (
+              <p>{agency.billing_address}, {agency.billing_postal_code} {agency.billing_city}</p>
+            )}
+            <div className="flex items-center justify-center gap-4 pt-2">
+              {agency.siret && <span>SIRET {agency.siret}</span>}
+              {agency.vat_number && <span>TVA {agency.vat_number}</span>}
+            </div>
+          </div>
+        </footer>
       </div>
     );
   }
@@ -343,295 +373,316 @@ export default function PublicQuote() {
   // Sign screen
   if (step === 'sign') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 p-4">
-        <div className="max-w-lg mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Pen className="h-5 w-5" />
-                Signer le devis
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">Montant à valider</p>
-                <p className="text-2xl font-bold">{formatCurrency(total)} HT</p>
-                <p className="text-sm text-muted-foreground">{formatCurrency(totalTTC)} TTC</p>
-              </div>
+      <div className="min-h-screen flex flex-col bg-white">
+        {/* Logo Banner */}
+        <header className="w-full border-b">
+          <div className="w-full flex items-center justify-center py-8 px-6">
+            {agency.logo_url ? (
+              <img 
+                src={agency.logo_url} 
+                alt={agency.name} 
+                className="h-16 max-h-16 w-auto object-contain"
+              />
+            ) : (
+              <h1 className="text-3xl font-bold tracking-tight uppercase">{agency.name}</h1>
+            )}
+          </div>
+        </header>
 
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signerName">Nom complet *</Label>
-                  <Input
-                    id="signerName"
-                    value={signerName}
-                    onChange={(e) => setSignerName(e.target.value)}
-                    placeholder="Votre nom"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signerEmail">Email *</Label>
-                  <Input
-                    id="signerEmail"
-                    type="email"
-                    value={signerEmail}
-                    onChange={(e) => setSignerEmail(e.target.value)}
-                    placeholder="votre@email.com"
-                  />
-                </div>
-              </div>
+        <main className="flex-1 max-w-lg mx-auto w-full p-6">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold tracking-tight mb-2 flex items-center gap-3">
+              <Pen className="h-6 w-6" />
+              Signer le devis
+            </h2>
+            <p className="text-muted-foreground">
+              Validez votre accord en signant ci-dessous
+            </p>
+          </div>
 
+          <div className="space-y-6">
+            {/* Amount summary */}
+            <div className="p-5 bg-muted/30 border rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">Montant à valider</p>
+              <p className="text-3xl font-bold tracking-tight">{formatCurrency(total)} <span className="text-lg font-normal text-muted-foreground">HT</span></p>
+              <p className="text-sm text-muted-foreground">{formatCurrency(totalTTC)} TTC</p>
+            </div>
+
+            {/* Form fields */}
+            <div className="grid gap-4">
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Signature *</Label>
-                  <Button variant="ghost" size="sm" onClick={clearSignature}>
-                    <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                    Effacer
-                  </Button>
-                </div>
-                <div className="border-2 border-dashed rounded-lg bg-white">
-                  <canvas
-                    ref={canvasRef}
-                    width={400}
-                    height={150}
-                    className="w-full cursor-crosshair touch-none"
-                    onMouseDown={startDrawing}
-                    onMouseMove={draw}
-                    onMouseUp={stopDrawing}
-                    onMouseLeave={stopDrawing}
-                    onTouchStart={startDrawing}
-                    onTouchMove={draw}
-                    onTouchEnd={stopDrawing}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground text-center">
-                  Dessinez votre signature ci-dessus
-                </p>
+                <Label htmlFor="signerName" className="text-sm font-medium">Nom complet *</Label>
+                <Input
+                  id="signerName"
+                  value={signerName}
+                  onChange={(e) => setSignerName(e.target.value)}
+                  placeholder="Votre nom"
+                  className="h-12"
+                />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="signerEmail" className="text-sm font-medium">Email *</Label>
+                <Input
+                  id="signerEmail"
+                  type="email"
+                  value={signerEmail}
+                  onChange={(e) => setSignerEmail(e.target.value)}
+                  placeholder="votre@email.com"
+                  className="h-12"
+                />
+              </div>
+            </div>
 
-              <p className="text-xs text-muted-foreground">
-                En signant, vous acceptez les conditions générales et confirmez votre accord sur le montant de {formatCurrency(total)} HT.
+            {/* Signature canvas */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Signature *</Label>
+                <Button variant="ghost" size="sm" onClick={clearSignature} className="text-muted-foreground">
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                  Effacer
+                </Button>
+              </div>
+              <div className="border-2 border-dashed rounded-lg bg-muted/20">
+                <canvas
+                  ref={canvasRef}
+                  width={400}
+                  height={150}
+                  className="w-full cursor-crosshair touch-none"
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  onTouchStart={startDrawing}
+                  onTouchMove={draw}
+                  onTouchEnd={stopDrawing}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Dessinez votre signature ci-dessus
               </p>
+            </div>
 
-              <div className="flex gap-3">
-                <Button variant="outline" className="flex-1" onClick={() => setStep('view')}>
-                  Retour
-                </Button>
-                <Button 
-                  className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
-                  onClick={handleSign}
-                  disabled={isSigning || !signerName || !signerEmail || !hasSignature}
-                >
-                  {isSigning ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Signature...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="h-4 w-4 mr-2" />
-                      Signer
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            <p className="text-xs text-muted-foreground">
+              En signant, vous acceptez les conditions générales et confirmez votre accord sur le montant de {formatCurrency(total)} HT.
+            </p>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4">
+              <Button variant="outline" className="flex-1 h-12" onClick={() => setStep('view')}>
+                Retour
+              </Button>
+              <Button 
+                className="flex-1 h-12 font-medium"
+                onClick={handleSign}
+                disabled={isSigning || !signerName || !signerEmail || !hasSignature}
+              >
+                {isSigning ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Signature...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Signer
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
 
-  // View screen
+  // View screen - Main quote display
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {agency.logo_url ? (
-              <img src={agency.logo_url} alt={agency.name} className="h-10 w-10 rounded-lg object-cover" />
-            ) : (
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                <span className="text-white font-bold">{agency.name?.charAt(0) || 'A'}</span>
-              </div>
-            )}
-            <div>
-              <h1 className="font-semibold">{agency.name || 'Agence'}</h1>
-              <p className="text-xs text-muted-foreground">Devis {doc.document_number}</p>
-            </div>
-          </div>
-          <Badge variant={doc.status === 'signed' ? 'default' : 'secondary'}>
-            {doc.status === 'signed' ? 'Signé' : doc.status === 'sent' ? 'En attente' : doc.status}
-          </Badge>
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* Logo Banner - Full Width */}
+      <header className="w-full border-b sticky top-0 z-10 bg-white">
+        <div className="w-full flex items-center justify-center py-8 px-6">
+          {agency.logo_url ? (
+            <img 
+              src={agency.logo_url} 
+              alt={agency.name} 
+              className="h-16 max-h-16 w-auto object-contain"
+            />
+          ) : (
+            <h1 className="text-3xl font-bold tracking-tight uppercase">{agency.name}</h1>
+          )}
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Document info */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">{doc.title}</CardTitle>
-            {doc.description && (
-              <p className="text-sm text-muted-foreground">{doc.description}</p>
+      {/* Agency Info Bar */}
+      <div className="w-full border-b bg-muted/30">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-6 text-sm">
+            <span className="text-muted-foreground">
+              Devis <span className="font-medium text-foreground">{doc.document_number}</span>
+            </span>
+            {doc.valid_until && (
+              <span className="text-muted-foreground">
+                Valide jusqu'au <span className="font-medium text-foreground">{new Date(doc.valid_until).toLocaleDateString('fr-FR')}</span>
+              </span>
             )}
-          </CardHeader>
-          <CardContent>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {doc.client_company && (
-                <div className="flex items-start gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">{doc.client_company.name}</p>
-                    {doc.client_company.address && (
-                      <p className="text-xs text-muted-foreground">
-                        {doc.client_company.address}, {doc.client_company.postal_code} {doc.client_company.city}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-              {doc.project_address && (
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Lieu du projet</p>
-                    <p className="text-xs text-muted-foreground">
-                      {doc.project_address}, {doc.postal_code} {doc.project_city}
-                    </p>
-                  </div>
-                </div>
-              )}
-              {doc.valid_until && (
-                <div className="flex items-start gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Valide jusqu'au</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(doc.valid_until).toLocaleDateString('fr-FR')}
-                    </p>
-                  </div>
-                </div>
-              )}
+          </div>
+          <Badge 
+            variant={doc.status === 'signed' ? 'default' : 'secondary'}
+            className="font-medium"
+          >
+            {doc.status === 'signed' ? 'Signé' : doc.status === 'sent' ? 'En attente' : doc.status}
+          </Badge>
+        </div>
+      </div>
+
+      <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-10 space-y-10">
+        {/* Document Title & Description */}
+        <section>
+          <h2 className="text-3xl font-bold tracking-tight mb-3">{doc.title}</h2>
+          {doc.description && (
+            <p className="text-muted-foreground text-lg leading-relaxed">{doc.description}</p>
+          )}
+        </section>
+
+        {/* Client & Project Info */}
+        <section className="grid sm:grid-cols-2 gap-6">
+          {doc.client_company && (
+            <div className="flex items-start gap-3 p-4 bg-muted/30 rounded-lg border">
+              <Building2 className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium">{doc.client_company.name}</p>
+                {doc.client_company.address && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {doc.client_company.address}<br />
+                    {doc.client_company.postal_code} {doc.client_company.city}
+                  </p>
+                )}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          )}
+          {doc.project_address && (
+            <div className="flex items-start gap-3 p-4 bg-muted/30 rounded-lg border">
+              <MapPin className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium">Lieu du projet</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {doc.project_address}<br />
+                  {doc.postal_code} {doc.project_city}
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
 
-        {/* Lines/Phases */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Détail de la proposition
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {phases.map((phase) => {
-                const isOptional = phase.line_type === 'option' || !phase.is_included;
-                const isSelected = optionsSelected[phase.id];
+        {/* Phases / Lines */}
+        <section>
+          <h3 className="text-xl font-semibold tracking-tight mb-6">Détail de la proposition</h3>
+          <div className="space-y-3">
+            {phases.map((phase) => {
+              const isOptional = phase.line_type === 'option' || !phase.is_included;
+              const isSelected = optionsSelected[phase.id];
 
-                return (
-                  <div
-                    key={phase.id}
-                    className={cn(
-                      "p-4 rounded-lg border transition-all",
-                      isOptional && !isSelected && "opacity-60 bg-muted/30",
-                      isOptional && isSelected && "border-amber-300 bg-amber-50/50",
-                      !isOptional && "bg-white"
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{phase.phase_name}</span>
-                          {isOptional && (
-                            <Badge variant="outline" className="text-xs">Option</Badge>
-                          )}
-                        </div>
-                        {phase.phase_description && (
-                          <p className="text-sm text-muted-foreground">{phase.phase_description}</p>
-                        )}
-                        {phase.deliverables && phase.deliverables.length > 0 && (
-                          <ul className="mt-2 text-xs text-muted-foreground space-y-1">
-                            {phase.deliverables.map((d, i) => (
-                              <li key={i} className="flex items-center gap-1">
-                                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                {d}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-semibold">{formatCurrency(phase.amount || 0)}</p>
+              return (
+                <div
+                  key={phase.id}
+                  className={cn(
+                    "p-5 rounded-lg border transition-all",
+                    isOptional && !isSelected && "opacity-60 bg-muted/20",
+                    isOptional && isSelected && "border-foreground bg-muted/10",
+                    !isOptional && "bg-white"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-base">{phase.phase_name}</span>
                         {isOptional && (
-                          <Switch
-                            checked={isSelected}
-                            onCheckedChange={(checked) => 
-                              setOptionsSelected(prev => ({ ...prev, [phase.id]: checked }))
-                            }
-                            className="mt-2"
-                          />
+                          <Badge variant="outline" className="text-xs font-normal">Option</Badge>
                         )}
                       </div>
+                      {phase.phase_description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed">{phase.phase_description}</p>
+                      )}
+                      {phase.deliverables && phase.deliverables.length > 0 && (
+                        <ul className="mt-3 text-sm text-muted-foreground space-y-1.5">
+                          {phase.deliverables.map((d, i) => (
+                            <li key={i} className="flex items-center gap-2">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />
+                              {d}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-semibold text-lg">{formatCurrency(phase.amount || 0)}</p>
+                      {isOptional && (
+                        <Switch
+                          checked={isSelected}
+                          onCheckedChange={(checked) => 
+                            setOptionsSelected(prev => ({ ...prev, [phase.id]: checked }))
+                          }
+                          className="mt-2"
+                        />
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
         {/* Summary */}
-        <Card className="bg-gradient-to-br from-amber-500 to-orange-500 text-white">
-          <CardContent className="pt-6">
-            <div className="space-y-2">
-              <div className="flex justify-between text-white/80">
-                <span>Total HT</span>
-                <span>{formatCurrency(total)}</span>
-              </div>
-              <div className="flex justify-between text-white/80">
-                <span>TVA ({doc.vat_rate || 20}%)</span>
-                <span>{formatCurrency(vatAmount)}</span>
-              </div>
-              <Separator className="bg-white/20" />
-              <div className="flex justify-between text-xl font-bold">
-                <span>Total TTC</span>
-                <span>{formatCurrency(totalTTC)}</span>
-              </div>
-              {doc.requires_deposit && (
-                <div className="flex justify-between text-white/80 pt-2">
-                  <span>Acompte à la signature ({doc.deposit_percentage || 30}%)</span>
-                  <span>{formatCurrency(depositAmount)}</span>
-                </div>
-              )}
+        <section className="bg-foreground text-background rounded-xl p-8">
+          <div className="space-y-3">
+            <div className="flex justify-between text-background/70">
+              <span>Total HT</span>
+              <span className="font-medium">{formatCurrency(total)}</span>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex justify-between text-background/70">
+              <span>TVA ({doc.vat_rate || 20}%)</span>
+              <span className="font-medium">{formatCurrency(vatAmount)}</span>
+            </div>
+            <Separator className="bg-background/20" />
+            <div className="flex justify-between text-2xl font-bold pt-2">
+              <span>Total TTC</span>
+              <span>{formatCurrency(totalTTC)}</span>
+            </div>
+            {doc.requires_deposit && (
+              <div className="flex justify-between text-background/70 pt-2">
+                <span>Acompte à la signature ({doc.deposit_percentage || 30}%)</span>
+                <span className="font-medium">{formatCurrency(depositAmount)}</span>
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* Action button */}
-        <div className="sticky bottom-0 bg-gradient-to-t from-amber-50 to-transparent pt-4 pb-6">
+        <div className="sticky bottom-0 bg-gradient-to-t from-white via-white to-transparent pt-4 pb-8">
           <Button 
             size="lg" 
-            className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-lg h-14 shadow-lg"
+            className="w-full h-14 text-base font-medium shadow-lg"
             onClick={() => setStep('sign')}
           >
             <Pen className="h-5 w-5 mr-2" />
             Accepter et signer ce devis
+            <ArrowRight className="h-5 w-5 ml-2" />
           </Button>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t py-6">
-        <div className="max-w-4xl mx-auto px-4 text-center text-xs text-muted-foreground">
-          <p>{agency.billing_name || agency.name}</p>
+      <footer className="border-t py-8 bg-muted/30">
+        <div className="max-w-4xl mx-auto px-6 text-center text-xs text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">{agency.billing_name || agency.name}</p>
           {agency.billing_address && (
             <p>{agency.billing_address}, {agency.billing_postal_code} {agency.billing_city}</p>
           )}
-          {agency.siret && <p>SIRET : {agency.siret}</p>}
-          {agency.vat_number && <p>TVA : {agency.vat_number}</p>}
+          <div className="flex items-center justify-center gap-4 pt-2">
+            {agency.siret && <span>SIRET {agency.siret}</span>}
+            {agency.vat_number && <span>TVA {agency.vat_number}</span>}
+          </div>
         </div>
       </footer>
     </div>
