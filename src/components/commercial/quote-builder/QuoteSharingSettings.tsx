@@ -18,9 +18,9 @@ import {
   Sparkles
 } from 'lucide-react';
 import { QuoteDocument } from '@/types/quoteTypes';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { getOrCreatePublicQuoteLink } from '@/lib/publicQuoteLink';
 
 interface QuoteSharingSettingsProps {
   document: Partial<QuoteDocument>;
@@ -46,28 +46,17 @@ export function QuoteSharingSettings({ document, onDocumentChange }: QuoteSharin
     setIsGeneratingLink(true);
 
     try {
-      // Generate a unique token
-      const token = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
-      
-      // Create the public link entry
-      const { error } = await supabase
-        .from('quote_public_links')
-        .insert({
-          document_id: document.id,
-          workspace_id: document.workspace_id,
-          token,
-          requires_deposit: document.requires_deposit || false,
-          deposit_percentage: document.deposit_percentage || 30,
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-        });
+      if (!document.id || !document.workspace_id) {
+        throw new Error('Document incomplet');
+      }
 
-      if (error) throw error;
+      const publicUrl = await getOrCreatePublicQuoteLink({
+        documentId: document.id,
+        workspaceId: document.workspace_id,
+        requiresDeposit: document.requires_deposit || false,
+        depositPercentage: document.deposit_percentage || 30,
+      });
 
-      // Use production URL - detect from current origin or use custom domain
-      const productionUrl = window.location.hostname.includes('lovable') 
-        ? 'https://archigood.lovable.app' 
-        : `${window.location.protocol}//${window.location.host}`;
-      const publicUrl = `${productionUrl}/q/${token}`;
       setGeneratedLink(publicUrl);
       toast.success('Lien de consultation créé');
     } catch (error) {

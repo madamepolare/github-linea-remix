@@ -38,6 +38,7 @@ import { QuoteDocument } from '@/types/quoteTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { getOrCreatePublicQuoteLink } from '@/lib/publicQuoteLink';
 
 interface SuggestedContact {
   email: string;
@@ -116,6 +117,7 @@ export function SendQuoteDialog({
   const [isSending, setIsSending] = useState(false);
   const [sentSuccessfully, setSentSuccessfully] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
 
   // Build suggested contacts list
   const suggestedContacts: SuggestedContact[] = [];
@@ -221,9 +223,35 @@ export function SendQuoteDialog({
     }
   };
 
-  const handleCopyLink = () => {
-    if (generatedLink) {
-      navigator.clipboard.writeText(generatedLink);
+  const ensurePublicLink = async () => {
+    if (!document.id || !document.workspace_id) {
+      toast.error('Document non sauvegardé');
+      return null;
+    }
+
+    setIsGeneratingLink(true);
+    try {
+      const url = await getOrCreatePublicQuoteLink({
+        documentId: document.id,
+        workspaceId: document.workspace_id,
+        requiresDeposit: document.requires_deposit || false,
+        depositPercentage: document.deposit_percentage || 30,
+      });
+      setGeneratedLink(url);
+      return url;
+    } catch (e) {
+      console.error(e);
+      toast.error('Erreur lors de la génération du lien');
+      return null;
+    } finally {
+      setIsGeneratingLink(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const url = generatedLink ?? (await ensurePublicLink());
+    if (url) {
+      await navigator.clipboard.writeText(url);
       toast.success('Lien copié !');
     }
   };
@@ -456,6 +484,26 @@ export function SendQuoteDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler
           </Button>
+
+          <Button
+            variant="outline"
+            onClick={handleCopyLink}
+            disabled={isSending || isGeneratingLink || !document.id || !generatePublicLink}
+            title={!generatePublicLink ? 'Activez "Générer un lien" pour copier le lien client' : undefined}
+          >
+            {isGeneratingLink ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Génération...
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4 mr-2" />
+                Copier le lien
+              </>
+            )}
+          </Button>
+
           <Button onClick={handleSend} disabled={isSending || !toEmail}>
             {isSending ? (
               <>
