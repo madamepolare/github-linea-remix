@@ -42,14 +42,14 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
   // Load existing schedule from document
   useEffect(() => {
     if (document.invoice_schedule && Array.isArray(document.invoice_schedule)) {
-      setPlannedInvoices(document.invoice_schedule);
+      setPlannedInvoices(document.invoice_schedule as PlannedInvoice[]);
     }
   }, [document.invoice_schedule]);
   
   // Update document when schedule changes
   const updateSchedule = (newSchedule: PlannedInvoice[]) => {
     setPlannedInvoices(newSchedule);
-    onDocumentChange({ invoice_schedule: newSchedule });
+    onDocumentChange({ invoice_schedule: newSchedule as unknown[] });
   };
   
   // Generate schedule from phases

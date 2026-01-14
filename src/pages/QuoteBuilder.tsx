@@ -33,6 +33,7 @@ import { QuoteLinesEditor } from '@/components/commercial/quote-builder/QuoteLin
 import { QuoteFeesAndLinesTab } from '@/components/commercial/quote-builder/QuoteFeesAndLinesTab';
 import { QuoteProductionTab } from '@/components/commercial/quote-builder/QuoteProductionTab';
 import { QuotePlanningTab } from '@/components/commercial/quote-builder/QuotePlanningTab';
+import { QuoteInvoicingTab } from '@/components/commercial/quote-builder/QuoteInvoicingTab';
 import { QuoteTermsTab } from '@/components/commercial/quote-builder/QuoteTermsTab';
 import { QuoteMOETermsTab } from '@/components/commercial/quote-builder/QuoteMOETermsTab';
 import { QuoteCommunicationTermsTab } from '@/components/commercial/quote-builder/QuoteCommunicationTermsTab';
@@ -130,14 +131,19 @@ export default function QuoteBuilder() {
   // Load existing document from direct fetch (not from list)
   useEffect(() => {
     if (!isNew && existingDoc) {
-      setDocument({
+      const docData = {
         ...existingDoc,
         document_type: (existingDoc.document_type === 'quote' || existingDoc.document_type === 'contract') 
           ? existingDoc.document_type 
           : 'contract',
         // Ensure valid project_type
-        project_type: ensureValidProjectType(existingDoc.project_type)
-      });
+        project_type: ensureValidProjectType(existingDoc.project_type),
+        // Ensure invoice_schedule is an array
+        invoice_schedule: Array.isArray(existingDoc.invoice_schedule) 
+          ? existingDoc.invoice_schedule 
+          : []
+      };
+      setDocument(docData as Partial<QuoteDocument>);
       if (existingDoc.project?.id) {
         setLinkedProjectId(existingDoc.project.id);
       }
@@ -590,6 +596,16 @@ export default function QuoteBuilder() {
                     onDocumentChange={handleDocumentChange}
                     lines={lines}
                     onLinesChange={handleLinesChange}
+                  />
+                </TabsContent>
+              )}
+
+              {processedTabs.includes('invoicing') && (
+                <TabsContent value="invoicing" className="m-0 p-3 sm:p-6">
+                  <QuoteInvoicingTab 
+                    document={document}
+                    onDocumentChange={handleDocumentChange}
+                    lines={lines}
                   />
                 </TabsContent>
               )}

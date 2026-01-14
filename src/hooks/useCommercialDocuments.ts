@@ -436,7 +436,7 @@ export const useCommercialDocuments = () => {
         }
       }
 
-      // Create project from document
+      // Create project from document with ALL data from quote
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -448,13 +448,16 @@ export const useCommercialDocuments = () => {
           crm_company_id: doc.client_company_id,
           address: doc.project_address,
           city: doc.project_city,
+          postal_code: doc.postal_code,
           surface_area: doc.project_surface,
           budget: doc.project_budget,
-          start_date: startDate,
-          end_date: projectEndDate,
+          start_date: doc.expected_start_date || startDate,
+          end_date: doc.expected_end_date || projectEndDate,
           color: '#3B82F6',
           phase: 'planning',
-          status: 'active'
+          status: 'active',
+          // Link back to commercial document for traceability
+          commercial_document_id: documentId
         })
         .select()
         .single();
@@ -492,6 +495,35 @@ export const useCommercialDocuments = () => {
         }
       }
 
+      // Create invoice schedule from document's planned invoices
+      if (doc.invoice_schedule && Array.isArray(doc.invoice_schedule) && doc.invoice_schedule.length > 0) {
+        const scheduleItems = doc.invoice_schedule.map((invoice: any, index: number) => ({
+          workspace_id: activeWorkspace.id,
+          project_id: project.id,
+          schedule_number: index + 1,
+          title: invoice.title || `Acompte ${index + 1}`,
+          description: invoice.description,
+          percentage: invoice.percentage,
+          amount_ht: invoice.amount_ht || 0,
+          amount_ttc: invoice.amount_ttc,
+          vat_rate: invoice.vat_rate || doc.vat_rate || 20,
+          planned_date: invoice.planned_date,
+          phase_ids: invoice.phase_ids,
+          milestone: invoice.milestone,
+          status: 'pending',
+          quote_id: documentId,
+          created_by: user.id
+        }));
+
+        const { error: scheduleError } = await supabase
+          .from('invoice_schedule')
+          .insert(scheduleItems);
+
+        if (scheduleError) {
+          console.error('Error creating invoice schedule:', scheduleError);
+        }
+      }
+
       // Update document with project link and accepted status
       const { error: updateError } = await supabase
         .from('commercial_documents')
@@ -510,6 +542,7 @@ export const useCommercialDocuments = () => {
       queryClient.invalidateQueries({ queryKey: ['commercial-documents'] });
       queryClient.invalidateQueries({ queryKey: ['commercial-document', data.document.id] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice-schedule'] });
       toast.success('Document accepté et projet créé avec planning IA');
     },
     onError: (error) => {
