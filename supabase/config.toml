@@ -89,3 +89,9 @@ verify_jwt = false
 
 [functions.client-portal-actions]
 verify_jwt = false
+
+[functions.company-portal-view]
+verify_jwt = false
+
+[functions.company-portal-actions]
+verify_jwt = false

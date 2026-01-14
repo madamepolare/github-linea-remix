@@ -1714,6 +1714,165 @@ export type Database = {
           },
         ]
       }
+      company_portal_links: {
+        Row: {
+          can_add_tasks: boolean | null
+          can_view_contacts: boolean | null
+          can_view_invoices: boolean | null
+          can_view_projects: boolean | null
+          can_view_quotes: boolean | null
+          can_view_tasks: boolean | null
+          can_view_time_entries: boolean | null
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          custom_slug: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          last_accessed_at: string | null
+          project_ids: string[] | null
+          token: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          can_add_tasks?: boolean | null
+          can_view_contacts?: boolean | null
+          can_view_invoices?: boolean | null
+          can_view_projects?: boolean | null
+          can_view_quotes?: boolean | null
+          can_view_tasks?: boolean | null
+          can_view_time_entries?: boolean | null
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          custom_slug?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          project_ids?: string[] | null
+          token: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          can_add_tasks?: boolean | null
+          can_view_contacts?: boolean | null
+          can_view_invoices?: boolean | null
+          can_view_projects?: boolean | null
+          can_view_quotes?: boolean | null
+          can_view_tasks?: boolean | null
+          can_view_time_entries?: boolean | null
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          custom_slug?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          project_ids?: string[] | null
+          token?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_portal_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_portal_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_portal_requests: {
+        Row: {
+          company_id: string
+          converted_task_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          portal_link_id: string
+          project_id: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          company_id: string
+          converted_task_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          portal_link_id: string
+          project_id?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          company_id?: string
+          converted_task_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          portal_link_id?: string
+          project_id?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_portal_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_portal_requests_converted_task_id_fkey"
+            columns: ["converted_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_portal_requests_portal_link_id_fkey"
+            columns: ["portal_link_id"]
+            isOneToOne: false
+            referencedRelation: "company_portal_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_portal_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_portal_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_pipeline_emails: {
         Row: {
           body_html: string
