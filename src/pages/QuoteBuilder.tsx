@@ -248,10 +248,11 @@ export default function QuoteBuilder() {
         createdDocNumber = newDoc.document_number;
         console.info('[QuoteBuilder] Created new doc', documentId, createdDocNumber);
       } else if (id) {
-        // Update existing document - include ALL fields
+        // Update existing document - include ALL fields including document_type
         const projectType = ensureValidProjectType(document.project_type);
         await updateDocument.mutateAsync({
           id,
+          document_type: document.document_type,
           title: document.title,
           description: document.description,
           status: document.status,
