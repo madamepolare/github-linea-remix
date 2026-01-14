@@ -226,13 +226,18 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
               <Label className="text-sm">Contact facturation</Label>
               <Select
                 value={document.billing_contact_id || ''}
-                onValueChange={(v) => onDocumentChange({ ...document, billing_contact_id: v || undefined })}
+                onValueChange={(v) =>
+                  onDocumentChange({
+                    ...document,
+                    billing_contact_id: v === '__same_as_primary__' ? undefined : v,
+                  })
+                }
               >
                 <SelectTrigger className="h-9 sm:h-10">
                   <SelectValue placeholder="Même que contact principal" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Même que contact principal</SelectItem>
+                  <SelectItem value="__same_as_primary__">Même que contact principal</SelectItem>
                   {billingContacts.map((contact) => (
                     <SelectItem key={contact.id} value={contact.id}>
                       <div className="flex items-center gap-2">
