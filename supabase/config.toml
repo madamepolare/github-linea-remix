@@ -68,3 +68,12 @@ verify_jwt = false
 
 [functions.ask-dce-question]
 verify_jwt = false
+
+[functions.send-quote-email]
+verify_jwt = false
+
+[functions.public-quote-view]
+verify_jwt = false
+
+[functions.public-quote-sign]
+verify_jwt = false
