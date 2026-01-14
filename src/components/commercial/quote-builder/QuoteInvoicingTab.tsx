@@ -158,12 +158,46 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
   const totalTTC = plannedInvoices.reduce((sum, inv) => sum + (inv.amount_ttc || 0), 0);
   const isBalanced = Math.abs(totalPercentage - 100) < 0.01;
   
+  // Check coverage: all quote lines should be covered by invoicing
+  const includedLinesTotal = lines
+    .filter(l => l.is_included && l.line_type !== 'discount')
+    .reduce((sum, l) => sum + (l.amount || 0), 0);
+  const missingAmount = Math.max(0, includedLinesTotal - totalHT);
+  const hasCoverageGap = missingAmount > 1; // Tolerance of 1€
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
   };
   
   return (
     <div className="space-y-6">
+      {/* Coverage alert */}
+      {hasCoverageGap && (
+        <div className="flex items-start gap-3 px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive">
+          <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Couverture de facturation incomplète</p>
+            <p className="text-sm opacity-90">
+              {formatCurrency(missingAmount)} du devis ne sont pas couverts par l'échéancier.
+              Tout ce qui est dans le devis doit être facturé.
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {/* No schedule alert */}
+      {plannedInvoices.length === 0 && totalAmount > 0 && (
+        <div className="flex items-start gap-3 px-4 py-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-700">
+          <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Aucun échéancier défini</p>
+            <p className="text-sm opacity-90">
+              Définissez un échéancier de facturation pour ce devis de {formatCurrency(totalAmount)}.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
