@@ -622,6 +622,17 @@ export default function QuoteBuilder() {
                 <Send className="h-4 w-4 mr-2" />
                 Envoyer au client
               </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => {
+                  const url = `${window.location.origin}/commercial/quote/${id}`;
+                  navigator.clipboard.writeText(url);
+                  toast.success('Lien copié !');
+                }}
+                disabled={isNew}
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Copier le lien
+              </DropdownMenuItem>
               <DropdownMenuItem>
                 <Copy className="h-4 w-4 mr-2" />
                 Dupliquer
