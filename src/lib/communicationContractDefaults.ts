@@ -303,7 +303,7 @@ export function getDefaultCommunicationConfig(): CommunicationContractConfig {
 }
 
 export function isCommunicationContractType(code: string): boolean {
-  const communicationCodes = ['CAMP360', 'BRAND', 'DIGITAL', 'EVENT', 'VIDEO', 'ACCORD', 'PUB', 'COM'];
+  const communicationCodes = ['CAMP360', 'BRAND', 'DIGITAL', 'EVENT', 'VIDEO', 'ACCORD', 'PUB', 'COM', 'COMMUNICATION'];
   return communicationCodes.includes(code?.toUpperCase());
 }
 
