@@ -73,6 +73,7 @@ export interface QuoteDocument {
   // Client
   client_company_id?: string;
   client_contact_id?: string;
+  billing_contact_id?: string;
   
   // Contract type (flexible)
   contract_type_id?: string;
@@ -84,6 +85,7 @@ export interface QuoteDocument {
   // Project details (dynamic based on contract type)
   project_address?: string;
   project_city?: string;
+  postal_code?: string;
   project_surface?: number;
   project_budget?: number;
   construction_budget?: number;
@@ -109,6 +111,14 @@ export interface QuoteDocument {
   header_text?: string;
   footer_text?: string;
   
+  // New enhanced fields
+  reference_client?: string;
+  expected_start_date?: string;
+  expected_end_date?: string;
+  expected_signature_date?: string;
+  internal_owner_id?: string;
+  invoice_schedule?: unknown[];
+  
   // Status
   status: DocumentStatus;
   sent_at?: string;
@@ -119,6 +129,7 @@ export interface QuoteDocument {
   // Relations
   client_company?: { id: string; name: string; logo_url?: string };
   client_contact?: { id: string; name: string; email?: string };
+  billing_contact?: { id: string; name: string; email?: string };
   project?: { id: string; name: string };
   
   // Metadata

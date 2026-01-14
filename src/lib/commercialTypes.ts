@@ -27,9 +27,11 @@ export interface CommercialDocument {
   description?: string;
   client_company_id?: string;
   client_contact_id?: string;
+  billing_contact_id?: string;
   project_type: ProjectType;
   project_address?: string;
   project_city?: string;
+  postal_code?: string;
   project_surface?: number;
   project_budget?: number;
   construction_budget?: number;
@@ -54,6 +56,13 @@ export interface CommercialDocument {
   contract_type_id?: string;
   quote_theme_id?: string;
   notes?: string;
+  // New fields for enhanced quote builder
+  reference_client?: string;
+  expected_start_date?: string;
+  expected_end_date?: string;
+  expected_signature_date?: string;
+  internal_owner_id?: string;
+  invoice_schedule?: unknown; // Stored as JSONB in DB
   // Timestamps and tracking
   sent_at?: string;
   accepted_at?: string;
@@ -65,9 +74,25 @@ export interface CommercialDocument {
   // Relations
   client_company?: { id: string; name: string; logo_url?: string };
   client_contact?: { id: string; name: string; email?: string };
+  billing_contact?: { id: string; name: string; email?: string };
   project?: { id: string; name: string };
   phases?: CommercialDocumentPhase[];
   items?: CommercialDocumentItem[];
+}
+
+// Planned invoice for quote invoice schedule
+export interface PlannedInvoice {
+  id: string;
+  schedule_number: number;
+  title: string;
+  description?: string;
+  percentage?: number;
+  amount_ht: number;
+  amount_ttc?: number;
+  vat_rate: number;
+  planned_date?: string;
+  milestone?: string;
+  phase_ids?: string[];
 }
 
 export interface CommercialDocumentPhase {
