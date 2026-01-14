@@ -3387,6 +3387,60 @@ export type Database = {
           },
         ]
       }
+      invoice_history: {
+        Row: {
+          created_at: string
+          description: string | null
+          event_date: string
+          event_type: string
+          id: string
+          invoice_id: string
+          new_value: Json | null
+          old_value: Json | null
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          event_date?: string
+          event_type: string
+          id?: string
+          invoice_id: string
+          new_value?: Json | null
+          old_value?: Json | null
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          event_date?: string
+          event_type?: string
+          id?: string
+          invoice_id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_history_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_history_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_items: {
         Row: {
           amount_ht: number
@@ -3716,6 +3770,8 @@ export type Database = {
           payment_terms: string | null
           pdf_url: string | null
           penalty_rate: number | null
+          period_end: string | null
+          period_start: string | null
           project_id: string | null
           project_name: string | null
           project_reference: string | null
@@ -3787,6 +3843,8 @@ export type Database = {
           payment_terms?: string | null
           pdf_url?: string | null
           penalty_rate?: number | null
+          period_end?: string | null
+          period_start?: string | null
           project_id?: string | null
           project_name?: string | null
           project_reference?: string | null
@@ -3858,6 +3916,8 @@ export type Database = {
           payment_terms?: string | null
           pdf_url?: string | null
           penalty_rate?: number | null
+          period_end?: string | null
+          period_start?: string | null
           project_id?: string | null
           project_name?: string | null
           project_reference?: string | null
