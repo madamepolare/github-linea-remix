@@ -5775,6 +5775,7 @@ export type Database = {
           category: string | null
           created_at: string | null
           created_by: string | null
+          credential_data: Json | null
           description: string | null
           element_type: Database["public"]["Enums"]["element_type"]
           file_name: string | null
@@ -5783,6 +5784,7 @@ export type Database = {
           file_url: string | null
           id: string
           is_pinned: boolean | null
+          is_sensitive: boolean | null
           project_id: string
           tags: string[] | null
           title: string
@@ -5795,6 +5797,7 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           created_by?: string | null
+          credential_data?: Json | null
           description?: string | null
           element_type?: Database["public"]["Enums"]["element_type"]
           file_name?: string | null
@@ -5803,6 +5806,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_pinned?: boolean | null
+          is_sensitive?: boolean | null
           project_id: string
           tags?: string[] | null
           title: string
@@ -5815,6 +5819,7 @@ export type Database = {
           category?: string | null
           created_at?: string | null
           created_by?: string | null
+          credential_data?: Json | null
           description?: string | null
           element_type?: Database["public"]["Enums"]["element_type"]
           file_name?: string | null
@@ -5823,6 +5828,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_pinned?: boolean | null
+          is_sensitive?: boolean | null
           project_id?: string
           tags?: string[] | null
           title?: string
@@ -10077,6 +10083,8 @@ export type Database = {
         | "order"
         | "letter"
         | "other"
+        | "credential"
+        | "image_ref"
       element_visibility: "all" | "admin" | "owner"
       french_leave_type:
         | "cp"
@@ -10264,6 +10272,8 @@ export const Constants = {
         "order",
         "letter",
         "other",
+        "credential",
+        "image_ref",
       ],
       element_visibility: ["all", "admin", "owner"],
       french_leave_type: [

@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Upload, X, Loader2 } from "lucide-react";
+import { Upload, X, Loader2, Eye, EyeOff } from "lucide-react";
 import {
   ElementType,
   ElementVisibility,
@@ -63,6 +63,12 @@ export function CreateElementDialog({
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  // Credential fields
+  const [credUsername, setCredUsername] = useState("");
+  const [credPassword, setCredPassword] = useState("");
+  const [credService, setCredService] = useState("");
+  const [credNotes, setCredNotes] = useState("");
+  const [isSensitive, setIsSensitive] = useState(false);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -114,13 +120,23 @@ export function CreateElementDialog({
       setIsUploading(true);
 
       let fileData = {};
-      if (file && (elementType === "file" || elementType === "order" || elementType === "letter")) {
+      if (file && (elementType === "file" || elementType === "order" || elementType === "letter" || elementType === "image_ref")) {
         const uploadResult = await onUploadFile(file, projectId);
         fileData = {
           file_url: uploadResult.url,
           file_name: uploadResult.fileName,
           file_size: uploadResult.fileSize,
           file_type: uploadResult.fileType,
+        };
+      }
+
+      let credentialData = undefined;
+      if (elementType === "credential") {
+        credentialData = {
+          username: credUsername || undefined,
+          password: credPassword || undefined,
+          service: credService || undefined,
+          notes: credNotes || undefined,
         };
       }
 
@@ -133,6 +149,8 @@ export function CreateElementDialog({
         category: category || undefined,
         visibility,
         tags,
+        is_sensitive: isSensitive || elementType === "credential",
+        credential_data: credentialData,
         ...fileData,
       });
 
@@ -145,6 +163,11 @@ export function CreateElementDialog({
       setTags([]);
       setFile(null);
       setElementType("file");
+      setCredUsername("");
+      setCredPassword("");
+      setCredService("");
+      setCredNotes("");
+      setIsSensitive(false);
       onOpenChange(false);
     } catch (error) {
       console.error("Error creating element:", error);
@@ -153,8 +176,9 @@ export function CreateElementDialog({
     }
   };
 
-  const showFileUpload = ["file", "order", "letter", "email"].includes(elementType);
+  const showFileUpload = ["file", "order", "letter", "email", "image_ref"].includes(elementType);
   const showUrlField = elementType === "link";
+  const showCredentialFields = elementType === "credential";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -266,7 +290,49 @@ export function CreateElementDialog({
             </div>
           )}
 
-          {/* Description */}
+          {/* Credential fields */}
+          {showCredentialFields && (
+            <div className="space-y-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="space-y-2">
+                <Label htmlFor="credService">Service / Site</Label>
+                <Input
+                  id="credService"
+                  value={credService}
+                  onChange={(e) => setCredService(e.target.value)}
+                  placeholder="Ex: Dropbox, Gmail..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="credUsername">Identifiant</Label>
+                <Input
+                  id="credUsername"
+                  value={credUsername}
+                  onChange={(e) => setCredUsername(e.target.value)}
+                  placeholder="Email ou nom d'utilisateur"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="credPassword">Mot de passe / Code</Label>
+                <Input
+                  id="credPassword"
+                  type="password"
+                  value={credPassword}
+                  onChange={(e) => setCredPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="credNotes">Notes</Label>
+                <Textarea
+                  id="credNotes"
+                  value={credNotes}
+                  onChange={(e) => setCredNotes(e.target.value)}
+                  placeholder="Informations supplémentaires..."
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
