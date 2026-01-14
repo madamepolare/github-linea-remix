@@ -282,78 +282,84 @@ export function QuoteLineItemCompact({
             />
           </div>
 
-          {/* Quantity */}
-          <Input
-            type="number"
-            value={line.quantity || 1}
-            onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 1 })}
-            className="h-8 w-14 text-center text-sm border-0 bg-muted/50 rounded tabular-nums shrink-0"
-            min={0}
-          />
-
-          {/* Unit type dropdown */}
-          <Select
-            value={line.unit || 'forfait'}
-            onValueChange={(value) => updateLine(line.id, { unit: value })}
-          >
-            <SelectTrigger className="h-8 w-20 text-xs shrink-0 border-0 bg-transparent hover:bg-muted/50 px-2">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-background z-50">
-              {UNIT_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Amount with € */}
-          <div className="flex items-center gap-1 shrink-0">
+          {/* Financial columns - fixed widths for table alignment */}
+          <div className="flex items-center gap-0 shrink-0">
+            {/* Quantity */}
             <Input
               type="number"
-              value={line.amount || 0}
-              onChange={(e) => updateLine(line.id, { amount: parseFloat(e.target.value) || 0, unit_price: parseFloat(e.target.value) || 0 })}
-              className="h-8 w-20 text-right tabular-nums font-semibold text-sm border rounded-lg bg-background px-2"
-              placeholder="0"
+              value={line.quantity || 1}
+              onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 1 })}
+              className="h-8 w-12 text-center text-sm border-0 bg-muted/50 rounded-l tabular-nums"
+              min={0}
             />
-            <span className="text-sm text-muted-foreground">€</span>
+
+            {/* Unit type dropdown */}
+            <Select
+              value={line.unit || 'forfait'}
+              onValueChange={(value) => updateLine(line.id, { unit: value })}
+            >
+              <SelectTrigger className="h-8 w-20 text-xs border-0 bg-muted/50 hover:bg-muted/70 px-2 rounded-none border-l border-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                {UNIT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Amount with € */}
+            <div className="flex items-center h-8 bg-background border rounded-r ml-2">
+              <Input
+                type="number"
+                value={line.amount || 0}
+                onChange={(e) => updateLine(line.id, { amount: parseFloat(e.target.value) || 0, unit_price: parseFloat(e.target.value) || 0 })}
+                className="h-8 w-20 text-right tabular-nums font-semibold text-sm border-0 bg-transparent px-2"
+                placeholder="0"
+              />
+              <span className="text-sm text-muted-foreground pr-2">€</span>
+            </div>
+
+            {/* Margin indicator - fixed width */}
+            <div className="w-16 flex justify-center">
+              {features.showCostAndMargin && effectivePurchasePrice > 0 && line.amount > 0 ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={cn(
+                      "flex items-center gap-1 px-2 py-1 rounded text-xs font-medium",
+                      effectiveMarginPercentage < 15 ? 'text-red-600' :
+                      effectiveMarginPercentage < 30 ? 'text-amber-600' :
+                      'text-green-600'
+                    )}>
+                      <TrendingUp className="h-3 w-3" />
+                      {effectiveMarginPercentage.toFixed(0)}%
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Marge: {formatCurrency(effectiveMargin)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Coût: {formatCurrency(isExternalLine ? (line.purchase_price || 0) : effectivePurchasePrice)}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
+            </div>
+
+            {/* Status badges - fixed width container */}
+            <div className="w-16 flex justify-center">
+              {!line.is_included && (
+                <Badge variant="secondary" className="text-xs">Exclu</Badge>
+              )}
+              {isExternalLine && line.is_included && (
+                <Badge variant="outline" className="text-xs bg-rose-50 text-rose-600 border-rose-200">
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Externe
+                </Badge>
+              )}
+            </div>
           </div>
-
-          {/* Margin indicator */}
-          {features.showCostAndMargin && effectivePurchasePrice > 0 && line.amount > 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "flex items-center gap-1 px-2 py-1 rounded text-xs font-medium shrink-0",
-                  effectiveMarginPercentage < 15 ? 'text-red-600' :
-                  effectiveMarginPercentage < 30 ? 'text-amber-600' :
-                  'text-green-600'
-                )}>
-                  <TrendingUp className="h-3 w-3" />
-                  {effectiveMarginPercentage.toFixed(0)}%
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Marge: {formatCurrency(effectiveMargin)}</p>
-                <p className="text-xs text-muted-foreground">
-                  Coût: {formatCurrency(isExternalLine ? (line.purchase_price || 0) : effectivePurchasePrice)}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-
-          {/* Status badges */}
-          {!line.is_included && (
-            <Badge variant="secondary" className="shrink-0 text-xs">Exclu</Badge>
-          )}
-
-          {isExternalLine && (
-            <Badge variant="outline" className="shrink-0 text-xs bg-rose-50 text-rose-600 border-rose-200">
-              <ExternalLink className="h-3 w-3 mr-1" />
-              Externe
-            </Badge>
-          )}
 
           {/* Actions dropdown */}
           <DropdownMenu>
