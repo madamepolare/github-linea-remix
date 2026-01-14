@@ -77,3 +77,9 @@ verify_jwt = false
 
 [functions.public-quote-sign]
 verify_jwt = false
+
+[functions.generate-email-content]
+verify_jwt = false
+
+[functions.generate-signed-pdf]
+verify_jwt = false
