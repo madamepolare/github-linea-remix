@@ -32,8 +32,8 @@ serve(async (req) => {
       .select(`
         *,
         contact:contacts(
-          id, name, email, phone, role, avatar_url,
-          crm_company:crm_companies(id, name, logo_url)
+          id, name, email, phone, role, avatar_url, crm_company_id,
+          crm_company:crm_companies!contacts_crm_company_id_fkey(id, name, logo_url)
         )
       `)
       .or(`token.eq.${token},custom_slug.eq.${token}`)
