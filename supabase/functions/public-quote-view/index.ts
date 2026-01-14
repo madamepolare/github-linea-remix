@@ -142,6 +142,7 @@ serve(async (req) => {
         options_selected: link.options_selected,
         final_amount: link.final_amount,
         deposit_paid: link.deposit_paid,
+        signed_pdf_url: link.signed_pdf_url,
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

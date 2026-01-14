@@ -17,7 +17,9 @@ import {
   RotateCcw,
   Check,
   PartyPopper,
-  ArrowRight
+  ArrowRight,
+  Download,
+  FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
@@ -99,6 +101,7 @@ interface QuoteData {
     options_selected?: Record<string, boolean>;
     final_amount?: number;
     deposit_paid?: boolean;
+    signed_pdf_url?: string;
   };
 }
 
@@ -115,6 +118,8 @@ export default function PublicQuote() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [signedPdfUrl, setSignedPdfUrl] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -242,9 +247,12 @@ export default function PublicQuote() {
           setSignerEmail(quoteData.document.client_contact.email || '');
         }
 
-        // If already signed, show success
+        // If already signed, show success and set PDF URL if exists
         if (quoteData.link.signed_at) {
           setStep('success');
+          if (quoteData.link.signed_pdf_url) {
+            setSignedPdfUrl(quoteData.link.signed_pdf_url);
+          }
         }
 
       } catch (err) {
@@ -372,6 +380,50 @@ export default function PublicQuote() {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
 
+  // Generate and download signed PDF
+  const handleDownloadSignedPDF = async () => {
+    if (!token) return;
+    
+    // If we already have the URL, download directly
+    if (signedPdfUrl) {
+      window.open(signedPdfUrl, '_blank');
+      return;
+    }
+    
+    setIsGeneratingPDF(true);
+    
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-signed-pdf`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ token }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de la génération');
+      }
+      
+      const result = await response.json();
+      
+      if (result.pdf_url) {
+        setSignedPdfUrl(result.pdf_url);
+        window.open(result.pdf_url, '_blank');
+      }
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      alert(err instanceof Error ? err.message : 'Erreur lors de la génération du PDF');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -448,8 +500,32 @@ export default function PublicQuote() {
                 <span className="font-semibold">{link.signed_at ? new Date(link.signed_at).toLocaleString('fr-FR') : 'Maintenant'}</span>
               </div>
             </div>
+            
+            {/* Download signed PDF button */}
+            <div className="mt-8">
+              <Button 
+                variant="outline"
+                className="w-full h-12 text-base font-medium gap-2"
+                onClick={handleDownloadSignedPDF}
+                disabled={isGeneratingPDF}
+                style={{ fontFamily: fontFamilies.heading }}
+              >
+                {isGeneratingPDF ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Génération en cours...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-5 w-5" />
+                    Télécharger le devis signé
+                  </>
+                )}
+              </Button>
+            </div>
+            
             {doc.requires_deposit && !link.deposit_paid && (
-              <div className="mt-8">
+              <div className="mt-4">
                 <p className="text-sm text-muted-foreground mb-4">
                   Un acompte de {formatCurrency(depositAmount)} est requis.
                 </p>
