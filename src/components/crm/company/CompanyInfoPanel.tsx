@@ -24,8 +24,10 @@ import {
   ExternalLink,
   Building2,
   X,
+  Search,
 } from "lucide-react";
 import { CompanyLogoSearch } from "./CompanyLogoSearch";
+import { SiretSearchDialog } from "../SiretSearchDialog";
 import { CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
@@ -143,9 +145,28 @@ export function CompanyInfoPanel({
       {isEditing && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Type d'entreprise
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Type d'entreprise
+              </CardTitle>
+              <SiretSearchDialog
+                onSelect={(company) => {
+                  onEditDataChange({
+                    ...editData,
+                    name: company.name,
+                    address: company.address || editData.address,
+                    postal_code: company.postal_code || editData.postal_code,
+                    city: company.city || editData.city,
+                  });
+                }}
+                trigger={
+                  <Button type="button" variant="outline" size="sm" className="gap-2">
+                    <Search className="h-4 w-4" />
+                    Recherche SIRET
+                  </Button>
+                }
+              />
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
