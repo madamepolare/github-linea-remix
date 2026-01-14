@@ -482,8 +482,19 @@ export default function QuoteBuilder() {
   return (
     <LineFeatureProvider contractType={currentContractType}>
     <div className="h-full flex flex-col bg-background">
+      {/* Agency Logo Banner - Full Width */}
+      {agencyInfo?.logo_url && (
+        <div className="w-full bg-card border-b flex items-center justify-center py-4 px-6">
+          <img 
+            src={agencyInfo.logo_url} 
+            alt={agencyInfo.name || 'Logo agence'} 
+            className="h-12 max-h-12 w-auto object-contain"
+          />
+        </div>
+      )}
+      
       {/* Header */}
-      <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b bg-background shrink-0 gap-2">
+      <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b bg-card shrink-0 gap-2">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
           <Button variant="ghost" size="icon" onClick={handleBack} className="shrink-0">
             <ArrowLeft className="h-4 w-4" />
@@ -511,19 +522,19 @@ export default function QuoteBuilder() {
           </div>
           
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <input
                 type="text"
                 value={document.title || ''}
                 onChange={(e) => handleDocumentChange({ title: e.target.value })}
                 placeholder={isNew ? 'Titre du projet...' : 'Édition du devis'}
-                className="font-semibold text-sm sm:text-base bg-transparent border-0 focus:ring-0 focus:outline-none w-full min-w-0 placeholder:text-muted-foreground"
+                className="font-semibold text-base sm:text-lg tracking-tight bg-transparent border-0 focus:ring-0 focus:outline-none w-full min-w-0 placeholder:text-muted-foreground"
               />
               <Select
                 value={document.status || 'draft'}
                 onValueChange={(v) => handleDocumentChange({ status: v as DocumentStatus })}
               >
-                <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs shrink-0">
+                <SelectTrigger className="h-8 w-auto min-w-[110px] text-xs font-medium shrink-0 rounded-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -546,8 +557,8 @@ export default function QuoteBuilder() {
                 </SelectContent>
               </Select>
             </div>
-            <p className="text-xs text-muted-foreground truncate">
-              {document.document_number || 'Brouillon'}
+            <p className="text-xs text-muted-foreground tracking-wide mt-0.5">
+              {document.document_number || 'Brouillon'} {document.client_company?.name ? `• ${document.client_company.name}` : ''}
             </p>
           </div>
         </div>
@@ -686,8 +697,8 @@ export default function QuoteBuilder() {
         {/* Editor Panel */}
         <div className={`flex flex-col ${showPreview ? 'w-full lg:w-[60%]' : 'w-full'} border-r`}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1">
-            <div className="px-2 sm:px-4 pt-2 sm:pt-4 pb-0 border-b bg-muted/30 shrink-0 overflow-x-auto">
-              <TabsList className="h-9 sm:h-10 w-max sm:w-auto">
+            <div className="px-3 sm:px-6 pt-3 sm:pt-4 pb-0 border-b bg-card shrink-0 overflow-x-auto">
+              <TabsList className="h-10 sm:h-11 w-max sm:w-auto bg-muted/50 p-1 rounded-lg">
                 {processedTabs.map(tabId => {
                   const config = TAB_CONFIG[tabId];
                   const Icon = config.icon;
@@ -695,11 +706,15 @@ export default function QuoteBuilder() {
                   const showLineCount = tabId === 'fees' && hasBothFeesAndLines && lines.length > 0;
                   const showLinesCount = tabId === 'lines' && lines.length > 0;
                   return (
-                    <TabsTrigger key={tabId} value={tabId} className="gap-1 sm:gap-2 px-2 sm:px-4 text-xs sm:text-sm">
-                      <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      <span className="hidden xs:inline sm:inline">{config.label}</span>
+                    <TabsTrigger 
+                      key={tabId} 
+                      value={tabId} 
+                      className="gap-2 px-3 sm:px-4 text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="hidden sm:inline">{config.label}</span>
                       {(showLineCount || showLinesCount) && (
-                        <span className="ml-1 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
+                        <span className="ml-1 text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full font-medium">
                           {lines.length}
                         </span>
                       )}
@@ -709,7 +724,7 @@ export default function QuoteBuilder() {
               </TabsList>
             </div>
 
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 bg-muted/20">
               {processedTabs.includes('general') && (
                 <TabsContent value="general" className="m-0 p-3 sm:p-6">
                   <QuoteGeneralTab 
