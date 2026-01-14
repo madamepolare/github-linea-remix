@@ -56,6 +56,7 @@ import {
   PurchaseStatus,
 } from "@/lib/purchaseTypes";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
+import { useProjectBudgetEnvelopes } from "@/hooks/useProjectBudgetEnvelopes";
 import type { ProjectPurchase, CreatePurchaseInput } from "@/hooks/useProjectPurchases";
 
 const purchaseSchema = z.object({
@@ -80,6 +81,7 @@ const purchaseSchema = z.object({
   vat_rate: z.number().default(20),
   selling_price: z.number().optional().nullable(),
   notes: z.string().optional(),
+  budget_envelope_id: z.string().optional(),
 });
 
 type PurchaseFormValues = z.infer<typeof purchaseSchema>;
@@ -89,6 +91,7 @@ interface CreatePurchaseDialogProps {
   onOpenChange: (open: boolean) => void;
   projectId: string;
   purchase?: ProjectPurchase | null;
+  defaultEnvelopeId?: string;
   onSubmit: (data: CreatePurchaseInput) => void;
   isLoading?: boolean;
 }
@@ -98,6 +101,7 @@ export function CreatePurchaseDialog({
   onOpenChange,
   projectId,
   purchase,
+  defaultEnvelopeId,
   onSubmit,
   isLoading = false,
 }: CreatePurchaseDialogProps) {
@@ -107,6 +111,7 @@ export function CreatePurchaseDialog({
   );
 
   const { companies } = useCRMCompanies();
+  const { envelopes } = useProjectBudgetEnvelopes(projectId);
 
   const form = useForm<PurchaseFormValues>({
     resolver: zodResolver(purchaseSchema),
@@ -124,6 +129,7 @@ export function CreatePurchaseDialog({
       vat_rate: 20,
       selling_price: null,
       notes: "",
+      budget_envelope_id: defaultEnvelopeId || "",
     },
   });
 
@@ -144,6 +150,7 @@ export function CreatePurchaseDialog({
         vat_rate: purchase.vat_rate || 20,
         selling_price: purchase.selling_price,
         notes: purchase.notes || "",
+        budget_envelope_id: purchase.budget_envelope_id || defaultEnvelopeId || "",
       });
       setPurchaseType(purchase.purchase_type);
     } else {
@@ -161,10 +168,11 @@ export function CreatePurchaseDialog({
         vat_rate: 20,
         selling_price: null,
         notes: "",
+        budget_envelope_id: defaultEnvelopeId || "",
       });
       setPurchaseType("provision");
     }
-  }, [purchase, form]);
+  }, [purchase, form, defaultEnvelopeId]);
 
   const handleSubmit = (values: PurchaseFormValues) => {
     const data: CreatePurchaseInput = {
@@ -186,6 +194,7 @@ export function CreatePurchaseDialog({
       vat_rate: values.vat_rate,
       selling_price: values.selling_price || undefined,
       notes: values.notes,
+      budget_envelope_id: values.budget_envelope_id || undefined,
     };
 
     onSubmit(data);
@@ -317,6 +326,40 @@ export function CreatePurchaseDialog({
                 </FormItem>
               )}
             />
+
+            {/* Budget Envelope */}
+            {envelopes.length > 0 && (
+              <FormField
+                control={form.control}
+                name="budget_envelope_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enveloppe budgétaire</FormLabel>
+                    <Select value={field.value || ""} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Aucune enveloppe" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">Aucune enveloppe</SelectItem>
+                        {envelopes.filter(e => e.status === 'active').map((envelope) => (
+                          <SelectItem key={envelope.id} value={envelope.id}>
+                            <div className="flex items-center justify-between gap-4">
+                              <span>{envelope.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatCurrency(envelope.remaining_amount)} restant
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Supplier */}
             <div className="grid grid-cols-2 gap-4">

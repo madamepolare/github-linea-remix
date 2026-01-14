@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useProjectBudgetEnvelopes, BudgetEnvelope } from "@/hooks/useProjectBudgetEnvelopes";
+import { useProjectPurchases, ProjectPurchase, CreatePurchaseInput } from "@/hooks/useProjectPurchases";
 import { useCommercialDocuments } from "@/hooks/useCommercialDocuments";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +35,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -46,8 +49,12 @@ import {
   Archive,
   FileText,
   TrendingDown,
+  Receipt,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CreatePurchaseDialog } from "./CreatePurchaseDialog";
+import { PURCHASE_STATUSES, PURCHASE_CATEGORIES, PurchaseStatus } from "@/lib/purchaseTypes";
 
 interface BudgetEnvelopesTabProps {
   projectId: string;
@@ -55,11 +62,14 @@ interface BudgetEnvelopesTabProps {
 
 export function BudgetEnvelopesTab({ projectId }: BudgetEnvelopesTabProps) {
   const { envelopes, isLoading, summary, createEnvelope, updateEnvelope, deleteEnvelope } = useProjectBudgetEnvelopes(projectId);
+  const { purchases, createPurchase, updatePurchase, deletePurchase } = useProjectPurchases(projectId);
   const { documents: commercialDocuments } = useCommercialDocuments();
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedEnvelope, setSelectedEnvelope] = useState<BudgetEnvelope | null>(null);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
+  const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
+  const [editingPurchase, setEditingPurchase] = useState<ProjectPurchase | null>(null);
   
   // Form state
   const [formData, setFormData] = useState<{
@@ -84,6 +94,11 @@ export function BudgetEnvelopesTab({ projectId }: BudgetEnvelopesTabProps) {
   const projectQuotes = commercialDocuments.filter(
     d => d.project_id === projectId && (d.status === 'accepted' || d.status === 'signed')
   );
+
+  // Get purchases for selected envelope
+  const envelopePurchases = selectedEnvelope 
+    ? purchases.filter(p => p.budget_envelope_id === selectedEnvelope.id)
+    : [];
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("fr-FR", {
@@ -129,6 +144,26 @@ export function BudgetEnvelopesTab({ projectId }: BudgetEnvelopesTabProps) {
     await updateEnvelope.mutateAsync({
       id: envelope.id,
       status: 'closed',
+    });
+  };
+
+  const handlePurchaseSubmit = async (data: CreatePurchaseInput) => {
+    if (editingPurchase) {
+      await updatePurchase.mutateAsync({ id: editingPurchase.id, ...data });
+    } else {
+      await createPurchase.mutateAsync({
+        ...data,
+        budget_envelope_id: selectedEnvelope?.id,
+      });
+    }
+    setPurchaseDialogOpen(false);
+    setEditingPurchase(null);
+  };
+
+  const handleRemovePurchaseFromEnvelope = async (purchase: ProjectPurchase) => {
+    await updatePurchase.mutateAsync({
+      id: purchase.id,
+      budget_envelope_id: undefined,
     });
   };
 
@@ -229,6 +264,7 @@ export function BudgetEnvelopesTab({ projectId }: BudgetEnvelopesTabProps) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {envelopes.map((envelope) => {
+            const envelopePurchasesCount = purchases.filter(p => p.budget_envelope_id === envelope.id).length;
             const consumedPct = envelope.budget_amount > 0 
               ? Math.min((envelope.consumed_amount / envelope.budget_amount) * 100, 100)
               : 0;
@@ -249,11 +285,19 @@ export function BudgetEnvelopesTab({ projectId }: BudgetEnvelopesTabProps) {
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <CardTitle className="text-base">{envelope.name}</CardTitle>
-                      {envelope.category && (
-                        <Badge variant="outline" className="text-xs">
-                          {envelope.category}
-                        </Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {envelope.category && (
+                          <Badge variant="outline" className="text-xs">
+                            {envelope.category}
+                          </Badge>
+                        )}
+                        {envelopePurchasesCount > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            <ShoppingCart className="h-3 w-3 mr-1" />
+                            {envelopePurchasesCount}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge className={cn("text-xs", getStatusColor(envelope))}>
@@ -273,7 +317,7 @@ export function BudgetEnvelopesTab({ projectId }: BudgetEnvelopesTabProps) {
                             setDetailSheetOpen(true);
                           }}>
                             <Edit className="h-4 w-4 mr-2" />
-                            Modifier
+                            Voir les détails
                           </DropdownMenuItem>
                           {envelope.status === 'active' && (
                             <DropdownMenuItem onClick={(e) => {
@@ -284,6 +328,7 @@ export function BudgetEnvelopesTab({ projectId }: BudgetEnvelopesTabProps) {
                               Clôturer
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="text-destructive"
                             onClick={(e) => {
@@ -330,13 +375,6 @@ export function BudgetEnvelopesTab({ projectId }: BudgetEnvelopesTabProps) {
                       {formatCurrency(envelope.remaining_amount)}
                     </span>
                   </div>
-
-                  {envelope.source_type !== 'manual' && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <FileText className="h-3 w-3" />
-                      <span>Depuis devis</span>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             );
@@ -456,21 +494,25 @@ export function BudgetEnvelopesTab({ projectId }: BudgetEnvelopesTabProps) {
               onClick={handleCreate} 
               disabled={!formData.name || formData.budget_amount <= 0 || createEnvelope.isPending}
             >
-              Créer l'enveloppe
+              {createEnvelope.isPending ? "Création..." : "Créer l'enveloppe"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Detail Sheet */}
+      {/* Detail Sheet with Purchases */}
       <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
-        <SheetContent className="w-full sm:max-w-lg">
+        <SheetContent className="w-full sm:max-w-xl">
           <SheetHeader>
-            <SheetTitle>{selectedEnvelope?.name}</SheetTitle>
+            <SheetTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5" />
+              {selectedEnvelope?.name}
+            </SheetTitle>
           </SheetHeader>
           
           {selectedEnvelope && (
             <div className="mt-6 space-y-6">
+              {/* Envelope info */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Badge className={getStatusColor(selectedEnvelope)}>
@@ -527,18 +569,158 @@ export function BudgetEnvelopesTab({ projectId }: BudgetEnvelopesTabProps) {
                     </div>
                   </CardContent>
                 </Card>
+              </div>
 
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Seuil d'alerte</p>
-                  <p className="text-sm text-muted-foreground">
-                    Notification à partir de {selectedEnvelope.alert_threshold}% de consommation
-                  </p>
+              {/* Purchases section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <ShoppingCart className="h-4 w-4" />
+                    Achats ({envelopePurchases.length})
+                  </h4>
+                  {selectedEnvelope.status === 'active' && (
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        setEditingPurchase(null);
+                        setPurchaseDialogOpen(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Ajouter
+                    </Button>
+                  )}
                 </div>
+
+                {envelopePurchases.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-8 text-center">
+                      <Receipt className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        Aucun achat dans cette enveloppe
+                      </p>
+                      {selectedEnvelope.status === 'active' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-3"
+                          onClick={() => {
+                            setEditingPurchase(null);
+                            setPurchaseDialogOpen(true);
+                          }}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Créer un achat
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <ScrollArea className="h-[300px]">
+                    <div className="space-y-2 pr-4">
+                      {envelopePurchases.map((purchase) => {
+                        const status = PURCHASE_STATUSES[purchase.status];
+                        const category = PURCHASE_CATEGORIES[purchase.purchase_category];
+                        const StatusIcon = status?.icon;
+                        const CategoryIcon = category?.icon;
+
+                        return (
+                          <Card key={purchase.id} className="hover:bg-muted/50">
+                            <CardContent className="p-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    {CategoryIcon && (
+                                      <CategoryIcon className={cn("h-4 w-4 shrink-0", category.color)} />
+                                    )}
+                                    <span className="font-medium text-sm truncate">
+                                      {purchase.title}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <Badge 
+                                      variant="secondary" 
+                                      className={cn("text-xs", status?.color)}
+                                    >
+                                      {StatusIcon && <StatusIcon className="h-3 w-3 mr-1" />}
+                                      {status?.label}
+                                    </Badge>
+                                    {purchase.supplier_name && (
+                                      <span className="text-xs text-muted-foreground truncate">
+                                        {purchase.supplier_name}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <p className="font-semibold text-sm">
+                                    {formatCurrency(purchase.amount_ht)}
+                                  </p>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6">
+                                        <MoreHorizontal className="h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => {
+                                        setEditingPurchase(purchase);
+                                        setPurchaseDialogOpen(true);
+                                      }}>
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Modifier
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => handleRemovePurchaseFromEnvelope(purchase)}>
+                                        <Archive className="h-4 w-4 mr-2" />
+                                        Retirer de l'enveloppe
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem 
+                                        className="text-destructive"
+                                        onClick={() => {
+                                          if (confirm("Supprimer cet achat ?")) {
+                                            deletePurchase.mutate(purchase.id);
+                                          }
+                                        }}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Supprimer
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
+
+              {/* Alert threshold */}
+              <div className="space-y-2 pt-4 border-t">
+                <p className="text-sm font-medium">Seuil d'alerte</p>
+                <p className="text-sm text-muted-foreground">
+                  Notification à partir de {selectedEnvelope.alert_threshold}% de consommation
+                </p>
               </div>
             </div>
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Purchase Dialog */}
+      <CreatePurchaseDialog
+        open={purchaseDialogOpen}
+        onOpenChange={setPurchaseDialogOpen}
+        projectId={projectId}
+        purchase={editingPurchase}
+        defaultEnvelopeId={selectedEnvelope?.id}
+        onSubmit={handlePurchaseSubmit}
+        isLoading={createPurchase.isPending || updatePurchase.isPending}
+      />
     </div>
   );
 }
