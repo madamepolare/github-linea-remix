@@ -16,7 +16,8 @@ import {
   Send,
   AlertTriangle,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Users
 } from "lucide-react";
 import { Pipeline, PipelineStage } from "@/hooks/useCRMPipelines";
 import { useContactPipeline, PipelineEntry } from "@/hooks/useContactPipeline";
@@ -24,6 +25,7 @@ import { usePipelineActions } from "@/hooks/usePipelineActions";
 import { useAuth } from "@/contexts/AuthContext";
 import { PipelineEmailModal } from "./PipelineEmailModal";
 import { BulkAddToPipelineDialog } from "./BulkAddToPipelineDialog";
+import { BulkEmailDialog } from "./BulkEmailDialog";
 import { PipelineEntrySidebar } from "./PipelineEntrySidebar";
 import {
   DropdownMenu,
@@ -51,6 +53,7 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
   const [targetStage, setTargetStage] = useState<PipelineStage | null>(null);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
   const [sidebarEntry, setSidebarEntry] = useState<PipelineEntry | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -130,10 +133,21 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
             {entries.length} entrée{entries.length !== 1 ? "s" : ""}
           </Badge>
         </div>
-        <Button size="sm" onClick={() => setBulkAddOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" />
-          Ajouter
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={() => setBulkEmailOpen(true)}
+            disabled={entries.length === 0}
+          >
+            <Users className="h-4 w-4 mr-1" />
+            Email groupé
+          </Button>
+          <Button size="sm" onClick={() => setBulkAddOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            Ajouter
+          </Button>
+        </div>
       </div>
 
       {/* Kanban Board */}
@@ -220,6 +234,15 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
         open={bulkAddOpen}
         onOpenChange={setBulkAddOpen}
         pipeline={pipeline}
+      />
+
+      {/* Bulk Email Dialog */}
+      <BulkEmailDialog
+        open={bulkEmailOpen}
+        onOpenChange={setBulkEmailOpen}
+        entries={entries}
+        pipelineId={pipeline.id}
+        pipelineName={pipeline.name}
       />
 
       {/* Entry Detail Sidebar */}
