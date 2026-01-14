@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -10,10 +10,13 @@ import {
   AlertCircle,
   CheckCircle2,
   Hourglass,
+  History,
+  Plus,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProject, useProjectMembers } from "@/hooks/useProjects";
@@ -24,6 +27,9 @@ import { useProjectPurchases } from "@/hooks/useProjectPurchases";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { BudgetAlertsPanel } from "./BudgetAlertsPanel";
+import { BudgetHistoryDialog } from "./BudgetHistoryDialog";
+import { IncreaseBudgetDialog } from "./IncreaseBudgetDialog";
 
 const MONTHLY_HOURS = 35 * 52 / 12;
 
@@ -197,15 +203,32 @@ export function BudgetOverviewTab({ projectId }: BudgetOverviewTabProps) {
     );
   }
 
+  const [increaseDialogOpen, setIncreaseDialogOpen] = useState(false);
+
   return (
     <div className="space-y-6">
+      {/* Alerts Panel */}
+      <BudgetAlertsPanel 
+        projectId={projectId} 
+        onIncreaseBudget={() => setIncreaseDialogOpen(true)}
+      />
+
       {/* Main KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Budget */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Budget projet</CardTitle>
-            <Euro className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-1">
+              <BudgetHistoryDialog projectId={projectId} trigger={
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <History className="h-3 w-3" />
+                </Button>
+              } />
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIncreaseDialogOpen(true)}>
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(projectBudget)}</div>
@@ -229,6 +252,12 @@ export function BudgetOverviewTab({ projectId }: BudgetOverviewTabProps) {
             )}
           </CardContent>
         </Card>
+
+      <IncreaseBudgetDialog
+        projectId={projectId}
+        open={increaseDialogOpen}
+        onOpenChange={setIncreaseDialogOpen}
+      />
 
         {/* Temps passé */}
         <Card>
@@ -421,6 +450,7 @@ export function BudgetOverviewTab({ projectId }: BudgetOverviewTabProps) {
             </CardContent>
           </Card>
         )}
+      </div>
       </div>
     </div>
   );

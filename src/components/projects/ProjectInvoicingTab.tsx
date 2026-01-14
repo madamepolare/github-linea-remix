@@ -1,18 +1,13 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { InvoiceBuilderSheet } from "@/components/invoicing/InvoiceBuilderSheet";
+import { Button } from "@/components/ui/button";
+import { FileText, Calendar, Receipt, Clock, CreditCard, Send } from "lucide-react";
 import { InvoicingOverviewTab } from "./invoicing/InvoicingOverviewTab";
 import { InvoiceScheduleTab } from "./invoicing/InvoiceScheduleTab";
-import { InvoicesListTab } from "./invoicing/InvoicesListTab";
-import { CreditNotesTab } from "./invoicing/CreditNotesTab";
-import { ChorusProPanel } from "./invoicing/ChorusProPanel";
-import {
-  LayoutDashboard,
-  Calendar,
-  Receipt,
-  RefreshCw,
-  Building2,
-} from "lucide-react";
+import { InvoiceBuilderSheet } from "@/components/invoicing/InvoiceBuilderSheet";
+import { ChorusProPanel } from "@/components/invoicing/ChorusProPanel";
+import { BillableTimeTab } from "./invoicing/BillableTimeTab";
+import { BillableTimeEntry } from "@/hooks/useBillableTime";
 
 interface ProjectInvoicingTabProps {
   projectId: string;
@@ -22,24 +17,46 @@ interface ProjectInvoicingTabProps {
 export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicingTabProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [builderOpen, setBuilderOpen] = useState(false);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | undefined>(undefined);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [showChorusPanel, setShowChorusPanel] = useState(false);
+  const [prefillTimeEntries, setPrefillTimeEntries] = useState<BillableTimeEntry[]>([]);
 
   const handleCreateInvoice = () => {
-    setSelectedInvoiceId(undefined);
+    setSelectedInvoiceId(null);
+    setPrefillTimeEntries([]);
     setBuilderOpen(true);
   };
 
   const handleEditInvoice = (invoiceId: string) => {
     setSelectedInvoiceId(invoiceId);
+    setPrefillTimeEntries([]);
     setBuilderOpen(true);
   };
 
-  const handleCloseBuilder = (open: boolean) => {
-    setBuilderOpen(open);
-    if (!open) {
-      setSelectedInvoiceId(undefined);
-    }
+  const handleCloseBuilder = () => {
+    setBuilderOpen(false);
+    setSelectedInvoiceId(null);
+    setPrefillTimeEntries([]);
+  };
+
+  const handleNavigateToTab = (tab: string) => {
+    const tabMap: Record<string, string> = {
+      'factures': 'invoices',
+      'invoices': 'invoices',
+      'avoirs': 'credit-notes',
+      'credit-notes': 'credit-notes',
+      'echeancier': 'schedule',
+      'schedule': 'schedule',
+      'temps': 'time',
+      'time': 'time',
+    };
+    setActiveTab(tabMap[tab] || tab);
+  };
+
+  const handleCreateInvoiceFromTime = (entries: BillableTimeEntry[]) => {
+    setPrefillTimeEntries(entries);
+    setSelectedInvoiceId(null);
+    setBuilderOpen(true);
   };
 
   return (
