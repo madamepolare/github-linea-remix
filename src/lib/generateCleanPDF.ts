@@ -438,6 +438,52 @@ export async function generateCleanContractPDF(
 
   ctx.y = (pdf as any).lastAutoTable.finalY + 8;
 
+  // Détail des phases avec descriptions et livrables
+  const includedPhases = phases.filter((p: any) => p.is_included);
+  if (includedPhases.length > 0) {
+    checkPageBreak(ctx, 30);
+    drawSectionTitle(ctx, 'Détail des phases');
+
+    for (const phase of includedPhases) {
+      checkPageBreak(ctx, 25);
+
+      // Phase title
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(40, 40, 40);
+      pdf.text(`${phase.code || ''} ${phase.code ? '- ' : ''}${phase.name}`, margin, ctx.y);
+      ctx.y += 5;
+
+      // Description
+      if (phase.description) {
+        pdf.setFontSize(7);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(80, 80, 80);
+        const descLines = pdf.splitTextToSize(phase.description, contentWidth - 5);
+        for (const line of descLines) {
+          checkPageBreak(ctx, 4);
+          pdf.text(line, margin + 2, ctx.y);
+          ctx.y += 3.5;
+        }
+        ctx.y += 1;
+      }
+
+      // Deliverables
+      if (phase.deliverables && phase.deliverables.length > 0) {
+        pdf.setFontSize(7);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(100, 100, 100);
+        for (const deliverable of phase.deliverables) {
+          checkPageBreak(ctx, 4);
+          pdf.text(`• ${deliverable}`, margin + 4, ctx.y);
+          ctx.y += 3.5;
+        }
+      }
+
+      ctx.y += 5;
+    }
+  }
+
   // Honoraires
   checkPageBreak(ctx, 40);
   drawSectionTitle(ctx, moe ? 'Détail des honoraires' : 'Prestations');
