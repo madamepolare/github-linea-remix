@@ -2,6 +2,7 @@ import { useState } from "react";
 import { format, isPast, isToday, addDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useInvoiceSchedule, InvoiceScheduleItem } from "@/hooks/useInvoiceSchedule";
+import { useProjectFinancialSummary } from "@/hooks/useProjectFinancialSummary";
 import { useCommercialDocuments } from "@/hooks/useCommercialDocuments";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,13 +19,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -34,25 +28,27 @@ import {
 import {
   Plus,
   Calendar,
-  MoreHorizontal,
-  Edit,
-  Trash2,
   FileText,
   CheckCircle,
   Clock,
   AlertTriangle,
   Receipt,
   Sparkles,
-  ChevronRight,
   Target,
   TrendingUp,
+  Wallet,
+  ArrowUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { BudgetVsCAAlert } from "./BudgetVsCAAlert";
+import { InvoiceScheduleInlineRow } from "./InvoiceScheduleInlineRow";
 
 interface InvoiceScheduleTabProps {
   projectId: string;
   onCreateInvoice?: (scheduleItem: InvoiceScheduleItem) => void;
+  onViewInvoice?: (invoiceId: string) => void;
+  onAdjustBudget?: () => void;
 }
 
 // Predefined schedule templates
@@ -62,7 +58,7 @@ const SCHEDULE_TEMPLATES = [
   { name: "30/30/30/10", items: [{ title: "Acompte", percentage: 30, daysFromStart: 0 }, { title: "Esquisse", percentage: 30, daysFromStart: 30 }, { title: "APD/DCE", percentage: 30, daysFromStart: 60 }, { title: "Réception", percentage: 10, daysFromStart: 90 }] },
 ];
 
-export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceScheduleTabProps) {
+export function InvoiceScheduleTab({ projectId, onCreateInvoice, onViewInvoice, onAdjustBudget }: InvoiceScheduleTabProps) {
   const { 
     scheduleItems, 
     isLoading, 
@@ -74,6 +70,8 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
     deleteScheduleItem,
     generateFromQuote,
   } = useInvoiceSchedule(projectId);
+
+  const financialSummary = useProjectFinancialSummary(projectId);
 
   const { documents } = useCommercialDocuments();
   
@@ -89,6 +87,7 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("30/40/30");
+  const [adjustCADialogOpen, setAdjustCADialogOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -104,6 +103,7 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
       currency: "EUR",
+      maximumFractionDigits: 0,
     }).format(value);
   };
 
@@ -157,43 +157,20 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
     resetForm();
   };
 
+  const handleInlineUpdate = async (data: { 
+    id: string; 
+    percentage?: number; 
+    amount_ht?: number; 
+    planned_date?: string;
+    vat_rate?: number;
+  }) => {
+    await updateScheduleItem.mutateAsync(data);
+  };
+
   const handleDelete = async (id: string) => {
     if (confirm("Supprimer cette échéance ?")) {
       await deleteScheduleItem.mutateAsync(id);
     }
-  };
-
-  const handleEdit = (item: InvoiceScheduleItem) => {
-    setEditingItem(item);
-    setFormData({
-      title: item.title,
-      description: item.description || "",
-      percentage: item.percentage || 0,
-      amount_ht: item.amount_ht,
-      vat_rate: item.vat_rate,
-      planned_date: item.planned_date,
-      milestone: item.milestone || "",
-    });
-    setCreateDialogOpen(true);
-  };
-
-  const getStatusConfig = (item: InvoiceScheduleItem) => {
-    if (item.status === 'paid') {
-      return { label: "Payé", variant: "default" as const, icon: CheckCircle, color: "text-emerald-500" };
-    }
-    if (item.status === 'invoiced') {
-      return { label: "Facturé", variant: "secondary" as const, icon: Receipt, color: "text-blue-500" };
-    }
-    if (item.status === 'cancelled') {
-      return { label: "Annulé", variant: "outline" as const, icon: AlertTriangle, color: "text-muted-foreground" };
-    }
-    
-    const isOverdue = isPast(new Date(item.planned_date)) && !isToday(new Date(item.planned_date));
-    if (isOverdue) {
-      return { label: "En retard", variant: "destructive" as const, icon: AlertTriangle, color: "text-destructive" };
-    }
-    
-    return { label: "À venir", variant: "outline" as const, icon: Clock, color: "text-muted-foreground" };
   };
 
   const handleGenerateFromQuote = async () => {
@@ -214,10 +191,17 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
     }
   };
 
+  const handleAdjustCA = () => {
+    setAdjustCADialogOpen(true);
+  };
+
+  const handleRedistribute = () => {
+    toast.info("Fonctionnalité de répartition à venir");
+  };
+
   // Calculate progress
   const progressPercentage = summary.totalAmountHt > 0 
-    ? ((summary.invoicedAmountHt + summary.paidAmountHt) / summary.totalAmountHt) * 100 / 2 + 
-      (summary.paidAmountHt / summary.totalAmountHt) * 100 / 2
+    ? (summary.paidAmountHt / summary.totalAmountHt) * 100 
     : 0;
 
   if (isLoading) {
@@ -230,32 +214,52 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
 
   return (
     <div className="space-y-6">
-      {/* Summary Header with Progress */}
-      <Card>
-        <CardHeader className="pb-2">
+      {/* CA Header with Budget Alert */}
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-3 bg-gradient-to-r from-primary/5 to-primary/10 border-b">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                Progression de la facturation
-              </CardTitle>
-              <CardDescription>
-                {summary.count} échéance(s) planifiée(s) • {summary.paidCount} payée(s)
-              </CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">CA du projet</CardTitle>
+                <CardDescription>
+                  Chiffre d'affaires prévu sur l'ensemble des échéances
+                </CardDescription>
+              </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold">{formatCurrency(summary.totalAmountHt)}</p>
-              <p className="text-xs text-muted-foreground">Budget total prévu</p>
+              <p className="text-3xl font-bold text-primary">{formatCurrency(summary.totalAmountHt)}</p>
+              <div className="flex items-center gap-2 justify-end text-sm text-muted-foreground">
+                <Wallet className="h-4 w-4" />
+                <span>Budget: {formatCurrency(financialSummary.currentBudget)}</span>
+              </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="pt-4 space-y-4">
+          {/* Budget vs CA Alert */}
+          <BudgetVsCAAlert
+            totalCA={summary.totalAmountHt}
+            projectBudget={financialSummary.currentBudget}
+            onAdjustBudget={onAdjustBudget}
+            onAdjustCA={handleAdjustCA}
+            onRedistribute={handleRedistribute}
+          />
+
+          {/* Progress bar */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Progression</span>
-              <span className="font-medium">{summary.totalAmountHt > 0 ? Math.round((summary.paidAmountHt / summary.totalAmountHt) * 100) : 0}%</span>
+              <span className="text-muted-foreground">Progression facturation</span>
+              <span className="font-medium">{Math.round(progressPercentage)}%</span>
             </div>
             <div className="relative h-3 w-full overflow-hidden rounded-full bg-muted">
+              {/* Pending (full bar background) */}
+              <div 
+                className="absolute left-0 top-0 h-full bg-amber-200 dark:bg-amber-900/30 transition-all"
+                style={{ width: `${summary.totalAmountHt > 0 ? ((summary.invoicedAmountHt + summary.pendingAmountHt) / summary.totalAmountHt) * 100 : 0}%` }}
+              />
               {/* Invoiced portion */}
               <div 
                 className="absolute left-0 top-0 h-full bg-blue-500 transition-all"
@@ -277,14 +281,37 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
                   <span className="h-2 w-2 rounded-full bg-blue-500" />
                   Facturé: {formatCurrency(summary.invoicedAmountHt)}
                 </span>
+                <span className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-amber-200 dark:bg-amber-900" />
+                  En attente: {formatCurrency(summary.pendingAmountHt)}
+                </span>
               </div>
-              <span>Reste: {formatCurrency(summary.pendingAmountHt)}</span>
+            </div>
+          </div>
+
+          {/* Summary stats */}
+          <div className="grid grid-cols-4 gap-4 pt-2">
+            <div className="text-center p-3 rounded-lg bg-muted/50">
+              <p className="text-2xl font-bold">{summary.count}</p>
+              <p className="text-xs text-muted-foreground">Échéances</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/20">
+              <p className="text-2xl font-bold text-emerald-600">{summary.paidCount}</p>
+              <p className="text-xs text-muted-foreground">Payées</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+              <p className="text-2xl font-bold text-blue-600">{summary.invoicedCount}</p>
+              <p className="text-xs text-muted-foreground">Facturées</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20">
+              <p className="text-2xl font-bold text-amber-600">{summary.pendingCount}</p>
+              <p className="text-xs text-muted-foreground">À facturer</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Alerts */}
+      {/* Overdue Alert */}
       {overdueItems.length > 0 && (
         <Card className="border-destructive/50 bg-destructive/5">
           <CardContent className="p-4 flex items-center gap-3">
@@ -297,7 +324,7 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
                 Total : {formatCurrency(overdueItems.reduce((s, i) => s + i.amount_ht, 0))} HT
               </p>
             </div>
-            <Button variant="destructive" size="sm">
+            <Button variant="destructive" size="sm" onClick={() => onCreateInvoice?.(overdueItems[0])}>
               <Receipt className="h-4 w-4 mr-2" />
               Facturer
             </Button>
@@ -307,7 +334,10 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
 
       {/* Header with Actions */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Échéancier de facturation</h3>
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-muted-foreground" />
+          Échéancier de facturation
+        </h3>
         <div className="flex items-center gap-2">
           {projectQuotes.length > 0 && scheduleItems.length === 0 && (
             <Button variant="outline" onClick={() => setGenerateDialogOpen(true)}>
@@ -317,12 +347,12 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
           )}
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Ajouter
+            Ajouter une facture
           </Button>
         </div>
       </div>
 
-      {/* Schedule Timeline */}
+      {/* Schedule Timeline - Inline Editable */}
       {scheduleItems.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -348,96 +378,30 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {scheduleItems.map((item, index) => {
-            const statusConfig = getStatusConfig(item);
-            const StatusIcon = statusConfig.icon;
-            
-            return (
-              <Card key={item.id} className="hover:bg-muted/50 transition-colors">
-                <CardContent className="p-4 flex items-center gap-4">
-                  {/* Timeline indicator */}
-                  <div className="flex flex-col items-center">
-                    <div className={cn(
-                      "h-10 w-10 rounded-full flex items-center justify-center border-2",
-                      item.status === 'paid' ? "border-emerald-500 bg-emerald-50" :
-                      item.status === 'invoiced' ? "border-blue-500 bg-blue-50" :
-                      "border-muted bg-background"
-                    )}>
-                      <span className="font-semibold text-sm">{index + 1}</span>
-                    </div>
-                    {index < scheduleItems.length - 1 && (
-                      <div className="w-0.5 h-6 bg-muted mt-1" />
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{item.title}</p>
-                      <Badge variant={statusConfig.variant} className="text-xs">
-                        <StatusIcon className="h-3 w-3 mr-1" />
-                        {statusConfig.label}
-                      </Badge>
-                      {item.percentage && (
-                        <Badge variant="outline" className="text-xs">
-                          {item.percentage}%
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(item.planned_date), "d MMMM yyyy", { locale: fr })}
-                      </span>
-                      {item.milestone && (
-                        <span className="flex items-center gap-1">
-                          <FileText className="h-3 w-3" />
-                          {item.milestone}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Amount */}
-                  <div className="text-right shrink-0">
-                    <p className="font-semibold">{formatCurrency(item.amount_ht)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      TTC: {formatCurrency(item.amount_ttc || 0)}
-                    </p>
-                  </div>
-
-                  {/* Actions */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {item.status === 'pending' && onCreateInvoice && (
-                        <DropdownMenuItem onClick={() => onCreateInvoice(item)}>
-                          <Receipt className="h-4 w-4 mr-2" />
-                          Créer la facture
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem onClick={() => handleEdit(item)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Modifier
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-destructive"
-                        onClick={() => handleDelete(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Supprimer
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </CardContent>
-              </Card>
-            );
-          })}
+        <div className="space-y-2">
+          {scheduleItems.map((item, index) => (
+            <InvoiceScheduleInlineRow
+              key={item.id}
+              item={item}
+              index={index}
+              totalCA={summary.totalAmountHt}
+              isLast={index === scheduleItems.length - 1}
+              onUpdate={handleInlineUpdate}
+              onDelete={handleDelete}
+              onCreateInvoice={onCreateInvoice}
+              onViewInvoice={onViewInvoice}
+              isUpdating={updateScheduleItem.isPending}
+            />
+          ))}
+          
+          {/* Add new schedule item button */}
+          <button
+            onClick={() => setCreateDialogOpen(true)}
+            className="w-full flex items-center justify-center gap-2 p-4 rounded-lg border-2 border-dashed border-muted-foreground/20 hover:border-primary/50 hover:bg-muted/50 transition-colors text-muted-foreground hover:text-foreground"
+          >
+            <Plus className="h-4 w-4" />
+            Ajouter une facture
+          </button>
         </div>
       )}
 
@@ -476,7 +440,15 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
                   min={0}
                   step={100}
                   value={formData.amount_ht}
-                  onChange={(e) => setFormData(prev => ({ ...prev, amount_ht: parseFloat(e.target.value) || 0 }))}
+                  onChange={(e) => {
+                    const amount = parseFloat(e.target.value) || 0;
+                    const percentage = summary.totalAmountHt > 0 ? (amount / summary.totalAmountHt) * 100 : 0;
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      amount_ht: amount,
+                      percentage: Math.round(percentage * 10) / 10
+                    }));
+                  }}
                 />
               </div>
               <div className="space-y-2">
@@ -486,7 +458,15 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
                   min={0}
                   max={100}
                   value={formData.percentage}
-                  onChange={(e) => setFormData(prev => ({ ...prev, percentage: parseFloat(e.target.value) || 0 }))}
+                  onChange={(e) => {
+                    const percentage = parseFloat(e.target.value) || 0;
+                    const amount = summary.totalAmountHt > 0 ? (percentage / 100) * summary.totalAmountHt : 0;
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      percentage,
+                      amount_ht: Math.round(amount)
+                    }));
+                  }}
                 />
               </div>
             </div>
@@ -630,6 +610,44 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice }: InvoiceSchedu
               disabled={!selectedQuoteId || generateFromQuote.isPending}
             >
               {generateFromQuote.isPending ? "Génération..." : "Générer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Adjust CA Dialog */}
+      <Dialog open={adjustCADialogOpen} onOpenChange={setAdjustCADialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ajuster le CA</DialogTitle>
+            <DialogDescription>
+              Réduisez les montants de l'échéancier pour correspondre au budget.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex justify-between text-sm">
+              <span>CA actuel</span>
+              <span className="font-medium">{formatCurrency(summary.totalAmountHt)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span>Budget</span>
+              <span className="font-medium">{formatCurrency(financialSummary.currentBudget)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-amber-600">
+              <span>Excédent</span>
+              <span className="font-medium">
+                {formatCurrency(summary.totalAmountHt - financialSummary.currentBudget)}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Modifiez individuellement les montants des échéances dans le tableau ci-dessous pour ajuster le CA total.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAdjustCADialogOpen(false)}>
+              Fermer
             </Button>
           </DialogFooter>
         </DialogContent>

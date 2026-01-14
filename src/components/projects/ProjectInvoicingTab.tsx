@@ -133,8 +133,12 @@ export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicing
               <InvoiceScheduleTab 
                 projectId={projectId}
                 onCreateInvoice={(scheduleItem) => {
-                  // Will create invoice from schedule item
                   handleCreateInvoice();
+                }}
+                onViewInvoice={handleEditInvoice}
+                onAdjustBudget={() => {
+                  // Navigate to budget tab or open budget dialog
+                  handleNavigateToTab('overview');
                 }}
               />
             </TabsContent>
