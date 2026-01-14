@@ -59,6 +59,7 @@ const DocumentationPage = lazy(() => import("./pages/DocumentationPage"));
 const CreateWorkspace = lazy(() => import("./pages/CreateWorkspace"));
 const NotificationsPage = lazy(() => import("./pages/Notifications"));
 const PublicQuote = lazy(() => import("./pages/PublicQuote"));
+const ClientPortal = lazy(() => import("./pages/ClientPortal"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading fallback
@@ -97,6 +98,7 @@ const App = () => (
               <Route path="/onboarding" element={<Suspense fallback={<PageLoader />}><Onboarding /></Suspense>} />
               <Route path="/invite" element={<Suspense fallback={<PageLoader />}><AcceptInvite /></Suspense>} />
               <Route path="/q/:token" element={<Suspense fallback={<PageLoader />}><PublicQuote /></Suspense>} />
+              <Route path="/portal/:token" element={<Suspense fallback={<PageLoader />}><ClientPortal /></Suspense>} />
 
                 {/* Protected routes with shared MainLayout */}
                 <Route

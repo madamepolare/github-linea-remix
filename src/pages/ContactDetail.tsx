@@ -26,6 +26,7 @@ import { ContactInfoPanel } from "@/components/crm/contact/ContactInfoPanel";
 import { ContactStatsCards } from "@/components/crm/contact/ContactStatsCards";
 import { ContactLeadsSection } from "@/components/crm/contact/ContactLeadsSection";
 import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
+import { ContactPortalSettings } from "@/components/crm/contact/ContactPortalSettings";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function ContactDetail() {
@@ -192,6 +193,10 @@ export default function ContactDetail() {
                 <ContactLeadsSection 
                   leads={contactLeads} 
                   contactId={contact.id} 
+                />
+                <ContactPortalSettings 
+                  contactId={contact.id}
+                  contactName={contact.name}
                 />
                 <ActivityTimeline
                   entityType="contact"
