@@ -52,12 +52,11 @@ import {
   FolderPlus,
   Briefcase,
   PenTool,
-  Info,
   Calculator,
-  Settings2,
   Clock,
   TrendingUp,
-  ExternalLink
+  ExternalLink,
+  Hash
 } from 'lucide-react';
 import { QuoteLine, QuoteDocument, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { UNIT_OPTIONS, BILLING_TYPE_LABELS, BillingType } from '@/hooks/useQuoteLineTemplates';
@@ -66,6 +65,7 @@ import { SkillsMultiSelect } from './SkillsMultiSelect';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useLineCostCalculation } from '@/hooks/useLineCostCalculation';
 import { useLineFeatures } from '@/contexts/LineFeatureContext';
+import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
 import { cn } from '@/lib/utils';
 
 const TYPE_ICONS: Record<QuoteLine['line_type'], React.ReactNode> = {
@@ -75,6 +75,15 @@ const TYPE_ICONS: Record<QuoteLine['line_type'], React.ReactNode> = {
   expense: <Receipt className="h-4 w-4" />,
   discount: <MinusCircle className="h-4 w-4" />,
   group: <Folder className="h-4 w-4" />
+};
+
+const TYPE_LABELS: Record<QuoteLine['line_type'], string> = {
+  phase: 'Phase',
+  service: 'Service',
+  option: 'Option',
+  expense: 'Frais',
+  discount: 'Remise',
+  group: 'Groupe'
 };
 
 const COST_SOURCE_CONFIG = {
@@ -128,6 +137,11 @@ export function QuoteLineItemCompact({
   const features = useLineFeatures();
   const [activeSection, setActiveSection] = useState<string>('pricing');
   
+  // Get phase templates for phase code dropdown
+  const projectType = document.project_type as 'interior' | 'architecture' | 'scenography' | undefined;
+  const { templates: phaseTemplates } = usePhaseTemplates(projectType);
+  const activeTemplates = phaseTemplates.filter(t => t.is_active);
+  
   // Determine if line is external/production type
   const isExternalLine = line.line_type === 'expense' || line.pricing_ref?.startsWith('PROD-');
   
@@ -169,6 +183,25 @@ export function QuoteLineItemCompact({
     ? (effectiveMargin / line.amount) * 100 
     : 0;
 
+  // Handle phase code change from dropdown
+  const handlePhaseCodeChange = (code: string) => {
+    if (code === '__none__') {
+      updateLine(line.id, { phase_code: undefined });
+      return;
+    }
+    const template = activeTemplates.find(t => t.code === code);
+    if (template) {
+      updateLine(line.id, { 
+        phase_code: template.code,
+        phase_name: line.phase_name || template.name,
+        phase_description: line.phase_description || template.description,
+        percentage_fee: line.percentage_fee || template.default_percentage || 0
+      });
+    } else {
+      updateLine(line.id, { phase_code: code });
+    }
+  };
+
   return (
     <Collapsible open={isExpanded}>
       <div
@@ -184,54 +217,112 @@ export function QuoteLineItemCompact({
           isExpanded && 'shadow-md ring-1 ring-primary/10'
         )}
       >
-        {/* Compact header */}
-        <div className="flex items-center gap-2 p-3">
-          <div className="cursor-grab shrink-0 p-1 hover:bg-muted rounded">
+        {/* Compact header - improved list view */}
+        <div className="flex items-center gap-1.5 sm:gap-2 p-2.5 sm:p-3">
+          {/* Drag handle */}
+          <div className="cursor-grab shrink-0 p-1 hover:bg-muted rounded hidden sm:block">
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
           
-          <div className={cn("p-1.5 rounded-lg shrink-0", LINE_TYPE_COLORS[line.line_type])}>
-            {TYPE_ICONS[line.line_type]}
-          </div>
+          {/* Type icon */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className={cn("p-1.5 rounded-lg shrink-0 cursor-default", LINE_TYPE_COLORS[line.line_type])}>
+                {TYPE_ICONS[line.line_type]}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>{TYPE_LABELS[line.line_type]}</p>
+            </TooltipContent>
+          </Tooltip>
 
-          {line.phase_code && (
+          {/* Phase code dropdown */}
+          {activeTemplates.length > 0 && (line.line_type === 'phase' || line.line_type === 'service') && (
+            <Select
+              value={line.phase_code || '__none__'}
+              onValueChange={handlePhaseCodeChange}
+            >
+              <SelectTrigger className="h-8 w-[80px] text-xs font-mono shrink-0 px-2">
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">
+                  <span className="text-muted-foreground">—</span>
+                </SelectItem>
+                {activeTemplates.map((t) => (
+                  <SelectItem key={t.code} value={t.code}>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs font-mono px-1.5 py-0">
+                        {t.code}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                        {t.name}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Phase code badge for non-editable display */}
+          {(activeTemplates.length === 0 || (line.line_type !== 'phase' && line.line_type !== 'service')) && line.phase_code && (
             <Badge variant="outline" className="shrink-0 text-xs font-mono">
               {line.phase_code}
             </Badge>
           )}
 
-          <Input
-            value={line.phase_name}
-            onChange={(e) => updateLine(line.id, { phase_name: e.target.value })}
-            className="flex-1 h-9 font-medium border-transparent hover:border-input focus:border-input bg-transparent"
-            placeholder="Désignation..."
-          />
-
-          {/* Quick amount display */}
-          <div className="flex items-center gap-2 shrink-0">
-            {features.showPercentageFee && line.line_type === 'phase' && line.percentage_fee !== undefined && (
-              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/50">
-                <Input
-                  type="number"
-                  value={line.percentage_fee}
-                  onChange={(e) => updateLine(line.id, { percentage_fee: parseFloat(e.target.value) || 0 })}
-                  className="h-7 w-14 text-right tabular-nums text-sm border-0 bg-transparent p-0"
-                  min={0}
-                />
-                <Percent className="h-3.5 w-3.5 text-muted-foreground" />
-              </div>
+          {/* Title + reference below */}
+          <div className="flex-1 min-w-0">
+            <Input
+              value={line.phase_name}
+              onChange={(e) => updateLine(line.id, { phase_name: e.target.value })}
+              className="h-8 font-medium border-transparent hover:border-input focus:border-input bg-transparent text-sm"
+              placeholder="Désignation..."
+            />
+            {line.pricing_ref && (
+              <p className="text-[10px] text-muted-foreground mt-0.5 pl-2 truncate">
+                Réf: {line.pricing_ref}
+              </p>
             )}
+          </div>
 
-            <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10">
+          {/* Quantity x Unit compact */}
+          <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+            <Input
+              type="number"
+              value={line.quantity || 1}
+              onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 1 })}
+              className="h-7 w-12 text-center text-xs border-0 bg-muted/50 rounded px-1"
+              min={0}
+            />
+            <span className="text-muted-foreground">{line.unit || 'u'}</span>
+          </div>
+
+          {/* Percentage fee for phases */}
+          {features.showPercentageFee && line.line_type === 'phase' && line.percentage_fee !== undefined && (
+            <div className="hidden sm:flex items-center gap-0.5 px-2 py-1 rounded-lg bg-muted/50 shrink-0">
               <Input
                 type="number"
-                value={line.amount || 0}
-                onChange={(e) => updateLine(line.id, { amount: parseFloat(e.target.value) || 0, unit_price: parseFloat(e.target.value) || 0 })}
-                className="h-7 w-20 text-right tabular-nums font-semibold border-0 bg-transparent p-0"
-                placeholder="0"
+                value={line.percentage_fee}
+                onChange={(e) => updateLine(line.id, { percentage_fee: parseFloat(e.target.value) || 0 })}
+                className="h-6 w-12 text-right tabular-nums text-xs border-0 bg-transparent p-0"
+                min={0}
               />
-              <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+              <Percent className="h-3 w-3 text-muted-foreground" />
             </div>
+          )}
+
+          {/* Amount */}
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-primary/5 border border-primary/10 shrink-0">
+            <Input
+              type="number"
+              value={line.amount || 0}
+              onChange={(e) => updateLine(line.id, { amount: parseFloat(e.target.value) || 0, unit_price: parseFloat(e.target.value) || 0 })}
+              className="h-7 w-16 sm:w-20 text-right tabular-nums font-semibold text-sm border-0 bg-transparent p-0"
+              placeholder="0"
+            />
+            <Euro className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
 
           {/* Quick margin indicator */}
@@ -575,7 +666,7 @@ export function QuoteLineItemCompact({
                           {CostSourceIcon && costSource !== 'manual' && costSource !== 'none' && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                                <Hash className="h-3 w-3 text-muted-foreground cursor-help" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>Source: {costSourceConfig.label}</p>
