@@ -109,12 +109,14 @@ export default function PublicQuote() {
 
       try {
         // Use fetch directly without auth headers for public access
+        // Must include apikey for Supabase edge functions
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/public-quote-view?token=${token}`,
           {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
+              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             },
           }
         );
@@ -232,6 +234,7 @@ export default function PublicQuote() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
           body: JSON.stringify({
             token,
