@@ -5,7 +5,6 @@ import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import { TaskArchiveView } from "@/components/tasks/TaskArchiveView";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
-import { QuickTasksSection } from "@/components/tasks/QuickTasksSection";
 
 type ViewType = "board" | "list" | "archive";
 
@@ -27,13 +26,6 @@ export default function Tasks() {
         title="Tâches"
         description="Gérez et suivez vos tâches"
       >
-        {/* Quick Tasks Section */}
-        {view !== "archive" && (
-          <div className="mb-6">
-            <QuickTasksSection />
-          </div>
-        )}
-
         {view === "board" && (
           <TaskBoard 
             statusFilter={null} 

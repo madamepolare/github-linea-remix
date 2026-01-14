@@ -16,6 +16,7 @@ import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { COMPANY_CATEGORIES, COMPANY_TYPE_CONFIG, CompanyCategory, CompanyType } from "@/lib/crmTypes";
 import { cn } from "@/lib/utils";
+import { SiretSearchInput } from "./SiretSearchInput";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -330,15 +331,28 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
             <div className="space-y-4 pt-4 border-t">
               <h4 className="text-sm font-medium text-muted-foreground">Informations financières</h4>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>SIREN</Label>
-                  <Input {...form.register("siren")} placeholder="123456789" maxLength={9} />
-                </div>
-                <div className="space-y-2">
-                  <Label>SIRET</Label>
-                  <Input {...form.register("siret")} placeholder="12345678900012" maxLength={14} />
-                </div>
+              {/* SIRET Search with auto-complete */}
+              <SiretSearchInput
+                value={form.watch("siret") || ""}
+                onChange={(value) => form.setValue("siret", value)}
+                onCompanySelect={(company) => {
+                  // Auto-fill fields from selected company
+                  if (!form.getValues("name")) {
+                    form.setValue("name", company.name);
+                  }
+                  form.setValue("siren", company.siren);
+                  form.setValue("siret", company.siret);
+                  if (company.address) form.setValue("address", company.address);
+                  if (company.postal_code) form.setValue("postal_code", company.postal_code);
+                  if (company.city) form.setValue("city", company.city);
+                  if (company.code_naf) form.setValue("code_naf", company.code_naf);
+                  if (company.forme_juridique) form.setValue("forme_juridique", company.forme_juridique);
+                }}
+              />
+
+              <div className="space-y-2">
+                <Label>SIREN</Label>
+                <Input {...form.register("siren")} placeholder="123456789" maxLength={9} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
