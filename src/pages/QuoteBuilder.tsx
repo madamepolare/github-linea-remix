@@ -25,7 +25,8 @@ import {
   Package,
   Calendar,
   Receipt,
-  LucideIcon
+  LucideIcon,
+  Trophy
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, phaseToQuoteLine, quoteLineToPhase, DOCUMENT_STATUS_LABELS, DocumentStatus } from '@/types/quoteTypes';
 import { cn } from '@/lib/utils';
@@ -582,7 +583,7 @@ export default function QuoteBuilder() {
             <span className="hidden sm:inline">{isSaving ? 'Enregistrement...' : 'Enregistrer'}</span>
           </Button>
           
-          {/* Convert to project button */}
+          {/* "Gagné" button - marks as accepted and offers project creation */}
           {canConvertToProject && (
             <Button 
               variant="default"
@@ -590,8 +591,8 @@ export default function QuoteBuilder() {
               onClick={() => setShowConvertDialog(true)}
               className="h-8 sm:h-9 px-2 sm:px-3 bg-green-600 hover:bg-green-700"
             >
-              <Rocket className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Créer projet</span>
+              <Trophy className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Gagné</span>
             </Button>
           )}
           

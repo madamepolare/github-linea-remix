@@ -8,6 +8,9 @@ export interface ClientBillingInfo {
   company_id?: string;
   department_id?: string;
   
+  // Client reference (for quotes)
+  client_reference?: string;
+  
   // Billing address
   billing_name?: string;
   billing_address?: string;
@@ -115,6 +118,7 @@ export function useClientBilling(companyId?: string, departmentId?: string) {
         if (company) {
           return {
             company_id: company.id,
+            client_reference: (company as any).client_reference || undefined,
             billing_name: company.name,
             billing_address: company.address || undefined,
             billing_postal_code: company.postal_code || undefined,

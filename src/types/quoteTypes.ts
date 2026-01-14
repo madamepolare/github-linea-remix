@@ -119,6 +119,17 @@ export interface QuoteDocument {
   internal_owner_id?: string;
   invoice_schedule?: unknown[];
   
+  // Public market fields
+  is_public_market?: boolean;
+  market_reference?: string;
+  
+  // Amendment field
+  is_amendment?: boolean;
+  
+  // Deposit settings
+  requires_deposit?: boolean;
+  deposit_percentage?: number;
+  
   // Status
   status: DocumentStatus;
   sent_at?: string;
