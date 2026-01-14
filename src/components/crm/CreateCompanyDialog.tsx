@@ -142,13 +142,13 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle>Nouvelle entreprise</DialogTitle>
           <DialogDescription>Ajoutez une nouvelle entreprise à votre CRM</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-1 -mx-6 px-6">
-          <form id="create-company-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pb-4">
+        <ScrollArea className="flex-1 -mx-6 px-6 overflow-y-auto">
+          <form id="create-company-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-2 pr-2">
             {/* Quick SIRET Search */}
             <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
               <Building2 className="h-5 w-5 text-primary shrink-0" />
@@ -416,6 +416,9 @@ export function CreateCompanyDialog({ open, onOpenChange }: CreateCompanyDialogP
               <Label>Notes</Label>
               <Textarea {...form.register("notes")} placeholder="Notes sur l'entreprise..." rows={2} />
             </div>
+            
+            {/* Bottom padding for scroll */}
+            <div className="h-4" />
           </form>
         </ScrollArea>
         <div className="flex justify-end gap-3 pt-4 border-t shrink-0">

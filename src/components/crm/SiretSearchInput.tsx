@@ -96,12 +96,32 @@ export function SiretSearchInput({
       
       const companies: CompanyResult[] = (data.results || []).map((item: any) => {
         const siege = item.siege || {};
+        
+        // Build address from components (excluding postal code and city)
+        let adresse = "";
+        if (siege.numero_voie) adresse += siege.numero_voie + " ";
+        if (siege.type_voie) adresse += siege.type_voie + " ";
+        if (siege.libelle_voie) adresse += siege.libelle_voie;
+        adresse = adresse.trim();
+        
+        // If no components, use the full address but try to extract just the street
+        if (!adresse && siege.adresse) {
+          const fullAddr = siege.adresse;
+          const postalCode = siege.code_postal || "";
+          const city = siege.libelle_commune || "";
+          if (postalCode && city) {
+            adresse = fullAddr.replace(new RegExp(`\\s*${postalCode}\\s*${city}\\s*$`, 'i'), '').trim();
+          } else {
+            adresse = fullAddr;
+          }
+        }
+        
         return {
           siren: item.siren || "",
           siret: siege.siret || "",
           nom_complet: item.nom_complet || item.nom_raison_sociale || "",
           nom_raison_sociale: item.nom_raison_sociale || "",
-          adresse: siege.adresse || siege.libelle_voie ? `${siege.numero_voie || ""} ${siege.type_voie || ""} ${siege.libelle_voie || ""}`.trim() : "",
+          adresse: adresse,
           code_postal: siege.code_postal || "",
           ville: siege.libelle_commune || "",
           activite_principale: item.activite_principale || siege.activite_principale || "",
