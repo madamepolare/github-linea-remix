@@ -796,6 +796,162 @@ export type Database = {
           },
         ]
       }
+      client_portal_links: {
+        Row: {
+          can_add_tasks: boolean | null
+          can_view_invoices: boolean | null
+          can_view_projects: boolean | null
+          can_view_quotes: boolean | null
+          can_view_tasks: boolean | null
+          can_view_time_entries: boolean | null
+          contact_id: string
+          created_at: string | null
+          created_by: string | null
+          custom_slug: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          last_accessed_at: string | null
+          project_ids: string[] | null
+          token: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          can_add_tasks?: boolean | null
+          can_view_invoices?: boolean | null
+          can_view_projects?: boolean | null
+          can_view_quotes?: boolean | null
+          can_view_tasks?: boolean | null
+          can_view_time_entries?: boolean | null
+          contact_id: string
+          created_at?: string | null
+          created_by?: string | null
+          custom_slug?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          project_ids?: string[] | null
+          token: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          can_add_tasks?: boolean | null
+          can_view_invoices?: boolean | null
+          can_view_projects?: boolean | null
+          can_view_quotes?: boolean | null
+          can_view_tasks?: boolean | null
+          can_view_time_entries?: boolean | null
+          contact_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          custom_slug?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          project_ids?: string[] | null
+          token?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_links_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_portal_requests: {
+        Row: {
+          contact_id: string
+          converted_task_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          portal_link_id: string
+          project_id: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          contact_id: string
+          converted_task_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          portal_link_id: string
+          project_id?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          contact_id?: string
+          converted_task_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          portal_link_id?: string
+          project_id?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_portal_requests_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_requests_converted_task_id_fkey"
+            columns: ["converted_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_requests_portal_link_id_fkey"
+            columns: ["portal_link_id"]
+            isOneToOne: false
+            referencedRelation: "client_portal_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_portal_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_document_items: {
         Row: {
           amount: number | null
