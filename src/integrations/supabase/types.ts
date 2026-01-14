@@ -1124,6 +1124,7 @@ export type Database = {
           requires_deposit: boolean | null
           sent_at: string | null
           signed_at: string | null
+          signed_pdf_url: string | null
           special_conditions: string | null
           status: string
           title: string
@@ -1180,6 +1181,7 @@ export type Database = {
           requires_deposit?: boolean | null
           sent_at?: string | null
           signed_at?: string | null
+          signed_pdf_url?: string | null
           special_conditions?: string | null
           status?: string
           title: string
@@ -1236,6 +1238,7 @@ export type Database = {
           requires_deposit?: boolean | null
           sent_at?: string | null
           signed_at?: string | null
+          signed_pdf_url?: string | null
           special_conditions?: string | null
           status?: string
           title?: string
