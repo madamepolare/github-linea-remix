@@ -689,6 +689,113 @@ export type Database = {
           },
         ]
       }
+      chorus_pro_config: {
+        Row: {
+          chorus_login: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_sandbox: boolean | null
+          last_sync_at: string | null
+          service_code_default: string | null
+          siret: string
+          technical_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          chorus_login?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_sandbox?: boolean | null
+          last_sync_at?: string | null
+          service_code_default?: string | null
+          siret: string
+          technical_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          chorus_login?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_sandbox?: boolean | null
+          last_sync_at?: string | null
+          service_code_default?: string | null
+          siret?: string
+          technical_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chorus_pro_config_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chorus_submissions: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          invoice_id: string
+          processed_at: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          status: string
+          submission_id: string | null
+          submitted_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          invoice_id: string
+          processed_at?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string
+          submission_id?: string | null
+          submitted_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          invoice_id?: string
+          processed_at?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string
+          submission_id?: string | null
+          submitted_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chorus_submissions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chorus_submissions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commercial_document_items: {
         Row: {
           amount: number | null
@@ -3459,19 +3566,121 @@ export type Database = {
           },
         ]
       }
+      invoice_schedule: {
+        Row: {
+          amount_ht: number
+          amount_ttc: number | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          invoice_id: string | null
+          milestone: string | null
+          percentage: number | null
+          phase_ids: Json | null
+          planned_date: string
+          project_id: string
+          quote_id: string | null
+          schedule_number: number
+          status: string
+          title: string
+          updated_at: string
+          vat_rate: number | null
+          workspace_id: string
+        }
+        Insert: {
+          amount_ht: number
+          amount_ttc?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          invoice_id?: string | null
+          milestone?: string | null
+          percentage?: number | null
+          phase_ids?: Json | null
+          planned_date: string
+          project_id: string
+          quote_id?: string | null
+          schedule_number: number
+          status?: string
+          title: string
+          updated_at?: string
+          vat_rate?: number | null
+          workspace_id: string
+        }
+        Update: {
+          amount_ht?: number
+          amount_ttc?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          invoice_id?: string | null
+          milestone?: string | null
+          percentage?: number | null
+          phase_ids?: Json | null
+          planned_date?: string
+          project_id?: string
+          quote_id?: string | null
+          schedule_number?: number
+          status?: string
+          title?: string
+          updated_at?: string
+          vat_rate?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_schedule_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_schedule_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_schedule_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_schedule_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
+          advance_payments: Json | null
           amount_due: number | null
           amount_paid: number | null
           bank_bic: string | null
           bank_iban: string | null
           bank_name: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
           chorus_pro_enabled: boolean | null
           chorus_pro_engagement_number: string | null
           chorus_pro_response: Json | null
           chorus_pro_service_code: string | null
           chorus_pro_status: string | null
           chorus_pro_submission_date: string | null
+          chorus_rejection_reason: string | null
+          chorus_status: string | null
+          chorus_submission_date: string | null
+          chorus_submission_id: string | null
           client_address: string | null
           client_city: string | null
           client_company_id: string | null
@@ -3487,7 +3696,10 @@ export type Database = {
           currency: string | null
           discount_amount: number | null
           discount_percentage: number | null
+          document_type: string | null
           due_date: string | null
+          engagement_number: string | null
+          facturx_xml: string | null
           footer_text: string | null
           header_text: string | null
           id: string
@@ -3495,35 +3707,51 @@ export type Database = {
           invoice_date: string
           invoice_number: string
           invoice_type: string
+          is_public_sector: boolean | null
+          legal_mentions: string | null
           notes: string | null
+          original_invoice_id: string | null
           paid_at: string | null
           payment_method: string | null
           payment_terms: string | null
           pdf_url: string | null
+          penalty_rate: number | null
           project_id: string | null
           project_name: string | null
           project_reference: string | null
+          recovery_costs: number | null
+          related_invoice_id: string | null
+          retentions: Json | null
           sent_at: string | null
+          service_code: string | null
           status: string
           subtotal_ht: number | null
           total_ttc: number | null
           tva_amount: number | null
           tva_rate: number | null
           updated_at: string | null
+          validated_at: string | null
           workspace_id: string
         }
         Insert: {
+          advance_payments?: Json | null
           amount_due?: number | null
           amount_paid?: number | null
           bank_bic?: string | null
           bank_iban?: string | null
           bank_name?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           chorus_pro_enabled?: boolean | null
           chorus_pro_engagement_number?: string | null
           chorus_pro_response?: Json | null
           chorus_pro_service_code?: string | null
           chorus_pro_status?: string | null
           chorus_pro_submission_date?: string | null
+          chorus_rejection_reason?: string | null
+          chorus_status?: string | null
+          chorus_submission_date?: string | null
+          chorus_submission_id?: string | null
           client_address?: string | null
           client_city?: string | null
           client_company_id?: string | null
@@ -3539,7 +3767,10 @@ export type Database = {
           currency?: string | null
           discount_amount?: number | null
           discount_percentage?: number | null
+          document_type?: string | null
           due_date?: string | null
+          engagement_number?: string | null
+          facturx_xml?: string | null
           footer_text?: string | null
           header_text?: string | null
           id?: string
@@ -3547,35 +3778,51 @@ export type Database = {
           invoice_date?: string
           invoice_number: string
           invoice_type?: string
+          is_public_sector?: boolean | null
+          legal_mentions?: string | null
           notes?: string | null
+          original_invoice_id?: string | null
           paid_at?: string | null
           payment_method?: string | null
           payment_terms?: string | null
           pdf_url?: string | null
+          penalty_rate?: number | null
           project_id?: string | null
           project_name?: string | null
           project_reference?: string | null
+          recovery_costs?: number | null
+          related_invoice_id?: string | null
+          retentions?: Json | null
           sent_at?: string | null
+          service_code?: string | null
           status?: string
           subtotal_ht?: number | null
           total_ttc?: number | null
           tva_amount?: number | null
           tva_rate?: number | null
           updated_at?: string | null
+          validated_at?: string | null
           workspace_id: string
         }
         Update: {
+          advance_payments?: Json | null
           amount_due?: number | null
           amount_paid?: number | null
           bank_bic?: string | null
           bank_iban?: string | null
           bank_name?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           chorus_pro_enabled?: boolean | null
           chorus_pro_engagement_number?: string | null
           chorus_pro_response?: Json | null
           chorus_pro_service_code?: string | null
           chorus_pro_status?: string | null
           chorus_pro_submission_date?: string | null
+          chorus_rejection_reason?: string | null
+          chorus_status?: string | null
+          chorus_submission_date?: string | null
+          chorus_submission_id?: string | null
           client_address?: string | null
           client_city?: string | null
           client_company_id?: string | null
@@ -3591,7 +3838,10 @@ export type Database = {
           currency?: string | null
           discount_amount?: number | null
           discount_percentage?: number | null
+          document_type?: string | null
           due_date?: string | null
+          engagement_number?: string | null
+          facturx_xml?: string | null
           footer_text?: string | null
           header_text?: string | null
           id?: string
@@ -3599,21 +3849,30 @@ export type Database = {
           invoice_date?: string
           invoice_number?: string
           invoice_type?: string
+          is_public_sector?: boolean | null
+          legal_mentions?: string | null
           notes?: string | null
+          original_invoice_id?: string | null
           paid_at?: string | null
           payment_method?: string | null
           payment_terms?: string | null
           pdf_url?: string | null
+          penalty_rate?: number | null
           project_id?: string | null
           project_name?: string | null
           project_reference?: string | null
+          recovery_costs?: number | null
+          related_invoice_id?: string | null
+          retentions?: Json | null
           sent_at?: string | null
+          service_code?: string | null
           status?: string
           subtotal_ht?: number | null
           total_ttc?: number | null
           tva_amount?: number | null
           tva_rate?: number | null
           updated_at?: string | null
+          validated_at?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -3639,10 +3898,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "invoices_original_invoice_id_fkey"
+            columns: ["original_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "invoices_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_related_invoice_id_fkey"
+            columns: ["related_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
@@ -5612,6 +5885,88 @@ export type Database = {
           },
         ]
       }
+      project_budget_envelopes: {
+        Row: {
+          alert_threshold: number | null
+          budget_amount: number
+          category: string | null
+          consumed_amount: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          project_id: string
+          remaining_amount: number | null
+          source_document_id: string | null
+          source_phase_ids: Json | null
+          source_type: string
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          alert_threshold?: number | null
+          budget_amount?: number
+          category?: string | null
+          consumed_amount?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          project_id: string
+          remaining_amount?: number | null
+          source_document_id?: string | null
+          source_phase_ids?: Json | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          alert_threshold?: number | null
+          budget_amount?: number
+          category?: string | null
+          consumed_amount?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+          remaining_amount?: number | null
+          source_document_id?: string | null
+          source_phase_ids?: Json | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_budget_envelopes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_budget_envelopes_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_budget_envelopes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_calendar_events: {
         Row: {
           attendees: Json | null
@@ -6791,6 +7146,7 @@ export type Database = {
           amount_ht: number
           amount_ttc: number | null
           assigned_to: string | null
+          budget_envelope_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -6823,6 +7179,7 @@ export type Database = {
           amount_ht?: number
           amount_ttc?: number | null
           assigned_to?: string | null
+          budget_envelope_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -6855,6 +7212,7 @@ export type Database = {
           amount_ht?: number
           amount_ttc?: number | null
           assigned_to?: string | null
+          budget_envelope_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -6884,6 +7242,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_purchases_budget_envelope_id_fkey"
+            columns: ["budget_envelope_id"]
+            isOneToOne: false
+            referencedRelation: "project_budget_envelopes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_purchases_phase_id_fkey"
             columns: ["phase_id"]
