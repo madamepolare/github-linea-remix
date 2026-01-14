@@ -327,14 +327,14 @@ export function QuickTimeEntry({ onEntryAdded }: QuickTimeEntryProps) {
               <div className="space-y-1.5">
                 <Label className="text-xs">Tâche (optionnel)</Label>
                 <Select
-                  value={newEntry.taskId}
-                  onValueChange={(v) => setNewEntry({ ...newEntry, taskId: v })}
+                  value={newEntry.taskId || "__none__"}
+                  onValueChange={(v) => setNewEntry({ ...newEntry, taskId: v === "__none__" ? "" : v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Aucune tâche spécifique" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Aucune tâche spécifique</SelectItem>
+                    <SelectItem value="__none__">Aucune tâche spécifique</SelectItem>
                     {tasks.map((task) => (
                       <SelectItem key={task.id} value={task.id}>
                         {task.title}

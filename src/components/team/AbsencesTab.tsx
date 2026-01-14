@@ -552,14 +552,14 @@ export function AbsencesTab() {
               <div className="space-y-2">
                 <Label>Membre</Label>
                 <Select
-                  value={newAbsence.target_user_id || ""}
-                  onValueChange={(v) => setNewAbsence({ ...newAbsence, target_user_id: v })}
+                  value={newAbsence.target_user_id || "__none__"}
+                  onValueChange={(v) => setNewAbsence({ ...newAbsence, target_user_id: v === "__none__" ? "" : v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Moi-même (par défaut)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Moi-même</SelectItem>
+                    <SelectItem value="__none__">Moi-même</SelectItem>
                     {members?.filter(m => m.user_id !== user?.id).map((member) => (
                       <SelectItem key={member.user_id} value={member.user_id}>
                         {member.profile?.full_name || member.user_id}

@@ -377,14 +377,14 @@ export function LotsSection({
             <div className="space-y-2">
               <Label htmlFor="company">Entreprise</Label>
               <Select
-                value={formData.crm_company_id}
-                onValueChange={(value) => setFormData({ ...formData, crm_company_id: value })}
+                value={formData.crm_company_id || "__none__"}
+                onValueChange={(value) => setFormData({ ...formData, crm_company_id: value === "__none__" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner une entreprise" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucune</SelectItem>
+                  <SelectItem value="__none__">Aucune</SelectItem>
                   {companies.map((company) => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.name}

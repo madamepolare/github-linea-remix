@@ -166,12 +166,12 @@ export function CreatePageDialog({
 
             <div className="space-y-2">
               <Label>Catégorie</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
+              <Select value={categoryId || "__none__"} onValueChange={(v) => setCategoryId(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Aucune" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucune</SelectItem>
+                  <SelectItem value="__none__">Aucune</SelectItem>
                   {categories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}

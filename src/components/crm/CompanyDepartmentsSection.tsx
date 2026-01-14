@@ -327,7 +327,7 @@ export function CompanyDepartmentsSection({
         <CardHeader className="flex flex-row items-center justify-between py-4">
           <CardTitle className="text-base flex items-center gap-2">
             <Building className="h-4 w-4 text-muted-foreground" />
-            Groupes
+            Organigramme
             <Badge variant="secondary" className="ml-1 text-xs">
               Glisser-déposer
             </Badge>
@@ -341,8 +341,8 @@ export function CompanyDepartmentsSection({
           {departments.length === 0 && unassignedContacts.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Building className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Aucun groupe</p>
-              <p className="text-xs mt-1">Créez des groupes pour organiser vos contacts</p>
+              <p className="text-sm">Aucun service</p>
+              <p className="text-xs mt-1">Créez des services pour organiser vos contacts</p>
             </div>
           ) : (
             <DragDropContext onDragEnd={handleDragEnd}>

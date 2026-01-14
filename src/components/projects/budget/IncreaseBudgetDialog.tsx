@@ -197,12 +197,12 @@ export function IncreaseBudgetDialog({
           {changeType === 'amendment' && documents.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="referenceDoc">Document de référence</Label>
-              <Select value={referenceDocId} onValueChange={setReferenceDocId}>
+              <Select value={referenceDocId || "__none__"} onValueChange={(v) => setReferenceDocId(v === "__none__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionner un avenant..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucun document</SelectItem>
+                  <SelectItem value="__none__">Aucun document</SelectItem>
                   {documents.map(doc => (
                     <SelectItem key={doc.id} value={doc.id}>
                       <div className="flex items-center gap-2">

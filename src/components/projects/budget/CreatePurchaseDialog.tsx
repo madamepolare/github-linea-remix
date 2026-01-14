@@ -335,14 +335,14 @@ export function CreatePurchaseDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Enveloppe budgétaire</FormLabel>
-                    <Select value={field.value || ""} onValueChange={field.onChange}>
+                    <Select value={field.value || "__none__"} onValueChange={(v) => field.onChange(v === "__none__" ? "" : v)}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Aucune enveloppe" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Aucune enveloppe</SelectItem>
+                        <SelectItem value="__none__">Aucune enveloppe</SelectItem>
                         {envelopes.filter(e => e.status === 'active').map((envelope) => (
                           <SelectItem key={envelope.id} value={envelope.id}>
                             <div className="flex items-center justify-between gap-4">
@@ -370,10 +370,11 @@ export function CreatePurchaseDialog({
                   <FormItem>
                     <FormLabel>Fournisseur (CRM)</FormLabel>
                     <Select 
-                      value={field.value || ""} 
+                      value={field.value || "__none__"} 
                       onValueChange={(value) => {
-                        field.onChange(value);
-                        if (value) {
+                        const actualValue = value === "__none__" ? "" : value;
+                        field.onChange(actualValue);
+                        if (actualValue) {
                           form.setValue("supplier_name", "");
                         }
                       }}
@@ -384,7 +385,7 @@ export function CreatePurchaseDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Aucun</SelectItem>
+                        <SelectItem value="__none__">Aucun</SelectItem>
                         {companies.map((company) => (
                           <SelectItem key={company.id} value={company.id}>
                             <div className="flex items-center gap-2">

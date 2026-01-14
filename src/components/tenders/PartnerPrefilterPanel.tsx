@@ -284,14 +284,14 @@ export function PartnerPrefilterPanel({
             </div>
             
             <Select
-              value={filters.specialty}
-              onValueChange={(v) => setFilters({ ...filters, specialty: v })}
+              value={filters.specialty || "__all__"}
+              onValueChange={(v) => setFilters({ ...filters, specialty: v === "__all__" ? "" : v })}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Spécialité" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Toutes les spécialités</SelectItem>
+                <SelectItem value="__all__">Toutes les spécialités</SelectItem>
                 {SPECIALTIES.map((s) => (
                   <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                 ))}
