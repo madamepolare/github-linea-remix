@@ -108,15 +108,11 @@ export default function PublicQuote() {
       }
 
       try {
-        const { data: responseData, error: fetchError } = await supabase.functions.invoke(
-          'public-quote-view',
-          { body: {}, headers: {} }
-        );
-
-        // Since we can't pass query params to invoke, use fetch directly
+        // Use fetch directly without auth headers for public access
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/public-quote-view?token=${token}`,
           {
+            method: 'GET',
             headers: {
               'Content-Type': 'application/json',
             },
