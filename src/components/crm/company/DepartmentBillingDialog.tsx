@@ -114,7 +114,7 @@ export function DepartmentBillingDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Facturation - {departmentName}</DialogTitle>
+          <DialogTitle>Facturation du groupe - {departmentName}</DialogTitle>
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh] pr-4">
