@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
-import { ComposeEmailDialog, EntityType } from "./ComposeEmailDialog";
+import { UnifiedEmailDialog, EntityType } from "./UnifiedEmailDialog";
 import { useGmailConnection } from "@/hooks/useGmailConnection";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -10,7 +10,9 @@ interface QuickEmailButtonProps {
   entityId: string;
   recipientEmail?: string;
   recipientName?: string;
+  companyName?: string;
   defaultSubject?: string;
+  context?: string;
   variant?: "default" | "outline" | "ghost" | "secondary";
   size?: "default" | "sm" | "lg" | "icon";
   showLabel?: boolean;
@@ -22,7 +24,9 @@ export function QuickEmailButton({
   entityId,
   recipientEmail,
   recipientName,
+  companyName,
   defaultSubject,
+  context,
   variant = "outline",
   size = "sm",
   showLabel = true,
@@ -55,14 +59,19 @@ export function QuickEmailButton({
         </TooltipContent>
       </Tooltip>
 
-      <ComposeEmailDialog
+      <UnifiedEmailDialog
         open={composeOpen}
         onOpenChange={setComposeOpen}
         entityType={entityType}
         entityId={entityId}
         defaultTo={recipientEmail}
         defaultSubject={defaultSubject}
+        recipientName={recipientName}
+        companyName={companyName}
+        context={context}
       />
     </>
   );
 }
+
+export type { EntityType } from "./UnifiedEmailDialog";
