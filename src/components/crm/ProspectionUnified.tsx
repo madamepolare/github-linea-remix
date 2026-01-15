@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,16 +22,26 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Loader2, Plus, ChevronDown, Sparkles, UserPlus, List, Kanban } from "lucide-react";
+import { Loader2, Plus, ChevronDown, Sparkles, UserPlus, List, Kanban, Target, Users } from "lucide-react";
 import { CRMLeadsTable } from "./CRMLeadsTable";
 import { LeadPipeline } from "./LeadPipeline";
 import { AIProspectingPanel } from "./AIProspectingPanel";
+import { AIProspectsManager } from "./AIProspectsManager";
 import { CreateLeadDialog } from "./CreateLeadDialog";
 import { ModuleFiltersBar } from "@/components/shared/ModuleFiltersBar";
 import { useCRMPipelines } from "@/hooks/useCRMPipelines";
 import { useIsModuleEnabled } from "@/hooks/useModules";
+import { useAIProspects } from "@/hooks/useAIProspects";
+import { cn } from "@/lib/utils";
 
 type ViewMode = "list" | "pipeline";
+type TabType = "leads" | "prospects";
+
+interface TabConfig {
+  key: TabType;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
 
 interface ProspectionUnifiedProps {
   searchQuery?: string;
@@ -37,6 +49,9 @@ interface ProspectionUnifiedProps {
 
 export function ProspectionUnified({ searchQuery: initialSearchQuery = "" }: ProspectionUnifiedProps) {
   const isAISalesAgentEnabled = useIsModuleEnabled("ai-sales-agent");
+  const { prospects } = useAIProspects();
+  
+  const [activeTab, setActiveTab] = useState<TabType>("leads");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
@@ -51,6 +66,12 @@ export function ProspectionUnified({ searchQuery: initialSearchQuery = "" }: Pro
     isLoading: pipelinesLoading,
     createDefaultPipeline,
   } = useCRMPipelines();
+
+  // Count pending prospects
+  const pendingProspectsCount = useMemo(() => 
+    prospects.filter(p => p.status === "new" || p.status === "reviewed").length,
+    [prospects]
+  );
 
   // Create default pipeline if none exist
   useEffect(() => {
@@ -86,11 +107,28 @@ export function ProspectionUnified({ searchQuery: initialSearchQuery = "" }: Pro
     }
   };
 
-  const renderListView = () => (
-    <CRMLeadsTable search={searchQuery} onCreateLead={() => setCreateLeadOpen(true)} />
-  );
+  // Tabs configuration
+  const tabs: TabConfig[] = useMemo(() => {
+    const baseTabs: TabConfig[] = [
+      { key: "leads", label: "Leads", icon: Users },
+    ];
+    
+    if (isAISalesAgentEnabled) {
+      baseTabs.push({
+        key: "prospects",
+        label: "Prospects IA",
+        icon: Target,
+      });
+    }
+    
+    return baseTabs;
+  }, [isAISalesAgentEnabled]);
 
-  const renderPipelineView = () => {
+  const renderLeadsContent = () => {
+    if (viewMode === "list") {
+      return <CRMLeadsTable search={searchQuery} onCreateLead={() => setCreateLeadOpen(true)} />;
+    }
+
     if (pipelinesLoading || opportunityPipelines.length === 0) {
       return (
         <div className="flex items-center justify-center py-12">
@@ -141,7 +179,7 @@ export function ProspectionUnified({ searchQuery: initialSearchQuery = "" }: Pro
     </Button>
   );
 
-  const viewToggle = (
+  const viewToggle = activeTab === "leads" ? (
     <ToggleGroup
       type="single"
       value={viewMode}
@@ -157,10 +195,10 @@ export function ProspectionUnified({ searchQuery: initialSearchQuery = "" }: Pro
         <span className="text-xs hidden sm:inline">Pipeline</span>
       </ToggleGroupItem>
     </ToggleGroup>
-  );
+  ) : null;
 
   // Pipeline selector dropdown (only visible in pipeline view with multiple pipelines)
-  const pipelineSelector = viewMode === "pipeline" && opportunityPipelines.length > 1 ? (
+  const pipelineSelector = activeTab === "leads" && viewMode === "pipeline" && opportunityPipelines.length > 1 ? (
     <Select value={selectedPipelineId || ""} onValueChange={setSelectedPipelineId}>
       <SelectTrigger className="w-[180px] h-9">
         <SelectValue placeholder="Sélectionner un pipeline" />
@@ -181,29 +219,82 @@ export function ProspectionUnified({ searchQuery: initialSearchQuery = "" }: Pro
     </Select>
   ) : null;
 
-  const filters = (
+  const filters = activeTab === "leads" ? (
     <div className="flex items-center gap-2">
       {pipelineSelector}
       {addButton}
     </div>
+  ) : (
+    <Button size="sm" className="h-9" onClick={() => setAiPanelOpen(true)}>
+      <Sparkles className="h-4 w-4 mr-1.5" />
+      Nouvelle recherche
+    </Button>
   );
 
   return (
     <>
       <div className="space-y-4">
-        {/* Header with search, view toggle, pipeline selector and add button */}
+        {/* Tab navigation like contacts */}
+        <div className="flex items-center gap-4">
+          <nav className="flex items-center">
+            <div className="flex items-center bg-muted/50 rounded-lg p-0.5">
+              {tabs.map((tab) => {
+                const isActive = activeTab === tab.key;
+                const Icon = tab.icon;
+                
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={cn(
+                      "relative flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all duration-150",
+                      isActive
+                        ? "text-foreground font-medium"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{tab.label}</span>
+                    {tab.key === "prospects" && pendingProspectsCount > 0 && (
+                      <Badge 
+                        variant="secondary" 
+                        className={cn(
+                          "h-5 min-w-5 px-1.5 text-xs font-medium",
+                          isActive 
+                            ? "bg-foreground text-background" 
+                            : "bg-muted-foreground/20 text-muted-foreground"
+                        )}
+                      >
+                        {pendingProspectsCount > 99 ? "99+" : pendingProspectsCount}
+                      </Badge>
+                    )}
+                    {isActive && (
+                      <motion.div
+                        layoutId="prospection-active-tab"
+                        className="absolute inset-0 bg-background rounded-md shadow-sm -z-10"
+                        transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        </div>
+
+        {/* Header with search, view toggle, and actions */}
         <ModuleFiltersBar
-          search={{
+          search={activeTab === "leads" ? {
             value: searchQuery,
             onChange: setSearchQuery,
             placeholder: "Rechercher un lead...",
-          }}
+          } : undefined}
           viewToggle={viewToggle}
           filters={filters}
         />
 
-        {/* Content based on view mode */}
-        {viewMode === "list" ? renderListView() : renderPipelineView()}
+        {/* Content based on active tab */}
+        {activeTab === "leads" ? renderLeadsContent() : <AIProspectsManager />}
       </div>
 
       {/* Create Lead Dialog */}
