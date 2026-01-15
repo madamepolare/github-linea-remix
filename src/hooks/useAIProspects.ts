@@ -416,6 +416,7 @@ export function useAIProspects() {
           phone: prospect.company_phone,
           email: prospect.company_email,
           industry: prospect.company_industry,
+          status: "lead",
           notes: prospect.notes,
           created_by: user?.id,
         })
