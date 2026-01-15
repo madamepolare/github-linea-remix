@@ -111,7 +111,7 @@ export function EventSchedulerDialog({ open, onOpenChange }: EventSchedulerDialo
       
       const { data, error } = await supabase
         .from("contacts")
-        .select("id, name, email, role, avatar_url, crm_company_id, crm_company:crm_companies(name)")
+        .select("id, name, email, role, avatar_url, crm_company_id, crm_company:crm_companies!contacts_crm_company_id_fkey(name)")
         .eq("workspace_id", activeWorkspace.id)
         .order("name");
       
