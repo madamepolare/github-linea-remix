@@ -16,7 +16,7 @@ import { ComposeEmailDialog } from "@/components/emails/ComposeEmailDialog";
 import { SingleEmailCard } from "@/components/crm/pipeline/SingleEmailCard";
 import { QuickActions } from "@/components/crm/pipeline/QuickActions";
 import { ActionsList } from "@/components/crm/pipeline/ActionsList";
-import { EntityCommunications } from "@/components/shared/EntityCommunications";
+import { CompactEntityCommunications } from "@/components/shared/CompactEntityCommunications";
 import { useNavigate } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -520,7 +520,7 @@ export function PipelineEntrySidebar({
             </TabsContent>
 
             <TabsContent value="discussion" className="flex-1 overflow-hidden m-0">
-              <EntityCommunications
+              <CompactEntityCommunications
                 entityType={entityType as 'contact' | 'company'}
                 entityId={entityId || ''}
                 className="h-full"
