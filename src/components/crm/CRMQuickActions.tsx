@@ -16,13 +16,11 @@ interface QuickAction {
 interface CRMQuickActionsProps {
   onCreateCompany: () => void;
   onCreateContact: () => void;
-  onCreateLead: () => void;
 }
 
 export function CRMQuickActions({
   onCreateCompany,
   onCreateContact,
-  onCreateLead,
 }: CRMQuickActionsProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -42,14 +40,6 @@ export function CRMQuickActions({
       color: "text-accent",
       bgColor: "bg-accent/10 hover:bg-accent/20",
       onClick: onCreateContact,
-    },
-    {
-      id: "lead",
-      label: "Opportunité",
-      icon: Target,
-      color: "text-success",
-      bgColor: "bg-success/10 hover:bg-success/20",
-      onClick: onCreateLead,
     },
   ];
 
