@@ -72,6 +72,7 @@ const schema = z.object({
   postal_code: z.string().optional(),
   notes: z.string().optional(),
   is_individual: z.boolean().default(false),
+  is_lead: z.boolean().default(false),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -108,6 +109,7 @@ export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: Cr
       postal_code: "",
       notes: "",
       is_individual: false,
+      is_lead: false,
     },
   });
 
@@ -263,6 +265,7 @@ export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: Cr
       crm_company_id: data.is_individual ? undefined : (data.crm_company_id || undefined),
       location,
       notes: data.notes || undefined,
+      status: data.is_lead ? 'lead' : 'confirmed',
     });
     form.reset();
     setCompanySearch("");
@@ -277,6 +280,21 @@ export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: Cr
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           {/* Switch particulier - only show if not pre-linked to a company */}
+          {/* Lead toggle */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-medium text-orange-700 dark:text-orange-400">Créer comme Lead</Label>
+              <p className="text-xs text-orange-600/80 dark:text-orange-500/80">
+                Les leads doivent être qualifiés avant de devenir des contacts
+              </p>
+            </div>
+            <Switch
+              checked={form.watch("is_lead")}
+              onCheckedChange={(checked) => form.setValue("is_lead", checked)}
+            />
+          </div>
+
+          {/* Individual toggle */}
           {!defaultCompanyId && (
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
               <div className="space-y-0.5">
