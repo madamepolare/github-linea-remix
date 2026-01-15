@@ -38,6 +38,7 @@ import { Pipeline, PipelineStage } from "@/hooks/useCRMPipelines";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { UnifiedEmailDialog } from "@/components/emails/UnifiedEmailDialog";
 
 interface ProspectionListViewProps {
   pipeline: Pipeline;
@@ -50,6 +51,10 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("entered_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  
+  // Email dialog state
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [selectedEmailEntry, setSelectedEmailEntry] = useState<PipelineEntry | null>(null);
 
   const stages = pipeline.stages || [];
 
@@ -370,7 +375,10 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
                           )}
                           {email && (
                             <DropdownMenuItem
-                              onClick={() => window.open(`mailto:${email}`)}
+                              onClick={() => {
+                                setSelectedEmailEntry(entry);
+                                setEmailDialogOpen(true);
+                              }}
                               className="gap-2"
                             >
                               <Mail className="h-4 w-4" />
@@ -395,6 +403,19 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
           </Table>
         </CardContent>
       </Card>
+
+      {/* Email Dialog */}
+      <UnifiedEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        entityType={selectedEmailEntry?.contact_id ? "contact" : "company"}
+        entityId={selectedEmailEntry?.contact_id || selectedEmailEntry?.company_id || ""}
+        defaultTo={selectedEmailEntry?.contact?.email || selectedEmailEntry?.company?.email}
+        recipientName={selectedEmailEntry?.contact?.name || selectedEmailEntry?.company?.name}
+        companyName={selectedEmailEntry?.company?.name}
+        context={`Pipeline de prospection: ${pipeline.name}`}
+        onSuccess={() => setEmailDialogOpen(false)}
+      />
     </div>
   );
 }
