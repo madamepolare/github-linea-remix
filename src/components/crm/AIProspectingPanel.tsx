@@ -67,6 +67,7 @@ export function AIProspectingPanel() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ProspectSearchResult[]>([]);
   const [selectedForConversion, setSelectedForConversion] = useState<Map<number, SelectedProspectForConversion>>(new Map());
+  const [searchProvider, setSearchProvider] = useState<"openai" | "firecrawl">("openai");
   
   // Conversion dialog
   const [showConvertDialog, setShowConvertDialog] = useState(false);
@@ -84,11 +85,15 @@ export function AIProspectingPanel() {
     if (!searchQuery.trim()) return;
 
     try {
-      const result = await searchProspects.mutateAsync({ query: searchQuery });
+      const result = await searchProspects.mutateAsync({ 
+        query: searchQuery,
+        provider: searchProvider 
+      });
       setSearchResults(result.prospects);
       setSelectedForConversion(new Map());
     } catch (error) {
       console.error("Search failed:", error);
+      toast.error("Erreur lors de la recherche");
     }
   };
 
@@ -247,23 +252,46 @@ export function AIProspectingPanel() {
             </div>
           </div>
 
-          <Button
-            onClick={handleSearch}
-            disabled={!searchQuery.trim() || searchProspects.isPending}
-            className="w-full sm:w-auto"
-          >
-            {searchProspects.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Recherche en cours...
-              </>
-            ) : (
-              <>
-                <Search className="h-4 w-4 mr-2" />
-                Rechercher
-              </>
-            )}
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Provider selector */}
+            <Select value={searchProvider} onValueChange={(v) => setSearchProvider(v as "openai" | "firecrawl")}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="openai">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-emerald-500" />
+                    OpenAI + Perplexity
+                  </div>
+                </SelectItem>
+                <SelectItem value="firecrawl">
+                  <div className="flex items-center gap-2">
+                    <span>🔥</span>
+                    Firecrawl
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              onClick={handleSearch}
+              disabled={!searchQuery.trim() || searchProspects.isPending}
+              className="w-full sm:w-auto"
+            >
+              {searchProspects.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Recherche en cours...
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-2" />
+                  Rechercher
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

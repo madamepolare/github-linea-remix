@@ -3,10 +3,13 @@
 // Ces valeurs sont utilisées quand aucun réglage n'est configuré
 // ============================================================
 
-// --- Types de contacts ---
+// --- Types de contacts (classification métier, pas le statut lead/confirmé) ---
 export const DEFAULT_CONTACT_TYPES = [
-  { key: "contact", label: "Contact", color: "#3B82F6", icon: "User" },
-  { key: "lead", label: "Lead", color: "#F59E0B", icon: "Target" },
+  { key: "client", label: "Client", color: "#3B82F6", icon: "Building2" },
+  { key: "prospect", label: "Prospect", color: "#F59E0B", icon: "Target" },
+  { key: "partenaire", label: "Partenaire", color: "#10B981", icon: "Handshake" },
+  { key: "fournisseur", label: "Fournisseur", color: "#8B5CF6", icon: "Truck" },
+  { key: "particulier", label: "Particulier", color: "#EC4899", icon: "User" },
 ];
 
 // --- Spécialités (génériques - à personnaliser via IA selon la discipline) ---
