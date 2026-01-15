@@ -32,8 +32,8 @@ import { CRMSparkline } from "./CRMSparkline";
 import { CRMActivityFeed } from "./CRMActivityFeed";
 import { CRMQuickActions } from "./CRMQuickActions";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
-import { CreateCompanyDialog } from "./CreateCompanyDialog";
-import { CreateContactDialog } from "./CreateContactDialog";
+import { CompanyFormDialog } from "./CompanyFormDialog";
+import { ContactFormDialog } from "./ContactFormDialog";
 
 interface CRMOverviewProps {
   onNavigate: (view: string) => void;
@@ -505,11 +505,13 @@ export function CRMOverview({
       </div>
 
       {/* Dialogs */}
-      <CreateCompanyDialog
+      <CompanyFormDialog
+        mode="create"
         open={showCreateCompany}
         onOpenChange={setShowCreateCompany}
       />
-      <CreateContactDialog
+      <ContactFormDialog
+        mode="create"
         open={showCreateContact}
         onOpenChange={setShowCreateContact}
       />

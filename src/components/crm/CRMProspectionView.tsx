@@ -3,8 +3,8 @@ import { useCRMPipelines } from "@/hooks/useCRMPipelines";
 import { ContactPipeline } from "./ContactPipeline";
 import { ProspectionListView } from "./ProspectionListView";
 import { BulkAddToPipelineDialog } from "./BulkAddToPipelineDialog";
-import { CreateContactDialog } from "./CreateContactDialog";
-import { CreateCompanyDialog } from "./CreateCompanyDialog";
+import { ContactFormDialog } from "./ContactFormDialog";
+import { CompanyFormDialog } from "./CompanyFormDialog";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { ModuleFiltersBar } from "@/components/shared/ModuleFiltersBar";
 import { Button } from "@/components/ui/button";
@@ -227,13 +227,15 @@ export function CRMProspectionView({ searchQuery = "" }: CRMProspectionViewProps
       )}
 
       {/* Create Contact Dialog */}
-      <CreateContactDialog
+      <ContactFormDialog
+        mode="create"
         open={createContactOpen}
         onOpenChange={setCreateContactOpen}
       />
 
       {/* Create Company Dialog */}
-      <CreateCompanyDialog
+      <CompanyFormDialog
+        mode="create"
         open={createCompanyOpen}
         onOpenChange={setCreateCompanyOpen}
       />

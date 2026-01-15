@@ -45,7 +45,7 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { useContactPipelineEntries } from "@/hooks/useContactPipelineEntries";
 import { ContactDetailSheet } from "./ContactDetailSheet";
-import { EditContactDialog } from "./EditContactDialog";
+import { ContactFormDialog } from "./ContactFormDialog";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
 import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
@@ -520,7 +520,8 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
       />
 
       {/* Edit dialog */}
-      <EditContactDialog
+      <ContactFormDialog
+        mode="edit"
         contact={editingContact}
         open={!!editingContact}
         onOpenChange={(open) => !open && setEditingContact(null)}

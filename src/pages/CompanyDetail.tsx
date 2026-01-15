@@ -25,7 +25,7 @@ import { EntityDocumentsList } from "@/components/crm/EntityDocumentsList";
 import { EntityInvoicesList } from "@/components/crm/EntityInvoicesList";
 import { EntityCommercialList } from "@/components/crm/EntityCommercialList";
 import { EntityEmailsTab } from "@/components/shared/EntityEmailsTab";
-import { CreateContactDialog } from "@/components/crm/CreateContactDialog";
+import { ContactFormDialog } from "@/components/crm/ContactFormDialog";
 import { CompanyDepartmentsSection } from "@/components/crm/CompanyDepartmentsSection";
 import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 import { LinkedEntitiesPanel } from "@/components/shared/LinkedEntitiesPanel";
@@ -329,7 +329,8 @@ export default function CompanyDetail() {
         {renderTabContent()}
       </div>
 
-      <CreateContactDialog
+      <ContactFormDialog
+        mode="create"
         open={createContactOpen}
         onOpenChange={setCreateContactOpen}
         defaultCompanyId={company.id}
