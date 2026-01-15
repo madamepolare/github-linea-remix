@@ -232,5 +232,18 @@ export function extractCountryFromLocation(location: string | null | undefined):
     return location;
   }
   
+  // Try to detect French postal codes (5 digits starting with specific patterns)
+  const frenchPostalCodeRegex = /\b(0[1-9]|[1-8]\d|9[0-5]|97[1-4]|98[6-8])\d{3}\b/;
+  if (frenchPostalCodeRegex.test(location)) {
+    return "France";
+  }
+  
+  // Check for common French city names as fallback
+  const frenchCities = ["paris", "lyon", "marseille", "toulouse", "nice", "nantes", "strasbourg", "montpellier", "bordeaux", "lille", "rennes", "reims", "saint-étienne", "toulon", "le havre", "grenoble", "dijon", "angers", "nîmes", "villeurbanne"];
+  const locationLower = location.toLowerCase();
+  if (frenchCities.some(city => locationLower.includes(city))) {
+    return "France";
+  }
+  
   return null;
 }
