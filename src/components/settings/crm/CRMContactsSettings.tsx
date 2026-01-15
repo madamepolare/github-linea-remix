@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 
 // Map icon names to components
 const ICON_MAP: Record<string, React.ReactNode> = {
-  "User": <User className="h-3 w-3" />,
-  "Target": <Target className="h-3 w-3" />,
+  "User": <User className="h-4 w-4" />,
+  "Target": <Target className="h-4 w-4" />,
 };
 
 export function CRMContactsSettings() {
@@ -16,24 +16,27 @@ export function CRMContactsSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Quick stats */}
+      {/* Quick preview */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
-            <CardTitle className="text-base">Types de contacts configurés</CardTitle>
+            <CardTitle className="text-base">Types de contacts</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Définissez si un contact est un simple Contact ou un Lead commercial actif.
+          </p>
           {isLoading ? (
             <div className="h-8 bg-muted animate-pulse rounded" />
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-3">
               {contactTypes.map((type) => (
                 <Badge 
                   key={type.key}
                   variant="outline"
-                  className="py-1 px-2 gap-1.5"
+                  className="py-2 px-3 gap-2 text-sm"
                   style={{ 
                     borderColor: type.color,
                     color: type.color,
@@ -56,8 +59,8 @@ export function CRMContactsSettings() {
       {/* Settings manager */}
       <GenericSettingsManager
         settingType="contact_types"
-        title="Types de contacts"
-        description="Catégorisez vos contacts selon leur rôle (client, partenaire, fournisseur...)"
+        title="Gérer les types"
+        description="Personnalisez les types de contacts disponibles"
         icon={<Users className="h-5 w-5 text-primary" />}
         showColor
         defaultItems={DEFAULT_CONTACT_TYPES}

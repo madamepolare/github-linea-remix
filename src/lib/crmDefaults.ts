@@ -70,109 +70,26 @@ export const CONTACT_ROLES = [
   { value: "autre", label: "Autre" },
 ];
 
-// --- Catégories d'entreprises (avec types associés) ---
+// --- Catégories d'entreprises (valeurs par défaut - générées par IA selon discipline) ---
 export const DEFAULT_COMPANY_CATEGORIES = [
-  { 
-    key: "client", 
-    label: "Clients", 
-    color: "#10B981",
-    icon: "Building2",
-    types: ["client", "prospect", "client_prive", "client_public"]
-  },
-  { 
-    key: "bet", 
-    label: "BET", 
-    color: "#F97316",
-    icon: "Ruler",
-    types: ["bet"] // Type unique - spécialités gérées via bet_specialties[]
-  },
-  { 
-    key: "partenaire", 
-    label: "Partenaires MOE", 
-    color: "#8B5CF6",
-    icon: "Users",
-    types: ["architecte", "urbaniste", "paysagiste", "decorateur", "economiste", "opc", "sps", "geometre", "diagnostiqueur"]
-  },
-  { 
-    key: "societe", 
-    label: "Sociétés", 
-    color: "#EF4444",
-    icon: "HardHat",
-    types: ["gros_oeuvre", "second_oeuvre", "entreprise_generale", "artisan"]
-  },
-  { 
-    key: "fournisseur", 
-    label: "Fournisseurs", 
-    color: "#3B82F6",
-    icon: "Package",
-    types: ["fournisseur", "fabricant", "distributeur"]
-  },
-  { 
-    key: "conseil", 
-    label: "AMO / Conseil", 
-    color: "#06B6D4",
-    icon: "Lightbulb",
-    types: ["amo", "programmiste", "conseil"]
-  },
-  { 
-    key: "admin", 
-    label: "Administration", 
-    color: "#6B7280",
-    icon: "Landmark",
-    types: ["administration", "notaire", "banque", "assurance"]
-  },
-  { 
-    key: "autre", 
-    label: "Autre", 
-    color: "#9CA3AF",
-    icon: "MoreHorizontal",
-    types: ["autre"]
-  },
+  { key: "client", label: "Clients", color: "#10B981" },
+  { key: "partenaire", label: "Partenaires", color: "#8B5CF6" },
+  { key: "fournisseur", label: "Fournisseurs", color: "#3B82F6" },
+  { key: "autre", label: "Autre", color: "#6B7280" },
 ];
 
-// --- Types d'entreprises (simplifiés - BET est un type unique) ---
+// --- Types d'entreprises par défaut (sous-catégories) ---
 export const DEFAULT_COMPANY_TYPES = [
   // Clients
-  { key: "client", label: "Client actif", shortLabel: "Client", category: "client", color: "#10B981" },
+  { key: "client_actif", label: "Client actif", shortLabel: "Client", category: "client", color: "#10B981" },
   { key: "prospect", label: "Prospect", shortLabel: "Prospect", category: "client", color: "#3B82F6" },
-  { key: "client_prive", label: "Client privé", shortLabel: "Privé", category: "client", color: "#059669" },
-  { key: "client_public", label: "Client public", shortLabel: "Public", category: "client", color: "#6366F1" },
   
-  // BET - Type unique, les spécialités sont dans bet_specialties[]
-  { key: "bet", label: "Bureau d'Études Techniques", shortLabel: "BET", category: "bet", color: "#F97316" },
-  
-  // Partenaires MOE
-  { key: "architecte", label: "Architecte", shortLabel: "Archi", category: "partenaire", color: "#8B5CF6" },
-  { key: "urbaniste", label: "Urbaniste", shortLabel: "Urba", category: "partenaire", color: "#14B8A6" },
-  { key: "paysagiste", label: "Paysagiste", shortLabel: "Paysage", category: "partenaire", color: "#84CC16" },
-  { key: "decorateur", label: "Décorateur", shortLabel: "Déco", category: "partenaire", color: "#EC4899" },
-  { key: "economiste", label: "Économiste", shortLabel: "Éco", category: "partenaire", color: "#0EA5E9" },
-  { key: "opc", label: "OPC", shortLabel: "OPC", category: "partenaire", color: "#D946EF" },
-  { key: "sps", label: "SPS", shortLabel: "SPS", category: "partenaire", color: "#F43F5E" },
-  { key: "geometre", label: "Géomètre", shortLabel: "Géo", category: "partenaire", color: "#78716C" },
-  { key: "diagnostiqueur", label: "Diagnostiqueur", shortLabel: "Diag", category: "partenaire", color: "#71717A" },
-  
-  // Sociétés
-  { key: "gros_oeuvre", label: "Gros œuvre", shortLabel: "GO", category: "societe", color: "#B45309" },
-  { key: "second_oeuvre", label: "Second œuvre", shortLabel: "SO", category: "societe", color: "#EA580C" },
-  { key: "entreprise_generale", label: "Entreprise générale", shortLabel: "EG", category: "societe", color: "#DC2626" },
-  { key: "artisan", label: "Artisan", shortLabel: "Artisan", category: "societe", color: "#CA8A04" },
+  // Partenaires
+  { key: "partenaire_moe", label: "Partenaire MOE", shortLabel: "MOE", category: "partenaire", color: "#8B5CF6" },
+  { key: "prestataire", label: "Prestataire", shortLabel: "Presta", category: "partenaire", color: "#EC4899" },
   
   // Fournisseurs
-  { key: "fournisseur", label: "Fournisseur", shortLabel: "Fourn.", category: "fournisseur", color: "#2563EB" },
-  { key: "fabricant", label: "Fabricant", shortLabel: "Fab.", category: "fournisseur", color: "#4F46E5" },
-  { key: "distributeur", label: "Distributeur", shortLabel: "Dist.", category: "fournisseur", color: "#7C3AED" },
-  
-  // AMO / Conseil
-  { key: "amo", label: "AMO", shortLabel: "AMO", category: "conseil", color: "#0891B2" },
-  { key: "programmiste", label: "Programmiste", shortLabel: "Prog.", category: "conseil", color: "#0D9488" },
-  { key: "conseil", label: "Conseil", shortLabel: "Conseil", category: "conseil", color: "#047857" },
-  
-  // Administration
-  { key: "administration", label: "Administration", shortLabel: "Admin", category: "admin", color: "#4B5563" },
-  { key: "notaire", label: "Notaire", shortLabel: "Notaire", category: "admin", color: "#475569" },
-  { key: "banque", label: "Banque", shortLabel: "Banque", category: "admin", color: "#1D4ED8" },
-  { key: "assurance", label: "Assurance", shortLabel: "Assur.", category: "admin", color: "#15803D" },
+  { key: "fournisseur", label: "Fournisseur", shortLabel: "Fourn.", category: "fournisseur", color: "#3B82F6" },
   
   // Autre
   { key: "autre", label: "Autre", shortLabel: "Autre", category: "autre", color: "#6B7280" },
