@@ -458,22 +458,7 @@ export default function CRM() {
 
   return (
     <>
-      <div className="flex flex-col h-full overflow-hidden">
-        {/* Quick search button */}
-        <div className="px-4 pt-4 pb-2">
-          <Button
-            variant="outline"
-            className="w-full max-w-sm justify-start text-muted-foreground h-9 gap-2"
-            onClick={() => setCommandBarOpen(true)}
-          >
-            <Search className="h-4 w-4" />
-            <span className="flex-1 text-left text-sm">Recherche rapide...</span>
-            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-              ⌘K
-            </kbd>
-          </Button>
-        </div>
-        
+      <div className="flex flex-col h-full overflow-hidden">        
         <div className="flex-1 overflow-auto p-4">
           {renderPipelinesBar()}
           {renderContent()}
