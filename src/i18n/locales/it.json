@@ -101,6 +101,8 @@
       "emailsDesc": "Template email",
       "tendersConfig": "Configurazione gare",
       "tendersConfigDesc": "Fasi, criteri, promemoria",
+      "integrations": "Integrazioni",
+      "integrationsDesc": "API e servizi collegati",
       "calendars": "Calendari",
       "calendarsDesc": "Google, Outlook, iCal",
       "pipeline": "Pipeline",

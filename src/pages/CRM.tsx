@@ -8,6 +8,7 @@ import { CreateCompanyDialog } from "@/components/crm/CreateCompanyDialog";
 import { ImportContactsDialog } from "@/components/crm/ImportContactsDialog";
 import { CRMOverview } from "@/components/crm/CRMOverview";
 import { CRMCommandBar } from "@/components/crm/CRMCommandBar";
+import { AIProspectingSheet } from "@/components/crm/AIProspectingSheet";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
 import { useContactPipeline } from "@/hooks/useContactPipeline";
@@ -24,6 +25,7 @@ export default function CRM() {
   const [createCompanyOpen, setCreateCompanyOpen] = useState(false);
   const [importContactsOpen, setImportContactsOpen] = useState(false);
   const [commandBarOpen, setCommandBarOpen] = useState(false);
+  const [aiProspectingOpen, setAiProspectingOpen] = useState(false);
 
   // Redirect old routes (leads -> prospection)
   useEffect(() => {
@@ -56,12 +58,15 @@ export default function CRM() {
   useEffect(() => {
     const handleCreateContact = () => setCreateContactOpen(true);
     const handleCreateCompany = () => setCreateCompanyOpen(true);
+    const handleAIProspecting = () => setAiProspectingOpen(true);
     
     window.addEventListener("open-create-contact", handleCreateContact);
     window.addEventListener("open-create-company", handleCreateCompany);
+    window.addEventListener("open-ai-prospecting", handleAIProspecting);
     return () => {
       window.removeEventListener("open-create-contact", handleCreateContact);
       window.removeEventListener("open-create-company", handleCreateCompany);
+      window.removeEventListener("open-ai-prospecting", handleAIProspecting);
     };
   }, []);
 
@@ -113,6 +118,7 @@ export default function CRM() {
       <CreateContactDialog open={createContactOpen} onOpenChange={setCreateContactOpen} />
       <CreateCompanyDialog open={createCompanyOpen} onOpenChange={setCreateCompanyOpen} />
       <ImportContactsDialog open={importContactsOpen} onOpenChange={setImportContactsOpen} />
+      <AIProspectingSheet open={aiProspectingOpen} onOpenChange={setAiProspectingOpen} />
     </>
   );
 }
