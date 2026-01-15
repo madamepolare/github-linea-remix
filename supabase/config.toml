@@ -95,3 +95,9 @@ verify_jwt = false
 
 [functions.company-portal-actions]
 verify_jwt = false
+
+[functions.generate-company-categories]
+verify_jwt = false
+
+[functions.generate-company-types]
+verify_jwt = false
