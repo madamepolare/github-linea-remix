@@ -104,3 +104,6 @@ verify_jwt = false
 
 [functions.schedule-followups]
 verify_jwt = false
+
+[functions.gmail-sync-config]
+verify_jwt = false
