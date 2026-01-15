@@ -7,9 +7,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Loader2, Plus, ChevronDown, Building2, User, Target } from "lucide-react";
 import { LeadPipeline } from "./LeadPipeline";
 import { CreateLeadDialog } from "./CreateLeadDialog";
+import { QuickAddToProspectionDialog } from "./QuickAddToProspectionDialog";
 import { ModuleFiltersBar } from "@/components/shared/ModuleFiltersBar";
 import { useCRMPipelines } from "@/hooks/useCRMPipelines";
 
@@ -21,6 +28,7 @@ export function CRMProspectionView({ searchQuery: initialSearchQuery = "" }: CRM
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [preselectedStageId, setPreselectedStageId] = useState<string | undefined>();
   
   const pipelineAutoCreatedRef = useRef(false);
@@ -106,10 +114,25 @@ export function CRMProspectionView({ searchQuery: initialSearchQuery = "" }: CRM
   const filters = (
     <div className="flex items-center gap-2">
       {pipelineSelector}
-      <Button size="sm" className="h-9" onClick={() => setCreateLeadOpen(true)}>
-        <Plus className="h-4 w-4 mr-1.5" />
-        Ajouter
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" className="h-9 gap-1">
+            <Plus className="h-4 w-4" />
+            Ajouter
+            <ChevronDown className="h-3 w-3 ml-0.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem onClick={() => setCreateLeadOpen(true)} className="gap-2">
+            <Target className="h-4 w-4" />
+            Nouvelle opportunité
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setQuickAddOpen(true)} className="gap-2">
+            <Building2 className="h-4 w-4" />
+            Ajouter contacts / entreprises
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 
@@ -137,6 +160,15 @@ export function CRMProspectionView({ searchQuery: initialSearchQuery = "" }: CRM
         pipeline={selectedPipeline}
         defaultStageId={preselectedStageId}
       />
+
+      {/* Quick Add Dialog */}
+      {selectedPipeline && (
+        <QuickAddToProspectionDialog
+          open={quickAddOpen}
+          onOpenChange={setQuickAddOpen}
+          pipeline={selectedPipeline}
+        />
+      )}
     </>
   );
 }
