@@ -332,18 +332,29 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
     };
   }, [entityId, entityType, enabled, queryClient, queryKey]);
 
-  // Group emails by thread
+  // Normalize subject to group by original subject (remove Re:, Fwd:, etc.)
+  function normalizeSubject(subject: string): string {
+    return subject
+      .replace(/^(Re|Fwd|Tr|Rép|RE|FW|TR)\s*:\s*/gi, '')
+      .replace(/^(Re|Fwd|Tr|Rép|RE|FW|TR)\s*:\s*/gi, '') // Double for Re: Re:
+      .trim()
+      .toLowerCase();
+  }
+
+  // Group emails by normalized subject (instead of gmail_thread_id)
   const threads: EmailThread[] = (() => {
     const threadMap = new Map<string, Email[]>();
     
     emails.forEach(email => {
-      const threadKey = email.gmail_thread_id || email.id;
-      const existing = threadMap.get(threadKey) || [];
+      // Use normalized subject as the grouping key
+      const normalizedSubject = normalizeSubject(email.subject);
+      const existing = threadMap.get(normalizedSubject) || [];
       existing.push(email);
-      threadMap.set(threadKey, existing);
+      threadMap.set(normalizedSubject, existing);
     });
 
-    return Array.from(threadMap.entries()).map(([threadId, threadEmails]) => {
+    return Array.from(threadMap.entries()).map(([normalizedSubject, threadEmails]) => {
+      // Sort by date (oldest first for chronological display)
       const sortedEmails = [...threadEmails].sort(
         (a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
       );
@@ -354,9 +365,12 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
         if (e.from_email) participantEmails.add(e.from_email);
       });
 
+      // Use the first email's original subject for display
+      const originalSubject = sortedEmails[0]?.subject || '(Sans objet)';
+
       return {
-        threadId,
-        subject: sortedEmails[0]?.subject || '(Sans objet)',
+        threadId: normalizedSubject, // Use normalized subject as ID
+        subject: originalSubject,
         emails: sortedEmails,
         lastEmailDate: sortedEmails[sortedEmails.length - 1]?.created_at || '',
         participantEmails: Array.from(participantEmails),
