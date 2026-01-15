@@ -38,6 +38,8 @@ import { EditCompanyDialog } from "./EditCompanyDialog";
 import { InlineEditCell } from "./InlineEditCell";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
 import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
+import { useContactPipelineEntries } from "@/hooks/useContactPipelineEntries";
+import { PipelineBadges } from "./PipelineBadges";
 import { cn } from "@/lib/utils";
 
 export interface CRMCompanyTableProps {
@@ -50,6 +52,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
   const navigate = useNavigate();
   const { companies, allCompanies, isLoading, deleteCompany, updateCompany, statsByCategory } = useCRMCompanies({ category, search });
   const { companyCategories, companyTypes, getCategoryFromType } = useCRMSettings();
+  const { entriesByCompanyId, isLoading: isLoadingPipelines } = useContactPipelineEntries();
   
   const [letterFilter, setLetterFilter] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -301,6 +304,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                       </div>
                     </TableHead>
                     <TableHead className="hidden xl:table-cell w-16">Pays</TableHead>
+                    <TableHead className="hidden lg:table-cell">Pipelines</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -385,6 +389,9 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                         </TableCell>
                         <TableCell className="py-2 hidden xl:table-cell">
                           <CountryFlag country={company.country} size="sm" />
+                        </TableCell>
+                        <TableCell className="py-2 hidden lg:table-cell" onClick={(e) => e.stopPropagation()}>
+                          <PipelineBadges entries={entriesByCompanyId[company.id] || []} />
                         </TableCell>
                         <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
