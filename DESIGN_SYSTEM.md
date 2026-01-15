@@ -1,7 +1,7 @@
 # Linea Suite Design System
 
 > **RÈGLE ABSOLUE** : Ce fichier est la référence pour tout développement UI.
-> Toute modification de composant ou de style DOIT respecter ces règles.
+> Tous les tokens sont centralisés dans `index.css` (source unique de vérité).
 
 ---
 
@@ -12,10 +12,281 @@
 - **Noir & Blanc** comme base avec accents subtils
 - **Fonctionnel avant décoratif**
 - **Cohérence absolue** sur tous les composants
+- **Single Source of Truth** : Tous les tokens dans `index.css`
 
 ---
 
-## 🎯 Tokens de Couleur
+## 📐 Architecture des Tokens
+
+### Fichiers clés
+```
+src/index.css          → Source unique de tous les tokens CSS
+tailwind.config.ts     → Référence les variables CSS
+DESIGN_SYSTEM.md       → Documentation (ce fichier)
+```
+
+### Catégories de tokens (dans index.css)
+1. **Typography Scale** - Polices, tailles, poids
+2. **Spacing Rules** - Échelle d'espacements (base 4px)
+3. **Border Radius** - Arrondis des éléments
+4. **Shadows** - Ombres et élévations
+5. **Colors** - Palette sémantique light/dark
+6. **Container Widths** - Largeurs max de conteneurs
+7. **Button Styles** - Dimensions des boutons
+8. **Z-Index Scale** - Couches de superposition
+9. **Transitions** - Durées et easings
+
+---
+
+## 1️⃣ Typography Scale
+
+### Variables CSS
+```css
+/* Familles */
+--font-family-heading    /* Inter pour titres */
+--font-family-body       /* Inter pour corps */
+--font-family-mono       /* Monospace pour code */
+
+/* Tailles (Mobile-first) */
+--font-size-2xs: 0.625rem   /* 10px */
+--font-size-xs: 0.75rem     /* 12px */
+--font-size-sm: 0.875rem    /* 14px - Base du body */
+--font-size-base: 1rem      /* 16px */
+--font-size-lg: 1.125rem    /* 18px */
+--font-size-xl: 1.25rem     /* 20px */
+--font-size-2xl: 1.5rem     /* 24px */
+--font-size-3xl: 1.875rem   /* 30px */
+--font-size-4xl: 2.25rem    /* 36px */
+
+/* Poids */
+--font-weight-light: 300
+--font-weight-normal: 400
+--font-weight-medium: 500
+--font-weight-semibold: 600
+--font-weight-bold: 700
+
+/* Line heights */
+--line-height-tight: 1.25
+--line-height-snug: 1.375
+--line-height-normal: 1.5
+--line-height-relaxed: 1.625
+```
+
+### Utilisation Tailwind
+```tsx
+// Hiérarchie des titres (définie globalement)
+<h1>  // 2xl→3xl, semibold, tight
+<h2>  // xl→2xl, semibold, tight
+<h3>  // lg→xl, semibold, snug
+<h4>  // base, semibold, snug
+<h5>  // sm, semibold, snug
+<h6>  // xs, semibold, snug
+
+// Classes utilitaires
+className="text-primary-content"     // Texte principal fort
+className="text-secondary-content"   // Texte secondaire
+className="text-tertiary"            // Texte tertiaire
+className="label-sm"                 // Labels uppercase
+```
+
+---
+
+## 2️⃣ Spacing Rules
+
+### Échelle (base 4px)
+```css
+--space-0: 0
+--space-1: 0.25rem     /* 4px */
+--space-2: 0.5rem      /* 8px */
+--space-3: 0.75rem     /* 12px */
+--space-4: 1rem        /* 16px */
+--space-5: 1.25rem     /* 20px */
+--space-6: 1.5rem      /* 24px */
+--space-8: 2rem        /* 32px */
+--space-10: 2.5rem     /* 40px */
+--space-12: 3rem       /* 48px */
+--space-16: 4rem       /* 64px */
+--space-20: 5rem       /* 80px */
+--space-24: 6rem       /* 96px */
+```
+
+### Tokens sémantiques
+```css
+--space-page-x: 1.5rem         /* Padding horizontal page */
+--space-page-y: 1.5rem         /* Padding vertical page */
+--space-card-padding: 1.25rem  /* Padding interne cartes */
+--space-section-gap: 2rem      /* Gap entre sections */
+--space-component-gap: 1rem    /* Gap entre composants */
+```
+
+### Utilisation Tailwind
+```tsx
+// Classes sémantiques
+className="p-card"              // Padding carte
+className="gap-section"         // Gap entre sections
+className="gap-component"       // Gap entre composants
+
+// Standards
+className="page-content"        // p-3 sm:p-4 md:p-6
+className="responsive-container"// px-3 sm:px-4 md:px-6
+
+// Gaps standards
+gap-1   // 4px - très proches
+gap-2   // 8px - proches
+gap-3   // 12px - normal
+gap-4   // 16px - confortable
+gap-6   // 24px - sections
+gap-8   // 32px - grandes sections
+```
+
+---
+
+## 3️⃣ Border Radius
+
+### Variables CSS
+```css
+--radius-none: 0
+--radius-sm: 0.375rem     /* 6px - Badges, petits éléments */
+--radius-md: 0.5rem       /* 8px - Default */
+--radius-lg: 0.625rem     /* 10px - Cartes */
+--radius-xl: 0.75rem      /* 12px - Grandes cartes, modals */
+--radius-2xl: 1rem        /* 16px - Hero sections */
+--radius-full: 9999px     /* Circulaire */
+
+/* Aliases sémantiques */
+--radius-button: var(--radius-lg)
+--radius-input: var(--radius-lg)
+--radius-card: var(--radius-xl)
+--radius-dialog: var(--radius-xl)
+--radius-badge: var(--radius-full)
+```
+
+### Utilisation Tailwind
+```tsx
+rounded-sm       // Petits éléments
+rounded-md       // Default
+rounded-lg       // Cartes, dialogs
+rounded-xl       // Grandes cartes
+rounded-full     // Badges, avatars
+
+// Sémantiques
+rounded-button   // Boutons
+rounded-input    // Inputs
+rounded-card     // Cartes
+rounded-dialog   // Modals
+rounded-badge    // Badges
+```
+
+---
+
+## 4️⃣ Shadows
+
+### Variables CSS
+```css
+--shadow-none: none
+--shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04)
+--shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06)
+--shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08)
+--shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1)
+--shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1)
+--shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.2)
+--shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)
+
+/* Aliases sémantiques */
+--shadow-card: var(--shadow-sm)
+--shadow-card-hover: var(--shadow-md)
+--shadow-dropdown: var(--shadow-lg)
+--shadow-dialog: var(--shadow-xl)
+--shadow-button: var(--shadow-xs)
+--shadow-button-hover: var(--shadow-sm)
+```
+
+### Utilisation Tailwind
+```tsx
+shadow-xs        // Subtil
+shadow-sm        // Léger
+shadow-md        // Medium (default)
+shadow-lg        // Prononcé
+shadow-xl        // Fort
+shadow-2xl       // Très fort
+
+// Sémantiques
+shadow-card        // Cartes au repos
+shadow-card-hover  // Cartes au survol
+shadow-dropdown    // Menus déroulants
+shadow-dialog      // Modals/dialogs
+shadow-button      // Boutons
+```
+
+---
+
+## 5️⃣ Button Styles
+
+### Dimensions
+```css
+--button-height-sm: 2.25rem    /* 36px / h-9 */
+--button-height-md: 2.5rem     /* 40px / h-10 */
+--button-height-lg: 2.75rem    /* 44px / h-11 */
+--button-height-icon: 2.5rem   /* 40px */
+--button-height-icon-sm: 2.25rem
+--button-height-icon-xs: 2rem
+
+--button-padding-x-sm: 1rem
+--button-padding-x-md: 1.25rem
+--button-padding-x-lg: 1.5rem
+```
+
+### Utilisation
+```tsx
+import { Button } from '@/components/ui/button';
+
+<Button>Principal</Button>                    // default
+<Button variant="secondary">Secondaire</Button>
+<Button variant="outline">Outline</Button>
+<Button variant="ghost">Ghost</Button>
+<Button variant="soft">Soft</Button>
+<Button variant="destructive">Supprimer</Button>
+
+<Button size="sm">Petit</Button>              // h-9
+<Button size="default">Normal</Button>        // h-10
+<Button size="lg">Grand</Button>              // h-11
+<Button size="icon">🔍</Button>               // h-10 w-10
+<Button size="icon-sm">🔍</Button>            // h-9 w-9
+<Button size="icon-xs">🔍</Button>            // h-8 w-8
+```
+
+---
+
+## 6️⃣ Container Widths
+
+### Variables CSS
+```css
+--container-xs: 20rem     /* 320px */
+--container-sm: 24rem     /* 384px */
+--container-md: 28rem     /* 448px */
+--container-lg: 32rem     /* 512px */
+--container-xl: 36rem     /* 576px */
+--container-2xl: 42rem    /* 672px */
+--container-3xl: 48rem    /* 768px */
+--container-4xl: 56rem    /* 896px */
+--container-5xl: 64rem    /* 1024px */
+--container-6xl: 72rem    /* 1152px */
+--container-7xl: 80rem    /* 1280px */
+--container-page: 87.5rem /* 1400px */
+```
+
+### Utilisation Tailwind
+```tsx
+className="max-w-xs"      // Petit conteneur
+className="max-w-sm"      // Formulaires
+className="max-w-md"      // Dialogs
+className="max-w-lg"      // Cartes larges
+className="max-w-page"    // Page complète
+```
+
+---
+
+## 🎯 Color Tokens
 
 ### ⛔ INTERDIT - Ne JAMAIS utiliser :
 ```tsx
@@ -23,170 +294,34 @@
 className="text-white"
 className="bg-black"
 className="text-gray-500"
-className="bg-slate-100"
-className="text-[#ffffff]"
-className="bg-zinc-900"
+className="bg-[#ffffff]"
 style={{ color: '#000' }}
 ```
 
-### ✅ OBLIGATOIRE - Toujours utiliser les tokens sémantiques :
+### ✅ OBLIGATOIRE - Tokens sémantiques :
 ```tsx
-// ✅ Couleurs de texte
-className="text-foreground"          // Texte principal (noir/blanc)
+// Texte
+className="text-foreground"          // Texte principal
 className="text-muted-foreground"    // Texte secondaire
-className="text-primary"             // Couleur d'accent principale
-className="text-destructive"         // Erreurs, danger
+className="text-primary"             // Accent principal
 
-// ✅ Fonds
+// Fonds
 className="bg-background"            // Fond de page
 className="bg-card"                  // Fond de carte
-className="bg-muted"                 // Fond subtil (gris clair)
-className="bg-surface"               // Surfaces intermédiaires
+className="bg-muted"                 // Fond subtil
+className="bg-surface"               // Surfaces
 className="bg-primary"               // Boutons principaux
-className="bg-secondary"             // Boutons secondaires
-className="bg-accent"                // Éléments accentués (violet)
 
-// ✅ Bordures
-className="border-border"            // Bordure standard
-className="border-input"             // Champs de formulaire
-
-// ✅ États
+// États
 className="text-success"             // Succès (vert)
 className="text-warning"             // Avertissement (orange)
 className="text-info"                // Information (bleu)
 className="text-destructive"         // Erreur (rouge)
-```
+className="text-error"               // Alias pour destructive
 
-### Variables CSS disponibles (index.css) :
-| Token | Light | Dark | Usage |
-|-------|-------|------|-------|
-| `--background` | blanc | #0f0f0f | Fond de page |
-| `--foreground` | noir | #fafafa | Texte principal |
-| `--card` | blanc | #141414 | Fond de carte |
-| `--muted` | #f5f5f5 | #1f1f1f | Fonds subtils |
-| `--accent` | violet | violet | Accents spéciaux |
-| `--primary` | noir | blanc | Boutons, liens actifs |
-| `--border` | #e5e5e5 | #292929 | Bordures |
-
----
-
-## 📝 Typographie
-
-### Hiérarchie des titres
-```tsx
-// Définis globalement dans index.css - NE PAS surcharger
-<h1>  // text-2xl sm:text-3xl font-semibold
-<h2>  // text-xl sm:text-2xl font-semibold
-<h3>  // text-lg sm:text-xl font-semibold
-<h4>  // text-base font-semibold
-<h5>  // text-sm font-semibold
-<h6>  // text-xs font-semibold
-
-// Paragraphes
-<p>   // text-sm text-muted-foreground
-```
-
-### Classes utilitaires
-```tsx
-className="text-primary-content"     // Texte principal fort
-className="text-secondary-content"   // Texte secondaire
-className="text-tertiary"            // Texte tertiaire
-className="label-sm"                 // Labels (uppercase, tracking-wider)
-```
-
----
-
-## 📦 Composants Standards
-
-### Boutons (utiliser shadcn/ui)
-```tsx
-import { Button } from '@/components/ui/button';
-
-<Button>Principal</Button>                    // variant="default"
-<Button variant="secondary">Secondaire</Button>
-<Button variant="outline">Outline</Button>
-<Button variant="ghost">Ghost</Button>
-<Button variant="destructive">Supprimer</Button>
-<Button size="sm">Petit</Button>
-<Button size="lg">Grand</Button>
-```
-
-### Cartes
-```tsx
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-// Carte standard
-<Card>
-  <CardHeader>
-    <CardTitle>Titre</CardTitle>
-  </CardHeader>
-  <CardContent>
-    Contenu
-  </CardContent>
-</Card>
-
-// Ou avec la classe custom
-<div className="card-programa">...</div>
-```
-
-### Badges
-```tsx
-import { Badge } from '@/components/ui/badge';
-
-<Badge>Default</Badge>
-<Badge variant="secondary">Secondary</Badge>
-<Badge variant="outline">Outline</Badge>
-<Badge variant="destructive">Destructive</Badge>
-
-// Custom pour statuts
-<div className="badge-phase">En cours</div>
-<div className="badge-phase-active">Actif</div>
-```
-
-### Inputs
-```tsx
-import { Input } from '@/components/ui/input';
-
-<Input placeholder="..." />
-
-// Ou style custom
-<input className="input-clean" />
-```
-
----
-
-## 📐 Espacements
-
-### Règles de spacing
-```tsx
-// Padding de page
-className="page-content"              // p-3 sm:p-4 md:p-6
-className="responsive-container"      // px-3 sm:px-4 md:px-6
-
-// Gaps standards
-gap-1   // 4px - éléments très proches
-gap-2   // 8px - éléments proches
-gap-3   // 12px - espacement normal
-gap-4   // 16px - espacement confortable
-gap-6   // 24px - sections
-gap-8   // 32px - grandes sections
-
-// Padding cards
-p-4     // Cartes compactes
-p-5     // Cartes standard
-p-6     // Cartes avec plus de contenu
-```
-
----
-
-## 🔲 Border Radius
-
-```tsx
-rounded-sm   // 0.375rem - petits éléments
-rounded-md   // 0.5rem - boutons, inputs
-rounded-lg   // 0.625rem - cartes, modals
-rounded-xl   // 0.75rem - grandes cartes
-rounded-full // Badges, avatars
+// Bordures
+className="border-border"            // Standard
+className="border-input"             // Inputs
 ```
 
 ---
@@ -195,46 +330,52 @@ rounded-full // Badges, avatars
 
 Le dark mode est automatique via `class="dark"` sur `<html>`.
 
-**IMPORTANT** : Ne pas utiliser de couleurs spécifiques au mode :
 ```tsx
 // ❌ ÉVITER
 className="bg-white dark:bg-black"
-className="text-gray-900 dark:text-gray-100"
 
 // ✅ UTILISER (s'adapte automatiquement)
 className="bg-background"
-className="text-foreground"
 ```
 
 ---
 
-## ⚡ Animations
+## ⚡ Transitions & Animations
 
-### Classes disponibles
+### Durées
+```css
+--transition-fast: 100ms
+--transition-base: 150ms
+--transition-slow: 200ms
+--transition-slower: 300ms
+```
+
+### Easings
+```css
+--ease-default: cubic-bezier(0.4, 0, 0.2, 1)
+--ease-in: cubic-bezier(0.4, 0, 1, 1)
+--ease-out: cubic-bezier(0, 0, 0.2, 1)
+--ease-in-out: cubic-bezier(0.4, 0, 0.2, 1)
+--ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55)
+```
+
+### Classes
 ```tsx
-className="animate-fade-in"           // Entrée avec fade
-className="animate-scale-in"          // Entrée avec scale
-className="animate-slide-in-right"    // Slide depuis la droite
-className="hover-lift"                // Légère élévation au hover
+className="animate-fade-in"           // Entrée fade
+className="animate-scale-in"          // Entrée scale
+className="animate-slide-in-right"    // Slide droite
+className="hover-lift"                // Élévation hover
 className="transition-smooth"         // Transition fluide
-```
 
-### Avec Framer Motion
-```tsx
-import { motion } from 'framer-motion';
-
-<motion.div
-  initial={{ opacity: 0, y: 8 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ duration: 0.2 }}
->
+className="duration-fast"             // 100ms
+className="duration-base"             // 150ms
+className="duration-slow"             // 200ms
 ```
 
 ---
 
-## 📱 Responsive
+## 📱 Responsive & Breakpoints
 
-### Breakpoints
 ```
 sm: 640px   // Tablette portrait
 md: 768px   // Tablette paysage
@@ -243,45 +384,52 @@ xl: 1280px  // Grand écran
 2xl: 1400px // Très grand écran
 ```
 
-### Patterns courants
+### Patterns
 ```tsx
 // Grilles
 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
 
-// Flex responsive
+// Flex
 className="flex flex-col sm:flex-row gap-4"
 
-// Texte responsive
-className="text-lg sm:text-xl lg:text-2xl"
-
 // Affichage conditionnel
-className="hidden sm:block"  // Caché sur mobile
-className="block sm:hidden"  // Visible uniquement sur mobile
+className="hidden sm:block"  // Caché mobile
+className="block sm:hidden"  // Mobile only
+```
+
+---
+
+## 🔢 Z-Index Scale
+
+```css
+--z-dropdown: 50
+--z-sticky: 100
+--z-fixed: 200
+--z-modal-backdrop: 400
+--z-modal: 500
+--z-popover: 600
+--z-tooltip: 700
+--z-toast: 800
+```
+
+```tsx
+className="z-dropdown"    // Menus
+className="z-modal"       // Dialogs
+className="z-tooltip"     // Tooltips
+className="z-toast"       // Notifications
 ```
 
 ---
 
 ## ✅ Checklist avant commit
 
-- [ ] Aucune couleur hardcodée (text-white, bg-black, etc.)
+- [ ] Aucune couleur hardcodée
 - [ ] Tous les tokens viennent du design system
-- [ ] Les composants shadcn/ui sont utilisés quand disponibles
-- [ ] Le responsive est géré (mobile-first)
-- [ ] Le dark mode fonctionne (pas de couleurs fixes)
-- [ ] Les espacements suivent la grille (gap-2, gap-4, etc.)
-- [ ] Les animations sont subtiles et performantes
-
----
-
-## 🗂 Structure des fichiers
-
-```
-src/
-├── index.css           # Variables CSS, classes globales
-├── components/
-│   └── ui/            # Composants shadcn/ui (NE PAS MODIFIER)
-tailwind.config.ts      # Configuration Tailwind
-```
+- [ ] Composants shadcn/ui utilisés quand disponibles
+- [ ] Responsive géré (mobile-first)
+- [ ] Dark mode fonctionne
+- [ ] Espacements suivent l'échelle
+- [ ] Animations subtiles et performantes
 
 ---
 
@@ -297,8 +445,10 @@ tailwind.config.ts      # Configuration Tailwind
 | Bordure standard | `border-border` |
 | Bouton principal | `<Button>` |
 | Bouton secondaire | `<Button variant="secondary">` |
-| Carte | `<Card>` |
-| Input | `<Input>` |
-| Badge | `<Badge>` |
-| Ombre légère | `shadow-sm` ou `shadow-card` |
+| Carte | `<Card>` + `rounded-card` |
+| Input | `<Input>` + `rounded-input` |
+| Badge | `<Badge>` + `rounded-badge` |
+| Ombre carte | `shadow-card` |
 | Ombre hover | `shadow-card-hover` |
+| Gap section | `gap-section` ou `gap-8` |
+| Gap composants | `gap-component` ou `gap-4` |
