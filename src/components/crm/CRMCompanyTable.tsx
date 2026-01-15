@@ -38,6 +38,7 @@ import { EditCompanyDialog } from "./EditCompanyDialog";
 import { InlineEditCell } from "./InlineEditCell";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
 import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
+import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { useContactPipelineEntries } from "@/hooks/useContactPipelineEntries";
 import { PipelineBadges } from "./PipelineBadges";
 import { cn } from "@/lib/utils";
@@ -211,21 +212,26 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
     <>
       <div className="space-y-3">
         {/* Filters */}
-        <CRMQuickFilters
-          search={searchQuery}
-          onSearchChange={setSearchQuery}
-          categories={categoryChips}
-          selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
-          placeholder="Rechercher une entreprise..."
-          totalCount={allCompanies.length}
-          filteredCount={filteredCompanies.length}
-          onClearAllFilters={() => {
-            setSearchQuery("");
-            setSelectedCategory("all");
-            setLetterFilter(null);
-          }}
-        />
+        <div className="flex items-center gap-3">
+          <div className="flex-1">
+            <CRMQuickFilters
+              search={searchQuery}
+              onSearchChange={setSearchQuery}
+              categories={categoryChips}
+              selectedCategory={selectedCategory}
+              onCategoryChange={setSelectedCategory}
+              placeholder="Rechercher une entreprise..."
+              totalCount={allCompanies.length}
+              filteredCount={filteredCompanies.length}
+              onClearAllFilters={() => {
+                setSearchQuery("");
+                setSelectedCategory("all");
+                setLetterFilter(null);
+              }}
+            />
+          </div>
+          <CRMDataQualityManager />
+        </div>
 
         {/* Alphabet filter */}
         <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-none pb-1">

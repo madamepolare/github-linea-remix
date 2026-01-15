@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { useContacts } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
+import { useToast } from "@/hooks/use-toast";
 import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 import { CONTACT_ROLES } from "@/lib/crmDefaults";
 import { SiretSearchDialog } from "./SiretSearchDialog";
@@ -85,6 +86,7 @@ export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: Cr
   const { createContact } = useContacts();
   const { companies, createCompany } = useCRMCompanies();
   const { contactTypes } = useCRMSettings();
+  const { toast } = useToast();
   const [companySearch, setCompanySearch] = useState("");
   const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
   const [isCreatingCompany, setIsCreatingCompany] = useState(false);
@@ -163,6 +165,44 @@ export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: Cr
     code_naf: string;
     forme_juridique: string;
   }) => {
+    // Check for existing company with same SIRET or SIREN
+    const existingBySiret = siretData.siret 
+      ? companies.find(c => c.siret === siretData.siret)
+      : null;
+    const existingBySiren = siretData.siren && !existingBySiret
+      ? companies.find(c => c.siren === siretData.siren)
+      : null;
+    const existingByName = !existingBySiret && !existingBySiren
+      ? companies.find(c => c.name.toLowerCase().trim() === siretData.name.toLowerCase().trim())
+      : null;
+    
+    const existingCompany = existingBySiret || existingBySiren || existingByName;
+    
+    if (existingCompany) {
+      // Use existing company instead of creating duplicate
+      form.setValue("crm_company_id", existingCompany.id);
+      // Auto-fill contact address if empty
+      if (!form.getValues("address") && (existingCompany.address || siretData.address)) {
+        form.setValue("address", existingCompany.address || siretData.address);
+      }
+      if (!form.getValues("city") && (existingCompany.city || siretData.city)) {
+        form.setValue("city", existingCompany.city || siretData.city);
+      }
+      if (!form.getValues("postal_code") && (existingCompany.postal_code || siretData.postal_code)) {
+        form.setValue("postal_code", existingCompany.postal_code || siretData.postal_code);
+      }
+      setCompanySearch("");
+      setShowCompanyDropdown(false);
+      
+      // Show toast about using existing company
+      const reason = existingBySiret ? "SIRET" : existingBySiren ? "SIREN" : "nom";
+      toast({
+        title: "Entreprise existante utilisée",
+        description: `"${existingCompany.name}" existe déjà (même ${reason}). Elle a été sélectionnée automatiquement.`,
+      });
+      return;
+    }
+    
     setIsCreatingCompany(true);
     try {
       const newCompany = await createCompany.mutateAsync({

@@ -31,6 +31,7 @@ import { cn } from "@/lib/utils";
 import { CRMSparkline } from "./CRMSparkline";
 import { CRMActivityFeed } from "./CRMActivityFeed";
 import { CRMQuickActions } from "./CRMQuickActions";
+import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { CreateCompanyDialog } from "./CreateCompanyDialog";
 import { CreateContactDialog } from "./CreateContactDialog";
 
@@ -168,10 +169,13 @@ export function CRMOverview({
             Votre activité CRM en un coup d'œil
           </p>
         </div>
-        <CRMQuickActions
-          onCreateCompany={() => setShowCreateCompany(true)}
-          onCreateContact={() => setShowCreateContact(true)}
-        />
+        <div className="flex items-center gap-2">
+          <CRMDataQualityManager />
+          <CRMQuickActions
+            onCreateCompany={() => setShowCreateCompany(true)}
+            onCreateContact={() => setShowCreateContact(true)}
+          />
+        </div>
       </div>
 
       {/* Stats cards - Modern design with sparklines */}
