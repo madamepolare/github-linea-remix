@@ -160,7 +160,7 @@ function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) 
               onCreateContact={() => window.dispatchEvent(new CustomEvent("open-create-contact"))}
               onCreateCompany={() => window.dispatchEvent(new CustomEvent("open-create-company"))}
               onCreateLead={() => window.dispatchEvent(new CustomEvent("open-create-lead"))}
-              onAIProspecting={() => navigate("/crm/prospection")}
+              onAIProspecting={() => window.dispatchEvent(new CustomEvent("open-ai-prospecting"))}
             />
           )}
           

@@ -101,6 +101,8 @@
       "emailsDesc": "Templates email",
       "tendersConfig": "Configuration AO",
       "tendersConfigDesc": "Phases, critères, rappels",
+      "integrations": "Intégrations",
+      "integrationsDesc": "APIs et services connectés",
       "calendars": "Calendriers",
       "calendarsDesc": "Google, Outlook, iCal",
       "pipeline": "Pipeline",

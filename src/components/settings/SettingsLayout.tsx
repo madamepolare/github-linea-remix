@@ -33,6 +33,7 @@ import {
   Calendar,
   Building,
   Globe,
+  Plug,
 } from 'lucide-react';
 
 export interface SettingsSection {
@@ -112,6 +113,7 @@ export function getSettingsGroups(t: (key: string) => string): SettingsGroup[] {
       id: 'integrations',
       label: t('settings.groups.integrations'),
       sections: [
+        { id: 'integrations', label: t('settings.sections.integrations'), icon: <Plug className="h-4 w-4" />, description: t('settings.sections.integrationsDesc') },
         { id: 'calendars', label: t('settings.sections.calendars'), icon: <Calendar className="h-4 w-4" />, description: t('settings.sections.calendarsDesc') },
       ],
     },

@@ -24,6 +24,7 @@ import { PricingGridsSection } from "@/components/settings/sections/PricingGrids
 import { QuoteThemesSettings } from "@/components/settings/QuoteThemesSettings";
 import { TenderSettings } from "@/components/settings/TenderSettings";
 import { CalendarIntegrationsSettings } from "@/components/settings/CalendarIntegrationsSettings";
+import { IntegrationsSettings } from "@/components/settings/IntegrationsSettings";
 import { LanguageSettings } from "@/components/settings/LanguageSettings";
 import {
   CRMPipelinesSettings,
@@ -91,6 +92,8 @@ export default function Settings() {
         return <CRMAdvancedSettings />;
       case "tenders":
         return <TenderSettings />;
+      case "integrations":
+        return <IntegrationsSettings />;
       case "calendars":
         return <CalendarIntegrationsSettings />;
       case "feedback":
