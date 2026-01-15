@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   DropdownMenu,
@@ -8,6 +7,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -85,7 +91,7 @@ export function ProspectionUnified({ searchQuery: initialSearchQuery = "" }: Pro
   );
 
   const renderPipelineView = () => {
-    if (pipelinesLoading) {
+    if (pipelinesLoading || opportunityPipelines.length === 0) {
       return (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -93,76 +99,25 @@ export function ProspectionUnified({ searchQuery: initialSearchQuery = "" }: Pro
       );
     }
 
-    if (opportunityPipelines.length === 0) {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      );
-    }
+    if (!selectedPipeline) return null;
 
-    // If only one pipeline, show it directly
-    if (opportunityPipelines.length === 1) {
-      return (
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
-          <LeadPipeline
-            pipeline={opportunityPipelines[0]}
-            kanbanHeightClass="h-[calc(100vh-240px)]"
-            onCreateLead={(stageId) => {
-              setPreselectedStageId(stageId);
-              setCreateLeadOpen(true);
-            }}
-          />
-        </div>
-      );
-    }
-
-    // Multiple pipelines: use sub-tabs
     return (
-      <Tabs
-        value={selectedPipelineId || opportunityPipelines[0]?.id}
-        onValueChange={setSelectedPipelineId}
-        className="space-y-3"
-      >
-        <TabsList className="h-8 bg-muted/50">
-          {opportunityPipelines.map((pipeline) => (
-            <TabsTrigger
-              key={pipeline.id}
-              value={pipeline.id}
-              className="text-xs gap-1.5 px-3 data-[state=active]:font-semibold"
-            >
-              <div
-                className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: pipeline.color || "hsl(var(--primary))" }}
-              />
-              {pipeline.name}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        {opportunityPipelines.map((pipeline) => (
-          <TabsContent key={pipeline.id} value={pipeline.id} className="mt-0">
-            <div className="rounded-lg border border-border bg-card overflow-hidden">
-              <LeadPipeline
-                pipeline={pipeline}
-                kanbanHeightClass="h-[calc(100vh-280px)]"
-                onCreateLead={(stageId) => {
-                  setSelectedPipelineId(pipeline.id);
-                  setPreselectedStageId(stageId);
-                  setCreateLeadOpen(true);
-                }}
-              />
-            </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+      <LeadPipeline
+        pipeline={selectedPipeline}
+        kanbanHeightClass="h-[calc(100vh-200px)]"
+        hideHeader
+        onCreateLead={(stageId) => {
+          setPreselectedStageId(stageId);
+          setCreateLeadOpen(true);
+        }}
+      />
     );
   };
 
   const addButton = isAISalesAgentEnabled ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="sm" className="h-8 gap-1">
+        <Button size="sm" className="h-9 gap-1">
           <Plus className="h-4 w-4" />
           Ajouter
           <ChevronDown className="h-3 w-3 ml-0.5" />
@@ -180,7 +135,7 @@ export function ProspectionUnified({ searchQuery: initialSearchQuery = "" }: Pro
       </DropdownMenuContent>
     </DropdownMenu>
   ) : (
-    <Button size="sm" className="h-8" onClick={() => setCreateLeadOpen(true)}>
+    <Button size="sm" className="h-9" onClick={() => setCreateLeadOpen(true)}>
       <Plus className="h-4 w-4 mr-1.5" />
       Ajouter
     </Button>
@@ -193,21 +148,50 @@ export function ProspectionUnified({ searchQuery: initialSearchQuery = "" }: Pro
       onValueChange={(v) => v && setViewMode(v as ViewMode)}
       className="h-9"
     >
-      <ToggleGroupItem value="list" aria-label="Vue liste" className="h-8 px-3 gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+      <ToggleGroupItem value="list" aria-label="Vue liste" className="h-9 px-3 gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
         <List className="h-4 w-4" />
         <span className="text-xs hidden sm:inline">Liste</span>
       </ToggleGroupItem>
-      <ToggleGroupItem value="pipeline" aria-label="Vue pipeline" className="h-8 px-3 gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+      <ToggleGroupItem value="pipeline" aria-label="Vue pipeline" className="h-9 px-3 gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
         <Kanban className="h-4 w-4" />
         <span className="text-xs hidden sm:inline">Pipeline</span>
       </ToggleGroupItem>
     </ToggleGroup>
   );
 
+  // Pipeline selector dropdown (only visible in pipeline view with multiple pipelines)
+  const pipelineSelector = viewMode === "pipeline" && opportunityPipelines.length > 1 ? (
+    <Select value={selectedPipelineId || ""} onValueChange={setSelectedPipelineId}>
+      <SelectTrigger className="w-[180px] h-9">
+        <SelectValue placeholder="Sélectionner un pipeline" />
+      </SelectTrigger>
+      <SelectContent>
+        {opportunityPipelines.map((pipeline) => (
+          <SelectItem key={pipeline.id} value={pipeline.id}>
+            <div className="flex items-center gap-2">
+              <div
+                className="h-2 w-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: pipeline.color || "hsl(var(--primary))" }}
+              />
+              {pipeline.name}
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  ) : null;
+
+  const filters = (
+    <div className="flex items-center gap-2">
+      {pipelineSelector}
+      {addButton}
+    </div>
+  );
+
   return (
     <>
       <div className="space-y-4">
-        {/* Header with search, view toggle, and add button */}
+        {/* Header with search, view toggle, pipeline selector and add button */}
         <ModuleFiltersBar
           search={{
             value: searchQuery,
@@ -215,7 +199,7 @@ export function ProspectionUnified({ searchQuery: initialSearchQuery = "" }: Pro
             placeholder: "Rechercher un lead...",
           }}
           viewToggle={viewToggle}
-          filters={addButton}
+          filters={filters}
         />
 
         {/* Content based on view mode */}
