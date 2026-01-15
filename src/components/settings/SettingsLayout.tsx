@@ -6,6 +6,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import {
   Building2,
   Users,
   User,
@@ -34,6 +41,8 @@ import {
   Building,
   Globe,
   Plug,
+  Menu,
+  ChevronLeft,
 } from 'lucide-react';
 
 export interface SettingsSection {
@@ -154,6 +163,7 @@ interface SettingsLayoutProps {
 export function SettingsLayout({ activeSection, onSectionChange, children }: SettingsLayoutProps) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const settingsGroups = getSettingsGroups(t);
 
@@ -170,68 +180,108 @@ export function SettingsLayout({ activeSection, onSectionChange, children }: Set
     ),
   })).filter(group => group.sections.length > 0);
 
+  const handleSectionChange = (sectionId: string) => {
+    onSectionChange(sectionId);
+    setMobileMenuOpen(false);
+  };
+
+  const SidebarContent = () => (
+    <>
+      {/* Search */}
+      <div className="p-3 border-b">
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 h-9 text-sm"
+          />
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <ScrollArea className="flex-1">
+        <div className="p-2 space-y-4">
+          {filteredGroups.map((group) => (
+            <div key={group.id}>
+              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {group.label}
+              </div>
+              <div className="space-y-0.5">
+                {group.sections.map((section) => (
+                  <button
+                    key={section.id}
+                    onClick={() => handleSectionChange(section.id)}
+                    className={cn(
+                      'w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-sm transition-colors',
+                      activeSection === section.id
+                        ? 'bg-primary/10 text-primary font-medium'
+                        : 'text-foreground hover:bg-muted'
+                    )}
+                  >
+                    <span className={cn(
+                      'shrink-0',
+                      activeSection === section.id ? 'text-primary' : 'text-muted-foreground'
+                    )}>
+                      {section.icon}
+                    </span>
+                    <span className="flex-1 truncate">{section.label}</span>
+                    {section.badge && (
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        {section.badge}
+                      </Badge>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+    </>
+  );
+
   return (
-    <div className="flex h-[calc(100vh-180px)] min-h-[500px]">
-      {/* Sidebar */}
-      <div className="w-64 border-r bg-muted/30 flex flex-col shrink-0">
-        {/* Search */}
-        <div className="p-3 border-b">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-9 text-sm"
-            />
+    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-180px)]">
+      {/* Mobile Header */}
+      <div className="lg:hidden flex items-center gap-3 p-3 border-b bg-background sticky top-0 z-10">
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="shrink-0">
+              <Menu className="h-4 w-4" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-72 p-0">
+            <SheetHeader className="p-4 border-b">
+              <SheetTitle className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Paramètres
+              </SheetTitle>
+            </SheetHeader>
+            <div className="flex flex-col h-[calc(100%-65px)]">
+              <SidebarContent />
+            </div>
+          </SheetContent>
+        </Sheet>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 text-sm">
+            <span className="text-muted-foreground">Paramètres</span>
+            <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
+            <span className="font-medium truncate">{currentSection?.label}</span>
           </div>
         </div>
+      </div>
 
-        {/* Navigation */}
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-4">
-            {filteredGroups.map((group) => (
-              <div key={group.id}>
-                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {group.label}
-                </div>
-                <div className="space-y-0.5">
-                  {group.sections.map((section) => (
-                    <button
-                      key={section.id}
-                      onClick={() => onSectionChange(section.id)}
-                      className={cn(
-                        'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm transition-colors',
-                        activeSection === section.id
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'text-foreground hover:bg-muted'
-                      )}
-                    >
-                      <span className={cn(
-                        'shrink-0',
-                        activeSection === section.id ? 'text-primary' : 'text-muted-foreground'
-                      )}>
-                        {section.icon}
-                      </span>
-                      <span className="flex-1 truncate">{section.label}</span>
-                      {section.badge && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {section.badge}
-                        </Badge>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:flex w-64 border-r bg-muted/30 flex-col shrink-0">
+        <SidebarContent />
       </div>
 
       {/* Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Header */}
-        <div className="px-6 py-4 border-b bg-background shrink-0">
+        {/* Desktop Header */}
+        <div className="hidden lg:block px-6 py-4 border-b bg-background shrink-0">
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
             <Settings className="h-3.5 w-3.5" />
             <span>Paramètres</span>
@@ -247,7 +297,7 @@ export function SettingsLayout({ activeSection, onSectionChange, children }: Set
 
         {/* Main content */}
         <ScrollArea className="flex-1">
-          <div className="p-6">
+          <div className="p-4 lg:p-6">
             {children}
           </div>
         </ScrollArea>
