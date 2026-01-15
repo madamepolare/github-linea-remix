@@ -174,7 +174,39 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                 </Label>
                 <Select
                   value={linkedProjectId || 'none'}
-                  onValueChange={(v) => onLinkedProjectChange(v === 'none' ? undefined : v)}
+                  onValueChange={(v) => {
+                    const newProjectId = v === 'none' ? undefined : v;
+                    onLinkedProjectChange(newProjectId);
+                    
+                    // Auto-fill client info from selected project
+                    if (newProjectId) {
+                      const selectedProject = projects?.find(p => p.id === newProjectId);
+                      if (selectedProject) {
+                        const updates: Partial<QuoteDocument> = { ...document };
+                        
+                        // Auto-fill company from project
+                        if (selectedProject.crm_company_id && !document.client_company_id) {
+                          updates.client_company_id = selectedProject.crm_company_id;
+                        }
+                        
+                        // Auto-fill project location info
+                        if (selectedProject.address && !document.project_address) {
+                          updates.project_address = selectedProject.address;
+                        }
+                        if (selectedProject.city && !document.project_city) {
+                          updates.project_city = selectedProject.city;
+                        }
+                        if (selectedProject.surface && !document.project_surface) {
+                          updates.project_surface = selectedProject.surface;
+                        }
+                        if (selectedProject.budget && !document.project_budget) {
+                          updates.project_budget = selectedProject.budget;
+                        }
+                        
+                        onDocumentChange(updates);
+                      }
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner un projet..." />
