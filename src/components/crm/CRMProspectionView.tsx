@@ -1,5 +1,12 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useCRMPipelines } from "@/hooks/useCRMPipelines";
+import { ContactPipeline } from "./ContactPipeline";
+import { BulkAddToPipelineDialog } from "./BulkAddToPipelineDialog";
+import { CreateContactDialog } from "./CreateContactDialog";
+import { CreateCompanyDialog } from "./CreateCompanyDialog";
+import { ModuleFiltersBar } from "@/components/shared/ModuleFiltersBar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -11,99 +18,77 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Loader2, Plus, ChevronDown, Building2, User, Target } from "lucide-react";
-import { LeadPipeline } from "./LeadPipeline";
-import { CreateLeadDialog } from "./CreateLeadDialog";
-import { QuickAddToProspectionDialog } from "./QuickAddToProspectionDialog";
-import { ModuleFiltersBar } from "@/components/shared/ModuleFiltersBar";
-import { useCRMPipelines } from "@/hooks/useCRMPipelines";
+import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  Plus, 
+  ChevronDown, 
+  Building2, 
+  User, 
+  Target
+} from "lucide-react";
 
 interface CRMProspectionViewProps {
   searchQuery?: string;
 }
 
-export function CRMProspectionView({ searchQuery: initialSearchQuery = "" }: CRMProspectionViewProps) {
-  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
-  const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
-  const [createLeadOpen, setCreateLeadOpen] = useState(false);
-  const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const [preselectedStageId, setPreselectedStageId] = useState<string | undefined>();
+export function CRMProspectionView({ searchQuery = "" }: CRMProspectionViewProps) {
+  const { pipelines, isLoading: pipelinesLoading, createDefaultContactPipelines } = useCRMPipelines();
   
-  const pipelineAutoCreatedRef = useRef(false);
+  const [search, setSearch] = useState(searchQuery);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
+  const [createContactOpen, setCreateContactOpen] = useState(false);
+  const [createCompanyOpen, setCreateCompanyOpen] = useState(false);
 
-  const {
-    opportunityPipelines,
-    isLoading: pipelinesLoading,
-    createDefaultPipeline,
-  } = useCRMPipelines();
-
-  // Create default pipeline if none exist
+  // Update search when prop changes
   useEffect(() => {
-    if (
-      !pipelinesLoading && 
-      opportunityPipelines.length === 0 && 
-      !createDefaultPipeline.isPending &&
-      !pipelineAutoCreatedRef.current
-    ) {
-      pipelineAutoCreatedRef.current = true;
-      createDefaultPipeline.mutate();
-    }
-  }, [pipelinesLoading, opportunityPipelines.length, createDefaultPipeline]);
+    setSearch(searchQuery);
+  }, [searchQuery]);
 
-  // Select first pipeline by default
+  // All pipelines are now unified
+  const allPipelines = pipelines;
+  
+  // Auto-select first pipeline
   useEffect(() => {
-    if (opportunityPipelines.length > 0 && !selectedPipelineId) {
-      const defaultPipeline = opportunityPipelines.find((p) => p.is_default) || opportunityPipelines[0];
-      setSelectedPipelineId(defaultPipeline.id);
+    if (!selectedPipelineId && allPipelines.length > 0) {
+      setSelectedPipelineId(allPipelines[0].id);
     }
-  }, [opportunityPipelines, selectedPipelineId]);
+  }, [allPipelines, selectedPipelineId]);
 
-  const selectedPipeline = useMemo(
-    () => opportunityPipelines.find((p) => p.id === selectedPipelineId) || (opportunityPipelines[0] ?? null),
-    [opportunityPipelines, selectedPipelineId]
-  );
-
-  const renderContent = () => {
-    if (pipelinesLoading || opportunityPipelines.length === 0) {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
-      );
+  // Create default pipelines if none exist
+  useEffect(() => {
+    if (!pipelinesLoading && allPipelines.length === 0) {
+      createDefaultContactPipelines.mutate();
     }
+  }, [pipelinesLoading, allPipelines.length]);
 
-    if (!selectedPipeline) return null;
+  const selectedPipeline = useMemo(() => {
+    return allPipelines.find(p => p.id === selectedPipelineId) || null;
+  }, [allPipelines, selectedPipelineId]);
 
-    return (
-      <LeadPipeline
-        pipeline={selectedPipeline}
-        kanbanHeightClass="h-[calc(100vh-180px)]"
-        hideHeader
-        onCreateLead={(stageId) => {
-          setPreselectedStageId(stageId);
-          setCreateLeadOpen(true);
-        }}
-      />
-    );
-  };
-
-  // Pipeline selector dropdown
-  const pipelineSelector = opportunityPipelines.length > 1 ? (
+  // Pipeline selector
+  const pipelineSelector = allPipelines.length > 1 ? (
     <Select value={selectedPipelineId || ""} onValueChange={setSelectedPipelineId}>
       <SelectTrigger className="w-[200px] h-9">
         <SelectValue placeholder="Sélectionner un pipeline" />
       </SelectTrigger>
       <SelectContent>
-        {opportunityPipelines.map((pipeline) => (
+        {allPipelines.map((pipeline) => (
           <SelectItem key={pipeline.id} value={pipeline.id}>
             <div className="flex items-center gap-2">
               <div
-                className="h-2 w-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: pipeline.color || "hsl(var(--primary))" }}
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: pipeline.color || "#6366f1" }}
               />
-              {pipeline.name}
+              <span>{pipeline.name}</span>
+              {pipeline.target_contact_type && (
+                <Badge variant="outline" className="text-[10px] ml-1">
+                  {pipeline.target_contact_type}
+                </Badge>
+              )}
             </div>
           </SelectItem>
         ))}
@@ -111,64 +96,110 @@ export function CRMProspectionView({ searchQuery: initialSearchQuery = "" }: CRM
     </Select>
   ) : null;
 
+  // Add button with dropdown
+  const addButton = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" className="h-9 gap-1">
+          <Plus className="h-4 w-4" />
+          Ajouter
+          <ChevronDown className="h-3 w-3 ml-0.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem onClick={() => setBulkAddOpen(true)} className="gap-2">
+          <Target className="h-4 w-4" />
+          Ajouter au pipeline
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => setCreateContactOpen(true)} className="gap-2">
+          <User className="h-4 w-4" />
+          Nouveau contact
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setCreateCompanyOpen(true)} className="gap-2">
+          <Building2 className="h-4 w-4" />
+          Nouvelle entreprise
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  // Filters for the filter bar
   const filters = (
     <div className="flex items-center gap-2">
       {pipelineSelector}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button size="sm" className="h-9 gap-1">
-            <Plus className="h-4 w-4" />
-            Ajouter
-            <ChevronDown className="h-3 w-3 ml-0.5" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem onClick={() => setCreateLeadOpen(true)} className="gap-2">
-            <Target className="h-4 w-4" />
-            Nouvelle opportunité
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setQuickAddOpen(true)} className="gap-2">
-            <Building2 className="h-4 w-4" />
-            Ajouter contacts / entreprises
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {addButton}
     </div>
   );
+
+  const renderContent = () => {
+    if (pipelinesLoading) {
+      return (
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex-shrink-0 w-72">
+              <Skeleton className="h-8 w-full mb-2" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (!selectedPipeline) {
+      return (
+        <div className="text-center py-12 text-muted-foreground">
+          <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p className="text-lg font-medium mb-2">Aucun pipeline configuré</p>
+          <p className="text-sm mb-4">
+            Créez un pipeline pour commencer à gérer vos prospects
+          </p>
+          <Button onClick={() => createDefaultContactPipelines.mutate()}>
+            Créer les pipelines par défaut
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <ContactPipeline 
+        pipeline={selectedPipeline} 
+        kanbanHeightClass="h-[calc(100vh-220px)]"
+      />
+    );
+  };
 
   return (
     <>
       <div className="space-y-4">
-        {/* Header with search, pipeline selector and add button */}
         <ModuleFiltersBar
-          search={{
-            value: searchQuery,
-            onChange: setSearchQuery,
-            placeholder: "Rechercher...",
-          }}
+          search={{ value: search, onChange: setSearch, placeholder: "Rechercher dans le pipeline..." }}
           filters={filters}
         />
 
-        {/* Pipeline view */}
         {renderContent()}
       </div>
 
-      {/* Create Lead Dialog */}
-      <CreateLeadDialog
-        open={createLeadOpen}
-        onOpenChange={setCreateLeadOpen}
-        pipeline={selectedPipeline}
-        defaultStageId={preselectedStageId}
-      />
-
-      {/* Quick Add Dialog */}
+      {/* Bulk Add Dialog */}
       {selectedPipeline && (
-        <QuickAddToProspectionDialog
-          open={quickAddOpen}
-          onOpenChange={setQuickAddOpen}
+        <BulkAddToPipelineDialog
+          open={bulkAddOpen}
+          onOpenChange={setBulkAddOpen}
           pipeline={selectedPipeline}
         />
       )}
+
+      {/* Create Contact Dialog */}
+      <CreateContactDialog
+        open={createContactOpen}
+        onOpenChange={setCreateContactOpen}
+      />
+
+      {/* Create Company Dialog */}
+      <CreateCompanyDialog
+        open={createCompanyOpen}
+        onOpenChange={setCreateCompanyOpen}
+      />
     </>
   );
 }

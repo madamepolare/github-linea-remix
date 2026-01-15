@@ -33,7 +33,6 @@ import { CRMActivityFeed } from "./CRMActivityFeed";
 import { CRMQuickActions } from "./CRMQuickActions";
 import { CreateCompanyDialog } from "./CreateCompanyDialog";
 import { CreateContactDialog } from "./CreateContactDialog";
-import { CreateLeadDialog } from "./CreateLeadDialog";
 
 interface CRMOverviewProps {
   onNavigate: (view: string) => void;
@@ -41,10 +40,7 @@ interface CRMOverviewProps {
   contactsCount: number;
   leadStats: {
     total: number;
-    totalValue: number;
-    weightedValue: number;
-    wonValue: number;
-    lostCount: number;
+    entries?: number;
   };
   companies: CRMCompanyEnriched[];
   contacts: Contact[];
@@ -71,7 +67,6 @@ export function CRMOverview({
 
   const [showCreateCompany, setShowCreateCompany] = useState(false);
   const [showCreateContact, setShowCreateContact] = useState(false);
-  const [showCreateLead, setShowCreateLead] = useState(false);
 
   const formatCurrency = (value: number) => {
     if (value >= 1000000) {
@@ -151,7 +146,7 @@ export function CRMOverview({
     },
     {
       id: "leads",
-      title: "Leads",
+      title: "Prospection",
       value: leadStats.total,
       change: leadStats.total > 0 ? Math.round(Math.random() * 10 + 1) : 0,
       trend: "up",
@@ -159,19 +154,7 @@ export function CRMOverview({
       color: "text-success",
       bgColor: "bg-success/10",
       sparklineData: generateSparklineData(leadStats.total, 0.4),
-      action: () => onNavigate("leads"),
-    },
-    {
-      id: "pipeline",
-      title: "Pipeline",
-      value: formatCurrency(leadStats.weightedValue),
-      change: leadStats.weightedValue > 0 ? Math.round(Math.random() * 25 + 10) : 0,
-      trend: leadStats.weightedValue > 0 ? "up" : "neutral",
-      icon: Euro,
-      color: "text-warning",
-      bgColor: "bg-warning/10",
-      sparklineData: generateSparklineData(leadStats.weightedValue / 1000, 0.5),
-      action: () => onNavigate("leads"),
+      action: () => onNavigate("prospection"),
     },
   ];
 
@@ -188,7 +171,6 @@ export function CRMOverview({
         <CRMQuickActions
           onCreateCompany={() => setShowCreateCompany(true)}
           onCreateContact={() => setShowCreateContact(true)}
-          onCreateLead={() => setShowCreateLead(true)}
         />
       </div>
 
@@ -526,10 +508,6 @@ export function CRMOverview({
       <CreateContactDialog
         open={showCreateContact}
         onOpenChange={setShowCreateContact}
-      />
-      <CreateLeadDialog
-        open={showCreateLead}
-        onOpenChange={setShowCreateLead}
       />
     </div>
   );
