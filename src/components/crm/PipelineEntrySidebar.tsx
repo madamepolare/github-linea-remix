@@ -1,16 +1,14 @@
 import { useState, useEffect } from "react";
-import { X, User, Building2, Mail, Phone, Calendar, Send, Clock, Plus, MessageSquare, FileText, ExternalLink, RefreshCw, Bell, AlertTriangle, MailOpen } from "lucide-react";
+import { User, Building2, Mail, Phone, Calendar, Send, Clock, Plus, MessageSquare, FileText, ExternalLink, RefreshCw, AlertTriangle } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Card, CardContent } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { PipelineEntry } from "@/hooks/useContactPipeline";
-import { useEntityEmails, Email, EmailThread } from "@/hooks/useEntityEmails";
+import { useEntityEmails, Email } from "@/hooks/useEntityEmails";
 import { usePipelineActions } from "@/hooks/usePipelineActions";
 import { useEntityActivities, logEntityActivity } from "@/hooks/useEntityActivities";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +16,7 @@ import { ComposeEmailDialog } from "@/components/emails/ComposeEmailDialog";
 import { SingleEmailCard } from "@/components/crm/pipeline/SingleEmailCard";
 import { QuickActions } from "@/components/crm/pipeline/QuickActions";
 import { ActionsList } from "@/components/crm/pipeline/ActionsList";
+import { EntityCommunications } from "@/components/shared/EntityCommunications";
 import { useNavigate } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -44,19 +43,12 @@ export function PipelineEntrySidebar({
   const [composeOpen, setComposeOpen] = useState(false);
   const [replyToEmail, setReplyToEmail] = useState<Email | null>(null);
   const [isFollowUp, setIsFollowUp] = useState(false);
-  const [notes, setNotes] = useState(entry?.notes || "");
   const [isSyncing, setIsSyncing] = useState(false);
-  // Removed selectedThread state - now showing emails individually
   
   const isContact = !!entry?.contact;
   const entityType = isContact ? 'contact' : 'company';
   const entityId = isContact ? entry?.contact_id : entry?.company_id;
   const entity = entry?.contact || entry?.company;
-  
-  // Reset notes when entry changes
-  useEffect(() => {
-    setNotes(entry?.notes || "");
-  }, [entry?.id, entry?.notes]);
   
   const { emails, threads, stats, isLoading: emailsLoading, gmailConnected, markAsRead } = useEntityEmails({
     entityType: entityType as any,
@@ -89,11 +81,6 @@ export function PipelineEntrySidebar({
     }
   };
 
-  const handleSaveNotes = () => {
-    if (entry && onUpdateNotes) {
-      onUpdateNotes(entry.id, notes);
-    }
-  };
 
   const navigateToEntity = () => {
     if (isContact && entry?.contact_id) {
@@ -370,9 +357,9 @@ export function PipelineEntrySidebar({
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="notes" className="gap-1">
-                <FileText className="h-3.5 w-3.5" />
-                Notes
+              <TabsTrigger value="discussion" className="gap-1">
+                <MessageSquare className="h-3.5 w-3.5" />
+                Discussion
               </TabsTrigger>
             </TabsList>
 
@@ -532,23 +519,12 @@ export function PipelineEntrySidebar({
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="notes" className="flex-1 overflow-hidden m-0 px-6 pt-4">
-              <div className="flex flex-col h-full">
-                <h4 className="text-sm font-medium mb-3">Notes</h4>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Ajouter des notes sur ce contact..."
-                  className="flex-1 min-h-[200px] resize-none"
-                />
-                <Button 
-                  className="mt-3" 
-                  onClick={handleSaveNotes}
-                  disabled={notes === entry.notes}
-                >
-                  Enregistrer
-                </Button>
-              </div>
+            <TabsContent value="discussion" className="flex-1 overflow-hidden m-0">
+              <EntityCommunications
+                entityType={entityType as 'contact' | 'company'}
+                entityId={entityId || ''}
+                className="h-full"
+              />
             </TabsContent>
           </Tabs>
         </SheetContent>
