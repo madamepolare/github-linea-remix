@@ -3,12 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { CRMContactsTable } from "@/components/crm/CRMContactsTable";
 import { CRMCompanyTable } from "@/components/crm/CRMCompanyTable";
 import { CRMLeadsView } from "@/components/crm/CRMLeadsView";
+import { CRMProspectionView } from "@/components/crm/CRMProspectionView";
 import { CreateContactDialog } from "@/components/crm/CreateContactDialog";
 import { CreateCompanyDialog } from "@/components/crm/CreateCompanyDialog";
 import { ImportContactsDialog } from "@/components/crm/ImportContactsDialog";
 import { CRMOverview } from "@/components/crm/CRMOverview";
 import { CRMCommandBar } from "@/components/crm/CRMCommandBar";
-import { AIProspectionPlayground } from "@/components/crm/AIProspectionPlayground";
 import { useLeads } from "@/hooks/useLeads";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
@@ -91,7 +91,7 @@ export default function CRM() {
         return <CRMLeadsView searchQuery={searchQuery} />;
 
       case "prospection":
-        return <AIProspectionPlayground />;
+        return <CRMProspectionView searchQuery={searchQuery} />;
 
       default:
         return null;
