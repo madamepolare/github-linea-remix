@@ -194,17 +194,17 @@ export default function CompanyDetail() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 overflow-auto p-6">
-        <div className="space-y-6">
-          <div className="grid grid-cols-4 gap-4">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
+      <div className="flex-1 overflow-auto p-4 md:p-6">
+        <div className="space-y-4 md:space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <Skeleton className="h-20 md:h-24" />
+            <Skeleton className="h-20 md:h-24" />
+            <Skeleton className="h-20 md:h-24 hidden md:block" />
+            <Skeleton className="h-20 md:h-24 hidden md:block" />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Skeleton className="h-96" />
-            <Skeleton className="h-96 lg:col-span-2" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <Skeleton className="h-64 md:h-96" />
+            <Skeleton className="h-64 md:h-96 lg:col-span-2" />
           </div>
         </div>
       </div>
@@ -229,11 +229,11 @@ export default function CompanyDetail() {
     switch (activeTab) {
       case "overview":
         return (
-          <div className="space-y-6">
-            {/* Main Content - 2 columns */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="space-y-4 md:space-y-6">
+            {/* Main Content - responsive: 1 col mobile, 2 col tablet, 3 col desktop */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {/* Left Column - Info Panel & Billing */}
-              <div className="lg:col-span-1 space-y-6">
+              <div className="md:col-span-1 lg:col-span-1 space-y-4 md:space-y-6 order-2 md:order-1">
                 <CompanyInfoPanel
                   company={company}
                   isEditing={isEditing}
@@ -248,7 +248,7 @@ export default function CompanyDetail() {
               </div>
 
               {/* Right Column - Contacts first, then Departments, Activity */}
-              <div className="lg:col-span-2 space-y-6">
+              <div className="md:col-span-1 lg:col-span-2 space-y-4 md:space-y-6 order-1 md:order-2">
                 {/* Contacts - moved to top */}
                 <CompanyContactsSection
                   contacts={companyContacts.slice(0, 5)}
@@ -261,8 +261,8 @@ export default function CompanyDetail() {
                   companyContacts={companyContacts}
                 />
 
-                {/* Activity & Related */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {/* Activity & Related - stack on mobile/tablet, side by side on xl */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                   <LinkedEntitiesPanel
                     entityType="company"
                     entityId={id}
@@ -325,7 +325,7 @@ export default function CompanyDetail() {
 
   return (
     <>
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-4 md:p-6">
         {renderTabContent()}
       </div>
 

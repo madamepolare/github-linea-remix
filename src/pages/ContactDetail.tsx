@@ -135,17 +135,17 @@ export default function ContactDetail() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 overflow-auto p-6">
-        <div className="space-y-6">
-          <div className="grid grid-cols-4 gap-4">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
+      <div className="flex-1 overflow-auto p-4 md:p-6">
+        <div className="space-y-4 md:space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <Skeleton className="h-20 md:h-24" />
+            <Skeleton className="h-20 md:h-24" />
+            <Skeleton className="h-20 md:h-24 hidden md:block" />
+            <Skeleton className="h-20 md:h-24 hidden md:block" />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Skeleton className="h-96" />
-            <Skeleton className="h-96 lg:col-span-2" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <Skeleton className="h-64 md:h-96" />
+            <Skeleton className="h-64 md:h-96 lg:col-span-2" />
           </div>
         </div>
       </div>
@@ -171,10 +171,10 @@ export default function ContactDetail() {
       case "info":
         return (
           <div className="space-y-6">
-            {/* Main Content - 2 columns: larger left, smaller right */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-              {/* Left Column - Info Panel (larger) */}
-              <div className="lg:col-span-3 space-y-6">
+            {/* Main Content - responsive: 1 col mobile, 2 col tablet, 5-col split desktop */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
+              {/* Left Column - Info Panel (larger on desktop) */}
+              <div className="md:col-span-1 lg:col-span-3 space-y-4 md:space-y-6">
                 <ContactInfoPanel
                   contact={contact}
                   company={company || null}
@@ -189,8 +189,8 @@ export default function ContactDetail() {
                 />
               </div>
 
-              {/* Right Column - Activity & Actions (smaller) */}
-              <div className="lg:col-span-2 space-y-6">
+              {/* Right Column - Activity & Actions (smaller on desktop) */}
+              <div className="md:col-span-1 lg:col-span-2 space-y-4 md:space-y-6">
                 <ActivityTimeline
                   entityType="contact"
                   entityId={id}
@@ -219,7 +219,7 @@ export default function ContactDetail() {
   };
 
   return (
-    <div className="flex-1 overflow-auto p-6">
+    <div className="flex-1 overflow-auto p-4 md:p-6">
       {renderTabContent()}
     </div>
   );
