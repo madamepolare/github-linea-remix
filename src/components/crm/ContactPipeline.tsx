@@ -225,6 +225,7 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
         entry={selectedEntry}
         stage={targetStage}
         pipelineId={pipeline.id}
+        pipelineEmailAiPrompt={pipeline.email_ai_prompt}
         onEmailSent={handleEmailSent}
         onSkip={handleSkipEmail}
       />

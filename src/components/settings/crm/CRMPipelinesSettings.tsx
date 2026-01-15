@@ -85,7 +85,8 @@ export function CRMPipelinesSettings() {
     name: "", 
     color: "#3B82F6",
     target_contact_type: "",
-    objective: ""
+    objective: "",
+    email_ai_prompt: ""
   });
   const [stageForm, setStageForm] = useState({ 
     name: "", 
@@ -118,6 +119,10 @@ export function CRMPipelinesSettings() {
 
       if (data?.stages && Array.isArray(data.stages)) {
         setGeneratedStages(data.stages);
+        // Also set the generated email AI prompt if available
+        if (data.email_ai_prompt) {
+          setPipelineForm(prev => ({ ...prev, email_ai_prompt: data.email_ai_prompt }));
+        }
         toast.success(`${data.stages.length} étapes générées avec succès`);
       } else {
         throw new Error("Format de réponse invalide");
@@ -136,7 +141,7 @@ export function CRMPipelinesSettings() {
 
   const handleOpenCreatePipeline = () => {
     setEditingPipeline(null);
-    setPipelineForm({ name: "", color: "#3B82F6", target_contact_type: "", objective: "" });
+    setPipelineForm({ name: "", color: "#3B82F6", target_contact_type: "", objective: "", email_ai_prompt: "" });
     setGeneratedStages([]);
     setIsPipelineDialogOpen(true);
   };
@@ -148,6 +153,7 @@ export function CRMPipelinesSettings() {
       color: pipeline.color || "#3B82F6",
       target_contact_type: pipeline.target_contact_type || "",
       objective: "",
+      email_ai_prompt: pipeline.email_ai_prompt || "",
     });
     setGeneratedStages([]);
     setIsPipelineDialogOpen(true);
@@ -160,6 +166,7 @@ export function CRMPipelinesSettings() {
         name: pipelineForm.name,
         color: pipelineForm.color,
         target_contact_type: pipelineForm.target_contact_type || undefined,
+        email_ai_prompt: pipelineForm.email_ai_prompt || undefined,
       });
     } else {
       const newPipeline = await createPipeline.mutateAsync({
@@ -167,6 +174,7 @@ export function CRMPipelinesSettings() {
         color: pipelineForm.color,
         pipeline_type: "contact", // All pipelines are now unified as "contact" type
         target_contact_type: pipelineForm.target_contact_type || undefined,
+        email_ai_prompt: pipelineForm.email_ai_prompt || undefined,
       });
 
       // Create generated stages if any
@@ -620,6 +628,23 @@ export function CRMPipelinesSettings() {
                 )}
               </div>
             )}
+
+            {/* Email AI Prompt Configuration */}
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-muted-foreground" />
+                <Label className="font-medium">Prompt IA pour les emails</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ce prompt sera utilisé comme base pour générer automatiquement les emails de ce pipeline.
+              </p>
+              <Textarea
+                value={pipelineForm.email_ai_prompt}
+                onChange={(e) => setPipelineForm({ ...pipelineForm, email_ai_prompt: e.target.value })}
+                placeholder="Ex: Adopter un ton professionnel et chaleureux pour prospecter des architectes, mentionner notre expertise en ingénierie structure..."
+                className="h-20 text-sm"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPipelineDialogOpen(false)}>

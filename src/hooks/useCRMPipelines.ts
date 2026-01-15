@@ -31,6 +31,7 @@ export interface Pipeline {
   updated_at: string | null;
   pipeline_type: PipelineType | null;
   target_contact_type: string | null;
+  email_ai_prompt: string | null;
   stages?: PipelineStage[];
 }
 
@@ -84,6 +85,7 @@ export function useCRMPipelines() {
       color?: string;
       pipeline_type?: PipelineType;
       target_contact_type?: string;
+      email_ai_prompt?: string;
     }) => {
       const { data, error } = await supabase
         .from("crm_pipelines")
@@ -94,6 +96,7 @@ export function useCRMPipelines() {
           color: input.color,
           pipeline_type: input.pipeline_type || "opportunity",
           target_contact_type: input.target_contact_type,
+          email_ai_prompt: input.email_ai_prompt,
           sort_order: pipelines?.length || 0,
         })
         .select()
@@ -119,6 +122,7 @@ export function useCRMPipelines() {
       color?: string;
       pipeline_type?: PipelineType;
       target_contact_type?: string;
+      email_ai_prompt?: string;
     }) => {
       const { data, error } = await supabase
         .from("crm_pipelines")
