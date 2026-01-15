@@ -61,6 +61,7 @@ export function CRMCompaniesSettings() {
   const { createSetting, deleteSetting } = useWorkspaceSettings();
   
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingTypes, setIsGeneratingTypes] = useState<string | null>(null);
   const [showAIDialog, setShowAIDialog] = useState(false);
   
   // Category dialog
@@ -209,6 +210,53 @@ export function CRMCompaniesSettings() {
       sort_order: companyTypes.length,
     });
     setShowSubcategoryDialog(false);
+  };
+
+  // Generate types with AI for a specific category
+  const handleGenerateTypesForCategory = async (categoryKey: string, categoryLabel: string) => {
+    setIsGeneratingTypes(categoryKey);
+    try {
+      const existingTypes = companyTypes
+        .filter(t => t.category === categoryKey)
+        .map(t => t.label);
+
+      const { data, error } = await supabase.functions.invoke("generate-company-types", {
+        body: { 
+          discipline: disciplineSlug,
+          disciplineName: config.name,
+          categoryKey,
+          categoryLabel,
+          existingTypes,
+        }
+      });
+
+      if (error) throw error;
+
+      const { types } = data;
+
+      // Create the new types
+      for (let i = 0; i < types.length; i++) {
+        const t = types[i];
+        await createSetting.mutateAsync({
+          setting_type: "company_types",
+          setting_key: t.key,
+          setting_value: {
+            label: t.label,
+            shortLabel: t.shortLabel,
+            color: t.color,
+            category: t.category,
+          },
+          sort_order: companyTypes.length + i,
+        });
+      }
+
+      toast.success(`${types.length} types générés pour "${categoryLabel}"`);
+    } catch (error) {
+      console.error("Error generating types:", error);
+      toast.error("Erreur lors de la génération des types");
+    } finally {
+      setIsGeneratingTypes(null);
+    }
   };
 
   // Delete handlers
@@ -383,15 +431,36 @@ export function CRMCompaniesSettings() {
                           ))}
                         </div>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full mt-2 text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() => openCreateSubcategory(category.key)}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Ajouter un type
-                      </Button>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex-1 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => openCreateSubcategory(category.key)}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Ajouter un type
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-primary hover:text-primary gap-1"
+                          onClick={() => handleGenerateTypesForCategory(category.key, category.label)}
+                          disabled={isGeneratingTypes === category.key}
+                        >
+                          {isGeneratingTypes === category.key ? (
+                            <>
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Génération...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-3 w-3" />
+                              Générer avec IA
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 );
