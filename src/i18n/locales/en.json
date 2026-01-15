@@ -105,6 +105,16 @@
       "calendarsDesc": "Google, Outlook, iCal",
       "pipeline": "Pipeline",
       "pipelineDesc": "Prospecting stages",
+      "crmPipelines": "Pipelines",
+      "crmPipelinesDesc": "Prospecting stages and sales tracking",
+      "crmCompanies": "Companies",
+      "crmCompaniesDesc": "Categories, types and BET specialties",
+      "crmContacts": "Contacts",
+      "crmContactsDesc": "Contact types",
+      "crmSources": "Sources & Activities",
+      "crmSourcesDesc": "Lead sources and interaction types",
+      "crmAdvanced": "Advanced",
+      "crmAdvancedDesc": "Reset and advanced options",
       "feedback": "User feedback",
       "feedbackDesc": "Suggestions and bugs"
     }

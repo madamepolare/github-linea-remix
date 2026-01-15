@@ -105,6 +105,16 @@
       "calendarsDesc": "Google, Outlook, iCal",
       "pipeline": "Pipeline",
       "pipelineDesc": "Fasi di prospezione",
+      "crmPipelines": "Pipeline",
+      "crmPipelinesDesc": "Fasi di prospezione e tracciamento vendite",
+      "crmCompanies": "Aziende",
+      "crmCompaniesDesc": "Categorie, tipi e specialità BET",
+      "crmContacts": "Contatti",
+      "crmContactsDesc": "Tipi di contatto",
+      "crmSources": "Fonti & Attività",
+      "crmSourcesDesc": "Fonti di lead e tipi di interazione",
+      "crmAdvanced": "Avanzato",
+      "crmAdvancedDesc": "Reset e opzioni avanzate",
       "feedback": "Feedback utenti",
       "feedbackDesc": "Suggerimenti e bug"
     }

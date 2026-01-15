@@ -105,6 +105,16 @@
       "calendarsDesc": "Google, Outlook, iCal",
       "pipeline": "Pipeline",
       "pipelineDesc": "Étapes de prospection",
+      "crmPipelines": "Pipelines",
+      "crmPipelinesDesc": "Étapes de prospection et suivi commercial",
+      "crmCompanies": "Entreprises",
+      "crmCompaniesDesc": "Catégories, types et spécialités BET",
+      "crmContacts": "Contacts",
+      "crmContactsDesc": "Types de contacts",
+      "crmSources": "Sources & Activités",
+      "crmSourcesDesc": "Sources de leads et types d'interactions",
+      "crmAdvanced": "Avancé",
+      "crmAdvancedDesc": "Réinitialisation et options avancées",
       "feedback": "Retours utilisateurs",
       "feedbackDesc": "Suggestions et bugs"
     }

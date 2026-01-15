@@ -8,7 +8,6 @@ import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { LotsTemplatesSettings } from "@/components/settings/LotsTemplatesSettings";
 import { ProjectsSettings } from "@/components/settings/ProjectsSettings";
 import { PhasesSettings } from "@/components/settings/PhasesSettings";
-import { CRMSettings } from "@/components/settings/CRMSettings";
 import { TasksSettings } from "@/components/settings/TasksSettings";
 import { DocumentsSettings } from "@/components/settings/DocumentsSettings";
 import { PermissionsSettings } from "@/components/settings/PermissionsSettings";
@@ -26,6 +25,13 @@ import { QuoteThemesSettings } from "@/components/settings/QuoteThemesSettings";
 import { TenderSettings } from "@/components/settings/TenderSettings";
 import { CalendarIntegrationsSettings } from "@/components/settings/CalendarIntegrationsSettings";
 import { LanguageSettings } from "@/components/settings/LanguageSettings";
+import {
+  CRMPipelinesSettings,
+  CRMCompaniesSettings,
+  CRMContactsSettings,
+  CRMSourcesActivitiesSettings,
+  CRMAdvancedSettings,
+} from "@/components/settings/crm";
 
 export default function Settings() {
   const { t } = useTranslation();
@@ -73,8 +79,16 @@ export default function Settings() {
         return <DocumentsSettings />;
       case "emails":
         return <EmailTemplatesSettings />;
-      case "crm":
-        return <CRMSettings />;
+      case "crm-pipelines":
+        return <CRMPipelinesSettings />;
+      case "crm-companies":
+        return <CRMCompaniesSettings />;
+      case "crm-contacts":
+        return <CRMContactsSettings />;
+      case "crm-sources":
+        return <CRMSourcesActivitiesSettings />;
+      case "crm-advanced":
+        return <CRMAdvancedSettings />;
       case "tenders":
         return <TenderSettings />;
       case "calendars":
