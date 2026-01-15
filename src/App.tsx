@@ -62,6 +62,7 @@ const NotificationsPage = lazy(() => import("./pages/Notifications"));
 const PublicQuote = lazy(() => import("./pages/PublicQuote"));
 const ClientPortal = lazy(() => import("./pages/ClientPortal"));
 const CompanyPortal = lazy(() => import("./pages/CompanyPortal"));
+const FrameworkRequest = lazy(() => import("./pages/FrameworkRequest"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading fallback
@@ -102,6 +103,7 @@ const App = () => (
               <Route path="/q/:token" element={<Suspense fallback={<PageLoader />}><PublicQuote /></Suspense>} />
               <Route path="/portal/:token" element={<Suspense fallback={<PageLoader />}><ClientPortal /></Suspense>} />
               <Route path="/company-portal/:token" element={<Suspense fallback={<PageLoader />}><CompanyPortal /></Suspense>} />
+              <Route path="/request/:token" element={<Suspense fallback={<PageLoader />}><FrameworkRequest /></Suspense>} />
 
                 {/* Protected routes with shared MainLayout */}
                 <Route

@@ -5,15 +5,16 @@ import { Progress } from "@/components/ui/progress";
 import { format, parseISO, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { Clock, CheckCircle2, ListTodo, Calendar, AlertTriangle } from "lucide-react";
+import { Clock, CheckCircle2, ListTodo, Calendar, AlertTriangle, User } from "lucide-react";
 import { SubProjectWithStats } from "@/hooks/useSubProjects";
 
 interface SubProjectCardProps {
   subProject: SubProjectWithStats;
   color?: string;
+  showClientBadge?: boolean;
 }
 
-export function SubProjectCard({ subProject, color }: SubProjectCardProps) {
+export function SubProjectCard({ subProject, color, showClientBadge }: SubProjectCardProps) {
   const navigate = useNavigate();
   
   const isOverdue = subProject.end_date && isPast(parseISO(subProject.end_date)) && subProject.status !== "completed" && subProject.status !== "done";
@@ -50,6 +51,12 @@ export function SubProjectCard({ subProject, color }: SubProjectCardProps) {
               <h4 className="font-medium text-sm truncate group-hover:text-primary transition-colors">
                 {subProject.name}
               </h4>
+              {showClientBadge && subProject.client_request_id && (
+                <Badge variant="outline" className="text-2xs shrink-0 bg-purple-50 text-purple-600 border-purple-200">
+                  <User className="h-2.5 w-2.5 mr-1" />
+                  Client
+                </Badge>
+              )}
               <Badge variant="secondary" className={cn("text-2xs shrink-0", status.className)}>
                 {status.label}
               </Badge>
