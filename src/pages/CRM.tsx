@@ -3,8 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { CRMContactsTable } from "@/components/crm/CRMContactsTable";
 import { CRMCompanyTable } from "@/components/crm/CRMCompanyTable";
 import { CRMProspectionView } from "@/components/crm/CRMProspectionView";
-import { CreateContactDialog } from "@/components/crm/CreateContactDialog";
-import { CreateCompanyDialog } from "@/components/crm/CreateCompanyDialog";
+import { ContactFormDialog } from "@/components/crm/ContactFormDialog";
+import { CompanyFormDialog } from "@/components/crm/CompanyFormDialog";
 import { ImportContactsDialog } from "@/components/crm/ImportContactsDialog";
 import { CRMOverview } from "@/components/crm/CRMOverview";
 import { CRMCommandBar } from "@/components/crm/CRMCommandBar";
@@ -13,7 +13,6 @@ import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
 import { useContactPipeline } from "@/hooks/useContactPipeline";
 import { useCRMPipelines } from "@/hooks/useCRMPipelines";
-
 type CRMView = "overview" | "contacts" | "companies" | "prospection";
 
 export default function CRM() {
@@ -115,8 +114,8 @@ export default function CRM() {
       </div>
 
       <CRMCommandBar open={commandBarOpen} onOpenChange={setCommandBarOpen} />
-      <CreateContactDialog open={createContactOpen} onOpenChange={setCreateContactOpen} />
-      <CreateCompanyDialog open={createCompanyOpen} onOpenChange={setCreateCompanyOpen} />
+      <ContactFormDialog mode="create" open={createContactOpen} onOpenChange={setCreateContactOpen} />
+      <CompanyFormDialog mode="create" open={createCompanyOpen} onOpenChange={setCreateCompanyOpen} />
       <ImportContactsDialog open={importContactsOpen} onOpenChange={setImportContactsOpen} />
       <AIProspectingSheet open={aiProspectingOpen} onOpenChange={setAiProspectingOpen} />
     </>

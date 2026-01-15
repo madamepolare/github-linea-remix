@@ -34,7 +34,7 @@ import {
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { CompanyCategory } from "@/lib/crmTypes";
-import { EditCompanyDialog } from "./EditCompanyDialog";
+import { CompanyFormDialog } from "./CompanyFormDialog";
 import { InlineEditCell } from "./InlineEditCell";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
 import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
@@ -457,7 +457,8 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
       />
 
       {/* Edit dialog */}
-      <EditCompanyDialog
+      <CompanyFormDialog
+        mode="edit"
         company={editingCompany}
         open={!!editingCompany}
         onOpenChange={(open) => !open && setEditingCompany(null)}
