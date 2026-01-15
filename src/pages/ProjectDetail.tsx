@@ -518,6 +518,18 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
         </Card>
       )}
 
+      {/* Framework Dashboard & Sub-projects for framework contracts */}
+      {project.contract_type === "framework" && (
+        <div className="space-y-6">
+          <FrameworkDashboard projectId={project.id} />
+          <SubProjectsList 
+            parentId={project.id} 
+            parentName={project.name}
+            parentColor={project.color}
+          />
+        </div>
+      )}
+
       {/* Project Description */}
       {project.description && (
         <Card>

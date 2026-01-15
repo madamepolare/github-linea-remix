@@ -115,6 +115,9 @@ export function useProjects(options?: { includeArchived?: boolean }) {
         query = query.eq("is_archived", false);
       }
 
+      // Filter out sub-projects (they have a parent_id) from main list
+      query = query.is("parent_id", null);
+
       const { data: projectsData, error: projectsError } = await query;
 
       if (projectsError) throw projectsError;
