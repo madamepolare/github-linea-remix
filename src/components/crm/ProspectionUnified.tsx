@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,23 +14,25 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Loader2, Plus, ChevronDown, Sparkles, UserPlus } from "lucide-react";
+import { Loader2, Plus, ChevronDown, Sparkles, UserPlus, List, Kanban } from "lucide-react";
 import { CRMLeadsTable } from "./CRMLeadsTable";
 import { LeadPipeline } from "./LeadPipeline";
 import { AIProspectingPanel } from "./AIProspectingPanel";
 import { CreateLeadDialog } from "./CreateLeadDialog";
+import { ModuleFiltersBar } from "@/components/shared/ModuleFiltersBar";
 import { useCRMPipelines } from "@/hooks/useCRMPipelines";
 import { useIsModuleEnabled } from "@/hooks/useModules";
 
-type ProspectionTab = "leads" | "pipelines";
+type ViewMode = "list" | "pipeline";
 
 interface ProspectionUnifiedProps {
   searchQuery?: string;
 }
 
-export function ProspectionUnified({ searchQuery = "" }: ProspectionUnifiedProps) {
+export function ProspectionUnified({ searchQuery: initialSearchQuery = "" }: ProspectionUnifiedProps) {
   const isAISalesAgentEnabled = useIsModuleEnabled("ai-sales-agent");
-  const [activeTab, setActiveTab] = useState<ProspectionTab>("leads");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
@@ -77,11 +80,11 @@ export function ProspectionUnified({ searchQuery = "" }: ProspectionUnifiedProps
     }
   };
 
-  const renderLeadsTab = () => (
+  const renderListView = () => (
     <CRMLeadsTable search={searchQuery} onCreateLead={() => setCreateLeadOpen(true)} />
   );
 
-  const renderPipelinesTab = () => {
+  const renderPipelineView = () => {
     if (pipelinesLoading) {
       return (
         <div className="flex items-center justify-center py-12">
@@ -104,7 +107,7 @@ export function ProspectionUnified({ searchQuery = "" }: ProspectionUnifiedProps
         <div className="rounded-lg border border-border bg-card overflow-hidden">
           <LeadPipeline
             pipeline={opportunityPipelines[0]}
-            kanbanHeightClass="h-[calc(100vh-280px)]"
+            kanbanHeightClass="h-[calc(100vh-240px)]"
             onCreateLead={(stageId) => {
               setPreselectedStageId(stageId);
               setCreateLeadOpen(true);
@@ -142,7 +145,7 @@ export function ProspectionUnified({ searchQuery = "" }: ProspectionUnifiedProps
             <div className="rounded-lg border border-border bg-card overflow-hidden">
               <LeadPipeline
                 pipeline={pipeline}
-                kanbanHeightClass="h-[calc(100vh-320px)]"
+                kanbanHeightClass="h-[calc(100vh-280px)]"
                 onCreateLead={(stageId) => {
                   setSelectedPipelineId(pipeline.id);
                   setPreselectedStageId(stageId);
@@ -156,56 +159,68 @@ export function ProspectionUnified({ searchQuery = "" }: ProspectionUnifiedProps
     );
   };
 
+  const addButton = isAISalesAgentEnabled ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" className="h-8 gap-1">
+          <Plus className="h-4 w-4" />
+          Ajouter
+          <ChevronDown className="h-3 w-3 ml-0.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem onClick={() => handleAddLead("manual")} className="gap-2">
+          <UserPlus className="h-4 w-4" />
+          Créer un lead
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleAddLead("ai")} className="gap-2">
+          <Sparkles className="h-4 w-4" />
+          Prospecter avec IA
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : (
+    <Button size="sm" className="h-8" onClick={() => setCreateLeadOpen(true)}>
+      <Plus className="h-4 w-4 mr-1.5" />
+      Ajouter
+    </Button>
+  );
+
+  const viewToggle = (
+    <ToggleGroup
+      type="single"
+      value={viewMode}
+      onValueChange={(v) => v && setViewMode(v as ViewMode)}
+      className="h-9"
+    >
+      <ToggleGroupItem value="list" aria-label="Vue liste" className="h-8 px-3 gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+        <List className="h-4 w-4" />
+        <span className="text-xs hidden sm:inline">Liste</span>
+      </ToggleGroupItem>
+      <ToggleGroupItem value="pipeline" aria-label="Vue pipeline" className="h-8 px-3 gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+        <Kanban className="h-4 w-4" />
+        <span className="text-xs hidden sm:inline">Pipeline</span>
+      </ToggleGroupItem>
+    </ToggleGroup>
+  );
+
   return (
     <>
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ProspectionTab)} className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <TabsList className="h-9">
-            <TabsTrigger value="leads" className="text-xs px-4 data-[state=active]:font-semibold">
-              Leads
-            </TabsTrigger>
-            <TabsTrigger value="pipelines" className="text-xs px-4 data-[state=active]:font-semibold">
-              Pipelines
-            </TabsTrigger>
-          </TabsList>
+      <div className="space-y-4">
+        {/* Header with search, view toggle, and add button */}
+        <ModuleFiltersBar
+          search={{
+            value: searchQuery,
+            onChange: setSearchQuery,
+            placeholder: "Rechercher un lead...",
+          }}
+          viewToggle={viewToggle}
+          filters={addButton}
+        />
 
-          {/* Add Lead Button with dropdown */}
-          {isAISalesAgentEnabled ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" className="h-8 gap-1">
-                  <Plus className="h-4 w-4" />
-                  Ajouter
-                  <ChevronDown className="h-3 w-3 ml-0.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => handleAddLead("manual")} className="gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Créer un lead
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleAddLead("ai")} className="gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Prospecter avec IA
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button size="sm" className="h-8" onClick={() => setCreateLeadOpen(true)}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Ajouter
-            </Button>
-          )}
-        </div>
-
-        <TabsContent value="leads" className="mt-0">
-          {renderLeadsTab()}
-        </TabsContent>
-
-        <TabsContent value="pipelines" className="mt-0">
-          {renderPipelinesTab()}
-        </TabsContent>
-      </Tabs>
+        {/* Content based on view mode */}
+        {viewMode === "list" ? renderListView() : renderPipelineView()}
+      </div>
 
       {/* Create Lead Dialog */}
       <CreateLeadDialog
