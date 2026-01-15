@@ -276,6 +276,8 @@ export interface Contact {
     name: string;
     logo_url: string | null;
     industry: string | null;
+    country?: string | null;
+    city?: string | null;
   } | null;
 }
 

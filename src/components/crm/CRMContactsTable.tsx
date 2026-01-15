@@ -362,7 +362,10 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                           )}
                         </TableCell>
                         <TableCell className="py-2 hidden xl:table-cell">
-                          <CountryFlag location={contact.location} size="sm" />
+                          <CountryFlag 
+                            location={contact.location || contact.company?.country || contact.company?.city} 
+                            size="sm" 
+                          />
                         </TableCell>
                         <TableCell className="py-2">
                           {/* Show type badge - for particulier, display as Client Particulier */}
