@@ -167,7 +167,7 @@ export function useAIProspects() {
             phone: company.company_phone || null,
             email: company.company_email || null,
             industry: company.company_industry || null,
-            status: "prospect",
+            status: "lead", // Valid status: 'lead' or 'confirmed'
             notes: company.notes ? `${company.notes}\n\nSource: ${sourceQuery}` : `Source: ${sourceQuery}`,
             created_by: user?.id,
           })
