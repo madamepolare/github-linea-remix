@@ -16,7 +16,7 @@ import { useEntityActivities, logEntityActivity } from "@/hooks/useEntityActivit
 import { useAuth } from "@/contexts/AuthContext";
 import { ComposeEmailDialog } from "@/components/emails/ComposeEmailDialog";
 import { SingleEmailCard } from "@/components/crm/pipeline/SingleEmailCard";
-import { ActionFormDialog } from "@/components/crm/pipeline/ActionFormDialog";
+import { QuickActions } from "@/components/crm/pipeline/QuickActions";
 import { ActionsList } from "@/components/crm/pipeline/ActionsList";
 import { useNavigate } from "react-router-dom";
 import { format, formatDistanceToNow } from "date-fns";
@@ -42,7 +42,6 @@ export function PipelineEntrySidebar({
   const { user, activeWorkspace } = useAuth();
   
   const [composeOpen, setComposeOpen] = useState(false);
-  const [actionFormOpen, setActionFormOpen] = useState(false);
   const [replyToEmail, setReplyToEmail] = useState<Email | null>(null);
   const [isFollowUp, setIsFollowUp] = useState(false);
   const [notes, setNotes] = useState(entry?.notes || "");
@@ -275,25 +274,20 @@ export function PipelineEntrySidebar({
             <div className="mt-3 pt-3 border-t space-y-2">
               {/* No actions planned alert */}
               {pendingCount === 0 && (
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                  <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                  <div className="flex-1">
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
                     <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
                       Aucune action prévue
                     </p>
-                    <p className="text-[10px] text-amber-700 dark:text-amber-300">
-                      Planifiez une relance pour ne pas perdre ce contact
-                    </p>
                   </div>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="h-7 text-xs border-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50"
-                    onClick={() => setActionFormOpen(true)}
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Planifier
-                  </Button>
+                  <QuickActions
+                    entryId={entry?.id || ''}
+                    contactId={entry?.contact_id}
+                    companyId={entry?.company_id}
+                    onCreateAction={handleActionCreated}
+                    isCreating={isCreating}
+                  />
                 </div>
               )}
 
@@ -452,12 +446,15 @@ export function PipelineEntrySidebar({
             </TabsContent>
 
             <TabsContent value="actions" className="flex-1 overflow-hidden m-0 px-6 pt-4">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-medium">Actions à planifier</h4>
-                <Button size="sm" onClick={() => setActionFormOpen(true)}>
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                  Action
-                </Button>
+              <div className="mb-4">
+                <h4 className="text-sm font-medium mb-3">Planifier rapidement</h4>
+                <QuickActions
+                  entryId={entry?.id || ''}
+                  contactId={entry?.contact_id}
+                  companyId={entry?.company_id}
+                  onCreateAction={handleActionCreated}
+                  isCreating={isCreating}
+                />
               </div>
 
               <ScrollArea className="h-[calc(100vh-420px)]">
@@ -576,16 +573,6 @@ export function PipelineEntrySidebar({
         onSuccess={handleEmailSent}
       />
 
-      {/* Action Form Dialog */}
-      <ActionFormDialog
-        open={actionFormOpen}
-        onOpenChange={setActionFormOpen}
-        onSubmit={handleActionCreated}
-        entryId={entry?.id || ''}
-        contactId={entry?.contact_id}
-        companyId={entry?.company_id}
-        isLoading={isCreating}
-      />
     </>
   );
 }
