@@ -69,12 +69,10 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
   const filteredCompanies = useMemo(() => {
     let result = allCompanies;
 
-    // Filter by category
+    // Filter by category - find all company types that belong to this category
     if (selectedCategory !== "all") {
-      const categoryConfig = companyCategories.find((c) => c.key === selectedCategory);
-      if (categoryConfig?.types) {
-        result = result.filter((c) => categoryConfig.types.includes(c.industry as string));
-      }
+      const typesInCategory = companyTypes.filter(t => t.category === selectedCategory).map(t => t.key);
+      result = result.filter((c) => typesInCategory.includes(c.industry as string));
     }
 
     // Filter by search

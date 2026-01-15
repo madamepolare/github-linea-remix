@@ -20,13 +20,12 @@ export interface CompanyTypeItem extends CRMSettingItem {
   category: string;
 }
 
-export interface CompanyCategoryItem extends CRMSettingItem {
-  types: string[];
-}
+// Company categories no longer have types array - types reference categories via category field
+export interface CompanyCategoryItem extends CRMSettingItem {}
 
 function transformSettings(
   settings: WorkspaceSetting[],
-  defaults: { key: string; label: string; color: string }[]
+  defaults: { key: string; label: string; color: string; icon?: string }[]
 ): CRMSettingItem[] {
   if (settings.length === 0) {
     return defaults;
@@ -63,7 +62,7 @@ function transformCompanyTypes(
 
 function transformCompanyCategories(
   settings: WorkspaceSetting[],
-  defaults: { key: string; label: string; color: string; icon?: string; types: string[] }[]
+  defaults: { key: string; label: string; color: string }[]
 ): CompanyCategoryItem[] {
   if (settings.length === 0) {
     return defaults;
@@ -76,7 +75,6 @@ function transformCompanyCategories(
       label: s.setting_value.label,
       color: s.setting_value.color || "#6B7280",
       icon: s.setting_value.icon,
-      types: (s.setting_value.types as string[]) || [],
     }));
 }
 
@@ -173,10 +171,9 @@ export function useCRMSettings() {
     return item?.color || "#6B7280";
   };
 
+  // Get all types that belong to a category (via their category field)
   const getCompanyTypesForCategory = (categoryKey: string): CompanyTypeItem[] => {
-    const category = companyCategories.find((c) => c.key === categoryKey);
-    if (!category) return [];
-    return companyTypes.filter((t) => category.types.includes(t.key));
+    return companyTypes.filter((t) => t.category === categoryKey);
   };
 
   const getCategoryFromType = (typeKey: string): string | null => {

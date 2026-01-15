@@ -2,156 +2,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GenericSettingsManager } from "./GenericSettingsManager";
 import { PipelineSettings } from "./PipelineSettings";
 import { CRMResetSection } from "./CRMResetSection";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { CRMContactsSettings } from "./crm/CRMContactsSettings";
+import { CRMCompaniesSettings } from "./crm/CRMCompaniesSettings";
 import { 
   Target, 
   Briefcase, 
   Phone,
   Users,
-  Layers,
+  Building2,
   Settings2,
 } from "lucide-react";
 import {
   DEFAULT_LEAD_SOURCES,
   DEFAULT_ACTIVITY_TYPES,
-  DEFAULT_CONTACT_TYPES,
-  DEFAULT_COMPANY_CATEGORIES,
-  DEFAULT_COMPANY_TYPES,
-  DEFAULT_BET_SPECIALTIES,
 } from "@/lib/crmDefaults";
-import { useCRMSettings } from "@/hooks/useCRMSettings";
-
-// Catégories avec leurs types pour affichage unifié
-function CategoriesWithTypesManager() {
-  const { companyCategories, companyTypes, betSpecialties } = useCRMSettings();
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-primary/10">
-          <Layers className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h3 className="font-semibold">Organisation des sociétés</h3>
-          <p className="text-sm text-muted-foreground">
-            Structure hiérarchique : Catégories → Types → (Spécialités BET)
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-4">
-        {companyCategories.map((category) => {
-          const categoryTypes = companyTypes.filter(t => t.category === category.key);
-          const isBET = category.key === "bet";
-          
-          return (
-            <Card key={category.key} className="overflow-hidden">
-              <CardHeader className="pb-3 bg-muted/30">
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="h-3 w-3 rounded-full" 
-                    style={{ backgroundColor: category.color }}
-                  />
-                  <CardTitle className="text-base">{category.label}</CardTitle>
-                  <Badge variant="secondary" className="text-xs">
-                    {categoryTypes.length} type{categoryTypes.length > 1 ? "s" : ""}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="flex flex-wrap gap-2">
-                  {categoryTypes.map((type) => (
-                    <Badge 
-                      key={type.key} 
-                      variant="outline" 
-                      className="text-xs py-1 px-2"
-                      style={{ 
-                        borderColor: type.color,
-                        color: type.color,
-                      }}
-                    >
-                      {type.shortLabel || type.label}
-                    </Badge>
-                  ))}
-                </div>
-
-                {isBET && betSpecialties.length > 0 && (
-                  <div className="mt-4 pt-4 border-t">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                      Spécialités disponibles pour les BET :
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {betSpecialties.map((specialty) => (
-                        <Badge 
-                          key={specialty.key} 
-                          variant="secondary" 
-                          className="text-xs"
-                          style={{ 
-                            backgroundColor: `${specialty.color}20`,
-                            color: specialty.color,
-                          }}
-                        >
-                          {specialty.label}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      <Card className="border-dashed">
-        <CardContent className="py-4">
-          <p className="text-sm text-muted-foreground text-center">
-            Pour modifier les catégories, types ou spécialités BET, utilisez les paramètres avancés ci-dessous.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Advanced settings accordions */}
-      <div className="space-y-4">
-        <GenericSettingsManager
-          settingType="company_categories"
-          title="Catégories (avancé)"
-          description="Modifier les grandes catégories de sociétés"
-          icon={<Layers className="h-5 w-5 text-primary" />}
-          showColor
-          defaultItems={DEFAULT_COMPANY_CATEGORIES.map(c => ({
-            key: c.key,
-            label: c.label,
-            color: c.color,
-          }))}
-        />
-
-        <GenericSettingsManager
-          settingType="company_types"
-          title="Types de sociétés (avancé)"
-          description="Modifier les types spécifiques dans chaque catégorie"
-          icon={<Layers className="h-5 w-5 text-primary" />}
-          showColor
-          defaultItems={DEFAULT_COMPANY_TYPES.map(t => ({
-            key: t.key,
-            label: `${t.label} (${t.shortLabel})`,
-            color: t.color,
-          }))}
-        />
-
-        <GenericSettingsManager
-          settingType="bet_specialties"
-          title="Spécialités BET (avancé)"
-          description="Modifier les spécialités des Bureaux d'Études Techniques"
-          icon={<Layers className="h-5 w-5 text-primary" />}
-          showColor
-          defaultItems={DEFAULT_BET_SPECIALTIES}
-        />
-      </div>
-    </div>
-  );
-}
 
 export function CRMSettings() {
   return (
@@ -162,9 +26,9 @@ export function CRMSettings() {
             <Target className="h-3.5 w-3.5" />
             Pipelines
           </TabsTrigger>
-          <TabsTrigger value="categories" className="gap-1.5 text-xs">
-            <Layers className="h-3.5 w-3.5" />
-            Sociétés
+          <TabsTrigger value="companies" className="gap-1.5 text-xs">
+            <Building2 className="h-3.5 w-3.5" />
+            Entreprises
           </TabsTrigger>
           <TabsTrigger value="contacts" className="gap-1.5 text-xs">
             <Users className="h-3.5 w-3.5" />
@@ -188,19 +52,12 @@ export function CRMSettings() {
           <PipelineSettings />
         </TabsContent>
 
-        <TabsContent value="categories" className="mt-6">
-          <CategoriesWithTypesManager />
+        <TabsContent value="companies" className="mt-6">
+          <CRMCompaniesSettings />
         </TabsContent>
 
         <TabsContent value="contacts" className="mt-6">
-          <GenericSettingsManager
-            settingType="contact_types"
-            title="Types de contacts"
-            description="Catégorisez vos contacts selon leur rôle"
-            icon={<Users className="h-5 w-5 text-primary" />}
-            showColor
-            defaultItems={DEFAULT_CONTACT_TYPES}
-          />
+          <CRMContactsSettings />
         </TabsContent>
 
         <TabsContent value="sources" className="mt-6">
