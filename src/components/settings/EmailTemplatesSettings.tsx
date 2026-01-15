@@ -13,6 +13,7 @@ import { Mail, Edit, RotateCcw, Eye, Code, Save, X } from "lucide-react";
 import { useEmailTemplates, EmailTemplate, DEFAULT_TEMPLATES } from "@/hooks/useEmailTemplates";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GmailSettings } from "./GmailSettings";
+import { EmailSignatureSettings } from "./EmailSignatureSettings";
 
 const TEMPLATE_LABELS: Record<string, string> = {
   workspace_invite: "Invitation au workspace",
@@ -99,6 +100,9 @@ export function EmailTemplatesSettings() {
     <div className="space-y-6">
       {/* Gmail Connection */}
       <GmailSettings />
+      
+      {/* Email Signature */}
+      <EmailSignatureSettings />
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
