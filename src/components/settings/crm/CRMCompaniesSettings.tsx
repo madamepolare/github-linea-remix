@@ -2,10 +2,10 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, Layers, ChevronRight, Sparkles, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
+import { Building2, Layers, Sparkles, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { useDiscipline } from "@/hooks/useDiscipline";
-import { useWorkspaceSettings } from "@/hooks/useWorkspaceSettings";
+import { useWorkspaceSettings, type WorkspaceSetting } from "@/hooks/useWorkspaceSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -52,7 +52,13 @@ interface SubcategoryFormData {
 export function CRMCompaniesSettings() {
   const { companyCategories, companyTypes, isLoading } = useCRMSettings();
   const { disciplineSlug, config } = useDiscipline();
-  const { createSetting, deleteSetting, updateSetting } = useWorkspaceSettings();
+  const { 
+    settings: categorySettings 
+  } = useWorkspaceSettings("company_categories");
+  const { 
+    settings: typeSettings 
+  } = useWorkspaceSettings("company_types");
+  const { createSetting, deleteSetting } = useWorkspaceSettings();
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAIDialog, setShowAIDialog] = useState(false);
@@ -66,10 +72,18 @@ export function CRMCompaniesSettings() {
   const [showSubcategoryDialog, setShowSubcategoryDialog] = useState(false);
   const [editingSubcategory, setEditingSubcategory] = useState<{ key: string; label: string; shortLabel: string; color: string; category: string } | null>(null);
   const [subcategoryForm, setSubcategoryForm] = useState<SubcategoryFormData>({ key: "", label: "", shortLabel: "", color: DEFAULT_COLORS[0], category: "" });
-  const [selectedCategoryForSub, setSelectedCategoryForSub] = useState<string>("");
   
   // Delete confirmation
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: "category" | "subcategory"; key: string } | null>(null);
+
+  // Find setting by key
+  const findCategorySetting = (key: string): WorkspaceSetting | undefined => {
+    return categorySettings.find(s => s.setting_key === key);
+  };
+
+  const findTypeSetting = (key: string): WorkspaceSetting | undefined => {
+    return typeSettings.find(s => s.setting_key === key);
+  };
 
   const handleGenerateWithAI = async () => {
     setIsGenerating(true);
@@ -163,7 +177,6 @@ export function CRMCompaniesSettings() {
   // Subcategory handlers
   const openCreateSubcategory = (categoryKey: string) => {
     setEditingSubcategory(null);
-    setSelectedCategoryForSub(categoryKey);
     const cat = companyCategories.find(c => c.key === categoryKey);
     setSubcategoryForm({ 
       key: "", 
@@ -196,6 +209,40 @@ export function CRMCompaniesSettings() {
       sort_order: companyTypes.length,
     });
     setShowSubcategoryDialog(false);
+  };
+
+  // Delete handlers
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+
+    try {
+      if (deleteConfirm.type === "category") {
+        // Find the category setting
+        const categorySetting = findCategorySetting(deleteConfirm.key);
+        if (categorySetting) {
+          // First delete all types in this category
+          const typesToDelete = typeSettings.filter(t => t.setting_value.category === deleteConfirm.key);
+          for (const type of typesToDelete) {
+            await deleteSetting.mutateAsync(type.id);
+          }
+          // Then delete the category
+          await deleteSetting.mutateAsync(categorySetting.id);
+          toast.success("Catégorie et types associés supprimés");
+        }
+      } else {
+        // Find the type setting
+        const typeSetting = findTypeSetting(deleteConfirm.key);
+        if (typeSetting) {
+          await deleteSetting.mutateAsync(typeSetting.id);
+          toast.success("Type supprimé");
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting:", error);
+      toast.error("Erreur lors de la suppression");
+    } finally {
+      setDeleteConfirm(null);
+    }
   };
 
   if (isLoading) {
@@ -304,25 +351,35 @@ export function CRMCompaniesSettings() {
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           {categoryTypes.map((type) => (
-                            <Badge 
-                              key={type.key} 
-                              variant="outline" 
-                              className="py-1 px-2 gap-1 cursor-pointer hover:bg-muted/50 transition-colors"
-                              style={{ 
-                                borderColor: type.color,
-                                color: type.color,
-                              }}
-                              onClick={() => openEditSubcategory({
-                                key: type.key,
-                                label: type.label,
-                                shortLabel: type.shortLabel || "",
-                                color: type.color,
-                                category: category.key,
-                              })}
-                            >
-                              {type.shortLabel || type.label}
-                              <Pencil className="h-2.5 w-2.5 opacity-50" />
-                            </Badge>
+                            <div key={type.key} className="group relative">
+                              <Badge 
+                                variant="outline" 
+                                className="py-1 px-2 gap-1 cursor-pointer hover:bg-muted/50 transition-colors pr-6"
+                                style={{ 
+                                  borderColor: type.color,
+                                  color: type.color,
+                                }}
+                                onClick={() => openEditSubcategory({
+                                  key: type.key,
+                                  label: type.label,
+                                  shortLabel: type.shortLabel || "",
+                                  color: type.color,
+                                  category: category.key,
+                                })}
+                              >
+                                {type.shortLabel || type.label}
+                                <Pencil className="h-2.5 w-2.5 opacity-50" />
+                              </Badge>
+                              <button
+                                className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteConfirm({ type: "subcategory", key: type.key });
+                                }}
+                              >
+                                <Trash2 className="h-2.5 w-2.5" />
+                              </button>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -453,7 +510,7 @@ export function CRMCompaniesSettings() {
               <Input
                 value={subcategoryForm.label}
                 onChange={(e) => setSubcategoryForm({ ...subcategoryForm, label: e.target.value })}
-                placeholder="Ex: Client privé, Architecte, BET Structure..."
+                placeholder="Ex: Client actif, Partenaire, Fournisseur..."
               />
             </div>
 
@@ -462,7 +519,7 @@ export function CRMCompaniesSettings() {
               <Input
                 value={subcategoryForm.shortLabel}
                 onChange={(e) => setSubcategoryForm({ ...subcategoryForm, shortLabel: e.target.value })}
-                placeholder="Ex: BET, Archi, GO..."
+                placeholder="Ex: Client, Part., Fourn..."
                 maxLength={10}
               />
             </div>
@@ -512,11 +569,7 @@ export function CRMCompaniesSettings() {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                // TODO: Implement delete based on key
-                toast.info("Suppression à implémenter");
-                setDeleteConfirm(null);
-              }}
+              onClick={handleDelete}
             >
               Supprimer
             </AlertDialogAction>

@@ -9,20 +9,8 @@ export const DEFAULT_CONTACT_TYPES = [
   { key: "lead", label: "Lead", color: "#F59E0B", icon: "Target" },
 ];
 
-// --- Spécialités BET ---
-export const DEFAULT_BET_SPECIALTIES = [
-  { key: "structure", label: "Structure", color: "#F97316" },
-  { key: "fluides", label: "Fluides (CVC)", color: "#06B6D4" },
-  { key: "electricite", label: "Électricité", color: "#EAB308" },
-  { key: "acoustique", label: "Acoustique", color: "#8B5CF6" },
-  { key: "thermique", label: "Thermique / RE2020", color: "#EF4444" },
-  { key: "vrd", label: "VRD", color: "#D97706" },
-  { key: "facade", label: "Façades", color: "#64748B" },
-  { key: "environnement", label: "Environnement / HQE", color: "#16A34A" },
-  { key: "economie", label: "Économie", color: "#3B82F6" },
-  { key: "securite", label: "Sécurité incendie", color: "#F43F5E" },
-  { key: "geotechnique", label: "Géotechnique", color: "#78716C" },
-];
+// --- Spécialités (génériques - à personnaliser via IA selon la discipline) ---
+export const DEFAULT_BET_SPECIALTIES: { key: string; label: string; color: string }[] = [];
 
 // --- Sources de leads ---
 export const DEFAULT_LEAD_SOURCES = [
@@ -70,30 +58,11 @@ export const CONTACT_ROLES = [
   { value: "autre", label: "Autre" },
 ];
 
-// --- Catégories d'entreprises (valeurs par défaut - générées par IA selon discipline) ---
-export const DEFAULT_COMPANY_CATEGORIES = [
-  { key: "client", label: "Clients", color: "#10B981" },
-  { key: "partenaire", label: "Partenaires", color: "#8B5CF6" },
-  { key: "fournisseur", label: "Fournisseurs", color: "#3B82F6" },
-  { key: "autre", label: "Autre", color: "#6B7280" },
-];
+// --- Catégories d'entreprises (vides par défaut - générées par IA selon discipline) ---
+export const DEFAULT_COMPANY_CATEGORIES: { key: string; label: string; color: string }[] = [];
 
-// --- Types d'entreprises par défaut (sous-catégories) ---
-export const DEFAULT_COMPANY_TYPES = [
-  // Clients
-  { key: "client_actif", label: "Client actif", shortLabel: "Client", category: "client", color: "#10B981" },
-  { key: "prospect", label: "Prospect", shortLabel: "Prospect", category: "client", color: "#3B82F6" },
-  
-  // Partenaires
-  { key: "partenaire_moe", label: "Partenaire MOE", shortLabel: "MOE", category: "partenaire", color: "#8B5CF6" },
-  { key: "prestataire", label: "Prestataire", shortLabel: "Presta", category: "partenaire", color: "#EC4899" },
-  
-  // Fournisseurs
-  { key: "fournisseur", label: "Fournisseur", shortLabel: "Fourn.", category: "fournisseur", color: "#3B82F6" },
-  
-  // Autre
-  { key: "autre", label: "Autre", shortLabel: "Autre", category: "autre", color: "#6B7280" },
-];
+// --- Types d'entreprises par défaut (vides par défaut - générés par IA selon discipline) ---
+export const DEFAULT_COMPANY_TYPES: { key: string; label: string; shortLabel: string; category: string; color: string }[] = [];
 
 // ============================================================
 // Pipelines Contacts par défaut (pour prospection/campagnes email)
@@ -117,6 +86,7 @@ export interface DefaultContactPipeline {
   stages: DefaultContactPipelineStage[];
 }
 
+// Pipelines génériques - peuvent être personnalisés par discipline via l'IA
 export const DEFAULT_CONTACT_PIPELINES: DefaultContactPipeline[] = [
   {
     key: "client_prospection",
@@ -135,59 +105,11 @@ export const DEFAULT_CONTACT_PIPELINES: DefaultContactPipeline[] = [
     ]
   },
   {
-    key: "promoteur_prospection",
-    name: "Promoteurs",
-    target_contact_type: "promoteur",
-    color: "#6366F1",
-    description: "Pipeline de prospection pour les promoteurs immobiliers",
-    stages: [
-      { name: "Cible identifiée", color: "#6B7280", requires_email: false, probability: 0 },
-      { name: "Prise de contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_promoteur", probability: 15 },
-      { name: "RDV planifié", color: "#8B5CF6", requires_email: false, probability: 30 },
-      { name: "Présentation agence", color: "#F59E0B", requires_email: false, probability: 50 },
-      { name: "En veille projet", color: "#EC4899", requires_email: false, probability: 60 },
-      { name: "Collaboration active", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
-      { name: "Non retenu", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
-    ]
-  },
-  {
-    key: "amenageur_prospection",
-    name: "Aménageurs",
-    target_contact_type: "amenageur",
-    color: "#0EA5E9",
-    description: "Pipeline de prospection pour les aménageurs",
-    stages: [
-      { name: "Identifié", color: "#6B7280", requires_email: false, probability: 0 },
-      { name: "Premier contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_amenageur", probability: 20 },
-      { name: "Qualification projet", color: "#8B5CF6", requires_email: false, probability: 35 },
-      { name: "Présentation", color: "#F59E0B", requires_email: false, probability: 50 },
-      { name: "Négociation", color: "#EC4899", requires_email: false, probability: 70 },
-      { name: "Partenaire", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
-      { name: "Non retenu", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
-    ]
-  },
-  {
-    key: "bet_prospection",
-    name: "BET",
-    target_contact_type: "bet",
-    color: "#F97316",
-    description: "Pipeline de prospection pour les Bureaux d'Études Techniques",
-    stages: [
-      { name: "À contacter", color: "#6B7280", requires_email: false, probability: 0 },
-      { name: "Premier contact", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_bet", probability: 20 },
-      { name: "Relance 1", color: "#8B5CF6", requires_email: true, email_template_type: "contact_followup_1", probability: 30 },
-      { name: "Relance 2", color: "#EC4899", requires_email: true, email_template_type: "contact_followup_2", probability: 40 },
-      { name: "En discussion", color: "#F59E0B", requires_email: false, probability: 60 },
-      { name: "Partenariat établi", color: "#22C55E", requires_email: false, is_final: true, probability: 100 },
-      { name: "Non intéressé", color: "#EF4444", requires_email: false, is_final: true, probability: 0 },
-    ]
-  },
-  {
     key: "partenaire_prospection",
-    name: "Partenaires MOE",
+    name: "Partenaires",
     target_contact_type: "partenaire",
     color: "#8B5CF6",
-    description: "Pipeline de prospection pour architectes, paysagistes, économistes...",
+    description: "Pipeline de prospection pour les partenaires",
     stages: [
       { name: "Identifié", color: "#6B7280", requires_email: false, probability: 0 },
       { name: "Contact initial", color: "#3B82F6", requires_email: true, email_template_type: "contact_first_partner", probability: 20 },
@@ -202,40 +124,8 @@ export const DEFAULT_CONTACT_PIPELINES: DefaultContactPipeline[] = [
 // Templates email par défaut pour les pipelines contacts
 export const DEFAULT_CONTACT_PIPELINE_EMAIL_TEMPLATES = [
   {
-    template_type: "contact_first_bet",
-    name: "Premier contact BET",
-    subject: "Collaboration potentielle - {{agency_name}}",
-    body_html: `<!DOCTYPE html>
-<html>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <p>Bonjour {{contact_name}},</p>
-  <p>Je me permets de vous contacter au nom de <strong>{{agency_name}}</strong>, agence d'architecture basée à {{agency_city}}.</p>
-  <p>Nous recherchons des partenaires BET {{specialty}} pour nos projets et votre expertise a retenu notre attention.</p>
-  <p>Seriez-vous disponible pour un échange téléphonique afin de discuter d'une éventuelle collaboration ?</p>
-  <p>Cordialement,<br/>{{sender_name}}<br/>{{agency_name}}</p>
-</body>
-</html>`,
-    variables: ["contact_name", "agency_name", "agency_city", "specialty", "sender_name"],
-  },
-  {
-    template_type: "contact_first_societe",
-    name: "Premier contact Société",
-    subject: "Partenariat travaux - {{agency_name}}",
-    body_html: `<!DOCTYPE html>
-<html>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <p>Bonjour {{contact_name}},</p>
-  <p>L'agence <strong>{{agency_name}}</strong> développe son réseau de sociétés partenaires.</p>
-  <p>Nous intervenons principalement sur des projets de {{project_types}} et cherchons des entreprises fiables pour nos chantiers.</p>
-  <p>Pourriez-vous nous transmettre votre plaquette et références ?</p>
-  <p>Cordialement,<br/>{{sender_name}}</p>
-</body>
-</html>`,
-    variables: ["contact_name", "agency_name", "project_types", "sender_name"],
-  },
-  {
     template_type: "contact_first_partner",
-    name: "Premier contact Partenaire MOE",
+    name: "Premier contact Partenaire",
     subject: "Proposition de collaboration - {{agency_name}}",
     body_html: `<!DOCTYPE html>
 <html>
@@ -252,12 +142,12 @@ export const DEFAULT_CONTACT_PIPELINE_EMAIL_TEMPLATES = [
   {
     template_type: "contact_first_supplier",
     name: "Premier contact Fournisseur",
-    subject: "Demande d'information produits - {{agency_name}}",
+    subject: "Demande d'information - {{agency_name}}",
     body_html: `<!DOCTYPE html>
 <html>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 600px; margin: 0 auto; padding: 20px;">
   <p>Bonjour {{contact_name}},</p>
-  <p>L'agence <strong>{{agency_name}}</strong> souhaite référencer de nouveaux fournisseurs.</p>
+  <p>L'entreprise <strong>{{agency_name}}</strong> souhaite référencer de nouveaux fournisseurs.</p>
   <p>Pourriez-vous nous transmettre votre catalogue et conditions tarifaires ?</p>
   <p>Cordialement,<br/>{{sender_name}}</p>
 </body>
