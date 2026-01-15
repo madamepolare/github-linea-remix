@@ -365,13 +365,20 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                           <CountryFlag location={contact.location} size="sm" />
                         </TableCell>
                         <TableCell className="py-2">
-                          {contact.contact_type && (
+                          {/* Show type badge - for particulier, display as Client Particulier */}
+                          {(contact.contact_type || !contact.crm_company_id) && (
                             <Badge variant="outline" className="gap-1 text-[10px] h-5 px-1.5">
                               <div
                                 className="w-1.5 h-1.5 rounded-full"
-                                style={{ backgroundColor: getContactTypeColor(contact.contact_type) }}
+                                style={{ 
+                                  backgroundColor: contact.contact_type === "particulier" || !contact.crm_company_id
+                                    ? getContactTypeColor("client")
+                                    : getContactTypeColor(contact.contact_type || "client")
+                                }}
                               />
-                              {getContactTypeLabel(contact.contact_type)}
+                              {contact.contact_type === "particulier" || (!contact.contact_type && !contact.crm_company_id)
+                                ? "Client particulier"
+                                : getContactTypeLabel(contact.contact_type || "client")}
                             </Badge>
                           )}
                         </TableCell>
