@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Building2, User, Target, Plus, ChevronDown } from "lucide-react";
+import { Building2, User, Target, Plus, ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { THIN_STROKE } from "@/components/ui/icon";
 
@@ -13,12 +14,14 @@ interface CRMAddDropdownProps {
   onCreateContact: () => void;
   onCreateCompany: () => void;
   onCreateLead: () => void;
+  onAIProspecting?: () => void;
 }
 
 export function CRMAddDropdown({
   onCreateContact,
   onCreateCompany,
   onCreateLead,
+  onAIProspecting,
 }: CRMAddDropdownProps) {
   const [open, setOpen] = useState(false);
 
@@ -62,6 +65,21 @@ export function CRMAddDropdown({
           <Target className="h-4 w-4 text-muted-foreground" strokeWidth={THIN_STROKE} />
           <span>Opportunité</span>
         </DropdownMenuItem>
+        {onAIProspecting && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => {
+                onAIProspecting();
+                setOpen(false);
+              }}
+              className="gap-2 cursor-pointer text-primary"
+            >
+              <Sparkles className="h-4 w-4" strokeWidth={THIN_STROKE} />
+              <span>Ajouter avec l'IA</span>
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

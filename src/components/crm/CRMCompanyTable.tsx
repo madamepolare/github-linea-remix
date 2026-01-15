@@ -341,14 +341,24 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                           />
                         </TableCell>
                         <TableCell className="py-2">
-                          <Badge
-                            variant="secondary"
-                            className="text-[10px] font-medium text-white px-1.5 py-0 max-w-[80px] truncate"
-                            style={{ backgroundColor: typeColor }}
-                            title={company.industry || undefined}
-                          >
-                            {typeLabel}
-                          </Badge>
+                          <div className="flex items-center gap-1">
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] font-medium text-white px-1.5 py-0 max-w-[80px] truncate"
+                              style={{ backgroundColor: typeColor }}
+                              title={company.industry || undefined}
+                            >
+                              {typeLabel}
+                            </Badge>
+                            {company.status === 'lead' && (
+                              <Badge
+                                variant="outline"
+                                className="text-[9px] px-1 py-0 border-amber-500 text-amber-600 bg-amber-50"
+                              >
+                                Lead
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="py-2">
                           <div className="flex items-center gap-2.5 min-w-0">
