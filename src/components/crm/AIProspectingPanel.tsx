@@ -1,20 +1,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -23,14 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Sparkles,
   Search,
@@ -42,44 +32,53 @@ import {
   MapPin,
   Loader2,
   Check,
-  X,
-  MoreHorizontal,
   ArrowRight,
-  Save,
-  Trash2,
-  ExternalLink,
   Target,
-  RefreshCw,
+  Zap,
+  Users,
+  TrendingUp,
 } from "lucide-react";
-import { useAIProspects, ProspectSearchResult, ProspectContact, AIProspect } from "@/hooks/useAIProspects";
+import { useAIProspects, ProspectSearchResult, ProspectContact } from "@/hooks/useAIProspects";
+import { useCRMPipelines, Pipeline, PipelineStage } from "@/hooks/useCRMPipelines";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const EXAMPLE_PROMPTS = [
-  "Directeurs commerciaux et responsables développement chez les promoteurs immobiliers Île-de-France avec emails et téléphones",
-  "Architectes associés et directeurs d'agences d'architecture Paris Lyon Marseille, emails LinkedIn",
-  "Dirigeants et responsables projets des bureaux d'études structure fluides région parisienne",
-  "Responsables achats prescription maîtres d'ouvrage publics Hauts-de-France, coordonnées complètes",
-  "Directeurs de programmes et développeurs fonciers promoteurs immobiliers Rhône-Alpes",
+  "Directeurs commerciaux promoteurs immobiliers Île-de-France",
+  "Architectes associés agences Paris Lyon Marseille",
+  "Responsables projets bureaux d'études structure",
+  "Responsables achats maîtres d'ouvrage publics",
+  "Directeurs de programmes promoteurs Rhône-Alpes",
 ];
+
+interface SelectedProspectForConversion {
+  result: ProspectSearchResult;
+  contacts: Set<number>; // indices of selected contacts
+}
 
 export function AIProspectingPanel() {
   const {
-    prospects,
-    isLoading,
     searchProspects,
-    saveProspects,
-    convertProspect,
-    deleteProspect,
-    rejectProspect,
+    saveAndConvertProspects,
   } = useAIProspects();
+
+  const { opportunityPipelines } = useCRMPipelines();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ProspectSearchResult[]>([]);
-  const [selectedResults, setSelectedResults] = useState<Set<number>>(new Set());
-  const [activeTab, setActiveTab] = useState<"search" | "saved">("search");
-  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
-  const [selectedProspect, setSelectedProspect] = useState<AIProspect | null>(null);
-  const [createLeadOnConvert, setCreateLeadOnConvert] = useState(true);
+  const [selectedForConversion, setSelectedForConversion] = useState<Map<number, SelectedProspectForConversion>>(new Map());
+  
+  // Conversion dialog
+  const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>("");
+  const [selectedStageId, setSelectedStageId] = useState<string>("");
+  const [createLeads, setCreateLeads] = useState(true);
+  const [isConverting, setIsConverting] = useState(false);
+
+  // Get default pipeline
+  const defaultPipeline = opportunityPipelines.find(p => p.is_default) || opportunityPipelines[0];
+  const selectedPipeline = opportunityPipelines.find(p => p.id === selectedPipelineId);
+  const availableStages = selectedPipeline?.stages || [];
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -87,581 +86,520 @@ export function AIProspectingPanel() {
     try {
       const result = await searchProspects.mutateAsync({ query: searchQuery });
       setSearchResults(result.prospects);
-      setSelectedResults(new Set(result.prospects.map((_, i) => i)));
+      setSelectedForConversion(new Map());
     } catch (error) {
       console.error("Search failed:", error);
     }
   };
 
-  const handleSaveSelected = async () => {
-    const selectedProspects = searchResults.filter((_, i) => selectedResults.has(i));
-    if (selectedProspects.length === 0) return;
-
-    await saveProspects.mutateAsync({
-      prospects: selectedProspects,
-      sourceQuery: searchQuery,
-    });
-
-    setSearchResults([]);
-    setSelectedResults(new Set());
-    setActiveTab("saved");
-  };
-
-  const toggleResult = (index: number) => {
-    const newSelected = new Set(selectedResults);
-    if (newSelected.has(index)) {
-      newSelected.delete(index);
+  const toggleCompanySelection = (index: number) => {
+    const newSelection = new Map(selectedForConversion);
+    
+    if (newSelection.has(index)) {
+      newSelection.delete(index);
     } else {
-      newSelected.add(index);
+      const result = searchResults[index];
+      // Select all contacts by default
+      const allContactIndices = new Set(result.contacts?.map((_, i) => i) || []);
+      newSelection.set(index, {
+        result,
+        contacts: allContactIndices,
+      });
     }
-    setSelectedResults(newSelected);
+    
+    setSelectedForConversion(newSelection);
   };
 
-  const toggleAll = () => {
-    if (selectedResults.size === searchResults.length) {
-      setSelectedResults(new Set());
+  const toggleContactSelection = (companyIndex: number, contactIndex: number) => {
+    const newSelection = new Map(selectedForConversion);
+    const current = newSelection.get(companyIndex);
+    
+    if (!current) return;
+    
+    const newContacts = new Set(current.contacts);
+    if (newContacts.has(contactIndex)) {
+      newContacts.delete(contactIndex);
     } else {
-      setSelectedResults(new Set(searchResults.map((_, i) => i)));
+      newContacts.add(contactIndex);
+    }
+    
+    newSelection.set(companyIndex, { ...current, contacts: newContacts });
+    setSelectedForConversion(newSelection);
+  };
+
+  const selectAll = () => {
+    if (selectedForConversion.size === searchResults.length) {
+      setSelectedForConversion(new Map());
+    } else {
+      const newSelection = new Map<number, SelectedProspectForConversion>();
+      searchResults.forEach((result, index) => {
+        const allContactIndices = new Set(result.contacts?.map((_, i) => i) || []);
+        newSelection.set(index, { result, contacts: allContactIndices });
+      });
+      setSelectedForConversion(newSelection);
     }
   };
 
-  const openConvertDialog = (prospect: AIProspect) => {
-    setSelectedProspect(prospect);
-    setConvertDialogOpen(true);
+  const openConversionDialog = () => {
+    if (selectedForConversion.size === 0) {
+      toast.error("Sélectionnez au moins une entreprise");
+      return;
+    }
+    
+    // Set defaults
+    if (defaultPipeline) {
+      setSelectedPipelineId(defaultPipeline.id);
+      const firstStage = defaultPipeline.stages?.[0];
+      if (firstStage) {
+        setSelectedStageId(firstStage.id);
+      }
+    }
+    
+    setShowConvertDialog(true);
   };
 
   const handleConvert = async () => {
-    if (!selectedProspect) return;
+    if (selectedForConversion.size === 0) return;
+    
+    setIsConverting(true);
+    
+    try {
+      // Prepare prospects for conversion
+      const prospectsToConvert: Array<{
+        company: ProspectSearchResult;
+        selectedContacts: ProspectContact[];
+      }> = [];
 
-    await convertProspect.mutateAsync({
-      prospect: selectedProspect,
-      createLead: createLeadOnConvert,
-    });
+      selectedForConversion.forEach(({ result, contacts }) => {
+        const selectedContacts = result.contacts?.filter((_, i) => contacts.has(i)) || [];
+        prospectsToConvert.push({
+          company: result,
+          selectedContacts,
+        });
+      });
 
-    setConvertDialogOpen(false);
-    setSelectedProspect(null);
-  };
+      await saveAndConvertProspects.mutateAsync({
+        prospects: prospectsToConvert,
+        sourceQuery: searchQuery,
+        createLeads,
+        pipelineId: selectedPipelineId || undefined,
+        stageId: selectedStageId || undefined,
+      });
 
-  const getStatusBadge = (status: AIProspect["status"]) => {
-    switch (status) {
-      case "new":
-        return <Badge variant="secondary">Nouveau</Badge>;
-      case "reviewed":
-        return <Badge variant="outline">Examiné</Badge>;
-      case "converted":
-        return <Badge className="bg-emerald-500">Converti</Badge>;
-      case "rejected":
-        return <Badge variant="destructive">Rejeté</Badge>;
+      // Clear selection and close dialog
+      setSelectedForConversion(new Map());
+      setShowConvertDialog(false);
+      setSearchResults([]);
+      
+      const totalContacts = prospectsToConvert.reduce((acc, p) => acc + p.selectedContacts.length, 0);
+      toast.success(
+        `${prospectsToConvert.length} entreprise(s) et ${totalContacts} contact(s) ajoutés au CRM`
+      );
+    } catch (error) {
+      console.error("Conversion failed:", error);
+      toast.error("Erreur lors de la conversion");
+    } finally {
+      setIsConverting(false);
     }
   };
 
-  const newProspects = prospects.filter((p) => p.status === "new" || p.status === "reviewed");
-  const convertedProspects = prospects.filter((p) => p.status === "converted");
+  const totalSelectedContacts = Array.from(selectedForConversion.values())
+    .reduce((acc, s) => acc + s.contacts.size, 0);
 
   return (
     <div className="space-y-6">
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "search" | "saved")}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="search" className="gap-2">
-            <Sparkles className="h-4 w-4" />
-            Recherche AI
-          </TabsTrigger>
-          <TabsTrigger value="saved" className="gap-2">
-            <Target className="h-4 w-4" />
-            Prospects ({newProspects.length})
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Search Tab */}
-        <TabsContent value="search" className="mt-6 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Agent de Prospection AI
-              </CardTitle>
-              <CardDescription>
-                Soyez précis sur les <strong>fonctions</strong> (directeur commercial, gérant...), le <strong>secteur</strong> et la <strong>localisation</strong>. Plus votre demande est détaillée, plus l'IA trouvera de contacts.
+      {/* Search Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+              <Sparkles className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Recherche IA de prospects</CardTitle>
+              <CardDescription className="text-sm">
+                Décrivez les profils recherchés : fonction, secteur, localisation
               </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Ex: Directeurs commerciaux et responsables développement chez les promoteurs immobiliers en Île-de-France, avec leurs emails et numéros de téléphone directs..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  rows={3}
-                  className="resize-none"
-                />
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">💡 Exemples de prompts efficaces :</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {EXAMPLE_PROMPTS.map((prompt) => (
-                      <Button
-                        key={prompt}
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs h-auto py-1 px-2 text-muted-foreground hover:text-foreground whitespace-normal text-left justify-start"
-                        onClick={() => setSearchQuery(prompt)}
-                      >
-                        {prompt.length > 60 ? prompt.substring(0, 60) + "..." : prompt}
-                      </Button>
-                    ))}
-                  </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <Textarea
+              placeholder="Ex: Directeurs commerciaux et responsables développement chez les promoteurs immobiliers en Île-de-France..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              rows={2}
+              className="resize-none"
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {EXAMPLE_PROMPTS.map((prompt) => (
+                <Button
+                  key={prompt}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7 px-2 text-muted-foreground hover:text-foreground"
+                  onClick={() => setSearchQuery(prompt)}
+                >
+                  {prompt}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <Button
+            onClick={handleSearch}
+            disabled={!searchQuery.trim() || searchProspects.isPending}
+            className="w-full sm:w-auto"
+          >
+            {searchProspects.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Recherche en cours...
+              </>
+            ) : (
+              <>
+                <Search className="h-4 w-4 mr-2" />
+                Rechercher
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Results */}
+      {searchResults.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              {/* Stats */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-primary">{searchResults.length}</span>
+                  <span className="text-xs text-muted-foreground">entreprises</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold">{searchResults.reduce((acc, r) => acc + (r.contacts?.length || 0), 0)}</span>
+                  <span className="text-xs text-muted-foreground">contacts</span>
                 </div>
               </div>
 
-              <Button
-                onClick={handleSearch}
-                disabled={!searchQuery.trim() || searchProspects.isPending}
-                className="w-full sm:w-auto"
-              >
-                {searchProspects.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Recherche en cours...
-                  </>
-                ) : (
-                  <>
-                    <Search className="h-4 w-4 mr-2" />
-                    Lancer la recherche
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={selectAll}>
+                  {selectedForConversion.size === searchResults.length ? "Désélectionner tout" : "Tout sélectionner"}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={openConversionDialog}
+                  disabled={selectedForConversion.size === 0}
+                  className="gap-2"
+                >
+                  <Zap className="h-4 w-4" />
+                  Ajouter au CRM ({selectedForConversion.size})
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
 
-          {/* Search Results */}
-          {searchResults.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-4">
-                    <div className="text-center px-4 py-2 rounded-lg bg-primary/10 border border-primary/20">
-                      <div className="text-2xl font-bold text-primary">
-                        {searchResults.reduce((acc, r) => acc + (r.contacts?.length || 0), 0)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">contacts</div>
-                    </div>
-                    <div className="text-center px-4 py-2 rounded-lg bg-muted">
-                      <div className="text-2xl font-bold">
-                        {searchResults.length}
-                      </div>
-                      <div className="text-xs text-muted-foreground">entreprises</div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={toggleAll}>
-                      {selectedResults.size === searchResults.length ? "Désélectionner" : "Tout sélectionner"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleSaveSelected}
-                      disabled={selectedResults.size === 0 || saveProspects.isPending}
-                    >
-                      {saveProspects.isPending ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4 mr-2" />
+          <CardContent className="p-0">
+            <ScrollArea className="h-[500px]">
+              <div className="divide-y">
+                {searchResults.map((result, index) => {
+                  const isSelected = selectedForConversion.has(index);
+                  const selection = selectedForConversion.get(index);
+                  
+                  return (
+                    <div
+                      key={index}
+                      className={cn(
+                        "p-4 transition-colors",
+                        isSelected ? "bg-primary/5" : "hover:bg-muted/30"
                       )}
-                      Enregistrer ({selectedResults.size})
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[500px]">
-                  <div className="space-y-4">
-                    {searchResults.map((result, index) => (
-                      <div
-                        key={index}
-                        className={cn(
-                          "rounded-lg border transition-colors",
-                          selectedResults.has(index)
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        )}
+                    >
+                      {/* Company Header */}
+                      <div 
+                        className="flex items-start gap-3 cursor-pointer"
+                        onClick={() => toggleCompanySelection(index)}
                       >
-                        {/* Company Header */}
-                        <div 
-                          className="p-4 cursor-pointer"
-                          onClick={() => toggleResult(index)}
-                        >
-                          <div className="flex items-start gap-3">
-                            <Checkbox
-                              checked={selectedResults.has(index)}
-                              onCheckedChange={() => toggleResult(index)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <div className="flex-1 min-w-0 space-y-3">
-                              {/* Company info */}
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Building2 className="h-4 w-4 text-primary shrink-0" />
-                                <span className="font-semibold text-base">{result.company_name}</span>
-                                {result.company_industry && (
-                                  <Badge variant="secondary" className="text-[10px]">
-                                    {result.company_industry}
-                                  </Badge>
-                                )}
-                                {result.confidence_score && (
-                                  <Badge variant="outline" className="text-[10px]">
-                                    Confiance: {Math.round(result.confidence_score * 100)}%
-                                  </Badge>
-                                )}
-                              </div>
-
-                              {/* Company details grid */}
-                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
-                                {result.company_city && (
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <MapPin className="h-3.5 w-3.5 shrink-0" />
-                                    <span>{result.company_postal_code} {result.company_city}</span>
-                                  </div>
-                                )}
-                                {result.company_phone && (
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Phone className="h-3.5 w-3.5 shrink-0" />
-                                    <span>{result.company_phone}</span>
-                                  </div>
-                                )}
-                                {result.company_email && (
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Mail className="h-3.5 w-3.5 shrink-0" />
-                                    <span className="truncate">{result.company_email}</span>
-                                  </div>
-                                )}
-                                {result.company_website && (
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Globe className="h-3.5 w-3.5 shrink-0" />
-                                    <a
-                                      href={result.company_website.startsWith("http") ? result.company_website : `https://${result.company_website}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="hover:text-primary truncate"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {result.company_website}
-                                    </a>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Contacts section */}
-                              {result.contacts && result.contacts.length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-border/50">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <User className="h-3.5 w-3.5 text-muted-foreground" />
-                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                      {result.contacts.length} contact{result.contacts.length > 1 ? "s" : ""} trouvé{result.contacts.length > 1 ? "s" : ""}
-                                    </span>
-                                  </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    {result.contacts.map((contact, cIdx) => (
-                                      <div 
-                                        key={cIdx}
-                                        className="p-2.5 rounded-md bg-muted/30 border border-border/50 space-y-1"
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-medium text-sm">{contact.name}</span>
-                                          {contact.role && (
-                                            <Badge variant="outline" className="text-[10px] h-5">
-                                              {contact.role}
-                                            </Badge>
-                                          )}
-                                        </div>
-                                        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                                          {contact.email && (
-                                            <div className="flex items-center gap-1">
-                                              <Mail className="h-3 w-3" />
-                                              <span>{contact.email}</span>
-                                            </div>
-                                          )}
-                                          {contact.phone && (
-                                            <div className="flex items-center gap-1">
-                                              <Phone className="h-3 w-3" />
-                                              <span>{contact.phone}</span>
-                                            </div>
-                                          )}
-                                          {contact.linkedin && (
-                                            <a
-                                              href={contact.linkedin}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="flex items-center gap-1 hover:text-primary"
-                                              onClick={(e) => e.stopPropagation()}
-                                            >
-                                              <ExternalLink className="h-3 w-3" />
-                                              <span>LinkedIn</span>
-                                            </a>
-                                          )}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Notes */}
-                              {result.notes && (
-                                <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2 mt-2">
-                                  💡 {result.notes}
-                                </p>
-                              )}
-                            </div>
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleCompanySelection(index)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1"
+                        />
+                        <div className="flex-1 min-w-0 space-y-2">
+                          {/* Company info */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Building2 className="h-4 w-4 text-primary shrink-0" />
+                            <span className="font-semibold">{result.company_name}</span>
+                            {result.company_industry && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                {result.company_industry}
+                              </Badge>
+                            )}
+                            {result.confidence_score && result.confidence_score >= 0.8 && (
+                              <Badge variant="outline" className="text-[10px] gap-1 text-emerald-600 border-emerald-200 bg-emerald-50">
+                                <TrendingUp className="h-3 w-3" />
+                                Haute qualité
+                              </Badge>
+                            )}
                           </div>
+
+                          {/* Company details */}
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            {result.company_city && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3.5 w-3.5" />
+                                {result.company_postal_code} {result.company_city}
+                              </span>
+                            )}
+                            {result.company_phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3.5 w-3.5" />
+                                {result.company_phone}
+                              </span>
+                            )}
+                            {result.company_email && (
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3.5 w-3.5" />
+                                {result.company_email}
+                              </span>
+                            )}
+                            {result.company_website && (
+                              <a
+                                href={result.company_website.startsWith("http") ? result.company_website : `https://${result.company_website}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 hover:text-primary"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Globe className="h-3.5 w-3.5" />
+                                Site web
+                              </a>
+                            )}
+                          </div>
+
+                          {/* Contacts */}
+                          {result.contacts && result.contacts.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-border/50">
+                              <div className="flex items-center gap-2 mb-2">
+                                <User className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                  {result.contacts.length} contact{result.contacts.length > 1 ? "s" : ""}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                {result.contacts.map((contact, cIdx) => {
+                                  const isContactSelected = isSelected && selection?.contacts.has(cIdx);
+                                  
+                                  return (
+                                    <div 
+                                      key={cIdx}
+                                      className={cn(
+                                        "p-2.5 rounded-md border space-y-1 cursor-pointer transition-colors",
+                                        isContactSelected 
+                                          ? "bg-primary/10 border-primary/30" 
+                                          : "bg-muted/30 border-border/50 hover:border-border"
+                                      )}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (isSelected) {
+                                          toggleContactSelection(index, cIdx);
+                                        }
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        {isSelected && (
+                                          <Checkbox
+                                            checked={isContactSelected}
+                                            onCheckedChange={() => toggleContactSelection(index, cIdx)}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="h-3.5 w-3.5"
+                                          />
+                                        )}
+                                        <span className="font-medium text-sm">{contact.name}</span>
+                                        {contact.role && (
+                                          <Badge variant="outline" className="text-[10px] h-5">
+                                            {contact.role}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                                        {contact.email && (
+                                          <span className="flex items-center gap-1">
+                                            <Mail className="h-3 w-3" />
+                                            {contact.email}
+                                          </span>
+                                        )}
+                                        {contact.phone && (
+                                          <span className="flex items-center gap-1">
+                                            <Phone className="h-3 w-3" />
+                                            {contact.phone}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
 
-          {searchProspects.isSuccess && searchResults.length === 0 && (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Aucun prospect trouvé pour cette recherche.</p>
-                <p className="text-sm mt-1">Essayez avec des termes différents.</p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+      {/* Empty state after search */}
+      {searchProspects.isSuccess && searchResults.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Aucun prospect trouvé pour cette recherche.</p>
+            <p className="text-sm mt-1">Essayez avec des termes différents.</p>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Saved Prospects Tab */}
-        <TabsContent value="saved" className="mt-6">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : newProspects.length === 0 && convertedProspects.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Aucun prospect enregistré</p>
-                <p className="text-sm mt-1">
-                  Utilisez l'onglet "Recherche AI" pour trouver de nouveaux prospects.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-6">
-              {/* New prospects */}
-              {newProspects.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Target className="h-4 w-4" />
-                      Prospects à traiter ({newProspects.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-[400px]">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Entreprise</TableHead>
-                            <TableHead>Contact</TableHead>
-                            <TableHead>Coordonnées</TableHead>
-                            <TableHead>Requête</TableHead>
-                            <TableHead className="w-[100px]">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {newProspects.map((prospect) => (
-                            <TableRow key={prospect.id}>
-                              <TableCell>
-                                <div className="font-medium">{prospect.company_name}</div>
-                                {prospect.company_city && (
-                                  <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <MapPin className="h-3 w-3" />
-                                    {prospect.company_city}
-                                  </div>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {prospect.contact_name ? (
-                                  <div>
-                                    <div className="text-sm">{prospect.contact_name}</div>
-                                    {prospect.contact_role && (
-                                      <div className="text-xs text-muted-foreground">
-                                        {prospect.contact_role}
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground text-sm">—</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <div className="space-y-1">
-                                  {(prospect.contact_email || prospect.company_email) && (
-                                    <div className="flex items-center gap-1 text-xs">
-                                      <Mail className="h-3 w-3" />
-                                      {prospect.contact_email || prospect.company_email}
-                                    </div>
-                                  )}
-                                  {(prospect.contact_phone || prospect.company_phone) && (
-                                    <div className="flex items-center gap-1 text-xs">
-                                      <Phone className="h-3 w-3" />
-                                      {prospect.contact_phone || prospect.company_phone}
-                                    </div>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <span className="text-xs text-muted-foreground line-clamp-2">
-                                  {prospect.source_query}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => openConvertDialog(prospect)}>
-                                      <ArrowRight className="h-4 w-4 mr-2" />
-                                      Convertir en contact
-                                    </DropdownMenuItem>
-                                    {prospect.company_website && (
-                                      <DropdownMenuItem asChild>
-                                        <a
-                                          href={prospect.company_website}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                        >
-                                          <ExternalLink className="h-4 w-4 mr-2" />
-                                          Voir le site
-                                        </a>
-                                      </DropdownMenuItem>
-                                    )}
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => rejectProspect.mutate(prospect.id)}
-                                    >
-                                      <X className="h-4 w-4 mr-2" />
-                                      Rejeter
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      className="text-destructive"
-                                      onClick={() => deleteProspect.mutate(prospect.id)}
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Supprimer
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Converted prospects */}
-              {convertedProspects.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Check className="h-4 w-4 text-emerald-500" />
-                      Prospects convertis ({convertedProspects.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-[200px]">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Entreprise</TableHead>
-                            <TableHead>Contact</TableHead>
-                            <TableHead>Date conversion</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {convertedProspects.map((prospect) => (
-                            <TableRow key={prospect.id} className="opacity-70">
-                              <TableCell className="font-medium">
-                                {prospect.company_name}
-                              </TableCell>
-                              <TableCell>{prospect.contact_name || "—"}</TableCell>
-                              <TableCell className="text-sm text-muted-foreground">
-                                {new Date(prospect.updated_at).toLocaleDateString("fr-FR")}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {/* Convert Dialog */}
-      <Dialog open={convertDialogOpen} onOpenChange={setConvertDialogOpen}>
-        <DialogContent>
+      {/* Conversion Dialog */}
+      <Dialog open={showConvertDialog} onOpenChange={setShowConvertDialog}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Convertir le prospect</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Ajouter au CRM
+            </DialogTitle>
             <DialogDescription>
-              Ce prospect va être converti en entreprise et contact dans votre CRM.
+              {selectedForConversion.size} entreprise(s) et {totalSelectedContacts} contact(s) sélectionné(s)
             </DialogDescription>
           </DialogHeader>
 
-          {selectedProspect && (
-            <div className="space-y-4 py-4">
-              <div className="p-4 rounded-lg border bg-muted/30 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{selectedProspect.company_name}</span>
+          <div className="space-y-4 py-4">
+            {/* Summary */}
+            <div className="p-3 rounded-lg border bg-muted/30 space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">{selectedForConversion.size} entreprises</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">{totalSelectedContacts} contacts</span>
+              </div>
+            </div>
+
+            {/* Create leads option */}
+            <div className="flex items-center gap-3 p-3 rounded-lg border">
+              <Checkbox
+                id="create-leads"
+                checked={createLeads}
+                onCheckedChange={(checked) => setCreateLeads(!!checked)}
+              />
+              <label htmlFor="create-leads" className="flex-1 cursor-pointer">
+                <div className="font-medium text-sm">Créer des opportunités</div>
+                <div className="text-xs text-muted-foreground">
+                  Une opportunité sera créée pour chaque entreprise
                 </div>
-                {selectedProspect.contact_name && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <User className="h-4 w-4" />
-                    <span>{selectedProspect.contact_name}</span>
-                    {selectedProspect.contact_role && (
-                      <span className="text-xs">({selectedProspect.contact_role})</span>
-                    )}
+              </label>
+            </div>
+
+            {/* Pipeline selection */}
+            {createLeads && opportunityPipelines.length > 0 && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label className="text-sm">Pipeline</Label>
+                  <Select
+                    value={selectedPipelineId}
+                    onValueChange={(value) => {
+                      setSelectedPipelineId(value);
+                      const pipeline = opportunityPipelines.find(p => p.id === value);
+                      const firstStage = pipeline?.stages?.[0];
+                      if (firstStage) {
+                        setSelectedStageId(firstStage.id);
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un pipeline" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {opportunityPipelines.map((pipeline) => (
+                        <SelectItem key={pipeline.id} value={pipeline.id}>
+                          <div className="flex items-center gap-2">
+                            {pipeline.color && (
+                              <div 
+                                className="w-2 h-2 rounded-full" 
+                                style={{ backgroundColor: pipeline.color }}
+                              />
+                            )}
+                            {pipeline.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {availableStages.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Étape initiale</Label>
+                    <Select
+                      value={selectedStageId}
+                      onValueChange={setSelectedStageId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une étape" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableStages.map((stage) => (
+                          <SelectItem key={stage.id} value={stage.id}>
+                            <div className="flex items-center gap-2">
+                              {stage.color && (
+                                <div 
+                                  className="w-2 h-2 rounded-full" 
+                                  style={{ backgroundColor: stage.color }}
+                                />
+                              )}
+                              {stage.name}
+                              {stage.probability !== null && (
+                                <span className="text-xs text-muted-foreground">
+                                  ({stage.probability}%)
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
               </div>
-
-              <div className="flex items-center gap-3 p-3 rounded-lg border">
-                <Checkbox
-                  id="create-lead"
-                  checked={createLeadOnConvert}
-                  onCheckedChange={(checked) => setCreateLeadOnConvert(!!checked)}
-                />
-                <label htmlFor="create-lead" className="flex-1 cursor-pointer">
-                  <div className="font-medium text-sm">Créer une opportunité</div>
-                  <div className="text-xs text-muted-foreground">
-                    Une opportunité sera créée en plus de l'entreprise et du contact
-                  </div>
-                </label>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConvertDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setShowConvertDialog(false)}>
               Annuler
             </Button>
-            <Button onClick={handleConvert} disabled={convertProspect.isPending}>
-              {convertProspect.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            <Button onClick={handleConvert} disabled={isConverting}>
+              {isConverting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Ajout en cours...
+                </>
               ) : (
-                <ArrowRight className="h-4 w-4 mr-2" />
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Ajouter au CRM
+                </>
               )}
-              Convertir
             </Button>
           </DialogFooter>
         </DialogContent>

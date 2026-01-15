@@ -89,12 +89,168 @@ export function useAIProspects() {
     },
   });
 
-  // Save prospects to database - one row per contact
+  // Save and convert prospects in one step (simplified workflow)
+  const saveAndConvertProspects = useMutation({
+    mutationFn: async ({ 
+      prospects: prospectsToConvert, 
+      sourceQuery,
+      createLeads = true,
+      pipelineId,
+      stageId,
+    }: { 
+      prospects: Array<{
+        company: ProspectSearchResult;
+        selectedContacts: ProspectContact[];
+      }>; 
+      sourceQuery: string;
+      createLeads?: boolean;
+      pipelineId?: string;
+      stageId?: string;
+    }) => {
+      if (!activeWorkspace?.id) throw new Error("No workspace");
+
+      const results: Array<{
+        companyId: string;
+        contactIds: string[];
+        leadId?: string;
+      }> = [];
+
+      for (const { company, selectedContacts } of prospectsToConvert) {
+        // 1. Create company
+        const { data: createdCompany, error: companyError } = await supabase
+          .from("crm_companies")
+          .insert({
+            workspace_id: activeWorkspace.id,
+            name: company.company_name,
+            website: company.company_website || null,
+            address: company.company_address || null,
+            city: company.company_city || null,
+            postal_code: company.company_postal_code || null,
+            phone: company.company_phone || null,
+            email: company.company_email || null,
+            industry: company.company_industry || null,
+            notes: `Source: ${sourceQuery}`,
+            created_by: user?.id,
+          })
+          .select()
+          .single();
+
+        if (companyError) {
+          console.error("Company creation error:", companyError);
+          throw companyError;
+        }
+
+        const contactIds: string[] = [];
+
+        // 2. Create contacts
+        for (const contact of selectedContacts) {
+          const { data: createdContact, error: contactError } = await supabase
+            .from("contacts")
+            .insert({
+              workspace_id: activeWorkspace.id,
+              name: contact.name,
+              email: contact.email || null,
+              phone: contact.phone || null,
+              role: contact.role || null,
+              crm_company_id: createdCompany.id,
+              created_by: user?.id,
+            })
+            .select()
+            .single();
+
+          if (contactError) {
+            console.error("Contact creation error:", contactError);
+            continue; // Continue with other contacts
+          }
+
+          contactIds.push(createdContact.id);
+        }
+
+        let leadId: string | undefined;
+
+        // 3. Create lead if requested
+        if (createLeads) {
+          const leadData: any = {
+            workspace_id: activeWorkspace.id,
+            title: `Opportunité - ${company.company_name}`,
+            crm_company_id: createdCompany.id,
+            contact_id: contactIds[0] || null, // Link to first contact
+            source: "ai_prospection",
+            status: "new",
+            created_by: user?.id,
+          };
+
+          // Add pipeline and stage if provided
+          if (pipelineId) {
+            leadData.pipeline_id = pipelineId;
+          }
+          if (stageId) {
+            leadData.stage_id = stageId;
+          }
+
+          const { data: createdLead, error: leadError } = await supabase
+            .from("leads")
+            .insert(leadData)
+            .select()
+            .single();
+
+          if (leadError) {
+            console.error("Lead creation error:", leadError);
+          } else {
+            leadId = createdLead.id;
+          }
+        }
+
+        // 4. Save to ai_prospects for tracking
+        await supabase.from("ai_prospects").insert({
+          workspace_id: activeWorkspace.id,
+          company_name: company.company_name,
+          company_website: company.company_website || null,
+          company_city: company.company_city || null,
+          company_postal_code: company.company_postal_code || null,
+          company_phone: company.company_phone || null,
+          company_email: company.company_email || null,
+          company_industry: company.company_industry || null,
+          contact_name: selectedContacts[0]?.name || null,
+          contact_email: selectedContacts[0]?.email || null,
+          contact_phone: selectedContacts[0]?.phone || null,
+          contact_role: selectedContacts[0]?.role || null,
+          source_query: sourceQuery,
+          source_url: company.source_url || null,
+          confidence_score: company.confidence_score || null,
+          status: "converted",
+          converted_company_id: createdCompany.id,
+          converted_contact_id: contactIds[0] || null,
+          converted_lead_id: leadId || null,
+          created_by: user?.id,
+        });
+
+        results.push({
+          companyId: createdCompany.id,
+          contactIds,
+          leadId,
+        });
+      }
+
+      return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ai-prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-companies"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
+    onError: (error) => {
+      console.error("Conversion error:", error);
+      toast.error("Erreur lors de l'ajout au CRM");
+    },
+  });
+
+  // Legacy: Save prospects to database - one row per contact
   const saveProspects = useMutation({
     mutationFn: async ({ prospects: newProspects, sourceQuery }: { prospects: ProspectSearchResult[]; sourceQuery: string }) => {
       if (!activeWorkspace?.id) throw new Error("No workspace");
 
-      // Flatten prospects: one row per contact (or one row for company without contacts)
       const prospectsToInsert: Array<{
         workspace_id: string;
         company_name: string;
@@ -137,7 +293,6 @@ export function useAIProspects() {
         };
 
         if (p.contacts && p.contacts.length > 0) {
-          // Create one row per contact
           for (const contact of p.contacts) {
             prospectsToInsert.push({
               ...baseProspect,
@@ -148,7 +303,6 @@ export function useAIProspects() {
             });
           }
         } else {
-          // Company without contacts
           prospectsToInsert.push({
             ...baseProspect,
             contact_name: null,
@@ -196,7 +350,17 @@ export function useAIProspects() {
 
   // Convert prospect to company + contact + lead
   const convertProspect = useMutation({
-    mutationFn: async ({ prospect, createLead = false }: { prospect: AIProspect; createLead?: boolean }) => {
+    mutationFn: async ({ 
+      prospect, 
+      createLead = false,
+      pipelineId,
+      stageId,
+    }: { 
+      prospect: AIProspect; 
+      createLead?: boolean;
+      pipelineId?: string;
+      stageId?: string;
+    }) => {
       if (!activeWorkspace?.id) throw new Error("No workspace");
 
       // 1. Create company
@@ -244,17 +408,27 @@ export function useAIProspects() {
 
       // 3. Create lead if requested
       if (createLead) {
+        const leadData: any = {
+          workspace_id: activeWorkspace.id,
+          title: `Opportunité - ${prospect.company_name}`,
+          crm_company_id: company.id,
+          contact_id: contactId,
+          source: "ai_prospection",
+          status: "new",
+          created_by: user?.id,
+        };
+
+        // Add pipeline and stage if provided
+        if (pipelineId) {
+          leadData.pipeline_id = pipelineId;
+        }
+        if (stageId) {
+          leadData.stage_id = stageId;
+        }
+
         const { data: lead, error: leadError } = await supabase
           .from("leads")
-          .insert({
-            workspace_id: activeWorkspace.id,
-            title: `Opportunité - ${prospect.company_name}`,
-            crm_company_id: company.id,
-            contact_id: contactId,
-            source: "ai_prospection",
-            status: "new",
-            created_by: user?.id,
-          })
+          .insert(leadData)
           .select()
           .single();
 
@@ -325,6 +499,7 @@ export function useAIProspects() {
     refetch,
     searchProspects,
     saveProspects,
+    saveAndConvertProspects,
     updateProspect,
     convertProspect,
     deleteProspect,

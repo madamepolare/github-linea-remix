@@ -1,4 +1,4 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Sparkles } from "lucide-react";
 import { AIProspectingPanel } from "./AIProspectingPanel";
 
@@ -18,6 +18,9 @@ export function AIProspectingSheet({ open, onOpenChange }: AIProspectingSheetPro
             </div>
             Prospection IA
           </SheetTitle>
+          <SheetDescription>
+            Recherchez des prospects et ajoutez-les directement à votre CRM
+          </SheetDescription>
         </SheetHeader>
         <div className="mt-2">
           <AIProspectingPanel />
