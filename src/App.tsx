@@ -122,7 +122,9 @@ const App = () => (
                   <Route path="/crm/contacts/:id" element={<Suspense fallback={<PageLoader />}><ContactDetail /></Suspense>} />
                   <Route path="/crm/leads/:id" element={<Suspense fallback={<PageLoader />}><LeadDetail /></Suspense>} />
                   <Route path="/tasks" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
-                  <Route path="/tasks/view/:view" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
+                  <Route path="/tasks/board" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
+                  <Route path="/tasks/list" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
+                  <Route path="/tasks/archive" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
                   <Route path="/tasks/:taskId" element={<Suspense fallback={<PageLoader />}><TaskDetail /></Suspense>} />
                   <Route path="/projects" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
                   <Route path="/projects/list" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
