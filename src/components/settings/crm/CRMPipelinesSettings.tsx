@@ -611,14 +611,14 @@ export function CRMPipelinesSettings() {
             <div className="space-y-2">
               <Label>Type de contact cible (optionnel)</Label>
               <Select
-                value={pipelineForm.target_contact_type}
-                onValueChange={(value) => setPipelineForm({ ...pipelineForm, target_contact_type: value })}
+                value={pipelineForm.target_contact_type || "_all"}
+                onValueChange={(value) => setPipelineForm({ ...pipelineForm, target_contact_type: value === "_all" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Tous les types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous les types</SelectItem>
+                  <SelectItem value="_all">Tous les types</SelectItem>
                   {CONTACT_TYPE_OPTIONS.map((type) => (
                     <SelectItem key={type.key} value={type.key}>
                       {type.label}
