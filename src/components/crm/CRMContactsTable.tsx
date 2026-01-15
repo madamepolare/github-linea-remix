@@ -40,11 +40,13 @@ import {
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
+import { useContactPipelineEntries } from "@/hooks/useContactPipelineEntries";
 import { ContactDetailSheet } from "./ContactDetailSheet";
 import { EditContactDialog } from "./EditContactDialog";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
 import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
+import { PipelineBadges } from "./PipelineBadges";
 import { cn } from "@/lib/utils";
 
 export interface CRMContactsTableProps {
@@ -58,6 +60,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
   const { contacts, allContacts, isLoading, deleteContact, updateContact, statsByType } = useContacts();
   const { canViewSensitiveData, canEditContacts, canDeleteContacts } = useWorkspaceRole();
   const { getContactTypeLabel, getContactTypeColor, contactTypes } = useCRMSettings();
+  const { entriesByContactId } = useContactPipelineEntries();
   
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
@@ -284,6 +287,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                     </TableHead>
                     <TableHead className="hidden xl:table-cell w-16">Pays</TableHead>
                     <TableHead className="w-24">Type</TableHead>
+                    <TableHead className="hidden lg:table-cell">Pipelines</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -384,6 +388,9 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                                 : getContactTypeLabel(contact.contact_type || "client")}
                             </Badge>
                           )}
+                        </TableCell>
+                        <TableCell className="py-2 hidden lg:table-cell">
+                          <PipelineBadges entries={entriesByContactId[contact.id] || []} />
                         </TableCell>
                         <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
