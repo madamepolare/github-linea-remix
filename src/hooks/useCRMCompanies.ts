@@ -30,6 +30,14 @@ export interface CreateCompanyInput {
   bet_specialties?: string[];
   billing_email?: string;
   status?: CompanyStatus;
+  // SIRET/SIREN fields
+  siren?: string;
+  siret?: string;
+  code_naf?: string;
+  forme_juridique?: string;
+  vat_number?: string;
+  capital_social?: number;
+  rcs_city?: string;
 }
 
 export function useCRMCompanies(filters?: Partial<CRMFilters>) {

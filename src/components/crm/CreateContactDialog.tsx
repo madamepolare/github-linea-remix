@@ -9,13 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Search, Plus, Building2 } from "lucide-react";
+import { Loader2, Search, Plus, Building2, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useContacts } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 import { CONTACT_ROLES } from "@/lib/crmDefaults";
+import { SiretSearchDialog } from "./SiretSearchDialog";
 
 // Helper pour obtenir le label d'industrie - formatage propre
 const getIndustryLabel = (industry: string | null) => {
@@ -145,6 +146,46 @@ export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: Cr
         name: companySearch.trim(),
       });
       form.setValue("crm_company_id", newCompany.id);
+      setCompanySearch("");
+      setShowCompanyDropdown(false);
+    } finally {
+      setIsCreatingCompany(false);
+    }
+  };
+
+  const handleCreateCompanyFromSiret = async (siretData: {
+    siren: string;
+    siret: string;
+    name: string;
+    address: string;
+    postal_code: string;
+    city: string;
+    code_naf: string;
+    forme_juridique: string;
+  }) => {
+    setIsCreatingCompany(true);
+    try {
+      const newCompany = await createCompany.mutateAsync({
+        name: siretData.name,
+        siren: siretData.siren,
+        siret: siretData.siret,
+        address: siretData.address,
+        postal_code: siretData.postal_code,
+        city: siretData.city,
+        code_naf: siretData.code_naf,
+        forme_juridique: siretData.forme_juridique,
+      });
+      form.setValue("crm_company_id", newCompany.id);
+      // Auto-fill contact address if empty
+      if (!form.getValues("address") && siretData.address) {
+        form.setValue("address", siretData.address);
+      }
+      if (!form.getValues("city") && siretData.city) {
+        form.setValue("city", siretData.city);
+      }
+      if (!form.getValues("postal_code") && siretData.postal_code) {
+        form.setValue("postal_code", siretData.postal_code);
+      }
       setCompanySearch("");
       setShowCompanyDropdown(false);
     } finally {
@@ -375,9 +416,27 @@ export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: Cr
                     
                     {showCompanyDropdown && (
                       <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                        {/* Quick create button - always visible when there's text */}
-                        {companySearch.trim() && (
-                          <div className="p-2 border-b border-border">
+                        {/* Quick actions - always visible */}
+                        <div className="p-2 border-b border-border space-y-1">
+                          {/* SIRET search button */}
+                          <SiretSearchDialog
+                            onSelect={handleCreateCompanyFromSiret}
+                            trigger={
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-start gap-2 h-9"
+                                disabled={isCreatingCompany}
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                Rechercher par SIRET/SIREN
+                              </Button>
+                            }
+                          />
+                          
+                          {/* Quick create from search text */}
+                          {companySearch.trim() && (
                             <Button
                               type="button"
                               variant="ghost"
@@ -391,10 +450,10 @@ export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: Cr
                               ) : (
                                 <Plus className="h-3.5 w-3.5" />
                               )}
-                              Créer l'entreprise "{companySearch.trim()}"
+                              Créer "{companySearch.trim()}"
                             </Button>
-                          </div>
-                        )}
+                          )}
+                        </div>
 
                         {filteredCompanies.length > 0 ? (
                           <>
