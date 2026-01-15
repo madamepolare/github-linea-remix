@@ -20,6 +20,7 @@ interface SubProjectsListProps {
 export function SubProjectsList({ parentId, parentName, parentColor }: SubProjectsListProps) {
   const { data: subProjects, isLoading } = useSubProjectsWithStats(parentId);
   const [createOpen, setCreateOpen] = useState(false);
+  const [createSupplementaryOpen, setCreateSupplementaryOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [qualifyProject, setQualifyProject] = useState<SubProjectWithStats | null>(null);
 
@@ -184,6 +185,7 @@ export function SubProjectsList({ parentId, parentName, parentColor }: SubProjec
         <SupplementaryWorkSection
           subProjects={supplementaryProjects}
           parentColor={parentColor}
+          onCreateNew={() => setCreateSupplementaryOpen(true)}
         />
       </div>
 
@@ -192,6 +194,15 @@ export function SubProjectsList({ parentId, parentName, parentColor }: SubProjec
         onOpenChange={setCreateOpen}
         parentId={parentId}
         parentName={parentName}
+        defaultBillingType="included"
+      />
+
+      <CreateSubProjectDialog
+        open={createSupplementaryOpen}
+        onOpenChange={setCreateSupplementaryOpen}
+        parentId={parentId}
+        parentName={parentName}
+        defaultBillingType="supplementary"
       />
 
       {qualifyProject && (
