@@ -26,6 +26,7 @@ serve(async (req) => {
 Tu dois générer:
 1. Des étapes de pipeline pertinentes et professionnelles
 2. Un prompt IA de base pour générer les emails de ce pipeline
+3. Pour chaque étape nécessitant un email, un prompt IA spécifique à cette étape
 
 Pour les étapes, chaque étape doit avoir:
 - Un nom court et clair (max 25 caractères)
@@ -33,20 +34,26 @@ Pour les étapes, chaque étape doit avoir:
 - Une probabilité de conversion (0-100%)
 - requires_email_on_enter: boolean (true si cette étape nécessite l'envoi d'un email)
 - is_final_stage: boolean (true uniquement pour la dernière étape de succès ou d'échec)
+- email_ai_prompt: string (prompt IA spécifique pour générer l'email de cette étape, seulement si requires_email_on_enter est true)
 
-Pour le prompt email IA (email_ai_prompt):
+Pour le prompt email IA global (email_ai_prompt):
 - C'est un prompt de base qui sera utilisé pour générer automatiquement les emails
 - Il doit décrire le ton, le style et les objectifs de communication de ce pipeline
 - Maximum 300 caractères
 
+Pour les prompts email par étape:
+- Chaque étape avec requires_email_on_enter=true doit avoir son propre email_ai_prompt
+- Ce prompt décrit spécifiquement l'objectif et le contenu attendu de l'email pour cette étape
+- Maximum 200 caractères
+
 Génère entre 4 et 7 étapes logiques qui suivent un parcours cohérent du début à la fin.`;
 
-    const userPrompt = `Génère des étapes de pipeline et un prompt email IA pour:
+    const userPrompt = `Génère des étapes de pipeline et des prompts email IA pour:
 - Nom du pipeline: ${pipelineName}
 - Type: ${contextInfo}
 - Objectif/Description: ${objective || "Non spécifié"}
 
-Retourne les étapes dans l'ordre logique du parcours client, ainsi qu'un prompt IA pour la génération d'emails adapté à ce contexte.`;
+Retourne les étapes dans l'ordre logique du parcours client, avec un prompt IA global pour la génération d'emails, et un prompt spécifique pour chaque étape nécessitant un email.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -79,6 +86,7 @@ Retourne les étapes dans l'ordre logique du parcours client, ainsi qu'un prompt
                         probability: { type: "number", description: "Probabilité de conversion 0-100" },
                         requires_email_on_enter: { type: "boolean", description: "Si un email est requis" },
                         is_final_stage: { type: "boolean", description: "Si c'est une étape finale" },
+                        email_ai_prompt: { type: "string", description: "Prompt IA pour générer l'email de cette étape (si requires_email_on_enter est true)" },
                       },
                       required: ["name", "color", "probability", "requires_email_on_enter", "is_final_stage"],
                       additionalProperties: false,

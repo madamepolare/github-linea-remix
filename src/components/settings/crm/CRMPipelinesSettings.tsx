@@ -56,6 +56,7 @@ interface GeneratedStage {
   probability: number;
   requires_email_on_enter: boolean;
   is_final_stage: boolean;
+  email_ai_prompt?: string;
 }
 
 export function CRMPipelinesSettings() {
@@ -94,9 +95,11 @@ export function CRMPipelinesSettings() {
     probability: 0,
     requires_email_on_enter: false,
     is_final_stage: false,
+    email_ai_prompt: "",
   });
   const [generatedStages, setGeneratedStages] = useState<GeneratedStage[]>([]);
   const [isGeneratingStages, setIsGeneratingStages] = useState(false);
+  const [isGeneratingForPipeline, setIsGeneratingForPipeline] = useState<string | null>(null);
 
   const handleGenerateStages = async () => {
     if (!pipelineForm.name) {
@@ -206,6 +209,7 @@ export function CRMPipelinesSettings() {
       probability: 0,
       requires_email_on_enter: false,
       is_final_stage: false,
+      email_ai_prompt: "",
     });
     setIsStageDialogOpen(true);
   };
@@ -218,8 +222,59 @@ export function CRMPipelinesSettings() {
       probability: stage.probability || 0,
       requires_email_on_enter: stage.requires_email_on_enter || false,
       is_final_stage: stage.is_final_stage || false,
+      email_ai_prompt: stage.email_ai_prompt || "",
     });
     setIsStageDialogOpen(true);
+  };
+
+  // Generate stages for an existing pipeline
+  const handleGenerateStagesForPipeline = async (pipeline: Pipeline) => {
+    setIsGeneratingForPipeline(pipeline.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-pipeline-stages", {
+        body: {
+          pipelineName: pipeline.name,
+          pipelineType: "contact",
+          targetContactType: pipeline.target_contact_type,
+          objective: "",
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.stages && Array.isArray(data.stages)) {
+        // Create the stages for this pipeline
+        for (let i = 0; i < data.stages.length; i++) {
+          const stage = data.stages[i];
+          await createStage.mutateAsync({
+            pipeline_id: pipeline.id,
+            name: stage.name,
+            color: stage.color,
+            probability: stage.probability,
+            requires_email_on_enter: stage.requires_email_on_enter,
+            is_final_stage: stage.is_final_stage,
+            email_ai_prompt: stage.email_ai_prompt,
+          });
+        }
+        
+        // Update pipeline with email_ai_prompt if provided
+        if (data.email_ai_prompt) {
+          await updatePipeline.mutateAsync({
+            id: pipeline.id,
+            email_ai_prompt: data.email_ai_prompt,
+          });
+        }
+        
+        toast.success(`${data.stages.length} étapes générées avec succès`);
+      } else {
+        throw new Error("Format de réponse invalide");
+      }
+    } catch (error) {
+      console.error("Error generating stages:", error);
+      toast.error("Erreur lors de la génération des étapes");
+    } finally {
+      setIsGeneratingForPipeline(null);
+    }
   };
 
   const handleSaveStage = async () => {
@@ -231,6 +286,7 @@ export function CRMPipelinesSettings() {
         probability: stageForm.probability,
         requires_email_on_enter: stageForm.requires_email_on_enter,
         is_final_stage: stageForm.is_final_stage,
+        email_ai_prompt: stageForm.requires_email_on_enter ? stageForm.email_ai_prompt : null,
       });
     } else if (currentPipelineId) {
       await createStage.mutateAsync({
@@ -240,6 +296,7 @@ export function CRMPipelinesSettings() {
         probability: stageForm.probability,
         requires_email_on_enter: stageForm.requires_email_on_enter,
         is_final_stage: stageForm.is_final_stage,
+        email_ai_prompt: stageForm.requires_email_on_enter ? stageForm.email_ai_prompt : undefined,
       });
     }
     setIsStageDialogOpen(false);
@@ -401,21 +458,62 @@ export function CRMPipelinesSettings() {
                                 <Layers className="h-3 w-3" />
                                 Étapes du pipeline
                               </span>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 text-xs"
-                                onClick={() => handleOpenCreateStage(pipeline.id)}
-                              >
-                                <Plus className="h-3 w-3 mr-1" />
-                                Étape
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => handleGenerateStagesForPipeline(pipeline)}
+                                  disabled={isGeneratingForPipeline === pipeline.id}
+                                >
+                                  {isGeneratingForPipeline === pipeline.id ? (
+                                    <>
+                                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                      Génération...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Sparkles className="h-3 w-3 mr-1" />
+                                      Générer avec IA
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => handleOpenCreateStage(pipeline.id)}
+                                >
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Étape
+                                </Button>
+                              </div>
                             </div>
 
                             {pipelineStages.length === 0 ? (
-                              <p className="text-sm text-muted-foreground text-center py-4">
-                                Aucune étape
-                              </p>
+                              <div className="text-center py-6 border border-dashed rounded-lg">
+                                <p className="text-sm text-muted-foreground mb-3">
+                                  Aucune étape configurée
+                                </p>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleGenerateStagesForPipeline(pipeline)}
+                                  disabled={isGeneratingForPipeline === pipeline.id}
+                                >
+                                  {isGeneratingForPipeline === pipeline.id ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Génération en cours...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Sparkles className="h-4 w-4 mr-2" />
+                                      Générer les étapes avec IA
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
                             ) : (
                               <div className="space-y-1">
                                 {pipelineStages.map((stage, index) => (
@@ -701,6 +799,26 @@ export function CRMPipelinesSettings() {
                 }
               />
             </div>
+
+            {/* Email AI Prompt - only show when email is required */}
+            {stageForm.requires_email_on_enter && (
+              <div className="space-y-2 p-3 rounded-lg bg-muted/50 border">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-primary" />
+                  <Label className="font-medium">Prompt IA pour l'email</Label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ce prompt sera utilisé pour générer l'email lors du passage à cette étape.
+                </p>
+                <Textarea
+                  value={stageForm.email_ai_prompt}
+                  onChange={(e) => setStageForm({ ...stageForm, email_ai_prompt: e.target.value })}
+                  placeholder="Ex: Email de prise de contact initial, mentionner notre expertise et proposer un RDV découverte..."
+                  className="h-20 text-sm"
+                />
+              </div>
+            )}
+
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label>Étape finale</Label>

@@ -2442,6 +2442,7 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string | null
+          email_ai_prompt: string | null
           email_template_id: string | null
           id: string
           is_final_stage: boolean | null
@@ -2454,6 +2455,7 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string | null
+          email_ai_prompt?: string | null
           email_template_id?: string | null
           id?: string
           is_final_stage?: boolean | null
@@ -2466,6 +2468,7 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string | null
+          email_ai_prompt?: string | null
           email_template_id?: string | null
           id?: string
           is_final_stage?: boolean | null
