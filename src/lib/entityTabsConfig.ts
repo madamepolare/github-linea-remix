@@ -82,11 +82,11 @@ export const CONTACT_TABS: EntityTab[] = [
 ];
 
 // Company detail tabs  
+// Company detail tabs - leads removed per user request
 export const COMPANY_TABS: EntityTab[] = [
   { key: "overview", label: "Informations", icon: LayoutDashboard },
   { key: "emails", label: "Emails", icon: Mail },
   { key: "contacts", label: "Contacts", icon: Users },
-  { key: "leads", label: "Leads", icon: Target },
   { key: "tasks", label: "Tâches", icon: CheckSquare },
   { key: "documents", label: "Documents", icon: FileText },
   { key: "invoicing", label: "Facturation", icon: Receipt },

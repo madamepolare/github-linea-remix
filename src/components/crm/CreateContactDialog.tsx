@@ -195,27 +195,29 @@ export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: Cr
           <DialogTitle>Nouveau Contact</DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {/* Switch particulier */}
-          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">Contact particulier</Label>
-              <p className="text-xs text-muted-foreground">
-                Activer si ce contact n'est pas rattaché à une entreprise
-              </p>
+          {/* Switch particulier - only show if not pre-linked to a company */}
+          {!defaultCompanyId && (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">Contact particulier</Label>
+                <p className="text-xs text-muted-foreground">
+                  Activer si ce contact n'est pas rattaché à une entreprise
+                </p>
+              </div>
+              <Switch
+                checked={isIndividual}
+                onCheckedChange={(checked) => {
+                  form.setValue("is_individual", checked);
+                  if (checked) {
+                    form.setValue("crm_company_id", "");
+                    form.setValue("contact_type", "particulier");
+                  } else {
+                    form.setValue("contact_type", "client");
+                  }
+                }}
+              />
             </div>
-            <Switch
-              checked={isIndividual}
-              onCheckedChange={(checked) => {
-                form.setValue("is_individual", checked);
-                if (checked) {
-                  form.setValue("crm_company_id", "");
-                  form.setValue("contact_type", "particulier");
-                } else {
-                  form.setValue("contact_type", "client");
-                }
-              }}
-            />
-          </div>
+          )}
 
           {/* Civilité */}
           <div className="space-y-2">

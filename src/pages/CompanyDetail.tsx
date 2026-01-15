@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
-import { useLeads } from "@/hooks/useLeads";
+// useLeads removed - leads/opportunities no longer shown on company detail
 import { useCompanyDepartments } from "@/hooks/useCompanyDepartments";
 import { useTopBar } from "@/contexts/TopBarContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,10 +32,8 @@ import { LinkedEntitiesPanel } from "@/components/shared/LinkedEntitiesPanel";
 
 // New modular components
 import { CompanyInfoPanel } from "@/components/crm/company/CompanyInfoPanel";
-import { CompanyStatsCards } from "@/components/crm/company/CompanyStatsCards";
 import { CompanyContactsSection } from "@/components/crm/company/CompanyContactsSection";
 import { CompanyBillingPanel } from "@/components/crm/company/CompanyBillingPanel";
-import { ContactLeadsSection } from "@/components/crm/contact/ContactLeadsSection";
 import { CompanyPortalSettings } from "@/components/crm/company/CompanyPortalSettings";
 
 export default function CompanyDetail() {
@@ -45,7 +43,7 @@ export default function CompanyDetail() {
   const { activeWorkspace } = useAuth();
   const { allCompanies, isLoading, updateCompany } = useCRMCompanies();
   const { contacts } = useContacts();
-  const { leads } = useLeads();
+  // leads hook removed - opportunities not shown
   const { departments } = useCompanyDepartments(id || "");
   const {
     companyTypes,
@@ -65,8 +63,7 @@ export default function CompanyDetail() {
   const company = allCompanies.find((c) => c.id === id);
   const companyId = company?.id;
   const companyContacts = contacts.filter((c) => c.crm_company_id === id);
-  const companyLeads = leads.filter((l) => l.crm_company_id === id);
-  const totalLeadValue = companyLeads.reduce((sum, l) => sum + (Number(l.estimated_value) || 0), 0);
+  // Leads removed - no longer showing opportunities on company detail
 
   // Helpers
   const getCategoryFromIndustry = (industry: string | null | undefined): CompanyCategory | "" => {
@@ -233,14 +230,6 @@ export default function CompanyDetail() {
       case "overview":
         return (
           <div className="space-y-6">
-            {/* Stats Cards */}
-            <CompanyStatsCards
-              contactsCount={companyContacts.length}
-              leadsCount={companyLeads.length}
-              totalValue={totalLeadValue}
-              departmentsCount={departments.length}
-            />
-
             {/* Main Content - 2 columns */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column - Info Panel & Billing */}
@@ -258,24 +247,18 @@ export default function CompanyDetail() {
                 <CompanyBillingPanel company={company} />
               </div>
 
-              {/* Right Column - Contacts, Leads, Activity */}
+              {/* Right Column - Contacts first, then Departments, Activity */}
               <div className="lg:col-span-2 space-y-6">
-                {/* Departments */}
-                <CompanyDepartmentsSection
-                  companyId={company.id}
-                  companyContacts={companyContacts}
-                />
-
-                {/* Quick Contacts Preview */}
+                {/* Contacts - moved to top */}
                 <CompanyContactsSection
                   contacts={companyContacts.slice(0, 5)}
                   onAddContact={() => setCreateContactOpen(true)}
                 />
 
-                {/* Leads */}
-                <ContactLeadsSection
-                  leads={companyLeads}
-                  contactId={company.id}
+                {/* Departments / Organigramme */}
+                <CompanyDepartmentsSection
+                  companyId={company.id}
+                  companyContacts={companyContacts}
                 />
 
                 {/* Activity & Related */}
@@ -317,8 +300,8 @@ export default function CompanyDetail() {
             />
           </div>
         );
-      case "leads":
-        return <ContactLeadsSection leads={companyLeads} contactId={company.id} />;
+      // leads tab removed - opportunities/leads no longer shown on company detail
+      case "tasks":
       case "tasks":
         return (
           <EntityTasksList
