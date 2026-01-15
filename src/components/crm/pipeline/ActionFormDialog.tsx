@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, addDays, addWeeks } from "date-fns";
 import { 
   Mail, 
   Phone, 
@@ -7,7 +7,6 @@ import {
   CheckSquare, 
   CornerUpRight,
   Clock,
-  AlertTriangle
 } from "lucide-react";
 import {
   Dialog,
@@ -18,17 +17,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { ActionType, ActionPriority, CreateActionInput } from "@/hooks/usePipelineActions";
+import type { ActionType, CreateActionInput } from "@/hooks/usePipelineActions";
 
 interface ActionFormDialogProps {
   open: boolean;
@@ -56,12 +47,13 @@ const actionTypeLabels: Record<ActionType, string> = {
   followup: 'Relance',
 };
 
-const priorityConfig: Record<ActionPriority, { label: string; color: string }> = {
-  low: { label: 'Basse', color: 'text-muted-foreground' },
-  medium: { label: 'Moyenne', color: 'text-foreground' },
-  high: { label: 'Haute', color: 'text-orange-500' },
-  urgent: { label: 'Urgente', color: 'text-red-500' },
-};
+// Quick date shortcuts
+const dateShortcuts = [
+  { label: "Aujourd'hui", getValue: () => format(new Date(), 'yyyy-MM-dd') },
+  { label: "Demain", getValue: () => format(addDays(new Date(), 1), 'yyyy-MM-dd') },
+  { label: "Dans 3j", getValue: () => format(addDays(new Date(), 3), 'yyyy-MM-dd') },
+  { label: "1 sem.", getValue: () => format(addWeeks(new Date(), 1), 'yyyy-MM-dd') },
+];
 
 export function ActionFormDialog({
   open,
@@ -72,22 +64,14 @@ export function ActionFormDialog({
   companyId,
   isLoading,
 }: ActionFormDialogProps) {
-  const [actionType, setActionType] = useState<ActionType>('task');
+  const [actionType, setActionType] = useState<ActionType>('followup');
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [dueTime, setDueTime] = useState('');
-  const [priority, setPriority] = useState<ActionPriority>('medium');
+  const [dueDate, setDueDate] = useState(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    let fullDueDate: string | undefined;
-    if (dueDate) {
-      fullDueDate = dueTime 
-        ? `${dueDate}T${dueTime}:00` 
-        : `${dueDate}T09:00:00`;
-    }
+    const fullDueDate = dueDate ? `${dueDate}T09:00:00` : undefined;
 
     onSubmit({
       entry_id: entryId,
@@ -95,118 +79,93 @@ export function ActionFormDialog({
       company_id: companyId,
       action_type: actionType,
       title: title || actionTypeLabels[actionType],
-      description: description || undefined,
       due_date: fullDueDate,
-      priority,
+      priority: 'medium',
     });
 
     // Reset form
     setTitle('');
-    setDescription('');
-    setDueDate('');
-    setDueTime('');
-    setPriority('medium');
+    setDueDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Nouvelle action
+            Planifier une action
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Action type toggle */}
           <div className="space-y-2">
-            <Label>Type d'action</Label>
+            <Label className="text-xs text-muted-foreground">Type</Label>
             <ToggleGroup 
               type="single" 
               value={actionType} 
               onValueChange={(v) => v && setActionType(v as ActionType)}
-              className="justify-start flex-wrap"
+              className="justify-start flex-wrap gap-1"
             >
               {Object.entries(actionTypeLabels).map(([type, label]) => (
                 <ToggleGroupItem 
                   key={type} 
                   value={type}
-                  className="gap-1.5"
+                  size="sm"
+                  className="gap-1.5 h-8 px-2.5"
                 >
                   {actionTypeIcons[type as ActionType]}
-                  <span className="hidden sm:inline">{label}</span>
+                  <span className="text-xs">{label}</span>
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
           </div>
 
-          {/* Title */}
-          <div className="space-y-2">
-            <Label>Titre</Label>
+          {/* Title (optional) */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Titre (optionnel)</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={actionTypeLabels[actionType]}
+              className="h-9"
             />
           </div>
 
-          {/* Description */}
+          {/* Due date with shortcuts */}
           <div className="space-y-2">
-            <Label>Description (optionnel)</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Détails de l'action..."
-              rows={3}
+            <Label className="text-xs text-muted-foreground">Échéance</Label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {dateShortcuts.map((shortcut) => (
+                <Button
+                  key={shortcut.label}
+                  type="button"
+                  variant={dueDate === shortcut.getValue() ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs px-2.5"
+                  onClick={() => setDueDate(shortcut.getValue())}
+                >
+                  {shortcut.label}
+                </Button>
+              ))}
+            </div>
+            <Input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              min={format(new Date(), 'yyyy-MM-dd')}
+              className="h-9"
             />
           </div>
 
-          {/* Due date & time */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Date d'échéance</Label>
-              <Input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                min={format(new Date(), 'yyyy-MM-dd')}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Heure</Label>
-              <Input
-                type="time"
-                value={dueTime}
-                onChange={(e) => setDueTime(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Priority */}
-          <div className="space-y-2">
-            <Label>Priorité</Label>
-            <Select value={priority} onValueChange={(v) => setPriority(v as ActionPriority)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(priorityConfig).map(([key, { label, color }]) => (
-                  <SelectItem key={key} value={key}>
-                    <span className={color}>{label}</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
               Annuler
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Création...' : 'Créer l\'action'}
+            <Button type="submit" size="sm" disabled={isLoading}>
+              {isLoading ? 'Création...' : 'Planifier'}
             </Button>
           </DialogFooter>
         </form>
