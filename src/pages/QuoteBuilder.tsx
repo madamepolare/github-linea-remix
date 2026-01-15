@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -62,6 +64,7 @@ import { useContractTypes, BuilderTab } from '@/hooks/useContractTypes';
 import { LineFeatureProvider } from '@/contexts/LineFeatureContext';
 import type { Json } from '@/integrations/supabase/types';
 import { ConvertQuoteToProjectDialog } from '@/components/commercial/ConvertQuoteToProjectDialog';
+import { ConvertQuoteToSubProjectDialog } from '@/components/commercial/ConvertQuoteToSubProjectDialog';
 import { SendQuoteDialog } from '@/components/commercial/SendQuoteDialog';
 import { Rocket, ExternalLink } from 'lucide-react';
 import {
@@ -83,7 +86,7 @@ export default function QuoteBuilder() {
   const projectId = searchParams.get('project');
   const documentType = searchParams.get('type') || 'quote';
   
-  const { createDocument, updateDocument, getDocument, getDocumentPhases, createPhase, updatePhase, deletePhase, acceptAndCreateProject } = useCommercialDocuments();
+  const { createDocument, updateDocument, getDocument, getDocumentPhases, createPhase, updatePhase, deletePhase, acceptAndCreateProject, acceptAndCreateSubProject } = useCommercialDocuments();
   const { agencyInfo } = useAgencyInfo();
   
   // Use getDocument from the hook for existing documents
@@ -99,12 +102,73 @@ export default function QuoteBuilder() {
   // Get contract types for dynamic tabs
   const { activeContractTypes } = useContractTypes();
   
+  // Check if document is linked to a framework project
+  const linkedProjectQuery = useQuery({
+    queryKey: ['linked-project-type', existingDoc?.project?.id],
+    queryFn: async () => {
+      if (!existingDoc?.project?.id) return null;
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, name, contract_type, parent_id')
+        .eq('id', existingDoc.project.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!existingDoc?.project?.id
+  });
+  
+  // Check if the linked project has a parent that is a framework
+  const parentProjectQuery = useQuery({
+    queryKey: ['parent-project-framework', linkedProjectQuery.data?.parent_id],
+    queryFn: async () => {
+      const parentId = linkedProjectQuery.data?.parent_id;
+      if (!parentId) return null;
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, name, contract_type')
+        .eq('id', parentId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!linkedProjectQuery.data?.parent_id
+  });
+
+  // Detect if document is linked to a framework project (directly or via a reference project_id pointing to framework)
+  // For new quotes linked via URL param, we also check
+  const frameworkParentQuery = useQuery({
+    queryKey: ['framework-parent-detection', projectId],
+    queryFn: async () => {
+      if (!projectId) return null;
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, name, contract_type')
+        .eq('id', projectId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId
+  });
+
+  const isLinkedToFrameworkProject = 
+    linkedProjectQuery.data?.contract_type === 'framework' ||
+    parentProjectQuery.data?.contract_type === 'framework' ||
+    frameworkParentQuery.data?.contract_type === 'framework';
+
+  const frameworkParentProject = 
+    (linkedProjectQuery.data?.contract_type === 'framework' ? linkedProjectQuery.data : null) ||
+    parentProjectQuery.data ||
+    (frameworkParentQuery.data?.contract_type === 'framework' ? frameworkParentQuery.data : null);
+  
   const [activeTab, setActiveTab] = useState('lines');
   const [showPreview, setShowPreview] = useState(true);
   const [zoom, setZoom] = useState(70);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
+  const [showConvertToSubProjectDialog, setShowConvertToSubProjectDialog] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
   
   const [document, setDocument] = useState<Partial<QuoteDocument>>({
@@ -428,6 +492,35 @@ export default function QuoteBuilder() {
     return result;
   };
 
+  // Handler for converting quote to sub-project (for framework projects)
+  const handleConvertToSubProject = async (params: {
+    subProjectName: string;
+    deadline?: string;
+  }) => {
+    if (!id || !frameworkParentProject) throw new Error('No document or parent project');
+    
+    const result = await acceptAndCreateSubProject.mutateAsync({
+      documentId: id,
+      parentProjectId: frameworkParentProject.id,
+      subProjectName: params.subProjectName,
+      deadline: params.deadline
+    });
+    
+    // Update local state to reflect accepted status
+    setDocument(prev => ({ ...prev, status: 'accepted', accepted_at: new Date().toISOString() }));
+    
+    return result;
+  };
+
+  // Handle "Gagné" button click - open appropriate dialog based on context
+  const handleWonClick = () => {
+    if (isLinkedToFrameworkProject && frameworkParentProject) {
+      setShowConvertToSubProjectDialog(true);
+    } else {
+      setShowConvertDialog(true);
+    }
+  };
+
   // Check if document is already linked to a project
   const isLinkedToProject = !!document.project?.id;
   const isAcceptedOrSigned = document.status === 'accepted' || document.status === 'signed';
@@ -587,16 +680,18 @@ export default function QuoteBuilder() {
             <span className="hidden sm:inline">{isSaving ? 'Enregistrement...' : 'Enregistrer'}</span>
           </Button>
           
-          {/* "Gagné" button - marks as accepted and offers project creation */}
+          {/* "Gagné" button - marks as accepted and offers project/sub-project creation */}
           {canConvertToProject && (
             <Button 
               variant="default"
               size="sm"
-              onClick={() => setShowConvertDialog(true)}
+              onClick={handleWonClick}
               className="h-8 sm:h-9 px-2 sm:px-3 bg-green-600 hover:bg-green-700"
             >
               <Trophy className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Gagné</span>
+              <span className="hidden sm:inline">
+                {isLinkedToFrameworkProject ? 'Valider' : 'Gagné'}
+              </span>
             </Button>
           )}
           
@@ -848,7 +943,7 @@ export default function QuoteBuilder() {
         )}
       </div>
       
-      {/* Convert to project dialog */}
+      {/* Convert to project dialog (for standard projects) */}
       <ConvertQuoteToProjectDialog
         open={showConvertDialog}
         onOpenChange={setShowConvertDialog}
@@ -856,6 +951,18 @@ export default function QuoteBuilder() {
         lines={lines}
         onConvert={handleConvertToProject}
       />
+
+      {/* Convert to sub-project dialog (for framework projects) */}
+      {frameworkParentProject && (
+        <ConvertQuoteToSubProjectDialog
+          open={showConvertToSubProjectDialog}
+          onOpenChange={setShowConvertToSubProjectDialog}
+          document={document as QuoteDocument}
+          lines={lines}
+          parentProject={frameworkParentProject}
+          onConvert={handleConvertToSubProject}
+        />
+      )}
       
       {/* Send quote dialog */}
       <SendQuoteDialog

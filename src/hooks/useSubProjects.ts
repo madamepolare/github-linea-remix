@@ -21,6 +21,7 @@ export interface SubProjectWithStats extends SubProject {
   tasks_completed: number;
   billing_type?: string;
   client_request_id?: string;
+  linked_quote_id?: string | null;
 }
 
 export function useSubProjects(parentId: string | undefined) {
