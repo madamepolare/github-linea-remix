@@ -259,7 +259,7 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
   );
 }
 
-// Entry Card Component with action alerts
+// Entry Card Component with action alerts and email reply badges
 function EntryCard({
   entry,
   onRemove,
@@ -288,14 +288,24 @@ function EntryCard({
   const hasOverdue = overdueCount > 0;
   const hasNoActions = pendingCount === 0;
   const hasUrgent = !!urgentAction && !hasOverdue;
+  
+  // Email reply indicators
+  const hasUnreadReplies = (entry.unread_replies_count || 0) > 0;
+  const isAwaitingResponse = entry.awaiting_response && !hasUnreadReplies;
+  
+  // Calculate days since last email sent (for awaiting response indicator)
+  const daysSinceEmail = entry.last_email_sent_at 
+    ? Math.floor((Date.now() - new Date(entry.last_email_sent_at).getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
 
   return (
     <Card 
       className={cn(
         "shadow-sm hover:shadow-md transition-shadow cursor-pointer",
-        hasOverdue && "border-red-500 border-l-4",
-        hasNoActions && !hasOverdue && "border-amber-500 border-l-4",
-        hasUrgent && !hasOverdue && !hasNoActions && "border-orange-500 border-l-4"
+        hasUnreadReplies && "border-green-500 border-l-4 bg-green-50/30 dark:bg-green-950/20",
+        !hasUnreadReplies && hasOverdue && "border-red-500 border-l-4",
+        !hasUnreadReplies && !hasOverdue && hasNoActions && "border-amber-500 border-l-4",
+        !hasUnreadReplies && !hasOverdue && !hasNoActions && hasUrgent && "border-orange-500 border-l-4"
       )} 
       onClick={onClick}
     >
@@ -344,8 +354,38 @@ function EntryCard({
             )}
           </div>
 
-          {/* Alert indicators */}
+          {/* Alert and email indicators */}
           <div className="flex flex-col items-end gap-1">
+            {/* Unread replies badge - highest priority */}
+            {hasUnreadReplies && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge className="h-5 px-1.5 gap-0.5 bg-green-600 hover:bg-green-700 animate-pulse">
+                    <Mail className="h-3 w-3" />
+                    <span className="text-[10px]">{entry.unread_replies_count}</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {entry.unread_replies_count} réponse{(entry.unread_replies_count || 0) > 1 ? 's' : ''} non lue{(entry.unread_replies_count || 0) > 1 ? 's' : ''}
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Awaiting response badge */}
+            {isAwaitingResponse && daysSinceEmail > 0 && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="h-5 px-1.5 gap-0.5 border-blue-500 text-blue-600">
+                    <Clock className="h-3 w-3" />
+                    <span className="text-[10px]">{daysSinceEmail}j</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  En attente de réponse depuis {daysSinceEmail} jour{daysSinceEmail > 1 ? 's' : ''}
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
             {hasOverdue && (
               <Tooltip>
                 <TooltipTrigger>
@@ -360,7 +400,7 @@ function EntryCard({
               </Tooltip>
             )}
             
-            {hasNoActions && !hasOverdue && (
+            {hasNoActions && !hasOverdue && !hasUnreadReplies && (
               <Tooltip>
                 <TooltipTrigger>
                   <Badge variant="outline" className="h-5 px-1.5 border-amber-500 text-amber-600">
@@ -373,7 +413,7 @@ function EntryCard({
               </Tooltip>
             )}
             
-            {hasUrgent && !hasOverdue && !hasNoActions && (
+            {hasUrgent && !hasOverdue && !hasNoActions && !hasUnreadReplies && (
               <Tooltip>
                 <TooltipTrigger>
                   <Badge variant="outline" className="h-5 px-1.5 border-orange-500 text-orange-600">
@@ -386,7 +426,7 @@ function EntryCard({
               </Tooltip>
             )}
 
-            {pendingCount > 0 && !hasOverdue && !hasUrgent && (
+            {pendingCount > 0 && !hasOverdue && !hasUrgent && !hasUnreadReplies && (
               <Tooltip>
                 <TooltipTrigger>
                   <Badge variant="outline" className="h-5 px-1.5 text-green-600 border-green-500">

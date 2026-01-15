@@ -101,3 +101,6 @@ verify_jwt = false
 
 [functions.generate-company-types]
 verify_jwt = false
+
+[functions.schedule-followups]
+verify_jwt = false

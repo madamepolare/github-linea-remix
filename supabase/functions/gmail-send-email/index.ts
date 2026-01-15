@@ -283,6 +283,23 @@ serve(async (req) => {
       // Don't throw - email was sent successfully
     }
 
+    // Update pipeline entry to mark as awaiting response
+    if (contactId || companyId) {
+      const entryQuery = supabaseAdmin
+        .from('contact_pipeline_entries')
+        .update({ 
+          awaiting_response: true,
+          last_email_sent_at: new Date().toISOString(),
+        })
+        .eq('workspace_id', workspaceId);
+
+      if (contactId) {
+        await entryQuery.eq('contact_id', contactId);
+      } else if (companyId) {
+        await entryQuery.eq('company_id', companyId);
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       messageId: gmailResult.id,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, User, Building2, Mail, Phone, Calendar, Send, Clock, Plus, MessageSquare, FileText, ExternalLink, RefreshCw, Bell, AlertTriangle } from "lucide-react";
+import { X, User, Building2, Mail, Phone, Calendar, Send, Clock, Plus, MessageSquare, FileText, ExternalLink, RefreshCw, Bell, AlertTriangle, MailOpen } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,12 +10,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { PipelineEntry } from "@/hooks/useContactPipeline";
-import { useEntityEmails, Email } from "@/hooks/useEntityEmails";
+import { useEntityEmails, Email, EmailThread } from "@/hooks/useEntityEmails";
 import { usePipelineActions } from "@/hooks/usePipelineActions";
 import { useEntityActivities, logEntityActivity } from "@/hooks/useEntityActivities";
 import { useAuth } from "@/contexts/AuthContext";
 import { ComposeEmailDialog } from "@/components/emails/ComposeEmailDialog";
 import { EmailThreadCard } from "@/components/crm/pipeline/EmailThreadCard";
+import { PipelineEmailDetailView } from "@/components/crm/pipeline/PipelineEmailDetailView";
 import { ActionFormDialog } from "@/components/crm/pipeline/ActionFormDialog";
 import { ActionsList } from "@/components/crm/pipeline/ActionsList";
 import { useNavigate } from "react-router-dom";
@@ -47,15 +48,17 @@ export function PipelineEntrySidebar({
   const [isFollowUp, setIsFollowUp] = useState(false);
   const [notes, setNotes] = useState(entry?.notes || "");
   const [isSyncing, setIsSyncing] = useState(false);
+  const [selectedThread, setSelectedThread] = useState<EmailThread | null>(null);
   
   const isContact = !!entry?.contact;
   const entityType = isContact ? 'contact' : 'company';
   const entityId = isContact ? entry?.contact_id : entry?.company_id;
   const entity = entry?.contact || entry?.company;
   
-  // Reset notes when entry changes
+  // Reset notes and selected thread when entry changes
   useEffect(() => {
     setNotes(entry?.notes || "");
+    setSelectedThread(null);
   }, [entry?.id, entry?.notes]);
   
   const { threads, stats, isLoading: emailsLoading, gmailConnected, markAsRead } = useEntityEmails({
@@ -382,68 +385,85 @@ export function PipelineEntrySidebar({
             </TabsList>
 
             <TabsContent value="emails" className="flex-1 overflow-hidden m-0 px-6 pt-4">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-sm font-medium">Historique emails</h4>
-                <div className="flex gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleSync}
-                    disabled={isSyncing || !gmailConnected}
-                  >
-                    <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={() => {
-                      setReplyToEmail(null);
-                      setIsFollowUp(false);
-                      setComposeOpen(true);
-                    }}
-                    disabled={!gmailConnected}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" />
-                    Email
-                  </Button>
-                </div>
-              </div>
-
-              <ScrollArea className="h-[calc(100vh-420px)]">
-                {emailsLoading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="h-20 bg-muted/50 rounded-lg animate-pulse" />
-                    ))}
-                  </div>
-                ) : threads.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Mail className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
-                    <p className="text-sm text-muted-foreground">Aucun email</p>
-                    {gmailConnected && (
+              {selectedThread ? (
+                <PipelineEmailDetailView
+                  thread={selectedThread}
+                  onBack={() => setSelectedThread(null)}
+                  onReply={handleReplyEmail}
+                  onFollowUp={handleFollowUpEmail}
+                  onMarkAsRead={markAsRead}
+                />
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-medium">Historique emails</h4>
+                    <div className="flex gap-1">
                       <Button 
-                        variant="outline" 
+                        variant="ghost" 
                         size="sm" 
-                        className="mt-3"
-                        onClick={() => setComposeOpen(true)}
+                        onClick={handleSync}
+                        disabled={isSyncing || !gmailConnected}
                       >
-                        Envoyer un email
+                        <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} />
                       </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => {
+                          setReplyToEmail(null);
+                          setIsFollowUp(false);
+                          setComposeOpen(true);
+                        }}
+                        disabled={!gmailConnected}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        Email
+                      </Button>
+                    </div>
+                  </div>
+
+                  <ScrollArea className="h-[calc(100vh-420px)]">
+                    {emailsLoading ? (
+                      <div className="space-y-3">
+                        {[1, 2, 3].map(i => (
+                          <div key={i} className="h-20 bg-muted/50 rounded-lg animate-pulse" />
+                        ))}
+                      </div>
+                    ) : threads.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Mail className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+                        <p className="text-sm text-muted-foreground">Aucun email</p>
+                        {gmailConnected && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="mt-3"
+                            onClick={() => setComposeOpen(true)}
+                          >
+                            Envoyer un email
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {threads.map(thread => (
+                          <div 
+                            key={thread.threadId}
+                            onClick={() => setSelectedThread(thread)}
+                            className="cursor-pointer"
+                          >
+                            <EmailThreadCard
+                              thread={thread}
+                              onReply={handleReplyEmail}
+                              onFollowUp={handleFollowUpEmail}
+                              onMarkAsRead={markAsRead}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     )}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {threads.map(thread => (
-                      <EmailThreadCard
-                        key={thread.threadId}
-                        thread={thread}
-                        onReply={handleReplyEmail}
-                        onFollowUp={handleFollowUpEmail}
-                        onMarkAsRead={markAsRead}
-                      />
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
+                  </ScrollArea>
+                </>
+              )}
             </TabsContent>
 
             <TabsContent value="actions" className="flex-1 overflow-hidden m-0 px-6 pt-4">
