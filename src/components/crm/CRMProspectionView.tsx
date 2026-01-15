@@ -6,6 +6,7 @@ import { BulkAddToPipelineDialog } from "./BulkAddToPipelineDialog";
 import { ContactFormDialog } from "./ContactFormDialog";
 import { CompanyFormDialog } from "./CompanyFormDialog";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
+import { CRMAddDropdown } from "./CRMAddDropdown";
 import { ModuleFiltersBar } from "@/components/shared/ModuleFiltersBar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,19 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  Plus, 
-  ChevronDown, 
-  Building2, 
-  User, 
   Target,
   LayoutGrid,
   List,
@@ -102,39 +92,15 @@ export function CRMProspectionView({ searchQuery = "" }: CRMProspectionViewProps
     </Select>
   ) : null;
 
-  // Add button with dropdown
-  const addButton = (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button size="sm" className="h-9 gap-1">
-          <Plus className="h-4 w-4" />
-          Ajouter
-          <ChevronDown className="h-3 w-3 ml-0.5" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onClick={() => setBulkAddOpen(true)} className="gap-2">
-          <Target className="h-4 w-4" />
-          Ajouter au pipeline
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => setCreateContactOpen(true)} className="gap-2">
-          <User className="h-4 w-4" />
-          Nouveau contact
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setCreateCompanyOpen(true)} className="gap-2">
-          <Building2 className="h-4 w-4" />
-          Nouvelle entreprise
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-
   // Filters for the filter bar
   const filters = (
     <div className="flex items-center gap-2">
       {pipelineSelector}
-      {addButton}
+      <CRMAddDropdown
+        onCreateContact={() => setCreateContactOpen(true)}
+        onCreateCompany={() => setCreateCompanyOpen(true)}
+        onCreateLead={() => setBulkAddOpen(true)}
+      />
       <CRMDataQualityManager />
     </div>
   );

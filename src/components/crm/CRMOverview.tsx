@@ -5,33 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   Building2,
   Users,
   Target,
-  Euro,
   ArrowRight,
   ArrowUpRight,
   ArrowDownRight,
-  TrendingUp,
   Mail,
   Phone,
-  MoreHorizontal,
-  Sparkles,
   Zap,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { CRMCompanyEnriched, Contact } from "@/lib/crmTypes";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { CRMSparkline } from "./CRMSparkline";
 import { CRMActivityFeed } from "./CRMActivityFeed";
-import { CRMQuickActions } from "./CRMQuickActions";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
+import { CRMQuickActions } from "./CRMQuickActions";
 import { CompanyFormDialog } from "./CompanyFormDialog";
 import { ContactFormDialog } from "./ContactFormDialog";
 
@@ -68,16 +59,6 @@ export function CRMOverview({
 
   const [showCreateCompany, setShowCreateCompany] = useState(false);
   const [showCreateContact, setShowCreateContact] = useState(false);
-
-  const formatCurrency = (value: number) => {
-    if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M€`;
-    }
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(0)}k€`;
-    }
-    return `${value}€`;
-  };
 
   // Generate mock sparkline data based on counts
   const generateSparklineData = (count: number, variance = 0.3) => {
