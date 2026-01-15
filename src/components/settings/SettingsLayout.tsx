@@ -135,6 +135,13 @@ export function getSettingsGroups(t: (key: string) => string): SettingsGroup[] {
         { id: 'feedback', label: t('settings.sections.feedback'), icon: <MessageSquarePlus className="h-4 w-4" />, description: t('settings.sections.feedbackDesc') },
       ],
     },
+    {
+      id: 'development',
+      label: 'Développement',
+      sections: [
+        { id: 'design-system', label: 'Design System', icon: <Palette className="h-4 w-4" />, description: 'Catalogue visuel des composants UI', badge: 'Admin' },
+      ],
+    },
   ];
 }
 
