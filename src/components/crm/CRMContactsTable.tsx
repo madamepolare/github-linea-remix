@@ -419,14 +419,12 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                           />
                         </TableCell>
                         <TableCell className="py-2">
-                          {/* Show type badge with icon */}
+                          {/* Show status badge (Lead or Contact) */}
                           {(() => {
-                            const contactType = contact.contact_type || "contact";
-                            const displayLabel = getContactTypeLabel(contactType);
-                            const displayColor = getContactTypeColor(contactType);
-                            
-                            // Get icon based on type
-                            const IconComponent = contactType === "lead" ? Target : User;
+                            const isLead = contact.status === 'lead';
+                            const displayLabel = isLead ? 'Lead' : 'Contact';
+                            const displayColor = isLead ? '#f97316' : '#22c55e';
+                            const IconComponent = isLead ? Target : User;
                             
                             return (
                               <Badge 
