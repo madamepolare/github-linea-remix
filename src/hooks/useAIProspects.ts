@@ -77,14 +77,52 @@ export function useAIProspects() {
     enabled: !!activeWorkspace?.id,
   });
 
-  // Search prospects using AI
+  // Search prospects using AI (supports multiple providers)
   const searchProspects = useMutation({
-    mutationFn: async ({ query, region, industry }: { query: string; region?: string; industry?: string }) => {
-      const { data, error } = await supabase.functions.invoke("ai-prospect-search", {
-        body: { query, region, industry },
+    mutationFn: async ({ 
+      query, 
+      region, 
+      industry,
+      provider = "openai" 
+    }: { 
+      query: string; 
+      region?: string; 
+      industry?: string;
+      provider?: "firecrawl" | "openai";
+    }) => {
+      const functionName = provider === "openai" ? "openai-lead-search" : "ai-prospect-search";
+      
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: { query, region, industry, count: 10 },
       });
 
       if (error) throw error;
+      
+      // Normalize response format
+      if (provider === "openai" && data.leads) {
+        // Transform OpenAI response to match existing format
+        const prospects: ProspectSearchResult[] = data.leads.map((lead: any) => ({
+          company_name: lead.company_name,
+          company_website: lead.company_website,
+          company_address: lead.company_address,
+          company_city: lead.company_city,
+          company_postal_code: lead.company_postal_code,
+          company_phone: lead.company_phone,
+          company_email: lead.company_email,
+          company_industry: lead.company_industry,
+          contacts: lead.contact_name ? [{
+            name: lead.contact_name,
+            email: lead.contact_email,
+            phone: lead.contact_phone,
+            role: lead.contact_role,
+          }] : [],
+          source_url: lead.source_url,
+          confidence_score: lead.confidence_score,
+          notes: lead.notes,
+        }));
+        return { prospects, citations: [], count: prospects.length };
+      }
+      
       return data as { prospects: ProspectSearchResult[]; citations: string[]; count: number };
     },
   });
