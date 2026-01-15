@@ -2,17 +2,18 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { CRMContactsTable } from "@/components/crm/CRMContactsTable";
 import { CRMCompanyTable } from "@/components/crm/CRMCompanyTable";
+import { CRMLeadsView } from "@/components/crm/CRMLeadsView";
 import { CreateContactDialog } from "@/components/crm/CreateContactDialog";
 import { CreateCompanyDialog } from "@/components/crm/CreateCompanyDialog";
 import { ImportContactsDialog } from "@/components/crm/ImportContactsDialog";
 import { CRMOverview } from "@/components/crm/CRMOverview";
 import { CRMCommandBar } from "@/components/crm/CRMCommandBar";
-import { ProspectionUnified } from "@/components/crm/ProspectionUnified";
+import { AIProspectionPlayground } from "@/components/crm/AIProspectionPlayground";
 import { useLeads } from "@/hooks/useLeads";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
 
-type CRMView = "overview" | "contacts" | "companies" | "prospection";
+type CRMView = "overview" | "contacts" | "companies" | "leads" | "prospection";
 
 export default function CRM() {
   const { section } = useParams();
@@ -24,10 +25,10 @@ export default function CRM() {
   const [importContactsOpen, setImportContactsOpen] = useState(false);
   const [commandBarOpen, setCommandBarOpen] = useState(false);
 
-  // Redirect old routes to new unified prospection
+  // Redirect old routes
   useEffect(() => {
-    if (section === "leads" || section === "leads-table" || section === "development") {
-      navigate("/crm/prospection", { replace: true });
+    if (section === "leads-table" || section === "development") {
+      navigate("/crm/leads", { replace: true });
     }
   }, [section, navigate]);
 
@@ -35,7 +36,7 @@ export default function CRM() {
   
   // Redirect invalid views to overview
   useEffect(() => {
-    const validViews: CRMView[] = ["overview", "contacts", "companies", "prospection"];
+    const validViews: CRMView[] = ["overview", "contacts", "companies", "leads", "prospection"];
     if (section && !validViews.includes(section as CRMView)) {
       navigate("/crm/overview", { replace: true });
     }
@@ -86,8 +87,11 @@ export default function CRM() {
           />
         );
 
+      case "leads":
+        return <CRMLeadsView searchQuery={searchQuery} />;
+
       case "prospection":
-        return <ProspectionUnified searchQuery={searchQuery} />;
+        return <AIProspectionPlayground />;
 
       default:
         return null;
