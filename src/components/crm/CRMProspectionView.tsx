@@ -1,12 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
 import { useCRMPipelines } from "@/hooks/useCRMPipelines";
 import { ContactPipeline } from "./ContactPipeline";
+import { ProspectionListView } from "./ProspectionListView";
 import { BulkAddToPipelineDialog } from "./BulkAddToPipelineDialog";
 import { CreateContactDialog } from "./CreateContactDialog";
 import { CreateCompanyDialog } from "./CreateCompanyDialog";
 import { ModuleFiltersBar } from "@/components/shared/ModuleFiltersBar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Select,
   SelectContent,
@@ -27,7 +29,9 @@ import {
   ChevronDown, 
   Building2, 
   User, 
-  Target
+  Target,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 
 interface CRMProspectionViewProps {
@@ -39,6 +43,7 @@ export function CRMProspectionView({ searchQuery = "" }: CRMProspectionViewProps
   
   const [search, setSearch] = useState(searchQuery);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"pipeline" | "list">("pipeline");
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
   const [createContactOpen, setCreateContactOpen] = useState(false);
   const [createCompanyOpen, setCreateCompanyOpen] = useState(false);
@@ -132,6 +137,31 @@ export function CRMProspectionView({ searchQuery = "" }: CRMProspectionViewProps
     </div>
   );
 
+  // View toggle
+  const viewToggle = (
+    <ToggleGroup
+      type="single"
+      value={viewMode}
+      onValueChange={(value) => value && setViewMode(value as "pipeline" | "list")}
+      className="border rounded-lg p-0.5"
+    >
+      <ToggleGroupItem
+        value="pipeline"
+        aria-label="Vue pipeline"
+        className="h-8 w-8 p-0 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+      >
+        <LayoutGrid className="h-4 w-4" />
+      </ToggleGroupItem>
+      <ToggleGroupItem
+        value="list"
+        aria-label="Vue liste"
+        className="h-8 w-8 p-0 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+      >
+        <List className="h-4 w-4" />
+      </ToggleGroupItem>
+    </ToggleGroup>
+  );
+
   const renderContent = () => {
     if (pipelinesLoading) {
       return (
@@ -161,6 +191,10 @@ export function CRMProspectionView({ searchQuery = "" }: CRMProspectionViewProps
       );
     }
 
+    if (viewMode === "list") {
+      return <ProspectionListView pipeline={selectedPipeline} search={search} />;
+    }
+
     return (
       <ContactPipeline 
         pipeline={selectedPipeline} 
@@ -173,6 +207,7 @@ export function CRMProspectionView({ searchQuery = "" }: CRMProspectionViewProps
     <>
       <div className="space-y-4">
         <ModuleFiltersBar
+          viewToggle={viewToggle}
           search={{ value: search, onChange: setSearch, placeholder: "Rechercher dans le pipeline..." }}
           filters={filters}
         />
