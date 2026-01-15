@@ -36,6 +36,8 @@ import {
   ExternalLink,
   Upload,
   ArrowUpDown,
+  CheckCircle2,
+  Target,
 } from "lucide-react";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
@@ -57,7 +59,7 @@ export interface CRMContactsTableProps {
 
 export function CRMContactsTable({ search: externalSearch = "", onCreateContact, onImportContacts }: CRMContactsTableProps) {
   const navigate = useNavigate();
-  const { contacts, allContacts, isLoading, deleteContact, updateContact, statsByType } = useContacts();
+  const { contacts, allContacts, isLoading, deleteContact, updateContact, confirmContact, statsByType, statsByStatus } = useContacts();
   const { canViewSensitiveData, canEditContacts, canDeleteContacts } = useWorkspaceRole();
   const { getContactTypeLabel, getContactTypeColor, contactTypes } = useCRMSettings();
   const { entriesByContactId } = useContactPipelineEntries();
@@ -66,6 +68,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [searchQuery, setSearchQuery] = useState(externalSearch);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -93,6 +96,15 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
       result = result.filter((c) => c.contact_type && selectedTypes.includes(c.contact_type));
     }
 
+    // Filter by status
+    if (selectedStatus !== "all") {
+      if (selectedStatus === "lead") {
+        result = result.filter((c) => c.status === "lead");
+      } else if (selectedStatus === "confirmed") {
+        result = result.filter((c) => c.status === "confirmed" || !c.status);
+      }
+    }
+
     // Sort
     result.sort((a, b) => {
       let aVal: any = a[sortBy as keyof Contact];
@@ -109,7 +121,16 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
     });
 
     return result;
-  }, [contacts, effectiveSearch, selectedTypes, sortBy, sortDir]);
+  }, [contacts, effectiveSearch, selectedTypes, selectedStatus, sortBy, sortDir]);
+
+  // Status filter options
+  const statusFilterOptions: FilterOption[] = useMemo(() => {
+    return [
+      { id: "all", label: "Tous", count: statsByStatus?.all || 0 },
+      { id: "lead", label: "Leads", color: "#f97316", count: statsByStatus?.lead || 0 },
+      { id: "confirmed", label: "Confirmés", color: "#22c55e", count: statsByStatus?.confirmed || 0 },
+    ];
+  }, [statsByStatus]);
 
   // Type filter options
   const typeFilterOptions: FilterOption[] = useMemo(() => {
@@ -203,6 +224,29 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
   return (
     <>
       <div className="space-y-3">
+        {/* Status tabs */}
+        <div className="flex items-center gap-1 border-b">
+          {statusFilterOptions.map((option) => (
+            <button
+              key={option.id}
+              onClick={() => setSelectedStatus(option.id)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
+                selectedStatus === option.id
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {option.id === "lead" && <Target className="h-3.5 w-3.5" />}
+              {option.id === "confirmed" && <CheckCircle2 className="h-3.5 w-3.5" />}
+              {option.label}
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+                {option.count}
+              </Badge>
+            </button>
+          ))}
+        </div>
+
         {/* Filters + actions */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -218,6 +262,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
               onClearAllFilters={() => {
                 setSearchQuery("");
                 setSelectedTypes([]);
+                setSelectedStatus("all");
               }}
             />
           </div>
@@ -413,10 +458,18 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                                 Voir détails
                               </DropdownMenuItem>
                               {canEditContacts && (
-                                <DropdownMenuItem onClick={() => setEditingContact(contact)}>
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  Modifier
-                                </DropdownMenuItem>
+                                <>
+                                  <DropdownMenuItem onClick={() => setEditingContact(contact)}>
+                                    <Pencil className="h-4 w-4 mr-2" />
+                                    Modifier
+                                  </DropdownMenuItem>
+                                  {contact.status === 'lead' && (
+                                    <DropdownMenuItem onClick={() => confirmContact.mutate(contact.id)}>
+                                      <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+                                      Confirmer
+                                    </DropdownMenuItem>
+                                  )}
+                                </>
                               )}
                               {canDeleteContacts && (
                                 <>

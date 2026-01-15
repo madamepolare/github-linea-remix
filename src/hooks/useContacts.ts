@@ -7,6 +7,8 @@ import { Contact } from "@/lib/crmTypes";
 
 export type { Contact };
 
+export type ContactStatus = 'lead' | 'confirmed';
+
 export interface CreateContactInput {
   name: string;
   first_name?: string;
@@ -20,12 +22,14 @@ export interface CreateContactInput {
   location?: string;
   avatar_url?: string;
   notes?: string;
+  status?: ContactStatus;
 }
 
 export function useContacts(options?: { 
   companyId?: string; 
   contactType?: string;
   search?: string;
+  status?: ContactStatus | 'all';
 }) {
   const { activeWorkspace, user } = useAuth();
   const queryClient = useQueryClient();
@@ -89,6 +93,10 @@ export function useContacts(options?: {
       result = result.filter((c) => c.contact_type === options.contactType);
     }
 
+    if (options?.status && options.status !== 'all') {
+      result = result.filter((c) => c.status === options.status);
+    }
+
     if (options?.search) {
       const searchLower = options.search.toLowerCase();
       result = result.filter(
@@ -102,6 +110,15 @@ export function useContacts(options?: {
 
     return result;
   }, [contacts, options]);
+
+  // Derived lists
+  const leadContacts = useMemo(() => 
+    (contacts || []).filter(c => c.status === 'lead'), [contacts]
+  );
+  
+  const confirmedContacts = useMemo(() => 
+    (contacts || []).filter(c => c.status === 'confirmed'), [contacts]
+  );
 
   // Stats by contact type
   const statsByType = useMemo(() => {
@@ -117,6 +134,38 @@ export function useContacts(options?: {
 
     return stats;
   }, [contacts]);
+
+  // Stats by status
+  const statsByStatus = useMemo(() => {
+    if (!contacts) return { all: 0, lead: 0, confirmed: 0 };
+    return {
+      all: contacts.length,
+      lead: contacts.filter(c => c.status === 'lead').length,
+      confirmed: contacts.filter(c => c.status === 'confirmed').length,
+    };
+  }, [contacts]);
+
+  // Confirm contact mutation
+  const confirmContact = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .update({ status: 'confirmed' as ContactStatus })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      toast({ title: "Contact confirmé" });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    },
+  });
 
   const createContact = useMutation({
     mutationFn: async (input: CreateContactInput) => {
@@ -182,11 +231,15 @@ export function useContacts(options?: {
   return {
     contacts: filteredContacts,
     allContacts: contacts || [],
+    leadContacts,
+    confirmedContacts,
     isLoading,
     error,
     statsByType,
+    statsByStatus,
     createContact,
     updateContact,
     deleteContact,
+    confirmContact,
   };
 }
