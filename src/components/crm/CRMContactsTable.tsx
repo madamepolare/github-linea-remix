@@ -351,11 +351,11 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                             <span className="text-[11px] text-muted-foreground/50">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="py-2 hidden sm:table-cell">
+                        <TableCell className="py-2 hidden sm:table-cell min-w-[180px]">
                           {contact.company ? (
                             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                               <Building2 className="h-3.5 w-3.5 shrink-0" />
-                              <span className="truncate max-w-[120px]">{contact.company.name}</span>
+                              <span className="truncate max-w-[200px]" title={contact.company.name}>{contact.company.name}</span>
                             </div>
                           ) : (
                             <span className="text-muted-foreground/50 text-xs">—</span>

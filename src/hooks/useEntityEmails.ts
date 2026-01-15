@@ -88,8 +88,8 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
             .order('created_at', { ascending: false });
           
           if (contact.email) {
-            // Match by contact_id OR by email address (from/to)
-            query = query.or(`contact_id.eq.${entityId},from_email.ilike.${contact.email},to_email.ilike.${contact.email}`);
+            // Match by contact_id OR by email address (from/to) - use wildcards for ilike
+            query = query.or(`contact_id.eq.${entityId},from_email.ilike.%${contact.email}%,to_email.ilike.%${contact.email}%`);
           } else {
             query = query.eq('contact_id', entityId);
           }

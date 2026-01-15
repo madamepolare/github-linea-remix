@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
-import { useLeads } from "@/hooks/useLeads";
+// useLeads kept for potential future use but contactLeads filtering removed
 import { useTopBar } from "@/contexts/TopBarContext";
 import { CONTACT_TABS } from "@/lib/entityTabsConfig";
 import { THIN_STROKE } from "@/components/ui/icon";
@@ -23,8 +23,6 @@ import { useCRMSettings } from "@/hooks/useCRMSettings";
 
 // New modular components
 import { ContactInfoPanel } from "@/components/crm/contact/ContactInfoPanel";
-import { ContactStatsCards } from "@/components/crm/contact/ContactStatsCards";
-import { ContactLeadsSection } from "@/components/crm/contact/ContactLeadsSection";
 import { ActivityTimeline } from "@/components/shared/ActivityTimeline";
 import { ContactPortalSettings } from "@/components/crm/contact/ContactPortalSettings";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,7 +32,7 @@ export default function ContactDetail() {
   const navigate = useNavigate();
   const { allContacts, isLoading, updateContact } = useContacts();
   const { allCompanies } = useCRMCompanies();
-  const { leads } = useLeads();
+  // Leads hook removed - leads now displayed in company overview only
   const { setEntityConfig } = useTopBar();
   const { activeWorkspace } = useAuth();
   const { getContactTypeLabel, getContactTypeColor } = useCRMSettings();
@@ -44,7 +42,7 @@ export default function ContactDetail() {
   const [activeTab, setActiveTab] = useState("info");
 
   const contact = allContacts.find((c) => c.id === id);
-  const contactLeads = leads.filter((l) => l.contact_id === id);
+  // contactLeads removed - leads now displayed in company overview only
   const company = contact?.crm_company_id
     ? allCompanies.find((c) => c.id === contact.crm_company_id)
     : null;
@@ -58,10 +56,12 @@ export default function ContactDetail() {
   // Configure TopBar for entity view
   useEffect(() => {
     if (contact) {
-      const updatedTabs = CONTACT_TABS.map(tab => ({
-        ...tab,
-        badge: tab.key === "leads" ? contactLeads.length : undefined,
-      }));
+      // Filter out leads tab - leads should be on company overview, not contact
+      const updatedTabs = CONTACT_TABS
+        .filter(tab => tab.key !== "leads")
+        .map(tab => ({
+          ...tab,
+        }));
 
       const typeColor = getContactTypeColor(contact.contact_type || "client");
 
@@ -124,7 +124,7 @@ export default function ContactDetail() {
     }
     
     return () => setEntityConfig(null);
-  }, [contact, activeTab, isEditing, contactLeads.length, setEntityConfig, getContactTypeLabel, getContactTypeColor]);
+  }, [contact, activeTab, isEditing, setEntityConfig, getContactTypeLabel, getContactTypeColor]);
 
   const handleSave = () => {
     if (contact && editData) {
@@ -171,13 +171,10 @@ export default function ContactDetail() {
       case "info":
         return (
           <div className="space-y-6">
-            {/* Stats Cards */}
-            <ContactStatsCards leads={contactLeads} />
-
-            {/* Main Content - 2 columns */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column - Info Panel */}
-              <div className="lg:col-span-1">
+            {/* Main Content - 2 columns: larger left, smaller right */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+              {/* Left Column - Info Panel (larger) */}
+              <div className="lg:col-span-3 space-y-6">
                 <ContactInfoPanel
                   contact={contact}
                   company={company || null}
@@ -186,23 +183,20 @@ export default function ContactDetail() {
                   onEditDataChange={setEditData}
                   allCompanies={allCompanies}
                 />
-              </div>
-
-              {/* Right Column - Leads & Activity */}
-              <div className="lg:col-span-2 space-y-6">
-                <ContactLeadsSection 
-                  leads={contactLeads} 
-                  contactId={contact.id} 
-                />
                 <ContactPortalSettings 
                   contactId={contact.id}
                   contactName={contact.name}
                 />
+              </div>
+
+              {/* Right Column - Activity & Actions (smaller) */}
+              <div className="lg:col-span-2 space-y-6">
                 <ActivityTimeline
                   entityType="contact"
                   entityId={id}
                   workspaceId={activeWorkspace?.id}
-                  maxItems={10}
+                  maxItems={15}
+                  showHeader={true}
                 />
               </div>
             </div>
@@ -219,8 +213,6 @@ export default function ContactDetail() {
         );
       case "tasks":
         return <EntityTasksList entityType="contact" entityId={contact.id} entityName={contact.name} />;
-      case "leads":
-        return <ContactLeadsSection leads={contactLeads} contactId={contact.id} />;
       default:
         return null;
     }

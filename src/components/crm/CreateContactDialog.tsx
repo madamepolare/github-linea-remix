@@ -382,6 +382,16 @@ export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: Cr
                                 className="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 transition-colors flex items-center gap-2"
                                 onClick={() => {
                                   form.setValue("crm_company_id", company.id);
+                                  // Auto-fill address from company if available and contact address is empty
+                                  if (company.address && !form.getValues("address")) {
+                                    form.setValue("address", company.address);
+                                  }
+                                  if (company.city && !form.getValues("city")) {
+                                    form.setValue("city", company.city);
+                                  }
+                                  if (company.postal_code && !form.getValues("postal_code")) {
+                                    form.setValue("postal_code", company.postal_code);
+                                  }
                                   setCompanySearch("");
                                   setShowCompanyDropdown(false);
                                 }}

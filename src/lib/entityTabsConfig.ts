@@ -74,12 +74,11 @@ export const TENDER_TABS: EntityTab[] = [
   { key: "memoire", label: "Mémoire", icon: PenTool },
 ];
 
-// Contact detail tabs
+// Contact detail tabs - leads moved to company overview
 export const CONTACT_TABS: EntityTab[] = [
   { key: "info", label: "Informations", icon: LayoutDashboard },
   { key: "emails", label: "Emails", icon: Mail },
   { key: "tasks", label: "Tâches", icon: CheckSquare },
-  { key: "leads", label: "Leads", icon: Target },
 ];
 
 // Company detail tabs  
