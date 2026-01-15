@@ -358,17 +358,17 @@ export function ProspectionUnified({ searchQuery = "" }: ProspectionUnifiedProps
     <>
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ProspectionSubTab)} className="space-y-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          <TabsList className="h-9">
-            <TabsTrigger value="leads" className="gap-1.5 text-xs px-3">
+        <TabsList className="h-9">
+            <TabsTrigger value="leads" className="gap-1.5 text-xs px-3 data-[state=active]:font-semibold">
               <List className="h-3.5 w-3.5" />
               Leads
             </TabsTrigger>
-            <TabsTrigger value="pipelines" className="gap-1.5 text-xs px-3">
+            <TabsTrigger value="pipelines" className="gap-1.5 text-xs px-3 data-[state=active]:font-semibold">
               <Layers className="h-3.5 w-3.5" />
               Pipelines
             </TabsTrigger>
             {isAISalesAgentEnabled && (
-              <TabsTrigger value="agent-ia" className="gap-1.5 text-xs px-3">
+              <TabsTrigger value="agent-ia" className="gap-1.5 text-xs px-3 data-[state=active]:font-semibold">
                 <Sparkles className="h-3.5 w-3.5" />
                 Agent IA
               </TabsTrigger>
