@@ -31,6 +31,15 @@ interface Integration {
 
 const INTEGRATIONS: Integration[] = [
   {
+    id: "openai",
+    name: "OpenAI",
+    description: "Recherche de leads IA avancée avec GPT-4",
+    category: "ai",
+    icon: <Sparkles className="h-5 w-5 text-emerald-500" />,
+    secretKey: "OPENAI_API_KEY",
+    docsUrl: "https://platform.openai.com"
+  },
+  {
     id: "firecrawl",
     name: "Firecrawl",
     description: "Recherche et scraping web pour la prospection IA",
@@ -88,6 +97,7 @@ export function IntegrationsSettings() {
   useEffect(() => {
     // These are the secrets that are connected based on the project configuration
     setConnectedSecrets([
+      "OPENAI_API_KEY",
       "FIRECRAWL_API_KEY",
       "PERPLEXITY_API_KEY", 
       "RESEND_API_KEY",
