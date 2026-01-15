@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFrameworkAggregation } from "@/hooks/useSubProjects";
+import { ShareRequestFormDialog } from "./ShareRequestFormDialog";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -13,15 +16,18 @@ import {
   Calendar, 
   TrendingUp,
   RefreshCw,
-  Wallet
+  Wallet,
+  Share2
 } from "lucide-react";
 
 interface FrameworkDashboardProps {
   projectId: string;
+  projectName?: string;
 }
 
-export function FrameworkDashboard({ projectId }: FrameworkDashboardProps) {
+export function FrameworkDashboard({ projectId, projectName }: FrameworkDashboardProps) {
   const { data: aggregation, isLoading } = useFrameworkAggregation(projectId);
+  const [shareOpen, setShareOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -87,6 +93,15 @@ export function FrameworkDashboard({ projectId }: FrameworkDashboardProps) {
 
   return (
     <div className="space-y-4">
+      {/* Header with share button */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Accord-cadre</h3>
+        <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}>
+          <Share2 className="h-4 w-4 mr-2" />
+          Partager formulaire
+        </Button>
+      </div>
+
       {/* Monthly budget card if available */}
       {aggregation.monthlyBudget && (
         <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
@@ -154,6 +169,13 @@ export function FrameworkDashboard({ projectId }: FrameworkDashboardProps) {
           </CardContent>
         </Card>
       )}
+
+      <ShareRequestFormDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        projectId={projectId}
+        projectName={projectName || "Projet"}
+      />
     </div>
   );
 }
