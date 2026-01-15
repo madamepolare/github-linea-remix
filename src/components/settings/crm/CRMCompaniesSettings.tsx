@@ -396,6 +396,56 @@ export function CRMCompaniesSettings() {
                   </div>
                 );
               })}
+              
+              {/* Orphan types (without category) */}
+              {(() => {
+                const orphanTypes = companyTypes.filter(t => !t.category || !companyCategories.some(c => c.key === t.category));
+                if (orphanTypes.length === 0) return null;
+                
+                return (
+                  <div className="border rounded-lg overflow-hidden border-dashed border-amber-500/50">
+                    <div className="flex items-center justify-between p-3 bg-amber-50">
+                      <div className="flex items-center gap-3">
+                        <div className="h-3 w-3 rounded-full shrink-0 bg-amber-500" />
+                        <span className="font-medium text-amber-800">Types sans catégorie</span>
+                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
+                          {orphanTypes.length} type{orphanTypes.length !== 1 ? "s" : ""} orphelin{orphanTypes.length !== 1 ? "s" : ""}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-amber-50/50">
+                      <p className="text-xs text-amber-700 mb-3">
+                        Ces types ne sont associés à aucune catégorie. Vous pouvez les supprimer ou les réorganiser.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {orphanTypes.map((type) => (
+                          <div key={type.key} className="group relative">
+                            <Badge 
+                              variant="outline" 
+                              className="py-1 px-2 gap-1 cursor-pointer hover:bg-white transition-colors pr-6"
+                              style={{ 
+                                borderColor: type.color,
+                                color: type.color,
+                              }}
+                            >
+                              {type.shortLabel || type.label}
+                            </Badge>
+                            <button
+                              className="absolute -right-1 -top-1 h-4 w-4 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirm({ type: "subcategory", key: type.key });
+                              }}
+                            >
+                              <Trash2 className="h-2.5 w-2.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </CardContent>
