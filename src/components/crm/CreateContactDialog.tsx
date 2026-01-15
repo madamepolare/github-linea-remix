@@ -374,7 +374,28 @@ export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: Cr
                     </div>
                     
                     {showCompanyDropdown && (
-                      <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        {/* Quick create button - always visible when there's text */}
+                        {companySearch.trim() && (
+                          <div className="p-2 border-b border-border">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="w-full justify-start gap-2 h-9 text-primary hover:text-primary hover:bg-primary/10"
+                              onClick={handleCreateCompany}
+                              disabled={isCreatingCompany}
+                            >
+                              {isCreatingCompany ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Plus className="h-3.5 w-3.5" />
+                              )}
+                              Créer l'entreprise "{companySearch.trim()}"
+                            </Button>
+                          </div>
+                        )}
+
                         {filteredCompanies.length > 0 ? (
                           <>
                             {filteredCompanies.map((company) => (
@@ -408,32 +429,11 @@ export function CreateContactDialog({ open, onOpenChange, defaultCompanyId }: Cr
                               </button>
                             ))}
                           </>
-                        ) : companySearch.trim() ? (
-                          <div className="p-2">
-                            <p className="text-xs text-muted-foreground mb-2 px-1">
-                              Aucune entreprise trouvée
-                            </p>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="w-full gap-2"
-                              onClick={handleCreateCompany}
-                              disabled={isCreatingCompany}
-                            >
-                              {isCreatingCompany ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Plus className="h-3.5 w-3.5" />
-                              )}
-                              Créer "{companySearch}"
-                            </Button>
-                          </div>
-                        ) : (
+                        ) : !companySearch.trim() ? (
                           <p className="text-xs text-muted-foreground p-3">
-                            Tapez pour rechercher...
+                            Tapez pour rechercher ou créer...
                           </p>
-                        )}
+                        ) : null}
                       </div>
                     )}
                   </>
