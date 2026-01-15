@@ -44,7 +44,7 @@ export function useContacts(options?: {
         .from("contacts")
         .select(`
           *,
-          company:crm_companies(id, name, logo_url, industry, country, city)
+          company:crm_companies!contacts_crm_company_id_fkey(id, name, logo_url, industry, country, city)
         `)
         .eq("workspace_id", activeWorkspace!.id)
         .order("name");
