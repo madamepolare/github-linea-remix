@@ -12,6 +12,9 @@ export interface PipelineEntry {
   company_id: string | null;
   entered_at: string | null;
   last_email_sent_at: string | null;
+  last_inbound_email_at: string | null;
+  awaiting_response: boolean | null;
+  unread_replies_count: number | null;
   notes: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -245,10 +248,13 @@ export function useContactPipeline(pipelineId: string | undefined) {
 
       if (error) throw error;
 
-      // Update entry's last_email_sent_at
+      // Update entry's last_email_sent_at and set awaiting_response
       await supabase
         .from("contact_pipeline_entries")
-        .update({ last_email_sent_at: new Date().toISOString() })
+        .update({ 
+          last_email_sent_at: new Date().toISOString(),
+          awaiting_response: true,
+        })
         .eq("id", input.entryId);
 
       return data;
@@ -329,10 +335,13 @@ export function useContactPipelineEmails(entryId: string | undefined) {
 
       if (error) throw error;
 
-      // Update entry's last_email_sent_at
+      // Update entry's last_email_sent_at and set awaiting_response
       await supabase
         .from("contact_pipeline_entries")
-        .update({ last_email_sent_at: new Date().toISOString() })
+        .update({ 
+          last_email_sent_at: new Date().toISOString(),
+          awaiting_response: true,
+        })
         .eq("id", input.entry_id);
 
       return data;

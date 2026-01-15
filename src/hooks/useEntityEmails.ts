@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGmailConnection } from "./useGmailConnection";
 import { toast } from "sonner";
@@ -286,6 +287,50 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
     },
     enabled: enabled && !!entityId,
   });
+
+  // Real-time subscription for new emails
+  useEffect(() => {
+    if (!entityId || !enabled) return;
+
+    const channel = supabase
+      .channel(`emails-${entityType}-${entityId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'crm_emails',
+        },
+        (payload) => {
+          // Check if the email is relevant to our entity
+          const record = payload.new as Email | undefined;
+          if (record) {
+            const isRelevant = 
+              (entityType === 'contact' && record.contact_id === entityId) ||
+              (entityType === 'company' && record.company_id === entityId) ||
+              (entityType === 'lead' && record.lead_id === entityId) ||
+              (entityType === 'project' && record.project_id === entityId) ||
+              (entityType === 'tender' && record.tender_id === entityId);
+
+            if (isRelevant) {
+              queryClient.invalidateQueries({ queryKey });
+              
+              // Show toast for new inbound emails
+              if (payload.eventType === 'INSERT' && record.direction === 'inbound') {
+                toast.info('Nouveau email reçu', {
+                  description: record.subject,
+                });
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [entityId, entityType, enabled, queryClient, queryKey]);
 
   // Group emails by thread
   const threads: EmailThread[] = (() => {

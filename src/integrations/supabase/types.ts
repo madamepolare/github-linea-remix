@@ -1952,41 +1952,50 @@ export type Database = {
       }
       contact_pipeline_entries: {
         Row: {
+          awaiting_response: boolean | null
           company_id: string | null
           contact_id: string | null
           created_at: string | null
           entered_at: string | null
           id: string
           last_email_sent_at: string | null
+          last_inbound_email_at: string | null
           notes: string | null
           pipeline_id: string
           stage_id: string
+          unread_replies_count: number | null
           updated_at: string | null
           workspace_id: string
         }
         Insert: {
+          awaiting_response?: boolean | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string | null
           entered_at?: string | null
           id?: string
           last_email_sent_at?: string | null
+          last_inbound_email_at?: string | null
           notes?: string | null
           pipeline_id: string
           stage_id: string
+          unread_replies_count?: number | null
           updated_at?: string | null
           workspace_id: string
         }
         Update: {
+          awaiting_response?: boolean | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string | null
           entered_at?: string | null
           id?: string
           last_email_sent_at?: string | null
+          last_inbound_email_at?: string | null
           notes?: string | null
           pipeline_id?: string
           stage_id?: string
+          unread_replies_count?: number | null
           updated_at?: string | null
           workspace_id?: string
         }
@@ -2440,6 +2449,9 @@ export type Database = {
       }
       crm_pipeline_stages: {
         Row: {
+          auto_followup_action_title: string | null
+          auto_followup_days: number | null
+          auto_followup_enabled: boolean | null
           color: string | null
           created_at: string | null
           email_ai_prompt: string | null
@@ -2453,6 +2465,9 @@ export type Database = {
           sort_order: number | null
         }
         Insert: {
+          auto_followup_action_title?: string | null
+          auto_followup_days?: number | null
+          auto_followup_enabled?: boolean | null
           color?: string | null
           created_at?: string | null
           email_ai_prompt?: string | null
@@ -2466,6 +2481,9 @@ export type Database = {
           sort_order?: number | null
         }
         Update: {
+          auto_followup_action_title?: string | null
+          auto_followup_days?: number | null
+          auto_followup_enabled?: boolean | null
           color?: string | null
           created_at?: string | null
           email_ai_prompt?: string | null
