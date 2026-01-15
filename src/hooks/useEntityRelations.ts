@@ -255,7 +255,7 @@ export function useEntityRelations(entityType: EntityType, entityId: string | un
         // Get contact with company
         const { data: contact } = await supabase
           .from('contacts')
-          .select('*, crm_company:crm_companies(id, name)')
+          .select('*, crm_company:crm_companies!contacts_crm_company_id_fkey(id, name)')
           .eq('id', entityId)
           .single();
 
