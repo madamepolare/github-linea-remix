@@ -54,11 +54,13 @@ export interface Lead {
     id: string;
     name: string;
     logo_url: string | null;
+    industry?: string | null;
   } | null;
   contact?: {
     id: string;
     name: string;
     email: string | null;
+    contact_type?: string | null;
   } | null;
   stage?: PipelineStage | null;
   crm_company?: {
@@ -67,6 +69,7 @@ export interface Lead {
     address?: string | null;
     city?: string | null;
     postal_code?: string | null;
+    industry?: string | null;
   } | null;
 }
 
@@ -99,9 +102,9 @@ export function useLeads(options?: { pipelineId?: string; stageId?: string; stat
         .from("leads")
         .select(`
           *,
-          company:crm_companies(id, name, logo_url),
-          crm_company:crm_companies(id, name, address, city, postal_code),
-          contact:contacts(id, name, email),
+          company:crm_companies(id, name, logo_url, industry),
+          crm_company:crm_companies(id, name, address, city, postal_code, industry),
+          contact:contacts(id, name, email, contact_type),
           stage:crm_pipeline_stages(*)
         `)
         .eq("workspace_id", activeWorkspace!.id)

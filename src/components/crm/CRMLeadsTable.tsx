@@ -359,6 +359,7 @@ export function CRMLeadsTable({ search = "", onCreateLead }: CRMLeadsTableProps)
                         )} />
                       </div>
                     </TableHead>
+                    <TableHead className="hidden lg:table-cell">Type</TableHead>
                     <TableHead 
                       className="hidden md:table-cell cursor-pointer hover:text-foreground"
                       onClick={() => handleSort("company")}
@@ -447,6 +448,27 @@ export function CRMLeadsTable({ search = "", onCreateLead }: CRMLeadsTableProps)
                               </div>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell className="py-2 hidden lg:table-cell">
+                          {lead.company?.logo_url || lead.contact ? (
+                            <div className="flex flex-col gap-0.5">
+                              {(lead.company as any)?.industry && (
+                                <Badge variant="outline" className="text-[10px] w-fit">
+                                  {(lead.company as any).industry}
+                                </Badge>
+                              )}
+                              {(lead.contact as any)?.contact_type && (
+                                <Badge variant="secondary" className="text-[10px] w-fit">
+                                  {(lead.contact as any).contact_type}
+                                </Badge>
+                              )}
+                              {!(lead.company as any)?.industry && !(lead.contact as any)?.contact_type && (
+                                <span className="text-xs text-muted-foreground/50">—</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground/50">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="py-2 hidden md:table-cell">
                           <div className="space-y-1">
