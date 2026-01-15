@@ -14,6 +14,8 @@ import { useCRMSettings } from "@/hooks/useCRMSettings";
 
 export type { CRMCompany, CRMCompanyEnriched };
 
+export type CompanyStatus = 'lead' | 'confirmed';
+
 export interface CreateCompanyInput {
   name: string;
   industry?: string;
@@ -27,6 +29,7 @@ export interface CreateCompanyInput {
   notes?: string;
   bet_specialties?: string[];
   billing_email?: string;
+  status?: CompanyStatus;
 }
 
 export function useCRMCompanies(filters?: Partial<CRMFilters>) {
@@ -198,6 +201,25 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
     return stats;
   }, [data]);
 
+  // Stats by status
+  const statsByStatus = useMemo(() => {
+    if (!data) return { all: 0, lead: 0, confirmed: 0 };
+    return {
+      all: data.length,
+      lead: data.filter(c => c.status === 'lead').length,
+      confirmed: data.filter(c => c.status === 'confirmed' || !c.status).length,
+    };
+  }, [data]);
+
+  // Derived lists
+  const leadCompanies = useMemo(() => 
+    (data || []).filter(c => c.status === 'lead'), [data]
+  );
+  
+  const confirmedCompanies = useMemo(() => 
+    (data || []).filter(c => c.status === 'confirmed' || !c.status), [data]
+  );
+
   const createCompany = useMutation({
     mutationFn: async (input: CreateCompanyInput) => {
       const { data, error } = await supabase
@@ -260,14 +282,40 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
     },
   });
 
+  // Confirm company mutation
+  const confirmCompany = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from("crm_companies")
+        .update({ status: 'confirmed' as CompanyStatus })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm-companies"] });
+      toast({ title: "Entreprise confirmée" });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    },
+  });
+
   return {
     companies: filteredCompanies,
     allCompanies: data || [],
+    leadCompanies,
+    confirmedCompanies,
     isLoading,
     error,
     statsByCategory,
+    statsByStatus,
     createCompany,
     updateCompany,
     deleteCompany,
+    confirmCompany,
   };
 }

@@ -2047,6 +2047,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           role: string | null
+          status: string | null
           updated_at: string | null
           workspace_id: string
         }
@@ -2068,6 +2069,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           role?: string | null
+          status?: string | null
           updated_at?: string | null
           workspace_id: string
         }
@@ -2089,6 +2091,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           role?: string | null
+          status?: string | null
           updated_at?: string | null
           workspace_id?: string
         }
@@ -2206,6 +2209,7 @@ export type Database = {
           rcs_city: string | null
           siren: string | null
           siret: string | null
+          status: string | null
           updated_at: string | null
           vat_number: string | null
           vat_rate: number | null
@@ -2237,6 +2241,7 @@ export type Database = {
           rcs_city?: string | null
           siren?: string | null
           siret?: string | null
+          status?: string | null
           updated_at?: string | null
           vat_number?: string | null
           vat_rate?: number | null
@@ -2268,6 +2273,7 @@ export type Database = {
           rcs_city?: string | null
           siren?: string | null
           siret?: string | null
+          status?: string | null
           updated_at?: string | null
           vat_number?: string | null
           vat_rate?: number | null

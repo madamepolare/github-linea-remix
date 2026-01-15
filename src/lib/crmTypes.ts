@@ -220,6 +220,7 @@ export interface CRMCompany {
   notes: string | null;
   logo_url: string | null;
   bet_specialties: string[] | null;
+  status: string | null; // 'lead' = prospect, 'confirmed' = validated company
   // Fiscal fields from crm_companies table
   siret: string | null;
   siren: string | null;
@@ -250,6 +251,13 @@ export interface CRMCompanyEnriched extends CRMCompany {
 }
 
 export type ContactGender = 'male' | 'female' | 'other';
+export type EntityStatus = 'lead' | 'confirmed';
+
+// Helper to safely cast status from DB
+export function asEntityStatus(status: string | null | undefined): EntityStatus {
+  if (status === 'lead') return 'lead';
+  return 'confirmed'; // default to confirmed if null/undefined
+}
 
 export interface Contact {
   id: string;
@@ -267,6 +275,7 @@ export interface Contact {
   crm_company_id: string | null;
   department_id: string | null;
   department_role: string | null; // Role within the department
+  status: string | null; // 'lead' = prospect, 'confirmed' = validated contact
   created_by: string | null;
   workspace_id: string;
   created_at: string | null;
