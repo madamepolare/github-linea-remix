@@ -62,11 +62,11 @@ export default function Team() {
   return (
     <>
       <SEOHead
-        title="Équipe | Gestion des ressources humaines"
+        title="RH | Gestion des ressources humaines"
         description="Gérez votre équipe, suivez les temps, validez les absences et recrutez de nouveaux talents."
       />
       <PageLayout
-        title="Équipe"
+        title="RH"
         description={sectionDescriptions[activeSection] || "Gestion des ressources humaines"}
       >
         {renderContent()}

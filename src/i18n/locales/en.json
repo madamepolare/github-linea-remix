@@ -31,7 +31,7 @@
     "commercial": "Commercial",
     "invoicing": "Invoicing",
     "documents": "Documents",
-    "team": "Team",
+    "team": "HR",
     "settings": "Settings",
     "planning": "Planning",
     "campaigns": "Campaigns",
@@ -49,7 +49,7 @@
     "languageChangedDescription": "The interface is now in {language}",
     "groups": {
       "workspace": "Workspace",
-      "team": "Team",
+      "team": "HR",
       "projects": "Projects",
       "commercial": "Finance & Commercial",
       "documents": "Documents",

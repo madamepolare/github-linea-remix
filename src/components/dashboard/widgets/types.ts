@@ -55,7 +55,7 @@ export const MODULE_LABELS: Record<WidgetModule, string> = {
   tenders: "Appels d'offres",
   invoicing: "Facturation",
   documents: "Documents",
-  team: "Équipe",
+  team: "RH",
   references: "Références",
   materials: "Matériaux",
   objects: "Objets",
