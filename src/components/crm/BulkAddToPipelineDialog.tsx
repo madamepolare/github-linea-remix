@@ -320,15 +320,39 @@ export function BulkAddToPipelineDialog({
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">
-                          {entity.name}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm truncate">
+                            {entity.name}
+                          </p>
+                          {entityType === "contact" && (entity as any).status === "lead" && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-amber-100 text-amber-700 border-amber-200">
+                              Lead
+                            </Badge>
+                          )}
+                          {entityType === "contact" && (entity as any).contact_type === "prospect" && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-blue-100 text-blue-700 border-blue-200">
+                              Prospect
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground truncate">
                           {(entity as any).email || (entity as any).phone || "—"}
                         </p>
                       </div>
+                      {entityType === "company" && (entity as any).status && (
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[10px] shrink-0 ${
+                            (entity as any).status === "lead" 
+                              ? "bg-amber-50 text-amber-700 border-amber-200" 
+                              : ""
+                          }`}
+                        >
+                          {(entity as any).status === "lead" ? "Lead" : (entity as any).status}
+                        </Badge>
+                      )}
                       {entityType === "company" && (entity as any).industry && (
-                        <Badge variant="outline" className="text-xs shrink-0">
+                        <Badge variant="outline" className="text-[10px] shrink-0">
                           {(entity as any).industry}
                         </Badge>
                       )}
