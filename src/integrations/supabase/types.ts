@@ -7969,11 +7969,13 @@ export type Database = {
         Row: {
           address: string | null
           ai_summary: string | null
+          auto_renew: boolean | null
           budget: number | null
           city: string | null
           client: string | null
           color: string | null
           commercial_document_id: string | null
+          contract_type: string | null
           created_at: string | null
           created_by: string | null
           crm_company_id: string | null
@@ -7981,11 +7983,15 @@ export type Database = {
           description: string | null
           end_date: string | null
           fee_calculation: Json | null
+          framework_end_date: string | null
+          framework_start_date: string | null
           id: string
           is_archived: boolean | null
           is_internal: boolean
           lead_id: string | null
+          monthly_budget: number | null
           name: string
+          parent_id: string | null
           phase: string | null
           postal_code: string | null
           project_type: string | null
@@ -7999,11 +8005,13 @@ export type Database = {
         Insert: {
           address?: string | null
           ai_summary?: string | null
+          auto_renew?: boolean | null
           budget?: number | null
           city?: string | null
           client?: string | null
           color?: string | null
           commercial_document_id?: string | null
+          contract_type?: string | null
           created_at?: string | null
           created_by?: string | null
           crm_company_id?: string | null
@@ -8011,11 +8019,15 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           fee_calculation?: Json | null
+          framework_end_date?: string | null
+          framework_start_date?: string | null
           id?: string
           is_archived?: boolean | null
           is_internal?: boolean
           lead_id?: string | null
+          monthly_budget?: number | null
           name: string
+          parent_id?: string | null
           phase?: string | null
           postal_code?: string | null
           project_type?: string | null
@@ -8029,11 +8041,13 @@ export type Database = {
         Update: {
           address?: string | null
           ai_summary?: string | null
+          auto_renew?: boolean | null
           budget?: number | null
           city?: string | null
           client?: string | null
           color?: string | null
           commercial_document_id?: string | null
+          contract_type?: string | null
           created_at?: string | null
           created_by?: string | null
           crm_company_id?: string | null
@@ -8041,11 +8055,15 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           fee_calculation?: Json | null
+          framework_end_date?: string | null
+          framework_start_date?: string | null
           id?: string
           is_archived?: boolean | null
           is_internal?: boolean
           lead_id?: string | null
+          monthly_budget?: number | null
           name?: string
+          parent_id?: string | null
           phase?: string | null
           postal_code?: string | null
           project_type?: string | null
@@ -8083,6 +8101,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {

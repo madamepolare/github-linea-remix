@@ -67,6 +67,8 @@ import { ProjectElementsTab } from "@/components/projects/elements/ProjectElemen
 import { ProjectPhasesTab } from "@/components/projects/ProjectPhasesTab";
 import { ProjectBudgetTab } from "@/components/projects/ProjectBudgetTab";
 import { MessageCircle, Mail } from "lucide-react";
+import { FrameworkDashboard } from "@/components/projects/subprojects/FrameworkDashboard";
+import { SubProjectsList } from "@/components/projects/subprojects/SubProjectsList";
 
 // Tab configuration for project detail
 const PROJECT_TABS = [
