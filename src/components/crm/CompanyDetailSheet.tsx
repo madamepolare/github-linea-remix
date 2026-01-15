@@ -6,63 +6,30 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Card, CardContent } from "@/components/ui/card";
 import {
-  Building2,
   Mail,
   Phone,
   Globe,
   MapPin,
   Users,
   Target,
-  Calendar,
   Edit2,
   ExternalLink,
   Plus,
-  Briefcase,
 } from "lucide-react";
 import { CRMCompany } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
 import { useLeads } from "@/hooks/useLeads";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
+import { getIndustryLabel, getBETSpecialtyLabel, getIndustryColor } from "@/lib/crmConstants";
 
 interface CompanyDetailSheetProps {
   company: CRMCompany | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const industryLabels: Record<string, string> = {
-  maitre_ouvrage: "Maître d'ouvrage",
-  moe: "Maître d'œuvre",
-  bet: "Bureau d'études",
-  entreprise: "Entreprise",
-  fournisseur: "Fournisseur",
-  partenaire: "Partenaire",
-};
-
-const industryColors: Record<string, string> = {
-  maitre_ouvrage: "bg-blue-500",
-  moe: "bg-indigo-500",
-  bet: "bg-emerald-500",
-  entreprise: "bg-amber-500",
-  fournisseur: "bg-purple-500",
-  partenaire: "bg-pink-500",
-};
-
-const specialtyLabels: Record<string, string> = {
-  structure: "Structure",
-  fluides: "Fluides",
-  electricite: "Électricité",
-  thermique: "Thermique",
-  acoustique: "Acoustique",
-  vrd: "VRD",
-  economie: "Économie",
-  facade: "Façade",
-  paysage: "Paysage",
-};
 
 export function CompanyDetailSheet({ company, open, onOpenChange }: CompanyDetailSheetProps) {
   const [activeTab, setActiveTab] = useState("overview");
@@ -77,23 +44,15 @@ export function CompanyDetailSheet({ company, open, onOpenChange }: CompanyDetai
 
   const totalLeadValue = companyLeads.reduce((sum, lead) => sum + (lead.estimated_value || 0), 0);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-xl w-full overflow-y-auto">
         <SheetHeader className="space-y-4">
           <div className="flex items-start gap-4">
-            <div className={cn(
-              "h-14 w-14 rounded-xl flex items-center justify-center text-white font-bold text-lg",
-              industryColors[company.industry || ""] || "bg-muted-foreground"
-            )}>
+            <div
+              className="h-14 w-14 rounded-xl flex items-center justify-center text-white font-bold text-lg"
+              style={{ backgroundColor: getIndustryColor(company.industry) }}
+            >
               {company.logo_url ? (
                 <img src={company.logo_url} alt={company.name} className="h-full w-full object-cover rounded-xl" />
               ) : (
@@ -105,7 +64,7 @@ export function CompanyDetailSheet({ company, open, onOpenChange }: CompanyDetai
               <div className="flex items-center gap-2 mt-1">
                 {company.industry && (
                   <Badge variant="secondary">
-                    {industryLabels[company.industry] || company.industry}
+                    {getIndustryLabel(company.industry)}
                   </Badge>
                 )}
               </div>
@@ -120,7 +79,7 @@ export function CompanyDetailSheet({ company, open, onOpenChange }: CompanyDetai
             <div className="flex flex-wrap gap-1.5">
               {company.bet_specialties.map((spec) => (
                 <Badge key={spec} variant="outline" className="text-xs">
-                  {specialtyLabels[spec] || spec}
+                  {getBETSpecialtyLabel(spec)}
                 </Badge>
               ))}
             </div>
@@ -138,7 +97,7 @@ export function CompanyDetailSheet({ company, open, onOpenChange }: CompanyDetai
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-2xl font-semibold">
-                {totalLeadValue > 0 ? formatCurrency(totalLeadValue) : "—"}
+                {totalLeadValue > 0 ? formatCurrency(totalLeadValue, { compact: true }) : "—"}
               </p>
               <p className="text-xs text-muted-foreground">Pipeline</p>
             </div>

@@ -64,6 +64,42 @@ export function getIndustryLabel(industry: string | null): string | null {
 }
 
 // ============================================
+// BET Specialty Labels & Colors
+// ============================================
+export const BET_SPECIALTY_LABELS: Record<string, string> = {
+  structure: "Structure",
+  fluides: "Fluides",
+  electricite: "Électricité",
+  thermique: "Thermique",
+  acoustique: "Acoustique",
+  vrd: "VRD",
+  economie: "Économie",
+  facade: "Façade",
+  paysage: "Paysage",
+};
+
+export function getBETSpecialtyLabel(specialty: string): string {
+  return BET_SPECIALTY_LABELS[specialty] || specialty;
+}
+
+// ============================================
+// Industry Colors (for visual indicators)
+// ============================================
+export const INDUSTRY_COLORS: Record<string, string> = {
+  maitre_ouvrage: "hsl(var(--info))",
+  moe: "hsl(262 80% 60%)",
+  bet: "hsl(var(--success))",
+  entreprise: "hsl(var(--warning))",
+  fournisseur: "hsl(280 70% 55%)",
+  partenaire: "hsl(330 70% 55%)",
+};
+
+export function getIndustryColor(industry: string | null): string {
+  if (!industry) return "hsl(var(--muted-foreground))";
+  return INDUSTRY_COLORS[industry] || "hsl(var(--muted-foreground))";
+}
+
+// ============================================
 // Category Helpers
 // ============================================
 
