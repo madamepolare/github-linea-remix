@@ -17,6 +17,7 @@ export interface PipelineStage {
   email_template_id: string | null;
   requires_email_on_enter: boolean | null;
   is_final_stage: boolean | null;
+  email_ai_prompt: string | null;
 }
 
 export interface Pipeline {
@@ -295,6 +296,7 @@ export function useCRMPipelines() {
       probability?: number;
       requires_email_on_enter?: boolean;
       is_final_stage?: boolean;
+      email_ai_prompt?: string;
     }) => {
       const existingStages = pipelines?.find((p) => p.id === input.pipeline_id)?.stages || [];
       
@@ -308,6 +310,7 @@ export function useCRMPipelines() {
           sort_order: existingStages.length,
           requires_email_on_enter: input.requires_email_on_enter || false,
           is_final_stage: input.is_final_stage || false,
+          email_ai_prompt: input.email_ai_prompt,
         })
         .select()
         .single();
@@ -333,6 +336,7 @@ export function useCRMPipelines() {
       requires_email_on_enter?: boolean;
       is_final_stage?: boolean;
       email_template_id?: string | null;
+      email_ai_prompt?: string | null;
     }) => {
       const { data, error } = await supabase
         .from("crm_pipeline_stages")
