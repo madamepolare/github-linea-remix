@@ -119,7 +119,11 @@ export function getSettingsGroups(t: (key: string) => string): SettingsGroup[] {
       id: 'crm',
       label: t('settings.groups.crm'),
       sections: [
-        { id: 'crm', label: t('settings.sections.pipeline'), icon: <Target className="h-4 w-4" />, description: t('settings.sections.pipelineDesc') },
+        { id: 'crm-pipelines', label: t('settings.sections.crmPipelines'), icon: <Target className="h-4 w-4" />, description: t('settings.sections.crmPipelinesDesc') },
+        { id: 'crm-companies', label: t('settings.sections.crmCompanies'), icon: <Building className="h-4 w-4" />, description: t('settings.sections.crmCompaniesDesc') },
+        { id: 'crm-contacts', label: t('settings.sections.crmContacts'), icon: <Users className="h-4 w-4" />, description: t('settings.sections.crmContactsDesc') },
+        { id: 'crm-sources', label: t('settings.sections.crmSources'), icon: <Target className="h-4 w-4" />, description: t('settings.sections.crmSourcesDesc') },
+        { id: 'crm-advanced', label: t('settings.sections.crmAdvanced'), icon: <Settings className="h-4 w-4" />, description: t('settings.sections.crmAdvancedDesc') },
       ],
     },
     {
