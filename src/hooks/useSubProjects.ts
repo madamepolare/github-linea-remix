@@ -221,6 +221,7 @@ export function useCreateSubProject() {
       description?: string;
       parent_id: string;
       end_date?: string;
+      billing_type?: "included" | "supplementary";
     }) => {
       if (!activeWorkspace?.id) throw new Error("No workspace");
 
@@ -246,6 +247,7 @@ export function useCreateSubProject() {
           status: "active",
           end_date: data.end_date ?? null,
           contract_type: "standard",
+          billing_type: data.billing_type || "included",
         })
         .select()
         .single();
