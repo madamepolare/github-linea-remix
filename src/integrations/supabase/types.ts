@@ -809,6 +809,7 @@ export type Database = {
           created_by: string | null
           custom_slug: string | null
           expires_at: string | null
+          framework_project_id: string | null
           id: string
           is_active: boolean | null
           last_accessed_at: string | null
@@ -829,6 +830,7 @@ export type Database = {
           created_by?: string | null
           custom_slug?: string | null
           expires_at?: string | null
+          framework_project_id?: string | null
           id?: string
           is_active?: boolean | null
           last_accessed_at?: string | null
@@ -849,6 +851,7 @@ export type Database = {
           created_by?: string | null
           custom_slug?: string | null
           expires_at?: string | null
+          framework_project_id?: string | null
           id?: string
           is_active?: boolean | null
           last_accessed_at?: string | null
@@ -866,6 +869,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_portal_links_framework_project_id_fkey"
+            columns: ["framework_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_portal_links_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
@@ -876,12 +886,15 @@ export type Database = {
       }
       client_portal_requests: {
         Row: {
+          attachments: Json | null
           contact_id: string
           converted_task_id: string | null
           created_at: string | null
           description: string | null
+          desired_deadline: string | null
           id: string
           portal_link_id: string
+          priority: string | null
           project_id: string | null
           status: string | null
           title: string
@@ -889,12 +902,15 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          attachments?: Json | null
           contact_id: string
           converted_task_id?: string | null
           created_at?: string | null
           description?: string | null
+          desired_deadline?: string | null
           id?: string
           portal_link_id: string
+          priority?: string | null
           project_id?: string | null
           status?: string | null
           title: string
@@ -902,12 +918,15 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          attachments?: Json | null
           contact_id?: string
           converted_task_id?: string | null
           created_at?: string | null
           description?: string | null
+          desired_deadline?: string | null
           id?: string
           portal_link_id?: string
+          priority?: string | null
           project_id?: string | null
           status?: string | null
           title?: string
@@ -7970,9 +7989,11 @@ export type Database = {
           address: string | null
           ai_summary: string | null
           auto_renew: boolean | null
+          billing_type: string | null
           budget: number | null
           city: string | null
           client: string | null
+          client_request_id: string | null
           color: string | null
           commercial_document_id: string | null
           contract_type: string | null
@@ -7989,6 +8010,8 @@ export type Database = {
           is_archived: boolean | null
           is_internal: boolean
           lead_id: string | null
+          linked_order_id: string | null
+          linked_quote_id: string | null
           monthly_budget: number | null
           name: string
           parent_id: string | null
@@ -8006,9 +8029,11 @@ export type Database = {
           address?: string | null
           ai_summary?: string | null
           auto_renew?: boolean | null
+          billing_type?: string | null
           budget?: number | null
           city?: string | null
           client?: string | null
+          client_request_id?: string | null
           color?: string | null
           commercial_document_id?: string | null
           contract_type?: string | null
@@ -8025,6 +8050,8 @@ export type Database = {
           is_archived?: boolean | null
           is_internal?: boolean
           lead_id?: string | null
+          linked_order_id?: string | null
+          linked_quote_id?: string | null
           monthly_budget?: number | null
           name: string
           parent_id?: string | null
@@ -8042,9 +8069,11 @@ export type Database = {
           address?: string | null
           ai_summary?: string | null
           auto_renew?: boolean | null
+          billing_type?: string | null
           budget?: number | null
           city?: string | null
           client?: string | null
+          client_request_id?: string | null
           color?: string | null
           commercial_document_id?: string | null
           contract_type?: string | null
@@ -8061,6 +8090,8 @@ export type Database = {
           is_archived?: boolean | null
           is_internal?: boolean
           lead_id?: string | null
+          linked_order_id?: string | null
+          linked_quote_id?: string | null
           monthly_budget?: number | null
           name?: string
           parent_id?: string | null
@@ -8075,6 +8106,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "projects_client_request_id_fkey"
+            columns: ["client_request_id"]
+            isOneToOne: false
+            referencedRelation: "client_portal_requests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "projects_commercial_document_id_fkey"
             columns: ["commercial_document_id"]
@@ -8101,6 +8139,20 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_linked_order_id_fkey"
+            columns: ["linked_order_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_linked_quote_id_fkey"
+            columns: ["linked_quote_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_documents"
             referencedColumns: ["id"]
           },
           {

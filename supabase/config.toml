@@ -107,3 +107,6 @@ verify_jwt = false
 
 [functions.gmail-sync-config]
 verify_jwt = false
+
+[functions.framework-request-submit]
+verify_jwt = false
