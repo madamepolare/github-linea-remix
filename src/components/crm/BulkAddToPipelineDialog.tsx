@@ -55,6 +55,7 @@ export function BulkAddToPipelineDialog({
   );
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [specialtyFilter, setSpecialtyFilter] = useState<string>("all");
+  const [contactStatusFilter, setContactStatusFilter] = useState<string>("all");
   const [isAdding, setIsAdding] = useState(false);
 
   // Get already added entity IDs
@@ -71,6 +72,16 @@ export function BulkAddToPipelineDialog({
       return (contacts || []).filter((c) => {
         if (existingContactIds.has(c.id)) return false;
         if (search && !c.name.toLowerCase().includes(search.toLowerCase())) {
+          return false;
+        }
+        // Filter by contact status
+        if (contactStatusFilter === "lead" && c.status !== "lead") {
+          return false;
+        }
+        if (contactStatusFilter === "prospect" && c.contact_type !== "prospect") {
+          return false;
+        }
+        if (contactStatusFilter === "confirmed" && (c.status === "lead" || c.contact_type === "prospect")) {
           return false;
         }
         return true;
@@ -100,6 +111,7 @@ export function BulkAddToPipelineDialog({
     search,
     categoryFilter,
     specialtyFilter,
+    contactStatusFilter,
     existingContactIds,
     existingCompanyIds,
   ]);
@@ -229,6 +241,23 @@ export function BulkAddToPipelineDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Filters for contacts */}
+          {entityType === "contact" && (
+            <div className="flex flex-wrap gap-2">
+              <Select value={contactStatusFilter} onValueChange={setContactStatusFilter}>
+                <SelectTrigger className="w-[160px] h-8 text-xs">
+                  <SelectValue placeholder="Statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les contacts</SelectItem>
+                  <SelectItem value="lead">Leads uniquement</SelectItem>
+                  <SelectItem value="prospect">Prospects uniquement</SelectItem>
+                  <SelectItem value="confirmed">Contacts confirmés</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Filters for companies */}
           {entityType === "company" && (
