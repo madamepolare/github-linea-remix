@@ -58,6 +58,7 @@ interface ModuleTopBarProps {
 
 function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Filter sub-nav based on enabled modules
   const filteredSubNav = useFilteredSubNav(module.slug, module.subNav);
@@ -159,6 +160,7 @@ function ModuleTopBar({ module, actions, hideQuickActions }: ModuleTopBarProps) 
               onCreateContact={() => window.dispatchEvent(new CustomEvent("open-create-contact"))}
               onCreateCompany={() => window.dispatchEvent(new CustomEvent("open-create-company"))}
               onCreateLead={() => window.dispatchEvent(new CustomEvent("open-create-lead"))}
+              onAIProspecting={() => navigate("/crm/prospection")}
             />
           )}
           
