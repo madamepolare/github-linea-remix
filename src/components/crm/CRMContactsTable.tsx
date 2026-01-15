@@ -38,6 +38,7 @@ import {
   ArrowUpDown,
   CheckCircle2,
   Target,
+  User,
 } from "lucide-react";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
@@ -418,29 +419,26 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                           />
                         </TableCell>
                         <TableCell className="py-2">
-                          {/* Show type badge - for particulier, display as Client Particulier */}
+                          {/* Show type badge with icon */}
                           {(() => {
-                            const isParticulier = contact.contact_type === "particulier" || (!contact.contact_type && !contact.crm_company_id);
-                            const displayType = isParticulier ? "particulier" : (contact.contact_type || "client");
-                            const displayLabel = isParticulier ? "Client particulier" : getContactTypeLabel(displayType);
-                            const displayColor = getContactTypeColor(displayType);
+                            const contactType = contact.contact_type || "contact";
+                            const displayLabel = getContactTypeLabel(contactType);
+                            const displayColor = getContactTypeColor(contactType);
                             
-                            if (!contact.contact_type && contact.crm_company_id) return null;
+                            // Get icon based on type
+                            const IconComponent = contactType === "lead" ? Target : User;
                             
                             return (
                               <Badge 
                                 variant="outline" 
-                                className="gap-1.5 text-[10px] h-5 px-2 font-medium"
+                                className="gap-1 text-[10px] h-5 px-1.5 font-medium whitespace-nowrap"
                                 style={{ 
                                   borderColor: `${displayColor}40`,
                                   backgroundColor: `${displayColor}15`,
                                   color: displayColor
                                 }}
                               >
-                                <div
-                                  className="w-1.5 h-1.5 rounded-full shrink-0"
-                                  style={{ backgroundColor: displayColor }}
-                                />
+                                <IconComponent className="h-3 w-3 shrink-0" />
                                 {displayLabel}
                               </Badge>
                             );

@@ -5,13 +5,8 @@
 
 // --- Types de contacts ---
 export const DEFAULT_CONTACT_TYPES = [
-  { key: "client", label: "Client", color: "#10B981" },
-  { key: "particulier", label: "Particulier", color: "#6B7280" },
-  { key: "partner", label: "Partenaire", color: "#8B5CF6" },
-  { key: "supplier", label: "Fournisseur", color: "#3B82F6" },
-  { key: "amo", label: "AMO", color: "#F59E0B" },
-  { key: "bet", label: "BET", color: "#06B6D4" },
-  { key: "societe", label: "Société", color: "#EF4444" },
+  { key: "contact", label: "Contact", color: "#3B82F6", icon: "User" },
+  { key: "lead", label: "Lead", color: "#F59E0B", icon: "Target" },
 ];
 
 // --- Spécialités BET ---

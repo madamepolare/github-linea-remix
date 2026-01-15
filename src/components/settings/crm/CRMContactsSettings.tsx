@@ -1,9 +1,15 @@
-import { Users } from "lucide-react";
+import { Users, User, Target } from "lucide-react";
 import { GenericSettingsManager } from "../GenericSettingsManager";
 import { DEFAULT_CONTACT_TYPES } from "@/lib/crmDefaults";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+
+// Map icon names to components
+const ICON_MAP: Record<string, React.ReactNode> = {
+  "User": <User className="h-3 w-3" />,
+  "Target": <Target className="h-3 w-3" />,
+};
 
 export function CRMContactsSettings() {
   const { contactTypes, isLoading } = useCRMSettings();
@@ -27,12 +33,13 @@ export function CRMContactsSettings() {
                 <Badge 
                   key={type.key}
                   variant="outline"
-                  className="py-1 px-2"
+                  className="py-1 px-2 gap-1.5"
                   style={{ 
                     borderColor: type.color,
                     color: type.color,
                   }}
                 >
+                  {type.icon && ICON_MAP[type.icon]}
                   {type.label}
                 </Badge>
               ))}
