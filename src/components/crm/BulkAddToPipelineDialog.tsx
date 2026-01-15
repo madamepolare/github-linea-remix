@@ -9,7 +9,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,7 +25,7 @@ import { useContactPipeline } from "@/hooks/useContactPipeline";
 import { useContacts } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { DEFAULT_COMPANY_CATEGORIES, DEFAULT_BET_SPECIALTIES } from "@/lib/crmDefaults";
-import { Search, Building2, User, Plus, Filter } from "lucide-react";
+import { Search, Building2, User, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface BulkAddToPipelineDialogProps {
@@ -42,7 +41,7 @@ export function BulkAddToPipelineDialog({
   onOpenChange,
   pipeline,
 }: BulkAddToPipelineDialogProps) {
-  const { entries, addEntry, addBulkEntries } = useContactPipeline(pipeline.id);
+  const { entries, addBulkEntries } = useContactPipeline(pipeline.id);
   const { contacts } = useContacts();
   const { companies } = useCRMCompanies();
 
@@ -70,9 +69,7 @@ export function BulkAddToPipelineDialog({
   const filteredEntities = useMemo(() => {
     if (entityType === "contact") {
       return (contacts || []).filter((c) => {
-        // Exclude already added
         if (existingContactIds.has(c.id)) return false;
-        // Search filter
         if (search && !c.name.toLowerCase().includes(search.toLowerCase())) {
           return false;
         }
@@ -80,17 +77,13 @@ export function BulkAddToPipelineDialog({
       });
     } else {
       return (companies || []).filter((c) => {
-        // Exclude already added
         if (existingCompanyIds.has(c.id)) return false;
-        // Search filter
         if (search && !c.name.toLowerCase().includes(search.toLowerCase())) {
           return false;
         }
-        // Category filter
         if (categoryFilter !== "all" && c.industry !== categoryFilter) {
           return false;
         }
-        // BET specialty filter
         if (specialtyFilter !== "all") {
           const specialties = c.bet_specialties || [];
           if (!specialties.includes(specialtyFilter)) {
@@ -131,7 +124,7 @@ export function BulkAddToPipelineDialog({
 
   const handleAdd = async () => {
     if (selectedIds.size === 0 || !targetStageId) {
-      toast.error("Sélectionnez au moins un élément et une étape");
+      toast.error("Sélectionnez au moins un élément");
       return;
     }
 
@@ -144,7 +137,7 @@ export function BulkAddToPipelineDialog({
       }));
 
       await addBulkEntries.mutateAsync(entriesToAdd);
-      toast.success(`${selectedIds.size} entrée(s) ajoutée(s)`);
+      toast.success(`${selectedIds.size} entrée(s) ajoutée(s) au pipeline`);
       setSelectedIds(new Set());
       onOpenChange(false);
     } catch (error) {
@@ -155,84 +148,109 @@ export function BulkAddToPipelineDialog({
     }
   };
 
+  const allSelected = filteredEntities.length > 0 && selectedIds.size === filteredEntities.length;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Ajouter au pipeline
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Plus className="h-5 w-5 text-primary" />
+            Ajouter au pipeline "{pipeline.name}"
           </DialogTitle>
-          <DialogDescription>
-            Sélectionnez les contacts ou sociétés à ajouter à "{pipeline.name}"
+          <DialogDescription className="text-sm">
+            Sélectionnez les éléments à ajouter
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Type toggle and search */}
-          <div className="flex flex-wrap gap-4">
-            {/* Entity type */}
-            <div className="flex gap-2">
-              <Button
-                variant={entityType === "contact" ? "default" : "outline"}
-                size="sm"
+        <div className="flex-1 overflow-hidden flex flex-col px-6 py-4 gap-4">
+          {/* Controls row */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Entity type toggle */}
+            <div className="inline-flex rounded-lg border p-1 bg-muted/30">
+              <button
                 onClick={() => {
                   setEntityType("contact");
                   setSelectedIds(new Set());
                 }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  entityType === "contact"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                <User className="h-4 w-4 mr-1" />
+                <User className="h-4 w-4" />
                 Contacts
-              </Button>
-              <Button
-                variant={entityType === "company" ? "default" : "outline"}
-                size="sm"
+              </button>
+              <button
                 onClick={() => {
                   setEntityType("company");
                   setSelectedIds(new Set());
                 }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  entityType === "company"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                <Building2 className="h-4 w-4 mr-1" />
+                <Building2 className="h-4 w-4" />
                 Sociétés
-              </Button>
+              </button>
             </div>
 
             {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative flex-1 min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Rechercher..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
+                className="pl-9 h-9"
               />
             </div>
+
+            {/* Stage selector */}
+            <Select value={targetStageId} onValueChange={setTargetStageId}>
+              <SelectTrigger className="w-[180px] h-9">
+                <SelectValue placeholder="Étape cible" />
+              </SelectTrigger>
+              <SelectContent>
+                {pipeline.stages.map((stage) => (
+                  <SelectItem key={stage.id} value={stage.id}>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: stage.color || "#6B7280" }}
+                      />
+                      <span className="truncate">{stage.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Filters for companies */}
           {entityType === "company" && (
-            <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Catégorie" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Toutes catégories</SelectItem>
-                    {DEFAULT_COMPANY_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.key} value={cat.key}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="flex flex-wrap gap-2">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-[160px] h-8 text-xs">
+                  <SelectValue placeholder="Catégorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes catégories</SelectItem>
+                  {DEFAULT_COMPANY_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.key} value={cat.key}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {categoryFilter === "bet" && (
                 <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Spécialité BET" />
+                  <SelectTrigger className="w-[160px] h-8 text-xs">
+                    <SelectValue placeholder="Spécialité" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Toutes spécialités</SelectItem>
@@ -247,107 +265,103 @@ export function BulkAddToPipelineDialog({
             </div>
           )}
 
-          {/* Target stage */}
-          <div className="space-y-2">
-            <Label>Étape cible</Label>
-            <Select value={targetStageId} onValueChange={setTargetStageId}>
-              <SelectTrigger className="w-[250px]">
-                <SelectValue placeholder="Sélectionner une étape" />
-              </SelectTrigger>
-              <SelectContent>
-                {pipeline.stages.map((stage) => (
-                  <SelectItem key={stage.id} value={stage.id}>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: stage.color || "#6B7280" }}
-                      />
-                      {stage.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Selection header */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between py-1">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
               <Checkbox
-                checked={
-                  filteredEntities.length > 0 &&
-                  selectedIds.size === filteredEntities.length
-                }
+                checked={allSelected}
                 onCheckedChange={toggleAll}
               />
-              <span className="text-sm text-muted-foreground">
-                {selectedIds.size > 0
-                  ? `${selectedIds.size} sélectionné(s)`
-                  : `${filteredEntities.length} disponible(s)`}
+              <span className="text-sm font-medium">
+                {allSelected ? "Tout désélectionner" : "Tout sélectionner"}
               </span>
-            </div>
+            </label>
+            <span className="text-sm text-muted-foreground">
+              {selectedIds.size > 0 && (
+                <Badge variant="secondary" className="font-medium">
+                  {selectedIds.size} sélectionné(s)
+                </Badge>
+              )}
+              {selectedIds.size === 0 && `${filteredEntities.length} disponible(s)`}
+            </span>
           </div>
 
           {/* Entity list */}
-          <ScrollArea className="h-[300px] border rounded-lg">
-            <div className="p-2 space-y-1">
+          <ScrollArea className="flex-1 -mx-6 px-6 min-h-0">
+            <div className="space-y-1 pb-2">
               {filteredEntities.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Aucun élément à afficher
+                <div className="text-center py-12 text-muted-foreground">
+                  <p className="text-sm">Aucun élément disponible</p>
                 </div>
               ) : (
-                filteredEntities.map((entity) => (
-                  <div
-                    key={entity.id}
-                    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-accent/50 transition-colors ${
-                      selectedIds.has(entity.id) ? "bg-accent" : ""
-                    }`}
-                    onClick={() => toggleSelection(entity.id)}
-                  >
-                    <Checkbox checked={selectedIds.has(entity.id)} />
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={
-                          entityType === "contact"
-                            ? (entity as any).avatar_url
-                            : (entity as any).logo_url
-                        }
-                      />
-                      <AvatarFallback className="text-xs">
-                        {entity.name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">
-                        {entity.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {(entity as any).email || "Pas d'email"}
-                      </p>
+                filteredEntities.map((entity) => {
+                  const isSelected = selectedIds.has(entity.id);
+                  return (
+                    <div
+                      key={entity.id}
+                      onClick={() => toggleSelection(entity.id)}
+                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                        isSelected
+                          ? "bg-primary/10 border border-primary/20"
+                          : "hover:bg-muted/50 border border-transparent"
+                      }`}
+                    >
+                      <Checkbox checked={isSelected} className="shrink-0" />
+                      <Avatar className="h-9 w-9 shrink-0">
+                        <AvatarImage
+                          src={
+                            entityType === "contact"
+                              ? (entity as any).avatar_url
+                              : (entity as any).logo_url
+                          }
+                        />
+                        <AvatarFallback className="text-xs font-medium">
+                          {entity.name.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          {entity.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {(entity as any).email || (entity as any).phone || "—"}
+                        </p>
+                      </div>
+                      {entityType === "company" && (entity as any).industry && (
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          {(entity as any).industry}
+                        </Badge>
+                      )}
+                      {entityType === "contact" && (entity as any).role && (
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {(entity as any).role}
+                        </span>
+                      )}
                     </div>
-                    {entityType === "company" && (entity as any).industry && (
-                      <Badge variant="outline" className="text-xs">
-                        {(entity as any).industry}
-                      </Badge>
-                    )}
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </ScrollArea>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="px-6 py-4 border-t bg-muted/30">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Annuler
           </Button>
           <Button
             onClick={handleAdd}
             disabled={isAdding || selectedIds.size === 0}
+            className="min-w-[140px]"
           >
-            {isAdding
-              ? "Ajout..."
-              : `Ajouter ${selectedIds.size} élément(s)`}
+            {isAdding ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Ajout...
+              </>
+            ) : (
+              `Ajouter ${selectedIds.size || ""} ${selectedIds.size > 1 ? "éléments" : "élément"}`
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
