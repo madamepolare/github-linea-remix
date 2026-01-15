@@ -5,6 +5,7 @@ import { ProspectionListView } from "./ProspectionListView";
 import { BulkAddToPipelineDialog } from "./BulkAddToPipelineDialog";
 import { CreateContactDialog } from "./CreateContactDialog";
 import { CreateCompanyDialog } from "./CreateCompanyDialog";
+import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { ModuleFiltersBar } from "@/components/shared/ModuleFiltersBar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -134,6 +135,7 @@ export function CRMProspectionView({ searchQuery = "" }: CRMProspectionViewProps
     <div className="flex items-center gap-2">
       {pipelineSelector}
       {addButton}
+      <CRMDataQualityManager />
     </div>
   );
 
