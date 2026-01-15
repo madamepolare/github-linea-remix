@@ -207,7 +207,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
     );
   }
 
-  if (contacts.length === 0) {
+  if (allContacts.length === 0) {
     return (
       <Card>
         <CardContent className="p-6">
