@@ -30,6 +30,8 @@ import {
   Building2,
   ExternalLink,
   ArrowUpDown,
+  LayoutGrid,
+  LayoutList,
 } from "lucide-react";
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
@@ -41,7 +43,9 @@ import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { useContactPipelineEntries } from "@/hooks/useContactPipelineEntries";
 import { PipelineBadges } from "./PipelineBadges";
+import { CompanyMobileCard } from "./shared/CRMMobileCards";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 export interface CRMCompanyTableProps {
   category?: CompanyCategory;
@@ -54,6 +58,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
   const { companies, allCompanies, isLoading, deleteCompany, updateCompany, statsByCategory } = useCRMCompanies({ category, search });
   const { companyCategories, companyTypes, getCategoryFromType } = useCRMSettings();
   const { entriesByCompanyId, isLoading: isLoadingPipelines } = useContactPipelineEntries();
+  const isMobile = useMediaQuery("(max-width: 768px)");
   
   const [letterFilter, setLetterFilter] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -62,7 +67,10 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
 
+  // Auto-switch to cards on mobile
+  const effectiveViewMode = isMobile ? "cards" : viewMode;
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
   // Filter companies
@@ -229,10 +237,29 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
             />
           </div>
           <CRMDataQualityManager />
+          {/* View mode toggle - hidden on mobile */}
+          <div className="hidden md:flex items-center border rounded-md">
+            <Button
+              variant={effectiveViewMode === "table" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2 rounded-r-none"
+              onClick={() => setViewMode("table")}
+            >
+              <LayoutList className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={effectiveViewMode === "cards" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2 rounded-l-none"
+              onClick={() => setViewMode("cards")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
-        {/* Alphabet filter */}
-        <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-none pb-1">
+        {/* Alphabet filter - hide on mobile */}
+        <div className="hidden sm:flex items-center gap-0.5 overflow-x-auto scrollbar-none pb-1">
           {alphabet.map((letter) => {
             const hasCompanies = filteredCompanies.some((c) =>
               c.name.toUpperCase().startsWith(letter)
@@ -255,21 +282,55 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
           })}
         </div>
 
-        {/* Table */}
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            {filteredCompanies.length === 0 ? (
-              <div className="text-center py-12 px-4">
-                <p className="text-sm text-muted-foreground">Aucune entreprise trouvée</p>
-                <Button variant="link" size="sm" onClick={() => {
-                  setSearchQuery("");
-                  setSelectedCategory("all");
-                  setLetterFilter(null);
-                }}>
-                  Effacer les filtres
-                </Button>
-              </div>
-            ) : (
+        {/* Content - Table or Cards */}
+        {filteredCompanies.length === 0 ? (
+          <Card className="overflow-hidden">
+            <div className="text-center py-12 px-4">
+              <p className="text-sm text-muted-foreground">Aucune entreprise trouvée</p>
+              <Button variant="link" size="sm" onClick={() => {
+                setSearchQuery("");
+                setSelectedCategory("all");
+                setLetterFilter(null);
+              }}>
+                Effacer les filtres
+              </Button>
+            </div>
+          </Card>
+        ) : effectiveViewMode === "cards" ? (
+          /* Mobile/Card View */
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {filteredCompanies.map((company) => {
+              const industryKey = company.industry || "";
+              const typeConfig = companyTypes.find(t => t.key === industryKey);
+              const typeLabel = typeConfig?.shortLabel || typeConfig?.label || industryKey || undefined;
+              const typeColor = typeConfig?.color || "#6B7280";
+              const isSelected = selectedIds.has(company.id);
+
+              return (
+                <CompanyMobileCard
+                  key={company.id}
+                  id={company.id}
+                  name={company.name}
+                  email={company.email}
+                  city={company.city}
+                  industry={company.industry}
+                  industryLabel={typeLabel}
+                  industryColor={typeColor}
+                  primaryContactName={company.primary_contact?.name}
+                  status={company.status as "lead" | "confirmed" | undefined}
+                  isSelected={isSelected}
+                  onSelect={(checked) => handleSelectOne(company.id, checked)}
+                  onClick={() => navigate(`/crm/companies/${company.id}`)}
+                  onEdit={() => setEditingCompany(company)}
+                  onDelete={() => deleteCompany.mutate(company.id)}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          /* Desktop Table View */
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -443,9 +504,9 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                   })}
                 </TableBody>
               </Table>
-            )}
-          </div>
-        </Card>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Bulk actions */}

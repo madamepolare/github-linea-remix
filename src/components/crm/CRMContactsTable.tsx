@@ -39,6 +39,8 @@ import {
   CheckCircle2,
   Target,
   User,
+  LayoutGrid,
+  LayoutList,
 } from "lucide-react";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
@@ -50,7 +52,9 @@ import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
 import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
 import { PipelineBadges } from "./PipelineBadges";
+import { ContactMobileCard } from "./shared/CRMMobileCards";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 export interface CRMContactsTableProps {
   search?: string;
@@ -64,6 +68,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
   const { canViewSensitiveData, canEditContacts, canDeleteContacts } = useWorkspaceRole();
   const { getContactTypeLabel, getContactTypeColor, contactTypes } = useCRMSettings();
   const { entriesByContactId } = useContactPipelineEntries();
+  const isMobile = useMediaQuery("(max-width: 768px)");
   
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
@@ -73,7 +78,10 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
 
+  // Auto-switch to cards on mobile
+  const effectiveViewMode = isMobile ? "cards" : viewMode;
   const effectiveSearch = externalSearch || searchQuery;
 
   // Filter contacts
@@ -270,30 +278,82 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
           <div className="flex items-center gap-2 shrink-0">
             <CRMDataQualityManager />
             {onImportContacts && (
-              <Button variant="outline" size="sm" className="h-9" onClick={onImportContacts}>
+              <Button variant="outline" size="sm" className="h-9 hidden sm:inline-flex" onClick={onImportContacts}>
                 <Upload className="h-4 w-4 mr-1.5" />
                 Importer
               </Button>
             )}
+            {/* View mode toggle - hidden on mobile */}
+            <div className="hidden md:flex items-center border rounded-md">
+              <Button
+                variant={effectiveViewMode === "table" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-8 px-2 rounded-r-none"
+                onClick={() => setViewMode("table")}
+              >
+                <LayoutList className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={effectiveViewMode === "cards" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-8 px-2 rounded-l-none"
+                onClick={() => setViewMode("cards")}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Table */}
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            {filteredContacts.length === 0 ? (
-              <div className="text-center py-12 px-4">
-                <p className="text-sm text-muted-foreground">
-                  Aucun contact trouvé{effectiveSearch ? ` pour "${effectiveSearch}"` : ""}
-                </p>
-                <Button variant="link" size="sm" onClick={() => {
-                  setSearchQuery("");
-                  setSelectedTypes([]);
-                }}>
-                  Effacer les filtres
-                </Button>
-              </div>
-            ) : (
+        {/* Content - Table or Cards */}
+        {filteredContacts.length === 0 ? (
+          <Card className="overflow-hidden">
+            <div className="text-center py-12 px-4">
+              <p className="text-sm text-muted-foreground">
+                Aucun contact trouvé{effectiveSearch ? ` pour "${effectiveSearch}"` : ""}
+              </p>
+              <Button variant="link" size="sm" onClick={() => {
+                setSearchQuery("");
+                setSelectedTypes([]);
+              }}>
+                Effacer les filtres
+              </Button>
+            </div>
+          </Card>
+        ) : effectiveViewMode === "cards" ? (
+          /* Mobile/Card View */
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {filteredContacts.map((contact) => {
+              const isSelected = selectedIds.has(contact.id);
+              const typeLabel = contact.contact_type ? getContactTypeLabel(contact.contact_type) : undefined;
+              const typeColor = contact.contact_type ? getContactTypeColor(contact.contact_type) : undefined;
+
+              return (
+                <ContactMobileCard
+                  key={contact.id}
+                  id={contact.id}
+                  name={contact.name}
+                  role={contact.role}
+                  email={canViewSensitiveData ? contact.email : null}
+                  phone={canViewSensitiveData ? contact.phone : null}
+                  avatarUrl={contact.avatar_url}
+                  companyName={contact.company?.name}
+                  status={contact.status as "lead" | "confirmed" | undefined}
+                  typeBadge={typeLabel ? { label: typeLabel, color: typeColor } : undefined}
+                  isSelected={isSelected}
+                  onSelect={(checked) => handleSelectOne(contact.id, checked)}
+                  onClick={() => navigate(`/crm/contacts/${contact.id}`)}
+                  onEdit={canEditContacts ? () => setEditingContact(contact) : undefined}
+                  onDelete={canDeleteContacts ? () => deleteContact.mutate(contact.id) : undefined}
+                  onView={() => navigate(`/crm/contacts/${contact.id}`)}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          /* Desktop Table View */
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
@@ -499,9 +559,9 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                   })}
                 </TableBody>
               </Table>
-            )}
-          </div>
-        </Card>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Bulk actions */}
