@@ -56,7 +56,7 @@ interface SelectedProspectForConversion {
   contacts: Set<number>; // indices of selected contacts
 }
 
-export function AIProspectingPanel() {
+export function AIProspectingPanel({ inSheet = false }: { inSheet?: boolean }) {
   const {
     searchProspects,
     saveAndConvertProspects,
@@ -211,89 +211,100 @@ export function AIProspectingPanel() {
   const totalSelectedContacts = Array.from(selectedForConversion.values())
     .reduce((acc, s) => acc + s.contacts.size, 0);
 
-  return (
-    <div className="space-y-6">
-      {/* Search Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-base">Recherche IA de prospects</CardTitle>
-              <CardDescription className="text-sm">
-                Décrivez les profils recherchés : fonction, secteur, localisation
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <Textarea
-              placeholder="Ex: Directeurs commerciaux et responsables développement chez les promoteurs immobiliers en Île-de-France..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              rows={2}
-              className="resize-none"
-            />
-            <div className="flex flex-wrap gap-1.5">
-              {EXAMPLE_PROMPTS.map((prompt) => (
-                <Button
-                  key={prompt}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-7 px-2 text-muted-foreground hover:text-foreground"
-                  onClick={() => setSearchQuery(prompt)}
-                >
-                  {prompt}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Provider selector */}
-            <Select value={searchProvider} onValueChange={(v) => setSearchProvider(v as "openai" | "firecrawl")}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="openai">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-emerald-500" />
-                    OpenAI + Perplexity
-                  </div>
-                </SelectItem>
-                <SelectItem value="firecrawl">
-                  <div className="flex items-center gap-2">
-                    <span>🔥</span>
-                    Firecrawl
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
+  const renderSearchForm = () => (
+    <>
+      <div className="space-y-3">
+        <Textarea
+          placeholder="Ex: Directeurs commerciaux et responsables développement chez les promoteurs immobiliers en Île-de-France..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          rows={2}
+          className="resize-none"
+        />
+        <div className="flex flex-wrap gap-1.5">
+          {EXAMPLE_PROMPTS.map((prompt) => (
             <Button
-              onClick={handleSearch}
-              disabled={!searchQuery.trim() || searchProspects.isPending}
-              className="w-full sm:w-auto"
+              key={prompt}
+              variant="outline"
+              size="sm"
+              className="text-xs h-auto py-1 px-2 text-muted-foreground hover:text-foreground whitespace-normal text-left"
+              onClick={() => setSearchQuery(prompt)}
             >
-              {searchProspects.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Recherche en cours...
-                </>
-              ) : (
-                <>
-                  <Search className="h-4 w-4 mr-2" />
-                  Rechercher
-                </>
-              )}
+              {prompt}
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Select value={searchProvider} onValueChange={(v) => setSearchProvider(v as "openai" | "firecrawl")}>
+          <SelectTrigger className="w-full sm:w-56 shrink-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="openai">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-emerald-500" />
+                <span>OpenAI + Perplexity</span>
+              </div>
+            </SelectItem>
+            <SelectItem value="firecrawl">
+              <div className="flex items-center gap-2">
+                <span>🔥</span>
+                <span>Firecrawl</span>
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Button
+          onClick={handleSearch}
+          disabled={!searchQuery.trim() || searchProspects.isPending}
+          className="shrink-0"
+        >
+          {searchProspects.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Recherche...
+            </>
+          ) : (
+            <>
+              <Search className="h-4 w-4 mr-2" />
+              Rechercher
+            </>
+          )}
+        </Button>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Search Section - simplified when in sheet */}
+      {!inSheet ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Recherche IA de prospects</CardTitle>
+                <CardDescription className="text-sm">
+                  Décrivez les profils recherchés : fonction, secteur, localisation
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {renderSearchForm()}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {renderSearchForm()}
+        </div>
+      )}
 
       {/* Results */}
       {searchResults.length > 0 && (

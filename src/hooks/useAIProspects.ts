@@ -154,7 +154,7 @@ export function useAIProspects() {
       }> = [];
 
       for (const { company, selectedContacts } of prospectsToConvert) {
-        // 1. Create company
+        // 1. Create company with industry/category from AI
         const { data: createdCompany, error: companyError } = await supabase
           .from("crm_companies")
           .insert({
@@ -167,7 +167,8 @@ export function useAIProspects() {
             phone: company.company_phone || null,
             email: company.company_email || null,
             industry: company.company_industry || null,
-            notes: `Source: ${sourceQuery}`,
+            status: "prospect",
+            notes: company.notes ? `${company.notes}\n\nSource: ${sourceQuery}` : `Source: ${sourceQuery}`,
             created_by: user?.id,
           })
           .select()
@@ -191,6 +192,8 @@ export function useAIProspects() {
               phone: contact.phone || null,
               role: contact.role || null,
               crm_company_id: createdCompany.id,
+              contact_type: "prospect",
+              status: createLeads ? "lead" : "confirmed",
               created_by: user?.id,
             })
             .select()
