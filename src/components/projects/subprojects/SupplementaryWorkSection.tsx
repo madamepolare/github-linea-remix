@@ -1,11 +1,13 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SubProjectWithStats } from "@/hooks/useSubProjects";
 import { SubProjectCard } from "./SubProjectCard";
-import { Plus, DollarSign, ChevronDown, ChevronUp, FileText, Receipt } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Plus, DollarSign, ChevronDown, ChevronUp, FileText, Receipt, ExternalLink } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface SupplementaryWorkSectionProps {
   subProjects: SubProjectWithStats[];
@@ -28,9 +30,32 @@ export function SupplementaryWorkSection({
     p => p.status === "completed" || p.status === "done"
   );
 
-  // Calculate total budget from supplementary work
-  // This would typically come from linked quotes
-  const totalBudget = 0; // Placeholder - would need to fetch from commercial_documents
+  // Fetch linked quotes for all supplementary projects
+  const linkedQuoteIds = subProjects
+    .map(p => p.linked_quote_id)
+    .filter((id): id is string => !!id);
+
+  const { data: linkedQuotes } = useQuery({
+    queryKey: ['supplementary-quotes', linkedQuoteIds],
+    queryFn: async () => {
+      if (linkedQuoteIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('commercial_documents')
+        .select('id, status, total_amount, document_number')
+        .in('id', linkedQuoteIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: linkedQuoteIds.length > 0
+  });
+
+  // Create a map for quick lookup
+  const quoteMap = new Map(linkedQuotes?.map(q => [q.id, q]) || []);
+
+  // Calculate total budget from supplementary work quotes
+  const totalBudget = linkedQuotes
+    ?.filter(q => q.status === 'accepted' || q.status === 'signed')
+    .reduce((sum, q) => sum + (q.total_amount || 0), 0) || 0;
 
   if (subProjects.length === 0 && !onCreateNew) {
     return null;
@@ -82,6 +107,7 @@ export function SupplementaryWorkSection({
                 key={subProject.id} 
                 subProject={subProject}
                 color={parentColor}
+                quoteData={subProject.linked_quote_id ? quoteMap.get(subProject.linked_quote_id) : undefined}
               />
             ))}
 
@@ -114,6 +140,7 @@ export function SupplementaryWorkSection({
                         key={subProject.id} 
                         subProject={subProject}
                         color={parentColor}
+                        quoteData={subProject.linked_quote_id ? quoteMap.get(subProject.linked_quote_id) : undefined}
                       />
                     ))}
                   </div>
@@ -130,37 +157,86 @@ export function SupplementaryWorkSection({
 // Extended card for supplementary work with billing info
 function SupplementaryProjectCard({ 
   subProject, 
-  color 
+  color,
+  quoteData
 }: { 
   subProject: SubProjectWithStats; 
   color?: string;
+  quoteData?: {
+    id: string;
+    status: string | null;
+    total_amount: number | null;
+    document_number: string | null;
+  };
 }) {
-  // This would fetch linked quote/invoice data
-  const quoteStatus = "pending" as "pending" | "accepted" | "rejected" | null;
-  const hasOrder = false;
+  const navigate = useNavigate();
+  
+  const quoteStatus = quoteData?.status as "draft" | "sent" | "accepted" | "rejected" | "signed" | null;
+  const quoteAmount = quoteData?.total_amount;
+
+  const getQuoteStatusBadge = () => {
+    if (!quoteStatus) return null;
+    
+    switch (quoteStatus) {
+      case 'accepted':
+      case 'signed':
+        return (
+          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-950/50 dark:text-green-300 dark:border-green-800">
+            <FileText className="h-3 w-3 mr-1" />
+            Devis accepté
+          </Badge>
+        );
+      case 'sent':
+        return (
+          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
+            <FileText className="h-3 w-3 mr-1" />
+            Devis envoyé
+          </Badge>
+        );
+      case 'draft':
+        return (
+          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800">
+            <FileText className="h-3 w-3 mr-1" />
+            Devis brouillon
+          </Badge>
+        );
+      case 'rejected':
+        return (
+          <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-800">
+            <FileText className="h-3 w-3 mr-1" />
+            Devis refusé
+          </Badge>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="relative">
       <SubProjectCard subProject={subProject} color={color} />
       
       {/* Billing overlay indicators */}
-      <div className="absolute top-2 right-2 flex gap-1">
-        {quoteStatus === "accepted" ? (
-          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-            <FileText className="h-3 w-3 mr-1" />
-            Devis accepté
+      <div className="absolute top-2 right-2 flex gap-1 items-center">
+        {quoteAmount && quoteAmount > 0 && (
+          <Badge variant="secondary" className="text-xs">
+            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(quoteAmount)}
           </Badge>
-        ) : quoteStatus === "pending" ? (
-          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
-            <FileText className="h-3 w-3 mr-1" />
-            Devis en attente
-          </Badge>
-        ) : null}
-        {hasOrder && (
-          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-            <Receipt className="h-3 w-3 mr-1" />
-            BC reçu
-          </Badge>
+        )}
+        {getQuoteStatusBadge()}
+        {quoteData?.id && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/commercial/quote/${quoteData.id}`);
+            }}
+            title="Voir le devis"
+          >
+            <ExternalLink className="h-3 w-3" />
+          </Button>
         )}
       </div>
     </div>

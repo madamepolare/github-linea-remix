@@ -556,6 +556,96 @@ export const useCommercialDocuments = () => {
     }
   });
 
+  // Accept document and create sub-project (for framework projects)
+  const acceptAndCreateSubProject = useMutation({
+    mutationFn: async ({ 
+      documentId, 
+      parentProjectId,
+      subProjectName,
+      deadline
+    }: { 
+      documentId: string; 
+      parentProjectId: string;
+      subProjectName: string;
+      deadline?: string;
+    }) => {
+      if (!activeWorkspace?.id) throw new Error('No workspace');
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user');
+
+      // Get full document data
+      const { data: doc, error: docError } = await supabase
+        .from('commercial_documents')
+        .select('*')
+        .eq('id', documentId)
+        .single();
+
+      if (docError) throw docError;
+
+      // Get parent project data
+      const { data: parent, error: parentError } = await supabase
+        .from('projects')
+        .select('crm_company_id, project_type, color, workspace_id')
+        .eq('id', parentProjectId)
+        .single();
+
+      if (parentError) throw parentError;
+
+      // Create sub-project linked to parent
+      const { data: subProject, error: subProjectError } = await supabase
+        .from('projects')
+        .insert({
+          workspace_id: activeWorkspace.id,
+          created_by: user.id,
+          parent_id: parentProjectId,
+          name: subProjectName,
+          description: doc.description,
+          project_type: parent.project_type || doc.project_type,
+          crm_company_id: parent.crm_company_id || doc.client_company_id,
+          address: doc.project_address,
+          city: doc.project_city,
+          billing_type: 'supplementary',
+          linked_quote_id: documentId,
+          status: 'active',
+          phase: 'execution',
+          color: parent.color,
+          deadline: deadline || null,
+          budget: doc.total_amount
+        })
+        .select()
+        .single();
+
+      if (subProjectError) throw subProjectError;
+
+      // Update document with accepted status and link to sub-project
+      const { error: updateError } = await supabase
+        .from('commercial_documents')
+        .update({
+          project_id: subProject.id,
+          status: 'accepted',
+          accepted_at: new Date().toISOString()
+        })
+        .eq('id', documentId);
+
+      if (updateError) throw updateError;
+
+      return { document: doc, subProject };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['commercial-documents'] });
+      queryClient.invalidateQueries({ queryKey: ['commercial-document', data.document.id] });
+      queryClient.invalidateQueries({ queryKey: ['sub-projects', data.subProject.parent_id] });
+      queryClient.invalidateQueries({ queryKey: ['sub-projects-stats', data.subProject.parent_id] });
+      queryClient.invalidateQueries({ queryKey: ['framework-aggregation', data.subProject.parent_id] });
+      toast.success('Devis accepté et demande supplémentaire créée');
+    },
+    onError: (error) => {
+      toast.error('Erreur lors de la création de la demande');
+      console.error(error);
+    }
+  });
+
   // Duplicate document
   const duplicateDocument = useMutation({
     mutationFn: async (documentId: string) => {
@@ -645,6 +735,7 @@ export const useCommercialDocuments = () => {
     createItem,
     deleteItem,
     acceptAndCreateProject,
+    acceptAndCreateSubProject,
     duplicateDocument
   };
 };
