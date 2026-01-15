@@ -6,9 +6,7 @@ import { useModules, useWorkspaceModules } from "@/hooks/useModules";
  * Configuration for sub-nav items that require specific modules to be enabled
  */
 const SUB_NAV_MODULE_REQUIREMENTS: Record<string, Record<string, string>> = {
-  crm: {
-    development: "ai-sales-agent", // "Dév. Commercial" tab requires AI Sales Agent module
-  },
+  // No more sub-nav module requirements needed since prospection is unified
 };
 
 /**
