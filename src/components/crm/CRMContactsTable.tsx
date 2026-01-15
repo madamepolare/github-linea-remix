@@ -412,27 +412,39 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                         </TableCell>
                         <TableCell className="py-2 hidden xl:table-cell">
                           <CountryFlag 
-                            location={contact.location || contact.company?.country || contact.company?.city} 
+                            location={contact.location} 
+                            country={contact.company?.country}
                             size="sm" 
                           />
                         </TableCell>
                         <TableCell className="py-2">
                           {/* Show type badge - for particulier, display as Client Particulier */}
-                          {(contact.contact_type || !contact.crm_company_id) && (
-                            <Badge variant="outline" className="gap-1 text-[10px] h-5 px-1.5">
-                              <div
-                                className="w-1.5 h-1.5 rounded-full"
+                          {(() => {
+                            const isParticulier = contact.contact_type === "particulier" || (!contact.contact_type && !contact.crm_company_id);
+                            const displayType = isParticulier ? "particulier" : (contact.contact_type || "client");
+                            const displayLabel = isParticulier ? "Client particulier" : getContactTypeLabel(displayType);
+                            const displayColor = getContactTypeColor(displayType);
+                            
+                            if (!contact.contact_type && contact.crm_company_id) return null;
+                            
+                            return (
+                              <Badge 
+                                variant="outline" 
+                                className="gap-1.5 text-[10px] h-5 px-2 font-medium"
                                 style={{ 
-                                  backgroundColor: contact.contact_type === "particulier" || !contact.crm_company_id
-                                    ? getContactTypeColor("client")
-                                    : getContactTypeColor(contact.contact_type || "client")
+                                  borderColor: `${displayColor}40`,
+                                  backgroundColor: `${displayColor}15`,
+                                  color: displayColor
                                 }}
-                              />
-                              {contact.contact_type === "particulier" || (!contact.contact_type && !contact.crm_company_id)
-                                ? "Client particulier"
-                                : getContactTypeLabel(contact.contact_type || "client")}
-                            </Badge>
-                          )}
+                              >
+                                <div
+                                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: displayColor }}
+                                />
+                                {displayLabel}
+                              </Badge>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="py-2 hidden lg:table-cell">
                           <PipelineBadges entries={entriesByContactId[contact.id] || []} />
