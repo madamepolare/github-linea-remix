@@ -2,18 +2,18 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { CRMContactsTable } from "@/components/crm/CRMContactsTable";
 import { CRMCompanyTable } from "@/components/crm/CRMCompanyTable";
-import { CRMLeadsView } from "@/components/crm/CRMLeadsView";
 import { CRMProspectionView } from "@/components/crm/CRMProspectionView";
 import { CreateContactDialog } from "@/components/crm/CreateContactDialog";
 import { CreateCompanyDialog } from "@/components/crm/CreateCompanyDialog";
 import { ImportContactsDialog } from "@/components/crm/ImportContactsDialog";
 import { CRMOverview } from "@/components/crm/CRMOverview";
 import { CRMCommandBar } from "@/components/crm/CRMCommandBar";
-import { useLeads } from "@/hooks/useLeads";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
+import { useContactPipeline } from "@/hooks/useContactPipeline";
+import { useCRMPipelines } from "@/hooks/useCRMPipelines";
 
-type CRMView = "overview" | "contacts" | "companies" | "leads" | "prospection";
+type CRMView = "overview" | "contacts" | "companies" | "prospection";
 
 export default function CRM() {
   const { section } = useParams();
@@ -25,10 +25,10 @@ export default function CRM() {
   const [importContactsOpen, setImportContactsOpen] = useState(false);
   const [commandBarOpen, setCommandBarOpen] = useState(false);
 
-  // Redirect old routes
+  // Redirect old routes (leads -> prospection)
   useEffect(() => {
-    if (section === "leads-table" || section === "development") {
-      navigate("/crm/leads", { replace: true });
+    if (section === "leads-table" || section === "development" || section === "leads") {
+      navigate("/crm/prospection", { replace: true });
     }
   }, [section, navigate]);
 
@@ -36,15 +36,21 @@ export default function CRM() {
   
   // Redirect invalid views to overview
   useEffect(() => {
-    const validViews: CRMView[] = ["overview", "contacts", "companies", "leads", "prospection"];
+    const validViews: CRMView[] = ["overview", "contacts", "companies", "prospection"];
     if (section && !validViews.includes(section as CRMView)) {
       navigate("/crm/overview", { replace: true });
     }
   }, [section, navigate]);
 
-  const { stats: leadStats } = useLeads();
   const { allCompanies } = useCRMCompanies();
   const { allContacts } = useContacts();
+  const { pipelines } = useCRMPipelines();
+  
+  // Calculate pipeline stats for overview
+  const pipelineStats = {
+    total: pipelines.length,
+    entries: 0, // Will be calculated from pipeline entries
+  };
 
   // Listen for command palette events
   useEffect(() => {
@@ -67,7 +73,7 @@ export default function CRM() {
             onNavigate={(v) => navigate(`/crm/${v}`)}
             companiesCount={allCompanies.length}
             contactsCount={allContacts.length}
-            leadStats={leadStats}
+            leadStats={pipelineStats}
             companies={allCompanies}
             contacts={allContacts}
           />
@@ -86,9 +92,6 @@ export default function CRM() {
             onImportContacts={() => setImportContactsOpen(true)}
           />
         );
-
-      case "leads":
-        return <CRMLeadsView searchQuery={searchQuery} />;
 
       case "prospection":
         return <CRMProspectionView searchQuery={searchQuery} />;
