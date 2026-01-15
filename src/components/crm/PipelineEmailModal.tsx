@@ -31,6 +31,7 @@ interface PipelineEmailModalProps {
   entry: PipelineEntry | null;
   stage: PipelineStage | null;
   pipelineId: string;
+  pipelineEmailAiPrompt?: string | null;
   onEmailSent: () => void;
   onSkip: () => void;
 }
@@ -41,6 +42,7 @@ export function PipelineEmailModal({
   entry,
   stage,
   pipelineId,
+  pipelineEmailAiPrompt,
   onEmailSent,
   onSkip,
 }: PipelineEmailModalProps) {
@@ -54,6 +56,14 @@ export function PipelineEmailModal({
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [showAiPrompt, setShowAiPrompt] = useState(false);
+
+  // Initialize AI prompt with pipeline default when opening
+  useEffect(() => {
+    if (open && pipelineEmailAiPrompt && !aiPrompt) {
+      setAiPrompt(pipelineEmailAiPrompt);
+      setShowAiPrompt(true); // Auto-expand AI section if we have a default prompt
+    }
+  }, [open, pipelineEmailAiPrompt]);
 
   // Get recipient info
   const recipientName = entry?.contact?.name || entry?.company?.name || "Contact";

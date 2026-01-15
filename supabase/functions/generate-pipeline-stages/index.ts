@@ -23,22 +23,30 @@ serve(async (req) => {
       : "Pipeline commercial pour gérer des opportunités de vente";
 
     const systemPrompt = `Tu es un expert en CRM et en processus commerciaux pour des agences d'architecture et bureaux d'études.
-Tu dois générer des étapes de pipeline pertinentes et professionnelles.
-Chaque étape doit avoir:
+Tu dois générer:
+1. Des étapes de pipeline pertinentes et professionnelles
+2. Un prompt IA de base pour générer les emails de ce pipeline
+
+Pour les étapes, chaque étape doit avoir:
 - Un nom court et clair (max 25 caractères)
 - Une couleur hex appropriée (utilise ces couleurs: #6B7280, #3B82F6, #8B5CF6, #EC4899, #F97316, #22C55E, #EF4444)
 - Une probabilité de conversion (0-100%)
 - requires_email_on_enter: boolean (true si cette étape nécessite l'envoi d'un email)
 - is_final_stage: boolean (true uniquement pour la dernière étape de succès ou d'échec)
 
+Pour le prompt email IA (email_ai_prompt):
+- C'est un prompt de base qui sera utilisé pour générer automatiquement les emails
+- Il doit décrire le ton, le style et les objectifs de communication de ce pipeline
+- Maximum 300 caractères
+
 Génère entre 4 et 7 étapes logiques qui suivent un parcours cohérent du début à la fin.`;
 
-    const userPrompt = `Génère des étapes de pipeline pour:
+    const userPrompt = `Génère des étapes de pipeline et un prompt email IA pour:
 - Nom du pipeline: ${pipelineName}
 - Type: ${contextInfo}
 - Objectif/Description: ${objective || "Non spécifié"}
 
-Retourne les étapes dans l'ordre logique du parcours client.`;
+Retourne les étapes dans l'ordre logique du parcours client, ainsi qu'un prompt IA pour la génération d'emails adapté à ce contexte.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -56,8 +64,8 @@ Retourne les étapes dans l'ordre logique du parcours client.`;
           {
             type: "function",
             function: {
-              name: "create_pipeline_stages",
-              description: "Crée les étapes du pipeline",
+              name: "create_pipeline_config",
+              description: "Crée les étapes du pipeline et le prompt email IA",
               parameters: {
                 type: "object",
                 properties: {
@@ -76,14 +84,18 @@ Retourne les étapes dans l'ordre logique du parcours client.`;
                       additionalProperties: false,
                     },
                   },
+                  email_ai_prompt: {
+                    type: "string",
+                    description: "Prompt IA de base pour générer les emails de ce pipeline (max 300 caractères)"
+                  },
                 },
-                required: ["stages"],
+                required: ["stages", "email_ai_prompt"],
                 additionalProperties: false,
               },
             },
           },
         ],
-        tool_choice: { type: "function", function: { name: "create_pipeline_stages" } },
+        tool_choice: { type: "function", function: { name: "create_pipeline_config" } },
       }),
     });
 
@@ -108,14 +120,18 @@ Retourne les étapes dans l'ordre logique du parcours client.`;
     const data = await response.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     
-    if (!toolCall || toolCall.function.name !== "create_pipeline_stages") {
+    if (!toolCall || toolCall.function.name !== "create_pipeline_config") {
       throw new Error("Invalid AI response format");
     }
 
-    const stages = JSON.parse(toolCall.function.arguments).stages;
+    const result = JSON.parse(toolCall.function.arguments);
+    console.log("Generated pipeline config:", result);
 
     return new Response(
-      JSON.stringify({ stages }),
+      JSON.stringify({ 
+        stages: result.stages,
+        email_ai_prompt: result.email_ai_prompt 
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
