@@ -11210,6 +11210,8 @@ export type Database = {
           daily_rate: number | null
           discipline_id: string | null
           email: string | null
+          email_signature: string | null
+          email_signature_enabled: boolean | null
           footer_text: string | null
           forme_juridique: string | null
           header_style: Json | null
@@ -11242,6 +11244,8 @@ export type Database = {
           daily_rate?: number | null
           discipline_id?: string | null
           email?: string | null
+          email_signature?: string | null
+          email_signature_enabled?: boolean | null
           footer_text?: string | null
           forme_juridique?: string | null
           header_style?: Json | null
@@ -11274,6 +11278,8 @@ export type Database = {
           daily_rate?: number | null
           discipline_id?: string | null
           email?: string | null
+          email_signature?: string | null
+          email_signature_enabled?: boolean | null
           footer_text?: string | null
           forme_juridique?: string | null
           header_style?: Json | null

@@ -13,12 +13,45 @@ interface SendEmailRequest {
   cc?: string[];
   bcc?: string[];
   replyTo?: string;
+  skipSignature?: boolean; // Optional flag to skip adding signature
   // CRM tracking fields
   contactId?: string;
   companyId?: string;
   leadId?: string;
   projectId?: string;
   tenderId?: string;
+}
+
+function processSignatureTemplate(
+  signature: string,
+  userData: { fullName?: string; email?: string },
+  workspaceData: { name?: string; phone?: string; email?: string; website?: string; address?: string; city?: string; postal_code?: string }
+): string {
+  const values: Record<string, string> = {
+    "{{user_name}}": userData.fullName || "",
+    "{{workspace_name}}": workspaceData.name || "",
+    "{{phone}}": workspaceData.phone || "",
+    "{{email}}": workspaceData.email || "",
+    "{{website}}": workspaceData.website || "",
+    "{{address}}": workspaceData.address || "",
+    "{{city}}": workspaceData.city || "",
+    "{{postal_code}}": workspaceData.postal_code || "",
+  };
+
+  let result = signature;
+  
+  // Replace simple variables
+  Object.entries(values).forEach(([key, value]) => {
+    result = result.replace(new RegExp(key.replace(/[{}]/g, "\\$&"), "g"), value);
+  });
+
+  // Handle conditional blocks: {{#key}}content{{/key}}
+  result = result.replace(/\{\{#(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (_, key, content) => {
+    const value = values[`{{${key}}}`];
+    return value ? content : "";
+  });
+
+  return result;
 }
 
 async function refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
@@ -108,16 +141,16 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    const { to, subject, body, cc, bcc, replyTo, contactId, companyId, leadId, projectId, tenderId }: SendEmailRequest = await req.json();
+    const { to, subject, body, cc, bcc, replyTo, skipSignature, contactId, companyId, leadId, projectId, tenderId }: SendEmailRequest = await req.json();
 
     if (!to || !subject || !body) {
       throw new Error('Missing required fields: to, subject, body');
     }
 
-    // Get user's active workspace from profile
+    // Get user's active workspace and profile info
     const { data: profile } = await supabaseUser
       .from('profiles')
-      .select('active_workspace_id')
+      .select('active_workspace_id, full_name')
       .eq('user_id', user.id)
       .single();
 
@@ -139,6 +172,35 @@ serve(async (req) => {
 
     if (connError || !connection) {
       throw new Error('Gmail not connected. Please connect your Gmail account in settings.');
+    }
+
+    // Get workspace data for email signature
+    const { data: workspace } = await supabaseAdmin
+      .from('workspaces')
+      .select('name, phone, email, website, address, city, postal_code, email_signature, email_signature_enabled')
+      .eq('id', workspaceId)
+      .single();
+
+    // Prepare email body with signature
+    let finalBody = body;
+    
+    if (!skipSignature && workspace?.email_signature_enabled && workspace?.email_signature) {
+      const processedSignature = processSignatureTemplate(
+        workspace.email_signature,
+        { fullName: profile?.full_name || '', email: connection.gmail_email },
+        {
+          name: workspace.name,
+          phone: workspace.phone,
+          email: workspace.email,
+          website: workspace.website,
+          address: workspace.address,
+          city: workspace.city,
+          postal_code: workspace.postal_code,
+        }
+      );
+      
+      // Add separator and signature
+      finalBody = `${body}<br><br>--<br>${processedSignature}`;
     }
 
     // Check if token needs refresh
@@ -166,7 +228,7 @@ serve(async (req) => {
       connection.gmail_email,
       to,
       subject,
-      body,
+      finalBody,
       cc,
       bcc,
       replyTo
