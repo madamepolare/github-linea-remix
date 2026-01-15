@@ -57,7 +57,7 @@ export function useSubProjectsWithStats(parentId: string | undefined) {
       // Get sub-projects
       const { data: subProjects, error: projectsError } = await supabase
         .from("projects")
-        .select("id, name, description, status, start_date, end_date, created_at, parent_id, color, billing_type, client_request_id")
+        .select("id, name, description, status, start_date, end_date, created_at, parent_id, color, billing_type, client_request_id, linked_quote_id")
         .eq("parent_id", parentId)
         .eq("workspace_id", activeWorkspace.id)
         .order("created_at", { ascending: false });
@@ -126,6 +126,7 @@ export function useSubProjectsWithStats(parentId: string | undefined) {
           color: project.color,
           billing_type: (project as any).billing_type || "included",
           client_request_id: (project as any).client_request_id,
+          linked_quote_id: (project as any).linked_quote_id,
           total_time_hours: Math.round((stats.timeMinutes / 60) * 10) / 10,
           tasks_count: stats.tasksCount,
           tasks_completed: stats.tasksCompleted,
