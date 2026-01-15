@@ -78,43 +78,39 @@ export function CRMLeadsView({ searchQuery: initialSearchQuery = "" }: CRMLeadsV
     </Button>
   );
 
+  // Tabs component for inline display
+  const tabsComponent = isAISalesAgentEnabled ? (
+    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="shrink-0">
+      <TabsList className="h-9 bg-muted/50 p-0.5">
+        <TabsTrigger value="list" className="h-8 px-3 gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <Users className="h-3.5 w-3.5" />
+          Tous les leads
+        </TabsTrigger>
+        <TabsTrigger value="prospects" className="h-8 px-3 gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <Target className="h-3.5 w-3.5" />
+          Prospects IA
+          {pendingProspectsCount > 0 && (
+            <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px] ml-1">
+              {pendingProspectsCount}
+            </Badge>
+          )}
+        </TabsTrigger>
+      </TabsList>
+    </Tabs>
+  ) : null;
+
   return (
     <>
       <div className="space-y-4">
-        {/* Tabs for leads list vs AI prospects */}
-        {isAISalesAgentEnabled && (
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="w-full">
-            <TabsList className="h-9 bg-muted/50 p-0.5">
-              <TabsTrigger value="list" className="h-8 px-3 gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <Users className="h-3.5 w-3.5" />
-                Tous les leads
-              </TabsTrigger>
-              <TabsTrigger value="prospects" className="h-8 px-3 gap-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                <Target className="h-3.5 w-3.5" />
-                Prospects IA
-                {pendingProspectsCount > 0 && (
-                  <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px] ml-1">
-                    {pendingProspectsCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        )}
-
-        {/* Header with search and add button */}
+        {/* Single line header: tabs + search + add button */}
         <ModuleFiltersBar
-          search={activeTab === "list" ? {
+          viewToggle={tabsComponent}
+          search={{
             value: searchQuery,
             onChange: setSearchQuery,
             placeholder: "Rechercher un lead...",
-          } : undefined}
-          filters={activeTab === "list" ? addButton : (
-            <Button size="sm" className="h-9" onClick={() => setAiPanelOpen(true)}>
-              <Sparkles className="h-4 w-4 mr-1.5" />
-              Nouvelle recherche
-            </Button>
-          )}
+          }}
+          filters={addButton}
         />
 
         {/* Content based on active tab */}
