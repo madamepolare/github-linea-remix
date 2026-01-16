@@ -556,7 +556,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                       <CheckSquare className="h-3.5 w-3.5" />
                       Sous-tâches
                     </label>
-                    <SubtasksManager taskId={task.id} workspaceId={activeWorkspace.id} />
+                    <SubtasksManager taskId={task.id} workspaceId={activeWorkspace.id} taskDescription={description} />
                   </div>
                 )}
 
