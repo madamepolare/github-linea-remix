@@ -60,35 +60,34 @@ export function PageHeader({
     >
       {/* Main Row: Title + Actions */}
       <motion.div
-        className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4"
+        className="px-3 sm:px-6 lg:px-8 py-2.5 sm:py-4"
         variants={rowVariants}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center justify-between gap-3">
           {/* Left: Title */}
-          <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold text-foreground tracking-tight">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base sm:text-xl lg:text-2xl font-semibold text-foreground tracking-tight truncate">
               {title}
             </h1>
             {description && (
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 line-clamp-2">
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1 sm:line-clamp-2 hidden sm:block">
                 {description}
               </p>
             )}
           </div>
 
           {/* Right: Actions + Primary Button (backwards compat) */}
-          <div className="flex items-center gap-2 sm:gap-3 justify-start sm:justify-end flex-shrink-0 overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
             {actions}
             
             {primaryAction && (
               <Button
                 onClick={primaryAction.onClick}
                 size="sm"
-                className="gap-2 shrink-0"
+                className="gap-1.5 shrink-0 h-8 sm:h-9 px-2.5 sm:px-3"
               >
                 <Plus className="h-4 w-4" strokeWidth={2} />
                 <span className="hidden sm:inline">{primaryAction.label}</span>
-                <span className="sm:hidden">Ajouter</span>
               </Button>
             )}
           </div>
@@ -98,7 +97,7 @@ export function PageHeader({
       {/* Filters Row (optional) */}
       {hasFilters && (
         <motion.div
-          className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 border-b border-border bg-muted/30 overflow-x-auto scrollbar-hide"
+          className="px-3 sm:px-6 lg:px-8 py-2 sm:py-3 border-b border-border overflow-x-auto scrollbar-hide"
           variants={rowVariants}
         >
           {filters}

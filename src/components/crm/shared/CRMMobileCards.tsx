@@ -62,11 +62,11 @@ export function ContactMobileCard({
     .toUpperCase();
 
   return (
-    <Card
+    <div
       className={cn(
-        "p-3 transition-colors",
-        onClick && "cursor-pointer hover:bg-muted/50",
-        isSelected && "bg-primary/5 ring-1 ring-primary/20",
+        "p-3 border-b border-border/50 bg-card transition-colors touch-manipulation",
+        onClick && "cursor-pointer active:bg-muted/30",
+        isSelected && "bg-muted/20",
         className
       )}
       onClick={onClick}
@@ -183,7 +183,7 @@ export function ContactMobileCard({
           </div>
         )}
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -224,11 +224,11 @@ export function CompanyMobileCard({
   className,
 }: CompanyMobileCardProps) {
   return (
-    <Card
+    <div
       className={cn(
-        "p-3 transition-colors",
-        onClick && "cursor-pointer hover:bg-muted/50",
-        isSelected && "bg-primary/5 ring-1 ring-primary/20",
+        "p-3 border-b border-border/50 bg-card transition-colors touch-manipulation",
+        onClick && "cursor-pointer active:bg-muted/30",
+        isSelected && "bg-muted/20",
         className
       )}
       onClick={onClick}
@@ -330,6 +330,6 @@ export function CompanyMobileCard({
           </div>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

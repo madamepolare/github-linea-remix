@@ -228,7 +228,7 @@ export function WidgetGridNew() {
   // Mobile: simple stack
   if (isMobile) {
     return (
-      <div className="relative space-y-4 px-4" ref={containerRef}>
+      <div className="relative space-y-3 px-3 py-2" ref={containerRef}>
         <div className="flex items-center justify-between gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

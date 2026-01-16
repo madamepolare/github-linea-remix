@@ -48,7 +48,7 @@ export function PageLayout({
         />
       )}
       <div
-        className={`flex-1 ${contentOverflow === "auto" ? "overflow-auto" : "overflow-hidden"} ${contentPadding ? "px-4 sm:px-6 lg:px-8 py-2 sm:py-3" : ""}`}
+        className={`flex-1 ${contentOverflow === "auto" ? "overflow-auto" : "overflow-hidden"} ${contentPadding ? "px-3 sm:px-6 lg:px-8 py-2 sm:py-3" : ""}`}
       >
         {children}
       </div>
