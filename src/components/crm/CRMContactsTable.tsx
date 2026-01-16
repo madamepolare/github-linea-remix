@@ -18,6 +18,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CountryFlag } from "@/components/ui/country-flag";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -41,6 +48,10 @@ import {
   User,
   LayoutGrid,
   LayoutList,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
@@ -64,7 +75,6 @@ export interface CRMContactsTableProps {
 
 export function CRMContactsTable({ search: externalSearch = "", onCreateContact, onImportContacts }: CRMContactsTableProps) {
   const navigate = useNavigate();
-  const { contacts, allContacts, isLoading, deleteContact, updateContact, confirmContact, statsByType, statsByStatus } = useContacts();
   const { canViewSensitiveData, canEditContacts, canDeleteContacts } = useWorkspaceRole();
   const { getContactTypeLabel, getContactTypeColor, contactTypes } = useCRMSettings();
   const { entriesByContactId } = useContactPipelineEntries();
@@ -79,40 +89,34 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
   const [sortBy, setSortBy] = useState<string>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const [pageSize, setPageSize] = useState<number>(50);
+
+  const effectiveSearch = externalSearch || searchQuery;
+
+  // Use hook with server-side filtering
+  const { 
+    contacts, 
+    allContactsCount, 
+    isLoading, 
+    deleteContact, 
+    updateContact, 
+    confirmContact, 
+    statsByType, 
+    statsByStatus,
+    pagination 
+  } = useContacts({
+    search: effectiveSearch,
+    status: selectedStatus as 'lead' | 'confirmed' | 'all',
+    selectedTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
+    pageSize,
+  });
 
   // Auto-switch to cards on mobile
   const effectiveViewMode = isMobile ? "cards" : viewMode;
-  const effectiveSearch = externalSearch || searchQuery;
 
-  // Filter contacts
-  const filteredContacts = useMemo(() => {
+  // Local sorting only (filtering is done server-side)
+  const sortedContacts = useMemo(() => {
     let result = [...contacts];
-
-    // Filter by search
-    if (effectiveSearch) {
-      const searchLower = effectiveSearch.toLowerCase();
-      result = result.filter(
-        (contact) =>
-          contact.name.toLowerCase().includes(searchLower) ||
-          contact.email?.toLowerCase().includes(searchLower) ||
-          contact.company?.name?.toLowerCase().includes(searchLower) ||
-          contact.role?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Filter by type
-    if (selectedTypes.length > 0) {
-      result = result.filter((c) => c.contact_type && selectedTypes.includes(c.contact_type));
-    }
-
-    // Filter by status
-    if (selectedStatus !== "all") {
-      if (selectedStatus === "lead") {
-        result = result.filter((c) => c.status === "lead");
-      } else if (selectedStatus === "confirmed") {
-        result = result.filter((c) => c.status === "confirmed" || !c.status);
-      }
-    }
 
     // Sort
     result.sort((a, b) => {
@@ -130,7 +134,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
     });
 
     return result;
-  }, [contacts, effectiveSearch, selectedTypes, selectedStatus, sortBy, sortDir]);
+  }, [contacts, sortBy, sortDir]);
 
   // Status filter options
   const statusFilterOptions: FilterOption[] = useMemo(() => {
@@ -154,11 +158,11 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
   // Selection handlers
   const handleSelectAll = useCallback((checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(filteredContacts.map((c) => c.id)));
+      setSelectedIds(new Set(sortedContacts.map((c) => c.id)));
     } else {
       setSelectedIds(new Set());
     }
-  }, [filteredContacts]);
+  }, [sortedContacts]);
 
   const handleSelectOne = useCallback((id: string, checked: boolean) => {
     setSelectedIds((prev) => {
@@ -185,7 +189,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
     setSelectedIds(new Set());
   };
 
-  const isAllSelected = filteredContacts.length > 0 && selectedIds.size === filteredContacts.length;
+  const isAllSelected = sortedContacts.length > 0 && selectedIds.size === sortedContacts.length;
 
   if (isLoading) {
     return (
@@ -215,7 +219,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
     );
   }
 
-  if (allContacts.length === 0) {
+  if (allContactsCount === 0) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -266,8 +270,8 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
               selectedTypes={selectedTypes}
               onTypesChange={setSelectedTypes}
               placeholder="Rechercher un contact..."
-              totalCount={contacts.length}
-              filteredCount={filteredContacts.length}
+              totalCount={pagination.totalCount}
+              filteredCount={sortedContacts.length}
               onClearAllFilters={() => {
                 setSearchQuery("");
                 setSelectedTypes([]);
@@ -306,7 +310,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
         </div>
 
         {/* Content - Table or Cards */}
-        {filteredContacts.length === 0 ? (
+        {sortedContacts.length === 0 ? (
           <Card className="overflow-hidden">
             <div className="text-center py-12 px-4">
               <p className="text-sm text-muted-foreground">
@@ -323,7 +327,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
         ) : effectiveViewMode === "cards" ? (
           /* Mobile/Card View */
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {filteredContacts.map((contact) => {
+            {sortedContacts.map((contact) => {
               const isSelected = selectedIds.has(contact.id);
               const typeLabel = contact.contact_type ? getContactTypeLabel(contact.contact_type) : undefined;
               const typeColor = contact.contact_type ? getContactTypeColor(contact.contact_type) : undefined;
@@ -398,7 +402,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredContacts.map((contact, index) => {
+                  {sortedContacts.map((contact, index) => {
                     const isSelected = selectedIds.has(contact.id);
                     
                     return (
@@ -561,6 +565,73 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
               </Table>
             </div>
           </Card>
+        )}
+
+        {/* Pagination controls */}
+        {pagination.totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                {((pagination.page - 1) * pagination.pageSize) + 1}–{Math.min(pagination.page * pagination.pageSize, pagination.totalCount)} sur {pagination.totalCount}
+              </span>
+              <span className="text-muted-foreground/50">•</span>
+              <span>Page {pagination.page} / {pagination.totalPages}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Page size selector */}
+              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                <SelectTrigger className="h-8 w-[80px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">par page</span>
+              
+              {/* Navigation buttons */}
+              <div className="flex items-center gap-1 ml-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => pagination.goToPage(1)}
+                  disabled={pagination.page === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={pagination.prevPage}
+                  disabled={pagination.page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={pagination.nextPage}
+                  disabled={pagination.page === pagination.totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => pagination.goToPage(pagination.totalPages)}
+                  disabled={pagination.page === pagination.totalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
 

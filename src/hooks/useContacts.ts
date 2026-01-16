@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { Contact } from "@/lib/crmTypes";
 
 export type { Contact };
@@ -25,35 +25,156 @@ export interface CreateContactInput {
   status?: ContactStatus;
 }
 
-export function useContacts(options?: { 
+export interface UseContactsOptions {
   companyId?: string; 
   contactType?: string;
   search?: string;
   status?: ContactStatus | 'all';
-}) {
+  selectedTypes?: string[];
+  pageSize?: number;
+}
+
+export function useContacts(options?: UseContactsOptions) {
   const { activeWorkspace, user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const queryKey = ["contacts", activeWorkspace?.id];
+  const [page, setPage] = useState(1);
+  const pageSize = options?.pageSize || 50;
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [options?.search, options?.status, options?.contactType, options?.companyId, JSON.stringify(options?.selectedTypes)]);
+
+  // Build filters for the query
+  const buildQuery = useCallback((countOnly = false) => {
+    let query = countOnly 
+      ? supabase.from("contacts").select("*", { count: "exact", head: true })
+      : supabase.from("contacts").select(`*, company:crm_companies!contacts_crm_company_id_fkey(id, name, logo_url, industry, country, city)`);
+    
+    query = query.eq("workspace_id", activeWorkspace!.id);
+
+    // Apply filters
+    if (options?.companyId) {
+      query = query.eq("crm_company_id", options.companyId);
+    }
+
+    if (options?.contactType) {
+      query = query.eq("contact_type", options.contactType);
+    }
+
+    if (options?.selectedTypes && options.selectedTypes.length > 0) {
+      query = query.in("contact_type", options.selectedTypes);
+    }
+
+    if (options?.status && options.status !== 'all') {
+      query = query.eq("status", options.status);
+    }
+
+    if (options?.search) {
+      query = query.or(`name.ilike.%${options.search}%,email.ilike.%${options.search}%,role.ilike.%${options.search}%`);
+    }
+
+    return query;
+  }, [activeWorkspace?.id, options?.companyId, options?.contactType, options?.selectedTypes, options?.status, options?.search]);
+
+  const queryKey = ["contacts", activeWorkspace?.id, page, pageSize, options?.search, options?.status, options?.contactType, options?.companyId, JSON.stringify(options?.selectedTypes)];
 
   const { data: contacts, isLoading, error } = useQuery({
     queryKey,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("contacts")
-        .select(`
-          *,
-          company:crm_companies!contacts_crm_company_id_fkey(id, name, logo_url, industry, country, city)
-        `)
-        .eq("workspace_id", activeWorkspace!.id)
-        .order("name");
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error } = await buildQuery()
+        .order("name")
+        .range(from, to);
 
       if (error) throw error;
       return data as Contact[];
     },
     enabled: !!activeWorkspace?.id,
   });
+
+  // Count query for pagination
+  const { data: totalCount = 0 } = useQuery({
+    queryKey: ["contacts-count", activeWorkspace?.id, options?.search, options?.status, options?.contactType, options?.companyId, JSON.stringify(options?.selectedTypes)],
+    queryFn: async () => {
+      const { count, error } = await buildQuery(true);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!activeWorkspace?.id,
+  });
+
+  // All contacts count (unfiltered) for stats
+  const { data: allContactsCount = 0 } = useQuery({
+    queryKey: ["contacts-all-count", activeWorkspace?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("contacts")
+        .select("*", { count: "exact", head: true })
+        .eq("workspace_id", activeWorkspace!.id);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!activeWorkspace?.id,
+  });
+
+  // Stats queries
+  const { data: statsByStatus } = useQuery({
+    queryKey: ["contacts-stats-status", activeWorkspace?.id],
+    queryFn: async () => {
+      const [allResult, leadResult, confirmedResult] = await Promise.all([
+        supabase.from("contacts").select("*", { count: "exact", head: true }).eq("workspace_id", activeWorkspace!.id),
+        supabase.from("contacts").select("*", { count: "exact", head: true }).eq("workspace_id", activeWorkspace!.id).eq("status", "lead"),
+        supabase.from("contacts").select("*", { count: "exact", head: true }).eq("workspace_id", activeWorkspace!.id).eq("status", "confirmed"),
+      ]);
+      return {
+        all: allResult.count || 0,
+        lead: leadResult.count || 0,
+        confirmed: confirmedResult.count || 0,
+      };
+    },
+    enabled: !!activeWorkspace?.id,
+    staleTime: 30000,
+  });
+
+  const { data: statsByType } = useQuery({
+    queryKey: ["contacts-stats-type", activeWorkspace?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("contact_type")
+        .eq("workspace_id", activeWorkspace!.id);
+      if (error) throw error;
+      
+      const stats: Record<string, number> = { all: data?.length || 0 };
+      data?.forEach((contact) => {
+        const type = contact.contact_type || "other";
+        stats[type] = (stats[type] || 0) + 1;
+      });
+      return stats;
+    },
+    enabled: !!activeWorkspace?.id,
+    staleTime: 30000,
+  });
+
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  // Pagination controls
+  const goToPage = useCallback((p: number) => {
+    setPage(Math.max(1, Math.min(p, totalPages)));
+  }, [totalPages]);
+
+  const nextPage = useCallback(() => {
+    if (page < totalPages) setPage(p => p + 1);
+  }, [page, totalPages]);
+
+  const prevPage = useCallback(() => {
+    if (page > 1) setPage(p => p - 1);
+  }, [page]);
 
   // Setup realtime subscription
   useEffect(() => {
@@ -70,7 +191,11 @@ export function useContacts(options?: {
           filter: `workspace_id=eq.${activeWorkspace.id}`,
         },
         () => {
-          queryClient.invalidateQueries({ queryKey });
+          queryClient.invalidateQueries({ queryKey: ["contacts"] });
+          queryClient.invalidateQueries({ queryKey: ["contacts-count"] });
+          queryClient.invalidateQueries({ queryKey: ["contacts-all-count"] });
+          queryClient.invalidateQueries({ queryKey: ["contacts-stats-status"] });
+          queryClient.invalidateQueries({ queryKey: ["contacts-stats-type"] });
         }
       )
       .subscribe();
@@ -78,40 +203,9 @@ export function useContacts(options?: {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [activeWorkspace?.id, queryClient, queryKey]);
+  }, [activeWorkspace?.id, queryClient]);
 
-  // Apply filters
-  const filteredContacts = useMemo(() => {
-    if (!contacts) return [];
-    let result = [...contacts];
-
-    if (options?.companyId) {
-      result = result.filter((c) => c.crm_company_id === options.companyId);
-    }
-
-    if (options?.contactType) {
-      result = result.filter((c) => c.contact_type === options.contactType);
-    }
-
-    if (options?.status && options.status !== 'all') {
-      result = result.filter((c) => c.status === options.status);
-    }
-
-    if (options?.search) {
-      const searchLower = options.search.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.name.toLowerCase().includes(searchLower) ||
-          c.email?.toLowerCase().includes(searchLower) ||
-          c.role?.toLowerCase().includes(searchLower) ||
-          c.company?.name.toLowerCase().includes(searchLower)
-      );
-    }
-
-    return result;
-  }, [contacts, options]);
-
-  // Derived lists
+  // Derived lists (from current page)
   const leadContacts = useMemo(() => 
     (contacts || []).filter(c => c.status === 'lead'), [contacts]
   );
@@ -119,31 +213,6 @@ export function useContacts(options?: {
   const confirmedContacts = useMemo(() => 
     (contacts || []).filter(c => c.status === 'confirmed'), [contacts]
   );
-
-  // Stats by contact type
-  const statsByType = useMemo(() => {
-    if (!contacts) return {};
-    const stats: Record<string, number> = {
-      all: contacts.length,
-    };
-
-    contacts.forEach((contact) => {
-      const type = contact.contact_type || "other";
-      stats[type] = (stats[type] || 0) + 1;
-    });
-
-    return stats;
-  }, [contacts]);
-
-  // Stats by status
-  const statsByStatus = useMemo(() => {
-    if (!contacts) return { all: 0, lead: 0, confirmed: 0 };
-    return {
-      all: contacts.length,
-      lead: contacts.filter(c => c.status === 'lead').length,
-      confirmed: contacts.filter(c => c.status === 'confirmed').length,
-    };
-  }, [contacts]);
 
   // Confirm contact mutation
   const confirmContact = useMutation({
@@ -160,6 +229,7 @@ export function useContacts(options?: {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contacts"] });
+      queryClient.invalidateQueries({ queryKey: ["contacts-stats-status"] });
       toast({ title: "Contact confirmé" });
     },
     onError: (error: Error) => {
@@ -229,17 +299,27 @@ export function useContacts(options?: {
   });
 
   return {
-    contacts: filteredContacts,
+    contacts: contacts || [],
     allContacts: contacts || [],
+    allContactsCount,
     leadContacts,
     confirmedContacts,
     isLoading,
     error,
-    statsByType,
-    statsByStatus,
+    statsByType: statsByType || {},
+    statsByStatus: statsByStatus || { all: 0, lead: 0, confirmed: 0 },
     createContact,
     updateContact,
     deleteContact,
     confirmContact,
+    pagination: {
+      page,
+      pageSize,
+      totalCount,
+      totalPages,
+      goToPage,
+      nextPage,
+      prevPage,
+    },
   };
 }
