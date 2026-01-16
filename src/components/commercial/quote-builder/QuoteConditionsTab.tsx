@@ -8,7 +8,8 @@ import {
   RotateCcw,
   Info,
   Sparkles,
-  FolderOpen
+  FolderOpen,
+  Trash2
 } from 'lucide-react';
 import { QuoteDocument } from '@/types/quoteTypes';
 import { ContractType } from '@/hooks/useContractTypes';
@@ -77,6 +78,27 @@ export function QuoteConditionsTab({
       clauses: { ...conditions.clauses, [key]: value }
     };
     syncToDocument(updated);
+  }, [conditions, syncToDocument]);
+
+  // Delete a specific clause
+  const deleteClause = useCallback((key: string) => {
+    const { [key]: _, ...remainingClauses } = conditions.clauses;
+    const updated: UnifiedContractConditions = {
+      ...conditions,
+      clauses: remainingClauses
+    };
+    syncToDocument(updated);
+    toast.success('Clause supprimée');
+  }, [conditions, syncToDocument]);
+
+  // Clear all clauses
+  const clearAllClauses = useCallback(() => {
+    const updated: UnifiedContractConditions = {
+      ...conditions,
+      clauses: {}
+    };
+    syncToDocument(updated);
+    toast.success('Toutes les clauses ont été supprimées');
   }, [conditions, syncToDocument]);
 
   // Load from template
@@ -170,7 +192,20 @@ export function QuoteConditionsTab({
       {/* Clauses Accordion */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Clauses contractuelles</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">Clauses contractuelles</CardTitle>
+            {clauseKeys.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-destructive hover:text-destructive gap-1"
+                onClick={clearAllClauses}
+              >
+                <Trash2 className="h-3 w-3" />
+                Tout effacer
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {clauseKeys.length === 0 ? (
@@ -212,7 +247,16 @@ export function QuoteConditionsTab({
                         className="text-sm"
                         placeholder={`Texte de la clause...`}
                       />
-                      <div className="flex items-center justify-end mt-2">
+                      <div className="flex items-center justify-between mt-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs text-destructive hover:text-destructive"
+                          onClick={() => deleteClause(key)}
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Supprimer
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
