@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Task, useTasks } from "@/hooks/useTasks";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { SubtasksManager } from "./SubtasksManager";
 import { TaskTimeTracker } from "./TaskTimeTracker";
 import { TaskCommunications, useTaskCommunicationsCount } from "./TaskCommunications";
@@ -93,6 +95,21 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
   const communicationsCount = useTaskCommunicationsCount(task?.id || null);
   const navigate = useNavigate();
   const titleRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch pending subtasks count
+  const { data: pendingSubtasksCount } = useQuery({
+    queryKey: ["subtasks-count", task?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("tasks")
+        .select("*", { count: "exact", head: true })
+        .eq("parent_id", task!.id)
+        .neq("status", "done");
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!task?.id,
+  });
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -503,6 +520,11 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
               >
                 <ListTodo className="h-4 w-4 mr-1.5" />
                 Sous-tâches
+                {pendingSubtasksCount && pendingSubtasksCount > 0 ? (
+                  <span className="ml-1.5 h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">
+                    {pendingSubtasksCount}
+                  </span>
+                ) : null}
               </TabsTrigger>
               <TabsTrigger 
                 value="time"
