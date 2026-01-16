@@ -32,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Tooltip,
@@ -46,7 +47,7 @@ import {
   Trash2, 
   Archive, 
   Link2,
-  Calendar,
+  CalendarIcon,
   Flag,
   Circle,
   CheckCircle2,
@@ -58,6 +59,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -420,6 +422,88 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                   </div>
                 </PopoverContent>
               </Popover>
+
+              {/* Date picker - deadline or duration */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:scale-105",
+                      dueDate ? "bg-amber-500/10 text-amber-600" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    <CalendarIcon className="h-3.5 w-3.5" />
+                    {dueDate ? (
+                      startDate ? (
+                        <span>{format(startDate, "dd/MM")} → {format(dueDate, "dd/MM")}</span>
+                      ) : (
+                        format(dueDate, "dd MMM", { locale: fr })
+                      )
+                    ) : (
+                      "Échéance"
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-3" align="start">
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Date de début (optionnel)</label>
+                      <CalendarComponent
+                        mode="single"
+                        selected={startDate || undefined}
+                        onSelect={(date) => setStartDate(date || null)}
+                        className="rounded-md border pointer-events-auto"
+                      />
+                    </div>
+                    <div className="border-t pt-3 space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Échéance</label>
+                      <CalendarComponent
+                        mode="single"
+                        selected={dueDate || undefined}
+                        onSelect={(date) => setDueDate(date || null)}
+                        className="rounded-md border pointer-events-auto"
+                      />
+                    </div>
+                    {(startDate || dueDate) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={() => {
+                          setStartDate(null);
+                          setDueDate(null);
+                        }}
+                      >
+                        Effacer les dates
+                      </Button>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Estimation */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all hover:scale-105",
+                      estimatedHours ? "bg-violet-500/10 text-violet-600" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    {estimatedHours ? `${estimatedHours}h` : "Estimation"}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-3" align="start">
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">Temps estimé</label>
+                    <DurationInput
+                      value={estimatedHours}
+                      onChange={setEstimatedHours}
+                    />
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
@@ -476,48 +560,6 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                   </div>
                 )}
 
-                {/* Quick Fields Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Dates */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5" />
-                      Début
-                    </label>
-                    <InlineDatePicker
-                      value={startDate}
-                      onChange={setStartDate}
-                      placeholder="Date de début"
-                      className="w-full"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                      <Flag className="h-3.5 w-3.5" />
-                      Échéance
-                    </label>
-                    <InlineDatePicker
-                      value={dueDate}
-                      onChange={setDueDate}
-                      placeholder="Date limite"
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-
-
-                {/* Estimation */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
-                    Estimation
-                  </label>
-                  <DurationInput
-                    value={estimatedHours}
-                    onChange={setEstimatedHours}
-                  />
-                </div>
 
                 {/* Tags */}
                 <div className="space-y-2">
