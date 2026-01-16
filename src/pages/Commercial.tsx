@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, FileText, FileSignature, Search, LayoutList, Kanban, Calendar } from 'lucide-react';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -30,25 +30,39 @@ import {
 
 const Commercial = () => {
   const navigate = useNavigate();
-  const { view } = useParams();
+  const location = useLocation();
   const { activeWorkspace } = useAuth();
   const { documents, isLoading, deleteDocument, duplicateDocument, updateDocument } = useCommercialDocuments();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all');
-  const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'monthly'>('list');
-  const typeFilter: DocumentType | 'all' = 
-    view === 'quotes' ? 'quote' : 
-    view === 'contracts' ? 'contract' : 'all';
+  
+  // Derive viewMode from URL path
+  const getViewModeFromPath = (): 'list' | 'pipeline' | 'monthly' => {
+    if (location.pathname.includes('/commercial/pipeline')) return 'pipeline';
+    if (location.pathname.includes('/commercial/monthly')) return 'monthly';
+    return 'list';
+  };
+  
+  const [viewMode, setViewMode] = useState<'list' | 'pipeline' | 'monthly'>(getViewModeFromPath);
+  
+  // Sync viewMode with URL
+  useEffect(() => {
+    setViewMode(getViewModeFromPath());
+  }, [location.pathname]);
+  
+  const handleViewModeChange = (mode: 'list' | 'pipeline' | 'monthly') => {
+    setViewMode(mode);
+    navigate(`/commercial/${mode}`);
+  };
 
   const filteredDocuments = documents.filter(doc => {
     const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.document_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.client_company?.name?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesType = typeFilter === 'all' || doc.document_type === typeFilter;
     const matchesStatus = statusFilter === 'all' || doc.status === statusFilter;
 
-    return matchesSearch && matchesType && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
   // KPIs
@@ -97,21 +111,21 @@ const Commercial = () => {
             <Button
               variant={viewMode === 'list' ? 'secondary' : 'ghost'}
               size="sm"
-              onClick={() => setViewMode('list')}
+              onClick={() => handleViewModeChange('list')}
             >
               <LayoutList className="h-4 w-4" />
             </Button>
             <Button
               variant={viewMode === 'pipeline' ? 'secondary' : 'ghost'}
               size="sm"
-              onClick={() => setViewMode('pipeline')}
+              onClick={() => handleViewModeChange('pipeline')}
             >
               <Kanban className="h-4 w-4" />
             </Button>
             <Button
               variant={viewMode === 'monthly' ? 'secondary' : 'ghost'}
               size="sm"
-              onClick={() => setViewMode('monthly')}
+              onClick={() => handleViewModeChange('monthly')}
             >
               <Calendar className="h-4 w-4" />
             </Button>
@@ -183,23 +197,6 @@ const Commercial = () => {
             />
           </div>
           <div className="flex gap-2 sm:gap-4">
-            <Select 
-              value={typeFilter} 
-              onValueChange={(v) => {
-                if (v === 'all') navigate('/commercial/all');
-                else if (v === 'quote') navigate('/commercial/quotes');
-                else if (v === 'contract') navigate('/commercial/contracts');
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-[140px]">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les types</SelectItem>
-                <SelectItem value="quote">Devis</SelectItem>
-                <SelectItem value="contract">Contrats</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as DocumentStatus | 'all')}>
               <SelectTrigger className="w-full sm:w-[140px]">
                 <SelectValue placeholder="Statut" />

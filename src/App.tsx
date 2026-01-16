@@ -138,9 +138,9 @@ const App = () => (
                   <Route path="/settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
                   <Route path="/settings/workspace/new" element={<Suspense fallback={<PageLoader />}><CreateWorkspace /></Suspense>} />
                   <Route path="/commercial" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
-                  <Route path="/commercial/all" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
-                  <Route path="/commercial/quotes" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
-                  <Route path="/commercial/contracts" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
+                  <Route path="/commercial/list" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
+                  <Route path="/commercial/monthly" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
+                  <Route path="/commercial/pipeline" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />
                   
                   <Route path="/commercial/:id" element={<Suspense fallback={<PageLoader />}><CommercialDocument /></Suspense>} />
                   <Route path="/commercial/quote/new" element={<Suspense fallback={<PageLoader />}><QuoteBuilder /></Suspense>} />
