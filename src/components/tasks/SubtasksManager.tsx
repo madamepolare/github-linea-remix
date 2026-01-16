@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Trash2, GripVertical, MessageCircle, Send, Sparkles, ChevronDown, Wand2, FileText, ListChecks } from "lucide-react";
+import { Plus, Trash2, GripVertical, MessageCircle, Send, Sparkles, Wand2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTaskExchanges, TaskExchange } from "@/hooks/useTaskExchanges";
 import { format } from "date-fns";
@@ -203,285 +202,271 @@ export function SubtasksManager({ taskId, workspaceId, taskDescription }: Subtas
   const hasExchanges = exchanges && exchanges.length > 0;
 
   return (
-    <Tabs defaultValue="subtasks" className="space-y-3">
-      <TabsList className="grid w-full grid-cols-2 h-9">
-        <TabsTrigger value="subtasks" className="text-xs gap-1.5">
-          <ListChecks className="h-3.5 w-3.5" />
-          Sous-tâches
-          {totalCount > 0 && (
-            <span className="ml-1 text-[10px] bg-muted px-1.5 py-0.5 rounded-full">
-              {completedCount}/{totalCount}
+    <div className="space-y-4">
+      {/* Progress Bar */}
+      {totalCount > 0 && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Progression</span>
+            <span className="font-medium text-foreground">
+              {completedCount}/{totalCount} ({Math.round(progressPercent)}%)
             </span>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="exchanges" className="text-xs gap-1.5">
-          <MessageCircle className="h-3.5 w-3.5" />
-          Allers-retours
-          {exchanges && exchanges.length > 0 && (
-            <span className="ml-1 text-[10px] bg-muted px-1.5 py-0.5 rounded-full">
-              {exchanges.length}
-            </span>
-          )}
-        </TabsTrigger>
-      </TabsList>
-
-      {/* Subtasks Tab */}
-      <TabsContent value="subtasks" className="space-y-3 mt-3">
-        {/* Progress Bar */}
-        {totalCount > 0 && (
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Progression</span>
-              <span className="font-medium text-foreground">
-                {Math.round(progressPercent)}%
-              </span>
-            </div>
-            <Progress value={progressPercent} className="h-1.5" />
           </div>
-        )}
+          <Progress value={progressPercent} className="h-1.5" />
+        </div>
+      )}
 
-        {/* Subtasks List */}
-        <div className="space-y-0.5">
-          {subtasks?.map((subtask) => (
-            <div
-              key={subtask.id}
+      {/* Subtasks List */}
+      <div className="space-y-0.5">
+        {subtasks?.map((subtask) => (
+          <div
+            key={subtask.id}
+            className={cn(
+              "group flex items-center gap-2 py-1.5 px-2 -mx-2 rounded-md hover:bg-muted/50 transition-colors",
+              subtask.status === "done" && "opacity-50"
+            )}
+          >
+            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 cursor-grab flex-shrink-0" />
+            <Checkbox
+              checked={subtask.status === "done"}
+              onCheckedChange={(checked) =>
+                toggleSubtask.mutate({ id: subtask.id, completed: !!checked })
+              }
+              className="h-4 w-4"
+            />
+            <span
               className={cn(
-                "group flex items-center gap-2 py-1.5 px-2 -mx-2 rounded-md hover:bg-muted/50 transition-colors",
-                subtask.status === "done" && "opacity-50"
+                "flex-1 text-sm leading-tight",
+                subtask.status === "done" && "line-through text-muted-foreground"
               )}
             >
-              <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 cursor-grab flex-shrink-0" />
-              <Checkbox
-                checked={subtask.status === "done"}
-                onCheckedChange={(checked) =>
-                  toggleSubtask.mutate({ id: subtask.id, completed: !!checked })
-                }
-                className="h-4 w-4"
-              />
-              <span
-                className={cn(
-                  "flex-1 text-sm leading-tight",
-                  subtask.status === "done" && "line-through text-muted-foreground"
-                )}
-              >
-                {subtask.title}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0"
-                onClick={() => deleteSubtask.mutate(subtask.id)}
-              >
-                <Trash2 className="h-3 w-3 text-muted-foreground" />
-              </Button>
-            </div>
-          ))}
-        </div>
-
-        {isLoading && (
-          <p className="text-xs text-muted-foreground text-center py-3">Chargement...</p>
-        )}
-
-        {!isLoading && totalCount === 0 && !showAiInput && (
-          <p className="text-xs text-muted-foreground text-center py-3">
-            Aucune sous-tâche
-          </p>
-        )}
-
-        {/* AI Text Input */}
-        {showAiInput && (
-          <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
-            <Textarea
-              placeholder="Décrivez les sous-tâches à générer..."
-              value={aiInputText}
-              onChange={(e) => setAiInputText(e.target.value)}
-              rows={3}
-              className="text-sm resize-none"
-            />
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={() => generateSubtasksFromText(aiInputText)}
-                disabled={!aiInputText.trim() || isGenerating}
-                className="h-7 text-xs"
-              >
-                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                Générer
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setShowAiInput(false);
-                  setAiInputText("");
-                }}
-                className="h-7 text-xs"
-              >
-                Annuler
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Add Subtask Form + AI Button */}
-        <div className="flex gap-2 pt-1">
-          <form onSubmit={handleAddSubtask} className="flex-1 flex gap-2">
-            <Input
-              placeholder="Ajouter une sous-tâche..."
-              value={newSubtask}
-              onChange={(e) => setNewSubtask(e.target.value)}
-              className="flex-1 h-8 text-sm"
-            />
-            <Button 
-              type="submit" 
-              size="icon" 
-              disabled={!newSubtask.trim() || createSubtask.isPending}
-              className="h-8 w-8 flex-shrink-0"
+              {subtask.title}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0"
+              onClick={() => deleteSubtask.mutate(subtask.id)}
             >
-              <Plus className="h-4 w-4" />
+              <Trash2 className="h-3 w-3 text-muted-foreground" />
             </Button>
-          </form>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                disabled={isGenerating}
-                className="h-8 w-8 flex-shrink-0"
-              >
-                {isGenerating ? (
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem 
-                onClick={() => hasDescription && generateSubtasksFromText(taskDescription!)}
-                disabled={!hasDescription}
-                className="gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                <div className="flex flex-col">
-                  <span>Depuis la description</span>
-                  {!hasDescription && (
-                    <span className="text-xs text-muted-foreground">Pas de description</span>
-                  )}
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowAiInput(true)} className="gap-2">
-                <Wand2 className="h-4 w-4" />
-                Depuis un texte personnalisé
-              </DropdownMenuItem>
-              
-              {hasExchanges && (
-                <>
-                  <DropdownMenuSeparator />
-                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                    Depuis un aller-retour
-                  </div>
-                  {exchanges.map((exchange) => (
-                    <DropdownMenuItem
-                      key={exchange.id}
-                      onClick={() => generateSubtasksFromExchange(exchange)}
-                      className="gap-2"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      <span className="truncate">
-                        #{getExchangeIndex(exchange)} {exchange.title || "Sans titre"}
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </TabsContent>
+          </div>
+        ))}
+      </div>
 
-      {/* Exchanges Tab */}
-      <TabsContent value="exchanges" className="space-y-3 mt-3">
-        {/* Exchanges List */}
-        <div className="space-y-2 max-h-60 overflow-y-auto">
-          {exchanges?.map((exchange) => (
-            <div
-              key={exchange.id}
-              className="group p-3 rounded-lg border bg-card space-y-2"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[10px] font-semibold flex-shrink-0">
-                    {getExchangeIndex(exchange)}
-                  </span>
-                  <span className="text-xs font-medium text-foreground">
-                    {exchange.title || "Aller-retour"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100"
-                    onClick={() => generateSubtasksFromExchange(exchange)}
-                    disabled={isGenerating}
-                  >
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Générer
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                    onClick={() => deleteExchange.mutate(exchange.id)}
-                  >
-                    <Trash2 className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                {exchange.content}
-              </p>
-              <p className="text-[10px] text-muted-foreground/70">
-                {exchange.created_at && format(new Date(exchange.created_at), "d MMM yyyy à HH:mm", { locale: fr })}
-              </p>
-            </div>
-          ))}
+      {isLoading && (
+        <p className="text-xs text-muted-foreground text-center py-3">Chargement...</p>
+      )}
 
-          {(!exchanges || exchanges.length === 0) && !exchangesLoading && (
-            <div className="text-center py-6">
-              <MessageCircle className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
-              <p className="text-xs text-muted-foreground">
-                Aucun aller-retour
-              </p>
-            </div>
-          )}
+      {!isLoading && totalCount === 0 && !showAiInput && (
+        <p className="text-xs text-muted-foreground text-center py-6">
+          Aucune sous-tâche
+        </p>
+      )}
 
-          {exchangesLoading && (
-            <p className="text-xs text-muted-foreground text-center py-3">Chargement...</p>
-          )}
-        </div>
-
-        {/* Add Exchange Form */}
-        <form onSubmit={handleAddExchange} className="space-y-2 pt-1">
+      {/* AI Text Input */}
+      {showAiInput && (
+        <div className="space-y-2 p-3 border rounded-lg bg-muted/30">
           <Textarea
-            placeholder="Nouveau retour client, feedback..."
-            value={newExchangeContent}
-            onChange={(e) => setNewExchangeContent(e.target.value)}
-            rows={2}
+            placeholder="Décrivez les sous-tâches à générer..."
+            value={aiInputText}
+            onChange={(e) => setAiInputText(e.target.value)}
+            rows={3}
             className="text-sm resize-none"
+          />
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => generateSubtasksFromText(aiInputText)}
+              disabled={!aiInputText.trim() || isGenerating}
+              className="h-7 text-xs"
+            >
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+              Générer
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setShowAiInput(false);
+                setAiInputText("");
+              }}
+              className="h-7 text-xs"
+            >
+              Annuler
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Subtask Form + AI Button */}
+      <div className="flex gap-2 pt-1">
+        <form onSubmit={handleAddSubtask} className="flex-1 flex gap-2">
+          <Input
+            placeholder="Ajouter une sous-tâche..."
+            value={newSubtask}
+            onChange={(e) => setNewSubtask(e.target.value)}
+            className="flex-1 h-8 text-sm"
           />
           <Button 
             type="submit" 
-            disabled={!newExchangeContent.trim() || createExchange.isPending} 
-            className="w-full h-8 text-xs"
+            size="icon" 
+            disabled={!newSubtask.trim() || createSubtask.isPending}
+            className="h-8 w-8 flex-shrink-0"
           >
-            <Send className="h-3.5 w-3.5 mr-1.5" />
-            Ajouter l'aller-retour #{(exchanges?.length || 0) + 1}
+            <Plus className="h-4 w-4" />
           </Button>
         </form>
-      </TabsContent>
-    </Tabs>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              disabled={isGenerating}
+              className="h-8 w-8 flex-shrink-0"
+            >
+              {isGenerating ? (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem 
+              onClick={() => hasDescription && generateSubtasksFromText(taskDescription!)}
+              disabled={!hasDescription}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              <div className="flex flex-col">
+                <span>Depuis la description</span>
+                {!hasDescription && (
+                  <span className="text-xs text-muted-foreground">Pas de description</span>
+                )}
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowAiInput(true)} className="gap-2">
+              <Wand2 className="h-4 w-4" />
+              Depuis un texte personnalisé
+            </DropdownMenuItem>
+            
+            {hasExchanges && (
+              <>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                  Depuis un aller-retour
+                </div>
+                {exchanges.map((exchange) => (
+                  <DropdownMenuItem
+                    key={exchange.id}
+                    onClick={() => generateSubtasksFromExchange(exchange)}
+                    className="gap-2"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    <span className="truncate">
+                      #{getExchangeIndex(exchange)} {exchange.title || "Sans titre"}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Exchanges Section */}
+      {(hasExchanges || true) && (
+        <div className="border-t pt-4 mt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+              <MessageCircle className="h-3.5 w-3.5" />
+              Allers-retours
+              {exchanges && exchanges.length > 0 && (
+                <span className="ml-1 text-[10px] bg-muted px-1.5 py-0.5 rounded-full">
+                  {exchanges.length}
+                </span>
+              )}
+            </label>
+          </div>
+
+          {/* Exchanges List */}
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {exchanges?.map((exchange) => (
+              <div
+                key={exchange.id}
+                className="group p-3 rounded-lg border bg-card space-y-2"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-[10px] font-semibold flex-shrink-0">
+                      {getExchangeIndex(exchange)}
+                    </span>
+                    <span className="text-xs font-medium text-foreground">
+                      {exchange.title || "Aller-retour"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100"
+                      onClick={() => generateSubtasksFromExchange(exchange)}
+                      disabled={isGenerating}
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Générer
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                      onClick={() => deleteExchange.mutate(exchange.id)}
+                    >
+                      <Trash2 className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                  {exchange.content}
+                </p>
+                <p className="text-[10px] text-muted-foreground/70">
+                  {exchange.created_at && format(new Date(exchange.created_at), "d MMM yyyy à HH:mm", { locale: fr })}
+                </p>
+              </div>
+            ))}
+
+            {(!exchanges || exchanges.length === 0) && !exchangesLoading && (
+              <div className="text-center py-4">
+                <p className="text-xs text-muted-foreground">
+                  Aucun aller-retour
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Add Exchange Form */}
+          <form onSubmit={handleAddExchange} className="space-y-2">
+            <Textarea
+              placeholder="Nouveau retour client, feedback..."
+              value={newExchangeContent}
+              onChange={(e) => setNewExchangeContent(e.target.value)}
+              rows={2}
+              className="text-sm resize-none"
+            />
+            <Button 
+              type="submit" 
+              size="sm"
+              disabled={!newExchangeContent.trim() || createExchange.isPending}
+              className="w-full h-8"
+            >
+              <Send className="h-3.5 w-3.5 mr-1.5" />
+              Ajouter
+            </Button>
+          </form>
+        </div>
+      )}
+    </div>
   );
 }

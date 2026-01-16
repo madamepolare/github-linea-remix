@@ -57,6 +57,7 @@ import {
   Timer,
   Tag,
   ExternalLink,
+  ListTodo,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -518,6 +519,13 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                 Détails
               </TabsTrigger>
               <TabsTrigger 
+                value="subtasks" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3 px-4"
+              >
+                <ListTodo className="h-4 w-4 mr-1.5" />
+                Sous-tâches
+              </TabsTrigger>
+              <TabsTrigger 
                 value="time"
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3 px-4"
               >
@@ -535,7 +543,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
 
             {/* Tab Content */}
             <div className="p-4">
-              {/* Details + Subtasks Tab (merged) */}
+              {/* Details Tab */}
               <TabsContent value="details" className="mt-0 space-y-6">
                 {/* Description */}
                 <div className="space-y-2">
@@ -549,18 +557,6 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                   />
                 </div>
 
-                {/* Subtasks - now in details tab */}
-                {activeWorkspace && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                      <CheckSquare className="h-3.5 w-3.5" />
-                      Sous-tâches
-                    </label>
-                    <SubtasksManager taskId={task.id} workspaceId={activeWorkspace.id} taskDescription={description} />
-                  </div>
-                )}
-
-
                 {/* Tags */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
@@ -569,6 +565,13 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                   </label>
                   <TagInput value={tags} onChange={setTags} />
                 </div>
+              </TabsContent>
+
+              {/* Subtasks Tab */}
+              <TabsContent value="subtasks" className="mt-0">
+                {activeWorkspace && (
+                  <SubtasksManager taskId={task.id} workspaceId={activeWorkspace.id} taskDescription={description} />
+                )}
               </TabsContent>
 
               {/* Time Tab */}
