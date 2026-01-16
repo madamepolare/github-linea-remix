@@ -4,13 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SubtasksManager } from "./SubtasksManager";
 import { TaskTimeTracker } from "./TaskTimeTracker";
 import { TaskCommunications, useTaskCommunicationsCount } from "./TaskCommunications";
-import { MultiAssigneePicker } from "./MultiAssigneePicker";
+import { MultiAssigneePicker, Profile } from "./MultiAssigneePicker";
 import { InlineDatePicker } from "./InlineDatePicker";
 import { TagInput } from "./TagInput";
 import { DurationInput } from "./DurationInput";
 import { EntitySelector, LinkedEntityBadge } from "./EntitySelector";
 import { RelatedEntityType } from "@/lib/taskTypes";
-import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import {
   Sheet,
   SheetContent,
@@ -54,7 +53,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -85,7 +83,6 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
   const { updateTask, deleteTask } = useTasks();
   const communicationsCount = useTaskCommunicationsCount(task?.id || null);
   const navigate = useNavigate();
-  const { data: profiles = [] } = useWorkspaceProfiles();
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
   const [title, setTitle] = useState("");
@@ -101,9 +98,6 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
   const [relatedId, setRelatedId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-
-  // Get assigned members details
-  const assignedMembers = profiles.filter(p => assignedTo.includes(p.user_id));
 
   useEffect(() => {
     if (task) {
@@ -277,42 +271,48 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
         {/* Header with avatars - Monday.com style */}
         <div className="sticky top-0 bg-background z-10 border-b">
           <div className="p-4 pb-3">
-            {/* Avatars row */}
+            {/* Avatars row - clickable to assign */}
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-1">
-                <TooltipProvider>
-                  {assignedMembers.slice(0, 5).map((member) => (
-                    <Tooltip key={member.user_id}>
-                      <TooltipTrigger asChild>
-                        <Avatar className="h-8 w-8 border-2 border-background -ml-1 first:ml-0 ring-2 ring-primary/20 hover:ring-primary/50 transition-all cursor-pointer">
-                          <AvatarImage src={member.avatar_url || undefined} />
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                            {member.full_name?.slice(0, 2).toUpperCase() || "?"}
+              <MultiAssigneePicker
+                value={assignedTo}
+                onChange={setAssignedTo}
+                renderTrigger={(selectedMembers) => (
+                  <div className="flex items-center gap-1 cursor-pointer group">
+                    <TooltipProvider>
+                      {selectedMembers.slice(0, 5).map((member) => (
+                        <Tooltip key={member.user_id}>
+                          <TooltipTrigger asChild>
+                            <Avatar className="h-8 w-8 border-2 border-background -ml-1 first:ml-0 ring-2 ring-primary/20 group-hover:ring-primary/50 transition-all">
+                              <AvatarImage src={member.avatar_url || undefined} />
+                              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                                {member.full_name?.slice(0, 2).toUpperCase() || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                          </TooltipTrigger>
+                          <TooltipContent>{member.full_name || "Membre"}</TooltipContent>
+                        </Tooltip>
+                      ))}
+                      {selectedMembers.length > 5 && (
+                        <Avatar className="h-8 w-8 border-2 border-background -ml-1">
+                          <AvatarFallback className="text-xs bg-muted">
+                            +{selectedMembers.length - 5}
                           </AvatarFallback>
                         </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>{member.full_name || "Membre"}</TooltipContent>
-                    </Tooltip>
-                  ))}
-                  {assignedMembers.length > 5 && (
-                    <Avatar className="h-8 w-8 border-2 border-background -ml-1">
-                      <AvatarFallback className="text-xs bg-muted">
-                        +{assignedMembers.length - 5}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                  {assignedMembers.length === 0 && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Avatar className="h-8 w-8 border-2 border-dashed border-muted-foreground/30">
-                        <AvatarFallback className="bg-transparent">
-                          <Plus className="h-4 w-4 text-muted-foreground/50" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>Non assigné</span>
-                    </div>
-                  )}
-                </TooltipProvider>
-              </div>
+                      )}
+                      {selectedMembers.length === 0 && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                          <Avatar className="h-8 w-8 border-2 border-dashed border-muted-foreground/30 group-hover:border-primary/50">
+                            <AvatarFallback className="bg-transparent">
+                              <Plus className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>Assigner</span>
+                        </div>
+                      )}
+                    </TooltipProvider>
+                  </div>
+                )}
+              />
               
               {/* Actions */}
               <div className="flex items-center gap-1">
@@ -391,14 +391,8 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                 value="details" 
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3 px-4"
               >
-                Détails
-              </TabsTrigger>
-              <TabsTrigger 
-                value="subtasks"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3 px-4"
-              >
                 <CheckSquare className="h-4 w-4 mr-1.5" />
-                Sous-tâches
+                Détails
               </TabsTrigger>
               <TabsTrigger 
                 value="time"
@@ -418,7 +412,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
 
             {/* Tab Content */}
             <div className="p-4">
-              {/* Details Tab */}
+              {/* Details + Subtasks Tab (merged) */}
               <TabsContent value="details" className="mt-0 space-y-6">
                 {/* Description */}
                 <div className="space-y-2">
@@ -431,6 +425,17 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                     className="resize-none"
                   />
                 </div>
+
+                {/* Subtasks - now in details tab */}
+                {activeWorkspace && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                      <CheckSquare className="h-3.5 w-3.5" />
+                      Sous-tâches
+                    </label>
+                    <SubtasksManager taskId={task.id} workspaceId={activeWorkspace.id} />
+                  </div>
+                )}
 
                 {/* Quick Fields Grid */}
                 <div className="grid grid-cols-2 gap-4">
@@ -462,17 +467,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                   </div>
                 </div>
 
-                {/* Assignees */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Assignés</label>
-                  <MultiAssigneePicker
-                    value={assignedTo}
-                    onChange={setAssignedTo}
-                    className="w-full"
-                  />
-                </div>
-
-                {/* Entity Linking */}
+                {/* Entity Linking - only one field now */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
                     <Link2 className="h-3.5 w-3.5" />
@@ -506,13 +501,6 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                   </label>
                   <TagInput value={tags} onChange={setTags} />
                 </div>
-              </TabsContent>
-
-              {/* Subtasks Tab */}
-              <TabsContent value="subtasks" className="mt-0">
-                {activeWorkspace && (
-                  <SubtasksManager taskId={task.id} workspaceId={activeWorkspace.id} />
-                )}
               </TabsContent>
 
               {/* Time Tab */}
