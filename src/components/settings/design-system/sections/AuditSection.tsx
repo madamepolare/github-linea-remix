@@ -32,24 +32,41 @@ const AUDIT_ISSUES: AuditIssue[] = [
     ],
     recommendation: "Migrer ContactPipeline vers KanbanBoard.tsx pour unifier le comportement drag-and-drop et réduire le bundle size.",
     effort: "high",
-    prompt: `**REFACTORING - Unifier le Drag & Drop CRM**
+    prompt: `**REFACTORING - Unifier le Drag & Drop CRM (garder les spécificités)**
 
-OBJECTIF : Migrer ContactPipeline.tsx pour utiliser le composant partagé KanbanBoard.tsx au lieu de @hello-pangea/dnd.
+OBJECTIF : Migrer ContactPipeline.tsx pour utiliser le composant partagé KanbanBoard.tsx au lieu de @hello-pangea/dnd, TOUT EN CONSERVANT ses fonctionnalités uniques.
 
-CONTRAINTES CRITIQUES :
-- ⚠️ NE PAS modifier le comportement fonctionnel actuel du CRM Pipeline
-- ⚠️ Conserver TOUTES les fonctionnalités existantes : déplacement de contacts entre colonnes, callbacks onDrop, styling des colonnes
-- ⚠️ Ne pas casser les autres modules qui utilisent déjà KanbanBoard
+CONTEXTE TECHNIQUE :
+- KanbanBoard.tsx expose une prop "renderCard" qui permet de passer un composant de carte personnalisé
+- KanbanBoard.tsx expose "onDrop(itemId, fromColumnId, toColumnId)" qui peut être intercepté
+
+SPÉCIFICITÉS À CONSERVER ABSOLUMENT dans ContactPipeline :
+1. ✅ EntryCard avec ses badges d'alertes (actions en retard, réponses non lues, etc.)
+2. ✅ Logique "requires_email_on_enter" qui ouvre un modal avant de déplacer vers certaines colonnes
+3. ✅ Tous les modals : PipelineEmailModal, BulkAddToPipelineDialog, BulkEmailDialog, PipelineEntrySidebar
+4. ✅ Le header spécifique avec boutons "Email groupé" et "Ajouter"
 
 FICHIERS À MODIFIER :
-1. src/components/crm/ContactPipeline.tsx → Utiliser <KanbanBoard /> de src/components/shared/KanbanBoard.tsx
-2. Adapter les props pour correspondre à l'interface de KanbanBoard (columns, items, renderCard, onDragEnd)
-3. Le composant EntryCard interne peut être passé via renderCard
+1. src/components/crm/ContactPipeline.tsx :
+   - Remplacer DragDropContext/Droppable/Draggable par <KanbanBoard />
+   - Passer EntryCard via la prop "renderCard"
+   - Gérer "requires_email_on_enter" dans le callback onDrop AVANT d'appeler moveEntry
+
+2. src/components/shared/KanbanBoard.tsx :
+   - SI NÉCESSAIRE, ajouter un prop "onBeforeDrop" qui retourne boolean/Promise pour annuler le drop
+   - Ou gérer la logique modal dans le parent et ne pas appeler onDrop si modal affiché
+
+ÉTAPES RECOMMANDÉES :
+1. Lire KanbanBoard.tsx pour comprendre l'interface
+2. Adapter ContactPipeline pour utiliser KanbanBoard avec renderCard={(entry, isDragging) => <EntryCard entry={entry} ... />}
+3. Mapper pipeline.stages vers le format KanbanColumn[]
+4. Le callback onDrop vérifie requires_email_on_enter et ouvre le modal si besoin
+5. Tester le drag-and-drop et tous les modals
 
 RÉSULTAT ATTENDU :
-- ContactPipeline utilise KanbanBoard.tsx
-- Comportement drag-and-drop identique
-- Possibilité de désinstaller @hello-pangea/dnd si plus utilisé ailleurs`
+- ContactPipeline utilise KanbanBoard.tsx pour le DnD
+- TOUTES les fonctionnalités métier restent identiques (modals, badges, actions)
+- Possible désinstallation de @hello-pangea/dnd`
   },
   {
     id: "list-views-duplicate",
