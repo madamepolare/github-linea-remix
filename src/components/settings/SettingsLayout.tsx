@@ -243,9 +243,9 @@ export function SettingsLayout({ activeSection, onSectionChange, children }: Set
   );
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-180px)]">
+    <div className="flex flex-col lg:flex-row h-full">
       {/* Mobile Header */}
-      <div className="lg:hidden flex items-center gap-3 p-3 border-b bg-background sticky top-0 z-10">
+      <div className="lg:hidden flex items-center gap-3 px-4 py-3 border-b bg-background sticky top-0 z-10">
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon" className="shrink-0">
@@ -274,9 +274,9 @@ export function SettingsLayout({ activeSection, onSectionChange, children }: Set
       </div>
 
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex w-64 border-r bg-muted/30 flex-col shrink-0">
+      <aside className="hidden lg:flex w-60 border-r bg-card flex-col shrink-0 h-full">
         <SidebarContent />
-      </div>
+      </aside>
 
       {/* Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -297,7 +297,7 @@ export function SettingsLayout({ activeSection, onSectionChange, children }: Set
 
         {/* Main content */}
         <ScrollArea className="flex-1">
-          <div className="p-4 lg:p-6">
+          <div className="p-6">
             {children}
           </div>
         </ScrollArea>
