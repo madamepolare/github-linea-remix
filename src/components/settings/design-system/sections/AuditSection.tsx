@@ -73,66 +73,97 @@ RÉSULTAT ATTENDU :
     severity: "info",
     category: "duplication",
     title: "Vues listes partiellement harmonisées",
-    description: "DataTable.tsx créé et TaskArchiveView migré. Certaines vues complexes (TaskListView avec groupement, inline editing) resteront custom.",
+    description: "DataTable.tsx créé et TaskArchiveView migré. ProspectionListView manque à l'appel. Certaines vues complexes (TaskListView, CRMContactsTable) resteront custom.",
     files: [
       "src/components/shared/DataTable.tsx ✅ CRÉÉ",
       "src/components/tasks/TaskArchiveView.tsx ✅ MIGRÉ",
+      "src/components/crm/ProspectionListView.tsx → À migrer (priorité haute)",
       "src/components/projects/ProjectListView.tsx → À migrer",
-      "src/components/crm/CRMCompanyTable.tsx → À migrer",
-      "src/components/tasks/TaskListView.tsx → CUSTOM (trop complexe)"
+      "src/components/crm/CRMCompanyTable.tsx → CUSTOM (filtres avancés, vue mobile)",
+      "src/components/crm/CRMContactsTable.tsx → CUSTOM (filtres avancés, vue mobile)",
+      "src/components/tasks/TaskListView.tsx → CUSTOM (groupement, inline editing)"
     ],
-    recommendation: "Continuer la migration des vues simples vers DataTable. TaskListView reste custom car groupement par status + inline editing.",
-    effort: "low",
-    prompt: `**MIGRATION - Utiliser DataTable pour ProjectListView**
+    recommendation: "Migrer ProspectionListView en priorité car proche de DataTable. CRMContactsTable et CRMCompanyTable restent custom car filtres avancés + vue cards mobile.",
+    effort: "medium",
+    prompt: `**MIGRATION - Utiliser DataTable pour ProspectionListView**
 
-CONTEXTE : Le composant DataTable générique existe déjà dans src/components/shared/DataTable.tsx
+CONTEXTE : Le composant DataTable.tsx générique existe dans src/components/shared/DataTable.tsx.
 TaskArchiveView a déjà été migré avec succès.
 
-OBJECTIF : Migrer ProjectListView.tsx pour utiliser DataTable.
+OBJECTIF : Migrer ProspectionListView.tsx pour utiliser DataTable.
 
 CONTRAINTES CRITIQUES :
-- ⚠️ NE PAS modifier TaskListView.tsx - il reste custom car trop complexe (groupement par status, inline editing, subtasks, confetti)
-- ⚠️ Conserver le comportement de navigation onClick vers /projects/:id
-- ⚠️ Conserver toutes les colonnes actuelles : Projet, Type, Client, Phase, Avancement, Dates, Budget
+- ⚠️ Conserver toutes les colonnes : Contact/Entreprise, Étape (avec badge coloré), Date d'entrée, Dernier email
+- ⚠️ Conserver le tri sur toutes les colonnes (name, stage, entered_at, last_email)
+- ⚠️ Conserver le menu d'actions avec : déplacer vers étape, envoyer email, retirer du pipeline
+- ⚠️ Conserver la sélection multiple (checkboxes) et suppression bulk
+- ⚠️ Conserver l'intégration UnifiedEmailDialog
+- ⚠️ NE PAS modifier CRMContactsTable.tsx ni CRMCompanyTable.tsx - ils restent custom (filtres avancés, vue mobile cards)
 
 FICHIER À MODIFIER :
-src/components/projects/ProjectListView.tsx
+src/components/crm/ProspectionListView.tsx
 
-EXEMPLE DE MIGRATION (voir TaskArchiveView.tsx) :
+IMPLEMENTATION :
 \`\`\`tsx
 import { DataTable, DataTableColumn } from "@/components/shared/DataTable";
 
-const columns: DataTableColumn<Project>[] = [
+const columns: DataTableColumn<PipelineEntry>[] = [
   {
     id: "name",
-    header: "Projet",
+    header: "Contact / Entreprise",
     sortable: true,
-    accessor: "name",
-    render: (project) => (
+    render: (entry) => (
       <div className="flex items-center gap-3">
-        <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: project.color }} />
-        <span className="font-medium">{project.name}</span>
+        <Avatar className="h-8 w-8">...</Avatar>
+        <div>
+          <span className="font-medium">{entry.contact?.name || entry.company?.name}</span>
+          {email && <p className="text-xs text-muted-foreground">{email}</p>}
+        </div>
       </div>
     ),
+  },
+  {
+    id: "stage",
+    header: "Étape",
+    sortable: true,
+    render: (entry) => {
+      const stage = getStageById(entry.stage_id);
+      return stage ? (
+        <Badge variant="outline" style={{ borderColor: stage.color, color: stage.color }}>
+          {stage.name}
+        </Badge>
+      ) : null;
+    },
   },
   // ... autres colonnes
 ];
 
 return (
   <DataTable
-    data={projects}
+    data={filteredEntries}
     columns={columns}
-    getRowKey={(p) => p.id}
-    onRowClick={(p) => navigate(\`/projects/\${p.id}\`)}
+    getRowKey={(e) => e.id}
     isLoading={isLoading}
+    selectable
+    selectedIds={selectedIds}
+    onSelectionChange={setSelectedIds}
+    sortColumn={sortBy}
+    sortDirection={sortDir}
+    onSort={(col, dir) => { setSortBy(col); setSortDir(dir); }}
+    emptyState={<EmptyState icon={Target} title="Aucune entrée" />}
   />
 );
 \`\`\`
 
+ATTENTION : DataTable devra être enrichi pour supporter :
+- selectable + selectedIds + onSelectionChange (pour les checkboxes)
+- renderActions pour le menu contextuel par ligne
+
 RÉSULTAT ATTENDU :
-- ProjectListView utilise DataTable
-- Même rendu visuel qu'avant
-- Navigation fonctionne`
+- ProspectionListView utilise DataTable
+- Même rendu visuel et fonctionnalités qu'avant
+- Sélection multiple fonctionne
+- Menu d'actions fonctionne`
   },
   {
     id: "entry-card-internal",
