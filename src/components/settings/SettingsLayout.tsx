@@ -214,21 +214,21 @@ export function SettingsLayout({ activeSection, onSectionChange, children }: Set
                     key={section.id}
                     onClick={() => handleSectionChange(section.id)}
                     className={cn(
-                      'w-full flex items-center gap-2 px-2 py-2 rounded-md text-left text-sm transition-colors',
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm transition-colors',
                       activeSection === section.id
-                        ? 'bg-primary/10 text-primary font-medium'
-                        : 'text-foreground hover:bg-muted'
+                        ? 'bg-foreground text-background font-medium'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                     )}
                   >
-                    <span className={cn(
-                      'shrink-0',
-                      activeSection === section.id ? 'text-primary' : 'text-muted-foreground'
-                    )}>
+                    <span className="shrink-0 [&>svg]:h-[18px] [&>svg]:w-[18px]">
                       {section.icon}
                     </span>
                     <span className="flex-1 truncate">{section.label}</span>
                     {section.badge && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                      <Badge variant="secondary" className={cn(
+                        "text-[10px] px-1.5 py-0",
+                        activeSection === section.id && "bg-background/20 text-background"
+                      )}>
                         {section.badge}
                       </Badge>
                     )}
