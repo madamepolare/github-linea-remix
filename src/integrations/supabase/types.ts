@@ -11342,6 +11342,7 @@ export type Database = {
           email: string | null
           email_signature: string | null
           email_signature_enabled: boolean | null
+          favicon_url: string | null
           footer_text: string | null
           forme_juridique: string | null
           header_style: Json | null
@@ -11376,6 +11377,7 @@ export type Database = {
           email?: string | null
           email_signature?: string | null
           email_signature_enabled?: boolean | null
+          favicon_url?: string | null
           footer_text?: string | null
           forme_juridique?: string | null
           header_style?: Json | null
@@ -11410,6 +11412,7 @@ export type Database = {
           email?: string | null
           email_signature?: string | null
           email_signature_enabled?: boolean | null
+          favicon_url?: string | null
           footer_text?: string | null
           forme_juridique?: string | null
           header_style?: Json | null

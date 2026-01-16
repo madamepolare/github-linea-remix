@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Building2, Loader2, Save, Upload, FileText, Palette, Image, PenLine, X, Clock } from "lucide-react";
+import { Building2, Loader2, Save, Upload, FileText, Palette, Image, PenLine, X, Clock, Globe } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,9 +134,11 @@ export function WorkspaceSettings() {
   const [activeTab, setActiveTab] = useState("general");
   const [formData, setFormData] = useState<UpdateAgencyInfoInput>({});
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingFavicon, setIsUploadingFavicon] = useState(false);
   const [isUploadingSignature, setIsUploadingSignature] = useState(false);
   const [dailyRate, setDailyRate] = useState<string>("");
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
   const signatureInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch daily rate
@@ -160,6 +162,7 @@ export function WorkspaceSettings() {
       setFormData({
         name: agencyInfo.name,
         logo_url: agencyInfo.logo_url,
+        favicon_url: agencyInfo.favicon_url,
         signature_url: agencyInfo.signature_url,
         address: agencyInfo.address || '',
         city: agencyInfo.city || '',
@@ -233,10 +236,10 @@ export function WorkspaceSettings() {
     }
   };
 
-  const handleFileUpload = async (file: File, type: 'logo' | 'signature') => {
+  const handleFileUpload = async (file: File, type: 'logo' | 'favicon' | 'signature') => {
     if (!activeWorkspace) return;
 
-    const setUploading = type === 'logo' ? setIsUploadingLogo : setIsUploadingSignature;
+    const setUploading = type === 'logo' ? setIsUploadingLogo : type === 'favicon' ? setIsUploadingFavicon : setIsUploadingSignature;
     setUploading(true);
 
     try {
@@ -267,11 +270,12 @@ export function WorkspaceSettings() {
         .from('workspace-assets')
         .getPublicUrl(fileName);
 
-      const fieldName = type === 'logo' ? 'logo_url' : 'signature_url';
+      const fieldName = type === 'logo' ? 'logo_url' : type === 'favicon' ? 'favicon_url' : 'signature_url';
       handleChange(fieldName, publicUrl);
 
+      const typeLabel = type === 'logo' ? "Logo" : type === 'favicon' ? "Favicon" : "Signature";
       toast({
-        title: type === 'logo' ? "Logo uploadé" : "Signature uploadée",
+        title: `${typeLabel} uploadé`,
         description: "L'image a été enregistrée avec succès.",
       });
     } catch (error: any) {
@@ -285,8 +289,8 @@ export function WorkspaceSettings() {
     }
   };
 
-  const handleRemoveImage = (type: 'logo' | 'signature') => {
-    const fieldName = type === 'logo' ? 'logo_url' : 'signature_url';
+  const handleRemoveImage = (type: 'logo' | 'favicon' | 'signature') => {
+    const fieldName = type === 'logo' ? 'logo_url' : type === 'favicon' ? 'favicon_url' : 'signature_url';
     handleChange(fieldName, null);
   };
 
@@ -648,7 +652,73 @@ export function WorkspaceSettings() {
                   </CardContent>
                 </Card>
 
-                {/* Signature */}
+                {/* Favicon */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Favicon
+                    </CardTitle>
+                    <CardDescription>
+                      Icône affichée dans l'onglet du navigateur. Par défaut, le logo sera utilisé.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <input
+                      ref={faviconInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload(file, 'favicon');
+                      }}
+                    />
+                    {formData.favicon_url ? (
+                      <div className="relative">
+                        <div className="border rounded-lg p-4 bg-muted/50 flex items-center justify-center min-h-[100px]">
+                          <img 
+                            src={formData.favicon_url} 
+                            alt="Favicon" 
+                            className="max-h-16 max-w-16 object-contain"
+                          />
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute -top-2 -right-2 h-6 w-6"
+                          onClick={() => handleRemoveImage('favicon')}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {formData.logo_url && (
+                          <div className="text-xs text-muted-foreground flex items-center gap-2 mb-2">
+                            <img src={formData.logo_url} alt="Logo actuel" className="h-6 w-6 object-contain" />
+                            <span>Le logo sera utilisé par défaut</span>
+                          </div>
+                        )}
+                        <Button
+                          variant="outline"
+                          className="w-full h-24 border-dashed"
+                          onClick={() => faviconInputRef.current?.click()}
+                          disabled={isUploadingFavicon}
+                        >
+                          {isUploadingFavicon ? (
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                          ) : (
+                            <div className="flex flex-col items-center gap-2">
+                              <Upload className="h-5 w-5 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">Icône personnalisée (optionnel)</span>
+                            </div>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
