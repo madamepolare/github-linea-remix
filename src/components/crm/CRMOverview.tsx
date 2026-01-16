@@ -17,9 +17,16 @@ import {
   Phone,
   Zap,
   TrendingUp,
-  MailCheck,
   Clock,
   Send,
+  Calendar,
+  AlertCircle,
+  CheckCircle2,
+  MailOpen,
+  PhoneCall,
+  Video,
+  ListTodo,
+  RefreshCw,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
@@ -33,7 +40,7 @@ import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { CRMQuickActions } from "./CRMQuickActions";
 import { CompanyFormDialog } from "./CompanyFormDialog";
 import { ContactFormDialog } from "./ContactFormDialog";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format, isToday, isTomorrow, isPast, isThisWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 
 interface CRMOverviewProps {
@@ -59,9 +66,9 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
   const { data: pipelineStats, isLoading: pipelineStatsLoading } = useQuery({
     queryKey: ["pipeline-entries-stats", activeWorkspace?.id],
     queryFn: async () => {
-      if (!activeWorkspace?.id) return { total: 0, awaiting: 0, recent: 0 };
+      if (!activeWorkspace?.id) return { total: 0, awaiting: 0, recent: 0, withReplies: 0 };
 
-      const [entriesResult, awaitingResult, recentResult] = await Promise.all([
+      const [entriesResult, awaitingResult, recentResult, repliesResult] = await Promise.all([
         // Total entries
         supabase
           .from("contact_pipeline_entries")
@@ -79,13 +86,79 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
           .select("id", { count: "exact", head: true })
           .eq("workspace_id", activeWorkspace.id)
           .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
+        // Entries with unread replies
+        supabase
+          .from("contact_pipeline_entries")
+          .select("id", { count: "exact", head: true })
+          .eq("workspace_id", activeWorkspace.id)
+          .gt("unread_replies_count", 0),
       ]);
 
       return {
         total: entriesResult.count || 0,
         awaiting: awaitingResult.count || 0,
         recent: recentResult.count || 0,
+        withReplies: repliesResult.count || 0,
       };
+    },
+    enabled: !!activeWorkspace?.id,
+    staleTime: 60000,
+  });
+
+  // Fetch upcoming actions
+  const { data: upcomingActions = [] } = useQuery({
+    queryKey: ["upcoming-pipeline-actions", activeWorkspace?.id],
+    queryFn: async () => {
+      if (!activeWorkspace?.id) return [];
+
+      const { data, error } = await supabase
+        .from("pipeline_actions")
+        .select(`
+          id,
+          action_type,
+          title,
+          due_date,
+          priority,
+          status,
+          contact:contacts(id, name),
+          company:crm_companies(id, name)
+        `)
+        .eq("workspace_id", activeWorkspace.id)
+        .eq("status", "pending")
+        .not("due_date", "is", null)
+        .order("due_date", { ascending: true })
+        .limit(5);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!activeWorkspace?.id,
+    staleTime: 60000,
+  });
+
+  // Fetch entries with unread replies
+  const { data: entriesWithReplies = [] } = useQuery({
+    queryKey: ["entries-with-replies", activeWorkspace?.id],
+    queryFn: async () => {
+      if (!activeWorkspace?.id) return [];
+
+      const { data, error } = await supabase
+        .from("contact_pipeline_entries")
+        .select(`
+          id,
+          unread_replies_count,
+          last_inbound_email_at,
+          contact:contacts(id, name, email),
+          company:crm_companies(id, name),
+          stage:crm_pipeline_stages(name, color)
+        `)
+        .eq("workspace_id", activeWorkspace.id)
+        .gt("unread_replies_count", 0)
+        .order("last_inbound_email_at", { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!activeWorkspace?.id,
     staleTime: 60000,
@@ -278,25 +351,40 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
         ))}
       </motion.div>
 
-      {/* Prospection Stats Row */}
-      {(pipelineStats?.awaiting || 0) > 0 && (
+      {/* Prospection Stats Row - Always show if there's pipeline data */}
+      {(pipelineStats?.total || 0) > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
           className="grid grid-cols-2 lg:grid-cols-4 gap-3"
         >
-          <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onNavigate("prospection")}>
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="p-2 rounded-md bg-warning/10">
-                <Clock className="h-4 w-4 text-warning" />
-              </div>
-              <div>
-                <p className="text-lg font-semibold">{pipelineStats?.awaiting || 0}</p>
-                <p className="text-xs text-muted-foreground">En attente de réponse</p>
-              </div>
-            </CardContent>
-          </Card>
+          {(pipelineStats?.withReplies || 0) > 0 && (
+            <Card className="cursor-pointer hover:bg-muted/50 transition-colors border-success/30 bg-success/5" onClick={() => onNavigate("prospection")}>
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="p-2 rounded-md bg-success/10">
+                  <MailOpen className="h-4 w-4 text-success" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-success">{pipelineStats?.withReplies || 0}</p>
+                  <p className="text-xs text-muted-foreground">Réponses reçues</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {(pipelineStats?.awaiting || 0) > 0 && (
+            <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onNavigate("prospection")}>
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="p-2 rounded-md bg-warning/10">
+                  <Clock className="h-4 w-4 text-warning" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold">{pipelineStats?.awaiting || 0}</p>
+                  <p className="text-xs text-muted-foreground">En attente de réponse</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onNavigate("prospection")}>
             <CardContent className="p-3 flex items-center gap-3">
               <div className="p-2 rounded-md bg-info/10">
@@ -316,6 +404,158 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
               <div>
                 <p className="text-lg font-semibold">{contactPipelines.length}</p>
                 <p className="text-xs text-muted-foreground">Pipelines actifs</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Upcoming Actions - Always visible if there are actions */}
+      {upcomingActions.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+        >
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between py-3 px-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm font-medium">
+                  Prochaines actions
+                </CardTitle>
+                <Badge variant="secondary" className="h-5 text-xs">
+                  {upcomingActions.length}
+                </Badge>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => onNavigate("prospection")}
+              >
+                Voir tout
+                <ArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+            </CardHeader>
+            <CardContent className="p-2">
+              <div className="space-y-1">
+                {upcomingActions.map((action: any) => {
+                  const dueDate = action.due_date ? new Date(action.due_date) : null;
+                  const isOverdue = dueDate && isPast(dueDate) && !isToday(dueDate);
+                  const isDueToday = dueDate && isToday(dueDate);
+                  const isDueTomorrow = dueDate && isTomorrow(dueDate);
+                  
+                  const ActionIcon = {
+                    email: Mail,
+                    call: PhoneCall,
+                    meeting: Video,
+                    task: ListTodo,
+                    followup: RefreshCw,
+                  }[action.action_type as string] || ListTodo;
+
+                  return (
+                    <div
+                      key={action.id}
+                      className={cn(
+                        "flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors",
+                        isOverdue && "bg-destructive/5 border border-destructive/20"
+                      )}
+                      onClick={() => onNavigate("prospection")}
+                    >
+                      <div className={cn(
+                        "p-1.5 rounded-md",
+                        isOverdue ? "bg-destructive/10" : "bg-muted"
+                      )}>
+                        <ActionIcon className={cn(
+                          "h-3.5 w-3.5",
+                          isOverdue ? "text-destructive" : "text-muted-foreground"
+                        )} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{action.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {action.contact?.name || action.company?.name || "—"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {action.priority === "urgent" && (
+                          <AlertCircle className="h-3.5 w-3.5 text-destructive" />
+                        )}
+                        <span className={cn(
+                          "text-xs",
+                          isOverdue ? "text-destructive font-medium" : 
+                          isDueToday ? "text-warning font-medium" :
+                          isDueTomorrow ? "text-info" : "text-muted-foreground"
+                        )}>
+                          {isOverdue ? "En retard" :
+                           isDueToday ? "Aujourd'hui" :
+                           isDueTomorrow ? "Demain" :
+                           dueDate ? format(dueDate, "d MMM", { locale: fr }) : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Unread Replies Alert */}
+      {entriesWithReplies.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="border-success/30 bg-success/5">
+            <CardHeader className="flex flex-row items-center justify-between py-3 px-4">
+              <div className="flex items-center gap-2">
+                <MailOpen className="h-4 w-4 text-success" />
+                <CardTitle className="text-sm font-medium text-success">
+                  Réponses non lues
+                </CardTitle>
+                <Badge className="h-5 text-xs bg-success text-white">
+                  {entriesWithReplies.reduce((acc: number, e: any) => acc + (e.unread_replies_count || 0), 0)}
+                </Badge>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-success hover:text-success"
+                onClick={() => onNavigate("prospection")}
+              >
+                Traiter
+                <ArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+            </CardHeader>
+            <CardContent className="p-2">
+              <div className="space-y-1">
+                {entriesWithReplies.slice(0, 3).map((entry: any) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center gap-3 p-2 rounded-md hover:bg-success/10 cursor-pointer transition-colors"
+                    onClick={() => onNavigate("prospection")}
+                  >
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: entry.stage?.color || "hsl(var(--success))" }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {entry.contact?.name || entry.company?.name || "—"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {entry.last_inbound_email_at && formatDistanceToNow(new Date(entry.last_inbound_email_at), { addSuffix: true, locale: fr })}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="h-5 text-xs bg-success/10 text-success">
+                      {entry.unread_replies_count} non lu{entry.unread_replies_count > 1 ? "s" : ""}
+                    </Badge>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
