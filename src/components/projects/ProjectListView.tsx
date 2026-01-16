@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useProjects, useSubProjects, Project } from "@/hooks/useProjects";
+import { useProjects, useSubProjects, useProjectMembersForList, Project, ProjectMember } from "@/hooks/useProjects";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -8,6 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +38,46 @@ import { Building2, FolderKanban, MapPin, MoreHorizontal, Archive, ArchiveRestor
 import { PROJECT_TYPES } from "@/lib/projectTypes";
 import { cn } from "@/lib/utils";
 
+// Avatar stack component for project members
+function ProjectMemberAvatars({ members }: { members: (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[] }) {
+  if (!members || members.length === 0) return null;
+
+  const displayMembers = members.slice(0, 3);
+  const remaining = members.length - 3;
+
+  return (
+    <TooltipProvider>
+      <div className="flex items-center -space-x-2">
+        {displayMembers.map((member) => {
+          const initials = member.profile?.full_name
+            ? member.profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+            : "?";
+          return (
+            <Tooltip key={member.id}>
+              <TooltipTrigger asChild>
+                <Avatar className="h-6 w-6 border-2 border-background ring-0">
+                  <AvatarImage src={member.profile?.avatar_url || ""} />
+                  <AvatarFallback className="text-2xs bg-primary/10 text-primary">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{member.profile?.full_name || "Membre"}</p>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+        {remaining > 0 && (
+          <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-2xs font-medium">
+            +{remaining}
+          </div>
+        )}
+      </div>
+    </TooltipProvider>
+  );
+}
+
 interface ProjectListViewProps {
   onCreateProject?: () => void;
 }
@@ -43,10 +85,11 @@ interface ProjectListViewProps {
 type ViewFilter = "active" | "closed" | "archived";
 
 // Sub-projects row component
-function SubProjectsRows({ parentId, onNavigate, onDelete }: { 
+function SubProjectsRows({ parentId, onNavigate, onDelete, membersByProject }: { 
   parentId: string; 
   onNavigate: (id: string) => void;
   onDelete: (id: string) => void;
+  membersByProject: Record<string, (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[]>;
 }) {
   const { data: subProjects = [], isLoading } = useSubProjects(parentId);
 
@@ -103,9 +146,12 @@ function SubProjectsRows({ parentId, onNavigate, onDelete }: {
               </div>
             </TableCell>
             <TableCell>
-              {projectType && (
-                <Badge variant="secondary" className="text-xs">{projectType.label}</Badge>
-              )}
+              <div className="flex items-center gap-2">
+                {projectType && (
+                  <Badge variant="secondary" className="text-xs">{projectType.label}</Badge>
+                )}
+                <ProjectMemberAvatars members={membersByProject[project.id] || []} />
+              </div>
             </TableCell>
             <TableCell>
               {project.crm_company ? (
@@ -169,6 +215,18 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
   const { projects: activeProjects, isLoading: loadingActive, archiveProject, closeProject, deleteProject } = useProjects();
   const { projects: closedProjects, isLoading: loadingClosed } = useProjects({ includeClosed: true });
   const { projects: archivedProjects, isLoading: loadingArchived } = useProjects({ includeArchived: true });
+
+  // Get all project IDs for fetching members
+  const allProjectIds = useMemo(() => {
+    const ids = new Set<string>();
+    activeProjects.forEach(p => ids.add(p.id));
+    closedProjects.forEach(p => ids.add(p.id));
+    archivedProjects.forEach(p => ids.add(p.id));
+    return [...ids];
+  }, [activeProjects, closedProjects, archivedProjects]);
+
+  // Fetch all project members at once
+  const { data: projectMembersByProject = {} } = useProjectMembersForList(allProjectIds);
 
   // Count sub-projects for each parent
   const projectsWithSubCount = useMemo(() => {
@@ -314,9 +372,12 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {projectType && (
-                        <Badge variant="secondary">{projectType.label}</Badge>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {projectType && (
+                          <Badge variant="secondary">{projectType.label}</Badge>
+                        )}
+                        <ProjectMemberAvatars members={projectMembersByProject[project.id] || []} />
+                      </div>
                     </TableCell>
                     <TableCell>
                       {project.crm_company ? (
@@ -411,6 +472,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
                       parentId={project.id} 
                       onNavigate={(id) => navigate(`/projects/${id}`)}
                       onDelete={setDeleteProjectId}
+                      membersByProject={projectMembersByProject}
                     />
                   )}
                 </>
