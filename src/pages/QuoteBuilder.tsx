@@ -773,8 +773,8 @@ export default function QuoteBuilder() {
         {/* Editor Panel */}
         <div className={`flex flex-col ${showPreview ? 'w-full lg:w-[55%]' : 'w-full'} border-r bg-background`}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1">
-            <div className="px-4 sm:px-6 pt-3 pb-2 border-b bg-card shrink-0 overflow-x-auto overflow-y-visible">
-              <TabsList className="h-9 w-max bg-muted/50 p-1 rounded-lg gap-0.5 mb-1">
+            <div className="px-4 sm:px-6 pt-3 pb-3 border-b bg-card shrink-0 overflow-x-auto">
+              <TabsList className="h-9 w-max bg-muted/50 p-1 rounded-lg gap-0.5">
                 {processedTabs.map(tabId => {
                   const config = TAB_CONFIG[tabId];
                   const Icon = config.icon;
@@ -785,7 +785,7 @@ export default function QuoteBuilder() {
                     <TabsTrigger 
                       key={tabId} 
                       value={tabId} 
-                      className="gap-1.5 px-3 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow rounded-md h-7"
+                      className="gap-1.5 px-3 text-xs font-medium rounded-md h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                     >
                       <Icon className="h-3.5 w-3.5" />
                       <span>{config.label}</span>
