@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Building2,
   Users,
@@ -16,8 +17,10 @@ import {
   Zap,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { CRMCompanyEnriched, Contact } from "@/lib/crmTypes";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
+import { useCRMCompanies } from "@/hooks/useCRMCompanies";
+import { useContacts } from "@/hooks/useContacts";
+import { useCRMPipelines } from "@/hooks/useCRMPipelines";
 import { cn, formatCurrency } from "@/lib/utils";
 import { CRMSparkline } from "./CRMSparkline";
 import { CRMActivityFeed } from "./CRMActivityFeed";
@@ -28,26 +31,9 @@ import { ContactFormDialog } from "./ContactFormDialog";
 
 interface CRMOverviewProps {
   onNavigate: (view: string) => void;
-  companiesCount: number;
-  contactsCount: number;
-  leadStats: {
-    total: number;
-    entries?: number;
-  };
-  companies: CRMCompanyEnriched[];
-  contacts: Contact[];
-  leads?: any[];
 }
 
-export function CRMOverview({
-  onNavigate,
-  companiesCount,
-  contactsCount,
-  leadStats,
-  companies,
-  contacts,
-  leads = [],
-}: CRMOverviewProps) {
+export function CRMOverview({ onNavigate }: CRMOverviewProps) {
   const navigate = useNavigate();
   const {
     getCompanyTypeLabel,
@@ -56,6 +42,16 @@ export function CRMOverview({
     getContactTypeLabel,
     getContactTypeColor,
   } = useCRMSettings();
+
+  // Fetch data only in this component
+  const { allCompanies: companies, isLoading: companiesLoading } = useCRMCompanies();
+  const { allContacts: contacts, isLoading: contactsLoading } = useContacts();
+  const { pipelines, isLoading: pipelinesLoading } = useCRMPipelines();
+
+  const isLoading = companiesLoading || contactsLoading || pipelinesLoading;
+  const companiesCount = companies.length;
+  const contactsCount = contacts.length;
+  const leadStats = { total: pipelines.length, entries: 0 };
 
   const [showCreateCompany, setShowCreateCompany] = useState(false);
   const [showCreateContact, setShowCreateContact] = useState(false);
@@ -139,6 +135,26 @@ export function CRMOverview({
       action: () => onNavigate("prospection"),
     },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-9 w-32" />
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-28 rounded-lg" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          <Skeleton className="lg:col-span-3 h-64 rounded-lg" />
+          <Skeleton className="lg:col-span-2 h-64 rounded-lg" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-4">
@@ -477,7 +493,7 @@ export function CRMOverview({
               <CRMActivityFeed
                 companies={companies}
                 contacts={contacts}
-                leads={leads}
+                leads={[]}
                 maxItems={10}
               />
             </CardContent>

@@ -1,21 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense, memo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { CRMContactsTable } from "@/components/crm/CRMContactsTable";
-import { CRMCompanyTable } from "@/components/crm/CRMCompanyTable";
-import { CRMProspectionView } from "@/components/crm/CRMProspectionView";
+import { CRMCommandBar } from "@/components/crm/CRMCommandBar";
+import { AIProspectingSheet } from "@/components/crm/AIProspectingSheet";
 import { ContactFormDialog } from "@/components/crm/ContactFormDialog";
 import { CompanyFormDialog } from "@/components/crm/CompanyFormDialog";
 import { ImportContactsDialog } from "@/components/crm/ImportContactsDialog";
-import { CRMOverview } from "@/components/crm/CRMOverview";
-import { CRMCommandBar } from "@/components/crm/CRMCommandBar";
-import { AIProspectingSheet } from "@/components/crm/AIProspectingSheet";
-import { useCRMCompanies } from "@/hooks/useCRMCompanies";
-import { useContacts } from "@/hooks/useContacts";
-import { useContactPipeline } from "@/hooks/useContactPipeline";
-import { useCRMPipelines } from "@/hooks/useCRMPipelines";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Lazy load heavy components to improve navigation speed
+const CRMOverview = lazy(() => import("@/components/crm/CRMOverview").then(m => ({ default: m.CRMOverview })));
+const CRMContactsTable = lazy(() => import("@/components/crm/CRMContactsTable").then(m => ({ default: m.CRMContactsTable })));
+const CRMCompanyTable = lazy(() => import("@/components/crm/CRMCompanyTable").then(m => ({ default: m.CRMCompanyTable })));
+const CRMProspectionView = lazy(() => import("@/components/crm/CRMProspectionView").then(m => ({ default: m.CRMProspectionView })));
+
 type CRMView = "overview" | "contacts" | "companies" | "prospection";
 
-export default function CRM() {
+function CRMLoadingSkeleton() {
+  return (
+    <div className="space-y-4 p-4">
+      <div className="flex gap-4">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+      <Skeleton className="h-[400px] w-full rounded-lg" />
+    </div>
+  );
+}
+
+function CRM() {
   const { section } = useParams();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
@@ -43,16 +55,6 @@ export default function CRM() {
     }
   }, [section, navigate]);
 
-  const { allCompanies } = useCRMCompanies();
-  const { allContacts } = useContacts();
-  const { pipelines } = useCRMPipelines();
-  
-  // Calculate pipeline stats for overview
-  const pipelineStats = {
-    total: pipelines.length,
-    entries: 0, // Will be calculated from pipeline entries
-  };
-
   // Listen for command palette events
   useEffect(() => {
     const handleCreateContact = () => setCreateContactOpen(true);
@@ -75,11 +77,6 @@ export default function CRM() {
         return (
           <CRMOverview
             onNavigate={(v) => navigate(`/crm/${v}`)}
-            companiesCount={allCompanies.length}
-            contactsCount={allContacts.length}
-            leadStats={pipelineStats}
-            companies={allCompanies}
-            contacts={allContacts}
           />
         );
 
@@ -109,7 +106,9 @@ export default function CRM() {
     <>
       <div className="flex flex-col h-full overflow-hidden">        
         <div className="flex-1 overflow-auto p-4">
-          {renderContent()}
+          <Suspense fallback={<CRMLoadingSkeleton />}>
+            {renderContent()}
+          </Suspense>
         </div>
       </div>
 
@@ -121,3 +120,5 @@ export default function CRM() {
     </>
   );
 }
+
+export default memo(CRM);
