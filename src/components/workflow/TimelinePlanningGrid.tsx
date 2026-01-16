@@ -329,7 +329,7 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-card/50">
+      <div className="flex items-center justify-between px-4 py-3 border-b">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("prev")} className="h-8 w-8">
             <ChevronLeft className="h-4 w-4" />
@@ -378,11 +378,11 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
         {/* Member info column (sticky) + Hour labels */}
         {displayedMember && (
           <div 
-            className="flex-shrink-0 border-r bg-muted/30 flex flex-col"
+            className="flex-shrink-0 border-r flex flex-col"
             style={{ width: MEMBER_COLUMN_WIDTH }}
           >
             {/* Header with member info */}
-            <div className="h-16 border-b flex items-center gap-3 px-3 bg-card/50 shrink-0">
+            <div className="h-16 border-b flex items-center gap-3 px-3 shrink-0">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={displayedMember.profile?.avatar_url || ""} />
                 <AvatarFallback className="text-sm">
@@ -437,8 +437,7 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
                   <div
                     className={cn(
                       "h-16 border-b flex flex-col items-center justify-center gap-0.5 sticky top-0 bg-background z-10",
-                      weekend && "bg-muted/40",
-                      isToday && "bg-primary/10"
+                      isToday && "bg-primary/5"
                     )}
                   >
                     <span className={cn(
