@@ -30,6 +30,7 @@ import {
   Zap,
   Bell,
   FileCode,
+  Target,
 } from 'lucide-react';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -69,6 +70,7 @@ import { CreateCreditNoteDialog } from '@/components/invoicing/CreateCreditNoteD
 import { generateFacturXXML, downloadFacturXXML, FacturXAgencyInfo } from '@/lib/facturx';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { InvoiceLandingTab } from '@/components/invoicing/InvoiceLandingTab';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
   draft: { label: 'Brouillon', color: 'bg-muted text-muted-foreground', icon: FileText },
@@ -247,6 +249,10 @@ export default function Invoicing() {
           <TabsTrigger value="dashboard" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Tableau de bord
+          </TabsTrigger>
+          <TabsTrigger value="landing" className="gap-2">
+            <Target className="h-4 w-4" />
+            Atterrissage
           </TabsTrigger>
           <TabsTrigger value="invoices" className="gap-2">
             <Receipt className="h-4 w-4" />
@@ -500,6 +506,11 @@ export default function Invoicing() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Landing Tab */}
+        <TabsContent value="landing" className="space-y-6">
+          <InvoiceLandingTab />
         </TabsContent>
 
         {/* Invoices Tab */}
