@@ -198,7 +198,7 @@ export function TaskDetailModal({ task, open, onOpenChange }: TaskDetailModalPro
                 </div>
 
                 {activeTab === "subtasks" && activeWorkspace && (
-                  <SubtasksManager taskId={task.id} workspaceId={activeWorkspace.id} />
+                  <SubtasksManager taskId={task.id} workspaceId={activeWorkspace.id} taskDescription={description} />
                 )}
                 {activeTab === "time" && (
                   <TaskTimeTracker taskId={task.id} />
