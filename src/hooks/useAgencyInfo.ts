@@ -7,6 +7,7 @@ export interface AgencyInfo {
   id: string;
   name: string;
   logo_url: string | null;
+  favicon_url: string | null;
   signature_url: string | null;
   address: string | null;
   city: string | null;
@@ -36,6 +37,7 @@ export interface AgencyInfo {
 export interface UpdateAgencyInfoInput {
   name?: string;
   logo_url?: string | null;
+  favicon_url?: string | null;
   signature_url?: string | null;
   address?: string | null;
   city?: string | null;
@@ -72,6 +74,7 @@ export function useAgencyInfo() {
           id,
           name,
           logo_url,
+          favicon_url,
           signature_url,
           address,
           city,

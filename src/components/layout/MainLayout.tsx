@@ -25,8 +25,12 @@ import { usePostItTasks } from "@/hooks/usePostItTasks";
 import { EventSchedulerDialog } from "@/components/workflow/EventSchedulerDialog";
 import { CheckInModal } from "@/components/checkin/CheckInModal";
 import { CheckOutModal } from "@/components/checkin/CheckOutModal";
+import { useFavicon } from "@/hooks/useFavicon";
 
 export function MainLayout() {
+  // Apply workspace favicon
+  useFavicon();
+  
   // Guard: redirect to home if current module not enabled in new workspace
   useWorkspaceModuleGuard();
   const { collapsed } = useSidebarStore();
