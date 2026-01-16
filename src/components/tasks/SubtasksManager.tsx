@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,17 +22,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Trash2, GripVertical, MessageCircle, Send, Sparkles, Wand2, FileText } from "lucide-react";
+import { Plus, Trash2, GripVertical, MessageCircle, Send, Sparkles, Wand2, FileText, User, CalendarIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTaskExchanges, TaskExchange } from "@/hooks/useTaskExchanges";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Profile } from "./MultiAssigneePicker";
 
 interface Subtask {
   id: string;
   title: string;
   status: "todo" | "in_progress" | "review" | "done" | "archived";
   sort_order: number | null;
+  assigned_to: string[] | null;
+  due_date: string | null;
 }
 
 interface SubtasksManagerProps {
@@ -51,12 +61,36 @@ export function SubtasksManager({ taskId, workspaceId, taskDescription }: Subtas
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("id, title, status, sort_order")
+        .select("id, title, status, sort_order, assigned_to, due_date")
         .eq("parent_id", taskId)
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return data as Subtask[];
     },
+  });
+
+  // Fetch workspace members for assignee picker
+  const { data: members } = useQuery({
+    queryKey: ["workspace-members", workspaceId],
+    queryFn: async () => {
+      const { data: memberData, error: memberError } = await supabase
+        .from("workspace_members")
+        .select("user_id")
+        .eq("workspace_id", workspaceId);
+
+      if (memberError) throw memberError;
+
+      const userIds = memberData.map((m) => m.user_id);
+
+      const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, user_id, full_name, avatar_url")
+        .in("user_id", userIds);
+
+      if (profileError) throw profileError;
+      return profiles as Profile[];
+    },
+    enabled: !!workspaceId,
   });
 
   const createSubtask = useMutation({
@@ -95,6 +129,25 @@ export function SubtasksManager({ taskId, workspaceId, taskDescription }: Subtas
           status: completed ? "done" : "todo",
           completed_at: completed ? new Date().toISOString() : null,
         })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+
+  // Update subtask assignee or due date
+  const updateSubtask = useMutation({
+    mutationFn: async ({ id, assigned_to, due_date }: { id: string; assigned_to?: string[] | null; due_date?: string | null }) => {
+      const updateData: any = {};
+      if (assigned_to !== undefined) updateData.assigned_to = assigned_to;
+      if (due_date !== undefined) updateData.due_date = due_date;
+      
+      const { error } = await supabase
+        .from("tasks")
+        .update(updateData)
         .eq("id", id);
       if (error) throw error;
     },
@@ -217,41 +270,155 @@ export function SubtasksManager({ taskId, workspaceId, taskDescription }: Subtas
       )}
 
       {/* Subtasks List */}
-      <div className="space-y-0.5">
-        {subtasks?.map((subtask) => (
-          <div
-            key={subtask.id}
-            className={cn(
-              "group flex items-center gap-2 py-1.5 px-2 -mx-2 rounded-md hover:bg-muted/50 transition-colors",
-              subtask.status === "done" && "opacity-50"
-            )}
-          >
-            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 cursor-grab flex-shrink-0" />
-            <Checkbox
-              checked={subtask.status === "done"}
-              onCheckedChange={(checked) =>
-                toggleSubtask.mutate({ id: subtask.id, completed: !!checked })
-              }
-              className="h-4 w-4"
-            />
-            <span
+      <div className="space-y-1">
+        {subtasks?.map((subtask) => {
+          const assignedMember = subtask.assigned_to?.[0] 
+            ? members?.find(m => m.user_id === subtask.assigned_to?.[0]) 
+            : null;
+          const dueDate = subtask.due_date ? new Date(subtask.due_date) : null;
+          const isOverdue = dueDate && dueDate < new Date() && subtask.status !== "done";
+
+          return (
+            <div
+              key={subtask.id}
               className={cn(
-                "flex-1 text-sm leading-tight",
-                subtask.status === "done" && "line-through text-muted-foreground"
+                "group flex items-center gap-2 py-2 px-2 -mx-2 rounded-md hover:bg-muted/50 transition-colors",
+                subtask.status === "done" && "opacity-50"
               )}
             >
-              {subtask.title}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0"
-              onClick={() => deleteSubtask.mutate(subtask.id)}
-            >
-              <Trash2 className="h-3 w-3 text-muted-foreground" />
-            </Button>
-          </div>
-        ))}
+              <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 cursor-grab flex-shrink-0" />
+              <Checkbox
+                checked={subtask.status === "done"}
+                onCheckedChange={(checked) =>
+                  toggleSubtask.mutate({ id: subtask.id, completed: !!checked })
+                }
+                className="h-4 w-4 flex-shrink-0"
+              />
+              <span
+                className={cn(
+                  "flex-1 text-sm leading-tight min-w-0 truncate",
+                  subtask.status === "done" && "line-through text-muted-foreground"
+                )}
+              >
+                {subtask.title}
+              </span>
+
+              {/* Assignee Picker */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "flex-shrink-0 rounded-full p-0.5 hover:bg-muted transition-colors",
+                      "opacity-60 group-hover:opacity-100"
+                    )}
+                  >
+                    {assignedMember ? (
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={assignedMember.avatar_url || undefined} />
+                        <AvatarFallback className="text-[10px]">
+                          {assignedMember.full_name?.split(" ").map(n => n[0]).join("").slice(0, 2) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <div className="h-5 w-5 rounded-full border border-dashed border-muted-foreground/40 flex items-center justify-center">
+                        <User className="h-3 w-3 text-muted-foreground/50" />
+                      </div>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-1" align="end">
+                  <div className="space-y-0.5">
+                    {members?.map((member) => (
+                      <button
+                        key={member.user_id}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted text-left"
+                        onClick={() => updateSubtask.mutate({
+                          id: subtask.id,
+                          assigned_to: subtask.assigned_to?.[0] === member.user_id ? null : [member.user_id]
+                        })}
+                      >
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={member.avatar_url || undefined} />
+                          <AvatarFallback className="text-[10px]">
+                            {member.full_name?.split(" ").map(n => n[0]).join("").slice(0, 2) || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm truncate flex-1">{member.full_name}</span>
+                        {subtask.assigned_to?.[0] === member.user_id && (
+                          <span className="text-primary">✓</span>
+                        )}
+                      </button>
+                    ))}
+                    {subtask.assigned_to && subtask.assigned_to.length > 0 && (
+                      <>
+                        <div className="border-t my-1" />
+                        <button
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted text-left text-muted-foreground"
+                          onClick={() => updateSubtask.mutate({ id: subtask.id, assigned_to: null })}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          <span className="text-sm">Retirer l'assignation</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Due Date Picker */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "flex-shrink-0 flex items-center gap-1 text-xs px-1.5 py-0.5 rounded hover:bg-muted transition-colors",
+                      "opacity-60 group-hover:opacity-100",
+                      isOverdue && "text-destructive opacity-100",
+                      dueDate && !isOverdue && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="h-3 w-3" />
+                    {dueDate ? (
+                      <span>{format(dueDate, "dd/MM", { locale: fr })}</span>
+                    ) : null}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={dueDate || undefined}
+                    onSelect={(date) => updateSubtask.mutate({
+                      id: subtask.id,
+                      due_date: date ? format(date, "yyyy-MM-dd") : null
+                    })}
+                    initialFocus
+                    locale={fr}
+                  />
+                  {dueDate && (
+                    <div className="p-2 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={() => updateSubtask.mutate({ id: subtask.id, due_date: null })}
+                      >
+                        Effacer l'échéance
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0"
+                onClick={() => deleteSubtask.mutate(subtask.id)}
+              >
+                <Trash2 className="h-3 w-3 text-muted-foreground" />
+              </Button>
+            </div>
+          );
+        })}
       </div>
 
       {isLoading && (
