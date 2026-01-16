@@ -70,40 +70,69 @@ RÉSULTAT ATTENDU :
   },
   {
     id: "list-views-duplicate",
-    severity: "warning",
+    severity: "info",
     category: "duplication",
-    title: "Vues listes non harmonisées",
-    description: "Chaque module implémente sa propre vue liste avec logique de tri, filtrage et colonnes dupliquée.",
+    title: "Vues listes partiellement harmonisées",
+    description: "DataTable.tsx créé et TaskArchiveView migré. Certaines vues complexes (TaskListView avec groupement, inline editing) resteront custom.",
     files: [
-      "src/components/crm/ProspectionListView.tsx",
-      "src/components/commercial/CommercialListView.tsx",
-      "src/components/projects/ProjectListView.tsx",
-      "src/components/tasks/TaskListView.tsx"
+      "src/components/shared/DataTable.tsx ✅ CRÉÉ",
+      "src/components/tasks/TaskArchiveView.tsx ✅ MIGRÉ",
+      "src/components/projects/ProjectListView.tsx → À migrer",
+      "src/components/crm/CRMCompanyTable.tsx → À migrer",
+      "src/components/tasks/TaskListView.tsx → CUSTOM (trop complexe)"
     ],
-    recommendation: "Créer un composant DataTable générique avec colonnes configurables, tri et filtrage intégrés.",
-    effort: "medium",
-    prompt: `**REFACTORING - Créer un DataTable générique**
+    recommendation: "Continuer la migration des vues simples vers DataTable. TaskListView reste custom car groupement par status + inline editing.",
+    effort: "low",
+    prompt: `**MIGRATION - Utiliser DataTable pour ProjectListView**
 
-OBJECTIF : Créer un composant DataTable réutilisable pour harmoniser toutes les vues listes.
+CONTEXTE : Le composant DataTable générique existe déjà dans src/components/shared/DataTable.tsx
+TaskArchiveView a déjà été migré avec succès.
+
+OBJECTIF : Migrer ProjectListView.tsx pour utiliser DataTable.
 
 CONTRAINTES CRITIQUES :
-- ⚠️ NE PAS supprimer les vues existantes immédiatement
-- ⚠️ Créer d'abord le composant générique, puis migrer une vue à la fois
-- ⚠️ Chaque vue doit continuer à fonctionner exactement comme avant
+- ⚠️ NE PAS modifier TaskListView.tsx - il reste custom car trop complexe (groupement par status, inline editing, subtasks, confetti)
+- ⚠️ Conserver le comportement de navigation onClick vers /projects/:id
+- ⚠️ Conserver toutes les colonnes actuelles : Projet, Type, Client, Phase, Avancement, Dates, Budget
 
-À CRÉER :
-1. src/components/shared/DataTable.tsx avec :
-   - Props: columns (définition des colonnes avec header, accessor, render, sortable)
-   - Props: data (tableau de données générique)
-   - Props: onSort, onFilter, onRowClick
-   - Intégration avec Table de shadcn/ui
+FICHIER À MODIFIER :
+src/components/projects/ProjectListView.tsx
 
-2. Migrer EN PREMIER : TaskListView.tsx (le plus simple)
+EXEMPLE DE MIGRATION (voir TaskArchiveView.tsx) :
+\`\`\`tsx
+import { DataTable, DataTableColumn } from "@/components/shared/DataTable";
+
+const columns: DataTableColumn<Project>[] = [
+  {
+    id: "name",
+    header: "Projet",
+    sortable: true,
+    accessor: "name",
+    render: (project) => (
+      <div className="flex items-center gap-3">
+        <div className="w-1.5 h-8 rounded-full" style={{ backgroundColor: project.color }} />
+        <span className="font-medium">{project.name}</span>
+      </div>
+    ),
+  },
+  // ... autres colonnes
+];
+
+return (
+  <DataTable
+    data={projects}
+    columns={columns}
+    getRowKey={(p) => p.id}
+    onRowClick={(p) => navigate(\`/projects/\${p.id}\`)}
+    isLoading={isLoading}
+  />
+);
+\`\`\`
 
 RÉSULTAT ATTENDU :
-- Nouveau composant DataTable fonctionnel
-- TaskListView migré et fonctionnel
-- Les autres vues restent inchangées (migration ultérieure)`
+- ProjectListView utilise DataTable
+- Même rendu visuel qu'avant
+- Navigation fonctionne`
   },
   {
     id: "entry-card-internal",

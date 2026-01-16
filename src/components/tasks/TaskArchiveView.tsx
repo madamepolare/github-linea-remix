@@ -6,14 +6,7 @@ import { Task } from "@/hooks/useTasks";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, DataTableColumn } from "@/components/shared/DataTable";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +22,6 @@ import { Archive, RotateCcw, Trash2, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export function TaskArchiveView() {
   const { activeWorkspace } = useAuth();
@@ -85,113 +77,122 @@ export function TaskArchiveView() {
     urgent: "Urgente",
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-2">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-14 w-full" />
-        ))}
-      </div>
-    );
-  }
-
-  if (!archivedTasks || archivedTasks.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <Archive className="h-12 w-12 text-muted-foreground mb-4" />
-        <h3 className="text-lg font-medium mb-2">Aucune tâche archivée</h3>
-        <p className="text-muted-foreground max-w-sm">
-          Les tâches que vous archivez apparaîtront ici. Vous pouvez les restaurer ou les supprimer définitivement.
-        </p>
-      </div>
-    );
-  }
+  const columns: DataTableColumn<Task>[] = [
+    {
+      id: "title",
+      header: "Tâche",
+      sortable: true,
+      accessor: "title",
+      render: (task) => (
+        <div>
+          <p className="font-medium text-muted-foreground">{task.title}</p>
+          {task.description && (
+            <p className="text-sm text-muted-foreground/70 line-clamp-1">
+              {task.description}
+            </p>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "priority",
+      header: "Priorité",
+      width: "w-28",
+      sortable: true,
+      accessor: "priority",
+      sortFn: (a, b) => {
+        const order = { urgent: 0, high: 1, medium: 2, low: 3 };
+        return order[a.priority] - order[b.priority];
+      },
+      render: (task) => (
+        <Badge variant="outline">{priorityLabels[task.priority]}</Badge>
+      ),
+    },
+    {
+      id: "updated_at",
+      header: "Archivée le",
+      width: "w-36",
+      sortable: true,
+      accessor: (task) => task.updated_at ? new Date(task.updated_at) : null,
+      render: (task) =>
+        task.updated_at ? (
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            {format(new Date(task.updated_at), "d MMM yyyy", { locale: fr })}
+          </div>
+        ) : null,
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      width: "w-32",
+      align: "right",
+      render: (task) => (
+        <div 
+          className="flex items-center justify-end gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => restoreTask.mutate(task.id)}
+            title="Restaurer"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Supprimer définitivement"
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Supprimer définitivement ?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Cette action est irréversible. La tâche et toutes ses sous-tâches seront supprimées.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => deleteTask.mutate(task.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Supprimer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <>
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Tâche</TableHead>
-              <TableHead className="w-28">Priorité</TableHead>
-              <TableHead className="w-36">Archivée le</TableHead>
-              <TableHead className="w-32 text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {archivedTasks.map((task) => (
-              <TableRow key={task.id} className="cursor-pointer hover:bg-muted/50">
-                <TableCell onClick={() => setSelectedTask(task)}>
-                  <div>
-                    <p className="font-medium text-muted-foreground">{task.title}</p>
-                    {task.description && (
-                      <p className="text-sm text-muted-foreground/70 line-clamp-1">
-                        {task.description}
-                      </p>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{priorityLabels[task.priority]}</Badge>
-                </TableCell>
-                <TableCell>
-                  {task.updated_at && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {format(new Date(task.updated_at), "d MMM yyyy", { locale: fr })}
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        restoreTask.mutate(task.id);
-                      }}
-                      title="Restaurer"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => e.stopPropagation()}
-                          title="Supprimer définitivement"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Supprimer définitivement ?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Cette action est irréversible. La tâche et toutes ses sous-tâches seront supprimées.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Annuler</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteTask.mutate(task.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Supprimer
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        data={archivedTasks || []}
+        columns={columns}
+        getRowKey={(task) => task.id}
+        isLoading={isLoading}
+        onRowClick={(task) => setSelectedTask(task)}
+        defaultSortColumn="updated_at"
+        defaultSortDirection="desc"
+        emptyState={
+          <div className="flex flex-col items-center justify-center py-8">
+            <Archive className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">Aucune tâche archivée</h3>
+            <p className="text-muted-foreground max-w-sm">
+              Les tâches que vous archivez apparaîtront ici. Vous pouvez les restaurer ou les supprimer définitivement.
+            </p>
+          </div>
+        }
+      />
 
       <TaskDetailSheet
         task={selectedTask}
