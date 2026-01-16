@@ -434,10 +434,11 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                 }}
                               >
                                 {/* Checkbox */}
-                                <div onClick={(e) => handleToggleComplete(e, task)} className="flex items-center justify-center">
+                                <div onClick={(e) => handleToggleComplete(e, task)} className="flex items-center justify-center h-full">
                                   <motion.div
                                     animate={isJustCompleted ? { scale: [1, 1.3, 1] } : {}}
                                     transition={{ duration: 0.3 }}
+                                    className="flex items-center justify-center"
                                   >
                                     {task.status === "done" ? (
                                       <CheckCircle2 className="h-5 w-5 text-green-500" />
