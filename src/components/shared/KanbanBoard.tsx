@@ -242,12 +242,12 @@ export function KanbanCard({ children, onClick, accentColor, className, isComple
       onClick={onClick}
       animate={showCelebration ? {
         scale: [1, 1.02, 1],
-        backgroundColor: ['hsl(var(--background))', 'hsl(142 76% 36% / 0.08)', 'hsl(var(--background))']
+        backgroundColor: ['white', 'hsl(142 76% 36% / 0.08)', 'white']
       } : {}}
       transition={{ duration: 0.3 }}
       className={cn(
-        "p-3 sm:p-4 rounded-lg bg-background border border-border/40 cursor-pointer transition-all duration-200",
-        "hover:border-border",
+        "p-3 sm:p-4 rounded-lg bg-white dark:bg-background border border-border/30 cursor-pointer transition-all duration-200",
+        "hover:border-border/60",
         isCompleted && "opacity-50",
         className
       )}
