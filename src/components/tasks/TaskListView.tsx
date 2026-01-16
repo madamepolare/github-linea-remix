@@ -319,13 +319,13 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
       <div className="space-y-4">
         {/* Quick add row */}
         {showQuickAdd ? (
-          <div className="border rounded-lg overflow-hidden">
-            <QuickTaskRow onCreated={() => setShowQuickAdd(false)} className="rounded-none border-0" />
+          <div className="border-b">
+            <QuickTaskRow onCreated={() => setShowQuickAdd(false)} className="border-0" />
           </div>
         ) : (
           <button
             onClick={() => setShowQuickAdd(true)}
-            className="w-full flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground border border-dashed rounded-lg hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground border-b border-dashed hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors"
           >
             <Plus className="h-4 w-4" />
             <span>Ajouter une tâche...</span>
@@ -342,26 +342,24 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
           const colors = STATUS_COLORS[status] || STATUS_COLORS.todo;
 
           return (
-            <div key={status} className="space-y-1">
+            <div key={status} className="space-y-0">
               {/* Status group header */}
               <button
                 onClick={() => toggleGroup(status)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors",
-                  colors.bg,
-                  "hover:opacity-80"
+                  "w-full flex items-center gap-3 px-4 py-2.5 border-b transition-colors",
+                  "hover:bg-muted/30"
                 )}
               >
                 <ChevronDown className={cn(
-                  "h-4 w-4 transition-transform",
-                  isCollapsed && "-rotate-90",
-                  colors.text
+                  "h-4 w-4 transition-transform text-muted-foreground",
+                  isCollapsed && "-rotate-90"
                 )} />
                 <div 
                   className="w-2 h-2 rounded-full"
                   style={{ backgroundColor: statusConfig?.color }}
                 />
-                <span className={cn("font-medium text-sm", colors.text)}>
+                <span className="font-medium text-sm text-foreground">
                   {statusConfig?.label}
                 </span>
                 <Badge variant="secondary" className="h-5 px-1.5 text-2xs">
@@ -380,11 +378,11 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                     className="overflow-hidden"
                   >
                     <div className={cn(
-                      "border rounded-lg overflow-hidden",
-                      `border-l-4 ${colors.border}`
+                      "border-l-2",
+                      colors.border
                     )}>
                       {/* Table header */}
-                      <div className="grid grid-cols-[40px_1fr_100px_100px_100px_100px_80px_60px] gap-2 px-4 py-2 bg-muted/30 text-xs text-muted-foreground font-medium border-b">
+                      <div className="grid grid-cols-[40px_1fr_100px_100px_100px_100px_80px_60px] gap-2 px-4 py-2 text-xs text-muted-foreground font-medium border-b">
                         <div></div>
                         <SortableHeader column="title">Tâche</SortableHeader>
                         <div className="flex items-center gap-1">
@@ -425,7 +423,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                 exit={{ opacity: 0, height: 0 }}
                                 transition={{ duration: 0.2 }}
                                 className={cn(
-                                  "grid grid-cols-[40px_1fr_100px_100px_100px_100px_80px_60px] gap-2 px-4 py-2.5 items-center cursor-pointer border-b last:border-b-0 transition-all duration-150 hover:bg-accent/50",
+                                  "grid grid-cols-[40px_1fr_100px_100px_100px_100px_80px_60px] gap-2 px-4 py-2.5 items-center cursor-pointer border-b last:border-b-0 transition-all duration-150 hover:bg-muted/30",
                                   task.status === "done" && "opacity-60"
                                 )}
                                 onClick={() => {
