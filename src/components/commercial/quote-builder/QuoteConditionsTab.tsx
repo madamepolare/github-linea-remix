@@ -1,18 +1,12 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { 
   FileText, 
-  Plus, 
-  Trash2, 
   RotateCcw,
   Info,
-  AlertTriangle,
-  CheckCircle2,
   Sparkles,
   FolderOpen
 } from 'lucide-react';
@@ -20,7 +14,6 @@ import { QuoteDocument } from '@/types/quoteTypes';
 import { ContractType } from '@/hooks/useContractTypes';
 import {
   UnifiedContractConditions,
-  UnifiedPaymentScheduleItem,
   parseConditionsFromDocument,
   getDefaultConditionsForType,
   mergeWithDefaults,
@@ -55,7 +48,6 @@ export function QuoteConditionsTab({
     const parsed = parseConditionsFromDocument(document.general_conditions || null);
     const defaults = getDefaultConditionsForType(contractTypeConfig?.code);
     
-    // If contract type has its own default_clauses, use those as base
     if (contractTypeConfig?.default_clauses) {
       const typeDefaults = parseConditionsFromDocument(
         typeof contractTypeConfig.default_clauses === 'string' 
@@ -87,32 +79,6 @@ export function QuoteConditionsTab({
     syncToDocument(updated);
   }, [conditions, syncToDocument]);
 
-  // Payment schedule handlers
-  const updatePaymentSchedule = useCallback((index: number, field: keyof UnifiedPaymentScheduleItem, value: string | number) => {
-    const updated = [...conditions.payment_schedule];
-    updated[index] = { ...updated[index], [field]: value };
-    syncToDocument({ ...conditions, payment_schedule: updated });
-  }, [conditions, syncToDocument]);
-
-  const addPaymentScheduleItem = useCallback(() => {
-    const updated: UnifiedContractConditions = {
-      ...conditions,
-      payment_schedule: [
-        ...conditions.payment_schedule,
-        { stage: 'Nouvelle étape', description: '', percentage: 0 }
-      ]
-    };
-    syncToDocument(updated);
-  }, [conditions, syncToDocument]);
-
-  const removePaymentScheduleItem = useCallback((index: number) => {
-    const updated: UnifiedContractConditions = {
-      ...conditions,
-      payment_schedule: conditions.payment_schedule.filter((_, i) => i !== index)
-    };
-    syncToDocument(updated);
-  }, [conditions, syncToDocument]);
-
   // Load from template
   const loadFromTemplate = useCallback((templateType: 'architecture' | 'communication' | 'generic') => {
     let defaults: UnifiedContractConditions;
@@ -135,10 +101,8 @@ export function QuoteConditionsTab({
     setIsGenerating(true);
     toast.info('Génération des conditions avec l\'IA...');
     
-    // Simulate AI generation - in real implementation, call AI endpoint
     await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // For now, just load appropriate defaults based on project description
     const code = contractTypeConfig?.code || '';
     const defaults = getDefaultConditionsForType(code);
     syncToDocument(defaults);
@@ -155,9 +119,6 @@ export function QuoteConditionsTab({
     }
   }, [contractTypeConfig?.code, updateClause]);
 
-  // Calculate total percentage
-  const totalPercentage = conditions.payment_schedule.reduce((sum, item) => sum + (item.percentage || 0), 0);
-  
   // Get clause keys that exist in current conditions
   const clauseKeys = Object.keys(conditions.clauses);
 
@@ -205,73 +166,6 @@ export function QuoteConditionsTab({
           </Button>
         </div>
       </div>
-
-      {/* Payment Schedule - Simple inline */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm">Échéancier de paiement</CardTitle>
-            <Badge 
-              variant={totalPercentage === 100 ? 'default' : 'destructive'}
-              className="text-xs"
-            >
-              {totalPercentage === 100 ? (
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-              ) : (
-                <AlertTriangle className="h-3 w-3 mr-1" />
-              )}
-              {totalPercentage}%
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {conditions.payment_schedule.map((item, index) => (
-            <div 
-              key={index} 
-              className="flex items-center gap-2 p-2 bg-muted/30 rounded-md"
-            >
-              <Input
-                value={item.stage}
-                onChange={(e) => updatePaymentSchedule(index, 'stage', e.target.value)}
-                placeholder="Étape"
-                className="h-8 text-sm flex-1"
-              />
-              <Input
-                value={item.description}
-                onChange={(e) => updatePaymentSchedule(index, 'description', e.target.value)}
-                placeholder="Description..."
-                className="h-8 text-sm flex-[2]"
-              />
-              <Input
-                type="number"
-                value={item.percentage}
-                onChange={(e) => updatePaymentSchedule(index, 'percentage', parseFloat(e.target.value) || 0)}
-                min={0}
-                max={100}
-                className="h-8 text-sm w-16 text-center"
-              />
-              <span className="text-xs text-muted-foreground">%</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
-                onClick={() => removePaymentScheduleItem(index)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          ))}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full h-8 text-xs gap-1.5 border border-dashed"
-            onClick={addPaymentScheduleItem}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Ajouter
-          </Button>
-        </CardContent>
-      </Card>
 
       {/* Clauses Accordion */}
       <Card>
@@ -338,38 +232,21 @@ export function QuoteConditionsTab({
         </CardContent>
       </Card>
 
-      {/* Special conditions & Payment terms */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Conditions particulières</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              value={document.special_conditions || ''}
-              onChange={(e) => onDocumentChange({ ...document, special_conditions: e.target.value })}
-              placeholder="Conditions spécifiques à ce document..."
-              rows={3}
-              className="text-sm"
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Modalités de paiement</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Textarea
-              value={document.payment_terms || ''}
-              onChange={(e) => onDocumentChange({ ...document, payment_terms: e.target.value })}
-              placeholder="Ex: Paiement à 30 jours..."
-              rows={3}
-              className="text-sm"
-            />
-          </CardContent>
-        </Card>
-      </div>
+      {/* Special conditions */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Conditions particulières</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            value={document.special_conditions || ''}
+            onChange={(e) => onDocumentChange({ ...document, special_conditions: e.target.value })}
+            placeholder="Conditions spécifiques à ce document..."
+            rows={4}
+            className="text-sm"
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
