@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQuery } from "@tanstack/react-query";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import {
   Building2,
   Users,
@@ -27,6 +29,7 @@ import {
   Video,
   ListTodo,
   RefreshCw,
+  Check,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
@@ -34,7 +37,6 @@ import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
 import { useCRMPipelines } from "@/hooks/useCRMPipelines";
 import { cn } from "@/lib/utils";
-import { CRMSparkline } from "./CRMSparkline";
 import { CRMActivityFeed } from "./CRMActivityFeed";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { CRMQuickActions } from "./CRMQuickActions";
@@ -49,7 +51,8 @@ interface CRMOverviewProps {
 
 export function CRMOverview({ onNavigate }: CRMOverviewProps) {
   const navigate = useNavigate();
-  const { activeWorkspace } = useAuth();
+  const queryClient = useQueryClient();
+  const { activeWorkspace, user } = useAuth();
   const {
     getCompanyTypeShortLabel,
     getCompanyTypeColor,
@@ -61,6 +64,30 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
   const { allCompanies: companies, isLoading: companiesLoading } = useCRMCompanies();
   const { allContacts: contacts, isLoading: contactsLoading } = useContacts();
   const { contactPipelines, isLoading: pipelinesLoading } = useCRMPipelines();
+
+  // Complete action mutation
+  const completeActionMutation = useMutation({
+    mutationFn: async (actionId: string) => {
+      const { error } = await supabase
+        .from('pipeline_actions')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          completed_by: user?.id || null,
+        })
+        .eq('id', actionId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Action terminée');
+      queryClient.invalidateQueries({ queryKey: ['upcoming-pipeline-actions'] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline-actions-all'] });
+    },
+    onError: () => {
+      toast.error('Erreur lors de la mise à jour');
+    },
+  });
 
   // Fetch pipeline entries count and stats
   const { data: pipelineStats, isLoading: pipelineStatsLoading } = useQuery({
@@ -105,8 +132,8 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
     staleTime: 60000,
   });
 
-  // Fetch upcoming actions
-  const { data: upcomingActions = [] } = useQuery({
+  // Fetch upcoming actions with contact phone for call actions
+  const { data: upcomingActions = [], refetch: refetchActions } = useQuery({
     queryKey: ["upcoming-pipeline-actions", activeWorkspace?.id],
     queryFn: async () => {
       if (!activeWorkspace?.id) return [];
@@ -120,8 +147,8 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
           due_date,
           priority,
           status,
-          contact:contacts(id, name),
-          company:crm_companies(id, name)
+          contact:contacts(id, name, phone),
+          company:crm_companies(id, name, phone)
         `)
         .eq("workspace_id", activeWorkspace.id)
         .eq("status", "pending")
@@ -199,16 +226,6 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
   const [showCreateCompany, setShowCreateCompany] = useState(false);
   const [showCreateContact, setShowCreateContact] = useState(false);
 
-  // Generate sparkline based on real data distribution
-  const generateSparklineData = (count: number, variance = 0.2) => {
-    const base = Math.max(Math.floor(count * 0.6), 0);
-    return Array.from({ length: 7 }, (_, i) => {
-      const trend = (i / 6) * (count - base);
-      const noise = Math.floor((Math.random() - 0.5) * count * variance);
-      return Math.max(0, Math.round(base + trend + noise));
-    });
-  };
-
   const recentCompanies = useMemo(() => {
     return [...companies]
       .sort(
@@ -237,8 +254,6 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
       icon: Building2,
       color: "text-info",
       bgColor: "bg-info/10",
-      sparklineColor: "hsl(var(--info))",
-      sparklineData: generateSparklineData(companiesCount),
       action: () => onNavigate("companies"),
     },
     {
@@ -248,8 +263,6 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
       icon: Users,
       color: "text-accent",
       bgColor: "bg-accent/10",
-      sparklineColor: "hsl(var(--accent))",
-      sparklineData: generateSparklineData(contactsCount),
       action: () => onNavigate("contacts"),
     },
     {
@@ -259,8 +272,15 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
       icon: Target,
       color: "text-success",
       bgColor: "bg-success/10",
-      sparklineColor: "hsl(var(--success))",
-      sparklineData: generateSparklineData(pipelineStats?.total || 0, 0.3),
+      action: () => onNavigate("prospection"),
+    },
+    {
+      id: "recent",
+      title: "Nouveaux cette semaine",
+      value: pipelineStats?.recent || 0,
+      icon: TrendingUp,
+      color: "text-primary",
+      bgColor: "bg-primary/10",
       action: () => onNavigate("prospection"),
     },
   ];
@@ -272,9 +292,9 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-9 w-32" />
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-28 rounded-lg" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-20 rounded-lg" />
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -304,11 +324,11 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
         </div>
       </div>
 
-      {/* Main Stats */}
+      {/* Main Stats - 4 columns without sparklines */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-2 lg:grid-cols-3 gap-3"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3"
       >
         {stats.map((stat, index) => (
           <motion.div
@@ -318,36 +338,24 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
             transition={{ delay: index * 0.05 }}
           >
             <Card
-              className="cursor-pointer group hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden"
+              className="cursor-pointer group hover:shadow-md hover:border-primary/20 transition-all duration-200"
               onClick={stat.action}
             >
-              <CardContent className="p-4 relative">
-                {/* Background sparkline */}
-                <div className="absolute bottom-0 right-0 opacity-60">
-                  <CRMSparkline
-                    data={stat.sparklineData}
-                    color={stat.sparklineColor}
-                    height={40}
-                    showDots
-                  />
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={cn("p-1.5 rounded-md", stat.bgColor)}>
+                    <stat.icon className={cn("h-4 w-4", stat.color)} />
+                  </div>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {stat.title}
+                  </span>
                 </div>
 
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={cn("p-1.5 rounded-md", stat.bgColor)}>
-                      <stat.icon className={cn("h-4 w-4", stat.color)} />
-                    </div>
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {stat.title}
-                    </span>
-                  </div>
-
-                  <div className="flex items-end justify-between">
-                    <p className="text-2xl font-bold tracking-tight">
-                      {stat.value}
-                    </p>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
+                <div className="flex items-end justify-between">
+                  <p className="text-2xl font-bold tracking-tight">
+                    {stat.value}
+                  </p>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </CardContent>
             </Card>
@@ -355,13 +363,13 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
         ))}
       </motion.div>
 
-      {/* Prospection Stats Row - Only show if there's meaningful data */}
-      {((pipelineStats?.withReplies || 0) > 0 || (pipelineStats?.awaiting || 0) > 0 || (pipelineStats?.recent || 0) > 0) && (
+      {/* Prospection Alerts Row - Only show if there's meaningful data */}
+      {((pipelineStats?.withReplies || 0) > 0 || (pipelineStats?.awaiting || 0) > 0) && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="grid grid-cols-2 lg:grid-cols-3 gap-3"
+          className="grid grid-cols-2 gap-3"
         >
           {(pipelineStats?.withReplies || 0) > 0 && (
             <Card className="cursor-pointer hover:bg-muted/50 transition-colors border-success/30 bg-success/5" onClick={() => onNavigate("prospection")}>
@@ -377,29 +385,18 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
             </Card>
           )}
           {(pipelineStats?.awaiting || 0) > 0 && (
-            <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onNavigate("prospection")}>
+            <Card className="cursor-pointer hover:bg-muted/50 transition-colors border-warning/30 bg-warning/5" onClick={() => onNavigate("prospection")}>
               <CardContent className="p-3 flex items-center gap-3">
                 <div className="p-2 rounded-md bg-warning/10">
                   <Clock className="h-4 w-4 text-warning" />
                 </div>
                 <div>
-                  <p className="text-lg font-semibold">{pipelineStats?.awaiting || 0}</p>
+                  <p className="text-lg font-semibold text-warning">{pipelineStats?.awaiting || 0}</p>
                   <p className="text-xs text-muted-foreground">En attente de réponse</p>
                 </div>
               </CardContent>
             </Card>
           )}
-          <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onNavigate("prospection")}>
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="p-2 rounded-md bg-info/10">
-                <TrendingUp className="h-4 w-4 text-info" />
-              </div>
-              <div>
-                <p className="text-lg font-semibold">{pipelineStats?.recent || 0}</p>
-                <p className="text-xs text-muted-foreground">Nouveaux cette semaine</p>
-              </div>
-            </CardContent>
-          </Card>
         </motion.div>
       )}
 
@@ -438,6 +435,8 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
                   const isOverdue = dueDate && isPast(dueDate) && !isToday(dueDate);
                   const isDueToday = dueDate && isToday(dueDate);
                   const isDueTomorrow = dueDate && isTomorrow(dueDate);
+                  const isCallAction = action.action_type === 'call';
+                  const phoneNumber = action.contact?.phone || action.company?.phone;
                   
                   const ActionIcon = {
                     email: Mail,
@@ -447,17 +446,29 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
                     followup: RefreshCw,
                   }[action.action_type as string] || ListTodo;
 
+                  const handleComplete = (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    completeActionMutation.mutate(action.id);
+                  };
+
                   return (
                     <div
                       key={action.id}
                       className={cn(
-                        "flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors",
+                        "flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 transition-colors group",
                         isOverdue && "bg-destructive/5 border border-destructive/20"
                       )}
-                      onClick={() => onNavigate("prospection")}
                     >
+                      {/* Checkbox to complete action */}
+                      <Checkbox
+                        className="shrink-0"
+                        checked={false}
+                        onCheckedChange={() => completeActionMutation.mutate(action.id)}
+                        disabled={completeActionMutation.isPending}
+                      />
+                      
                       <div className={cn(
-                        "p-1.5 rounded-md",
+                        "p-1.5 rounded-md shrink-0",
                         isOverdue ? "bg-destructive/10" : "bg-muted"
                       )}>
                         <ActionIcon className={cn(
@@ -465,12 +476,27 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
                           isOverdue ? "text-destructive" : "text-muted-foreground"
                         )} />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      
+                      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onNavigate("prospection")}>
                         <p className="text-sm font-medium truncate">{action.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {action.contact?.name || action.company?.name || "—"}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground truncate">
+                            {action.contact?.name || action.company?.name || "—"}
+                          </span>
+                          {/* Show phone number for call actions */}
+                          {isCallAction && phoneNumber && (
+                            <a 
+                              href={`tel:${phoneNumber}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
+                            >
+                              <Phone className="h-3 w-3" />
+                              {phoneNumber}
+                            </a>
+                          )}
+                        </div>
                       </div>
+                      
                       <div className="flex items-center gap-2 shrink-0">
                         {action.priority === "urgent" && (
                           <AlertCircle className="h-3.5 w-3.5 text-destructive" />
