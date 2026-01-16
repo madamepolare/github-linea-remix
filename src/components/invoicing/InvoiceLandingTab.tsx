@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useInvoiceLanding, useInvoiceLandingStats } from "@/hooks/useInvoiceLanding";
 import { InvoiceLandingChart } from "./InvoiceLandingChart";
-import { FileText, Clock, TrendingUp, Target } from "lucide-react";
+import { FileText, Clock, TrendingUp, Target, Calendar } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function InvoiceLandingTab() {
@@ -15,7 +15,7 @@ export function InvoiceLandingTab() {
   return (
     <div className="space-y-6">
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -27,11 +27,34 @@ export function InvoiceLandingTab() {
                   <p className="text-2xl font-bold">{formatCurrency(stats?.totalProjected || 0)}</p>
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  {stats?.totalCount || 0} factures
+                  {stats?.totalCount || 0} éléments
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <Target className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Échéances projets</p>
+                {statsLoading ? (
+                  <Skeleton className="h-8 w-24 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold text-amber-600">
+                    {formatCurrency(stats?.scheduledTotal || 0)}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats?.scheduledCount || 0} à facturer
+                </p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-amber-600" />
               </div>
             </div>
           </CardContent>
@@ -64,7 +87,7 @@ export function InvoiceLandingTab() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Confirmées</p>
+                <p className="text-sm text-muted-foreground">En attente</p>
                 {statsLoading ? (
                   <Skeleton className="h-8 w-24 mt-1" />
                 ) : (
@@ -101,8 +124,8 @@ export function InvoiceLandingTab() {
                   </>
                 )}
               </div>
-              <div className="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-amber-600" />
+              <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-emerald-600" />
               </div>
             </div>
           </CardContent>
@@ -114,7 +137,7 @@ export function InvoiceLandingTab() {
         <CardHeader>
           <CardTitle className="text-base">Atterrissage mensuel des factures</CardTitle>
           <CardDescription>
-            Projection des encaissements basée sur les dates d'échéance des factures brouillons, en attente et envoyées
+            Projection des encaissements basée sur les échéances des projets et les factures en cours
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -18,8 +18,9 @@ export function InvoiceLandingChart({ data, isLoading }: InvoiceLandingChartProp
   const chartData = useMemo(() => {
     return data.map(month => ({
       ...month,
-      confirmed: month.pending + month.sent,
-      confirmedCount: month.pendingCount + month.sentCount,
+      // Combine pending invoices for chart display
+      confirmed: month.pending,
+      confirmedCount: month.pendingCount,
     }));
   }, [data]);
 
@@ -68,6 +69,7 @@ export function InvoiceLandingChart({ data, isLoading }: InvoiceLandingChartProp
             labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 500, marginBottom: 4 }}
             formatter={(value: number, name: string) => {
               const labels: Record<string, string> = {
+                scheduled: "Échéances projets",
                 drafts: "Brouillons",
                 confirmed: "En attente / Envoyées",
               };
@@ -80,11 +82,19 @@ export function InvoiceLandingChart({ data, isLoading }: InvoiceLandingChartProp
             height={36}
             formatter={(value: string) => {
               const labels: Record<string, string> = {
+                scheduled: "Échéances projets",
                 drafts: "Brouillons",
-                confirmed: "En attente / Envoyées",
+                confirmed: "Factures en attente",
               };
               return labels[value] || value;
             }}
+          />
+          <Bar
+            dataKey="scheduled"
+            stackId="a"
+            fill="hsl(var(--warning))"
+            radius={[0, 0, 0, 0]}
+            opacity={0.8}
           />
           <Bar
             dataKey="drafts"
