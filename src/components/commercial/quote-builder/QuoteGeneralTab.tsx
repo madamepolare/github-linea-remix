@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, User, MapPin, Ruler, Euro, FileText, FolderKanban, Link2, CalendarIcon, UserCircle, Hash, Receipt, Landmark, FileEdit } from 'lucide-react';
+import { Building2, User, MapPin, Ruler, Euro, FileText, FolderKanban, Link2, CalendarIcon, UserCircle, Receipt, Landmark, FileEdit } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { isArchitectureContractType } from '@/lib/moeContractDefaults';
 import { format } from 'date-fns';
@@ -25,6 +25,8 @@ import { useContractTypes } from '@/hooks/useContractTypes';
 import { useProjects } from '@/hooks/useProjects';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useContacts } from '@/hooks/useContacts';
+import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
+import { useCRMCompanies } from '@/hooks/useCRMCompanies';
 import { ClientSelector } from '../ClientSelector';
 import { getProjectTypeFromCode } from '@/lib/projectTypeMapping';
 
@@ -40,6 +42,8 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
   const { projects, isLoading: isLoadingProjects } = useProjects();
   const { data: members } = useTeamMembers();
   const { contacts } = useContacts();
+  const { documents: commercialDocuments } = useCommercialDocuments();
+  const { companies } = useCRMCompanies();
 
   // Get current contract type
   const currentContractType = activeContractTypes.find(t => t.id === document.contract_type_id);
@@ -171,21 +175,47 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                         const updates: Partial<QuoteDocument> = { ...document };
                         
                         // Auto-fill company from project
-                        if (selectedProject.crm_company_id && !document.client_company_id) {
+                        if (selectedProject.crm_company_id) {
                           updates.client_company_id = selectedProject.crm_company_id;
+                          
+                          // Try to get contact info from existing commercial documents for this project
+                          const projectDocs = commercialDocuments?.filter(d => d.project?.id === newProjectId);
+                          const latestDoc = projectDocs?.sort((a, b) => 
+                            new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+                          )[0];
+                          
+                          if (latestDoc) {
+                            // Pre-fill contacts from the latest document of this project
+                            if (latestDoc.client_contact?.id) {
+                              updates.client_contact_id = latestDoc.client_contact.id;
+                            }
+                            if (latestDoc.billing_contact?.id) {
+                              updates.billing_contact_id = latestDoc.billing_contact.id;
+                            }
+                          } else {
+                            // Fallback: get primary contact from company
+                            const company = companies?.find(c => c.id === selectedProject.crm_company_id);
+                            if (company?.primary_contact?.id) {
+                              updates.client_contact_id = company.primary_contact.id;
+                            }
+                            // Check for billing_contact_id on company
+                            if (company?.billing_contact_id) {
+                              updates.billing_contact_id = company.billing_contact_id;
+                            }
+                          }
                         }
                         
                         // Auto-fill project location info
-                        if (selectedProject.address && !document.project_address) {
+                        if (selectedProject.address) {
                           updates.project_address = selectedProject.address;
                         }
-                        if (selectedProject.city && !document.project_city) {
+                        if (selectedProject.city) {
                           updates.project_city = selectedProject.city;
                         }
-                        if (selectedProject.surface && !document.project_surface) {
+                        if (selectedProject.surface) {
                           updates.project_surface = selectedProject.surface;
                         }
-                        if (selectedProject.budget && !document.project_budget) {
+                        if (selectedProject.budget) {
                           updates.project_budget = selectedProject.budget;
                         }
                         
