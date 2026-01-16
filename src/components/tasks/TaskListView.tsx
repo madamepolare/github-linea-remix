@@ -5,6 +5,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { useTaskCommunicationsCounts } from "@/hooks/useTaskCommunicationsCounts";
 import { useScheduledTaskIds } from "@/hooks/useScheduledTaskIds";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
 import { TextEditCell, StatusEditCell, PriorityEditCell, DateEditCell, AssigneeEditCell } from "./InlineTaskEditCell";
@@ -26,9 +27,11 @@ import {
   CheckCircle2,
   MessageCircle,
   ChevronDown,
-  CalendarClock
+  CalendarClock,
+  Calendar
 } from "lucide-react";
-import { isPast, isToday } from "date-fns";
+import { isPast, isToday, format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { TASK_STATUSES } from "@/lib/taskTypes";
 import confetti from "canvas-confetti";
@@ -49,6 +52,7 @@ const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }
 };
 
 export function TaskListView({ entityFilter = "all", projectId }: TaskListViewProps) {
+  const isMobile = useIsMobile();
   const { tasks, isLoading, updateTaskStatus, updateTask } = useTasks(projectId ? { projectId } : undefined);
   const { companies } = useCRMCompanies();
   const { projects } = useProjects();
@@ -381,22 +385,24 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                       "border-l-2",
                       colors.border
                     )}>
-                      {/* Table header */}
-                      <div className="grid grid-cols-[40px_1fr_100px_100px_100px_100px_80px_60px] gap-2 px-4 py-2 text-xs text-muted-foreground font-medium border-b">
-                        <div></div>
-                        <SortableHeader column="title">Tâche</SortableHeader>
-                        <div className="flex items-center gap-1">
-                          <CalendarClock className="h-3 w-3" />
-                          Planning
+                      {/* Table header - desktop only */}
+                      {!isMobile && (
+                        <div className="grid grid-cols-[40px_1fr_100px_100px_100px_100px_80px_60px] gap-2 px-4 py-2 text-xs text-muted-foreground font-medium border-b">
+                          <div></div>
+                          <SortableHeader column="title">Tâche</SortableHeader>
+                          <div className="flex items-center gap-1">
+                            <CalendarClock className="h-3 w-3" />
+                            Planning
+                          </div>
+                          <SortableHeader column="relation">Relation</SortableHeader>
+                          <SortableHeader column="due_date">Échéance</SortableHeader>
+                          <SortableHeader column="priority">Priorité</SortableHeader>
+                          <div>Assignés</div>
+                          <div className="text-center">
+                            <MessageCircle className="h-3.5 w-3.5 mx-auto" />
+                          </div>
                         </div>
-                        <SortableHeader column="relation">Relation</SortableHeader>
-                        <SortableHeader column="due_date">Échéance</SortableHeader>
-                        <SortableHeader column="priority">Priorité</SortableHeader>
-                        <div>Assignés</div>
-                        <div className="text-center">
-                          <MessageCircle className="h-3.5 w-3.5 mx-auto" />
-                        </div>
-                      </div>
+                      )}
 
                       {/* Task rows */}
                       <AnimatePresence mode="popLayout">
@@ -411,6 +417,86 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                           const hasRecentComment = commData?.hasRecent || false;
                           const isScheduled = scheduledTaskIds?.has(task.id) || false;
 
+                          // Mobile card view
+                          if (isMobile) {
+                            return (
+                              <motion.div
+                                key={task.id}
+                                layout
+                                initial={{ opacity: 0 }}
+                                animate={{ 
+                                  opacity: 1,
+                                  backgroundColor: isJustCompleted ? "hsl(142 76% 36% / 0.1)" : "transparent"
+                                }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className={cn(
+                                  "flex items-start gap-3 px-3 py-3 border-b last:border-b-0 cursor-pointer active:bg-muted/50 touch-manipulation",
+                                  task.status === "done" && "opacity-60"
+                                )}
+                                onClick={() => {
+                                  setSelectedTaskTab("details");
+                                  setSelectedTask(task);
+                                }}
+                              >
+                                {/* Checkbox */}
+                                <div 
+                                  onClick={(e) => handleToggleComplete(e, task)} 
+                                  className="flex items-center justify-center pt-0.5 touch-manipulation"
+                                >
+                                  {task.status === "done" ? (
+                                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                  ) : (
+                                    <Checkbox checked={false} className="h-5 w-5" />
+                                  )}
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0 space-y-1.5">
+                                  <p className={cn(
+                                    "font-medium text-sm leading-snug line-clamp-2",
+                                    task.status === "done" && "line-through text-muted-foreground"
+                                  )}>
+                                    {task.title}
+                                  </p>
+                                  
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {/* Relation */}
+                                    {relation && (
+                                      <Badge variant="outline" className="text-2xs px-1.5 py-0 gap-1 font-normal">
+                                        <relation.icon className="h-2.5 w-2.5" />
+                                        <span className="truncate max-w-[80px]">{relation.label}</span>
+                                      </Badge>
+                                    )}
+                                    
+                                    {/* Due date */}
+                                    {task.due_date && (
+                                      <span className={cn(
+                                        "text-2xs flex items-center gap-1",
+                                        getDueDateStyle(task.due_date, task.status)
+                                      )}>
+                                        <Calendar className="h-3 w-3" />
+                                        {format(new Date(task.due_date), "d MMM", { locale: fr })}
+                                      </span>
+                                    )}
+                                    
+                                    {/* Comments */}
+                                    {commentCount > 0 && (
+                                      <span className="text-2xs text-muted-foreground flex items-center gap-0.5">
+                                        <MessageCircle className="h-3 w-3" />
+                                        {commentCount}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Assignees */}
+                                {getAssigneeAvatars(task.assigned_to)}
+                              </motion.div>
+                            );
+                          }
+
+                          // Desktop table row
                           return (
                             <div key={task.id}>
                               <motion.div
