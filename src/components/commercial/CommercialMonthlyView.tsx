@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, parseISO, startOfYear, addMonths, isSameMonth, subYears, addYears } from 'date-fns';
+import { format, parseISO, startOfYear, addMonths, isSameMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, FileText, FileSignature } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -42,7 +42,7 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
     });
 
     // Sort documents within each month by date (newest first)
-    map.forEach((docs, key) => {
+    map.forEach((docs) => {
       docs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     });
 
@@ -73,6 +73,14 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
   };
 
   const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('fr-FR', { 
+      style: 'currency', 
+      currency: 'EUR',
+      maximumFractionDigits: 0 
+    }).format(value);
+  };
+
+  const formatCurrencyShort = (value: number) => {
     if (value >= 1000000) {
       return `${(value / 1000000).toFixed(1)}M€`;
     }
@@ -88,56 +96,57 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
 
   return (
     <div className="space-y-4">
-      {/* Header with navigation */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="h-8 w-8"
-            onClick={() => setCurrentYear(currentYear - 1)}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <h2 className="text-lg font-semibold min-w-[80px] text-center">
-            {currentYear}
-          </h2>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="h-8 w-8"
-            onClick={() => setCurrentYear(currentYear + 1)}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setCurrentYear(new Date().getFullYear())}
-          >
-            Cette année
-          </Button>
-        </div>
-
-        {/* Yearly stats */}
-        <div className="flex items-center gap-3 text-sm">
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50">
-            <span className="text-muted-foreground">{yearlyStats.count}</span>
-            <span className="font-medium">documents</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50">
-            <span className="font-semibold">
-              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(yearlyStats.total)}
+      {/* Sticky header with navigation + stats */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b pb-3 -mx-4 px-4 sm:-mx-6 sm:px-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={() => setCurrentYear(currentYear - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-semibold min-w-[60px] text-center tabular-nums">
+              {currentYear}
             </span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={() => setCurrentYear(currentYear + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => setCurrentYear(new Date().getFullYear())}
+            >
+              Aujourd'hui
+            </Button>
           </div>
-          {yearlyStats.accepted > 0 && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-emerald-500/10 text-emerald-600">
-              <span className="text-xs">✓</span>
-              <span className="font-medium">
-                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(yearlyStats.accepted)}
-              </span>
+
+          {/* Yearly stats - same style as ListView */}
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50">
+              <span className="text-muted-foreground">{yearlyStats.count}</span>
+              <span className="font-medium">documents</span>
             </div>
-          )}
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-muted/50">
+              <span className="text-muted-foreground">Total</span>
+              <span className="font-semibold">{formatCurrency(yearlyStats.total)}</span>
+            </div>
+            {yearlyStats.accepted > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-emerald-500/10 text-emerald-600">
+                <span className="text-xs">Accepté</span>
+                <span className="font-medium">{formatCurrency(yearlyStats.accepted)}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -148,56 +157,40 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
             const monthKey = format(month, 'yyyy-MM');
             const monthDocs = documentsByMonth.get(monthKey) || [];
             const monthTotal = monthDocs.reduce((sum, d) => sum + (d.total_amount || 0), 0);
-            const monthAccepted = monthDocs.filter(d => d.status === 'accepted' || d.status === 'signed')
-              .reduce((sum, d) => sum + (d.total_amount || 0), 0);
             const isCurrent = isCurrentMonth(month);
 
             return (
               <div 
                 key={monthKey}
-                className={cn(
-                  "flex flex-col w-[280px] shrink-0 rounded-xl overflow-hidden bg-card",
-                  isCurrent && "ring-2 ring-primary"
-                )}
+                className="flex flex-col w-[260px] shrink-0"
               >
-                {/* Month header */}
+                {/* Month header - minimal */}
                 <div className={cn(
-                  "px-4 py-3",
-                  isCurrent ? "bg-primary text-primary-foreground" : "bg-muted/50"
+                  "flex items-center justify-between px-1 pb-2 mb-2 border-b",
+                  isCurrent && "border-primary"
                 )}>
-                  <div className="flex items-center justify-between">
-                    <span className={cn(
-                      "font-semibold capitalize text-sm",
-                      isCurrent && "text-primary-foreground"
-                    )}>
-                      {format(month, 'MMMM', { locale: fr })}
-                    </span>
-                    <span className={cn(
-                      "text-xs font-medium px-2 py-0.5 rounded-full",
-                      isCurrent ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-muted-foreground"
-                    )}>
-                      {monthDocs.length}
-                    </span>
+                  <span className={cn(
+                    "text-sm font-medium capitalize",
+                    isCurrent ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {format(month, 'MMMM', { locale: fr })}
+                  </span>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>{monthDocs.length}</span>
+                    {monthTotal > 0 && (
+                      <>
+                        <span>·</span>
+                        <span className="font-medium text-foreground">{formatCurrencyShort(monthTotal)}</span>
+                      </>
+                    )}
                   </div>
-                  {monthTotal > 0 && (
-                    <div className="flex items-center gap-3 mt-1.5 text-xs">
-                      <span className={isCurrent ? "text-primary-foreground/80" : "text-muted-foreground"}>
-                        {formatCurrency(monthTotal)}
-                      </span>
-                      {monthAccepted > 0 && (
-                        <span className={isCurrent ? "text-primary-foreground" : "text-emerald-600"}>
-                          ✓ {formatCurrency(monthAccepted)}
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
 
-                {/* Documents list */}
-                <div className="flex-1 p-3 space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto">
+                {/* Documents list - same row style as ListView */}
+                <div className="flex-1 space-y-1 max-h-[calc(100vh-220px)] overflow-y-auto">
                   {monthDocs.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-8">
-                      Aucun document
+                    <p className="text-xs text-muted-foreground text-center py-6">
+                      —
                     </p>
                   ) : (
                     monthDocs.map(doc => {
@@ -205,51 +198,36 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
                       return (
                         <div 
                           key={doc.id}
-                          className={cn(
-                            "p-3 rounded-lg cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md",
-                            doc.status === 'accepted' || doc.status === 'signed' 
-                              ? "bg-emerald-500/10" 
-                              : doc.status === 'sent'
-                              ? "bg-blue-500/10"
-                              : doc.status === 'rejected'
-                              ? "bg-red-500/10"
-                              : "bg-muted/30"
-                          )}
+                          className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
                           onClick={() => navigate(`/commercial/quote/${doc.id}`)}
                         >
-                          {/* Header row */}
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                            <span className="text-xs font-medium truncate flex-1">
-                              {doc.document_number}
-                            </span>
-                            <Badge 
-                              variant="outline" 
-                              className={cn("text-[10px] px-1.5 py-0 h-4 border-0", STATUS_COLORS[doc.status])}
-                            >
-                              {STATUS_LABELS[doc.status]}
-                            </Badge>
+                          {/* Icon */}
+                          <div className="h-6 w-6 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                            <Icon className="h-3 w-3 text-primary" />
                           </div>
 
-                          {/* Title */}
-                          <p className="text-sm font-medium truncate mb-1.5" title={doc.title}>
-                            {doc.title}
-                          </p>
-
-                          {/* Client + Amount */}
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground truncate max-w-[120px]">
-                              {doc.client_company?.name || '—'}
-                            </span>
-                            <span className="font-semibold shrink-0">
-                              {formatCurrency(doc.total_amount || 0)}
-                            </span>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-medium truncate">
+                                {doc.document_number}
+                              </span>
+                              <Badge 
+                                variant="outline" 
+                                className={cn("text-[10px] px-1 py-0 h-4", STATUS_COLORS[doc.status])}
+                              >
+                                {STATUS_LABELS[doc.status]}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {doc.client_company?.name || doc.title}
+                            </p>
                           </div>
 
-                          {/* Date */}
-                          <div className="text-[10px] text-muted-foreground mt-1.5">
-                            {format(parseISO(doc.created_at), 'dd MMM', { locale: fr })}
-                          </div>
+                          {/* Amount */}
+                          <span className="text-xs font-semibold shrink-0 tabular-nums">
+                            {formatCurrencyShort(doc.total_amount || 0)}
+                          </span>
                         </div>
                       );
                     })
