@@ -124,9 +124,9 @@ export function DayTimelineCell({
     <div
       ref={containerRef}
       className={cn(
-        "relative flex-1 border-r border-border/20 transition-colors",
+        "relative flex-1 border-r border-border/20 rounded-lg transition-all duration-150",
         isToday && "bg-primary/5",
-        isDragOver && "bg-primary/10"
+        isDragOver && "bg-muted/30 ring-1 ring-muted-foreground/10"
       )}
       onDragOver={(e) => {
         e.preventDefault();
@@ -169,8 +169,8 @@ export function DayTimelineCell({
             <div
               key={hour}
               className={cn(
-                "absolute left-0 right-0 border-t border-border/20 hover:bg-accent/20 transition-colors cursor-pointer",
-                dragOverHour === hour && "bg-primary/20",
+                "absolute left-0 right-0 border-t border-border/20 hover:bg-muted/20 transition-all duration-150 cursor-pointer",
+                dragOverHour === hour && "bg-muted/40 rounded-md mx-1",
                 isOutsideWorkingHours && "bg-muted/20",
                 isLunchBreak && !isOutsideWorkingHours && "bg-muted/10"
               )}
