@@ -143,7 +143,7 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
 
       {/* Monthly columns */}
       <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-4" style={{ minWidth: 'max-content' }}>
+        <div className="flex gap-4 pb-4" style={{ minWidth: 'max-content' }}>
           {months.map((month) => {
             const monthKey = format(month, 'yyyy-MM');
             const monthDocs = documentsByMonth.get(monthKey) || [];
@@ -156,33 +156,36 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
               <div 
                 key={monthKey}
                 className={cn(
-                  "flex flex-col w-[220px] shrink-0 border rounded-lg overflow-hidden",
-                  isCurrent && "ring-2 ring-primary/50"
+                  "flex flex-col w-[280px] shrink-0 rounded-xl overflow-hidden bg-card",
+                  isCurrent && "ring-2 ring-primary"
                 )}
               >
                 {/* Month header */}
                 <div className={cn(
-                  "px-3 py-2 border-b",
-                  isCurrent ? "bg-primary/10" : "bg-muted/30"
+                  "px-4 py-3",
+                  isCurrent ? "bg-primary text-primary-foreground" : "bg-muted/50"
                 )}>
                   <div className="flex items-center justify-between">
                     <span className={cn(
-                      "font-medium capitalize",
-                      isCurrent && "text-primary"
+                      "font-semibold capitalize text-sm",
+                      isCurrent && "text-primary-foreground"
                     )}>
                       {format(month, 'MMMM', { locale: fr })}
                     </span>
-                    <Badge variant="secondary" className="text-xs">
+                    <span className={cn(
+                      "text-xs font-medium px-2 py-0.5 rounded-full",
+                      isCurrent ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background text-muted-foreground"
+                    )}>
                       {monthDocs.length}
-                    </Badge>
+                    </span>
                   </div>
                   {monthTotal > 0 && (
-                    <div className="flex items-center gap-2 mt-1 text-xs">
-                      <span className="text-muted-foreground">
+                    <div className="flex items-center gap-3 mt-1.5 text-xs">
+                      <span className={isCurrent ? "text-primary-foreground/80" : "text-muted-foreground"}>
                         {formatCurrency(monthTotal)}
                       </span>
                       {monthAccepted > 0 && (
-                        <span className="text-emerald-600">
+                        <span className={isCurrent ? "text-primary-foreground" : "text-emerald-600"}>
                           ✓ {formatCurrency(monthAccepted)}
                         </span>
                       )}
@@ -191,9 +194,9 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
                 </div>
 
                 {/* Documents list */}
-                <div className="flex-1 p-2 space-y-1.5 max-h-[calc(100vh-280px)] overflow-y-auto bg-background">
+                <div className="flex-1 p-3 space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto">
                   {monthDocs.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">
+                    <p className="text-xs text-muted-foreground text-center py-8">
                       Aucun document
                     </p>
                   ) : (
@@ -203,39 +206,39 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
                         <div 
                           key={doc.id}
                           className={cn(
-                            "p-2 rounded-md border cursor-pointer hover:border-primary/50 transition-colors",
+                            "p-3 rounded-lg cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md",
                             doc.status === 'accepted' || doc.status === 'signed' 
-                              ? "bg-emerald-500/5 border-emerald-500/20" 
+                              ? "bg-emerald-500/10" 
                               : doc.status === 'sent'
-                              ? "bg-blue-500/5 border-blue-500/20"
+                              ? "bg-blue-500/10"
                               : doc.status === 'rejected'
-                              ? "bg-red-500/5 border-red-500/20"
-                              : "bg-muted/20"
+                              ? "bg-red-500/10"
+                              : "bg-muted/30"
                           )}
                           onClick={() => navigate(`/commercial/quote/${doc.id}`)}
                         >
                           {/* Header row */}
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                             <span className="text-xs font-medium truncate flex-1">
                               {doc.document_number}
                             </span>
                             <Badge 
                               variant="outline" 
-                              className={cn("text-[10px] px-1 py-0 h-4", STATUS_COLORS[doc.status])}
+                              className={cn("text-[10px] px-1.5 py-0 h-4 border-0", STATUS_COLORS[doc.status])}
                             >
                               {STATUS_LABELS[doc.status]}
                             </Badge>
                           </div>
 
                           {/* Title */}
-                          <p className="text-xs truncate mb-1" title={doc.title}>
+                          <p className="text-sm font-medium truncate mb-1.5" title={doc.title}>
                             {doc.title}
                           </p>
 
                           {/* Client + Amount */}
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground truncate max-w-[100px]">
+                            <span className="text-muted-foreground truncate max-w-[120px]">
                               {doc.client_company?.name || '—'}
                             </span>
                             <span className="font-semibold shrink-0">
@@ -244,7 +247,7 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
                           </div>
 
                           {/* Date */}
-                          <div className="text-[10px] text-muted-foreground mt-1">
+                          <div className="text-[10px] text-muted-foreground mt-1.5">
                             {format(parseISO(doc.created_at), 'dd MMM', { locale: fr })}
                           </div>
                         </div>
