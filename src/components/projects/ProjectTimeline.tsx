@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   format,
@@ -14,11 +14,11 @@ import {
   parseISO,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, FolderKanban } from "lucide-react";
+import { ChevronLeft, ChevronRight, FolderKanban, ChevronDown, Lock, FolderOpen, CornerDownRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
-import { useProjects, Project, ProjectPhase } from "@/hooks/useProjects";
+import { useProjects, useSubProjects, Project, ProjectPhase } from "@/hooks/useProjects";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PROJECT_TYPES, PHASE_STATUS_CONFIG } from "@/lib/projectTypes";
@@ -31,10 +31,60 @@ interface ProjectTimelineProps {
   onCreateProject?: () => void;
 }
 
+// Sub-project timeline rows
+function SubProjectTimelineRows({ 
+  parentId, 
+  visibleStart, 
+  visibleDays, 
+  onNavigate,
+  getPhaseBarPosition,
+}: { 
+  parentId: string; 
+  visibleStart: Date;
+  visibleDays: Date[];
+  onNavigate: (id: string) => void;
+  getPhaseBarPosition: (phase: ProjectPhase) => { left: number; width: number } | null;
+}) {
+  const { data: subProjects = [], isLoading } = useSubProjects(parentId);
+
+  if (isLoading || subProjects.length === 0) return null;
+
+  return (
+    <>
+      {subProjects.map((project) => {
+        const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
+        const currentPhase = project.phases?.find((p) => p.status === "in_progress");
+        const displayColor = projectType?.color || project.color || "#3B82F6";
+        const isClosed = project.status === "closed";
+        const phases = project.phases || [];
+        const today = startOfDay(new Date());
+        const startDate = project.start_date ? parseISO(project.start_date) : today;
+        const endDate = project.end_date ? parseISO(project.end_date) : addMonths(startDate, 3);
+
+        const startOffset = Math.max(0, differenceInDays(startDate, visibleStart));
+        const endOffset = Math.min(visibleDays.length, differenceInDays(endDate, visibleStart) + 1);
+        const width = Math.max(1, endOffset - startOffset);
+
+        const projectBar = {
+          left: startOffset * CELL_WIDTH,
+          width: Math.max(width * CELL_WIDTH, 100),
+        };
+
+        return (
+          <Fragment key={project.id}>
+            {/* Project name in sidebar will be handled separately */}
+          </Fragment>
+        );
+      })}
+    </>
+  );
+}
+
 export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
   const navigate = useNavigate();
   const { projects, isLoading } = useProjects();
   const [viewDate, setViewDate] = useState(new Date());
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +121,18 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
   }, [todayOffset]);
 
   const today = startOfDay(new Date());
+
+  const toggleExpanded = (projectId: string) => {
+    setExpandedProjects(prev => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
+  };
 
   const getPhaseBarPosition = (phase: ProjectPhase) => {
     if (!phase.start_date || !phase.end_date) return null;
@@ -111,6 +173,29 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
   const goToToday = () => {
     setViewDate(new Date());
   };
+
+  // Get sub-projects for expanded parents
+  const getSubProjects = (parentId: string) => {
+    // This will be fetched via useSubProjects hook
+    return [];
+  };
+
+  // Build flat list of projects with sub-projects
+  const flatProjectList = useMemo(() => {
+    const result: { project: Project; isSubProject: boolean; parentId?: string }[] = [];
+    
+    projects.forEach(project => {
+      result.push({ project, isSubProject: false });
+      
+      // If expanded and is framework, we'll add sub-projects (handled in render)
+      const hasSubProjects = (project as any).contract_type === "framework";
+      if (hasSubProjects && expandedProjects.has(project.id)) {
+        // Sub-projects will be rendered inline using useSubProjects
+      }
+    });
+    
+    return result;
+  }, [projects, expandedProjects]);
 
   if (isLoading) {
     return (
