@@ -2,7 +2,7 @@ import { Task } from "@/hooks/useTasks";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckSquare, Circle, Clock, CheckCircle2 } from "lucide-react";
+import { CheckSquare, Circle, Clock, CheckCircle2, AlertCircle, ArrowUp, ArrowRight, ArrowDown } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { LinkedEntityBadge } from "./EntitySelector";
@@ -24,6 +24,24 @@ const statusConfig = {
     color: "bg-emerald-500",
     icon: CheckCircle2,
     label: "Terminé",
+  },
+} as const;
+
+const priorityConfig = {
+  high: {
+    className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    icon: AlertCircle,
+    label: "Haute",
+  },
+  medium: {
+    className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    icon: ArrowUp,
+    label: "Moyenne",
+  },
+  low: {
+    className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+    icon: ArrowDown,
+    label: "Basse",
   },
 } as const;
 
@@ -81,6 +99,22 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         />
       )}
 
+      {/* Priority badge */}
+      {task.priority && priorityConfig[task.priority as keyof typeof priorityConfig] && (
+        <div className="mb-2">
+          {(() => {
+            const config = priorityConfig[task.priority as keyof typeof priorityConfig];
+            const PriorityIcon = config.icon;
+            return (
+              <Badge className={cn("text-xs gap-1", config.className)}>
+                <PriorityIcon className="h-3 w-3" />
+                {config.label}
+              </Badge>
+            );
+          })()}
+        </div>
+      )}
+
       {/* Phase badge */}
       {task.tags && task.tags.length > 0 && (
         <Badge variant="phase" className="mb-3">
@@ -107,16 +141,16 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           )}
         </div>
 
-        {/* Assignees with profile pictures */}
+        {/* Assignees with profile pictures - Avatar Stack */}
         {task.assigned_to && task.assigned_to.length > 0 && (
-          <div className="flex -space-x-1.5">
+          <div className="flex -space-x-2">
             {task.assigned_to.slice(0, 3).map((userId) => {
               const profile = getProfile(userId);
               const initials = profile?.full_name
                 ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
                 : userId.slice(0, 2).toUpperCase();
               return (
-                <Avatar key={userId} className="h-6 w-6 border-2 border-card">
+                <Avatar key={userId} className="h-6 w-6 ring-2 ring-background">
                   {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name || ""} className="object-cover" />}
                   <AvatarFallback className="text-2xs bg-muted text-muted-foreground">
                     {initials}
@@ -124,6 +158,11 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
                 </Avatar>
               );
             })}
+            {task.assigned_to.length > 3 && (
+              <div className="h-6 w-6 rounded-full bg-muted ring-2 ring-background flex items-center justify-center">
+                <span className="text-2xs text-muted-foreground font-medium">+{task.assigned_to.length - 3}</span>
+              </div>
+            )}
           </div>
         )}
       </div>

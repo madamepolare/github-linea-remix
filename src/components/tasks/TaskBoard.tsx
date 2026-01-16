@@ -309,14 +309,14 @@ function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, onC
             <div className="flex items-center gap-2">
               {/* Assignees with profile pictures */}
               {task.assigned_to && task.assigned_to.length > 0 && (
-                <div className="flex -space-x-1.5">
-                  {task.assigned_to.slice(0, 2).map((userId) => {
+                <div className="flex -space-x-2">
+                  {task.assigned_to.slice(0, 3).map((userId) => {
                     const profile = getProfile(userId);
                     const initials = profile?.full_name
                       ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
                       : userId.slice(0, 2).toUpperCase();
                     return (
-                      <Avatar key={userId} className="h-5 w-5 border-2 border-card">
+                      <Avatar key={userId} className="h-5 w-5 ring-2 ring-background">
                         {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile.full_name || ""} className="object-cover" />}
                         <AvatarFallback className="text-2xs bg-primary/10">
                           {initials}
@@ -324,9 +324,9 @@ function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, onC
                       </Avatar>
                     );
                   })}
-                  {task.assigned_to.length > 2 && (
-                    <div className="h-5 w-5 rounded-full bg-muted border-2 border-card flex items-center justify-center">
-                      <span className="text-2xs text-muted-foreground">+{task.assigned_to.length - 2}</span>
+                  {task.assigned_to.length > 3 && (
+                    <div className="h-5 w-5 rounded-full bg-muted ring-2 ring-background flex items-center justify-center">
+                      <span className="text-2xs text-muted-foreground font-medium">+{task.assigned_to.length - 3}</span>
                     </div>
                   )}
                 </div>
