@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -202,56 +202,62 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-10 pr-0">
                   <Checkbox
                     checked={isAllSelected}
                     onCheckedChange={handleSelectAll}
+                    aria-label="Sélectionner tout"
+                    className="translate-y-[2px]"
                   />
                 </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="-ml-3 h-8 gap-1"
-                    onClick={() => handleSort("name")}
-                  >
+                <TableHead 
+                  className="cursor-pointer hover:text-foreground"
+                  onClick={() => handleSort("name")}
+                >
+                  <div className="flex items-center gap-1">
                     Contact / Entreprise
-                    <ArrowUpDown className="h-3 w-3" />
-                  </Button>
+                    <ArrowUpDown className={cn(
+                      "h-3 w-3",
+                      sortBy === "name" ? "text-foreground" : "text-muted-foreground/50"
+                    )} />
+                  </div>
                 </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="-ml-3 h-8 gap-1"
-                    onClick={() => handleSort("stage")}
-                  >
+                <TableHead 
+                  className="cursor-pointer hover:text-foreground"
+                  onClick={() => handleSort("stage")}
+                >
+                  <div className="flex items-center gap-1">
                     Étape
-                    <ArrowUpDown className="h-3 w-3" />
-                  </Button>
+                    <ArrowUpDown className={cn(
+                      "h-3 w-3",
+                      sortBy === "stage" ? "text-foreground" : "text-muted-foreground/50"
+                    )} />
+                  </div>
                 </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="-ml-3 h-8 gap-1"
-                    onClick={() => handleSort("entered_at")}
-                  >
+                <TableHead 
+                  className="cursor-pointer hover:text-foreground"
+                  onClick={() => handleSort("entered_at")}
+                >
+                  <div className="flex items-center gap-1">
                     Date d'entrée
-                    <ArrowUpDown className="h-3 w-3" />
-                  </Button>
+                    <ArrowUpDown className={cn(
+                      "h-3 w-3",
+                      sortBy === "entered_at" ? "text-foreground" : "text-muted-foreground/50"
+                    )} />
+                  </div>
                 </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="-ml-3 h-8 gap-1"
-                    onClick={() => handleSort("last_email")}
-                  >
+                <TableHead 
+                  className="cursor-pointer hover:text-foreground"
+                  onClick={() => handleSort("last_email")}
+                >
+                  <div className="flex items-center gap-1">
                     Dernier email
-                    <ArrowUpDown className="h-3 w-3" />
-                  </Button>
+                    <ArrowUpDown className={cn(
+                      "h-3 w-3",
+                      sortBy === "last_email" ? "text-foreground" : "text-muted-foreground/50"
+                    )} />
+                  </div>
                 </TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
@@ -270,49 +276,52 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
                   .toUpperCase()
                   .slice(0, 2);
 
+                const isSelected = selectedIds.has(entry.id);
+
                 return (
                   <motion.tr
                     key={entry.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.02 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: Math.min(index * 0.02, 0.2) }}
                     className={cn(
-                      "group hover:bg-muted/50 transition-colors",
-                      selectedIds.has(entry.id) && "bg-muted/30"
+                      "group transition-colors",
+                      isSelected ? "bg-primary/5" : "hover:bg-muted/40"
                     )}
                   >
-                    <TableCell>
+                    <TableCell className="py-2 pr-0" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
-                        checked={selectedIds.has(entry.id)}
+                        checked={isSelected}
                         onCheckedChange={(checked) =>
                           handleSelectOne(entry.id, checked as boolean)
                         }
+                        aria-label={`Sélectionner ${name}`}
                       />
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={avatar || undefined} />
-                          <AvatarFallback className={isContact ? "bg-primary/10 text-primary" : "bg-secondary"}>
-                            {isContact ? initials : <Building2 className="h-4 w-4" />}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm truncate">{name}</span>
+                    <TableCell className="py-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={cn(
+                          "flex h-7 w-7 items-center justify-center rounded text-[10px] font-medium shrink-0",
+                          isContact ? "bg-primary/10 text-primary" : "bg-muted"
+                        )}>
+                          {initials}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-medium text-sm truncate leading-tight">{name}</p>
                             {isContact ? (
-                              <User className="h-3 w-3 text-muted-foreground" />
+                              <User className="h-3 w-3 text-muted-foreground shrink-0" />
                             ) : (
-                              <Building2 className="h-3 w-3 text-muted-foreground" />
+                              <Building2 className="h-3 w-3 text-muted-foreground shrink-0" />
                             )}
                           </div>
                           {email && (
-                            <p className="text-xs text-muted-foreground truncate">{email}</p>
+                            <p className="text-[11px] text-muted-foreground truncate">{email}</p>
                           )}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-2">
                       {stage && (
                         <Badge
                           variant="outline"
@@ -326,28 +335,28 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="py-2 text-sm text-muted-foreground">
                       {entry.entered_at
                         ? format(new Date(entry.entered_at), "d MMM yyyy", { locale: fr })
-                        : "-"}
+                        : "—"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="py-2 text-sm text-muted-foreground">
                       {entry.last_email_sent_at
                         ? format(new Date(entry.last_email_sent_at), "d MMM yyyy", { locale: fr })
-                        : "-"}
+                        : "—"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                            className="h-7 w-7 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
+                        <DropdownMenuContent align="end" className="w-40">
                           {stages.length > 0 && (
                             <>
                               <DropdownMenuItem disabled className="text-xs text-muted-foreground">
@@ -388,7 +397,7 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => removeEntry.mutate(entry.id)}
-                            className="gap-2 text-destructive"
+                            className="gap-2 text-destructive focus:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
                             Retirer du pipeline
