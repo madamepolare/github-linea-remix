@@ -122,8 +122,8 @@ export function KanbanBoard<T>({
           <div
             key={column.id}
             className={cn(
-              "kanban-column flex flex-col min-h-[400px] sm:min-h-[500px] min-w-[85vw] md:min-w-[320px] w-72 sm:w-80 flex-shrink-0 snap-center transition-all duration-200",
-              isDropTarget && "bg-primary/5"
+              "kanban-column flex flex-col min-h-[400px] sm:min-h-[500px] min-w-[85vw] md:min-w-[320px] w-72 sm:w-80 flex-shrink-0 snap-center transition-all duration-150",
+              isDropTarget && "bg-muted/30 rounded-xl"
             )}
             onDragOver={(e) => handleDragOver(e, column.id)}
             onDragLeave={handleDragLeave}
