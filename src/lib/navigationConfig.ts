@@ -105,8 +105,9 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
     icon: FileText,
     href: "/commercial",
     subNav: [
-      { key: "all", label: "Tous", href: "/commercial/all" },
-      { key: "quotes", label: "Devis", href: "/commercial/quotes" },
+      { key: "list", label: "Liste", href: "/commercial/list" },
+      { key: "monthly", label: "Mensuel", href: "/commercial/monthly" },
+      { key: "pipeline", label: "Pipeline", href: "/commercial/pipeline" },
     ],
     quickActions: [
       { key: "create-quote", label: "Nouveau devis", event: "navigate-to-quote-builder" },
