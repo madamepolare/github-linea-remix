@@ -154,7 +154,7 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
         .eq("status", "pending")
         .not("due_date", "is", null)
         .order("due_date", { ascending: true })
-        .limit(5);
+        .limit(20);
 
       if (error) throw error;
       return data || [];
