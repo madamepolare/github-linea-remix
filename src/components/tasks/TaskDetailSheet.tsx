@@ -10,6 +10,7 @@ import { TagInput } from "./TagInput";
 import { DurationInput } from "./DurationInput";
 import { EntitySelector, LinkedEntityBadge } from "./EntitySelector";
 import { RelatedEntityType } from "@/lib/taskTypes";
+import { AIRewriteButton } from "@/components/projects/meeting-report/AIRewriteButton";
 import {
   Sheet,
   SheetContent,
@@ -525,7 +526,14 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
               <TabsContent value="details" className="mt-0 space-y-6">
                 {/* Description */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Description</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-muted-foreground">Description</label>
+                    <AIRewriteButton
+                      text={description}
+                      onRewrite={setDescription}
+                      context="description de tâche ou grief à clarifier pour un projet d'architecture"
+                    />
+                  </div>
                   <Textarea 
                     value={description} 
                     onChange={(e) => setDescription(e.target.value)} 
