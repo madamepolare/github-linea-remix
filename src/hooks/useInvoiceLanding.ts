@@ -8,12 +8,15 @@ export interface InvoiceLandingMonth {
   month: string;
   fullMonth: string;
   date: Date;
+  // Échéances projets (pas encore facturées)
+  scheduled: number;
+  scheduledCount: number;
+  // Factures brouillons
   drafts: number;
   draftsCount: number;
+  // Factures en attente/envoyées
   pending: number;
   pendingCount: number;
-  sent: number;
-  sentCount: number;
   total: number;
   totalCount: number;
 }
@@ -30,18 +33,34 @@ export function useInvoiceLanding(monthsAhead: number = 12) {
       const startDate = startOfMonth(now);
       const endDate = endOfMonth(addMonths(now, monthsAhead - 1));
 
-      // Fetch unpaid invoices (drafts, pending, sent)
-      const { data, error } = await supabase
-        .from("invoices")
-        .select("id, status, total_ttc, due_date, invoice_date, invoice_type")
-        .eq("workspace_id", activeWorkspace.id)
-        .in("status", ["draft", "pending", "sent"])
-        .neq("invoice_type", "credit_note")
-        .gte("due_date", startDate.toISOString())
-        .lte("due_date", endDate.toISOString())
-        .order("due_date", { ascending: true });
+      // Fetch in parallel: invoices and scheduled items
+      const [invoicesResult, scheduleResult] = await Promise.all([
+        // Fetch unpaid invoices (drafts, pending, sent)
+        supabase
+          .from("invoices")
+          .select("id, status, total_ttc, due_date, invoice_type")
+          .eq("workspace_id", activeWorkspace.id)
+          .in("status", ["draft", "pending", "sent"])
+          .neq("invoice_type", "credit_note")
+          .gte("due_date", startDate.toISOString())
+          .lte("due_date", endDate.toISOString()),
+        
+        // Fetch scheduled items not yet invoiced
+        supabase
+          .from("invoice_schedule")
+          .select("id, amount_ttc, planned_date, status, invoice_id")
+          .eq("workspace_id", activeWorkspace.id)
+          .is("invoice_id", null) // Not yet converted to invoice
+          .in("status", ["pending", "upcoming"])
+          .gte("planned_date", startDate.toISOString().split("T")[0])
+          .lte("planned_date", endDate.toISOString().split("T")[0]),
+      ]);
 
-      if (error) throw error;
+      if (invoicesResult.error) throw invoicesResult.error;
+      if (scheduleResult.error) throw scheduleResult.error;
+
+      const invoices = invoicesResult.data || [];
+      const scheduleItems = scheduleResult.data || [];
 
       // Group by month
       const months: InvoiceLandingMonth[] = [];
@@ -51,32 +70,39 @@ export function useInvoiceLanding(monthsAhead: number = 12) {
         const monthStart = startOfMonth(monthDate);
         const monthEnd = endOfMonth(monthDate);
 
-        const monthInvoices = (data || []).filter(inv => {
+        // Filter invoices for this month
+        const monthInvoices = invoices.filter(inv => {
           if (!inv.due_date) return false;
           const dueDate = parseISO(inv.due_date);
           return dueDate >= monthStart && dueDate <= monthEnd;
         });
 
-        const drafts = monthInvoices.filter(i => i.status === "draft");
-        const pending = monthInvoices.filter(i => i.status === "pending");
-        const sent = monthInvoices.filter(i => i.status === "sent");
+        // Filter schedule items for this month
+        const monthSchedule = scheduleItems.filter(item => {
+          if (!item.planned_date) return false;
+          const plannedDate = parseISO(item.planned_date);
+          return plannedDate >= monthStart && plannedDate <= monthEnd;
+        });
 
+        const drafts = monthInvoices.filter(i => i.status === "draft");
+        const pendingInvoices = monthInvoices.filter(i => i.status === "pending" || i.status === "sent");
+
+        const scheduledAmount = monthSchedule.reduce((sum, i) => sum + (i.amount_ttc || 0), 0);
         const draftsAmount = drafts.reduce((sum, i) => sum + (i.total_ttc || 0), 0);
-        const pendingAmount = pending.reduce((sum, i) => sum + (i.total_ttc || 0), 0);
-        const sentAmount = sent.reduce((sum, i) => sum + (i.total_ttc || 0), 0);
+        const pendingAmount = pendingInvoices.reduce((sum, i) => sum + (i.total_ttc || 0), 0);
 
         months.push({
           month: format(monthDate, "MMM", { locale: fr }),
           fullMonth: format(monthDate, "MMMM yyyy", { locale: fr }),
           date: monthDate,
+          scheduled: Math.round(scheduledAmount),
+          scheduledCount: monthSchedule.length,
           drafts: Math.round(draftsAmount),
           draftsCount: drafts.length,
           pending: Math.round(pendingAmount),
-          pendingCount: pending.length,
-          sent: Math.round(sentAmount),
-          sentCount: sent.length,
-          total: Math.round(draftsAmount + pendingAmount + sentAmount),
-          totalCount: monthInvoices.length,
+          pendingCount: pendingInvoices.length,
+          total: Math.round(scheduledAmount + draftsAmount + pendingAmount),
+          totalCount: monthSchedule.length + monthInvoices.length,
         });
       }
 
@@ -95,31 +121,51 @@ export function useInvoiceLandingStats() {
     queryFn: async () => {
       if (!activeWorkspace?.id) return null;
 
-      const { data, error } = await supabase
-        .from("invoices")
-        .select("id, status, total_ttc, due_date")
-        .eq("workspace_id", activeWorkspace.id)
-        .in("status", ["draft", "pending", "sent"])
-        .neq("invoice_type", "credit_note");
+      // Fetch both invoices and schedule items in parallel
+      const [invoicesResult, scheduleResult] = await Promise.all([
+        supabase
+          .from("invoices")
+          .select("id, status, total_ttc, due_date")
+          .eq("workspace_id", activeWorkspace.id)
+          .in("status", ["draft", "pending", "sent"])
+          .neq("invoice_type", "credit_note"),
+        
+        supabase
+          .from("invoice_schedule")
+          .select("id, amount_ttc, planned_date, status, invoice_id")
+          .eq("workspace_id", activeWorkspace.id)
+          .is("invoice_id", null)
+          .in("status", ["pending", "upcoming"]),
+      ]);
 
-      if (error) throw error;
+      if (invoicesResult.error) throw invoicesResult.error;
+      if (scheduleResult.error) throw scheduleResult.error;
 
-      const invoices = data || [];
+      const invoices = invoicesResult.data || [];
+      const scheduleItems = scheduleResult.data || [];
+
       const drafts = invoices.filter(i => i.status === "draft");
-      const pending = invoices.filter(i => i.status === "pending");
-      const sent = invoices.filter(i => i.status === "sent");
+      const pendingInvoices = invoices.filter(i => i.status === "pending" || i.status === "sent");
 
-      const totalProjected = invoices.reduce((sum, i) => sum + (i.total_ttc || 0), 0);
+      const scheduledTotal = scheduleItems.reduce((sum, i) => sum + (i.amount_ttc || 0), 0);
       const draftsTotal = drafts.reduce((sum, i) => sum + (i.total_ttc || 0), 0);
-      const confirmedTotal = [...pending, ...sent].reduce((sum, i) => sum + (i.total_ttc || 0), 0);
+      const confirmedTotal = pendingInvoices.reduce((sum, i) => sum + (i.total_ttc || 0), 0);
+      const totalProjected = scheduledTotal + draftsTotal + confirmedTotal;
 
-      // Find peak month
-      const now = new Date();
+      // Find peak month from all sources
       const monthTotals: Record<string, number> = {};
+      
       invoices.forEach(inv => {
         if (inv.due_date) {
           const monthKey = format(parseISO(inv.due_date), "yyyy-MM");
           monthTotals[monthKey] = (monthTotals[monthKey] || 0) + (inv.total_ttc || 0);
+        }
+      });
+      
+      scheduleItems.forEach(item => {
+        if (item.planned_date) {
+          const monthKey = format(parseISO(item.planned_date), "yyyy-MM");
+          monthTotals[monthKey] = (monthTotals[monthKey] || 0) + (item.amount_ttc || 0);
         }
       });
 
@@ -134,11 +180,13 @@ export function useInvoiceLandingStats() {
 
       return {
         totalProjected,
+        scheduledTotal,
+        scheduledCount: scheduleItems.length,
         draftsTotal,
         draftsCount: drafts.length,
         confirmedTotal,
-        confirmedCount: pending.length + sent.length,
-        totalCount: invoices.length,
+        confirmedCount: pendingInvoices.length,
+        totalCount: invoices.length + scheduleItems.length,
         peakMonth: peakMonth ? format(parseISO(peakMonth + "-01"), "MMMM yyyy", { locale: fr }) : null,
         peakAmount,
       };
