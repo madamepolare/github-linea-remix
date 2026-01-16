@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import {
   CRMCompany,
   CRMCompanyEnriched,
@@ -40,40 +40,113 @@ export interface CreateCompanyInput {
   rcs_city?: string;
 }
 
+export interface PaginationState {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+const DEFAULT_PAGE_SIZE = 50;
+
 export function useCRMCompanies(filters?: Partial<CRMFilters>) {
   const { activeWorkspace, user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { getCompanyTypesForCategory, getCompanyTypeCategory } = useCRMSettings();
 
-  const queryKey = ["crm-companies", activeWorkspace?.id];
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  // Fetch companies with contacts and leads counts
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filters?.search, filters?.category, filters?.letterFilter]);
+
+  const queryKey = ["crm-companies", activeWorkspace?.id, page, pageSize, filters?.search, filters?.category, filters?.letterFilter];
+
+  // Fetch total count for pagination
+  const { data: totalCount = 0 } = useQuery({
+    queryKey: ["crm-companies-count", activeWorkspace?.id, filters?.search, filters?.category, filters?.letterFilter],
+    queryFn: async () => {
+      if (!activeWorkspace?.id) return 0;
+
+      let query = supabase
+        .from("crm_companies")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", activeWorkspace.id);
+
+      // Apply search filter server-side
+      if (filters?.search) {
+        query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,city.ilike.%${filters.search}%`);
+      }
+
+      // Apply letter filter server-side
+      if (filters?.letterFilter) {
+        query = query.ilike("name", `${filters.letterFilter}%`);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!activeWorkspace?.id,
+    staleTime: 60000,
+  });
+
+  // Fetch paginated companies
   const { data, isLoading, error } = useQuery({
     queryKey,
     queryFn: async () => {
-      // Fetch companies
-      const { data: companies, error: companiesError } = await supabase
+      if (!activeWorkspace?.id) return [];
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      // Build base query
+      let query = supabase
         .from("crm_companies")
         .select("*")
-        .eq("workspace_id", activeWorkspace!.id)
-        .order("name");
+        .eq("workspace_id", activeWorkspace.id)
+        .order("name")
+        .range(from, to);
 
+      // Apply search filter server-side
+      if (filters?.search) {
+        query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,city.ilike.%${filters.search}%`);
+      }
+
+      // Apply letter filter server-side
+      if (filters?.letterFilter) {
+        query = query.ilike("name", `${filters.letterFilter}%`);
+      }
+
+      const { data: companies, error: companiesError } = await query;
       if (companiesError) throw companiesError;
 
-      // Fetch contacts grouped by company
+      // Get company IDs for batch fetching related data
+      const companyIds = companies?.map(c => c.id) || [];
+      
+      if (companyIds.length === 0) {
+        return [];
+      }
+
+      // Fetch contacts only for current page companies
       const { data: contacts, error: contactsError } = await supabase
         .from("contacts")
         .select("id, name, email, phone, crm_company_id")
-        .eq("workspace_id", activeWorkspace!.id);
+        .eq("workspace_id", activeWorkspace.id)
+        .in("crm_company_id", companyIds);
 
       if (contactsError) throw contactsError;
 
-      // Fetch leads grouped by company
+      // Fetch leads only for current page companies
       const { data: leads, error: leadsError } = await supabase
         .from("leads")
         .select("id, crm_company_id, estimated_value")
-        .eq("workspace_id", activeWorkspace!.id);
+        .eq("workspace_id", activeWorkspace.id)
+        .in("crm_company_id", companyIds);
 
       if (leadsError) throw leadsError;
 
@@ -102,6 +175,7 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
       return enrichedCompanies;
     },
     enabled: !!activeWorkspace?.id,
+    staleTime: 30000,
   });
 
   // Setup realtime subscription
@@ -129,7 +203,7 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
     };
   }, [activeWorkspace?.id, queryClient, queryKey]);
 
-  // Apply filters
+  // Apply category filter client-side (since it requires settings mapping)
   const filteredCompanies = useMemo(() => {
     if (!data) return [];
     let result = [...data];
@@ -146,23 +220,6 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
 
     if (filters?.companyType && filters.companyType !== "all") {
       result = result.filter((c) => c.industry === filters.companyType);
-    }
-
-    if (filters?.search) {
-      const searchLower = filters.search.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.name.toLowerCase().includes(searchLower) ||
-          c.city?.toLowerCase().includes(searchLower) ||
-          c.email?.toLowerCase().includes(searchLower) ||
-          c.primary_contact?.name.toLowerCase().includes(searchLower)
-      );
-    }
-
-    if (filters?.letterFilter) {
-      result = result.filter((c) =>
-        c.name.toUpperCase().startsWith(filters.letterFilter!)
-      );
     }
 
     // Sorting
@@ -182,6 +239,28 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
 
     return result;
   }, [data, filters]);
+
+  // Pagination helpers
+  const totalPages = Math.ceil(totalCount / pageSize);
+  
+  const goToPage = useCallback((newPage: number) => {
+    setPage(Math.max(1, Math.min(newPage, totalPages)));
+  }, [totalPages]);
+
+  const nextPage = useCallback(() => {
+    if (page < totalPages) setPage(p => p + 1);
+  }, [page, totalPages]);
+
+  const prevPage = useCallback(() => {
+    if (page > 1) setPage(p => p - 1);
+  }, [page]);
+
+  const pagination: PaginationState = {
+    page,
+    pageSize,
+    totalCount,
+    totalPages,
+  };
 
   // Stats by category
   const statsByCategory = useMemo(() => {
@@ -325,5 +404,11 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
     updateCompany,
     deleteCompany,
     confirmCompany,
+    // Pagination
+    pagination,
+    goToPage,
+    nextPage,
+    prevPage,
+    setPageSize,
   };
 }

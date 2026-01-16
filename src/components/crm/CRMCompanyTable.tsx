@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -32,6 +32,10 @@ import {
   ArrowUpDown,
   LayoutGrid,
   LayoutList,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
@@ -55,69 +59,51 @@ export interface CRMCompanyTableProps {
 
 export function CRMCompanyTable({ category = "all", search = "", onCreateCompany }: CRMCompanyTableProps) {
   const navigate = useNavigate();
-  const { companies, allCompanies, isLoading, deleteCompany, updateCompany, statsByCategory } = useCRMCompanies({ category, search });
+  const [letterFilter, setLetterFilter] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState(search);
+  const [sortBy, setSortBy] = useState<string>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  // Pass filters to hook for server-side filtering
+  const { 
+    companies, 
+    allCompanies, 
+    isLoading, 
+    deleteCompany, 
+    updateCompany, 
+    statsByCategory,
+    pagination,
+    goToPage,
+    nextPage,
+    prevPage,
+  } = useCRMCompanies({ 
+    category: selectedCategory !== "all" ? selectedCategory as CompanyCategory : undefined, 
+    search: searchQuery,
+    letterFilter: letterFilter || undefined,
+    sortBy,
+    sortDir,
+  });
+  
   const { companyCategories, companyTypes, getCategoryFromType } = useCRMSettings();
   const { entriesByCompanyId, isLoading: isLoadingPipelines } = useContactPipelineEntries();
   const isMobile = useMediaQuery("(max-width: 768px)");
   
-  const [letterFilter, setLetterFilter] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [editingCompany, setEditingCompany] = useState<CRMCompanyEnriched | null>(null);
-  const [searchQuery, setSearchQuery] = useState(search);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<string>("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
 
   // Auto-switch to cards on mobile
   const effectiveViewMode = isMobile ? "cards" : viewMode;
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-  // Filter companies
-  const filteredCompanies = useMemo(() => {
-    let result = allCompanies;
+  // Use companies from server (already filtered and paginated)
+  const filteredCompanies = companies;
 
-    // Filter by category - find all company types that belong to this category
-    if (selectedCategory !== "all") {
-      const typesInCategory = companyTypes.filter(t => t.category === selectedCategory).map(t => t.key);
-      result = result.filter((c) => typesInCategory.includes(c.industry as string));
-    }
-
-    // Filter by search
-    if (searchQuery) {
-      const searchLower = searchQuery.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.name.toLowerCase().includes(searchLower) ||
-          c.email?.toLowerCase().includes(searchLower) ||
-          c.city?.toLowerCase().includes(searchLower) ||
-          c.primary_contact?.name?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Filter by letter
-    if (letterFilter) {
-      result = result.filter((c) => c.name.toUpperCase().startsWith(letterFilter));
-    }
-
-    // Sort
-    result.sort((a, b) => {
-      let aVal: any = a[sortBy as keyof CRMCompanyEnriched];
-      let bVal: any = b[sortBy as keyof CRMCompanyEnriched];
-      if (typeof aVal === "string") aVal = aVal.toLowerCase();
-      if (typeof bVal === "string") bVal = bVal.toLowerCase();
-      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return result;
-  }, [allCompanies, selectedCategory, searchQuery, letterFilter, companyCategories, sortBy, sortDir]);
-
-  // Category filter chips
+  // Category filter chips - use totalCount from pagination
   const categoryChips: FilterOption[] = useMemo(() => {
     const chips = [
-      { id: "all", label: "Tous", count: allCompanies.length },
+      { id: "all", label: "Tous", count: pagination.totalCount },
       ...companyCategories.map((cat) => ({
         id: cat.key,
         label: cat.label,
@@ -126,7 +112,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
       })),
     ];
     return chips.filter((c) => c.count > 0 || c.id === "all");
-  }, [statsByCategory, allCompanies.length, companyCategories]);
+  }, [statsByCategory, pagination.totalCount, companyCategories]);
 
   // Selection handlers
   const handleSelectAll = useCallback((checked: boolean) => {
@@ -505,6 +491,56 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                 </TableBody>
               </Table>
             </div>
+            
+            {/* Pagination Controls */}
+            {pagination.totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t">
+                <div className="text-xs text-muted-foreground">
+                  {((pagination.page - 1) * pagination.pageSize) + 1}–{Math.min(pagination.page * pagination.pageSize, pagination.totalCount)} sur {pagination.totalCount}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => goToPage(1)}
+                    disabled={pagination.page === 1}
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={prevPage}
+                    disabled={pagination.page === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs px-2">
+                    Page {pagination.page} / {pagination.totalPages}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={nextPage}
+                    disabled={pagination.page === pagination.totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => goToPage(pagination.totalPages)}
+                    disabled={pagination.page === pagination.totalPages}
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         )}
       </div>
