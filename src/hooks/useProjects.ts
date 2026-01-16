@@ -425,6 +425,50 @@ export function useProject(projectId: string | null) {
   });
 }
 
+// Hook to get project members with profiles for multiple projects at once (for list views)
+export function useProjectMembersForList(projectIds: string[]) {
+  return useQuery({
+    queryKey: ["project-members-for-list", projectIds],
+    queryFn: async () => {
+      if (!projectIds.length) return {};
+
+      // Get all project members for the given project IDs
+      const { data: membersData, error } = await supabase
+        .from("project_members")
+        .select("*")
+        .in("project_id", projectIds);
+
+      if (error) throw error;
+      if (!membersData || membersData.length === 0) return {};
+
+      // Get profiles for these members
+      const userIds = [...new Set(membersData.map(m => m.user_id))];
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, avatar_url")
+        .in("user_id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Group by project_id
+      const membersByProject: Record<string, (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[]> = {};
+      
+      for (const member of membersData) {
+        if (!membersByProject[member.project_id]) {
+          membersByProject[member.project_id] = [];
+        }
+        membersByProject[member.project_id].push({
+          ...member,
+          profile: profiles?.find(p => p.user_id === member.user_id) || null
+        });
+      }
+
+      return membersByProject;
+    },
+    enabled: projectIds.length > 0,
+  });
+}
+
 export function useProjectMembers(projectId: string | null) {
   const queryClient = useQueryClient();
 
