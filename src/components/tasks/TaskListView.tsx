@@ -387,12 +387,11 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                     )}>
                       {/* Table header - desktop only */}
                       {!isMobile && (
-                        <div className="grid grid-cols-[40px_1fr_100px_100px_100px_100px_80px_60px] gap-2 px-4 py-2 text-xs text-muted-foreground font-medium border-b">
+                        <div className="grid grid-cols-[40px_1fr_50px_100px_100px_100px_80px_60px] gap-2 px-4 py-2 text-xs text-muted-foreground font-medium border-b">
                           <div></div>
                           <SortableHeader column="title">Tâche</SortableHeader>
-                          <div className="flex items-center gap-1">
-                            <CalendarClock className="h-3 w-3" />
-                            Planning
+                          <div className="flex justify-center">
+                            <CalendarClock className="h-3.5 w-3.5" />
                           </div>
                           <SortableHeader column="relation">Relation</SortableHeader>
                           <SortableHeader column="due_date">Échéance</SortableHeader>
@@ -509,7 +508,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                 exit={{ opacity: 0, height: 0 }}
                                 transition={{ duration: 0.2 }}
                                 className={cn(
-                                  "grid grid-cols-[40px_1fr_100px_100px_100px_100px_80px_60px] gap-2 px-4 py-2.5 items-center cursor-pointer border-b last:border-b-0 transition-all duration-150 hover:bg-muted/30",
+                                  "grid grid-cols-[40px_1fr_50px_100px_100px_100px_80px_60px] gap-2 px-4 py-2.5 items-center cursor-pointer border-b last:border-b-0 transition-all duration-150 hover:bg-muted/30",
                                   task.status === "done" && "opacity-60"
                                 )}
                                 onClick={() => {
@@ -551,30 +550,44 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                     )}
                                   />
                                   {hasSubtasks && (
-                                    <Badge variant="outline" className="text-2xs px-1.5 py-0 h-5 flex-shrink-0">
-                                      {completedSubtasks}/{task.subtasks!.length}
-                                    </Badge>
+                                    <TooltipProvider delayDuration={100}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                                            <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
+                                              <div 
+                                                className="h-full bg-primary rounded-full transition-all"
+                                                style={{ width: `${(completedSubtasks / task.subtasks!.length) * 100}%` }}
+                                              />
+                                            </div>
+                                            <span className="text-2xs text-muted-foreground tabular-nums">
+                                              {completedSubtasks}/{task.subtasks!.length}
+                                            </span>
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {completedSubtasks} sur {task.subtasks!.length} sous-tâches terminées
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
                                   )}
                                 </div>
 
-                                {/* Planning badge */}
-                                <div>
+                                {/* Planning icon */}
+                                <div className="flex justify-center">
                                   {isScheduled ? (
                                     <TooltipProvider delayDuration={100}>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
-                                          <Badge variant="secondary" className="text-2xs px-1.5 py-0.5 gap-1 font-normal bg-primary/10 text-primary border-primary/20">
-                                            <CalendarClock className="h-2.5 w-2.5" />
-                                            Planifiée
-                                          </Badge>
+                                          <CalendarClock className="h-4 w-4 text-primary" />
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                          <p>Cette tâche est planifiée dans le workflow</p>
+                                          <p>Planifiée dans le workflow</p>
                                         </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
                                   ) : (
-                                    <span className="text-xs text-muted-foreground/50">—</span>
+                                    <span className="text-muted-foreground/30">—</span>
                                   )}
                                 </div>
 
