@@ -169,18 +169,6 @@ export function WidgetGrid() {
     return () => window.removeEventListener("resize", updateWidth);
   }, []);
 
-  // Only used for live visual updates during drag/resize - NO save here
-  const handleLayoutChange = useCallback(
-    (newLayout: LayoutItem[]) => {
-      if (isEditing) {
-        // Clone and apply constraints for live state update only
-        const clonedLayout = applyConstraintsAndClone(newLayout);
-        setState((prev) => ({ ...prev, layout: clonedLayout }));
-      }
-    },
-    [isEditing]
-  );
-
   // Save only when resize/drag stops - this is the source of truth
   const handleResizeStop = useCallback(
     (_layout: LayoutItem[], _oldItem: LayoutItem, newItem: LayoutItem, _placeholder: LayoutItem, _e: MouseEvent, _element: HTMLElement) => {
@@ -466,13 +454,12 @@ export function WidgetGrid() {
           isDraggable={isEditing}
           isResizable={isEditing}
           draggableHandle=".widget-drag-handle"
-          onLayoutChange={handleLayoutChange}
           onResizeStop={handleResizeStop}
           onDragStop={handleDragStop}
           useCSSTransforms
           resizeHandles={["se", "e", "s"]}
-          compactType={null}
-          preventCollision={true}
+          compactType="vertical"
+          preventCollision={false}
         >
           {widgets.map((widgetId) => {
             const widgetLayout = layout.find(l => l.i === widgetId);
