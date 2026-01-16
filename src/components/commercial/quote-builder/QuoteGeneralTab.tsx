@@ -46,9 +46,10 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
   const fields = currentContractType?.default_fields || {};
 
   // Determine if this is an architecture/scenography type (for showing location/surface)
-  const isArchitectureType = isArchitectureContractType(
-    currentContractType?.code || document.project_type || ''
-  );
+  // Strict detection: only show location/surface when contract type is explicitly architecture
+  const isArchitectureType = currentContractType?.code 
+    ? isArchitectureContractType(currentContractType.code)
+    : false;
 
   // Filter contacts for billing contact (only those linked to the selected company)
   const billingContacts = contacts?.filter(c => 
@@ -82,47 +83,32 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm">Type de contrat</Label>
-              <Select
-                value={document.contract_type_id || ''}
-                onValueChange={handleContractTypeChange}
-              >
-                <SelectTrigger className="h-9 sm:h-10">
-                  <SelectValue placeholder="Sélectionner un type..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeContractTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-2 h-2 rounded-full shrink-0"
-                          style={{ backgroundColor: type.color }}
-                        />
-                        <span className="truncate">{type.name}</span>
-                        <Badge variant="outline" className="ml-1 text-xs shrink-0 hidden sm:inline-flex">
-                          {type.code}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm">
-                <Hash className="h-3.5 w-3.5 text-muted-foreground" />
-                Référence client
-              </Label>
-              <Input
-                value={document.reference_client || ''}
-                onChange={(e) => onDocumentChange({ ...document, reference_client: e.target.value })}
-                placeholder="Référence interne du client"
-                className="h-9 sm:h-10"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label className="text-sm">Type de contrat</Label>
+            <Select
+              value={document.contract_type_id || ''}
+              onValueChange={handleContractTypeChange}
+            >
+              <SelectTrigger className="h-9 sm:h-10">
+                <SelectValue placeholder="Sélectionner un type..." />
+              </SelectTrigger>
+              <SelectContent>
+                {activeContractTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: type.color }}
+                      />
+                      <span className="truncate">{type.name}</span>
+                      <Badge variant="outline" className="ml-1 text-xs shrink-0 hidden sm:inline-flex">
+                        {type.code}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

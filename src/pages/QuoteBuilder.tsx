@@ -46,13 +46,12 @@ import { QuoteFeesAndLinesTab } from '@/components/commercial/quote-builder/Quot
 import { QuoteProductionTab } from '@/components/commercial/quote-builder/QuoteProductionTab';
 import { QuotePlanningTab } from '@/components/commercial/quote-builder/QuotePlanningTab';
 import { QuoteInvoicingTab } from '@/components/commercial/quote-builder/QuoteInvoicingTab';
-import { QuoteTermsTab } from '@/components/commercial/quote-builder/QuoteTermsTab';
-import { QuoteMOETermsTab } from '@/components/commercial/quote-builder/QuoteMOETermsTab';
-import { QuoteCommunicationTermsTab } from '@/components/commercial/quote-builder/QuoteCommunicationTermsTab';
+import { QuoteConditionsTab } from '@/components/commercial/quote-builder/QuoteConditionsTab';
 import { QuotePreviewPanel } from '@/components/commercial/quote-builder/QuotePreviewPanel';
 import { ContractPreviewPanel } from '@/components/commercial/quote-builder/ContractPreviewPanel';
-import { isArchitectureContractType, COMMUNICATION_CONTRACT_CODES, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
+import { isArchitectureContractType, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
+import { getDefaultConditionsForType, serializeConditions } from '@/lib/contractConditionsUnified';
 import { generateCleanQuotePDF, generateCleanContractPDF } from '@/lib/generateCleanPDF';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
@@ -278,21 +277,12 @@ export default function QuoteBuilder() {
     
     const code = currentContractType.code || '';
     
-    if (isArchitectureContractType(code)) {
-      // Initialize with MOE defaults if not already set
-      const moeDefaults = getDefaultMOEConfig();
-      setDocument(prev => ({
-        ...prev,
-        general_conditions: JSON.stringify(moeDefaults)
-      }));
-    } else if (isCommunicationContractType(code)) {
-      // Initialize with Communication defaults
-      const comDefaults = getDefaultCommunicationConfig();
-      setDocument(prev => ({
-        ...prev,
-        general_conditions: JSON.stringify(comDefaults)
-      }));
-    }
+    // Use unified conditions system for all contract types
+    const defaults = getDefaultConditionsForType(code);
+    setDocument(prev => ({
+      ...prev,
+      general_conditions: serializeConditions(defaults)
+    }));
   }, [currentContractType?.id]);
 
   const handleSave = async () => {
@@ -879,24 +869,11 @@ export default function QuoteBuilder() {
 
               {processedTabs.includes('terms') && (
                 <TabsContent value="terms" className="m-0 p-4 sm:p-6">
-                  {isArchitectureContractType(currentContractType?.code || document.project_type || '') ? (
-                    <QuoteMOETermsTab
-                      document={document}
-                      onDocumentChange={handleDocumentChange}
-                      contractTypeConfig={currentContractType}
-                    />
-                  ) : isCommunicationContractType(currentContractType?.code || '') ? (
-                    <QuoteCommunicationTermsTab
-                      document={document}
-                      onDocumentChange={handleDocumentChange}
-                      contractTypeConfig={currentContractType}
-                    />
-                  ) : (
-                    <QuoteTermsTab
-                      document={document}
-                      onDocumentChange={handleDocumentChange}
-                    />
-                  )}
+                  <QuoteConditionsTab
+                    document={document}
+                    onDocumentChange={handleDocumentChange}
+                    contractTypeConfig={currentContractType}
+                  />
                 </TabsContent>
               )}
             </ScrollArea>
