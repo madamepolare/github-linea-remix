@@ -124,8 +124,7 @@ export function DayTimelineCell({
     <div
       ref={containerRef}
       className={cn(
-        "relative flex-1 border-r transition-colors",
-        isWeekend && "bg-muted/20",
+        "relative flex-1 border-r border-border/20 transition-colors",
         isToday && "bg-primary/5",
         isDragOver && "bg-primary/10"
       )}
@@ -170,10 +169,10 @@ export function DayTimelineCell({
             <div
               key={hour}
               className={cn(
-                "absolute left-0 right-0 border-t border-border/30 hover:bg-accent/30 transition-colors cursor-pointer",
+                "absolute left-0 right-0 border-t border-border/20 hover:bg-accent/20 transition-colors cursor-pointer",
                 dragOverHour === hour && "bg-primary/20",
-                isOutsideWorkingHours && "bg-muted/50",
-                isLunchBreak && !isOutsideWorkingHours && "bg-muted/30"
+                isOutsideWorkingHours && "bg-muted/20",
+                isLunchBreak && !isOutsideWorkingHours && "bg-muted/10"
               )}
               style={{
                 top: `${((hour - DAY_START_HOUR) / TOTAL_HOURS) * 100}%`,
@@ -272,13 +271,13 @@ export function TimelineHourLabels() {
 
   return (
     <div 
-      className="w-12 border-r bg-muted/30 flex-shrink-0"
+      className="w-12 border-r border-border/20 flex-shrink-0"
       style={{ height: TOTAL_HOURS * 60 * PIXELS_PER_MINUTE }}
     >
       {hours.map((hour) => (
         <div
           key={hour}
-          className="relative border-t border-border/30"
+          className="relative border-t border-border/20"
           style={{ height: 60 * PIXELS_PER_MINUTE }}
         >
           <span className="absolute -top-2.5 left-1 text-[10px] text-muted-foreground font-medium">

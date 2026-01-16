@@ -568,7 +568,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header avec navigation */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-card/50">
+      <div className="flex items-center justify-between px-4 py-3 border-b">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("prev")} className="h-8 w-8">
             <ChevronLeft className="h-4 w-4" />
@@ -790,7 +790,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
       </div>
 
       {/* Légende */}
-      <div className="flex items-center gap-3 px-4 py-1.5 border-b bg-muted/20 text-xs flex-wrap">
+      <div className="flex items-center gap-3 px-4 py-1.5 border-b text-xs flex-wrap">
         <span className="text-muted-foreground font-medium">Légende :</span>
         <div className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: "#6366f1" }} />
@@ -937,7 +937,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                   {monthGroups.map((group, idx) => (
                     <div
                       key={`${group.month}-${group.year}-${idx}`}
-                      className="flex items-center justify-center text-xs font-semibold capitalize bg-muted/30"
+                      className="flex items-center justify-center text-xs font-semibold capitalize"
                       style={{ width: group.days.length * CELL_WIDTH }}
                     >
                       {group.month} {group.year}
@@ -955,9 +955,8 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                       <div
                         key={day.toISOString()}
                         className={cn(
-                          "flex items-center justify-center gap-1.5 border-r text-xs transition-colors",
-                          weekend && "bg-muted/40",
-                          isToday && "bg-primary/10"
+                          "flex items-center justify-center gap-1.5 border-r border-border/20 text-xs transition-colors",
+                          isToday && "bg-primary/5"
                         )}
                         style={{ width: CELL_WIDTH }}
                       >
