@@ -15,6 +15,7 @@ import { NavigationSection } from "@/components/settings/design-system/sections/
 import { BusinessSection } from "@/components/settings/design-system/sections/BusinessSection";
 import { LayoutSection } from "@/components/settings/design-system/sections/LayoutSection";
 import { TokenEditor } from "@/components/settings/design-system/TokenEditor";
+import { AuditSection } from "@/components/settings/design-system/sections/AuditSection";
 import { CRMSection } from "@/components/settings/design-system/sections/modules/CRMSection";
 import { ProjectsSection } from "@/components/settings/design-system/sections/modules/ProjectsSection";
 import { TasksSection } from "@/components/settings/design-system/sections/modules/TasksSection";
@@ -29,13 +30,14 @@ import { Eye, Sparkles, ArrowLeft, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function DesignSystem() {
-  const [activeSection, setActiveSection] = useState("tokens");
+  const [activeSection, setActiveSection] = useState("audit");
 
   const allSections = flattenSections(DESIGN_SYSTEM_SECTIONS);
   const currentSection = allSections.find(s => s.id === activeSection);
 
   const renderSection = () => {
     switch (activeSection) {
+      case "audit": return <AuditSection />;
       case "tokens": return <TokenEditor />;
       case "colors": return <ColorsSection />;
       case "typography": return <TypographySection />;

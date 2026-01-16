@@ -27,6 +27,7 @@ import {
   Sparkles,
   ChevronDown,
   ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -45,6 +46,22 @@ export interface DesignSystemSection {
 }
 
 export const DESIGN_SYSTEM_SECTIONS: DesignSystemSection[] = [
+  // Audit
+  {
+    id: "audit-section",
+    label: "Audit",
+    icon: <AlertTriangle className="h-4 w-4" />,
+    description: "Analyse et optimisation",
+    children: [
+      {
+        id: "audit",
+        label: "Alertes & Optimisations",
+        icon: <AlertTriangle className="h-4 w-4" />,
+        description: "Détecter les incohérences",
+        badge: "6",
+      },
+    ],
+  },
   // Foundations
   {
     id: "foundations",
@@ -253,6 +270,7 @@ export function DesignSystemNav({
   onSectionChange,
 }: DesignSystemNavProps) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    "audit-section": true,
     foundations: true,
     primitives: true,
     modules: false,
