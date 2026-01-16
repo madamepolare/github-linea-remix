@@ -11,13 +11,20 @@ interface TaskCommunicationsProps {
 /**
  * TaskCommunications - Wrapper around EntityCommunications for tasks
  * Uses the unified communications UI from EntityCommunications
+ * Passes context so communications appear in parent entity (project, lead, etc.)
  */
-export function TaskCommunications({ taskId }: TaskCommunicationsProps) {
+export function TaskCommunications({ 
+  taskId, 
+  contextEntityType, 
+  contextEntityId 
+}: TaskCommunicationsProps) {
   return (
     <EntityCommunications
       entityType="task"
       entityId={taskId}
-      className="h-full overflow-auto"
+      contextEntityType={contextEntityType}
+      contextEntityId={contextEntityId}
+      className="h-full"
     />
   );
 }

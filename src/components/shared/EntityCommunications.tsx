@@ -70,6 +70,9 @@ interface EntityCommunicationsProps {
   entityType: EntityType;
   entityId: string | null;
   className?: string;
+  // Context for aggregation - when entity is linked to another entity (e.g., task -> project)
+  contextEntityType?: EntityType;
+  contextEntityId?: string;
 }
 
 const typeConfig: Record<
@@ -133,6 +136,8 @@ export function EntityCommunications({
   entityType,
   entityId,
   className,
+  contextEntityType,
+  contextEntityId,
 }: EntityCommunicationsProps) {
   const { user } = useAuth();
   const {
@@ -229,6 +234,9 @@ export function EntityCommunications({
         content: newContent,
         title: createType === "exchange" ? newTitle : undefined,
         mentions: newMentions.length > 0 ? newMentions : undefined,
+        // Pass context so the communication appears in parent entity's communications too
+        contextEntityType: contextEntityType,
+        contextEntityId: contextEntityId,
       },
       {
         onSuccess: () => {
@@ -679,121 +687,92 @@ export function EntityCommunications({
   const currentProfile = profiles?.find((p) => p.user_id === user?.id);
 
   return (
-    <div className={cn("space-y-6", className)}>
-      {/* Create new communication */}
-      <div className="flex gap-3">
-        <Avatar className="h-10 w-10 shrink-0 ring-2 ring-background shadow-sm">
-          {currentProfile?.avatar_url && (
-            <AvatarImage src={currentProfile.avatar_url} alt={currentProfile.full_name || ""} />
-          )}
-          <AvatarFallback
-            className={cn(
-              "text-white text-sm font-medium",
-              getAvatarColor(user?.id || null)
-            )}
-          >
-            {getInitials(currentProfile?.full_name || null)}
-          </AvatarFallback>
-        </Avatar>
-
-        <div className="flex-1 space-y-3">
-          <Tabs
-            value={createType}
-            onValueChange={(v) => setCreateType(v as typeof createType)}
-          >
-            <TabsList className="h-8 bg-muted/50">
-              <TabsTrigger value="comment" className="text-xs gap-1.5 px-3">
-                <MessageCircle className="h-3.5 w-3.5" />
-                Commentaire
-              </TabsTrigger>
-              <TabsTrigger value="exchange" className="text-xs gap-1.5 px-3">
-                <FileText className="h-3.5 w-3.5" />
-                Échange
-              </TabsTrigger>
-              <TabsTrigger value="note" className="text-xs gap-1.5 px-3">
-                <StickyNote className="h-3.5 w-3.5" />
-                Note
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {createType === "exchange" && (
-            <Input
-              placeholder="Titre de l'échange..."
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              className="text-sm"
-            />
-          )}
-
-          <MentionInput
-            placeholder={
-              createType === "comment"
-                ? "Ajouter un commentaire... @mention"
-                : createType === "exchange"
-                ? "Contenu de l'échange... @mention"
-                : "Ajouter une note privée..."
-            }
-            value={newContent}
-            onChange={(value, mentions) => {
-              setNewContent(value);
-              setNewMentions(mentions);
-            }}
-            className={cn(
-              "text-sm",
-              createType === "note" && "bg-yellow-50/50 dark:bg-yellow-950/20"
-            )}
-            minHeight="80px"
-          />
-
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              onClick={handleSubmit}
-              disabled={!newContent.trim() || createCommunication.isPending}
-              className="gap-2"
-            >
-              <Send className="h-4 w-4" />
-              Envoyer
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Separator */}
-      {sortedCommunications.length > 0 && (
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center">
-            <span className="bg-background px-3 text-xs text-muted-foreground">
-              {sortedCommunications.length} communication
-              {sortedCommunications.length > 1 ? "s" : ""}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Communications list */}
-      <div className="space-y-6">
+    <div className={cn("flex flex-col h-full", className)}>
+      {/* Communications list - scrollable */}
+      <div className="flex-1 overflow-auto space-y-4 pb-4">
         <AnimatePresence mode="popLayout">
           {sortedCommunications.map((comm) => renderCommunication(comm))}
         </AnimatePresence>
 
         {sortedCommunications.length === 0 && (
-          <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted/50 mb-4">
-              <MessageCircle className="h-8 w-8 text-muted-foreground/50" />
+          <div className="text-center py-8">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted/50 mb-3">
+              <MessageCircle className="h-6 w-6 text-muted-foreground/50" />
             </div>
-            <p className="text-sm text-muted-foreground font-medium">
+            <p className="text-sm text-muted-foreground">
               Aucune communication
-            </p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              Commencez la conversation en ajoutant un commentaire
             </p>
           </div>
         )}
+      </div>
+
+      {/* Create new communication - fixed at bottom */}
+      <div className="border-t bg-background pt-3 space-y-3">
+        {/* Type selector - compact pills */}
+        <div className="flex items-center gap-1.5">
+          {(["comment", "exchange", "note"] as const).map((type) => {
+            const config = typeConfig[type];
+            const Icon = config.icon;
+            return (
+              <button
+                key={type}
+                onClick={() => setCreateType(type)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all",
+                  createType === type
+                    ? cn(config.bgColor, config.color)
+                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <Icon className="h-3 w-3" />
+                {config.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Title input for exchanges */}
+        {createType === "exchange" && (
+          <Input
+            placeholder="Titre de l'échange..."
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            className="text-sm h-8"
+          />
+        )}
+
+        {/* Message input with send button */}
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <MentionInput
+              placeholder={
+                createType === "comment"
+                  ? "Ajouter un commentaire..."
+                  : createType === "exchange"
+                  ? "Contenu de l'échange..."
+                  : "Ajouter une note privée..."
+              }
+              value={newContent}
+              onChange={(value, mentions) => {
+                setNewContent(value);
+                setNewMentions(mentions);
+              }}
+              className={cn(
+                "text-sm",
+                createType === "note" && "bg-yellow-50/50 dark:bg-yellow-950/20"
+              )}
+              minHeight="40px"
+            />
+          </div>
+          <Button
+            size="icon"
+            onClick={handleSubmit}
+            disabled={!newContent.trim() || createCommunication.isPending}
+            className="h-9 w-9 shrink-0"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
