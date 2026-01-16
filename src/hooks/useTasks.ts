@@ -7,6 +7,8 @@ export interface SubtaskPreview {
   id: string;
   title: string;
   status: string;
+  assigned_to: string[] | null;
+  due_date: string | null;
 }
 
 export interface Task {
@@ -96,7 +98,7 @@ export function useTasks(options?: UseTasksOptions) {
         (data || []).map(async (task) => {
           const { data: subtasks } = await supabase
             .from("tasks")
-            .select("id, title, status")
+            .select("id, title, status, assigned_to, due_date")
             .eq("parent_id", task.id)
             .order("sort_order");
           return { 

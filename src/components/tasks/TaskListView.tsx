@@ -778,6 +778,11 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                               <AnimatePresence>
                                 {isExpanded && task.subtasks?.map((subtask) => {
                                   const isSubtaskCompleted = recentlyCompleted.has(subtask.id);
+                                  const subtaskDueDate = subtask.due_date ? new Date(subtask.due_date) : null;
+                                  const isSubtaskOverdue = subtaskDueDate && isPast(subtaskDueDate) && !isToday(subtaskDueDate) && subtask.status !== "done";
+                                  const subtaskAssignee = subtask.assigned_to?.[0] 
+                                    ? profiles?.find(p => p.user_id === subtask.assigned_to?.[0] || p.id === subtask.assigned_to?.[0])
+                                    : null;
                                   
                                   return (
                                     <motion.div
@@ -789,7 +794,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                         backgroundColor: isSubtaskCompleted ? "hsl(142 76% 36% / 0.1)" : "transparent"
                                       }}
                                       exit={{ opacity: 0, height: 0 }}
-                                      className="grid grid-cols-[40px_1fr_100px_100px_100px_100px_80px_60px] gap-2 px-4 py-2 items-center bg-muted/20 hover:bg-muted/40 transition-colors border-b"
+                                      className="grid grid-cols-[40px_1fr_50px_100px_100px_100px_80px_60px] gap-2 px-4 py-2 items-center bg-muted/20 hover:bg-muted/40 transition-colors border-b"
                                     >
                                       <div onClick={(e) => handleToggleSubtask(e, subtask)} className="flex items-center justify-center pl-4">
                                         <motion.div
@@ -806,7 +811,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                       <div className="flex items-center gap-2 pl-6">
                                         <span className="text-muted-foreground text-xs">↳</span>
                                         <span className={cn(
-                                          "text-sm",
+                                          "text-sm truncate",
                                           subtask.status === "done" && "line-through text-muted-foreground"
                                         )}>
                                           {subtask.title}
@@ -814,9 +819,35 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                                       </div>
                                       <div></div>
                                       <div></div>
+                                      {/* Due date */}
+                                      <div className={cn(
+                                        "text-xs",
+                                        isSubtaskOverdue ? "text-destructive font-medium" : "text-muted-foreground"
+                                      )}>
+                                        {subtaskDueDate && (
+                                          <span className="flex items-center gap-1">
+                                            <Calendar className="h-3 w-3" />
+                                            {format(subtaskDueDate, "d MMM", { locale: fr })}
+                                          </span>
+                                        )}
+                                      </div>
                                       <div></div>
-                                      <div></div>
-                                      <div></div>
+                                      {/* Assignee */}
+                                      <div>
+                                        {subtaskAssignee && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Avatar className="h-5 w-5">
+                                                <AvatarImage src={subtaskAssignee.avatar_url} />
+                                                <AvatarFallback className="text-2xs bg-primary/10 text-primary">
+                                                  {subtaskAssignee.full_name?.slice(0, 2).toUpperCase() || "?"}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{subtaskAssignee.full_name}</TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                      </div>
                                       <div></div>
                                     </motion.div>
                                   );
