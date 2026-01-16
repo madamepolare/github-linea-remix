@@ -31,6 +31,8 @@ import {
   Bell,
   FileCode,
   Target,
+  FolderOpen,
+  ExternalLink,
 } from 'lucide-react';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -625,8 +627,19 @@ export default function Invoicing() {
                             <span>{invoice.client_name || invoice.client_company?.name || '-'}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {invoice.project_name || invoice.project?.name || '-'}
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          {invoice.project_id ? (
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto text-muted-foreground hover:text-primary"
+                              onClick={() => navigate(`/projects/${invoice.project_id}`)}
+                            >
+                              {invoice.project_name || invoice.project?.name || 'Voir projet'}
+                              <ExternalLink className="h-3 w-3 ml-1" />
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           {format(new Date(invoice.invoice_date), 'dd MMM yyyy', { locale: fr })}
@@ -668,6 +681,13 @@ export default function Invoicing() {
                                 <Eye className="h-4 w-4 mr-2" />
                                 Voir / Modifier
                               </DropdownMenuItem>
+                              {invoice.project_id && (
+                                <DropdownMenuItem onClick={() => navigate(`/projects/${invoice.project_id}`)}>
+                                  <FolderOpen className="h-4 w-4 mr-2" />
+                                  Voir le projet
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
                               <DropdownMenuItem>
                                 <Download className="h-4 w-4 mr-2" />
                                 Télécharger PDF
