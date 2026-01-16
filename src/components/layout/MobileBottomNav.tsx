@@ -34,41 +34,42 @@ export function MobileBottomNav({ onMenuClick }: MobileBottomNavProps) {
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t border-border safe-area-bottom"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="flex items-center justify-around h-16 px-2">
+      <div className="flex items-stretch justify-around h-14">
         {navItems.map((item) => {
           const active = isActive(item.href);
           return (
             <NavLink
               key={item.href}
               to={item.href}
-              className="flex-1"
+              className="flex-1 touch-manipulation"
             >
               <motion.div
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-2 px-1 rounded-xl transition-colors",
+                  "flex flex-col items-center justify-center h-full gap-0.5 transition-colors",
                   active 
                     ? "text-foreground" 
-                    : "text-muted-foreground"
+                    : "text-muted-foreground active:text-foreground"
                 )}
-                whileTap={{ scale: 0.92 }}
+                whileTap={{ scale: 0.95 }}
               >
                 <div className={cn(
-                  "flex items-center justify-center w-10 h-7 rounded-full transition-colors",
-                  active && "bg-foreground/10"
+                  "flex items-center justify-center w-12 h-7 rounded-full transition-colors",
+                  active && "bg-primary/10"
                 )}>
                   <item.icon 
                     className={cn(
-                      "h-5 w-5 transition-all",
-                      active && "scale-110"
+                      "h-5 w-5 transition-transform",
+                      active && "scale-105"
                     )} 
-                    strokeWidth={active ? 2 : THIN_STROKE} 
+                    strokeWidth={active ? 2.2 : THIN_STROKE} 
                   />
                 </div>
                 <span className={cn(
-                  "text-[10px] font-medium transition-colors",
-                  active && "font-semibold"
+                  "text-[10px] leading-tight transition-colors",
+                  active ? "font-semibold" : "font-medium"
                 )}>
                   {item.label}
                 </span>
@@ -80,13 +81,13 @@ export function MobileBottomNav({ onMenuClick }: MobileBottomNavProps) {
         {/* Menu button */}
         <motion.button
           onClick={onMenuClick}
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 px-1 text-muted-foreground"
-          whileTap={{ scale: 0.92 }}
+          className="flex-1 flex flex-col items-center justify-center h-full gap-0.5 text-muted-foreground active:text-foreground touch-manipulation"
+          whileTap={{ scale: 0.95 }}
         >
-          <div className="flex items-center justify-center w-10 h-7 rounded-full">
+          <div className="flex items-center justify-center w-12 h-7 rounded-full">
             <Menu className="h-5 w-5" strokeWidth={THIN_STROKE} />
           </div>
-          <span className="text-[10px] font-medium">Plus</span>
+          <span className="text-[10px] font-medium leading-tight">Plus</span>
         </motion.button>
       </div>
     </motion.nav>

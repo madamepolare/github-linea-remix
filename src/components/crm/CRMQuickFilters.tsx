@@ -90,16 +90,16 @@ export function CRMQuickFilters({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       {/* Search bar row */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={placeholder}
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9 h-9 bg-background"
+            className="pl-8 sm:pl-9 h-9 text-sm bg-background"
           />
           {search && (
             <Button

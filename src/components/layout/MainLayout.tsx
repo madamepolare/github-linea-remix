@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, Outlet } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { X, StickyNote } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { TopBar } from "./TopBar";
 import { GlobalTopBar } from "./GlobalTopBar";
@@ -83,24 +83,43 @@ export function MainLayout() {
       <WorkspaceStylesLoader />
       
       {/* Mobile Header - Simplified */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-center h-12 px-4 bg-background/95 backdrop-blur-lg border-b border-border">
-        <div className="flex items-center gap-2">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-14 px-4 bg-background/95 backdrop-blur-lg border-b border-border safe-area-inset-top">
+        {/* Left: Menu trigger area (invisible but tappable) */}
+        <button 
+          onClick={() => setMobileMenuOpen(true)}
+          className="flex items-center gap-2.5 -ml-1 px-1 py-1 active:opacity-70 touch-manipulation"
+        >
           {activeWorkspace?.logo_url ? (
             <img 
               src={activeWorkspace.logo_url} 
               alt={activeWorkspace.name}
-              className="h-6 w-6 rounded-md object-cover"
+              className="h-7 w-7 rounded-lg object-cover"
             />
           ) : (
-            <div className="h-6 w-6 rounded-md bg-foreground flex items-center justify-center">
-              <span className="text-xs font-semibold text-background">
+            <div className="h-7 w-7 rounded-lg bg-foreground flex items-center justify-center">
+              <span className="text-xs font-bold text-background">
                 {activeWorkspace?.name?.slice(0, 1).toUpperCase() || "L"}
               </span>
             </div>
           )}
-          <span className="font-semibold text-sm">
+          <span className="font-semibold text-sm text-foreground">
             {activeWorkspace?.name || "Linea"}
           </span>
+        </button>
+        
+        {/* Right: Quick actions */}
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={() => setPostItOpen(true)}
+            className="relative p-2 rounded-full hover:bg-muted active:bg-muted/70 touch-manipulation"
+          >
+            <StickyNote className="h-5 w-5 text-amber-500" />
+            {pendingCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] font-medium bg-amber-500 text-white rounded-full">
+                {pendingCount > 9 ? '9+' : pendingCount}
+              </span>
+            )}
+          </button>
         </div>
       </header>
 
@@ -151,7 +170,7 @@ export function MainLayout() {
       <div 
         className={cn(
           "min-h-screen flex flex-col transition-all duration-200 ease-out",
-          "pt-12 pb-16 lg:pt-0 lg:pb-0", // Account for mobile header + bottom nav
+          "pt-14 pb-[72px] lg:pt-0 lg:pb-0", // Account for mobile header (h-14) + bottom nav (h-[72px] with safe area)
           collapsed ? "lg:pl-[72px]" : "lg:pl-[260px]"
         )}
       >
