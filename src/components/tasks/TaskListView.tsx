@@ -28,13 +28,22 @@ import {
   MessageCircle,
   ChevronDown,
   CalendarClock,
-  Calendar
+  Calendar,
+  Tag,
+  Layers
 } from "lucide-react";
 import { isPast, isToday, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { TASK_STATUSES } from "@/lib/taskTypes";
 import confetti from "canvas-confetti";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface TaskListViewProps {
   entityFilter?: string;
@@ -43,6 +52,7 @@ interface TaskListViewProps {
 
 type SortColumn = "title" | "status" | "due_date" | "priority" | "relation";
 type SortDirection = "asc" | "desc";
+type GroupBy = "status" | "project" | "client" | "tag";
 
 const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }> = {
   todo: { bg: "bg-muted/50 dark:bg-muted/30", border: "border-l-muted-foreground", text: "text-muted-foreground" },
@@ -71,6 +81,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(new Set());
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [groupBy, setGroupBy] = useState<GroupBy>("status");
 
   const handleToggleComplete = (e: React.MouseEvent, task: Task) => {
     e.stopPropagation();
@@ -208,23 +219,43 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
       filtered = filtered.filter((task) => task.related_type === entityFilter);
     }
 
-    // Group by status
-    const groups: Record<string, Task[]> = {
-      in_progress: [],
-      todo: [],
-      review: [],
-      done: [],
-    };
+    const groups: Record<string, Task[]> = {};
 
+    // Group based on selected groupBy
     filtered.forEach(task => {
-      if (groups[task.status]) {
-        groups[task.status].push(task);
+      let groupKey: string;
+      
+      switch (groupBy) {
+        case "project":
+          groupKey = task.project_id || "_no_project";
+          break;
+        case "client":
+          groupKey = task.crm_company_id || "_no_client";
+          break;
+        case "tag":
+          if (task.tags && task.tags.length > 0) {
+            // Add task to each tag group
+            task.tags.forEach(tag => {
+              if (!groups[tag]) groups[tag] = [];
+              groups[tag].push(task);
+            });
+            return; // Skip the normal grouping
+          }
+          groupKey = "_no_tag";
+          break;
+        case "status":
+        default:
+          groupKey = task.status;
+          break;
       }
+      
+      if (!groups[groupKey]) groups[groupKey] = [];
+      groups[groupKey].push(task);
     });
 
     // Sort within each group
-    Object.keys(groups).forEach(status => {
-      groups[status].sort((a, b) => {
+    Object.keys(groups).forEach(key => {
+      groups[key].sort((a, b) => {
         let comparison = 0;
         switch (sortColumn) {
           case "title":
@@ -248,7 +279,61 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
     });
 
     return groups;
-  }, [tasks, entityFilter, sortColumn, sortDirection]);
+  }, [tasks, entityFilter, sortColumn, sortDirection, groupBy]);
+
+  // Get sorted group keys based on groupBy type
+  const getGroupOrder = useMemo(() => {
+    const keys = Object.keys(groupedTasks);
+    
+    if (groupBy === "status") {
+      const statusOrder = ["in_progress", "todo", "review", "done"];
+      return statusOrder.filter(s => keys.includes(s));
+    }
+    
+    // Sort alphabetically, but put "no X" groups at the end
+    return keys.sort((a, b) => {
+      if (a.startsWith("_")) return 1;
+      if (b.startsWith("_")) return -1;
+      
+      if (groupBy === "project") {
+        const nameA = getProjectName(a) || "";
+        const nameB = getProjectName(b) || "";
+        return nameA.localeCompare(nameB);
+      }
+      if (groupBy === "client") {
+        const nameA = getCompanyName(a) || "";
+        const nameB = getCompanyName(b) || "";
+        return nameA.localeCompare(nameB);
+      }
+      return a.localeCompare(b);
+    });
+  }, [groupedTasks, groupBy, projects, companies]);
+
+  const getGroupLabel = (key: string): { label: string; color?: string; icon?: any } => {
+    switch (groupBy) {
+      case "status":
+        const statusConfig = TASK_STATUSES.find(s => s.id === key);
+        return { 
+          label: statusConfig?.label || key, 
+          color: statusConfig?.color 
+        };
+      case "project":
+        if (key === "_no_project") return { label: "Sans projet", icon: FolderKanban };
+        return { 
+          label: getProjectName(key) || key, 
+          icon: FolderKanban,
+          color: projects?.find(p => p.id === key)?.color 
+        };
+      case "client":
+        if (key === "_no_client") return { label: "Sans client", icon: Building2 };
+        return { label: getCompanyName(key) || key, icon: Building2 };
+      case "tag":
+        if (key === "_no_tag") return { label: "Sans tag", icon: Tag };
+        return { label: key, icon: Tag };
+      default:
+        return { label: key };
+    }
+  };
 
   const getDueDateStyle = (dueDate: string | null, status: string) => {
     if (!dueDate || status === "done") return "text-muted-foreground";
@@ -316,11 +401,28 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
     </div>
   );
 
-  const statusOrder = ["in_progress", "todo", "review", "done"];
-
   return (
     <>
       <div className="space-y-4">
+        {/* Filters row */}
+        <div className="flex items-center gap-3 px-4 py-2 border-b">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Layers className="h-4 w-4" />
+            <span>Grouper par</span>
+          </div>
+          <Select value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
+            <SelectTrigger className="w-[140px] h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="status">Statut</SelectItem>
+              <SelectItem value="project">Projet</SelectItem>
+              <SelectItem value="client">Client</SelectItem>
+              <SelectItem value="tag">Tag</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Quick add row */}
         {showQuickAdd ? (
           <div className="border-b">
@@ -337,19 +439,22 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
         )}
 
         {/* Grouped task lists */}
-        {statusOrder.map(status => {
-          const statusTasks = groupedTasks[status] || [];
-          if (statusTasks.length === 0) return null;
+        {getGroupOrder.map(groupKey => {
+          const groupTasks = groupedTasks[groupKey] || [];
+          if (groupTasks.length === 0) return null;
           
-          const statusConfig = TASK_STATUSES.find(s => s.id === status);
-          const isCollapsed = collapsedGroups.has(status);
-          const colors = STATUS_COLORS[status] || STATUS_COLORS.todo;
+          const groupInfo = getGroupLabel(groupKey);
+          const isCollapsed = collapsedGroups.has(groupKey);
+          const colors = groupBy === "status" 
+            ? (STATUS_COLORS[groupKey] || STATUS_COLORS.todo)
+            : { bg: "bg-muted/30", border: "border-l-primary/50", text: "text-foreground" };
+          const GroupIcon = groupInfo.icon;
 
           return (
-            <div key={status} className="space-y-0">
-              {/* Status group header */}
+            <div key={groupKey} className="space-y-0">
+              {/* Group header */}
               <button
-                onClick={() => toggleGroup(status)}
+                onClick={() => toggleGroup(groupKey)}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-2.5 border-b transition-colors",
                   "hover:bg-muted/30"
@@ -359,15 +464,19 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
                   "h-4 w-4 transition-transform text-muted-foreground",
                   isCollapsed && "-rotate-90"
                 )} />
-                <div 
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: statusConfig?.color }}
-                />
+                {groupInfo.color ? (
+                  <div 
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: groupInfo.color }}
+                  />
+                ) : GroupIcon ? (
+                  <GroupIcon className="h-4 w-4 text-muted-foreground" />
+                ) : null}
                 <span className="font-medium text-sm text-foreground">
-                  {statusConfig?.label}
+                  {groupInfo.label}
                 </span>
                 <Badge variant="secondary" className="h-5 px-1.5 text-2xs">
-                  {statusTasks.length}
+                  {groupTasks.length}
                 </Badge>
               </button>
 
@@ -405,7 +514,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
 
                       {/* Task rows */}
                       <AnimatePresence mode="popLayout">
-                        {statusTasks.map((task) => {
+                        {groupTasks.map((task) => {
                           const hasSubtasks = task.subtasks && task.subtasks.length > 0;
                           const isExpanded = expandedTasks.has(task.id);
                           const completedSubtasks = task.subtasks?.filter(s => s.status === "done").length || 0;
