@@ -91,12 +91,18 @@ export interface CreateProjectInput {
   is_internal?: boolean;
 }
 
-export function useProjects(options?: { includeArchived?: boolean }) {
+export type ProjectStatus = 'active' | 'completed' | 'closed';
+
+export function useProjects(options?: { 
+  includeArchived?: boolean; 
+  includeClosed?: boolean;
+  parentId?: string | null;
+}) {
   const { activeWorkspace, user } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: projects, isLoading, error } = useQuery({
-    queryKey: ["projects", activeWorkspace?.id, options?.includeArchived],
+    queryKey: ["projects", activeWorkspace?.id, options?.includeArchived, options?.includeClosed, options?.parentId],
     queryFn: async () => {
       if (!activeWorkspace?.id) return [];
 
@@ -115,8 +121,20 @@ export function useProjects(options?: { includeArchived?: boolean }) {
         query = query.eq("is_archived", false);
       }
 
-      // Filter out sub-projects (they have a parent_id) from main list
-      query = query.is("parent_id", null);
+      // Filter out closed projects unless explicitly requested
+      if (!options?.includeClosed) {
+        query = query.neq("status", "closed");
+      }
+
+      // Filter by parent_id (null for main projects, specific id for sub-projects)
+      if (options?.parentId === undefined) {
+        // Default: show only main projects (no parent)
+        query = query.is("parent_id", null);
+      } else if (options?.parentId !== null) {
+        // Show sub-projects of a specific parent
+        query = query.eq("parent_id", options.parentId);
+      }
+      // If parentId is null, we don't add a filter (show all)
 
       const { data: projectsData, error: projectsError } = await query;
 
@@ -279,6 +297,25 @@ export function useProjects(options?: { includeArchived?: boolean }) {
     },
   });
 
+  const closeProject = useMutation({
+    mutationFn: async ({ id, isClosed }: { id: string; isClosed: boolean }) => {
+      const { error } = await supabase
+        .from("projects")
+        .update({ status: isClosed ? 'closed' : 'active' })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { isClosed }) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success(isClosed ? "Projet fermé" : "Projet réouvert");
+    },
+    onError: (error) => {
+      toast.error("Erreur lors de la fermeture");
+      console.error(error);
+    },
+  });
+
   const deleteProject = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -305,8 +342,52 @@ export function useProjects(options?: { includeArchived?: boolean }) {
     createProject,
     updateProject,
     archiveProject,
+    closeProject,
     deleteProject,
   };
+}
+
+// Hook to get sub-projects for a specific parent
+export function useSubProjects(parentId: string | null) {
+  const { activeWorkspace } = useAuth();
+
+  return useQuery({
+    queryKey: ["sub-projects", parentId, activeWorkspace?.id],
+    queryFn: async () => {
+      if (!parentId || !activeWorkspace?.id) return [];
+
+      const { data, error } = await supabase
+        .from("projects")
+        .select(`
+          *,
+          crm_company:crm_companies(id, name, logo_url)
+        `)
+        .eq("workspace_id", activeWorkspace.id)
+        .eq("parent_id", parentId)
+        .eq("is_archived", false)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch phases
+      const projectIds = data?.map(p => p.id) || [];
+      if (projectIds.length > 0) {
+        const { data: phasesData } = await supabase
+          .from("project_phases")
+          .select("*")
+          .in("project_id", projectIds)
+          .order("sort_order", { ascending: true });
+
+        return data?.map(project => ({
+          ...project,
+          phases: phasesData?.filter(phase => phase.project_id === project.id) || []
+        })) as Project[];
+      }
+
+      return data as Project[];
+    },
+    enabled: !!parentId && !!activeWorkspace?.id,
+  });
 }
 
 export function useProject(projectId: string | null) {
