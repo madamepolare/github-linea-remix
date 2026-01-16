@@ -228,7 +228,7 @@ function TaskKanbanCard({ task, companyName, projectName, profiles, onClick, onC
     <motion.div
       animate={isJustCompleted ? {
         scale: [1, 1.05, 1],
-        backgroundColor: ['hsl(var(--card))', 'hsl(142 76% 36% / 0.2)', 'hsl(var(--card))']
+        backgroundColor: ['white', 'hsl(142 76% 36% / 0.15)', 'white']
       } : {}}
       transition={{ duration: 0.5 }}
     >
