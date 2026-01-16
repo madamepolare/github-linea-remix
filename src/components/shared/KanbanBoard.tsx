@@ -122,8 +122,9 @@ export function KanbanBoard<T>({
           <div
             key={column.id}
             className={cn(
-              "kanban-column flex flex-col min-h-[400px] sm:min-h-[500px] min-w-[85vw] md:min-w-[320px] w-72 sm:w-80 flex-shrink-0 snap-center transition-all duration-150",
-              isDropTarget && "bg-muted/30 rounded-xl"
+              "kanban-column flex flex-col min-h-[400px] sm:min-h-[500px] min-w-[85vw] md:min-w-[320px] w-72 sm:w-80 flex-shrink-0 snap-center",
+              "transition-all duration-200 ease-out origin-top",
+              isDropTarget && "bg-muted/25 rounded-xl scale-[1.02]"
             )}
             onDragOver={(e) => handleDragOver(e, column.id)}
             onDragLeave={handleDragLeave}
@@ -192,9 +193,15 @@ export function KanbanBoard<T>({
 
               {/* Drop zone ghost indicator */}
               {isDropTarget && (
-                <div className="h-16 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 flex items-center justify-center">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  className="h-16 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 flex items-center justify-center"
+                >
                   <span className="text-xs text-primary/60">Déposer ici</span>
-                </div>
+                </motion.div>
               )}
 
               {/* Empty state */}
