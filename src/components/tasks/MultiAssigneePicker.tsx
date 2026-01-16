@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface Profile {
+export interface Profile {
   id: string;
   user_id: string;
   full_name: string | null;
@@ -25,9 +25,10 @@ interface MultiAssigneePickerProps {
   value: string[];
   onChange: (value: string[]) => void;
   className?: string;
+  renderTrigger?: (selectedMembers: Profile[]) => React.ReactNode;
 }
 
-export function MultiAssigneePicker({ value, onChange, className }: MultiAssigneePickerProps) {
+export function MultiAssigneePicker({ value, onChange, className, renderTrigger }: MultiAssigneePickerProps) {
   const { activeWorkspace } = useAuth();
   const [open, setOpen] = useState(false);
 
@@ -78,6 +79,44 @@ export function MultiAssigneePicker({ value, onChange, className }: MultiAssigne
       .toUpperCase()
       .slice(0, 2);
   };
+
+  // Custom trigger rendering
+  if (renderTrigger) {
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <div className={cn("cursor-pointer", className)}>
+            {renderTrigger(selectedMembers)}
+          </div>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-2" align="start">
+          <div className="space-y-1">
+            {members?.map((member) => (
+              <div
+                key={member.user_id}
+                className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer"
+                onClick={() => toggleMember(member.user_id)}
+              >
+                <Checkbox checked={value.includes(member.user_id)} />
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={member.avatar_url || undefined} />
+                  <AvatarFallback className="text-xs">
+                    {getInitials(member.full_name)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm">{member.full_name || "Utilisateur"}</span>
+              </div>
+            ))}
+            {(!members || members.length === 0) && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Aucun membre trouvé
+              </p>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
