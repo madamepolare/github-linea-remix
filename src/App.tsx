@@ -64,6 +64,7 @@ const ClientPortal = lazy(() => import("./pages/ClientPortal"));
 const CompanyPortal = lazy(() => import("./pages/CompanyPortal"));
 const FrameworkRequest = lazy(() => import("./pages/FrameworkRequest"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const DesignSystem = lazy(() => import("./pages/DesignSystem"));
 
 // Loading fallback
 const PageLoader = () => (
@@ -104,6 +105,7 @@ const App = () => (
               <Route path="/portal/:token" element={<Suspense fallback={<PageLoader />}><ClientPortal /></Suspense>} />
               <Route path="/company-portal/:token" element={<Suspense fallback={<PageLoader />}><CompanyPortal /></Suspense>} />
               <Route path="/request/:token" element={<Suspense fallback={<PageLoader />}><FrameworkRequest /></Suspense>} />
+              <Route path="/designsystem" element={<Suspense fallback={<PageLoader />}><DesignSystem /></Suspense>} />
 
                 {/* Protected routes with shared MainLayout */}
                 <Route
