@@ -12,3 +12,6 @@ export { CRMStatsWidget } from "./CRMStatsWidget";
 export { CampaignsStatsWidget } from "./CampaignsStatsWidget";
 export { TeamStatsWidget } from "./TeamStatsWidget";
 export { PlaceholderWidget } from "./PlaceholderWidget";
+export { RevenueChartWidget } from "./RevenueChartWidget";
+export { LeadsPipelineWidget } from "./LeadsPipelineWidget";
+export { RecentLeadsWidget } from "./RecentLeadsWidget";
