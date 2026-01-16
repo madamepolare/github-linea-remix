@@ -356,7 +356,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
           </div>
         ) : (
           /* Desktop Table View */
-          <Card className="overflow-hidden">
+          <div className="border-t">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -413,7 +413,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                         transition={{ delay: Math.min(index * 0.02, 0.2) }}
                         className={cn(
                           "group cursor-pointer transition-colors",
-                          isSelected ? "bg-primary/5" : "hover:bg-muted/40"
+                          isSelected ? "bg-muted/30" : "hover:bg-muted/20"
                         )}
                         onClick={() => navigate(`/crm/contacts/${contact.id}`)}
                       >
@@ -433,7 +433,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                               </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0">
-                              <p className="font-medium text-sm truncate leading-tight">{contact.name}</p>
+                              <p className="font-medium text-sm text-foreground truncate leading-tight">{contact.name}</p>
                               {contact.role && (
                                 <p className="text-[11px] text-muted-foreground truncate">{contact.role}</p>
                               )}
@@ -564,7 +564,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                 </TableBody>
               </Table>
             </div>
-          </Card>
+          </div>
         )}
 
         {/* Pagination controls */}

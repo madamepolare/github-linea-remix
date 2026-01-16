@@ -315,7 +315,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
           </div>
         ) : (
           /* Desktop Table View */
-          <Card className="overflow-hidden">
+          <div className="border-t">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -376,7 +376,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                         transition={{ delay: Math.min(index * 0.02, 0.2) }}
                         className={cn(
                           "group cursor-pointer transition-colors",
-                          isSelected ? "bg-primary/5" : "hover:bg-muted/40"
+                          isSelected ? "bg-muted/30" : "hover:bg-muted/20"
                         )}
                         onClick={() => navigate(`/crm/companies/${company.id}`)}
                       >
@@ -541,7 +541,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
                 </div>
               </div>
             )}
-          </Card>
+          </div>
         )}
       </div>
 
