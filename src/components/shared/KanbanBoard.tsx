@@ -1,8 +1,9 @@
-import { useState, ReactNode, useRef } from "react";
+import { useState, ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, MoreHorizontal, GripVertical, Clipboard, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Clipboard, ChevronLeft, ChevronRight } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface KanbanColumn<T> {
@@ -37,69 +38,19 @@ export function KanbanBoard<T>({
   className,
 }: KanbanBoardProps<T>) {
   const isMobile = useIsMobile();
-  const [draggedItem, setDraggedItem] = useState<{ id: string; fromColumn: string } | null>(null);
-  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [mobileColumnIndex, setMobileColumnIndex] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
-  // Track if any drag is happening globally to disable layout animations
-  const isDraggingRef = useRef(false);
 
-  const handleDragStart = (e: React.DragEvent, itemId: string, columnId: string) => {
-    isDraggingRef.current = true;
-    setDraggedItem({ id: itemId, fromColumn: columnId });
-    e.dataTransfer.effectAllowed = "move";
-    // Safari requires setting data for drag to work
-    e.dataTransfer.setData("text/plain", itemId);
-    e.dataTransfer.setData("application/x-kanban-item", JSON.stringify({ id: itemId, fromColumn: columnId }));
-    // Set a transparent drag image
-    const dragImage = document.createElement("div");
-    dragImage.style.opacity = "0";
-    dragImage.style.position = "absolute";
-    dragImage.style.top = "-1000px";
-    document.body.appendChild(dragImage);
-    e.dataTransfer.setDragImage(dragImage, 0, 0);
-    setTimeout(() => document.body.removeChild(dragImage), 0);
-  };
-
-  const handleDragOver = (e: React.DragEvent, columnId: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverColumn(columnId);
-  };
-
-  const handleDragLeave = () => {
-    setDragOverColumn(null);
-  };
-
-  const handleDrop = (e: React.DragEvent, columnId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDragEnd = (result: DropResult) => {
+    const { draggableId, source, destination } = result;
     
-    // Try to get data from state first, then fallback to dataTransfer (Safari)
-    let itemData = draggedItem;
-    if (!itemData) {
-      try {
-        const data = e.dataTransfer.getData("application/x-kanban-item");
-        if (data) {
-          itemData = JSON.parse(data);
-        }
-      } catch {
-        // Ignore parsing errors
-      }
-    }
+    // Dropped outside a droppable
+    if (!destination) return;
     
-    if (itemData && itemData.fromColumn !== columnId) {
-      onDrop?.(itemData.id, itemData.fromColumn, columnId);
-    }
-    isDraggingRef.current = false;
-    setDraggedItem(null);
-    setDragOverColumn(null);
-  };
-
-  const handleDragEnd = () => {
-    isDraggingRef.current = false;
-    setDraggedItem(null);
-    setDragOverColumn(null);
+    // Same position
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+    
+    // Call onDrop with the item ID and column IDs
+    onDrop?.(draggableId, source.droppableId, destination.droppableId);
   };
 
   // Mobile navigation
@@ -174,128 +125,142 @@ export function KanbanBoard<T>({
         </div>
       )}
 
-      <div 
-        ref={containerRef}
-        className={cn(
-          "flex-1 overflow-x-auto snap-x snap-mandatory",
-          isMobile ? "flex flex-col" : "flex gap-4 sm:gap-6 pb-4"
-        )}
-      >
-        {displayColumns.map((column) => {
-          const isDropTarget = dragOverColumn === column.id && draggedItem?.fromColumn !== column.id;
-          
-          return (
-            <div
-              key={column.id}
-              className={cn(
-                "kanban-column flex flex-col flex-shrink-0 snap-center",
-                isMobile 
-                  ? "w-full min-h-[calc(100vh-280px)]" 
-                  : "min-h-[400px] sm:min-h-[500px] min-w-[280px] md:min-w-[320px] w-72 sm:w-80",
-                "transition-all duration-150",
-                isDropTarget && "bg-muted/25 rounded-xl"
-              )}
-              onDragOver={(e) => handleDragOver(e, column.id)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, column.id)}
-            >
-            {/* Column Header */}
-            <div className="kanban-column-header flex items-center justify-between px-1 py-2 mb-3">
-              <div className="flex items-center gap-2">
-                {column.color && (
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: column.color }}
-                  />
-                )}
-                <span className="font-medium text-sm text-foreground">{column.label}</span>
-                <span className="text-xs text-muted-foreground/70 font-medium">
-                  {column.items.length}
-                </span>
-              </div>
-              <div className="flex items-center gap-0.5">
-                {onColumnAdd && (
-                  <button 
-                    onClick={() => onColumnAdd(column.id)}
-                    className="p-1.5 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Column Metadata (e.g., total value) */}
-            {column.metadata && (
-              <div className="px-1 py-1.5 mb-2">
-                {column.metadata}
-              </div>
-            )}
-
-            {/* Items List */}
-            <div className="flex-1 space-y-2 overflow-y-auto scrollbar-thin">
-              <AnimatePresence mode="popLayout">
-                {column.items.map((item) => {
-                  const itemId = getItemId(item);
-                  const isDragging = draggedItem?.id === itemId;
-
-                    return (
-                      <motion.div
-                        key={itemId}
-                        layout
-                        initial={false}
-                        animate={{ 
-                          opacity: isDragging ? 0.5 : 1,
-                          scale: isDragging ? 0.95 : 1,
-                          rotate: isDragging ? 2 : 0,
-                        }}
-                        whileDrag={{ scale: 0.8 }}
-                        transition={{ 
-                          type: "spring", 
-                          stiffness: 500, 
-                          damping: 30,
-                          mass: 0.8
-                        }}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, itemId, column.id)}
-                        onDragEnd={handleDragEnd}
-                        className="cursor-grab active:cursor-grabbing"
-                        style={{ userSelect: 'none' }}
-                      >
-                        {renderCard(item, isDragging)}
-                      </motion.div>
-                    );
-                })}
-              </AnimatePresence>
-
-              {/* Drop zone ghost indicator */}
-              {isDropTarget && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  className="h-16 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 flex items-center justify-center"
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div 
+          className={cn(
+            "flex-1 overflow-x-auto snap-x snap-mandatory",
+            isMobile ? "flex flex-col" : "flex gap-4 sm:gap-6 pb-4"
+          )}
+        >
+          {displayColumns.map((column) => (
+            <Droppable key={column.id} droppableId={column.id}>
+              {(provided, snapshot) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className={cn(
+                    "kanban-column flex flex-col flex-shrink-0 snap-center",
+                    isMobile 
+                      ? "w-full min-h-[calc(100vh-280px)]" 
+                      : "min-h-[400px] sm:min-h-[500px] min-w-[280px] md:min-w-[320px] w-72 sm:w-80",
+                    "transition-all duration-150",
+                    snapshot.isDraggingOver && "bg-muted/25 rounded-xl"
+                  )}
                 >
-                  <span className="text-xs text-primary/60">Déposer ici</span>
-                </motion.div>
-              )}
+                  {/* Column Header */}
+                  <div className="kanban-column-header flex items-center justify-between px-1 py-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      {column.color && (
+                        <div
+                          className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: column.color }}
+                        />
+                      )}
+                      <span className="font-medium text-sm text-foreground">{column.label}</span>
+                      <span className="text-xs text-muted-foreground/70 font-medium">
+                        {column.items.length}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      {onColumnAdd && (
+                        <button 
+                          onClick={() => onColumnAdd(column.id)}
+                          className="p-1.5 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
-              {/* Empty state */}
-              {column.items.length === 0 && !isDropTarget && (
-                <div className="text-center py-8 flex flex-col items-center gap-2">
-                  <Clipboard className="h-6 w-6 text-muted-foreground/20" />
-                  <span className="text-xs text-muted-foreground/50">Aucun élément</span>
+                  {/* Column Metadata (e.g., total value) */}
+                  {column.metadata && (
+                    <div className="px-1 py-1.5 mb-2">
+                      {column.metadata}
+                    </div>
+                  )}
+
+                  {/* Items List */}
+                  <div className="flex-1 space-y-2 overflow-y-auto scrollbar-thin">
+                    <AnimatePresence mode="popLayout">
+                      {column.items.map((item, index) => {
+                        const itemId = getItemId(item);
+
+                        return (
+                          <Draggable key={itemId} draggableId={itemId} index={index}>
+                            {(dragProvided, dragSnapshot) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                {...dragProvided.dragHandleProps}
+                                style={{
+                                  ...dragProvided.draggableProps.style,
+                                  userSelect: 'none',
+                                }}
+                                className={cn(
+                                  "cursor-grab active:cursor-grabbing touch-manipulation",
+                                  dragSnapshot.isDragging && "z-50"
+                                )}
+                              >
+                                <motion.div
+                                  layout={!dragSnapshot.isDragging}
+                                  initial={false}
+                                  animate={{ 
+                                    opacity: dragSnapshot.isDragging ? 0.9 : 1,
+                                    scale: dragSnapshot.isDragging ? 1.02 : 1,
+                                    rotate: dragSnapshot.isDragging ? 1 : 0,
+                                    boxShadow: dragSnapshot.isDragging 
+                                      ? "0 8px 20px rgba(0,0,0,0.15)" 
+                                      : "0 0 0 rgba(0,0,0,0)"
+                                  }}
+                                  transition={{ 
+                                    type: "spring", 
+                                    stiffness: 500, 
+                                    damping: 30,
+                                    mass: 0.8
+                                  }}
+                                >
+                                  {renderCard(item, dragSnapshot.isDragging)}
+                                </motion.div>
+                              </div>
+                            )}
+                          </Draggable>
+                        );
+                      })}
+                    </AnimatePresence>
+                    
+                    {provided.placeholder}
+
+                    {/* Drop zone ghost indicator */}
+                    {snapshot.isDraggingOver && (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.15, ease: "easeOut" }}
+                        className="h-16 rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 flex items-center justify-center"
+                      >
+                        <span className="text-xs text-primary/60">Déposer ici</span>
+                      </motion.div>
+                    )}
+
+                    {/* Empty state */}
+                    {column.items.length === 0 && !snapshot.isDraggingOver && (
+                      <div className="text-center py-8 flex flex-col items-center gap-2">
+                        <Clipboard className="h-6 w-6 text-muted-foreground/20" />
+                        <span className="text-xs text-muted-foreground/50">Aucun élément</span>
+                      </div>
+                    )}
+
+                    {/* Quick Add */}
+                    {renderQuickAdd?.(column.id)}
+                  </div>
                 </div>
               )}
-
-              {/* Quick Add */}
-              {renderQuickAdd?.(column.id)}
-            </div>
-          </div>
-        );
-      })}
-      </div>
+            </Droppable>
+          ))}
+        </div>
+      </DragDropContext>
     </div>
   );
 }
