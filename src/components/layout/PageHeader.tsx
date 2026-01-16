@@ -60,7 +60,7 @@ export function PageHeader({
     >
       {/* Main Row: Title + Actions */}
       <motion.div
-        className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5"
+        className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4"
         variants={rowVariants}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
