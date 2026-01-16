@@ -16,6 +16,7 @@ import { ModulesSettings } from "@/components/settings/ModulesSettings";
 import { EmailTemplatesSettings } from "@/components/settings/EmailTemplatesSettings";
 import { FeedbackSettings } from "@/components/settings/FeedbackSettings";
 import { StyleSettings } from "@/components/settings/StyleSettings";
+import { PageInspectorSettings } from "@/components/settings/PageInspectorSettings";
 import { DisciplineSettings } from "@/components/settings/DisciplineSettings";
 import { ContractTypesSection } from "@/components/settings/sections/ContractTypesSection";
 import { SkillsSection } from "@/components/settings/sections/SkillsSection";
@@ -106,6 +107,8 @@ export default function Settings() {
             <DesignSystemSettings />
           </PermissionGate>
         );
+      case "page-inspector":
+        return <PageInspectorSettings />;
       default:
         return <WorkspaceSettings />;
     }
