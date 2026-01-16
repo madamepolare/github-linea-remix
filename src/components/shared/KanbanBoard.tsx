@@ -123,8 +123,8 @@ export function KanbanBoard<T>({
             key={column.id}
             className={cn(
               "kanban-column flex flex-col min-h-[400px] sm:min-h-[500px] min-w-[85vw] md:min-w-[320px] w-72 sm:w-80 flex-shrink-0 snap-center",
-              "transition-all duration-200 ease-out origin-top",
-              isDropTarget && "bg-muted/25 rounded-xl scale-[1.02]"
+              "transition-all duration-150",
+              isDropTarget && "bg-muted/25 rounded-xl"
             )}
             onDragOver={(e) => handleDragOver(e, column.id)}
             onDragLeave={handleDragLeave}
@@ -170,24 +170,32 @@ export function KanbanBoard<T>({
                   const itemId = getItemId(item);
                   const isDragging = draggedItem?.id === itemId;
 
-                  return (
-                    <div
-                      key={itemId}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, itemId, column.id)}
-                      onDragEnd={handleDragEnd}
-                      className="cursor-grab active:cursor-grabbing"
-                      style={{ 
-                        userSelect: 'none',
-                        opacity: isDragging ? 0.6 : 1,
-                        transform: isDragging ? 'scale(0.98) rotate(1deg)' : 'scale(1) rotate(0deg)',
-                        boxShadow: isDragging ? '0 10px 25px -5px rgba(0, 0, 0, 0.1)' : 'none',
-                        transition: 'opacity 0.15s, transform 0.15s, box-shadow 0.15s',
-                      }}
-                    >
-                      {renderCard(item, isDragging)}
-                    </div>
-                  );
+                    return (
+                      <motion.div
+                        key={itemId}
+                        layout
+                        initial={false}
+                        animate={{ 
+                          opacity: isDragging ? 0.5 : 1,
+                          scale: isDragging ? 0.95 : 1,
+                          rotate: isDragging ? 2 : 0,
+                        }}
+                        whileDrag={{ scale: 0.8 }}
+                        transition={{ 
+                          type: "spring", 
+                          stiffness: 500, 
+                          damping: 30,
+                          mass: 0.8
+                        }}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, itemId, column.id)}
+                        onDragEnd={handleDragEnd}
+                        className="cursor-grab active:cursor-grabbing"
+                        style={{ userSelect: 'none' }}
+                      >
+                        {renderCard(item, isDragging)}
+                      </motion.div>
+                    );
                 })}
               </AnimatePresence>
 
