@@ -215,8 +215,8 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200",
           "cursor-pointer select-none",
           active
-            ? "bg-foreground/5 text-foreground font-medium"
-            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            ? "bg-foreground/5 text-foreground font-semibold"
+            : "text-foreground/80 font-medium hover:bg-muted/50 hover:text-foreground"
         )}
       >
         {/* Active indicator */}
@@ -227,9 +227,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         <item.icon
           className={cn(
             "h-[18px] w-[18px] shrink-0 transition-colors",
-            active ? "text-foreground" : "text-muted-foreground/70"
+            active ? "text-foreground" : "text-foreground/60"
           )}
-          strokeWidth={THIN_STROKE}
+          strokeWidth={1.75}
         />
 
         {!collapsed && (
@@ -425,9 +425,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         {!collapsed ? (
           <button 
             onClick={() => setShowSupportChat(true)}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground/80 font-medium transition-colors hover:bg-muted/50 hover:text-foreground"
           >
-            <HelpCircle className="h-[18px] w-[18px] text-muted-foreground/70" strokeWidth={THIN_STROKE} />
+            <HelpCircle className="h-[18px] w-[18px] text-foreground/60" strokeWidth={1.75} />
             <span>Aide & Support</span>
           </button>
         ) : (
