@@ -419,12 +419,11 @@
 
   /* Kanban column */
   .kanban-column {
-    @apply flex flex-col rounded-lg min-h-[400px];
-    background: hsl(var(--surface));
+    @apply flex flex-col min-h-[400px];
   }
 
   .kanban-column-header {
-    @apply flex items-center gap-2 px-4 py-3;
+    @apply flex items-center gap-2 px-1 py-2;
   }
 
   /* Task card */
