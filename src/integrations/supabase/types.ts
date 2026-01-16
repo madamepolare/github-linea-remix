@@ -2585,6 +2585,41 @@ export type Database = {
           },
         ]
       }
+      dashboard_layouts: {
+        Row: {
+          created_at: string
+          id: string
+          layout_data: Json
+          template_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          layout_data?: Json
+          template_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          layout_data?: Json
+          template_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_layouts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deliverable_email_templates: {
         Row: {
           body: string

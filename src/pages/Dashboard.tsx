@@ -1,10 +1,10 @@
 import { PageLayout } from "@/components/layout/PageLayout";
-import { WidgetGrid } from "@/components/dashboard/widgets";
+import { WidgetGridNew } from "@/components/dashboard/widgets";
 
 const Dashboard = () => {
   return (
     <PageLayout title="Tableau de bord" contentPadding={false}>
-      <WidgetGrid />
+      <WidgetGridNew />
     </PageLayout>
   );
 };
