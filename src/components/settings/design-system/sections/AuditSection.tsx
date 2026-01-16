@@ -1,9 +1,11 @@
-import { AlertTriangle, CheckCircle, Info, Zap, GitMerge, Layers, Code, ArrowRight } from "lucide-react";
+import { AlertTriangle, CheckCircle, Info, Zap, GitMerge, Layers, Code, ArrowRight, Copy, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface AuditIssue {
   id: string;
@@ -14,6 +16,7 @@ interface AuditIssue {
   files: string[];
   recommendation: string;
   effort: "low" | "medium" | "high";
+  prompt: string;
 }
 
 const AUDIT_ISSUES: AuditIssue[] = [
@@ -28,7 +31,25 @@ const AUDIT_ISSUES: AuditIssue[] = [
       "src/components/shared/KanbanBoard.tsx"
     ],
     recommendation: "Migrer ContactPipeline vers KanbanBoard.tsx pour unifier le comportement drag-and-drop et réduire le bundle size.",
-    effort: "high"
+    effort: "high",
+    prompt: `**REFACTORING - Unifier le Drag & Drop CRM**
+
+OBJECTIF : Migrer ContactPipeline.tsx pour utiliser le composant partagé KanbanBoard.tsx au lieu de @hello-pangea/dnd.
+
+CONTRAINTES CRITIQUES :
+- ⚠️ NE PAS modifier le comportement fonctionnel actuel du CRM Pipeline
+- ⚠️ Conserver TOUTES les fonctionnalités existantes : déplacement de contacts entre colonnes, callbacks onDrop, styling des colonnes
+- ⚠️ Ne pas casser les autres modules qui utilisent déjà KanbanBoard
+
+FICHIERS À MODIFIER :
+1. src/components/crm/ContactPipeline.tsx → Utiliser <KanbanBoard /> de src/components/shared/KanbanBoard.tsx
+2. Adapter les props pour correspondre à l'interface de KanbanBoard (columns, items, renderCard, onDragEnd)
+3. Le composant EntryCard interne peut être passé via renderCard
+
+RÉSULTAT ATTENDU :
+- ContactPipeline utilise KanbanBoard.tsx
+- Comportement drag-and-drop identique
+- Possibilité de désinstaller @hello-pangea/dnd si plus utilisé ailleurs`
   },
   {
     id: "list-views-duplicate",
@@ -43,7 +64,29 @@ const AUDIT_ISSUES: AuditIssue[] = [
       "src/components/tasks/TaskListView.tsx"
     ],
     recommendation: "Créer un composant DataTable générique avec colonnes configurables, tri et filtrage intégrés.",
-    effort: "medium"
+    effort: "medium",
+    prompt: `**REFACTORING - Créer un DataTable générique**
+
+OBJECTIF : Créer un composant DataTable réutilisable pour harmoniser toutes les vues listes.
+
+CONTRAINTES CRITIQUES :
+- ⚠️ NE PAS supprimer les vues existantes immédiatement
+- ⚠️ Créer d'abord le composant générique, puis migrer une vue à la fois
+- ⚠️ Chaque vue doit continuer à fonctionner exactement comme avant
+
+À CRÉER :
+1. src/components/shared/DataTable.tsx avec :
+   - Props: columns (définition des colonnes avec header, accessor, render, sortable)
+   - Props: data (tableau de données générique)
+   - Props: onSort, onFilter, onRowClick
+   - Intégration avec Table de shadcn/ui
+
+2. Migrer EN PREMIER : TaskListView.tsx (le plus simple)
+
+RÉSULTAT ATTENDU :
+- Nouveau composant DataTable fonctionnel
+- TaskListView migré et fonctionnel
+- Les autres vues restent inchangées (migration ultérieure)`
   },
   {
     id: "entry-card-internal",
@@ -57,7 +100,27 @@ const AUDIT_ISSUES: AuditIssue[] = [
       "src/components/projects/ProjectCard.tsx"
     ],
     recommendation: "Extraire EntryCard comme composant partagé ou utiliser un BaseCard avec variants.",
-    effort: "medium"
+    effort: "medium",
+    prompt: `**REFACTORING - Extraire EntryCard comme composant partagé**
+
+OBJECTIF : Extraire le composant EntryCard de ContactPipeline vers un fichier séparé réutilisable.
+
+CONTRAINTES CRITIQUES :
+- ⚠️ NE PAS modifier le rendu visuel de la carte actuelle
+- ⚠️ Conserver toutes les props et le comportement existants
+- ⚠️ Le ContactPipeline doit fonctionner exactement comme avant après le refactoring
+
+ÉTAPES :
+1. Créer src/components/crm/EntryCard.tsx
+2. Copier la définition du composant EntryCard de ContactPipeline.tsx
+3. Exporter le composant avec ses types/interfaces
+4. Dans ContactPipeline.tsx, importer EntryCard depuis le nouveau fichier
+5. Supprimer la définition interne
+
+RÉSULTAT ATTENDU :
+- EntryCard est dans son propre fichier
+- ContactPipeline importe et utilise EntryCard
+- Aucun changement visuel ou fonctionnel`
   },
   {
     id: "health-status-duplicate",
@@ -71,7 +134,27 @@ const AUDIT_ISSUES: AuditIssue[] = [
       "src/components/tasks/TaskCard.tsx"
     ],
     recommendation: "Créer un hook useHealthStatus() ou un utilitaire pour centraliser le calcul des indicateurs de santé.",
-    effort: "low"
+    effort: "low",
+    prompt: `**REFACTORING - Centraliser le calcul du Health Status**
+
+OBJECTIF : Créer un hook useHealthStatus() pour centraliser la logique de calcul des indicateurs de santé (retard, progression, alertes).
+
+CONTRAINTES CRITIQUES :
+- ⚠️ NE PAS modifier l'affichage visuel des badges existants
+- ⚠️ Les calculs doivent retourner exactement les mêmes résultats qu'actuellement
+- ⚠️ Migrer un composant à la fois pour tester
+
+À CRÉER :
+1. src/hooks/useHealthStatus.ts avec :
+   - Input: { dueDate?, startDate?, endDate?, progress?, status? }
+   - Output: { isLate: boolean, daysLate: number, healthLevel: 'good' | 'warning' | 'critical', progressPercent: number }
+
+2. Migrer SubProjectCard.tsx en premier (plus simple)
+
+RÉSULTAT ATTENDU :
+- Hook useHealthStatus fonctionnel
+- SubProjectCard utilise le hook
+- Même rendu visuel qu'avant`
   },
   {
     id: "kanban-card-unused",
@@ -83,7 +166,23 @@ const AUDIT_ISSUES: AuditIssue[] = [
       "src/components/shared/KanbanBoard.tsx"
     ],
     recommendation: "Standardiser l'utilisation de KanbanCard dans tous les modules utilisant KanbanBoard.",
-    effort: "low"
+    effort: "low",
+    prompt: `**AMÉLIORATION - Documenter et promouvoir KanbanCard**
+
+OBJECTIF : S'assurer que tous les modules utilisant KanbanBoard passent par le composant KanbanCard pour bénéficier des fonctionnalités intégrées (célébrations, animations).
+
+CONTRAINTES CRITIQUES :
+- ⚠️ NE PAS modifier le comportement de KanbanCard
+- ⚠️ Vérifier que chaque module utilisant KanbanBoard utilise bien renderCard avec KanbanCard
+
+ÉTAPES :
+1. Lister tous les usages de KanbanBoard dans le projet
+2. Pour chaque usage, vérifier si renderCard utilise KanbanCard
+3. Si non, proposer la migration vers KanbanCard
+
+RÉSULTAT ATTENDU :
+- Liste des modules à migrer (si applicable)
+- Documentation sur l'utilisation de KanbanCard`
   },
   {
     id: "table-components",
@@ -97,7 +196,29 @@ const AUDIT_ISSUES: AuditIssue[] = [
       "src/components/tenders/TendersList.tsx"
     ],
     recommendation: "Utiliser systématiquement le composant Table de shadcn avec un wrapper DataTable configurable.",
-    effort: "medium"
+    effort: "medium",
+    prompt: `**HARMONISATION - Utiliser Table shadcn partout**
+
+OBJECTIF : Migrer les tableaux utilisant des divs custom vers le composant Table de shadcn/ui.
+
+CONTRAINTES CRITIQUES :
+- ⚠️ NE PAS modifier les données affichées
+- ⚠️ Conserver toutes les fonctionnalités (tri, actions, etc.)
+- ⚠️ Migrer UN tableau à la fois pour valider
+
+ORDRE DE MIGRATION SUGGÉRÉ :
+1. TeamMembersTable.tsx (probablement le plus simple)
+2. TendersList.tsx
+3. InvoiceTable.tsx (peut être plus complexe)
+
+POUR CHAQUE MIGRATION :
+- Identifier les colonnes actuelles
+- Convertir vers <Table>, <TableHeader>, <TableBody>, <TableRow>, <TableCell>
+- Tester que le rendu est identique
+
+RÉSULTAT ATTENDU :
+- Premier tableau migré et fonctionnel
+- Pattern établi pour les suivants`
   }
 ];
 
@@ -121,9 +242,24 @@ const categoryConfig = {
 };
 
 export function AuditSection() {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  
   const criticalCount = AUDIT_ISSUES.filter(i => i.severity === "critical").length;
   const warningCount = AUDIT_ISSUES.filter(i => i.severity === "warning").length;
   const infoCount = AUDIT_ISSUES.filter(i => i.severity === "info").length;
+
+  const copyPromptToClipboard = async (issue: AuditIssue) => {
+    try {
+      await navigator.clipboard.writeText(issue.prompt);
+      setCopiedId(issue.id);
+      toast.success("Prompt copié !", {
+        description: "Collez-le dans le chat Lovable pour demander la correction."
+      });
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      toast.error("Erreur lors de la copie");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -203,6 +339,7 @@ export function AuditSection() {
                 const category = categoryConfig[issue.category];
                 const SeverityIcon = severity.icon;
                 const CategoryIcon = category.icon;
+                const isCopied = copiedId === issue.id;
 
                 return (
                   <AccordionItem 
@@ -258,9 +395,34 @@ export function AuditSection() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Prompt Preview */}
+                        <div className="bg-muted/30 border rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-medium text-muted-foreground">Prompt pour Lovable :</p>
+                          </div>
+                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono max-h-32 overflow-y-auto">
+                            {issue.prompt}
+                          </pre>
+                        </div>
                         
-                        <Button size="sm" variant="outline" className="w-full">
-                          Demander la correction à Lovable
+                        <Button 
+                          size="sm" 
+                          variant={isCopied ? "default" : "outline"} 
+                          className="w-full gap-2"
+                          onClick={() => copyPromptToClipboard(issue)}
+                        >
+                          {isCopied ? (
+                            <>
+                              <Check className="h-4 w-4" />
+                              Copié ! Collez dans le chat Lovable
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-4 w-4" />
+                              Copier le prompt pour Lovable
+                            </>
+                          )}
                         </Button>
                       </div>
                     </AccordionContent>
