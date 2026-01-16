@@ -198,8 +198,8 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
         </motion.div>
       )}
 
-      <Card>
-        <CardContent className="p-0">
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -410,7 +410,7 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
               })}
             </TableBody>
           </Table>
-        </CardContent>
+        </div>
       </Card>
 
       {/* Email Dialog */}
