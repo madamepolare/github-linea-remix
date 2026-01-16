@@ -14,6 +14,9 @@ import {
   CampaignsStatsWidget,
   TeamStatsWidget,
   PlaceholderWidget,
+  RevenueChartWidget,
+  LeadsPipelineWidget,
+  RecentLeadsWidget,
 } from "./content";
 
 interface WidgetRendererProps {
@@ -62,7 +65,9 @@ export function WidgetRenderer({ widgetId, isEditing, onRemove, widthCols }: Wid
       case "crm-stats":
         return <CRMStatsWidget />;
       case "crm-leads":
-        return <PlaceholderWidget title="Leads récents" />;
+        return <RecentLeadsWidget />;
+      case "crm-pipeline":
+        return <LeadsPipelineWidget />;
       case "crm-companies":
         return <PlaceholderWidget title="Entreprises" />;
 
@@ -96,7 +101,7 @@ export function WidgetRenderer({ widgetId, isEditing, onRemove, widthCols }: Wid
       case "invoicing-pending":
         return <PlaceholderWidget title="Factures en attente" />;
       case "invoicing-chart":
-        return <PlaceholderWidget title="Graphique CA" />;
+        return <RevenueChartWidget />;
 
       // Documents
       case "documents-stats":
