@@ -29,6 +29,7 @@
 .react-grid-item {
   transition: all 200ms ease;
   transition-property: left, top, width, height;
+  overflow: visible;
 }
 
 .react-grid-item.cssTransforms {
@@ -37,8 +38,12 @@
 
 .react-grid-item.resizing {
   transition: none;
-  z-index: 1;
+  z-index: 10;
   will-change: width, height;
+}
+
+.react-grid-item.react-draggable-dragging {
+  z-index: 10;
 }
 
 /* Show width indicator when resizing */
@@ -87,6 +92,7 @@
   box-sizing: border-box;
   background-image: none;
   z-index: 50;
+  pointer-events: all;
 }
 
 .react-resizable-handle::after {
