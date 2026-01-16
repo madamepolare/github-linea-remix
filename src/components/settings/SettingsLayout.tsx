@@ -148,7 +148,6 @@ export function getSettingsGroups(t: (key: string) => string): SettingsGroup[] {
       id: 'development',
       label: 'Développement',
       sections: [
-        { id: 'design-system', label: 'Design System', icon: <Palette className="h-4 w-4" />, description: 'Catalogue visuel des composants UI', badge: 'Admin' },
         { id: 'page-inspector', label: 'Inspecteur IA', icon: <Search className="h-4 w-4" />, description: 'Analyse IA des pages pour détecter les incohérences', badge: 'Nouveau' },
       ],
     },
