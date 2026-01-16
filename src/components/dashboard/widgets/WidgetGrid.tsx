@@ -378,7 +378,7 @@ export function WidgetGrid() {
           rowHeight={120}
           width={containerWidth}
           margin={[16, 16]}
-          containerPadding={[8, 8]}
+          containerPadding={[0, 0]}
           isDraggable={isEditing}
           isResizable={isEditing}
           draggableHandle=".widget-drag-handle"

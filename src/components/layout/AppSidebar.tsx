@@ -93,7 +93,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   // Build navigation based on enabled modules
   const { coreNavigation, extensionNavigation } = useMemo(() => {
     const core: NavItem[] = [
-      { title: "Dashboard", icon: LayoutDashboard, href: "/" },
+      { title: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
     ];
     const extensions: NavItem[] = [];
 
