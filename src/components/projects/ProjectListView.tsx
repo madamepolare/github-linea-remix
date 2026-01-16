@@ -96,7 +96,7 @@ function SubProjectsRows({ parentId, onNavigate, onDelete, membersByProject }: {
   if (isLoading) {
     return (
       <TableRow>
-        <TableCell colSpan={8} className="py-2 pl-12">
+        <TableCell colSpan={9} className="py-2 pl-12">
           <Skeleton className="h-8 w-full" />
         </TableCell>
       </TableRow>
@@ -146,12 +146,12 @@ function SubProjectsRows({ parentId, onNavigate, onDelete, membersByProject }: {
               </div>
             </TableCell>
             <TableCell>
-              <div className="flex items-center gap-2">
-                {projectType && (
-                  <Badge variant="secondary" className="text-xs">{projectType.label}</Badge>
-                )}
-                <ProjectMemberAvatars members={membersByProject[project.id] || []} />
-              </div>
+              {projectType && (
+                <Badge variant="secondary" className="text-xs">{projectType.label}</Badge>
+              )}
+            </TableCell>
+            <TableCell>
+              <ProjectMemberAvatars members={membersByProject[project.id] || []} />
             </TableCell>
             <TableCell>
               {project.crm_company ? (
@@ -303,6 +303,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
             <TableRow>
               <TableHead className="w-[300px]">Projet</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead className="w-[100px]">Équipe</TableHead>
               <TableHead>Client</TableHead>
               <TableHead>Phase</TableHead>
               <TableHead>Avancement</TableHead>
@@ -372,12 +373,12 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        {projectType && (
-                          <Badge variant="secondary">{projectType.label}</Badge>
-                        )}
-                        <ProjectMemberAvatars members={projectMembersByProject[project.id] || []} />
-                      </div>
+                      {projectType && (
+                        <Badge variant="secondary">{projectType.label}</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <ProjectMemberAvatars members={projectMembersByProject[project.id] || []} />
                     </TableCell>
                     <TableCell>
                       {project.crm_company ? (
