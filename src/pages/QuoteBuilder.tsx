@@ -795,7 +795,7 @@ export default function QuoteBuilder() {
                     <TabsTrigger 
                       key={tabId} 
                       value={tabId} 
-                      className="gap-1.5 px-3 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md h-7"
+                      className="gap-1.5 px-3 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow rounded-md h-7"
                     >
                       <Icon className="h-3.5 w-3.5" />
                       <span>{config.label}</span>
