@@ -15,6 +15,11 @@ import {
   SheetContent,
 } from "@/components/ui/sheet";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -371,16 +376,50 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                 {priorityConfig.label}
               </button>
 
-              {relatedType && relatedId && (
-                <button
-                  onClick={handleNavigateToEntity}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-all"
-                >
-                  <Link2 className="h-3.5 w-3.5" />
-                  <LinkedEntityBadge entityType={relatedType} entityId={relatedId} />
-                  <ExternalLink className="h-3 w-3" />
-                </button>
-              )}
+              {/* Entity relation - clickable to change */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  {relatedType && relatedId ? (
+                    <button
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                    >
+                      <Link2 className="h-3.5 w-3.5" />
+                      <LinkedEntityBadge entityType={relatedType} entityId={relatedId} />
+                    </button>
+                  ) : (
+                    <button
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-all"
+                    >
+                      <Link2 className="h-3.5 w-3.5" />
+                      Lier
+                    </button>
+                  )}
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-3" align="start">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Entité liée</label>
+                      {relatedType && relatedId && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-xs text-muted-foreground"
+                          onClick={handleNavigateToEntity}
+                        >
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          Ouvrir
+                        </Button>
+                      )}
+                    </div>
+                    <EntitySelector
+                      entityType={relatedType}
+                      entityId={relatedId}
+                      onEntityTypeChange={setRelatedType}
+                      onEntityIdChange={setRelatedId}
+                    />
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
@@ -467,19 +506,6 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                   </div>
                 </div>
 
-                {/* Entity Linking - only one field now */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                    <Link2 className="h-3.5 w-3.5" />
-                    Entité liée
-                  </label>
-                  <EntitySelector
-                    entityType={relatedType}
-                    entityId={relatedId}
-                    onEntityTypeChange={setRelatedType}
-                    onEntityIdChange={setRelatedId}
-                  />
-                </div>
 
                 {/* Estimation */}
                 <div className="space-y-2">
