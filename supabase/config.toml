@@ -110,3 +110,6 @@ verify_jwt = false
 
 [functions.framework-request-submit]
 verify_jwt = false
+
+[functions.ai-page-inspector]
+verify_jwt = false
