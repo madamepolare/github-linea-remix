@@ -577,19 +577,18 @@ export default function QuoteBuilder() {
     <div className="h-full flex flex-col bg-background">
       
       {/* Header */}
-      <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b bg-card shrink-0 gap-2">
-        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-          <Button variant="ghost" size="icon" onClick={handleBack} className="shrink-0">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b bg-card shrink-0 gap-3">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+          <Button variant="ghost" size="icon" onClick={handleBack} className="shrink-0 h-8 w-8">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <Separator orientation="vertical" className="h-6 hidden sm:block" />
           
           {/* Document type toggle */}
           <div className="flex items-center bg-muted rounded-lg p-0.5 shrink-0">
             <Button
               variant={document.document_type === 'quote' ? 'default' : 'ghost'}
               size="sm"
-              className="h-7 px-2.5 text-xs"
+              className="h-7 px-3 text-xs"
               onClick={() => handleDocumentChange({ document_type: 'quote' })}
             >
               Devis
@@ -597,12 +596,14 @@ export default function QuoteBuilder() {
             <Button
               variant={document.document_type === 'contract' ? 'default' : 'ghost'}
               size="sm"
-              className="h-7 px-2.5 text-xs"
+              className="h-7 px-3 text-xs"
               onClick={() => handleDocumentChange({ document_type: 'contract' })}
             >
               Contrat
             </Button>
           </div>
+          
+          <Separator orientation="vertical" className="h-6 hidden sm:block" />
           
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-3">
@@ -617,7 +618,7 @@ export default function QuoteBuilder() {
                 value={document.status || 'draft'}
                 onValueChange={(v) => handleDocumentChange({ status: v as DocumentStatus })}
               >
-                <SelectTrigger className="h-8 w-auto min-w-[110px] text-xs font-medium shrink-0 rounded-full">
+                <SelectTrigger className="h-8 w-auto min-w-[120px] text-xs font-medium shrink-0 rounded-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -640,7 +641,7 @@ export default function QuoteBuilder() {
                 </SelectContent>
               </Select>
             </div>
-            <p className="text-xs text-muted-foreground tracking-wide mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {document.document_number || 'Brouillon'} {document.client_company?.name ? `• ${document.client_company.name}` : ''}
             </p>
           </div>
@@ -780,10 +781,10 @@ export default function QuoteBuilder() {
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Editor Panel */}
-        <div className={`flex flex-col ${showPreview ? 'w-full lg:w-[60%]' : 'w-full'} border-r`}>
+        <div className={`flex flex-col ${showPreview ? 'w-full lg:w-[55%]' : 'w-full'} border-r bg-background`}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1">
-            <div className="px-3 sm:px-6 pt-3 sm:pt-4 pb-0 border-b bg-card shrink-0 overflow-x-auto">
-              <TabsList className="h-10 sm:h-11 w-max sm:w-auto bg-muted/50 p-1 rounded-lg">
+            <div className="px-4 sm:px-6 py-3 border-b bg-card shrink-0 overflow-x-auto">
+              <TabsList className="h-9 w-max bg-muted/50 p-1 rounded-lg gap-0.5">
                 {processedTabs.map(tabId => {
                   const config = TAB_CONFIG[tabId];
                   const Icon = config.icon;
@@ -794,12 +795,12 @@ export default function QuoteBuilder() {
                     <TabsTrigger 
                       key={tabId} 
                       value={tabId} 
-                      className="gap-2 px-3 sm:px-4 text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+                      className="gap-1.5 px-3 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md h-7"
                     >
-                      <Icon className="h-4 w-4" />
-                      <span className="hidden sm:inline">{config.label}</span>
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{config.label}</span>
                       {(showLineCount || showLinesCount) && (
-                        <span className="ml-1 text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full font-medium">
+                        <span className="ml-0.5 text-2xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full font-medium">
                           {lines.length}
                         </span>
                       )}
@@ -809,9 +810,9 @@ export default function QuoteBuilder() {
               </TabsList>
             </div>
 
-            <ScrollArea className="flex-1 bg-muted/20">
+            <ScrollArea className="flex-1 bg-muted/10">
               {processedTabs.includes('general') && (
-                <TabsContent value="general" className="m-0 p-3 sm:p-6">
+                <TabsContent value="general" className="m-0 p-4 sm:p-6">
                   <QuoteGeneralTab 
                     document={document}
                     onDocumentChange={handleDocumentChange}
@@ -822,7 +823,7 @@ export default function QuoteBuilder() {
               )}
 
               {processedTabs.includes('fees') && (
-                <TabsContent value="fees" className="m-0 p-3 sm:p-6">
+                <TabsContent value="fees" className="m-0 p-4 sm:p-6">
                   <QuoteFeesAndLinesTab 
                     document={document}
                     onDocumentChange={handleDocumentChange}
@@ -834,7 +835,7 @@ export default function QuoteBuilder() {
               )}
 
               {processedTabs.includes('lines') && !hasBothFeesAndLines && (
-                <TabsContent value="lines" className="m-0 p-3 sm:p-6">
+                <TabsContent value="lines" className="m-0 p-4 sm:p-6">
                   <QuoteLinesEditor
                     lines={lines}
                     onLinesChange={handleLinesChange}
@@ -845,7 +846,7 @@ export default function QuoteBuilder() {
               )}
 
               {processedTabs.includes('production') && (
-                <TabsContent value="production" className="m-0 p-3 sm:p-6">
+                <TabsContent value="production" className="m-0 p-4 sm:p-6">
                   <QuoteProductionTab 
                     document={document}
                     onDocumentChange={handleDocumentChange}
@@ -856,7 +857,7 @@ export default function QuoteBuilder() {
               )}
 
               {processedTabs.includes('planning') && (
-                <TabsContent value="planning" className="m-0 p-3 sm:p-6">
+                <TabsContent value="planning" className="m-0 p-4 sm:p-6">
                   <QuotePlanningTab 
                     document={document}
                     onDocumentChange={handleDocumentChange}
@@ -867,7 +868,7 @@ export default function QuoteBuilder() {
               )}
 
               {processedTabs.includes('invoicing') && (
-                <TabsContent value="invoicing" className="m-0 p-3 sm:p-6">
+                <TabsContent value="invoicing" className="m-0 p-4 sm:p-6">
                   <QuoteInvoicingTab 
                     document={document}
                     onDocumentChange={handleDocumentChange}
@@ -877,7 +878,7 @@ export default function QuoteBuilder() {
               )}
 
               {processedTabs.includes('terms') && (
-                <TabsContent value="terms" className="m-0 p-3 sm:p-6">
+                <TabsContent value="terms" className="m-0 p-4 sm:p-6">
                   {isArchitectureContractType(currentContractType?.code || document.project_type || '') ? (
                     <QuoteMOETermsTab
                       document={document}
@@ -904,10 +905,10 @@ export default function QuoteBuilder() {
 
         {/* Preview Panel - Hidden on mobile */}
         {showPreview && (
-          <div className="hidden lg:flex w-[40%] flex-col bg-muted/30">
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-background shrink-0">
-              <span className="text-sm font-medium">Aperçu</span>
-              <div className="flex items-center gap-2">
+          <div className="hidden lg:flex w-[45%] flex-col bg-muted/20 border-l">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b bg-card shrink-0">
+              <span className="text-sm font-medium text-muted-foreground">Aperçu</span>
+              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -916,7 +917,7 @@ export default function QuoteBuilder() {
                 >
                   <ZoomOut className="h-3.5 w-3.5" />
                 </Button>
-                <span className="text-xs text-muted-foreground w-10 text-center">{zoom}%</span>
+                <span className="text-xs text-muted-foreground w-10 text-center tabular-nums">{zoom}%</span>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -927,7 +928,7 @@ export default function QuoteBuilder() {
                 </Button>
               </div>
             </div>
-            <div className="flex-1 overflow-auto p-4">
+            <div className="flex-1 overflow-auto p-4 flex justify-center">
               {document.document_type === 'contract' ? (
                 <ContractPreviewPanel
                   document={document}
