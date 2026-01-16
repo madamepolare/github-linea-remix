@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import ReactGridLayout from "react-grid-layout";
-import { Plus, Settings2, RotateCcw, Check, User, FolderKanban, Wallet, ChevronDown } from "lucide-react";
+import { Plus, Settings2, RotateCcw, Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WidgetRenderer } from "./WidgetRenderer";
 import { WidgetPicker } from "./WidgetPicker";
@@ -22,20 +22,22 @@ import "./grid-styles.css";
 // Cast GridLayout to any to avoid type mismatch issues
 const GridLayout = ReactGridLayout as any;
 
-interface RGLLayout {
+// Our own layout item interface matching react-grid-layout expectations
+interface LayoutItem {
   i: string;
   x: number;
   y: number;
   w: number;
   h: number;
   minW?: number;
-  minH?: number;
   maxW?: number;
+  minH?: number;
   maxH?: number;
 }
 
 const STORAGE_KEY = "linea-dashboard-layout";
 const TEMPLATE_KEY = "linea-dashboard-template";
+const COLS = 4;
 
 const DEFAULT_WIDGETS: string[] = [
   "welcome",
@@ -46,54 +48,61 @@ const DEFAULT_WIDGETS: string[] = [
   "activity-feed",
 ];
 
-// Width constraints: 1 = 25%, 2 = 50%, 4 = 100% of grid
-const ALLOWED_WIDTHS = [1, 2, 4] as const;
-
-function snapToAllowedWidth(w: number): 1 | 2 | 4 {
-  // Snap to nearest allowed width based on thresholds
-  if (w <= 1.5) return 1;      // 25%
-  if (w <= 3) return 2;        // 50%
-  return 4;                     // 100%
-}
-
-function getDefaultLayout(widgets: string[]): RGLLayout[] {
+function getDefaultLayout(widgets: string[]): LayoutItem[] {
   let x = 0;
   let y = 0;
 
   return widgets.map((widgetId) => {
     const config = getWidgetById(widgetId);
     const size = config ? getSizeDefaults(config.defaultSize) : { w: 2, h: 2 };
-    const snappedW = snapToAllowedWidth(size.w);
+    const w = Math.min(size.w, COLS);
 
-    if (x + snappedW > 4) {
+    if (x + w > COLS) {
       x = 0;
       y += 2;
     }
 
-    const layout: RGLLayout = {
+    const layout: LayoutItem = {
       i: widgetId,
       x,
       y,
-      w: snappedW,
+      w,
       h: size.h,
-      minW: 1,
-      maxW: 4,
+      minW: config?.minW || 1,
+      maxW: config?.maxW || COLS,
       minH: config?.minH || 1,
+      maxH: config?.maxH,
     };
 
-    x += snappedW;
+    x += w;
+    if (x >= COLS) {
+      x = 0;
+      y += size.h;
+    }
+    
     return layout;
   });
 }
 
-function loadLayout(): { widgets: string[]; layout: RGLLayout[] } {
+function loadLayout(): { widgets: string[]; layout: LayoutItem[] } {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
+      // Re-apply constraints from registry
+      const layout = (parsed.layout || []).map((item: LayoutItem) => {
+        const config = getWidgetById(item.i);
+        return {
+          ...item,
+          minW: config?.minW || 1,
+          maxW: config?.maxW || COLS,
+          minH: config?.minH || 1,
+          maxH: config?.maxH,
+        };
+      });
       return {
         widgets: parsed.widgets || DEFAULT_WIDGETS,
-        layout: parsed.layout || getDefaultLayout(parsed.widgets || DEFAULT_WIDGETS),
+        layout: layout.length ? layout : getDefaultLayout(parsed.widgets || DEFAULT_WIDGETS),
       };
     }
   } catch (e) {
@@ -105,7 +114,7 @@ function loadLayout(): { widgets: string[]; layout: RGLLayout[] } {
   };
 }
 
-function saveLayout(widgets: string[], layout: RGLLayout[]) {
+function saveLayout(widgets: string[], layout: LayoutItem[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ widgets, layout }));
   } catch (e) {
@@ -143,15 +152,21 @@ export function WidgetGrid() {
   }, []);
 
   const handleLayoutChange = useCallback(
-    (newLayout: RGLLayout[]) => {
+    (newLayout: LayoutItem[]) => {
       if (isEditing) {
-        // Snap widths to allowed values (1, 2, or 4)
-        const snappedLayout = newLayout.map((item) => ({
-          ...item,
-          w: snapToAllowedWidth(item.w),
-        }));
-        setState((prev) => ({ ...prev, layout: snappedLayout }));
-        saveLayout(widgets, snappedLayout);
+        // Apply constraints from registry to maintain them
+        const constrainedLayout = newLayout.map((item) => {
+          const config = getWidgetById(item.i);
+          return {
+            ...item,
+            minW: config?.minW || 1,
+            maxW: config?.maxW || COLS,
+            minH: config?.minH || 1,
+            maxH: config?.maxH,
+          };
+        });
+        setState((prev) => ({ ...prev, layout: constrainedLayout }));
+        saveLayout(widgets, constrainedLayout);
       }
     },
     [isEditing, widgets]
@@ -163,18 +178,19 @@ export function WidgetGrid() {
 
       const config = getWidgetById(widgetId);
       const size = config ? getSizeDefaults(config.defaultSize) : { w: 2, h: 2 };
-      const snappedW = snapToAllowedWidth(size.w);
+      const w = Math.min(size.w, COLS);
       const maxY = Math.max(0, ...prev.layout.map((l) => l.y + l.h));
 
-      const newLayout: RGLLayout = {
+      const newLayout: LayoutItem = {
         i: widgetId,
         x: 0,
         y: maxY,
-        w: snappedW,
+        w,
         h: size.h,
-        minW: 1,
-        maxW: 4,
+        minW: config?.minW || 1,
+        maxW: config?.maxW || COLS,
         minH: config?.minH || 1,
+        maxH: config?.maxH,
       };
 
       const newWidgets = [...prev.widgets, widgetId];
@@ -374,7 +390,7 @@ export function WidgetGrid() {
         <GridLayout
           className="layout"
           layout={layout}
-          cols={4}
+          cols={COLS}
           rowHeight={120}
           width={containerWidth}
           margin={[16, 16]}
@@ -384,12 +400,20 @@ export function WidgetGrid() {
           draggableHandle=".widget-drag-handle"
           onLayoutChange={handleLayoutChange}
           useCSSTransforms
-          resizeHandles={["e", "w", "se"]}
+          resizeHandles={["se", "e"]}
+          compactType="vertical"
+          preventCollision={false}
         >
           {widgets.map((widgetId) => {
             const widgetLayout = layout.find(l => l.i === widgetId);
             return (
-              <div key={widgetId} className={cn(isEditing && "transition-shadow")}>
+              <div 
+                key={widgetId} 
+                className={cn(
+                  "h-full",
+                  isEditing && "transition-shadow"
+                )}
+              >
                 <WidgetRenderer 
                   widgetId={widgetId} 
                   isEditing={isEditing} 
