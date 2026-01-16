@@ -461,10 +461,10 @@ export function QuoteLineItemCompact({
           <div className="border-t bg-gradient-to-b from-muted/30 to-transparent">
             <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full">
               <div className="px-4 pt-3 border-b bg-muted/20">
-                <TabsList className="h-8 bg-transparent p-0 gap-1">
+                <TabsList className="h-8 bg-transparent p-0 gap-4 border-0">
                   <TabsTrigger 
                     value="pricing" 
-                    className="h-7 px-3 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+                    className="h-7 px-0 text-xs bg-transparent border-0 shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground"
                   >
                     <Euro className="h-3 w-3 mr-1.5" />
                     Tarification
@@ -472,7 +472,7 @@ export function QuoteLineItemCompact({
                   {(features.showMemberAssignment || features.showSkillAssignment) && (
                     <TabsTrigger 
                       value="resources" 
-                      className="h-7 px-3 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+                      className="h-7 px-0 text-xs bg-transparent border-0 shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground"
                     >
                       <User className="h-3 w-3 mr-1.5" />
                       Ressources
@@ -481,7 +481,7 @@ export function QuoteLineItemCompact({
                   {features.showDates && (
                     <TabsTrigger 
                       value="planning" 
-                      className="h-7 px-3 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+                      className="h-7 px-0 text-xs bg-transparent border-0 shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground"
                     >
                       <Clock className="h-3 w-3 mr-1.5" />
                       Planning
@@ -490,7 +490,7 @@ export function QuoteLineItemCompact({
                   {(features.showPurchasePrice || features.showCostAndMargin) && (
                     <TabsTrigger 
                       value="costs" 
-                      className="h-7 px-3 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+                      className="h-7 px-0 text-xs bg-transparent border-0 shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground"
                     >
                       <TrendingUp className="h-3 w-3 mr-1.5" />
                       Coûts
