@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useInvoiceSchedule } from "@/hooks/useInvoiceSchedule";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import {
   CreditCard,
   Building2,
   ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +30,7 @@ interface InvoicingOverviewTabProps {
 }
 
 export function InvoicingOverviewTab({ projectId, projectBudget = 0, onNavigateToTab }: InvoicingOverviewTabProps) {
+  const navigate = useNavigate();
   const { data: allInvoices = [], isLoading: invoicesLoading } = useInvoices();
   const { scheduleItems, summary: scheduleSummary, nextDue, overdueItems, isLoading: scheduleLoading } = useInvoiceSchedule(projectId);
 
@@ -370,6 +373,20 @@ export function InvoicingOverviewTab({ projectId, projectBudget = 0, onNavigateT
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Link to global invoicing */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate('/invoicing')}
+          className="gap-2"
+        >
+          <Receipt className="h-4 w-4" />
+          Voir toute la facturation
+          <ExternalLink className="h-3 w-3" />
+        </Button>
       </div>
     </div>
   );

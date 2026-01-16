@@ -125,9 +125,6 @@ export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicing
                   handleCreateInvoice();
                 }}
                 onViewInvoice={handleEditInvoice}
-                onAdjustBudget={() => {
-                  handleNavigateToTab('overview');
-                }}
               />
             </TabsContent>
 

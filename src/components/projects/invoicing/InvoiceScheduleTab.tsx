@@ -43,12 +43,12 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BudgetVsCAAlert } from "./BudgetVsCAAlert";
 import { InvoiceScheduleInlineRow } from "./InvoiceScheduleInlineRow";
+import { AdjustBudgetDialog } from "./AdjustBudgetDialog";
 
 interface InvoiceScheduleTabProps {
   projectId: string;
   onCreateInvoice?: (scheduleItem: InvoiceScheduleItem) => void;
   onViewInvoice?: (invoiceId: string) => void;
-  onAdjustBudget?: () => void;
 }
 
 // Predefined schedule templates
@@ -58,7 +58,7 @@ const SCHEDULE_TEMPLATES = [
   { name: "30/30/30/10", items: [{ title: "Acompte", percentage: 30, daysFromStart: 0 }, { title: "Esquisse", percentage: 30, daysFromStart: 30 }, { title: "APD/DCE", percentage: 30, daysFromStart: 60 }, { title: "Réception", percentage: 10, daysFromStart: 90 }] },
 ];
 
-export function InvoiceScheduleTab({ projectId, onCreateInvoice, onViewInvoice, onAdjustBudget }: InvoiceScheduleTabProps) {
+export function InvoiceScheduleTab({ projectId, onCreateInvoice, onViewInvoice }: InvoiceScheduleTabProps) {
   const { 
     scheduleItems, 
     isLoading, 
@@ -88,6 +88,7 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice, onViewInvoice, 
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("30/40/30");
   const [adjustCADialogOpen, setAdjustCADialogOpen] = useState(false);
+  const [adjustBudgetDialogOpen, setAdjustBudgetDialogOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -243,7 +244,7 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice, onViewInvoice, 
           <BudgetVsCAAlert
             totalCA={summary.totalAmountHt}
             projectBudget={financialSummary.currentBudget}
-            onAdjustBudget={onAdjustBudget}
+            onAdjustBudget={() => setAdjustBudgetDialogOpen(true)}
             onAdjustCA={handleAdjustCA}
             onRedistribute={handleRedistribute}
           />
@@ -652,6 +653,14 @@ export function InvoiceScheduleTab({ projectId, onCreateInvoice, onViewInvoice, 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Adjust Budget Dialog */}
+      <AdjustBudgetDialog
+        open={adjustBudgetDialogOpen}
+        onOpenChange={setAdjustBudgetDialogOpen}
+        projectId={projectId}
+        currentBudget={financialSummary.currentBudget}
+      />
     </div>
   );
 }
