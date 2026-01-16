@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProjects, useSubProjects, useProjectMembersForList, Project, ProjectMember } from "@/hooks/useProjects";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -34,7 +35,7 @@ import {
 } from "@/components/ui/collapsible";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Building2, FolderKanban, MapPin, MoreHorizontal, Archive, ArchiveRestore, Trash2, ChevronRight, Lock, Unlock, FolderOpen, CornerDownRight } from "lucide-react";
+import { Building2, FolderKanban, MapPin, MoreHorizontal, Archive, ArchiveRestore, Trash2, ChevronRight, Lock, Unlock, FolderOpen, CornerDownRight, Calendar, Wallet } from "lucide-react";
 import { PROJECT_TYPES } from "@/lib/projectTypes";
 import { cn } from "@/lib/utils";
 
@@ -208,6 +209,7 @@ function SubProjectsRows({ parentId, onNavigate, onDelete, membersByProject }: {
 
 export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [viewFilter, setViewFilter] = useState<ViewFilter>("active");
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
@@ -268,7 +270,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         {[1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-16 w-full" />
         ))}
@@ -277,13 +279,13 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
   }
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-4">
+      <div className="flex items-center justify-between overflow-x-auto">
         <Tabs value={viewFilter} onValueChange={(v) => setViewFilter(v as ViewFilter)}>
-          <TabsList>
-            <TabsTrigger value="active">Actifs ({activeProjects.length})</TabsTrigger>
-            <TabsTrigger value="closed">Fermés ({closedProjects.filter(p => p.status === "closed" && !p.is_archived).length})</TabsTrigger>
-            <TabsTrigger value="archived">Archivés ({archivedProjects.filter(p => p.is_archived).length})</TabsTrigger>
+          <TabsList className="h-9">
+            <TabsTrigger value="active" className="text-xs sm:text-sm">Actifs ({activeProjects.length})</TabsTrigger>
+            <TabsTrigger value="closed" className="text-xs sm:text-sm">Fermés ({closedProjects.filter(p => p.status === "closed" && !p.is_archived).length})</TabsTrigger>
+            <TabsTrigger value="archived" className="text-xs sm:text-sm hidden sm:flex">Archivés ({archivedProjects.filter(p => p.is_archived).length})</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -297,7 +299,82 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
             action={viewFilter === "active" && onCreateProject ? { label: "Créer un projet", onClick: onCreateProject } : undefined}
           />
         </div>
+      ) : isMobile ? (
+        /* Mobile Card View */
+        <div className="space-y-2">
+          {projects.map((project) => {
+            const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
+            const phases = project.phases || [];
+            const completedPhases = phases.filter((p) => p.status === "completed").length;
+            const progressPercent = phases.length > 0 ? Math.round((completedPhases / phases.length) * 100) : 0;
+            const currentPhase = phases.find((p) => p.status === "in_progress");
+            const isClosed = project.status === "closed";
+
+            return (
+              <div
+                key={project.id}
+                className={cn(
+                  "flex items-start gap-3 p-3 border-b cursor-pointer active:bg-muted/50 touch-manipulation",
+                  isClosed && "opacity-70"
+                )}
+                onClick={() => navigate(`/projects/${project.id}`)}
+              >
+                {/* Color indicator */}
+                <div
+                  className="w-1 h-full min-h-[60px] rounded-full flex-shrink-0"
+                  style={{ backgroundColor: project.color || "#3B82F6" }}
+                />
+                
+                {/* Content */}
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm truncate">{project.name}</p>
+                        {isClosed && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+                      </div>
+                      {project.city && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <MapPin className="h-3 w-3" />
+                          {project.city}
+                        </p>
+                      )}
+                    </div>
+                    <ProjectMemberAvatars members={projectMembersByProject[project.id] || []} />
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {projectType && (
+                      <Badge variant="secondary" className="text-2xs">{projectType.label}</Badge>
+                    )}
+                    {project.crm_company && (
+                      <Badge variant="outline" className="text-2xs gap-1">
+                        <Building2 className="h-2.5 w-2.5" />
+                        {project.crm_company.name}
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Progress value={progressPercent} className="h-1.5 flex-1 max-w-[100px]" />
+                      <span className="text-2xs text-muted-foreground">{progressPercent}%</span>
+                    </div>
+                    
+                    {project.budget && (
+                      <span className="text-xs font-medium text-primary flex items-center gap-1">
+                        <Wallet className="h-3 w-3" />
+                        {(project.budget / 1000).toFixed(0)}k €
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
+        /* Desktop Table View */
         <Table>
           <TableHeader>
             <TableRow>

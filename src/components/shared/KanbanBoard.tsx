@@ -2,7 +2,8 @@ import { useState, ReactNode, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, MoreHorizontal, GripVertical, Clipboard } from "lucide-react";
+import { Plus, MoreHorizontal, GripVertical, Clipboard, ChevronLeft, ChevronRight } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface KanbanColumn<T> {
   id: string;
@@ -35,8 +36,11 @@ export function KanbanBoard<T>({
   emptyColumnContent,
   className,
 }: KanbanBoardProps<T>) {
+  const isMobile = useIsMobile();
   const [draggedItem, setDraggedItem] = useState<{ id: string; fromColumn: string } | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [mobileColumnIndex, setMobileColumnIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
   // Track if any drag is happening globally to disable layout animations
   const isDraggingRef = useRef(false);
 
@@ -98,11 +102,20 @@ export function KanbanBoard<T>({
     setDragOverColumn(null);
   };
 
+  // Mobile navigation
+  const handlePrevColumn = () => {
+    setMobileColumnIndex(Math.max(0, mobileColumnIndex - 1));
+  };
+  
+  const handleNextColumn = () => {
+    setMobileColumnIndex(Math.min(columns.length - 1, mobileColumnIndex + 1));
+  };
+
   if (isLoading) {
     return (
       <div className={cn("flex gap-4 sm:gap-6 overflow-x-auto snap-x snap-mandatory pb-4", className)}>
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="flex-shrink-0 min-w-[85vw] md:min-w-[320px] w-72 sm:w-80 snap-center space-y-2">
+        {[...Array(isMobile ? 1 : 4)].map((_, i) => (
+          <div key={i} className="flex-shrink-0 w-full md:min-w-[320px] md:w-80 snap-center space-y-2 px-1">
             <Skeleton className="h-8 w-32 rounded-md bg-muted/50" />
             <Skeleton className="h-20 w-full rounded-lg bg-muted/30" />
             <Skeleton className="h-20 w-full rounded-lg bg-muted/30" />
@@ -113,23 +126,79 @@ export function KanbanBoard<T>({
     );
   }
 
+  // Mobile: show one column at a time with nav
+  const displayColumns = isMobile ? [columns[mobileColumnIndex]] : columns;
+
   return (
-    <div className={cn("flex gap-4 sm:gap-6 overflow-x-auto snap-x snap-mandatory pb-4 h-full", className)}>
-      {columns.map((column) => {
-        const isDropTarget = dragOverColumn === column.id && draggedItem?.fromColumn !== column.id;
-        
-        return (
-          <div
-            key={column.id}
+    <div className={cn("flex flex-col h-full", className)}>
+      {/* Mobile Column Selector */}
+      {isMobile && columns.length > 1 && (
+        <div className="flex items-center justify-between px-2 pb-3 border-b mb-3">
+          <button
+            onClick={handlePrevColumn}
+            disabled={mobileColumnIndex === 0}
             className={cn(
-              "kanban-column flex flex-col min-h-[400px] sm:min-h-[500px] min-w-[85vw] md:min-w-[320px] w-72 sm:w-80 flex-shrink-0 snap-center",
-              "transition-all duration-150",
-              isDropTarget && "bg-muted/25 rounded-xl"
+              "p-2 rounded-lg transition-colors touch-manipulation",
+              mobileColumnIndex === 0 ? "text-muted-foreground/30" : "text-foreground hover:bg-muted active:bg-muted/80"
             )}
-            onDragOver={(e) => handleDragOver(e, column.id)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, column.id)}
           >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          
+          <div className="flex items-center gap-1.5">
+            {columns.map((col, idx) => (
+              <button
+                key={col.id}
+                onClick={() => setMobileColumnIndex(idx)}
+                className={cn(
+                  "h-2 rounded-full transition-all touch-manipulation",
+                  idx === mobileColumnIndex 
+                    ? "w-6 bg-primary" 
+                    : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                )}
+                style={idx === mobileColumnIndex && col.color ? { backgroundColor: col.color } : undefined}
+              />
+            ))}
+          </div>
+          
+          <button
+            onClick={handleNextColumn}
+            disabled={mobileColumnIndex === columns.length - 1}
+            className={cn(
+              "p-2 rounded-lg transition-colors touch-manipulation",
+              mobileColumnIndex === columns.length - 1 ? "text-muted-foreground/30" : "text-foreground hover:bg-muted active:bg-muted/80"
+            )}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+
+      <div 
+        ref={containerRef}
+        className={cn(
+          "flex-1 overflow-x-auto snap-x snap-mandatory",
+          isMobile ? "flex flex-col" : "flex gap-4 sm:gap-6 pb-4"
+        )}
+      >
+        {displayColumns.map((column) => {
+          const isDropTarget = dragOverColumn === column.id && draggedItem?.fromColumn !== column.id;
+          
+          return (
+            <div
+              key={column.id}
+              className={cn(
+                "kanban-column flex flex-col flex-shrink-0 snap-center",
+                isMobile 
+                  ? "w-full min-h-[calc(100vh-280px)]" 
+                  : "min-h-[400px] sm:min-h-[500px] min-w-[280px] md:min-w-[320px] w-72 sm:w-80",
+                "transition-all duration-150",
+                isDropTarget && "bg-muted/25 rounded-xl"
+              )}
+              onDragOver={(e) => handleDragOver(e, column.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, column.id)}
+            >
             {/* Column Header */}
             <div className="kanban-column-header flex items-center justify-between px-1 py-2 mb-3">
               <div className="flex items-center gap-2">
@@ -226,6 +295,7 @@ export function KanbanBoard<T>({
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
