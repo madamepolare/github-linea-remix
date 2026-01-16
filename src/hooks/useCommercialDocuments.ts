@@ -455,7 +455,7 @@ export const useCommercialDocuments = () => {
           city: doc.project_city,
           postal_code: doc.postal_code,
           surface_area: doc.project_surface,
-          budget: doc.project_budget,
+          budget: doc.total_amount || doc.project_budget || 0,
           start_date: doc.expected_start_date || startDate,
           end_date: doc.expected_end_date || projectEndDate,
           color: '#3B82F6',
