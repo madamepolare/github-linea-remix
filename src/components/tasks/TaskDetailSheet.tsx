@@ -424,7 +424,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                 </PopoverContent>
               </Popover>
 
-              {/* Date picker - deadline or duration */}
+              {/* Date picker - deadline only */}
               <Popover>
                 <PopoverTrigger asChild>
                   <button
@@ -434,51 +434,29 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                     )}
                   >
                     <CalendarIcon className="h-3.5 w-3.5" />
-                    {dueDate ? (
-                      startDate ? (
-                        <span>{format(startDate, "dd/MM")} → {format(dueDate, "dd/MM")}</span>
-                      ) : (
-                        format(dueDate, "dd MMM", { locale: fr })
-                      )
-                    ) : (
-                      "Échéance"
-                    )}
+                    {dueDate ? format(dueDate, "dd MMM", { locale: fr }) : "Échéance"}
                   </button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-3" align="start">
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Date de début (optionnel)</label>
-                      <CalendarComponent
-                        mode="single"
-                        selected={startDate || undefined}
-                        onSelect={(date) => setStartDate(date || null)}
-                        className="rounded-md border pointer-events-auto"
-                      />
-                    </div>
-                    <div className="border-t pt-3 space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Échéance</label>
-                      <CalendarComponent
-                        mode="single"
-                        selected={dueDate || undefined}
-                        onSelect={(date) => setDueDate(date || null)}
-                        className="rounded-md border pointer-events-auto"
-                      />
-                    </div>
-                    {(startDate || dueDate) && (
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={dueDate || undefined}
+                    onSelect={(date) => setDueDate(date || null)}
+                    initialFocus
+                    locale={fr}
+                  />
+                  {dueDate && (
+                    <div className="p-2 border-t">
                       <Button
                         variant="ghost"
                         size="sm"
                         className="w-full text-xs"
-                        onClick={() => {
-                          setStartDate(null);
-                          setDueDate(null);
-                        }}
+                        onClick={() => setDueDate(null)}
                       >
-                        Effacer les dates
+                        Effacer l'échéance
                       </Button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </PopoverContent>
               </Popover>
 
