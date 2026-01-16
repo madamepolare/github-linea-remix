@@ -237,6 +237,7 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
       icon: Building2,
       color: "text-info",
       bgColor: "bg-info/10",
+      sparklineColor: "hsl(var(--info))",
       sparklineData: generateSparklineData(companiesCount),
       action: () => onNavigate("companies"),
     },
@@ -247,6 +248,7 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
       icon: Users,
       color: "text-accent",
       bgColor: "bg-accent/10",
+      sparklineColor: "hsl(var(--accent))",
       sparklineData: generateSparklineData(contactsCount),
       action: () => onNavigate("contacts"),
     },
@@ -257,6 +259,7 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
       icon: Target,
       color: "text-success",
       bgColor: "bg-success/10",
+      sparklineColor: "hsl(var(--success))",
       sparklineData: generateSparklineData(pipelineStats?.total || 0, 0.3),
       action: () => onNavigate("prospection"),
     },
@@ -320,9 +323,10 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
             >
               <CardContent className="p-4 relative">
                 {/* Background sparkline */}
-                <div className="absolute bottom-0 right-0 opacity-50">
+                <div className="absolute bottom-0 right-0 opacity-60">
                   <CRMSparkline
                     data={stat.sparklineData}
+                    color={stat.sparklineColor}
                     height={40}
                     showDots
                   />
@@ -351,13 +355,13 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
         ))}
       </motion.div>
 
-      {/* Prospection Stats Row - Always show if there's pipeline data */}
-      {(pipelineStats?.total || 0) > 0 && (
+      {/* Prospection Stats Row - Only show if there's meaningful data */}
+      {((pipelineStats?.withReplies || 0) > 0 || (pipelineStats?.awaiting || 0) > 0 || (pipelineStats?.recent || 0) > 0) && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+          className="grid grid-cols-2 lg:grid-cols-3 gap-3"
         >
           {(pipelineStats?.withReplies || 0) > 0 && (
             <Card className="cursor-pointer hover:bg-muted/50 transition-colors border-success/30 bg-success/5" onClick={() => onNavigate("prospection")}>
@@ -392,18 +396,7 @@ export function CRMOverview({ onNavigate }: CRMOverviewProps) {
               </div>
               <div>
                 <p className="text-lg font-semibold">{pipelineStats?.recent || 0}</p>
-                <p className="text-xs text-muted-foreground">Ajoutés cette semaine</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => onNavigate("prospection")}>
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="p-2 rounded-md bg-accent/10">
-                <Send className="h-4 w-4 text-accent" />
-              </div>
-              <div>
-                <p className="text-lg font-semibold">{contactPipelines.length}</p>
-                <p className="text-xs text-muted-foreground">Pipelines actifs</p>
+                <p className="text-xs text-muted-foreground">Nouveaux cette semaine</p>
               </div>
             </CardContent>
           </Card>
