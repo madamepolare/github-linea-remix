@@ -115,6 +115,8 @@ export default function Settings() {
     <PageLayout
       title={t('settings.title')}
       description={t('settings.description')}
+      contentPadding={false}
+      contentOverflow="hidden"
     >
       <SettingsLayout
         activeSection={activeSection}
