@@ -27,7 +27,7 @@ import { TenderSettings } from "@/components/settings/TenderSettings";
 import { CalendarIntegrationsSettings } from "@/components/settings/CalendarIntegrationsSettings";
 import { IntegrationsSettings } from "@/components/settings/IntegrationsSettings";
 import { LanguageSettings } from "@/components/settings/LanguageSettings";
-import { DesignSystemSettings } from "@/components/settings/DesignSystemSettings";
+
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import {
   CRMPipelinesSettings,
@@ -101,12 +101,6 @@ export default function Settings() {
         return <CalendarIntegrationsSettings />;
       case "feedback":
         return <FeedbackSettings />;
-      case "design-system":
-        return (
-          <PermissionGate minRole="admin" fallback={<div className="text-muted-foreground">Accès réservé aux administrateurs</div>}>
-            <DesignSystemSettings />
-          </PermissionGate>
-        );
       case "page-inspector":
         return <PageInspectorSettings />;
       default:
