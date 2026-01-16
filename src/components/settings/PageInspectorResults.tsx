@@ -211,9 +211,21 @@ function ScoreGauge({ score }: { score: number }) {
 }
 
 export function PageInspectorResults({ result, onReanalyze, isAnalyzing }: PageInspectorResultsProps) {
+  const [allCopied, setAllCopied] = useState(false);
   const criticalIssues = result.issues.filter(i => i.severity === 'critique');
   const importantIssues = result.issues.filter(i => i.severity === 'important');
   const minorIssues = result.issues.filter(i => i.severity === 'mineur');
+
+  const copyAllPrompts = async () => {
+    const allPrompts = result.issues
+      .map((issue, index) => `${index + 1}. [${issue.severity.toUpperCase()}] ${issue.title}\n${issue.lovablePrompt}`)
+      .join('\n\n');
+    
+    await navigator.clipboard.writeText(allPrompts);
+    setAllCopied(true);
+    toast.success(`${result.issues.length} prompts copiés !`);
+    setTimeout(() => setAllCopied(false), 2000);
+  };
 
   return (
     <div className="space-y-6">
@@ -253,6 +265,24 @@ export function PageInspectorResults({ result, onReanalyze, isAnalyzing }: PageI
               </Badge>
             </div>
             <div className="flex-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyAllPrompts}
+              className="gap-2"
+            >
+              {allCopied ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  Copiés
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" />
+                  Tout copier
+                </>
+              )}
+            </Button>
             <Button
               variant="outline"
               size="sm"
