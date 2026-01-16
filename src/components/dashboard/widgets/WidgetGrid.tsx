@@ -122,6 +122,24 @@ function saveLayout(widgets: string[], layout: LayoutItem[]) {
   }
 }
 
+// Pure function to clone layout items and apply constraints from registry
+function applyConstraintsAndClone(layoutItems: LayoutItem[]): LayoutItem[] {
+  return layoutItems.map((item) => {
+    const config = getWidgetById(item.i);
+    return {
+      i: item.i,
+      x: item.x,
+      y: item.y,
+      w: item.w,
+      h: item.h,
+      minW: config?.minW || 1,
+      maxW: config?.maxW || COLS,
+      minH: config?.minH || 1,
+      maxH: config?.maxH,
+    };
+  });
+}
+
 export function WidgetGrid() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(1200);
@@ -151,25 +169,75 @@ export function WidgetGrid() {
     return () => window.removeEventListener("resize", updateWidth);
   }, []);
 
+  // Only used for live visual updates during drag/resize - NO save here
   const handleLayoutChange = useCallback(
     (newLayout: LayoutItem[]) => {
       if (isEditing) {
-        // Apply constraints from registry to maintain them
-        const constrainedLayout = newLayout.map((item) => {
-          const config = getWidgetById(item.i);
-          return {
-            ...item,
-            minW: config?.minW || 1,
-            maxW: config?.maxW || COLS,
-            minH: config?.minH || 1,
-            maxH: config?.maxH,
-          };
-        });
-        setState((prev) => ({ ...prev, layout: constrainedLayout }));
-        saveLayout(widgets, constrainedLayout);
+        // Clone and apply constraints for live state update only
+        const clonedLayout = applyConstraintsAndClone(newLayout);
+        setState((prev) => ({ ...prev, layout: clonedLayout }));
       }
     },
-    [isEditing, widgets]
+    [isEditing]
+  );
+
+  // Save only when resize/drag stops - this is the source of truth
+  const handleResizeStop = useCallback(
+    (_layout: LayoutItem[], _oldItem: LayoutItem, newItem: LayoutItem, _placeholder: LayoutItem, _e: MouseEvent, _element: HTMLElement) => {
+      if (!isEditing) return;
+      
+      setState((prev) => {
+        const updatedLayout = prev.layout.map((item) => {
+          if (item.i === newItem.i) {
+            const config = getWidgetById(item.i);
+            return {
+              i: newItem.i,
+              x: newItem.x,
+              y: newItem.y,
+              w: newItem.w,
+              h: newItem.h,
+              minW: config?.minW || 1,
+              maxW: config?.maxW || COLS,
+              minH: config?.minH || 1,
+              maxH: config?.maxH,
+            };
+          }
+          return { ...item };
+        });
+        saveLayout(prev.widgets, updatedLayout);
+        return { ...prev, layout: updatedLayout };
+      });
+    },
+    [isEditing]
+  );
+
+  const handleDragStop = useCallback(
+    (_layout: LayoutItem[], _oldItem: LayoutItem, newItem: LayoutItem, _placeholder: LayoutItem, _e: MouseEvent, _element: HTMLElement) => {
+      if (!isEditing) return;
+      
+      setState((prev) => {
+        const updatedLayout = prev.layout.map((item) => {
+          if (item.i === newItem.i) {
+            const config = getWidgetById(item.i);
+            return {
+              i: newItem.i,
+              x: newItem.x,
+              y: newItem.y,
+              w: item.w, // Keep existing width
+              h: item.h, // Keep existing height
+              minW: config?.minW || 1,
+              maxW: config?.maxW || COLS,
+              minH: config?.minH || 1,
+              maxH: config?.maxH,
+            };
+          }
+          return { ...item };
+        });
+        saveLayout(prev.widgets, updatedLayout);
+        return { ...prev, layout: updatedLayout };
+      });
+    },
+    [isEditing]
   );
 
   const handleAddWidget = useCallback((widgetId: string) => {
@@ -240,7 +308,7 @@ export function WidgetGrid() {
   // Mobile: render as simple stack
   if (isMobile) {
     return (
-      <div className="relative space-y-4" ref={containerRef}>
+      <div className="relative space-y-4 px-4" ref={containerRef}>
         {/* Mobile Header */}
         <div className="flex items-center justify-between gap-2">
           <DropdownMenu>
@@ -311,7 +379,7 @@ export function WidgetGrid() {
   }
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative px-4 sm:px-6 lg:px-8 py-4" ref={containerRef}>
       <div className="flex items-center justify-between gap-2 mb-4">
         {/* Left side - Template selector */}
         <DropdownMenu>
@@ -399,10 +467,12 @@ export function WidgetGrid() {
           isResizable={isEditing}
           draggableHandle=".widget-drag-handle"
           onLayoutChange={handleLayoutChange}
+          onResizeStop={handleResizeStop}
+          onDragStop={handleDragStop}
           useCSSTransforms
-          resizeHandles={["se", "e"]}
-          compactType="vertical"
-          preventCollision={false}
+          resizeHandles={["se", "e", "s"]}
+          compactType={null}
+          preventCollision={true}
         >
           {widgets.map((widgetId) => {
             const widgetLayout = layout.find(l => l.i === widgetId);

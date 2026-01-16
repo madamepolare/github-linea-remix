@@ -3,7 +3,7 @@ import { WidgetGrid } from "@/components/dashboard/widgets";
 
 const Dashboard = () => {
   return (
-    <PageLayout title="Tableau de bord">
+    <PageLayout title="Tableau de bord" contentPadding={false}>
       <WidgetGrid />
     </PageLayout>
   );
