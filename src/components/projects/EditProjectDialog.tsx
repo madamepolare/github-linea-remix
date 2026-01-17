@@ -18,27 +18,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjectTypeSettings, getProjectTypeIcon } from "@/hooks/useProjectTypeSettings";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
-import { ProjectType } from "@/lib/projectTypes";
 import * as LucideIcons from "lucide-react";
 import {
   Building2,
   Loader2,
   Home,
+  FolderKanban,
+  MapPin,
+  Calendar,
+  Wallet,
+  FileText,
 } from "lucide-react";
 
 // Disciplines that show surface field
-const SURFACE_DISCIPLINES = ["architecture", "interior", "interieur", "archi"];
+const SURFACE_TYPES = ["architecture", "interior", "interieur", "archi"];
 
 interface Project {
   id: string;
   name: string;
   description: string | null;
-  project_type: ProjectType | null;
+  project_type: string | null;
   crm_company_id: string | null;
   address: string | null;
   city: string | null;
@@ -73,15 +78,14 @@ const colors = [
 // Helper to get icon component from name
 const getIconComponent = (iconName: string): React.ElementType => {
   const icons = LucideIcons as unknown as Record<string, React.ElementType>;
-  const Icon = icons[iconName];
-  return Icon || Building2;
+  return icons[iconName] || FolderKanban;
 };
 
-// Check if discipline should show surface field
-function shouldShowSurface(disciplineKey: string | null): boolean {
-  if (!disciplineKey) return false;
-  return SURFACE_DISCIPLINES.some(d => 
-    disciplineKey.toLowerCase().includes(d.toLowerCase())
+// Check if project type should show surface field
+function shouldShowSurface(projectType: string | null): boolean {
+  if (!projectType) return false;
+  return SURFACE_TYPES.some(t => 
+    projectType.toLowerCase().includes(t.toLowerCase())
   );
 }
 
@@ -93,10 +97,11 @@ export function EditProjectDialog({
   isSaving = false 
 }: EditProjectDialogProps) {
   const { companies } = useCRMCompanies();
-  const { projectTypes: disciplines, isLoading: isLoadingDisciplines } = useProjectTypeSettings();
+  const { projectTypes, isLoading: isLoadingTypes } = useProjectTypeSettings();
+  
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description || "");
-  const [projectType, setProjectType] = useState<ProjectType | null>(project.project_type);
+  const [projectType, setProjectType] = useState<string | null>(project.project_type);
   const [address, setAddress] = useState(project.address || "");
   const [city, setCity] = useState(project.city || "");
   const [postalCode, setPostalCode] = useState(project.postal_code || "");
@@ -114,6 +119,11 @@ export function EditProjectDialog({
 
   // Check if surface should be shown based on project type
   const showSurface = useMemo(() => shouldShowSurface(projectType), [projectType]);
+
+  // Get current type config
+  const currentTypeConfig = useMemo(() => {
+    return projectTypes.find(t => t.key === projectType);
+  }, [projectTypes, projectType]);
 
   // Sync state when project changes
   useEffect(() => {
@@ -138,10 +148,10 @@ export function EditProjectDialog({
     onSave({
       name: name.trim(),
       description: description.trim() || null,
-      project_type: projectType,
-      address: address.trim() || null,
-      city: city.trim() || null,
-      postal_code: postalCode.trim() || null,
+      project_type: projectType as any,
+      address: isInternal ? null : (address.trim() || null),
+      city: isInternal ? null : (city.trim() || null),
+      postal_code: isInternal ? null : (postalCode.trim() || null),
       surface_area: showSurface && surfaceArea ? parseFloat(surfaceArea) : null,
       color,
       crm_company_id: isInternal ? null : crmCompanyId,
@@ -169,217 +179,270 @@ export function EditProjectDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Internal Project Toggle */}
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-            <div className="flex items-center gap-2">
-              <Home className="h-4 w-4 text-muted-foreground" />
-              <div className="space-y-0.5">
-                <Label htmlFor="edit-is-internal" className="text-sm font-medium cursor-pointer">
-                  Projet interne
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Non facturable (admin, formation, commercial...)
-                </p>
-              </div>
+          {/* Section 1: General */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <FolderKanban className="h-4 w-4" />
+              Général
             </div>
-            <Switch
-              id="edit-is-internal"
-              checked={isInternal}
-              onCheckedChange={setIsInternal}
-            />
-          </div>
 
-          {/* Project Type from Settings */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Type de projet</Label>
-            {isLoadingDisciplines ? (
-              <div className="flex items-center justify-center p-4">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            {/* Internal Project Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
+              <div className="flex items-center gap-2">
+                <Home className="h-4 w-4 text-muted-foreground" />
+                <div className="space-y-0.5">
+                  <Label htmlFor="edit-is-internal" className="text-sm font-medium cursor-pointer">
+                    Projet interne
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Non facturable (admin, R&D, formation...)
+                  </p>
+                </div>
               </div>
-            ) : disciplines.length === 0 ? (
-              <p className="text-sm text-muted-foreground p-4 text-center border rounded-lg">
-                Aucun type de projet configuré. Configurez-les dans les paramètres.
-              </p>
-            ) : (
-              <div className="grid grid-cols-3 gap-3">
-                {disciplines.map((discipline) => {
-                  const iconName = discipline.icon || getProjectTypeIcon(discipline.key);
-                  const Icon = getIconComponent(iconName);
-                  return (
-                    <button
-                      key={discipline.key}
-                      type="button"
-                      onClick={() => setProjectType(discipline.key as ProjectType)}
-                      className={cn(
-                        "flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all",
-                        projectType === discipline.key
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/50 hover:bg-muted/50"
-                      )}
-                    >
-                      <div className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center",
-                        projectType === discipline.key ? "bg-primary text-primary-foreground" : "bg-muted"
-                      )}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <span className="font-medium text-xs">{discipline.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Name & Color */}
-          <div className="grid grid-cols-[1fr,auto] gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nom du projet *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nom du projet"
+              <Switch
+                id="edit-is-internal"
+                checked={isInternal}
+                onCheckedChange={setIsInternal}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Couleur</Label>
-              <div className="flex gap-1.5 flex-wrap max-w-[140px]">
-                {colors.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setColor(c.value)}
-                    className={cn(
-                      "w-6 h-6 rounded-full transition-all",
-                      color === c.value && "ring-2 ring-offset-2 ring-primary"
-                    )}
-                    style={{ backgroundColor: c.value }}
-                    title={c.label}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
 
-          {/* Client - hidden for internal projects */}
-          {!isInternal && (
-            <div className="space-y-2">
-              <Label>Client</Label>
-              <Select 
-                value={crmCompanyId || "none"} 
-                onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un client..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Aucun client</SelectItem>
-                  {clientCompanies.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Location - hidden for internal projects */}
-          {!isInternal && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="address">Adresse</Label>
-                <Input
-                  id="address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="123 rue de Paris"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <Label htmlFor="postal_code">Code postal</Label>
-                  <Input
-                    id="postal_code"
-                    value={postalCode}
-                    onChange={(e) => setPostalCode(e.target.value)}
-                    placeholder="75001"
-                  />
+            {/* Project Type */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Type de projet</Label>
+              {isLoadingTypes ? (
+                <div className="flex items-center justify-center p-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city">Ville</Label>
-                  <Input
-                    id="city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Paris"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Surface & Budget - conditionally shown */}
-          {!isInternal && (
-            <div className={cn("grid gap-4", showSurface ? "grid-cols-2" : "grid-cols-1")}>
-              {showSurface && (
-                <div className="space-y-2">
-                  <Label htmlFor="surface">Surface (m²)</Label>
-                  <Input
-                    id="surface"
-                    type="number"
-                    value={surfaceArea}
-                    onChange={(e) => setSurfaceArea(e.target.value)}
-                    placeholder="150"
-                  />
+              ) : projectTypes.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-4 text-center border rounded-lg">
+                  Aucun type de projet configuré.
+                </p>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {projectTypes.map((type) => {
+                    const iconName = type.icon || getProjectTypeIcon(type.key);
+                    const Icon = getIconComponent(iconName);
+                    return (
+                      <button
+                        key={type.key}
+                        type="button"
+                        onClick={() => setProjectType(type.key)}
+                        className={cn(
+                          "flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all",
+                          projectType === type.key
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50 hover:bg-muted/50"
+                        )}
+                      >
+                        <div 
+                          className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center",
+                            projectType === type.key ? "bg-primary text-primary-foreground" : "bg-muted"
+                          )}
+                          style={projectType === type.key ? {} : { backgroundColor: `${type.color}20` }}
+                        >
+                          <Icon 
+                            className="h-4 w-4" 
+                            style={{ color: projectType === type.key ? undefined : type.color }}
+                          />
+                        </div>
+                        <span className="font-medium text-xs text-center">{type.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
+            </div>
+
+            {/* Name & Color */}
+            <div className="grid grid-cols-[1fr,auto] gap-4">
               <div className="space-y-2">
-                <Label htmlFor="budget">Budget (€)</Label>
+                <Label htmlFor="name">Nom du projet *</Label>
                 <Input
-                  id="budget"
-                  type="number"
-                  value={budget}
-                  onChange={(e) => setBudget(e.target.value)}
-                  placeholder="50000"
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Nom du projet"
                 />
               </div>
-            </div>
-          )}
-
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Date de début</Label>
-              <InlineDatePicker
-                value={startDate}
-                onChange={setStartDate}
-                placeholder="Sélectionner..."
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Date de fin</Label>
-              <InlineDatePicker
-                value={endDate}
-                onChange={setEndDate}
-                placeholder="Sélectionner..."
-                className="w-full"
-              />
+              <div className="space-y-2">
+                <Label>Couleur</Label>
+                <div className="flex gap-1.5 flex-wrap max-w-[140px]">
+                  {colors.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setColor(c.value)}
+                      className={cn(
+                        "w-6 h-6 rounded-full transition-all",
+                        color === c.value && "ring-2 ring-offset-2 ring-primary"
+                      )}
+                      style={{ backgroundColor: c.value }}
+                      title={c.label}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description / Notes</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Notes sur le projet..."
-              rows={4}
-            />
+          <Separator />
+
+          {/* Section 2: Client & Location - hidden for internal projects */}
+          {!isInternal && (
+            <>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Building2 className="h-4 w-4" />
+                  Client & Localisation
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Client</Label>
+                  <Select 
+                    value={crmCompanyId || "none"} 
+                    onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un client..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Aucun client</SelectItem>
+                      {clientCompanies.map((company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address">
+                    <MapPin className="h-3.5 w-3.5 inline mr-1" />
+                    Adresse
+                  </Label>
+                  <Input
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="123 rue de Paris"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="postal_code">Code postal</Label>
+                    <Input
+                      id="postal_code"
+                      value={postalCode}
+                      onChange={(e) => setPostalCode(e.target.value)}
+                      placeholder="75001"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="city">Ville</Label>
+                    <Input
+                      id="city"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Paris"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+            </>
+          )}
+
+          {/* Section 3: Details (Surface & Budget) */}
+          {!isInternal && (showSurface || true) && (
+            <>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Wallet className="h-4 w-4" />
+                  Détails
+                </div>
+
+                <div className={cn("grid gap-4", showSurface ? "grid-cols-2" : "grid-cols-1")}>
+                  {showSurface && (
+                    <div className="space-y-2">
+                      <Label htmlFor="surface">Surface (m²)</Label>
+                      <Input
+                        id="surface"
+                        type="number"
+                        value={surfaceArea}
+                        onChange={(e) => setSurfaceArea(e.target.value)}
+                        placeholder="150"
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="budget">Budget (€)</Label>
+                    <Input
+                      id="budget"
+                      type="number"
+                      value={budget}
+                      onChange={(e) => setBudget(e.target.value)}
+                      placeholder="50000"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+            </>
+          )}
+
+          {/* Section 4: Planning */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              Planification
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Date de début</Label>
+                <InlineDatePicker
+                  value={startDate}
+                  onChange={setStartDate}
+                  placeholder="Sélectionner..."
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Date de fin</Label>
+                <InlineDatePicker
+                  value={endDate}
+                  onChange={setEndDate}
+                  placeholder="Sélectionner..."
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Section 5: Notes */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <FileText className="h-4 w-4" />
+              Notes
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description / Notes</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Notes sur le projet..."
+                rows={4}
+              />
+            </div>
           </div>
         </div>
 
