@@ -468,14 +468,20 @@ export function useProjectMembersForList(projectIds: string[]) {
       if (error) throw error;
       if (!membersData || membersData.length === 0) return {};
 
-      // Get profiles for these members
-      const userIds = [...new Set(membersData.map(m => m.user_id))];
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, avatar_url")
-        .in("user_id", userIds);
+      // Get profiles for these members (filter out null user_ids from external members)
+      const userIds = [...new Set(membersData.map(m => m.user_id).filter(Boolean))] as string[];
+      
+      let profiles: { user_id: string; full_name: string | null; avatar_url: string | null }[] = [];
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, avatar_url")
+          .in("user_id", userIds);
+        
+        if (profilesError) throw profilesError;
+        profiles = profilesData || [];
+      }
 
-      if (profilesError) throw profilesError;
 
       // Group by project_id
       const membersByProject: Record<string, (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[]> = {};
