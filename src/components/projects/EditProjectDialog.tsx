@@ -192,6 +192,7 @@ export function EditProjectDialog({
   const handleSave = () => {
     if (!name.trim()) return;
     
+    // Only save fields that exist in the database
     onSave({
       name: name.trim(),
       description: description.trim() || null,
@@ -207,11 +208,6 @@ export function EditProjectDialog({
       budget: isInternal ? null : (budget ? parseFloat(budget) : null),
       is_internal: isInternal,
       status,
-      is_restricted: isRestricted,
-      progress_type: progressType,
-      invoice_details: invoiceDetails.trim() || null,
-      show_quote_on_invoice: showQuoteOnInvoice,
-      market_reference: marketReference.trim() || null,
     });
   };
 
