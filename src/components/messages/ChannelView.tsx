@@ -1,13 +1,13 @@
-import { useEffect, useRef } from "react";
-import { Hash, Lock, MessageCircle, Settings, Users } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Hash, Lock, MessageCircle, Settings, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { TeamChannel, useChannelMessages, useTeamMessageMutations } from "@/hooks/useTeamMessages";
+import { TeamChannel, useChannelMessages, useChannelMembers, useTeamMessageMutations } from "@/hooks/useTeamMessages";
 import { MessageItem } from "./MessageItem";
 import { MessageInput } from "./MessageInput";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
-import { useAuth } from "@/contexts/AuthContext";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 interface ChannelViewProps {
   channel: TeamChannel;
@@ -16,35 +16,30 @@ interface ChannelViewProps {
 
 export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
   const { data: messages, isLoading } = useChannelMessages(channel.id);
+  const { data: members = [] } = useChannelMembers(channel.id);
   const { createMessage, markChannelAsRead } = useTeamMessageMutations();
   const { data: profiles = [] } = useWorkspaceProfiles();
-  const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [showMembers, setShowMembers] = useState(false);
 
   const isDM = channel.channel_type === "direct";
-
-  // Get display name for DM channel
-  const getDMDisplayName = () => {
-    const parts = channel.name.replace("dm-", "").split("-");
-    const otherUserId = parts.find(id => id !== user?.id) || parts[parts.length - 1];
-    const otherProfile = profiles.find(p => p.user_id === otherUserId);
-    return otherProfile?.full_name || "Utilisateur";
-  };
-
-  const getDMAvatar = () => {
-    const parts = channel.name.replace("dm-", "").split("-");
-    const otherUserId = parts.find(id => id !== user?.id) || parts[parts.length - 1];
-    return profiles.find(p => p.user_id === otherUserId);
-  };
+  const dmMember = channel.dm_member;
+  const displayName = isDM ? (dmMember?.full_name || "Utilisateur") : channel.name;
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "?";
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const dmProfile = isDM ? getDMAvatar() : null;
-  const displayName = isDM ? getDMDisplayName() : channel.name;
+  // Get profiles for channel members
+  const memberProfiles = members.map(m => {
+    const profile = profiles.find(p => p.user_id === m.user_id);
+    return {
+      ...m,
+      profile,
+    };
+  });
 
   // Mark channel as read when opened
   useEffect(() => {
@@ -71,11 +66,11 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
       {/* Channel Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-3">
-          {isDM && dmProfile ? (
+          {isDM && dmMember ? (
             <Avatar className="h-8 w-8">
-              <AvatarImage src={dmProfile.avatar_url || undefined} />
+              <AvatarImage src={dmMember.avatar_url || undefined} />
               <AvatarFallback className="text-xs">
-                {getInitials(dmProfile.full_name)}
+                {getInitials(dmMember.full_name)}
               </AvatarFallback>
             </Avatar>
           ) : (
@@ -91,11 +86,8 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon-sm">
+          <Button variant="ghost" size="icon-sm" onClick={() => setShowMembers(true)}>
             <Users className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon-sm">
-            <Settings className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -110,10 +102,10 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
           ) : messages?.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                {isDM && dmProfile ? (
+                {isDM && dmMember ? (
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={dmProfile.avatar_url || undefined} />
-                    <AvatarFallback>{getInitials(dmProfile.full_name)}</AvatarFallback>
+                    <AvatarImage src={dmMember.avatar_url || undefined} />
+                    <AvatarFallback>{getInitials(dmMember.full_name)}</AvatarFallback>
                   </Avatar>
                 ) : (
                   <Icon className="h-8 w-8 text-muted-foreground" />
@@ -155,6 +147,42 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
           isLoading={createMessage.isPending}
         />
       </div>
+
+      {/* Members Sheet */}
+      <Sheet open={showMembers} onOpenChange={setShowMembers}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>
+              {isDM ? "Participants" : `Membres de #${channel.name}`}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-2">
+            {memberProfiles.map((member) => (
+              <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={member.profile?.avatar_url || undefined} />
+                  <AvatarFallback className="text-xs">
+                    {getInitials(member.profile?.full_name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">
+                    {member.profile?.full_name || "Utilisateur"}
+                  </p>
+                  {member.role === "admin" && (
+                    <span className="text-xs text-muted-foreground">Admin</span>
+                  )}
+                </div>
+              </div>
+            ))}
+            {memberProfiles.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Aucun membre
+              </p>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { MessageSquare, MoreHorizontal, Pencil, Smile, Trash2 } from "lucide-react";
+import { Check, MessageSquare, MoreHorizontal, Pencil, Smile, Trash2, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { TeamMessage, useMessageReactions, useTeamMessageMutations, QUICK_REACTIONS } from "@/hooks/useTeamMessages";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -31,9 +32,11 @@ interface MessageItemProps {
 export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage = false }: MessageItemProps) {
   const { user } = useAuth();
   const { data: profiles = [] } = useWorkspaceProfiles();
-  const { toggleReaction, deleteMessage } = useTeamMessageMutations();
+  const { toggleReaction, deleteMessage, updateMessage } = useTeamMessageMutations();
   const { data: reactions } = useMessageReactions([message.id]);
   const [isHovered, setIsHovered] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(message.content);
 
   const isOwn = message.created_by === user?.id;
   const messageReactions = reactions?.filter(r => r.message_id === message.id) || [];
@@ -56,6 +59,35 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
 
   const formattedTime = format(new Date(message.created_at), "HH:mm", { locale: fr });
   const formattedDate = format(new Date(message.created_at), "d MMM yyyy", { locale: fr });
+
+  const handleStartEdit = () => {
+    setEditContent(message.content);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditContent(message.content);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editContent.trim()) return;
+    await updateMessage.mutateAsync({
+      id: message.id,
+      content: editContent,
+      channel_id: message.channel_id,
+    });
+    setIsEditing(false);
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSaveEdit();
+    } else if (e.key === "Escape") {
+      handleCancelEdit();
+    }
+  };
 
   return (
     <div
@@ -94,12 +126,37 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
           </div>
         )}
 
-        <div className="text-sm">
-          {renderContentWithMentions(message.content, profiles)}
-        </div>
+        {isEditing ? (
+          <div className="space-y-2">
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              onKeyDown={handleEditKeyDown}
+              className="min-h-[60px] resize-none"
+              autoFocus
+            />
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={handleSaveEdit} disabled={!editContent.trim()}>
+                <Check className="h-4 w-4 mr-1" />
+                Enregistrer
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                <X className="h-4 w-4 mr-1" />
+                Annuler
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Échap pour annuler • Entrée pour enregistrer
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="text-sm">
+            {renderContentWithMentions(message.content, profiles)}
+          </div>
+        )}
 
         {/* Reactions */}
-        {Object.keys(reactionGroups).length > 0 && (
+        {!isEditing && Object.keys(reactionGroups).length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             {Object.entries(reactionGroups).map(([emoji, data]) => (
               <button
@@ -120,7 +177,7 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
         )}
 
         {/* Thread indicator */}
-        {!isThreadMessage && message.reply_count && message.reply_count > 0 && (
+        {!isEditing && !isThreadMessage && message.reply_count && message.reply_count > 0 && (
           <button
             onClick={onOpenThread}
             className="flex items-center gap-1 mt-1 text-xs text-primary hover:underline"
@@ -132,7 +189,7 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
       </div>
 
       {/* Actions (hover) */}
-      {isHovered && (
+      {isHovered && !isEditing && (
         <div className="absolute right-2 top-0 flex items-center gap-0.5 bg-background border rounded-md shadow-sm p-0.5">
           <Popover>
             <PopoverTrigger asChild>
@@ -169,7 +226,7 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleStartEdit}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Modifier
                 </DropdownMenuItem>
