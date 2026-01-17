@@ -1,8 +1,8 @@
-import { useProjectContacts } from "@/hooks/useProjectContacts";
+import { useProjectContacts, CLIENT_TEAM_ROLES } from "@/hooks/useProjectContacts";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Phone, Mail, Building2, User } from "lucide-react";
+import { Phone, Mail, Building2, User, Star } from "lucide-react";
 
 interface ProjectContactsSummaryProps {
   projectId: string;
@@ -23,14 +23,7 @@ export function ProjectContactsSummary({ projectId, companyName }: ProjectContac
   };
 
   const getRoleLabel = (role: string) => {
-    const roles: Record<string, string> = {
-      client: "Client",
-      decision_maker: "Décisionnaire",
-      operational: "Opérationnel",
-      billing: "Facturation",
-      technical: "Technique",
-    };
-    return roles[role] || role;
+    return CLIENT_TEAM_ROLES.find((r) => r.value === role)?.label || role;
   };
 
   if (isLoading) {
@@ -88,13 +81,11 @@ export function ProjectContactsSummary({ projectId, companyName }: ProjectContac
                     {displayName}
                   </span>
                   {isPrimary && (
-                    <Badge variant="secondary" className="text-xs">
-                      Principal
-                    </Badge>
+                    <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
                   )}
                 </div>
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span>{getRoleLabel(projectContact.role)}</span>
+                  <span className="font-medium">{getRoleLabel(projectContact.role)}</span>
                   {contact.role && <span>• {contact.role}</span>}
                 </div>
               </div>
