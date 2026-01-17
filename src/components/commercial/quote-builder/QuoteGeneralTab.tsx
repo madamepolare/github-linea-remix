@@ -88,12 +88,15 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
         </CardHeader>
         <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
           <div className="space-y-2">
-            <Label className="text-sm">Type de contrat</Label>
+            <Label className="text-sm flex items-center gap-1">
+              Type de contrat
+              <span className="text-destructive">*</span>
+            </Label>
             <Select
               value={document.contract_type_id || ''}
               onValueChange={handleContractTypeChange}
             >
-              <SelectTrigger className="h-9 sm:h-10">
+              <SelectTrigger className={cn("h-9 sm:h-10", !document.contract_type_id && "border-destructive/50")}>
                 <SelectValue placeholder="Sélectionner un type..." />
               </SelectTrigger>
               <SelectContent>
@@ -259,12 +262,12 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
         </Card>
       )}
 
-      {/* Client + Contact facturation ensemble */}
-      <Card>
+      <Card className={cn(!document.client_company_id && "border-destructive/30")}>
         <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
           <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <Building2 className="h-4 w-4" />
             Client & Facturation
+            <span className="text-destructive text-sm">*</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 px-3 sm:px-6">

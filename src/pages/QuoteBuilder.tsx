@@ -306,6 +306,24 @@ export default function QuoteBuilder() {
       return;
     }
 
+    // Validate required fields
+    const missingFields: string[] = [];
+    
+    if (!document.title?.trim()) {
+      missingFields.push('Titre');
+    }
+    if (!document.client_company_id) {
+      missingFields.push('Client (entreprise)');
+    }
+    if (!document.contract_type_id) {
+      missingFields.push('Type de contrat');
+    }
+    
+    if (missingFields.length > 0) {
+      toast.error(`Champs obligatoires manquants : ${missingFields.join(', ')}`);
+      return;
+    }
+
     console.info('[QuoteBuilder] handleSave start, workspace:', activeWorkspace.id, activeWorkspace.name);
     
     setIsSaving(true);
@@ -614,8 +632,12 @@ export default function QuoteBuilder() {
                 type="text"
                 value={document.title || ''}
                 onChange={(e) => handleDocumentChange({ title: e.target.value })}
-                placeholder={isNew ? 'Titre du projet...' : 'Édition du devis'}
-                className="font-semibold text-base sm:text-lg tracking-tight bg-transparent border-0 focus:ring-0 focus:outline-none w-full min-w-0 placeholder:text-muted-foreground"
+                placeholder={isNew ? 'Titre du projet... *' : 'Édition du devis *'}
+                className={cn(
+                  "font-semibold text-base sm:text-lg tracking-tight bg-transparent border-0 focus:ring-0 focus:outline-none w-full min-w-0 placeholder:text-muted-foreground",
+                  !document.title?.trim() && "placeholder:text-destructive/60"
+                )}
+                required
               />
               <Select
                 value={document.status || 'draft'}
