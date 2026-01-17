@@ -159,23 +159,26 @@ export function QuoteLinesEditor({
 
   // Load a complete quote template (all phases)
   const loadQuoteTemplate = (template: any) => {
-    const newLines: QuoteLine[] = template.phases.map((phase: any, index: number) => ({
-      id: generateId(),
-      phase_code: phase.code,
-      phase_name: phase.name,
-      phase_description: phase.description || '',
-      line_type: 'phase' as const,
-      quantity: 1,
-      unit: 'forfait',
-      unit_price: 0,
-      amount: 0,
-      percentage_fee: phase.defaultPercentage || 0,
-      billing_type: 'one_time' as const,
-      is_optional: phase.category === 'complementary',
-      is_included: phase.category !== 'complementary',
-      deliverables: phase.deliverables || [],
-      sort_order: lines.length + index
-    }));
+    const newLines: QuoteLine[] = template.phases.map((phase: any, index: number) => {
+      const unitPrice = phase.defaultUnitPrice || 0;
+      return {
+        id: generateId(),
+        phase_code: phase.code,
+        phase_name: phase.name,
+        phase_description: phase.description || '',
+        line_type: 'phase' as const,
+        quantity: 1,
+        unit: 'forfait',
+        unit_price: unitPrice,
+        amount: unitPrice,
+        percentage_fee: phase.defaultPercentage || 0,
+        billing_type: 'one_time' as const,
+        is_optional: phase.category === 'complementary',
+        is_included: phase.category !== 'complementary',
+        deliverables: phase.deliverables || [],
+        sort_order: lines.length + index
+      };
+    });
     onLinesChange([...lines, ...newLines]);
   };
 

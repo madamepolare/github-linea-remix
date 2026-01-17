@@ -10,6 +10,7 @@ export interface QuoteTemplatePhase {
   name: string;
   description: string;
   defaultPercentage: number;
+  defaultUnitPrice?: number;
   deliverables: string[];
   category: 'base' | 'complementary';
 }
