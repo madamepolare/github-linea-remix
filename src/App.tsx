@@ -133,7 +133,6 @@ const App = () => (
                   <Route path="/tasks/:taskId" element={<Suspense fallback={<PageLoader />}><TaskDetail /></Suspense>} />
                   <Route path="/projects" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
                   <Route path="/projects/list" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
-                  <Route path="/projects/cards" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
                   <Route path="/projects/board" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
                   <Route path="/projects/timeline" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
                   <Route path="/projects/:id" element={<Suspense fallback={<PageLoader />}><ProjectDetail /></Suspense>} />

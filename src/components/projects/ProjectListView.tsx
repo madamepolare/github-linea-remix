@@ -1,16 +1,15 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useProjects, useSubProjects, useProjectMembersForList, Project, ProjectMember } from "@/hooks/useProjects";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useProjects, useProjectMembersForList, Project, ProjectMember } from "@/hooks/useProjects";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,23 +27,36 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, differenceInDays } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Building2, FolderKanban, MapPin, MoreHorizontal, Archive, ArchiveRestore, Trash2, ChevronRight, Lock, Unlock, FolderOpen, CornerDownRight, Calendar, Wallet } from "lucide-react";
+import { 
+  Building2, 
+  FolderKanban, 
+  MapPin, 
+  MoreHorizontal, 
+  Archive, 
+  Lock, 
+  Trash2,
+  Calendar,
+  Wallet,
+  Users,
+  TrendingUp,
+  Eye,
+  Settings
+} from "lucide-react";
 import { PROJECT_TYPES } from "@/lib/projectTypes";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 // Avatar stack component for project members
-function ProjectMemberAvatars({ members }: { members: (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[] }) {
+function ProjectMemberAvatars({ members, max = 4 }: { 
+  members: (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[];
+  max?: number;
+}) {
   if (!members || members.length === 0) return null;
 
-  const displayMembers = members.slice(0, 3);
-  const remaining = members.length - 3;
+  const displayMembers = members.slice(0, max);
+  const remaining = members.length - max;
 
   return (
     <TooltipProvider>
@@ -56,7 +68,7 @@ function ProjectMemberAvatars({ members }: { members: (ProjectMember & { profile
           return (
             <Tooltip key={member.id}>
               <TooltipTrigger asChild>
-                <Avatar className="h-6 w-6 border-2 border-background ring-0">
+                <Avatar className="h-7 w-7 border-2 border-background ring-0">
                   <AvatarImage src={member.profile?.avatar_url || ""} />
                   <AvatarFallback className="text-2xs bg-primary/10 text-primary">
                     {initials}
@@ -70,7 +82,7 @@ function ProjectMemberAvatars({ members }: { members: (ProjectMember & { profile
           );
         })}
         {remaining > 0 && (
-          <div className="h-6 w-6 rounded-full bg-muted border-2 border-background flex items-center justify-center text-2xs font-medium">
+          <div className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-2xs font-medium">
             +{remaining}
           </div>
         )}
@@ -85,136 +97,12 @@ interface ProjectListViewProps {
 
 type ViewFilter = "active" | "closed" | "archived";
 
-// Sub-projects row component
-function SubProjectsRows({ parentId, onNavigate, onDelete, membersByProject }: { 
-  parentId: string; 
-  onNavigate: (id: string) => void;
-  onDelete: (id: string) => void;
-  membersByProject: Record<string, (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[]>;
-}) {
-  const { data: subProjects = [], isLoading } = useSubProjects(parentId);
-
-  if (isLoading) {
-    return (
-      <TableRow>
-        <TableCell colSpan={9} className="py-2 pl-12">
-          <Skeleton className="h-8 w-full" />
-        </TableCell>
-      </TableRow>
-    );
-  }
-
-  if (subProjects.length === 0) return null;
-
-  return (
-    <>
-      {subProjects.map((project) => {
-        const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
-        const phases = project.phases || [];
-        const completedPhases = phases.filter((p) => p.status === "completed").length;
-        const progressPercent = phases.length > 0 ? Math.round((completedPhases / phases.length) * 100) : 0;
-        const currentPhase = phases.find((p) => p.status === "in_progress");
-        const isClosed = project.status === "closed";
-
-        return (
-          <TableRow
-            key={project.id}
-            className={cn(
-              "cursor-pointer hover:bg-muted/50 bg-muted/20",
-              isClosed && "opacity-60"
-            )}
-            onClick={() => onNavigate(project.id)}
-          >
-            <TableCell>
-              <div className="flex items-center gap-3 pl-6">
-                <CornerDownRight className="h-4 w-4 text-muted-foreground" />
-                <div
-                  className="w-1 h-6 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: project.color || "#3B82F6" }}
-                />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium truncate">{project.name}</p>
-                    {isClosed && <Lock className="h-3 w-3 text-muted-foreground" />}
-                  </div>
-                  {project.city && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {project.city}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </TableCell>
-            <TableCell>
-              {projectType && (
-                <Badge variant="secondary" className="text-xs">{projectType.label}</Badge>
-              )}
-            </TableCell>
-            <TableCell>
-              <ProjectMemberAvatars members={membersByProject[project.id] || []} />
-            </TableCell>
-            <TableCell>
-              {project.crm_company ? (
-                <div className="flex items-center gap-1.5 text-sm">
-                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  {project.crm_company.name}
-                </div>
-              ) : (
-                <span className="text-muted-foreground">-</span>
-              )}
-            </TableCell>
-            <TableCell>
-              {currentPhase ? (
-                <span className="text-sm">{currentPhase.name}</span>
-              ) : (
-                <span className="text-muted-foreground">-</span>
-              )}
-            </TableCell>
-            <TableCell>
-              <div className="flex items-center gap-2 min-w-24">
-                <Progress value={progressPercent} className="h-2 flex-1" />
-                <span className="text-xs text-muted-foreground w-8">{progressPercent}%</span>
-              </div>
-            </TableCell>
-            <TableCell>
-              {project.start_date ? (
-                <span className="text-sm">
-                  {format(parseISO(project.start_date), "d MMM yyyy", { locale: fr })}
-                </span>
-              ) : (
-                <span className="text-muted-foreground">-</span>
-              )}
-            </TableCell>
-            <TableCell className="text-right">
-              {project.budget ? (
-                <span className="text-sm font-medium">
-                  {project.budget.toLocaleString("fr-FR")} €
-                </span>
-              ) : (
-                <span className="text-muted-foreground">-</span>
-              )}
-            </TableCell>
-            <TableCell onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(project.id)}>
-                <Trash2 className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </TableCell>
-          </TableRow>
-        );
-      })}
-    </>
-  );
-}
-
 export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
   const [viewFilter, setViewFilter] = useState<ViewFilter>("active");
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   
-  const { projects: activeProjects, isLoading: loadingActive, archiveProject, closeProject, deleteProject } = useProjects();
+  const { projects: activeProjects, isLoading: loadingActive, deleteProject } = useProjects();
   const { projects: closedProjects, isLoading: loadingClosed } = useProjects({ includeClosed: true });
   const { projects: archivedProjects, isLoading: loadingArchived } = useProjects({ includeArchived: true });
 
@@ -229,13 +117,6 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
 
   // Fetch all project members at once
   const { data: projectMembersByProject = {} } = useProjectMembersForList(allProjectIds);
-
-  // Count sub-projects for each parent
-  const projectsWithSubCount = useMemo(() => {
-    // We need to check which projects have sub-projects
-    // For now we'll use contract_type === 'framework' as indicator
-    return activeProjects;
-  }, [activeProjects]);
   
   const projects = useMemo(() => {
     switch (viewFilter) {
@@ -250,30 +131,28 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
 
   const isLoading = viewFilter === "archived" ? loadingArchived : viewFilter === "closed" ? loadingClosed : loadingActive;
 
-  const toggleExpanded = (projectId: string) => {
-    setExpandedProjects(prev => {
-      const next = new Set(prev);
-      if (next.has(projectId)) {
-        next.delete(projectId);
-      } else {
-        next.add(projectId);
-      }
-      return next;
-    });
-  };
-
   const handleDelete = async () => {
     if (!deleteProjectId) return;
     await deleteProject.mutateAsync(deleteProjectId);
     setDeleteProjectId(null);
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "EUR",
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
   if (isLoading) {
     return (
       <div className="p-4 sm:p-6 space-y-4">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-16 w-full" />
-        ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-[200px] w-full rounded-xl" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -299,274 +178,28 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
             action={viewFilter === "active" && onCreateProject ? { label: "Créer un projet", onClick: onCreateProject } : undefined}
           />
         </div>
-      ) : isMobile ? (
-        /* Mobile Card View */
-        <div className="space-y-2">
-          {projects.map((project) => {
-            const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
-            const phases = project.phases || [];
-            const completedPhases = phases.filter((p) => p.status === "completed").length;
-            const progressPercent = phases.length > 0 ? Math.round((completedPhases / phases.length) * 100) : 0;
-            const currentPhase = phases.find((p) => p.status === "in_progress");
-            const isClosed = project.status === "closed";
-
-            return (
-              <div
-                key={project.id}
-                className={cn(
-                  "flex items-start gap-3 p-3 border-b cursor-pointer active:bg-muted/50 touch-manipulation",
-                  isClosed && "opacity-70"
-                )}
-                onClick={() => navigate(`/projects/${project.id}`)}
-              >
-                {/* Color indicator */}
-                <div
-                  className="w-1 h-full min-h-[60px] rounded-full flex-shrink-0"
-                  style={{ backgroundColor: project.color || "#3B82F6" }}
-                />
-                
-                {/* Content */}
-                <div className="flex-1 min-w-0 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm truncate">{project.name}</p>
-                        {isClosed && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
-                      </div>
-                      {project.city && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <MapPin className="h-3 w-3" />
-                          {project.city}
-                        </p>
-                      )}
-                    </div>
-                    <ProjectMemberAvatars members={projectMembersByProject[project.id] || []} />
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {projectType && (
-                      <Badge variant="secondary" className="text-2xs">{projectType.label}</Badge>
-                    )}
-                    {project.crm_company && (
-                      <Badge variant="outline" className="text-2xs gap-1">
-                        <Building2 className="h-2.5 w-2.5" />
-                        {project.crm_company.name}
-                      </Badge>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Progress value={progressPercent} className="h-1.5 flex-1 max-w-[100px]" />
-                      <span className="text-2xs text-muted-foreground">{progressPercent}%</span>
-                    </div>
-                    
-                    {project.budget && (
-                      <span className="text-xs font-medium text-primary flex items-center gap-1">
-                        <Wallet className="h-3 w-3" />
-                        {(project.budget / 1000).toFixed(0)}k €
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       ) : (
-        /* Desktop Table View */
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[300px]">Projet</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead className="w-[100px]">Équipe</TableHead>
-              <TableHead>Client</TableHead>
-              <TableHead>Phase</TableHead>
-              <TableHead>Avancement</TableHead>
-              <TableHead>Dates</TableHead>
-              <TableHead className="text-right">Budget</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {projects.map((project) => {
-              const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
-              const phases = project.phases || [];
-              const completedPhases = phases.filter((p) => p.status === "completed").length;
-              const progressPercent = phases.length > 0 ? Math.round((completedPhases / phases.length) * 100) : 0;
-              const currentPhase = phases.find((p) => p.status === "in_progress");
-              const hasSubProjects = (project as any).contract_type === "framework";
-              const isExpanded = expandedProjects.has(project.id);
-              const isClosed = project.status === "closed";
-
-              return (
-                <>
-                  <TableRow
-                    key={project.id}
-                    className={cn(
-                      "cursor-pointer hover:bg-muted/50",
-                      isClosed && "opacity-70"
-                    )}
-                    onClick={() => navigate(`/projects/${project.id}`)}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        {hasSubProjects && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleExpanded(project.id);
-                            }}
-                          >
-                            <ChevronRight className={cn(
-                              "h-4 w-4 transition-transform",
-                              isExpanded && "rotate-90"
-                            )} />
-                          </Button>
-                        )}
-                        <div
-                          className="w-1.5 h-8 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: project.color || "#3B82F6" }}
-                        />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium truncate">{project.name}</p>
-                            {hasSubProjects && (
-                              <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
-                            )}
-                            {isClosed && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-                          </div>
-                          {project.city && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {project.city}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {projectType && (
-                        <Badge variant="secondary">{projectType.label}</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <ProjectMemberAvatars members={projectMembersByProject[project.id] || []} />
-                    </TableCell>
-                    <TableCell>
-                      {project.crm_company ? (
-                        <div className="flex items-center gap-1.5 text-sm">
-                          <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                          {project.crm_company.name}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {currentPhase ? (
-                        <span className="text-sm">{currentPhase.name}</span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 min-w-24">
-                        <Progress value={progressPercent} className="h-2 flex-1" />
-                        <span className="text-xs text-muted-foreground w-8">{progressPercent}%</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {project.start_date ? (
-                        <span className="text-sm">
-                          {format(parseISO(project.start_date), "d MMM yyyy", { locale: fr })}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {project.budget ? (
-                        <span className="text-sm font-medium">
-                          {project.budget.toLocaleString("fr-FR")} €
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                          {/* Close/Reopen */}
-                          {!project.is_archived && (
-                            isClosed ? (
-                              <DropdownMenuItem onClick={() => closeProject.mutate({ id: project.id, isClosed: false })}>
-                                <Unlock className="h-4 w-4 mr-2" />
-                                Réouvrir
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem onClick={() => closeProject.mutate({ id: project.id, isClosed: true })}>
-                                <Lock className="h-4 w-4 mr-2" />
-                                Fermer
-                              </DropdownMenuItem>
-                            )
-                          )}
-                          {/* Archive/Restore */}
-                          {project.is_archived ? (
-                            <DropdownMenuItem onClick={() => archiveProject.mutate({ id: project.id, isArchived: false })}>
-                              <ArchiveRestore className="h-4 w-4 mr-2" />
-                              Restaurer
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem onClick={() => archiveProject.mutate({ id: project.id, isArchived: true })}>
-                              <Archive className="h-4 w-4 mr-2" />
-                              Archiver
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="text-destructive focus:text-destructive"
-                            onClick={() => setDeleteProjectId(project.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Supprimer
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                  {/* Sub-projects */}
-                  {hasSubProjects && isExpanded && (
-                    <SubProjectsRows 
-                      parentId={project.id} 
-                      onNavigate={(id) => navigate(`/projects/${id}`)}
-                      onDelete={setDeleteProjectId}
-                      membersByProject={projectMembersByProject}
-                    />
-                  )}
-                </>
-              );
-            })}
-          </TableBody>
-        </Table>
+        <div className="flex flex-col gap-3">
+          {projects.map((project, index) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              members={projectMembersByProject[project.id] || []}
+              index={index}
+              onNavigate={() => navigate(`/projects/${project.id}`)}
+              onDelete={() => setDeleteProjectId(project.id)}
+              formatCurrency={formatCurrency}
+            />
+          ))}
+        </div>
       )}
 
-      {/* Delete Confirmation */}
       <AlertDialog open={!!deleteProjectId} onOpenChange={(open) => !open && setDeleteProjectId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer ce projet ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Le projet et toutes ses données seront définitivement supprimés.
+              Cette action est irréversible. Le projet sera définitivement supprimé.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -578,5 +211,167 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+interface ProjectCardProps {
+  project: Project;
+  members: (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[];
+  index: number;
+  onNavigate: () => void;
+  onDelete: () => void;
+  formatCurrency: (value: number) => string;
+}
+
+function ProjectCard({ project, members, index, onNavigate, onDelete, formatCurrency }: ProjectCardProps) {
+  const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
+  const phases = project.phases || [];
+  const completedPhases = phases.filter((p) => p.status === "completed").length;
+  const progressPercent = phases.length > 0 ? Math.round((completedPhases / phases.length) * 100) : 0;
+  const currentPhase = phases.find((p) => p.status === "in_progress");
+  const displayColor = projectType?.color || project.color || "#3B82F6";
+  const isClosed = project.status === "closed";
+
+  // Calculate days remaining
+  const daysRemaining = project.end_date 
+    ? differenceInDays(parseISO(project.end_date), new Date())
+    : null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.2, delay: index * 0.03 }}
+    >
+      <Card 
+        className={cn(
+          "group cursor-pointer hover:shadow-md transition-all duration-200",
+          isClosed && "opacity-70"
+        )}
+        onClick={onNavigate}
+      >
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-center gap-4">
+            {/* Left: Project info */}
+            <div className="flex-1 min-w-0 flex items-center gap-4">
+              {/* Name & Type */}
+              <div className="min-w-0 w-48 sm:w-56 shrink-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-sm truncate">{project.name}</h3>
+                  {isClosed && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {projectType && (
+                    <Badge 
+                      variant="secondary" 
+                      className="text-2xs"
+                      style={{ 
+                        backgroundColor: `${displayColor}15`,
+                        color: displayColor,
+                      }}
+                    >
+                      {projectType.label}
+                    </Badge>
+                  )}
+                  {project.is_internal && (
+                    <Badge variant="outline" className="text-2xs">Interne</Badge>
+                  )}
+                </div>
+              </div>
+
+              {/* Client & Location */}
+              <div className="hidden md:flex items-center gap-4 text-xs text-muted-foreground min-w-0 w-48 shrink-0">
+                {project.crm_company && (
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Building2 className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{project.crm_company.name}</span>
+                  </div>
+                )}
+                {project.city && (
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{project.city}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Progress */}
+              <div className="hidden lg:flex items-center gap-3 w-40 shrink-0">
+                <Progress value={progressPercent} className="h-2 flex-1" />
+                <span className="text-xs font-semibold w-8 text-right">{progressPercent}%</span>
+              </div>
+
+              {/* Current Phase */}
+              <div className="hidden xl:flex items-center gap-1.5 text-xs text-muted-foreground w-36 shrink-0">
+                <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">
+                  {currentPhase ? currentPhase.name : "—"}
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Stats */}
+            <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+              {/* Budget */}
+              <div className="hidden sm:block text-right w-20">
+                <p className="text-xs text-muted-foreground">Budget</p>
+                <p className="text-xs font-semibold">
+                  {project.budget ? formatCurrency(project.budget) : "—"}
+                </p>
+              </div>
+
+              {/* Team */}
+              <div className="hidden sm:block">
+                {members.length > 0 ? (
+                  <ProjectMemberAvatars members={members} max={4} />
+                ) : (
+                  <div className="text-xs text-muted-foreground">—</div>
+                )}
+              </div>
+
+              {/* Deadline */}
+              <div className="text-right w-16">
+                <p className="text-xs text-muted-foreground">Échéance</p>
+                {project.end_date ? (
+                  <p className={cn(
+                    "text-xs font-semibold",
+                    daysRemaining !== null && daysRemaining < 0 && "text-destructive",
+                    daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 7 && "text-amber-500"
+                  )}>
+                    {format(parseISO(project.end_date), "d MMM", { locale: fr })}
+                  </p>
+                ) : (
+                  <p className="text-xs font-semibold">—</p>
+                )}
+              </div>
+
+              {/* Actions */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onClick={onNavigate}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Voir le projet
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.location.href = `/projects/${project.id}/settings`; }}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Paramètres
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive focus:text-destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Supprimer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
