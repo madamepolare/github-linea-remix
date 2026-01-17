@@ -219,12 +219,29 @@ export function QuoteLinesEditor({
             <DropdownMenuItem onClick={addGroup}><FolderPlus className="h-4 w-4 mr-2" />Nouveau groupe</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => addLine('service')}><Package className="h-4 w-4 mr-2" />Ligne libre</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLine('phase')}><FileText className="h-4 w-4 mr-2" />Phase</DropdownMenuItem>
             <DropdownMenuItem onClick={() => addLine('option')}><Gift className="h-4 w-4 mr-2" />Option</DropdownMenuItem>
             <DropdownMenuItem onClick={() => addLine('expense')}><Receipt className="h-4 w-4 mr-2" />Frais</DropdownMenuItem>
             <DropdownMenuItem onClick={() => addLine('discount')}><MinusCircle className="h-4 w-4 mr-2" />Remise</DropdownMenuItem>
-            {baseTemplates.length > 0 && (<><DropdownMenuSeparator /><DropdownMenuSub><DropdownMenuSubTrigger><FileText className="h-4 w-4 mr-2" />Phases de base</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 overflow-y-auto">{baseTemplates.map(t => (<DropdownMenuItem key={t.id} onClick={() => addLineFromTemplate(t)}><Badge variant="outline" className="mr-2 text-xs">{t.code}</Badge>{t.name}</DropdownMenuItem>))}</DropdownMenuSubContent></DropdownMenuSub></>)}
-            {complementaryTemplates.length > 0 && (<DropdownMenuSub><DropdownMenuSubTrigger><FileText className="h-4 w-4 mr-2" />Phases complémentaires</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 overflow-y-auto">{complementaryTemplates.map(t => (<DropdownMenuItem key={t.id} onClick={() => addLineFromTemplate(t)}><Badge variant="outline" className="mr-2 text-xs">{t.code}</Badge>{t.name}</DropdownMenuItem>))}</DropdownMenuSubContent></DropdownMenuSub>)}
+            {(baseTemplates.length > 0 || complementaryTemplates.length > 0) && (
+              <>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5 text-xs text-muted-foreground font-medium flex items-center justify-between">
+                  <span>Phases (Paramètres)</span>
+                  <a href="/settings/phases" target="_blank" className="text-primary hover:underline text-xs">Gérer →</a>
+                </div>
+              </>
+            )}
+            {baseTemplates.length > 0 && (<DropdownMenuSub><DropdownMenuSubTrigger><FileText className="h-4 w-4 mr-2" />Phases de base</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 overflow-y-auto">{baseTemplates.map(t => (<DropdownMenuItem key={t.id} onClick={() => addLineFromTemplate(t)}><Badge variant="outline" className="mr-2 text-xs font-mono">{t.code}</Badge><span className="truncate">{t.name}</span></DropdownMenuItem>))}</DropdownMenuSubContent></DropdownMenuSub>)}
+            {complementaryTemplates.length > 0 && (<DropdownMenuSub><DropdownMenuSubTrigger><FileText className="h-4 w-4 mr-2" />Phases complémentaires</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 overflow-y-auto">{complementaryTemplates.map(t => (<DropdownMenuItem key={t.id} onClick={() => addLineFromTemplate(t)}><Badge variant="outline" className="mr-2 text-xs font-mono">{t.code}</Badge><span className="truncate">{t.name}</span></DropdownMenuItem>))}</DropdownMenuSubContent></DropdownMenuSub>)}
+            {(baseTemplates.length === 0 && complementaryTemplates.length === 0) && (
+              <>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-2 text-xs text-muted-foreground text-center">
+                  <p>Aucune phase définie</p>
+                  <a href="/settings/phases" target="_blank" className="text-primary hover:underline">Configurer les phases →</a>
+                </div>
+              </>
+            )}
             {activePricingGrids.length > 0 && (<><DropdownMenuSeparator />{activePricingGrids.map(grid => (<DropdownMenuSub key={grid.id}><DropdownMenuSubTrigger><Grid3X3 className="h-4 w-4 mr-2" />{grid.name}</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 overflow-y-auto">{grid.items.map((item: any, idx: number) => (<DropdownMenuItem key={idx} onClick={() => addLineFromPricingGrid(item)}><div className="flex flex-col"><span>{item.name}</span>{item.unit_price && <span className="text-xs text-muted-foreground">{formatCurrency(item.unit_price)}</span>}</div></DropdownMenuItem>))}</DropdownMenuSubContent></DropdownMenuSub>))}</>)}
           </DropdownMenuContent>
         </DropdownMenu>
