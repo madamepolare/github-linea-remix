@@ -36,12 +36,12 @@ serve(async (req) => {
       );
     }
 
-    // Build context for AI
+    // Build context for AI with explicit phase IDs
     const phasesContext = phases.map(p => {
       let dateInfo = "";
       if (p.start_date) dateInfo += `début: ${p.start_date}`;
       if (p.end_date) dateInfo += `${dateInfo ? ", " : ""}fin: ${p.end_date}`;
-      return `- ${p.name}${dateInfo ? ` (${dateInfo})` : ""}`;
+      return `- ID: "${p.id}" | Nom: "${p.name}"${dateInfo ? ` | ${dateInfo}` : ""}`;
     }).join("\n");
 
     const projectTypeLabel = projectType || "projet d'architecture/design";
@@ -51,14 +51,17 @@ serve(async (req) => {
 Génère une liste de livrables professionnels pour ce projet:
 - Nom du projet: ${projectName}
 - Type de projet: ${projectTypeLabel}
-- Phases du projet:
+
+PHASES DU PROJET (utilise EXACTEMENT les IDs fournis):
 ${phasesContext}
+
+IMPORTANT: Tu DOIS utiliser les IDs de phase EXACTEMENT comme ils sont écrits ci-dessus (ce sont des UUIDs).
 
 Pour chaque phase, propose 2 à 4 livrables pertinents avec:
 1. Le nom du livrable (court et professionnel)
 2. Une description courte (1 phrase)
 3. La date d'échéance suggérée (basée sur les dates de phase, format YYYY-MM-DD)
-4. L'ID de la phase associée
+4. L'ID EXACT de la phase associée (copie-colle l'UUID)
 
 Adapte les livrables au type de projet:
 - Architecture: plans, permis, études, DOE, CCTP, etc.
@@ -70,7 +73,7 @@ Réponds UNIQUEMENT avec un JSON valide, pas de texte avant ou après:
 {
   "deliverables": [
     {
-      "phase_id": "uuid de la phase",
+      "phase_id": "UUID_EXACT_DE_LA_PHASE",
       "name": "Nom du livrable",
       "description": "Description courte",
       "due_date": "YYYY-MM-DD ou null"
@@ -79,7 +82,7 @@ Réponds UNIQUEMENT avec un JSON valide, pas de texte avant ou après:
 }`;
 
     console.log("Generating deliverables for project:", projectName);
-    console.log("Phases:", phases.map(p => p.name).join(", "));
+    console.log("Phases with IDs:", phases.map(p => `${p.name} (${p.id})`).join(", "));
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -98,7 +101,7 @@ Réponds UNIQUEMENT avec un JSON valide, pas de texte avant ou après:
         messages: [
           {
             role: "system",
-            content: "Tu es un assistant expert en gestion de projets créatifs. Tu génères des livrables professionnels adaptés au contexte. Tu réponds toujours en JSON valide uniquement."
+            content: "Tu es un assistant expert en gestion de projets créatifs. Tu génères des livrables professionnels adaptés au contexte. Tu réponds toujours en JSON valide uniquement. IMPORTANT: Utilise EXACTEMENT les UUIDs des phases qui te sont fournis."
           },
           {
             role: "user",
