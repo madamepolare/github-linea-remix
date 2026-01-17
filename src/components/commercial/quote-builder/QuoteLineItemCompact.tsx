@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -101,7 +102,7 @@ interface QuoteLineItemCompactProps {
   isInGroup: boolean;
   groups: QuoteLine[];
   isExpanded: boolean;
-  draggedIndex: number | null;
+  dragHandleProps?: DraggableProvidedDragHandleProps | null;
   teamMembers: any[] | undefined;
   document: Partial<QuoteDocument>;
   toggleExpanded: (id: string) => void;
@@ -109,9 +110,6 @@ interface QuoteLineItemCompactProps {
   duplicateLine: (line: QuoteLine) => void;
   deleteLine: (id: string) => void;
   assignToGroup: (lineId: string, groupId: string | undefined) => void;
-  handleDragStart: (index: number) => void;
-  handleDragOver: (e: React.DragEvent, index: number) => void;
-  handleDragEnd: () => void;
   formatCurrency: (value: number) => string;
 }
 
@@ -121,7 +119,7 @@ export function QuoteLineItemCompact({
   isInGroup,
   groups,
   isExpanded,
-  draggedIndex,
+  dragHandleProps,
   teamMembers,
   document,
   toggleExpanded,
@@ -129,9 +127,6 @@ export function QuoteLineItemCompact({
   duplicateLine,
   deleteLine,
   assignToGroup,
-  handleDragStart,
-  handleDragOver,
-  handleDragEnd,
   formatCurrency
 }: QuoteLineItemCompactProps) {
   const features = useLineFeatures();
@@ -205,13 +200,8 @@ export function QuoteLineItemCompact({
   return (
     <Collapsible open={isExpanded}>
       <div
-        draggable
-        onDragStart={() => handleDragStart(index)}
-        onDragOver={(e) => handleDragOver(e, index)}
-        onDragEnd={handleDragEnd}
         className={cn(
           "border rounded-xl transition-all",
-          draggedIndex === index && 'opacity-50',
           !line.is_included && 'border-dashed border-muted-foreground/30 bg-muted/20',
           isInGroup && 'ml-2',
           isExpanded && 'shadow-md ring-1 ring-primary/10'
@@ -220,7 +210,10 @@ export function QuoteLineItemCompact({
         {/* Compact header - improved list view matching design */}
         <div className="flex items-center gap-2 p-3">
           {/* Drag handle */}
-          <div className="cursor-grab shrink-0 p-1 hover:bg-muted rounded">
+          <div 
+            {...dragHandleProps}
+            className="cursor-grab shrink-0 p-1 hover:bg-muted rounded active:cursor-grabbing"
+          >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
           
