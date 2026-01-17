@@ -85,8 +85,9 @@ export function PhasesSettings() {
   const queryClient = useQueryClient();
   const { projectTypes, isLoading: projectTypesLoading } = useProjectTypeSettings();
   const { discipline, disciplineSlug } = useDiscipline();
-  const [activeProjectType, setActiveProjectType] = useState<string>("");
-  const { templates, isLoading, createTemplate, updateTemplate, deleteTemplate, reorderTemplates, resetToDefaults, initializeDefaultsIfEmpty } = usePhaseTemplates(activeProjectType);
+  const [activeProjectType, setActiveProjectType] = useState<string>("universal");
+  // Fetch ALL phases without project type filter for universal list
+  const { templates, isLoading, createTemplate, updateTemplate, deleteTemplate, reorderTemplates, resetToDefaults, initializeDefaultsIfEmpty } = usePhaseTemplates();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPhase, setEditingPhase] = useState<PhaseTemplate | null>(null);
