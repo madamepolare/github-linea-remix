@@ -130,9 +130,20 @@ export function EntitySelector({
     }
   };
 
+  // Check if we can modify the project relation (blocked if deliverable is linked)
+  const isProjectLocked = entityType === "project" && deliverableId;
+
   const handleTypeClick = (typeId: RelatedEntityType) => {
+    // If a deliverable is linked, don't allow changing from project type
+    if (isProjectLocked && typeId !== "project") {
+      return; // Silently prevent change - the UI will show it's disabled
+    }
+
     if (entityType === typeId) {
-      // Clicking same type again deselects it
+      // Clicking same type again deselects it - but not if deliverable is linked
+      if (isProjectLocked) {
+        return; // Can't remove project relation when deliverable is linked
+      }
       executeWithConfirmation(() => {
         onEntityTypeChange(null);
         onEntityIdChange(null);
@@ -150,9 +161,15 @@ export function EntitySelector({
 
   const handleEntityChange = (value: string) => {
     const newId = value === "none" ? null : value;
+    
+    // Don't allow removing project if deliverable is linked
+    if (entityType === "project" && newId === null && deliverableId) {
+      return;
+    }
+    
     onEntityIdChange(newId);
     // Reset deliverable when project changes
-    if (entityType === "project") {
+    if (entityType === "project" && newId !== entityId) {
       onDeliverableIdChange?.(null);
     }
   };
@@ -165,27 +182,39 @@ export function EntitySelector({
     <div className={cn("space-y-3", className)}>
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">Lier à une entité</Label>
+        
+        {/* Warning message when deliverable is linked */}
+        {isProjectLocked && (
+          <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 flex items-center gap-1.5">
+            <FileCheck className="h-3 w-3 flex-shrink-0" />
+            <span>Un livrable est lié à ce projet. Pour changer la relation, supprimez d'abord le livrable.</span>
+          </div>
+        )}
+        
         <div className="flex flex-wrap gap-2">
           {RELATED_ENTITY_TYPES.map((type) => {
             const Icon = entityIcons[type.id];
             const colors = entityColors[type.id];
             const isSelected = entityType === type.id;
+            // Disable other types when a deliverable is linked to current project
+            const isLockedOut = isProjectLocked && type.id !== "project";
+            const isDisabled = disabled || isLockedOut;
             
             return (
               <motion.button
                 key={type.id}
                 type="button"
                 onClick={() => handleTypeClick(type.id)}
-                disabled={disabled}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                disabled={isDisabled}
+                whileHover={!isDisabled ? { scale: 1.02 } : undefined}
+                whileTap={!isDisabled ? { scale: 0.98 } : undefined}
                 className={cn(
                   "relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200",
                   "text-sm font-medium",
                   isSelected 
                     ? cn(colors.bg, colors.border, colors.text, "border-2 shadow-sm")
                     : "bg-muted/30 border-border hover:bg-muted/50 text-muted-foreground",
-                  disabled && "opacity-50 cursor-not-allowed"
+                  isDisabled && "opacity-50 cursor-not-allowed"
                 )}
               >
                 <div className={cn(
@@ -195,7 +224,7 @@ export function EntitySelector({
                   <Icon className="h-3.5 w-3.5" />
                 </div>
                 <span>{type.label}</span>
-                {isSelected && (
+                {isSelected && !isProjectLocked && (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
@@ -232,7 +261,10 @@ export function EntitySelector({
                   <SelectValue placeholder="Sélectionner..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Aucun</SelectItem>
+                  {/* Don't show "Aucun" option if deliverable is linked */}
+                  {!isProjectLocked && (
+                    <SelectItem value="none">Aucun</SelectItem>
+                  )}
                   {entityType === "project" ? (
                     <>
                       {internalProjects.length > 0 && (
