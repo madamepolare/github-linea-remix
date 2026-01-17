@@ -63,7 +63,6 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
     href: "/projects",
     subNav: [
       { key: "list", label: "Liste", href: "/projects/list" },
-      { key: "board", label: "Board", href: "/projects/board" },
       { key: "timeline", label: "Timeline", href: "/projects/timeline" },
     ],
     quickActions: [
