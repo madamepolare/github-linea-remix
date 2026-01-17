@@ -144,9 +144,10 @@ export interface CommercialTemplate {
   updated_at: string;
 }
 
-// Legacy phase templates - now loaded from database via usePhaseTemplates hook
-// These are kept for backward compatibility and AI defaults generation
-
+// Legacy phase templates - DEPRECATED
+// Phases are now ONLY loaded from database via usePhaseTemplates hook
+// Do NOT use this constant - it's kept only to prevent import errors during migration
+// @deprecated Use usePhaseTemplates hook instead
 export const PHASES_BY_PROJECT_TYPE: Record<ProjectType, PhaseTemplate[]> = {
   architecture: [],
   interior: [],
