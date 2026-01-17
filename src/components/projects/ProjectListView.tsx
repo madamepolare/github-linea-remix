@@ -317,7 +317,7 @@ function ProjectCard({ project, members, financialData, index, onNavigate, onDel
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="3"
-                      className="text-muted/30"
+                      className="text-muted-foreground/30"
                     />
                     <circle
                       cx="12"
