@@ -401,7 +401,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
                   )}
                   
                   {/* Projects in group */}
-                  <div className="flex flex-col">
+                  <div className="flex flex-col gap-2">
                     {group.projects.map((project, index) => (
                       <ProjectCard
                         key={project.id}
