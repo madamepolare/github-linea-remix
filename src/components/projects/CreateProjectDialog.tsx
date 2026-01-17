@@ -24,7 +24,6 @@ import { usePhaseTemplates } from "@/hooks/usePhaseTemplates";
 import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
-import { AIRewriteButton } from "@/components/projects/meeting-report/AIRewriteButton";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -61,6 +60,7 @@ import {
   Palette,
   Globe,
   FileVideo,
+  Loader2,
 } from "lucide-react";
 
 interface CreateProjectDialogProps {
@@ -68,14 +68,16 @@ interface CreateProjectDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Simplified steps - removed "Type" (sub-type) step
 const STEPS = [
   { id: "discipline", label: "Discipline" },
-  { id: "type", label: "Type" },
   { id: "info", label: "Informations" },
   { id: "client", label: "Client" },
-  { id: "phases", label: "Phases" },
-  { id: "dates", label: "Dates & Budget" },
+  { id: "summary", label: "Récapitulatif" },
 ];
+
+// Disciplines that show surface field
+const SURFACE_DISCIPLINES = ["architecture", "interior", "interieur", "archi"];
 
 // Map icon names to components
 const iconMap: Record<string, React.ElementType> = {
@@ -113,7 +115,7 @@ function mapDisciplineToProjectType(disciplineKey: string): ProjectType | null {
     scenographie: "scenography",
   };
   const normalized = disciplineKey.toLowerCase();
-  return mapping[normalized] || "interior"; // Default to interior if unknown
+  return mapping[normalized] || "interior";
 }
 
 // Map project type key to discipline slug for phase defaults
@@ -124,7 +126,6 @@ function mapProjectTypeToDiscipline(projectType: string): DisciplineSlug | null 
     architecture: "architecture",
     scenography: "scenography",
     scenographie: "scenography",
-    // Communication types
     campagne: "communication",
     branding: "communication",
     supports: "communication",
@@ -139,24 +140,28 @@ function mapProjectTypeToDiscipline(projectType: string): DisciplineSlug | null 
   return mapping[normalized] || null;
 }
 
+// Check if discipline should show surface field
+function shouldShowSurface(disciplineKey: string | null): boolean {
+  if (!disciplineKey) return false;
+  return SURFACE_DISCIPLINES.some(d => 
+    disciplineKey.toLowerCase().includes(d.toLowerCase())
+  );
+}
+
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
   const { createProject } = useProjects();
   const { companies, isLoading: companiesLoading } = useCRMCompanies();
   const { projectTypes: disciplines, isLoading: disciplinesLoading } = useProjectTypeSettings();
   
   const [step, setStep] = useState(0);
-  // Step 0: Selected discipline (from workspace settings)
   const [selectedDiscipline, setSelectedDiscipline] = useState<string | null>(null);
-  // Step 1: Selected sub-type within discipline
-  const [selectedSubType, setSelectedSubType] = useState<string | null>(null);
-  // projectType for database (maps to legacy ProjectType)
   const [projectType, setProjectType] = useState<ProjectType | null>(null);
   
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
-  const [region, setRegion] = useState("");
+  const [postalCode, setPostalCode] = useState("");
   const [surfaceArea, setSurfaceArea] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   
@@ -171,14 +176,12 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     return disciplines.find(d => d.key === selectedDiscipline);
   }, [disciplines, selectedDiscipline]);
 
-  // Sub-types are now managed via workspace settings (project_subtypes)
-  // For now, we don't show subtypes in the creation flow - can be set after creation
+  // Check if surface should be shown
+  const showSurface = useMemo(() => shouldShowSurface(selectedDiscipline), [selectedDiscipline]);
 
-  // When discipline changes, reset subtype and set projectType
+  // When discipline changes, set projectType
   useEffect(() => {
     if (selectedDiscipline) {
-      setSelectedSubType(null);
-      // Map discipline to legacy ProjectType
       const legacyType = mapDisciplineToProjectType(selectedDiscipline);
       setProjectType(legacyType);
     }
@@ -209,7 +212,6 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
         }))
       );
     } else if (projectType) {
-      // Fallback: Try to map to discipline default phases
       const disciplineSlug = mapProjectTypeToDiscipline(projectType);
       if (disciplineSlug) {
         const defaultPhases = getDefaultPhases(disciplineSlug);
@@ -227,7 +229,6 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const handleCreate = () => {
     if (!name.trim() || !projectType) return;
     
-    // Use discipline color as the project color
     const color = selectedDisciplineConfig?.color || "#3B82F6";
     
     const input: CreateProjectInput = {
@@ -237,7 +238,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       crm_company_id: isInternal ? null : crmCompanyId,
       address: address.trim() || null,
       city: city.trim() || null,
-      surface_area: surfaceArea ? parseFloat(surfaceArea) : null,
+      surface_area: showSurface && surfaceArea ? parseFloat(surfaceArea) : null,
       color,
       start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
       end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
@@ -253,16 +254,14 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const resetForm = () => {
     setStep(0);
     setSelectedDiscipline(null);
-    setSelectedSubType(null);
     setProjectType(null);
     setName("");
     setDescription("");
     setAddress("");
     setCity("");
-    setRegion("");
+    setPostalCode("");
     setSurfaceArea("");
     setIsInternal(false);
-    
     setCrmCompanyId(null);
     setStartDate(null);
     setEndDate(null);
@@ -277,23 +276,19 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     region: string;
   }) => {
     setCity(result.city);
-    setRegion(result.region);
+    setPostalCode(result.postalCode);
   };
 
   const canProceed = () => {
     switch (step) {
       case 0: // Discipline
         return !!selectedDiscipline;
-      case 1: // Sub-type (optional but skippable if no subtypes)
-        return true; // Sub-type step is skipped
-      case 2: // Info
+      case 1: // Info
         return !!name.trim();
-      case 3: // Client
+      case 2: // Client
         return true; // Client is optional
-      case 4: // Phases
-        return phases.length > 0;
-      case 5: // Dates
-        return !!startDate && !!endDate;
+      case 3: // Summary
+        return true;
       default:
         return false;
     }
@@ -312,6 +307,15 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   };
 
   const selectedCompany = companies.find(c => c.id === crmCompanyId);
+
+  // Filter client companies
+  const clientCompanies = companies.filter(c => 
+    c.industry === "client_particulier" || 
+    c.industry === "client_professionnel" || 
+    c.industry === "promoteur" || 
+    c.industry === "investisseur" ||
+    !c.industry // Include companies without industry set
+  );
 
   return (
     <Dialog open={open} onOpenChange={(open) => { if (!open) resetForm(); onOpenChange(open); }}>
@@ -337,7 +341,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 </button>
                 {index < STEPS.length - 1 && (
                   <div className={cn(
-                    "w-8 h-0.5 mx-1",
+                    "w-12 h-0.5 mx-1",
                     index < step ? "bg-primary" : "bg-muted"
                   )} />
                 )}
@@ -381,10 +385,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                   </p>
                   
                   {disciplinesLoading ? (
-                    <div className="grid grid-cols-3 gap-3">
-                      {[1, 2, 3].map(i => (
-                        <div key={i} className="h-32 rounded-xl border-2 border-border bg-muted/30 animate-pulse" />
-                      ))}
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
                   ) : (
                     <div className="grid grid-cols-3 gap-3">
@@ -419,29 +421,17 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 </div>
               )}
 
-              {/* Step 1: Project Sub-Type Selection */}
+              {/* Step 1: Project Info */}
               {step === 1 && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-4">
                     <Badge variant="outline" style={{ borderColor: selectedDisciplineConfig?.color, color: selectedDisciplineConfig?.color }}>
                       {selectedDisciplineConfig?.label}
                     </Badge>
+                    {isInternal && (
+                      <Badge variant="secondary">Projet interne</Badge>
+                    )}
                   </div>
-                  
-                  <p className="text-sm text-muted-foreground">
-                    Précisez le type de projet (optionnel).
-                  </p>
-                  
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>Les sous-types de projet sont gérés dans les paramètres.</p>
-                    <p className="text-sm mt-2">Vous pouvez passer à l'étape suivante.</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Project Info */}
-              {step === 2 && (
-                <div className="space-y-4">
 
                   <div className="space-y-2">
                     <Label htmlFor="name">Nom du projet *</Label>
@@ -459,7 +449,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                       <div className="space-y-2">
                         <Label htmlFor="address">
                           <MapPin className="h-3.5 w-3.5 inline mr-1" />
-                          Adresse
+                          Adresse du projet
                         </Label>
                         <AddressAutocomplete
                           value={address}
@@ -469,7 +459,16 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                         />
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className={cn("grid gap-4", showSurface ? "grid-cols-3" : "grid-cols-2")}>
+                        <div className="space-y-2">
+                          <Label htmlFor="postalCode">Code postal</Label>
+                          <Input
+                            id="postalCode"
+                            value={postalCode}
+                            onChange={(e) => setPostalCode(e.target.value)}
+                            placeholder="75001"
+                          />
+                        </div>
                         <div className="space-y-2">
                           <Label htmlFor="city">Ville</Label>
                           <Input
@@ -479,38 +478,24 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                             placeholder="Paris"
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="region">Région</Label>
-                          <Input
-                            id="region"
-                            value={region}
-                            onChange={(e) => setRegion(e.target.value)}
-                            placeholder="Île-de-France"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="surface">Surface (m²)</Label>
-                          <Input
-                            id="surface"
-                            type="number"
-                            value={surfaceArea}
-                            onChange={(e) => setSurfaceArea(e.target.value)}
-                            placeholder="150"
-                          />
-                        </div>
+                        {showSurface && (
+                          <div className="space-y-2">
+                            <Label htmlFor="surface">Surface (m²)</Label>
+                            <Input
+                              id="surface"
+                              type="number"
+                              value={surfaceArea}
+                              onChange={(e) => setSurfaceArea(e.target.value)}
+                              placeholder="150"
+                            />
+                          </div>
+                        )}
                       </div>
                     </>
                   )}
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="description">Description</Label>
-                      <AIRewriteButton
-                        text={description}
-                        onRewrite={setDescription}
-                        context="description de projet d'architecture"
-                      />
-                    </div>
+                    <Label htmlFor="description">Description</Label>
                     <Textarea
                       id="description"
                       value={description}
@@ -519,94 +504,13 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                       rows={3}
                     />
                   </div>
-                </div>
-              )}
 
-              {/* Step 3: Client Selection */}
-              {step === 3 && (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Sélectionnez un client depuis le CRM ou passez cette étape.
-                  </p>
-                  
-                  <div className="space-y-2">
-                    <Label>Client (optionnel)</Label>
-                    <Select 
-                      value={crmCompanyId || "none"} 
-                      onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un client..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Aucun client</SelectItem>
-                        {companies.map((company) => (
-                          <SelectItem key={company.id} value={company.id}>
-                            {company.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {selectedCompany && (
-                    <div className="p-4 rounded-lg border border-border bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Building2 className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{selectedCompany.name}</p>
-                          {selectedCompany.email && (
-                            <p className="text-sm text-muted-foreground">{selectedCompany.email}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Step 4: Phases Preview */}
-              {step === 4 && (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Les phases suivantes seront créées automatiquement. Vous pourrez les modifier après création.
-                  </p>
-                  
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {phases.map((phase, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card"
-                      >
-                        <div
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: phase.color }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">{phase.name}</p>
-                          {phase.description && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {phase.description}
-                            </p>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">#{index + 1}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 5: Dates & Budget */}
-              {step === 5 && (
-                <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                  {/* Dates inline */}
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label className="flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
-                        Date de début *
+                        Date de début
                       </Label>
                       <InlineDatePicker
                         value={startDate}
@@ -614,87 +518,197 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                         placeholder="Sélectionner..."
                         className="w-full"
                       />
-                      {!startDate && (
-                        <p className="text-xs text-destructive">Requis pour calculer les phases</p>
-                      )}
                     </div>
-
                     <div className="space-y-2">
-                      <Label>Date de fin prévue *</Label>
+                      <Label>Date de fin prévue</Label>
                       <InlineDatePicker
                         value={endDate}
                         onChange={setEndDate}
                         placeholder="Sélectionner..."
                         className="w-full"
                       />
-                      {!endDate && (
-                        <p className="text-xs text-destructive">Requis pour calculer les phases</p>
-                      )}
                     </div>
                   </div>
 
-                  {startDate && endDate && (
-                    <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                      <p className="text-sm text-primary">
-                        Les {phases.length} phases seront automatiquement réparties sur la durée du projet.
-                      </p>
+                  {!isInternal && (
+                    <div className="space-y-2">
+                      <Label htmlFor="budget">
+                        <Wallet className="h-3.5 w-3.5 inline mr-1" />
+                        Budget estimé (€)
+                      </Label>
+                      <Input
+                        id="budget"
+                        type="number"
+                        value={budget}
+                        onChange={(e) => setBudget(e.target.value)}
+                        placeholder="50000"
+                      />
                     </div>
                   )}
+                </div>
+              )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="budget">
-                      <Wallet className="h-3.5 w-3.5 inline mr-1" />
-                      Budget (€)
-                    </Label>
-                    <Input
-                      id="budget"
-                      type="number"
-                      value={budget}
-                      onChange={(e) => setBudget(e.target.value)}
-                      placeholder="50000"
-                    />
+              {/* Step 2: Client Selection */}
+              {step === 2 && (
+                <div className="space-y-4">
+                  {isInternal ? (
+                    <div className="text-center py-8 border border-dashed rounded-lg">
+                      <Home className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                      <p className="text-sm font-medium">Projet interne</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Pas de client associé aux projets internes
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        Sélectionnez un client depuis le CRM ou passez cette étape.
+                      </p>
+                      
+                      <div className="space-y-2">
+                        <Label>Client (optionnel)</Label>
+                        <Select 
+                          value={crmCompanyId || "none"} 
+                          onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un client..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Aucun client</SelectItem>
+                            {clientCompanies.map((company) => (
+                              <SelectItem key={company.id} value={company.id}>
+                                {company.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {selectedCompany && (
+                        <div className="p-4 rounded-lg border border-border bg-muted/30">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Building2 className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{selectedCompany.name}</p>
+                              {selectedCompany.email && (
+                                <p className="text-sm text-muted-foreground">{selectedCompany.email}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3: Summary */}
+              {step === 3 && (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Vérifiez les informations avant de créer le projet.
+                  </p>
+                  
+                  {/* Summary card */}
+                  <div className="p-4 rounded-lg border border-border bg-card">
+                    <div className="flex items-start gap-4">
+                      <div 
+                        className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: `${selectedDisciplineConfig?.color}20` }}
+                      >
+                        {(() => {
+                          const Icon = iconMap[selectedDisciplineConfig?.icon || "Building2"] || Building2;
+                          return <Icon className="h-6 w-6" style={{ color: selectedDisciplineConfig?.color }} />;
+                        })()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-lg truncate">{name}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" style={{ borderColor: selectedDisciplineConfig?.color, color: selectedDisciplineConfig?.color }}>
+                            {selectedDisciplineConfig?.label}
+                          </Badge>
+                          {isInternal && <Badge variant="secondary">Interne</Badge>}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Summary */}
-                  <div className="mt-6 p-4 rounded-lg border border-border bg-muted/30">
-                    <h4 className="font-medium mb-3">Récapitulatif</h4>
-                    <dl className="space-y-2 text-sm">
+                  {/* Details */}
+                  <dl className="space-y-3 text-sm">
+                    {description && (
+                      <div>
+                        <dt className="text-muted-foreground">Description</dt>
+                        <dd className="font-medium mt-0.5">{description}</dd>
+                      </div>
+                    )}
+                    
+                    {!isInternal && (address || city) && (
                       <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Discipline</dt>
-                        <dd className="font-medium">
-                          {selectedDisciplineConfig?.label || "-"}
+                        <dt className="text-muted-foreground">Localisation</dt>
+                        <dd className="font-medium text-right">
+                          {[address, postalCode, city].filter(Boolean).join(", ")}
                         </dd>
                       </div>
-                      {selectedSubType && (
-                        <div className="flex justify-between">
-                          <dt className="text-muted-foreground">Type</dt>
-                          <dd className="font-medium">
-                            {selectedSubType}
-                          </dd>
-                        </div>
-                      )}
+                    )}
+
+                    {showSurface && surfaceArea && (
                       <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Nom</dt>
-                        <dd className="font-medium truncate max-w-48">{name}</dd>
+                        <dt className="text-muted-foreground">Surface</dt>
+                        <dd className="font-medium">{parseFloat(surfaceArea).toLocaleString("fr-FR")} m²</dd>
                       </div>
-                      {selectedCompany && (
-                        <div className="flex justify-between">
-                          <dt className="text-muted-foreground">Client</dt>
-                          <dd className="font-medium">{selectedCompany.name}</dd>
-                        </div>
-                      )}
+                    )}
+
+                    {startDate && (
                       <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Phases</dt>
-                        <dd className="font-medium">{phases.length} phases</dd>
+                        <dt className="text-muted-foreground">Dates</dt>
+                        <dd className="font-medium">
+                          {format(startDate, "dd/MM/yyyy")}
+                          {endDate && ` → ${format(endDate, "dd/MM/yyyy")}`}
+                        </dd>
                       </div>
-                      {budget && (
-                        <div className="flex justify-between">
-                          <dt className="text-muted-foreground">Budget</dt>
-                          <dd className="font-medium">{parseFloat(budget).toLocaleString("fr-FR")} €</dd>
-                        </div>
-                      )}
-                    </dl>
-                  </div>
+                    )}
+
+                    {selectedCompany && (
+                      <div className="flex justify-between">
+                        <dt className="text-muted-foreground">Client</dt>
+                        <dd className="font-medium">{selectedCompany.name}</dd>
+                      </div>
+                    )}
+
+                    {budget && !isInternal && (
+                      <div className="flex justify-between">
+                        <dt className="text-muted-foreground">Budget</dt>
+                        <dd className="font-medium">{parseFloat(budget).toLocaleString("fr-FR")} €</dd>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between pt-2 border-t">
+                      <dt className="text-muted-foreground">Phases</dt>
+                      <dd className="font-medium">{phases.length} phases seront créées</dd>
+                    </div>
+                  </dl>
+
+                  {/* Phases preview */}
+                  {phases.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs text-muted-foreground mb-2">Phases du projet :</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {phases.map((phase, index) => (
+                          <Badge 
+                            key={index} 
+                            variant="outline" 
+                            className="text-xs"
+                            style={{ borderColor: phase.color, color: phase.color }}
+                          >
+                            {phase.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </motion.div>
@@ -725,9 +739,16 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
           ) : (
             <Button 
               onClick={handleCreate} 
-              disabled={!canProceed() || createProject.isPending}
+              disabled={!name.trim() || !projectType || createProject.isPending}
             >
-              {createProject.isPending ? "Création..." : "Créer le projet"}
+              {createProject.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Création...
+                </>
+              ) : (
+                "Créer le projet"
+              )}
             </Button>
           )}
         </div>

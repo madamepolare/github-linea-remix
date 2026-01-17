@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,10 @@ import {
   Loader2,
   Home,
 } from "lucide-react";
+
+// Disciplines that show surface field
+const SURFACE_DISCIPLINES = ["architecture", "interior", "interieur", "archi"];
+
 interface Project {
   id: string;
   name: string;
@@ -73,6 +77,14 @@ const getIconComponent = (iconName: string): React.ElementType => {
   return Icon || Building2;
 };
 
+// Check if discipline should show surface field
+function shouldShowSurface(disciplineKey: string | null): boolean {
+  if (!disciplineKey) return false;
+  return SURFACE_DISCIPLINES.some(d => 
+    disciplineKey.toLowerCase().includes(d.toLowerCase())
+  );
+}
+
 export function EditProjectDialog({ 
   open, 
   onOpenChange, 
@@ -99,6 +111,9 @@ export function EditProjectDialog({
   );
   const [budget, setBudget] = useState(project.budget?.toString() || "");
   const [isInternal, setIsInternal] = useState(project.is_internal || false);
+
+  // Check if surface should be shown based on project type
+  const showSurface = useMemo(() => shouldShowSurface(projectType), [projectType]);
 
   // Sync state when project changes
   useEffect(() => {
@@ -127,7 +142,7 @@ export function EditProjectDialog({
       address: address.trim() || null,
       city: city.trim() || null,
       postal_code: postalCode.trim() || null,
-      surface_area: surfaceArea ? parseFloat(surfaceArea) : null,
+      surface_area: showSurface && surfaceArea ? parseFloat(surfaceArea) : null,
       color,
       crm_company_id: isInternal ? null : crmCompanyId,
       start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
@@ -136,6 +151,15 @@ export function EditProjectDialog({
       is_internal: isInternal,
     });
   };
+
+  // Filter client companies
+  const clientCompanies = companies.filter(c => 
+    c.industry === "client_particulier" || 
+    c.industry === "client_professionnel" || 
+    c.industry === "promoteur" || 
+    c.industry === "investisseur" ||
+    !c.industry
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -251,74 +275,78 @@ export function EditProjectDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Aucun client</SelectItem>
-                  {companies
-                    .filter(c => c.industry === "client_particulier" || c.industry === "client_professionnel" || c.industry === "promoteur" || c.industry === "investisseur")
-                    .map((company) => (
-                      <SelectItem key={company.id} value={company.id}>
-                        {company.name}
-                      </SelectItem>
-                    ))}
+                  {clientCompanies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           )}
 
-          {/* Location */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="address">Adresse</Label>
-              <Input
-                id="address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="123 rue de Paris"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
+          {/* Location - hidden for internal projects */}
+          {!isInternal && (
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="postal_code">Code postal</Label>
+                <Label htmlFor="address">Adresse</Label>
                 <Input
-                  id="postal_code"
-                  value={postalCode}
-                  onChange={(e) => setPostalCode(e.target.value)}
-                  placeholder="75001"
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="123 rue de Paris"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="city">Ville</Label>
-                <Input
-                  id="city"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Paris"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor="postal_code">Code postal</Label>
+                  <Input
+                    id="postal_code"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                    placeholder="75001"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city">Ville</Label>
+                  <Input
+                    id="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Paris"
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Surface & Budget */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="surface">Surface (m²)</Label>
-              <Input
-                id="surface"
-                type="number"
-                value={surfaceArea}
-                onChange={(e) => setSurfaceArea(e.target.value)}
-                placeholder="150"
-              />
+          {/* Surface & Budget - conditionally shown */}
+          {!isInternal && (
+            <div className={cn("grid gap-4", showSurface ? "grid-cols-2" : "grid-cols-1")}>
+              {showSurface && (
+                <div className="space-y-2">
+                  <Label htmlFor="surface">Surface (m²)</Label>
+                  <Input
+                    id="surface"
+                    type="number"
+                    value={surfaceArea}
+                    onChange={(e) => setSurfaceArea(e.target.value)}
+                    placeholder="150"
+                  />
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="budget">Budget (€)</Label>
+                <Input
+                  id="budget"
+                  type="number"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  placeholder="50000"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="budget">Budget (€)</Label>
-              <Input
-                id="budget"
-                type="number"
-                value={budget}
-                onChange={(e) => setBudget(e.target.value)}
-                placeholder="50000"
-              />
-            </div>
-          </div>
+          )}
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
@@ -341,7 +369,6 @@ export function EditProjectDialog({
               />
             </div>
           </div>
-
 
           {/* Description */}
           <div className="space-y-2">
