@@ -97,6 +97,7 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
   const { activeWorkspace } = useAuth();
   const { projects, isLoading } = useProjects();
   const [viewDate, setViewDate] = useState(new Date());
+  const [monthsRange, setMonthsRange] = useState<1 | 3 | 6 | 12>(3);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -131,12 +132,16 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
     return map;
   }, [allDeliverables]);
 
-  // Calculate visible range - show 2 months before and 2 months after current view date
+  // Calculate visible range based on selected months range
   const { visibleStart, visibleEnd, visibleDays, visibleMonths, todayOffset } = useMemo(() => {
     const today = startOfDay(new Date());
     
-    const start = subMonths(startOfMonth(viewDate), 1);
-    const end = endOfMonth(addMonths(viewDate, 2));
+    // Center the view around viewDate with selected range
+    const monthsBefore = Math.floor(monthsRange / 2);
+    const monthsAfter = monthsRange - monthsBefore - 1;
+    
+    const start = subMonths(startOfMonth(viewDate), monthsBefore);
+    const end = endOfMonth(addMonths(viewDate, monthsAfter));
     
     const days = eachDayOfInterval({ start, end });
     const months = eachMonthOfInterval({ start, end });
@@ -149,7 +154,7 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
       visibleMonths: months,
       todayOffset: offset,
     };
-  }, [viewDate]);
+  }, [viewDate, monthsRange]);
 
   // Auto-scroll to position "today" at 25% from left on mount
   useEffect(() => {
@@ -290,9 +295,30 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
               {format(viewDate, "MMMM yyyy", { locale: fr })}
             </span>
           </div>
-          <Button variant="outline" size="sm" onClick={goToToday} className="h-7 sm:h-8 text-xs sm:text-sm">
-            Aujourd'hui
-          </Button>
+          
+          <div className="flex items-center gap-2">
+            {/* Month range selector */}
+            <div className="flex items-center border border-border rounded-md overflow-hidden">
+              {([1, 3, 6, 12] as const).map((months) => (
+                <button
+                  key={months}
+                  onClick={() => setMonthsRange(months)}
+                  className={cn(
+                    "px-2 sm:px-3 py-1 text-xs sm:text-sm font-medium transition-colors",
+                    monthsRange === months
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {months}m
+                </button>
+              ))}
+            </div>
+            
+            <Button variant="outline" size="sm" onClick={goToToday} className="h-7 sm:h-8 text-xs sm:text-sm">
+              Aujourd'hui
+            </Button>
+          </div>
         </div>
       </div>
 
