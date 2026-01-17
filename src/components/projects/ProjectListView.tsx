@@ -374,49 +374,51 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {groupedProjects.map((group) => {
-            const GroupIcon = group.icon ? getIconComponent(group.icon) : (groupBy === "client" ? Building2 : FolderKanban);
-            
-            return (
-              <div key={group.key} className="flex flex-col">
-                {/* Group Header */}
-                {groupBy !== "none" && (
-                  <div className="flex items-center gap-2 mb-2 px-1">
-                    <div 
-                      className="h-7 w-7 rounded-md flex items-center justify-center"
-                      style={{ backgroundColor: group.color ? `${group.color}15` : 'hsl(var(--muted))' }}
-                    >
-                      <GroupIcon 
-                        className="h-4 w-4" 
-                        style={{ color: group.color || 'hsl(var(--muted-foreground))' }}
-                      />
+          {groupedProjects
+            .filter((group) => group.projects.length > 0)
+            .map((group) => {
+              const GroupIcon = group.icon ? getIconComponent(group.icon) : (groupBy === "client" ? Building2 : FolderKanban);
+              
+              return (
+                <div key={group.key} className="flex flex-col">
+                  {/* Group Header */}
+                  {groupBy !== "none" && (
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <div 
+                        className="h-7 w-7 rounded-md flex items-center justify-center"
+                        style={{ backgroundColor: group.color ? `${group.color}15` : 'hsl(var(--muted))' }}
+                      >
+                        <GroupIcon 
+                          className="h-4 w-4" 
+                          style={{ color: group.color || 'hsl(var(--muted-foreground))' }}
+                        />
+                      </div>
+                      <span className="font-medium text-sm">{group.label}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {group.projects.length}
+                      </Badge>
                     </div>
-                    <span className="font-medium text-sm">{group.label}</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {group.projects.length}
-                    </Badge>
+                  )}
+                  
+                  {/* Projects in group */}
+                  <div className="flex flex-col">
+                    {group.projects.map((project, index) => (
+                      <ProjectCard
+                        key={project.id}
+                        project={project}
+                        members={projectMembersByProject[project.id] || []}
+                        financialData={projectsFinancialData[project.id]}
+                        projectTypeSettings={projectTypes}
+                        index={index}
+                        onNavigate={() => navigate(`/projects/${project.id}`)}
+                        onDelete={() => setDeleteProjectId(project.id)}
+                        formatCurrency={formatCurrency}
+                      />
+                    ))}
                   </div>
-                )}
-                
-                {/* Projects in group */}
-                <div className="flex flex-col gap-1">
-                  {group.projects.map((project, index) => (
-                    <ProjectCard
-                      key={project.id}
-                      project={project}
-                      members={projectMembersByProject[project.id] || []}
-                      financialData={projectsFinancialData[project.id]}
-                      projectTypeSettings={projectTypes}
-                      index={index}
-                      onNavigate={() => navigate(`/projects/${project.id}`)}
-                      onDelete={() => setDeleteProjectId(project.id)}
-                      formatCurrency={formatCurrency}
-                    />
-                  ))}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
 
           {/* Financial Totals Footer */}
           {financialTotals.totalBudget > 0 && (
