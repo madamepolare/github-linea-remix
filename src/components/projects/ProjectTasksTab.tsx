@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { TaskListView } from "@/components/tasks/TaskListView";
-import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
+import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 import { ViewSwitcher } from "@/components/ui/view-switcher";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -47,10 +47,12 @@ export function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
         <TaskListView projectId={projectId} />
       )}
 
-      {/* Create dialog with project pre-filled */}
-      <CreateTaskDialog
+      {/* Create sheet with project pre-filled */}
+      <TaskDetailSheet
+        task={null}
         open={createOpen}
         onOpenChange={setCreateOpen}
+        isCreateMode={true}
         defaultProjectId={projectId}
       />
     </div>

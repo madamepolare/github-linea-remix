@@ -7,7 +7,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TaskDetailSheet } from "./TaskDetailSheet";
-import { CreateTaskDialog } from "./CreateTaskDialog";
 import { Plus, CheckSquare, Clock, AlertCircle } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -94,11 +93,11 @@ export function EntityTasksList({ entityType, entityId, entityName, compact = fa
               onClick: () => setShowCreateDialog(true),
             }}
           />
-          <CreateTaskDialog
+          <TaskDetailSheet
+            task={null}
             open={showCreateDialog}
             onOpenChange={setShowCreateDialog}
-            defaultRelatedType={entityType}
-            defaultRelatedId={entityId}
+            isCreateMode={true}
           />
         </CardContent>
       </Card>
@@ -197,11 +196,11 @@ export function EntityTasksList({ entityType, entityId, entityName, compact = fa
         onOpenChange={(open) => !open && setSelectedTask(null)}
       />
 
-      <CreateTaskDialog
+      <TaskDetailSheet
+        task={null}
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
-        defaultRelatedType={entityType}
-        defaultRelatedId={entityId}
+        isCreateMode={true}
       />
     </>
   );

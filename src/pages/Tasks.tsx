@@ -4,7 +4,7 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import { TaskArchiveView } from "@/components/tasks/TaskArchiveView";
-import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
+import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 
 type ViewType = "board" | "list" | "archive";
 
@@ -42,7 +42,12 @@ export default function Tasks() {
         {view === "archive" && <TaskArchiveView />}
       </PageLayout>
 
-      <CreateTaskDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <TaskDetailSheet 
+        task={null} 
+        open={createOpen} 
+        onOpenChange={setCreateOpen}
+        isCreateMode={true}
+      />
     </>
   );
 }
