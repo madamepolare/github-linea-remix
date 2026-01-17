@@ -4,6 +4,7 @@ import { useLeads } from "@/hooks/useLeads";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
 import { useTenders } from "@/hooks/useTenders";
+import { useProjectDeliverables } from "@/hooks/useProjectDeliverables";
 import { RELATED_ENTITY_TYPES, RelatedEntityType } from "@/lib/taskTypes";
 import {
   Select,
@@ -15,7 +16,7 @@ import {
   SelectLabel,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { FolderKanban, Target, Building2, User, Home, FileText, X } from "lucide-react";
+import { FolderKanban, Target, Building2, User, Home, FileText, X, FileCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -67,6 +68,11 @@ interface EntitySelectorProps {
   onEntityIdChange: (id: string | null) => void;
   className?: string;
   disabled?: boolean;
+  // New props for deliverable sub-selection
+  deliverableId?: string | null;
+  onDeliverableIdChange?: (id: string | null) => void;
+  // Callback to request confirmation before changing relation
+  onRequestChange?: (callback: () => void) => void;
 }
 
 export function EntitySelector({
@@ -76,12 +82,19 @@ export function EntitySelector({
   onEntityIdChange,
   className,
   disabled,
+  deliverableId,
+  onDeliverableIdChange,
+  onRequestChange,
 }: EntitySelectorProps) {
   const { projects } = useProjects();
   const { leads } = useLeads();
   const { allCompanies } = useCRMCompanies();
   const { allContacts } = useContacts();
   const { tenders } = useTenders();
+
+  // Fetch deliverables for selected project
+  const selectedProjectId = entityType === "project" ? entityId : null;
+  const { deliverables } = useProjectDeliverables(selectedProjectId);
 
   // Separate internal and client projects
   const internalProjects = projects.filter(p => p.is_internal);
@@ -107,19 +120,45 @@ export function EntitySelector({
   const entities = getEntitiesForType(entityType);
   const selectedEntity = entities.find((e) => e.id === entityId);
 
+  // Helper to execute action with optional confirmation
+  const executeWithConfirmation = (action: () => void) => {
+    // If there's an existing relation and we want confirmation
+    if (onRequestChange && entityType && entityId) {
+      onRequestChange(action);
+    } else {
+      action();
+    }
+  };
+
   const handleTypeClick = (typeId: RelatedEntityType) => {
     if (entityType === typeId) {
       // Clicking same type again deselects it
-      onEntityTypeChange(null);
-      onEntityIdChange(null);
+      executeWithConfirmation(() => {
+        onEntityTypeChange(null);
+        onEntityIdChange(null);
+        onDeliverableIdChange?.(null);
+      });
     } else {
-      onEntityTypeChange(typeId);
-      onEntityIdChange(null);
+      // Changing to a different type
+      executeWithConfirmation(() => {
+        onEntityTypeChange(typeId);
+        onEntityIdChange(null);
+        onDeliverableIdChange?.(null);
+      });
     }
   };
 
   const handleEntityChange = (value: string) => {
-    onEntityIdChange(value === "none" ? null : value);
+    const newId = value === "none" ? null : value;
+    onEntityIdChange(newId);
+    // Reset deliverable when project changes
+    if (entityType === "project") {
+      onDeliverableIdChange?.(null);
+    }
+  };
+
+  const handleDeliverableChange = (value: string) => {
+    onDeliverableIdChange?.(value === "none" ? null : value);
   };
 
   return (
@@ -177,63 +216,100 @@ export function EntitySelector({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="space-y-2 overflow-hidden"
+            className="space-y-3 overflow-hidden"
           >
-            <Label className="text-xs text-muted-foreground">Sélectionner</Label>
-            <Select
-              value={entityId || "none"}
-              onValueChange={handleEntityChange}
-              disabled={disabled}
-            >
-              <SelectTrigger className={cn(
-                "border-2",
-                entityType && entityColors[entityType]?.border
-              )}>
-                <SelectValue placeholder="Sélectionner..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Aucun</SelectItem>
-                {entityType === "project" ? (
-                  <>
-                    {internalProjects.length > 0 && (
-                      <SelectGroup>
-                        <SelectLabel className="flex items-center gap-1.5 text-xs">
-                          <Home className="h-3 w-3" />
-                          Projets internes
-                        </SelectLabel>
-                        {internalProjects.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            <span className="flex items-center gap-2">
-                              <span className="w-2 h-2 rounded-full bg-muted-foreground/50" />
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Sélectionner</Label>
+              <Select
+                value={entityId || "none"}
+                onValueChange={handleEntityChange}
+                disabled={disabled}
+              >
+                <SelectTrigger className={cn(
+                  "border-2",
+                  entityType && entityColors[entityType]?.border
+                )}>
+                  <SelectValue placeholder="Sélectionner..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucun</SelectItem>
+                  {entityType === "project" ? (
+                    <>
+                      {internalProjects.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel className="flex items-center gap-1.5 text-xs">
+                            <Home className="h-3 w-3" />
+                            Projets internes
+                          </SelectLabel>
+                          {internalProjects.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              <span className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-muted-foreground/50" />
+                                {p.name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                      {clientProjects.length > 0 && (
+                        <SelectGroup>
+                          <SelectLabel className="flex items-center gap-1.5 text-xs">
+                            <FolderKanban className="h-3 w-3" />
+                            Projets clients
+                          </SelectLabel>
+                          {clientProjects.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
                               {p.name}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    )}
-                    {clientProjects.length > 0 && (
-                      <SelectGroup>
-                        <SelectLabel className="flex items-center gap-1.5 text-xs">
-                          <FolderKanban className="h-3 w-3" />
-                          Projets clients
-                        </SelectLabel>
-                        {clientProjects.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    )}
-                  </>
-                ) : (
-                  entities.map((entity) => (
-                    <SelectItem key={entity.id} value={entity.id}>
-                      {entity.name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )}
+                    </>
+                  ) : (
+                    entities.map((entity) => (
+                      <SelectItem key={entity.id} value={entity.id}>
+                        {entity.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Deliverable sub-selector - only for projects */}
+            {entityType === "project" && entityId && onDeliverableIdChange && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-2"
+              >
+                <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <FileCheck className="h-3 w-3 text-emerald-600" />
+                  Lier à un livrable (optionnel)
+                </Label>
+                <Select
+                  value={deliverableId || "none"}
+                  onValueChange={handleDeliverableChange}
+                  disabled={disabled}
+                >
+                  <SelectTrigger className="border-2 border-emerald-200">
+                    <SelectValue placeholder="Aucun livrable" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Aucun livrable</SelectItem>
+                    {deliverables.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        <span className="flex items-center gap-2">
+                          <FileCheck className="h-3 w-3 text-emerald-600" />
+                          {d.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
