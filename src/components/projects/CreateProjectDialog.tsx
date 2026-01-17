@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -18,38 +20,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useProjects, CreateProjectInput } from "@/hooks/useProjects";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
+import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
 import * as LucideIcons from "lucide-react";
 import {
   Building2,
-  ChevronLeft,
+  ChevronDown,
   ChevronRight,
-  Check,
-  MapPin,
   Loader2,
   Home,
   FolderKanban,
+  Calendar,
+  Users,
+  MapPin,
+  Check,
+  X,
 } from "lucide-react";
 
 interface CreateProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-// Simple 3-step flow
-const STEPS = [
-  { id: "type", label: "Type de projet" },
-  { id: "info", label: "Informations" },
-  { id: "client", label: "Client" },
-];
 
 // Disciplines that show surface field
 const SURFACE_TYPES = ["architecture", "interior", "interieur", "archi"];
@@ -72,26 +74,35 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const { createProject } = useProjects();
   const { companies, isLoading: companiesLoading } = useCRMCompanies();
   const { projectTypes, isLoading: typesLoading } = useProjectTypeSettings();
+  const { data: teamMembers = [], isLoading: teamLoading } = useTeamMembers();
   
-  const [step, setStep] = useState(0);
+  // Collapsible sections
+  const [configOpen, setConfigOpen] = useState(true);
+  const [planningOpen, setPlanningOpen] = useState(true);
+  const [teamOpen, setTeamOpen] = useState(false);
+  const [clientOpen, setClientOpen] = useState(false);
   
-  // Step 1: Type
+  // Configuration
+  const [name, setName] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [isInternal, setIsInternal] = useState(false);
+  const [status, setStatus] = useState<"active" | "closed">("active");
   
-  // Step 2: Info
-  const [name, setName] = useState("");
+  // Planning
   const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  
+  // Équipe
+  const [selectedReferents, setSelectedReferents] = useState<string[]>([]);
+  
+  // Client & Location
+  const [crmCompanyId, setCrmCompanyId] = useState<string | null>(null);
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [surfaceArea, setSurfaceArea] = useState("");
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
   const [budget, setBudget] = useState("");
-  
-  // Step 3: Client
-  const [crmCompanyId, setCrmCompanyId] = useState<string | null>(null);
 
   // Get selected type config
   const selectedTypeConfig = useMemo(() => {
@@ -100,6 +111,17 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
 
   // Check if surface should be shown
   const showSurface = useMemo(() => shouldShowSurface(selectedType), [selectedType]);
+
+  // Filter client companies
+  const clientCompanies = companies.filter(c => 
+    c.industry === "client_particulier" || 
+    c.industry === "client_professionnel" || 
+    c.industry === "promoteur" || 
+    c.industry === "investisseur" ||
+    !c.industry
+  );
+
+  const selectedCompany = companies.find(c => c.id === crmCompanyId);
 
   const handleCreate = () => {
     if (!name.trim() || !selectedType) return;
@@ -127,19 +149,24 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   };
 
   const resetForm = () => {
-    setStep(0);
+    setName("");
     setSelectedType(null);
     setIsInternal(false);
-    setName("");
+    setStatus("active");
     setDescription("");
+    setStartDate(null);
+    setEndDate(null);
+    setSelectedReferents([]);
+    setCrmCompanyId(null);
     setAddress("");
     setCity("");
     setPostalCode("");
     setSurfaceArea("");
-    setStartDate(null);
-    setEndDate(null);
     setBudget("");
-    setCrmCompanyId(null);
+    setConfigOpen(true);
+    setPlanningOpen(true);
+    setTeamOpen(false);
+    setClientOpen(false);
   };
 
   const handleAddressSelect = (result: {
@@ -152,412 +179,391 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     setPostalCode(result.postalCode);
   };
 
-  const canProceed = () => {
-    switch (step) {
-      case 0: // Type
-        return !!selectedType;
-      case 1: // Info
-        return !!name.trim();
-      case 2: // Client
-        return true; // Client is optional
-      default:
-        return false;
-    }
+  const toggleReferent = (userId: string) => {
+    setSelectedReferents(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
   };
 
-  const nextStep = () => {
-    if (step < STEPS.length - 1 && canProceed()) {
-      setStep(step + 1);
-    }
+  const getInitials = (name: string | null) => {
+    if (!name) return "?";
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const prevStep = () => {
-    if (step > 0) {
-      setStep(step - 1);
-    }
-  };
-
-  const selectedCompany = companies.find(c => c.id === crmCompanyId);
-
-  // Filter client companies
-  const clientCompanies = companies.filter(c => 
-    c.industry === "client_particulier" || 
-    c.industry === "client_professionnel" || 
-    c.industry === "promoteur" || 
-    c.industry === "investisseur" ||
-    !c.industry
-  );
+  const canCreate = !!name.trim() && !!selectedType;
 
   return (
     <Dialog open={open} onOpenChange={(open) => { if (!open) resetForm(); onOpenChange(open); }}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="pb-4 border-b border-border">
-          <DialogTitle>Nouveau projet</DialogTitle>
-          
-          {/* Step indicators */}
-          <div className="flex items-center gap-1 pt-4">
-            {STEPS.map((s, index) => (
-              <div key={s.id} className="flex items-center">
-                <button
-                  onClick={() => index < step && setStep(index)}
-                  disabled={index > step}
-                  className={cn(
-                    "flex items-center justify-center w-7 h-7 rounded-full text-xs font-medium transition-all",
-                    index < step && "bg-primary text-primary-foreground cursor-pointer",
-                    index === step && "bg-primary text-primary-foreground ring-2 ring-primary/20",
-                    index > step && "bg-muted text-muted-foreground cursor-not-allowed"
-                  )}
-                >
-                  {index < step ? <Check className="h-3.5 w-3.5" /> : index + 1}
-                </button>
-                {index < STEPS.length - 1 && (
-                  <div className={cn(
-                    "w-16 h-0.5 mx-1",
-                    index < step ? "bg-primary" : "bg-muted"
-                  )} />
-                )}
-              </div>
-            ))}
-          </div>
-          <p className="text-sm text-muted-foreground pt-2">{STEPS[step].label}</p>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="px-6 py-4 border-b border-border">
+          <DialogTitle className="text-xl">Nouveau projet</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto py-4">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={step}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
-            >
-              {/* Step 0: Project Type */}
-              {step === 0 && (
-                <div className="space-y-4">
-                  {/* Internal Project Toggle */}
-                  <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-                    <div className="flex items-center gap-2">
-                      <Home className="h-4 w-4 text-muted-foreground" />
-                      <div className="space-y-0.5">
-                        <Label htmlFor="is-internal" className="text-sm font-medium cursor-pointer">
-                          Projet interne
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          Non facturable (admin, R&D, formation...)
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      id="is-internal"
-                      checked={isInternal}
-                      onCheckedChange={setIsInternal}
-                    />
-                  </div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-4">
+            
+            {/* Section: Configuration projet */}
+            <Collapsible open={configOpen} onOpenChange={setConfigOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                <div className="flex items-center gap-2 font-medium">
+                  <FolderKanban className="h-4 w-4 text-muted-foreground" />
+                  Configuration projet
+                </div>
+                {configOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-4 space-y-4">
+                {/* Titre */}
+                <div className="space-y-2">
+                  <Label htmlFor="name">Titre du projet *</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Nom du projet"
+                    autoFocus
+                  />
+                </div>
 
-                  <p className="text-sm text-muted-foreground">
-                    Sélectionnez le type de projet.
-                  </p>
-                  
+                {/* Type de projet */}
+                <div className="space-y-2">
+                  <Label>Type de projet *</Label>
                   {typesLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                     </div>
                   ) : projectTypes.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <FolderKanban className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Aucun type de projet configuré.</p>
-                      <p className="text-xs">Configurez-les dans les paramètres.</p>
+                    <div className="text-center py-4 text-muted-foreground border border-dashed rounded-lg">
+                      <FolderKanban className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                      <p className="text-sm">Aucun type configuré</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-4 gap-2">
                       {projectTypes.map((type) => {
                         const Icon = getIconComponent(type.icon || "FolderKanban");
                         return (
                           <button
                             key={type.key}
+                            type="button"
                             onClick={() => setSelectedType(type.key)}
                             className={cn(
-                              "flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all",
+                              "flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all",
                               selectedType === type.key
                                 ? "border-primary bg-primary/5"
-                                : "border-border hover:border-primary/50 hover:bg-muted/50"
+                                : "border-border hover:border-primary/50"
                             )}
                           >
                             <div 
                               className={cn(
-                                "w-10 h-10 rounded-full flex items-center justify-center",
+                                "w-8 h-8 rounded-full flex items-center justify-center",
                                 selectedType === type.key ? "bg-primary text-primary-foreground" : "bg-muted"
                               )}
-                              style={selectedType === type.key ? {} : { backgroundColor: `${type.color}20` }}
+                              style={selectedType === type.key ? {} : { backgroundColor: `${type.color}15` }}
                             >
                               <Icon 
-                                className="h-5 w-5" 
+                                className="h-4 w-4" 
                                 style={{ color: selectedType === type.key ? undefined : type.color }} 
                               />
                             </div>
-                            <span className="font-medium text-sm text-center">{type.label}</span>
+                            <span className="text-xs font-medium text-center leading-tight">{type.label}</span>
                           </button>
                         );
                       })}
                     </div>
                   )}
                 </div>
-              )}
 
-              {/* Step 1: Project Info */}
-              {step === 1 && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Badge variant="outline" style={{ borderColor: selectedTypeConfig?.color, color: selectedTypeConfig?.color }}>
-                      {selectedTypeConfig?.label}
-                    </Badge>
-                    {isInternal && (
-                      <Badge variant="secondary">Projet interne</Badge>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nom du projet *</Label>
-                    <Input
-                      id="name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder={isInternal ? "Ex: R&D, Formation équipe" : "Ex: Campagne été 2024"}
-                      autoFocus
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Notes sur le projet..."
-                      rows={2}
-                    />
-                  </div>
-
-                  {!isInternal && (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="address">
-                          <MapPin className="h-3.5 w-3.5 inline mr-1" />
-                          Adresse du projet
+                {/* Projet interne & Statut */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <Home className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <Label htmlFor="is-internal" className="text-sm cursor-pointer">
+                          Projet interne
                         </Label>
-                        <AddressAutocomplete
-                          value={address}
-                          onChange={setAddress}
-                          onAddressSelect={handleAddressSelect}
-                          placeholder="Rechercher une adresse..."
-                        />
+                        <p className="text-xs text-muted-foreground">Non facturable</p>
                       </div>
-
-                      <div className={cn("grid gap-4", showSurface ? "grid-cols-3" : "grid-cols-2")}>
-                        <div className="space-y-2">
-                          <Label htmlFor="postalCode">Code postal</Label>
-                          <Input
-                            id="postalCode"
-                            value={postalCode}
-                            onChange={(e) => setPostalCode(e.target.value)}
-                            placeholder="75001"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="city">Ville</Label>
-                          <Input
-                            id="city"
-                            value={city}
-                            onChange={(e) => setCity(e.target.value)}
-                            placeholder="Paris"
-                          />
-                        </div>
-                        {showSurface && (
-                          <div className="space-y-2">
-                            <Label htmlFor="surface">Surface (m²)</Label>
-                            <Input
-                              id="surface"
-                              type="number"
-                              value={surfaceArea}
-                              onChange={(e) => setSurfaceArea(e.target.value)}
-                              placeholder="150"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-
-                  {/* Dates */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Date de début</Label>
-                      <InlineDatePicker
-                        value={startDate}
-                        onChange={setStartDate}
-                        placeholder="Sélectionner..."
-                        className="w-full"
-                      />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Date de fin</Label>
-                      <InlineDatePicker
-                        value={endDate}
-                        onChange={setEndDate}
-                        placeholder="Sélectionner..."
-                        className="w-full"
-                      />
+                    <Switch
+                      id="is-internal"
+                      checked={isInternal}
+                      onCheckedChange={(checked) => {
+                        setIsInternal(checked);
+                        if (checked) {
+                          setClientOpen(false);
+                        }
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Statut</Label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setStatus("active")}
+                        className={cn(
+                          "flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all",
+                          status === "active"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border hover:border-primary/50"
+                        )}
+                      >
+                        Ouvert
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStatus("closed")}
+                        className={cn(
+                          "flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all",
+                          status === "closed"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border hover:border-primary/50"
+                        )}
+                      >
+                        Fermé
+                      </button>
                     </div>
                   </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
-                  {!isInternal && (
-                    <div className="space-y-2">
-                      <Label htmlFor="budget">Budget (€)</Label>
-                      <Input
-                        id="budget"
-                        type="number"
-                        value={budget}
-                        onChange={(e) => setBudget(e.target.value)}
-                        placeholder="50000"
-                      />
-                    </div>
+            {/* Section: Planification */}
+            <Collapsible open={planningOpen} onOpenChange={setPlanningOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                <div className="flex items-center gap-2 font-medium">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  Planification
+                </div>
+                {planningOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-4 space-y-4">
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Du</Label>
+                    <InlineDatePicker
+                      value={startDate}
+                      onChange={setStartDate}
+                      placeholder="Date de début"
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Au</Label>
+                    <InlineDatePicker
+                      value={endDate}
+                      onChange={setEndDate}
+                      placeholder="Date de fin"
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description / Notes</Label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Notes sur le projet..."
+                    rows={3}
+                  />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {/* Section: Équipe projet */}
+            <Collapsible open={teamOpen} onOpenChange={setTeamOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                <div className="flex items-center gap-2 font-medium">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  Équipe projet
+                  {selectedReferents.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">{selectedReferents.length}</Badge>
                   )}
                 </div>
-              )}
-
-              {/* Step 2: Client */}
-              {step === 2 && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Badge variant="outline" style={{ borderColor: selectedTypeConfig?.color, color: selectedTypeConfig?.color }}>
-                      {selectedTypeConfig?.label}
-                    </Badge>
-                    {isInternal && (
-                      <Badge variant="secondary">Projet interne</Badge>
-                    )}
+                {teamOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-4 space-y-3">
+                <Label className="text-sm text-muted-foreground">Référent(s) projet</Label>
+                
+                {teamLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
-
-                  {isInternal ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Home className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p className="font-medium">Projet interne</p>
-                      <p className="text-sm">Pas de client associé</p>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-sm text-muted-foreground">
-                        Associez un client à ce projet (optionnel).
-                      </p>
-
-                      {companiesLoading ? (
-                        <div className="flex items-center justify-center py-8">
-                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <Select 
-                            value={crmCompanyId || "none"} 
-                            onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner un client..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Aucun client</SelectItem>
-                              {clientCompanies.map((company) => (
-                                <SelectItem key={company.id} value={company.id}>
-                                  <div className="flex items-center gap-2">
-                                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                                    {company.name}
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-
-                          {selectedCompany && (
-                            <div className="p-3 rounded-lg border border-border bg-muted/30">
-                              <p className="font-medium">{selectedCompany.name}</p>
-                              {selectedCompany.email && (
-                                <p className="text-sm text-muted-foreground">{selectedCompany.email}</p>
-                              )}
-                              {selectedCompany.phone && (
-                                <p className="text-sm text-muted-foreground">{selectedCompany.phone}</p>
-                              )}
-                            </div>
+                ) : teamMembers.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground border border-dashed rounded-lg">
+                    <Users className="h-6 w-6 mx-auto mb-1 opacity-50" />
+                    <p className="text-sm">Aucun membre dans le workspace</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {teamMembers.map((member) => (
+                      <button
+                        key={member.user_id}
+                        type="button"
+                        onClick={() => toggleReferent(member.user_id)}
+                        className={cn(
+                          "flex items-center gap-3 p-2 rounded-lg border transition-all text-left",
+                          selectedReferents.includes(member.user_id)
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        )}
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={member.profile?.avatar_url || undefined} />
+                          <AvatarFallback className="text-xs">
+                            {getInitials(member.profile?.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {member.profile?.full_name || "Utilisateur"}
+                          </p>
+                          {member.profile?.job_title && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {member.profile.job_title}
+                            </p>
                           )}
                         </div>
-                      )}
-                    </>
-                  )}
-
-                  {/* Summary */}
-                  <div className="mt-6 p-4 rounded-lg border border-border bg-muted/20">
-                    <h4 className="font-medium mb-3">Récapitulatif</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Type</span>
-                        <span>{selectedTypeConfig?.label}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Nom</span>
-                        <span className="font-medium">{name}</span>
-                      </div>
-                      {!isInternal && city && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Localisation</span>
-                          <span>{city}</span>
-                        </div>
-                      )}
-                      {startDate && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Début</span>
-                          <span>{format(startDate, "dd/MM/yyyy")}</span>
-                        </div>
-                      )}
-                      {!isInternal && selectedCompany && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Client</span>
-                          <span>{selectedCompany.name}</span>
-                        </div>
-                      )}
-                    </div>
+                        {selectedReferents.includes(member.user_id) && (
+                          <Check className="h-4 w-4 text-primary shrink-0" />
+                        )}
+                      </button>
+                    ))}
                   </div>
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
 
-        <DialogFooter className="flex-shrink-0 pt-4 border-t border-border">
-          <div className="flex justify-between w-full">
-            <Button
-              variant="outline"
-              onClick={prevStep}
-              disabled={step === 0}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Précédent
-            </Button>
-            
-            {step < STEPS.length - 1 ? (
-              <Button
-                onClick={nextStep}
-                disabled={!canProceed()}
-              >
-                Suivant
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleCreate}
-                disabled={!name.trim() || !selectedType || createProject.isPending}
-              >
-                {createProject.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Créer le projet
-              </Button>
+            {/* Section: Client & Localisation (masqué si projet interne) */}
+            {!isInternal && (
+              <Collapsible open={clientOpen} onOpenChange={setClientOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+                  <div className="flex items-center gap-2 font-medium">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    Client & Localisation
+                    {selectedCompany && (
+                      <Badge variant="outline" className="ml-1">{selectedCompany.name}</Badge>
+                    )}
+                  </div>
+                  {clientOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-4 space-y-4">
+                  {/* Client */}
+                  <div className="space-y-2">
+                    <Label>Client</Label>
+                    {companiesLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Chargement...
+                      </div>
+                    ) : (
+                      <Select 
+                        value={crmCompanyId || ""} 
+                        onValueChange={(v) => setCrmCompanyId(v || null)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Aucun client</SelectItem>
+                          {clientCompanies.map((company) => (
+                            <SelectItem key={company.id} value={company.id}>
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                                {company.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+
+                  {/* Adresse */}
+                  <div className="space-y-2">
+                    <Label>
+                      <MapPin className="h-3.5 w-3.5 inline mr-1" />
+                      Adresse du projet
+                    </Label>
+                    <AddressAutocomplete
+                      value={address}
+                      onChange={setAddress}
+                      onAddressSelect={handleAddressSelect}
+                      placeholder="Rechercher une adresse..."
+                    />
+                  </div>
+
+                  {/* Ville / CP / Surface */}
+                  <div className={cn("grid gap-4", showSurface ? "grid-cols-3" : "grid-cols-2")}>
+                    <div className="space-y-2">
+                      <Label>Code postal</Label>
+                      <Input
+                        value={postalCode}
+                        onChange={(e) => setPostalCode(e.target.value)}
+                        placeholder="75001"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Ville</Label>
+                      <Input
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="Paris"
+                      />
+                    </div>
+                    {showSurface && (
+                      <div className="space-y-2">
+                        <Label>Surface (m²)</Label>
+                        <Input
+                          type="number"
+                          value={surfaceArea}
+                          onChange={(e) => setSurfaceArea(e.target.value)}
+                          placeholder="150"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Budget */}
+                  <div className="space-y-2">
+                    <Label>Budget (€)</Label>
+                    <Input
+                      type="number"
+                      value={budget}
+                      onChange={(e) => setBudget(e.target.value)}
+                      placeholder="50000"
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             )}
           </div>
+        </div>
+
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/30">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Annuler
+          </Button>
+          <Button 
+            onClick={handleCreate} 
+            disabled={!canCreate || createProject.isPending}
+          >
+            {createProject.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Création...
+              </>
+            ) : (
+              "Créer le projet"
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

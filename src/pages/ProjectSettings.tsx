@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useProject, useProjects } from "@/hooks/useProjects";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
-import { useProjectTeam } from "@/hooks/useProjectTeam";
-import { useProjectContacts } from "@/hooks/useProjectContacts";
+import { useProjectTeam, INTERNAL_ROLES, EXTERNAL_ROLES } from "@/hooks/useProjectTeam";
+import { useProjectContacts, CLIENT_TEAM_ROLES } from "@/hooks/useProjectContacts";
+import { useCRMCompanies } from "@/hooks/useCRMCompanies";
+import { useProjectTypeSettings, getProjectTypeIcon } from "@/hooks/useProjectTypeSettings";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -21,9 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCRMCompanies } from "@/hooks/useCRMCompanies";
-import { useProjectTypeSettings, getProjectTypeIcon } from "@/hooks/useProjectTypeSettings";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
+import { ProjectContactsManager } from "@/components/projects/ProjectContactsManager";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import * as LucideIcons from "lucide-react";
@@ -40,6 +42,10 @@ import {
   Archive,
   Trash2,
   AlertTriangle,
+  Star,
+  Plus,
+  RefreshCw,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -70,19 +76,25 @@ function shouldShowSurface(projectType: string | null): boolean {
   );
 }
 
+const getInitials = (name: string | null) => {
+  if (!name) return "?";
+  return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+};
+
 export default function ProjectSettings() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: project, isLoading: projectLoading } = useProject(id || null);
   const { updateProject, archiveProject, deleteProject } = useProjects();
   const { phases } = useProjectPhases(id || null);
-  const { members } = useProjectTeam(id || null);
+  const { members, internalMembers, externalMembers, leadMember, getRoleLabel } = useProjectTeam(id || null);
   const { contacts } = useProjectContacts(id || null);
   const { companies } = useCRMCompanies();
   const { projectTypes, isLoading: typesLoading } = useProjectTypeSettings();
 
   const [activeTab, setActiveTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Form state
   const [name, setName] = useState("");
@@ -90,6 +102,7 @@ export default function ProjectSettings() {
   const [projectType, setProjectType] = useState<string | null>(null);
   const [color, setColor] = useState("#3B82F6");
   const [isInternal, setIsInternal] = useState(false);
+  const [status, setStatus] = useState<"active" | "closed">("active");
   const [crmCompanyId, setCrmCompanyId] = useState<string | null>(null);
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
@@ -100,13 +113,14 @@ export default function ProjectSettings() {
   const [endDate, setEndDate] = useState<Date | null>(null);
 
   // Sync form state when project loads
-  useState(() => {
+  useEffect(() => {
     if (project) {
       setName(project.name);
       setDescription(project.description || "");
       setProjectType(project.project_type);
       setColor(project.color || "#3B82F6");
       setIsInternal(project.is_internal || false);
+      setStatus(project.status === "closed" ? "closed" : "active");
       setCrmCompanyId(project.crm_company_id);
       setAddress(project.address || "");
       setCity(project.city || "");
@@ -115,25 +129,31 @@ export default function ProjectSettings() {
       setBudget(project.budget?.toString() || "");
       setStartDate(project.start_date ? parseISO(project.start_date) : null);
       setEndDate(project.end_date ? parseISO(project.end_date) : null);
+      setHasChanges(false);
     }
-  });
+  }, [project]);
 
-  // Re-sync when project changes
-  if (project && name === "" && project.name) {
-    setName(project.name);
-    setDescription(project.description || "");
-    setProjectType(project.project_type);
-    setColor(project.color || "#3B82F6");
-    setIsInternal(project.is_internal || false);
-    setCrmCompanyId(project.crm_company_id);
-    setAddress(project.address || "");
-    setCity(project.city || "");
-    setPostalCode(project.postal_code || "");
-    setSurfaceArea(project.surface_area?.toString() || "");
-    setBudget(project.budget?.toString() || "");
-    setStartDate(project.start_date ? parseISO(project.start_date) : null);
-    setEndDate(project.end_date ? parseISO(project.end_date) : null);
-  }
+  // Track changes
+  useEffect(() => {
+    if (project) {
+      const changed = 
+        name !== project.name ||
+        description !== (project.description || "") ||
+        projectType !== project.project_type ||
+        color !== (project.color || "#3B82F6") ||
+        isInternal !== (project.is_internal || false) ||
+        status !== (project.status === "closed" ? "closed" : "active") ||
+        crmCompanyId !== project.crm_company_id ||
+        address !== (project.address || "") ||
+        city !== (project.city || "") ||
+        postalCode !== (project.postal_code || "") ||
+        surfaceArea !== (project.surface_area?.toString() || "") ||
+        budget !== (project.budget?.toString() || "") ||
+        (startDate?.toISOString() || null) !== (project.start_date || null) ||
+        (endDate?.toISOString() || null) !== (project.end_date || null);
+      setHasChanges(changed);
+    }
+  }, [name, description, projectType, color, isInternal, status, crmCompanyId, address, city, postalCode, surfaceArea, budget, startDate, endDate, project]);
 
   const showSurface = shouldShowSurface(projectType);
 
@@ -157,6 +177,7 @@ export default function ProjectSettings() {
         project_type: projectType as any,
         color,
         is_internal: isInternal,
+        status,
         crm_company_id: isInternal ? null : crmCompanyId,
         address: isInternal ? null : (address.trim() || null),
         city: isInternal ? null : (city.trim() || null),
@@ -167,6 +188,7 @@ export default function ProjectSettings() {
         end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
       });
       toast.success("Projet mis à jour");
+      setHasChanges(false);
     } catch (error) {
       toast.error("Erreur lors de la mise à jour");
     } finally {
@@ -211,7 +233,7 @@ export default function ProjectSettings() {
               <p className="text-muted-foreground">{project.name}</p>
             </div>
           </div>
-          <Button onClick={handleSave} disabled={isSaving || !name.trim()}>
+          <Button onClick={handleSave} disabled={isSaving || !name.trim() || !hasChanges}>
             {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Enregistrer
           </Button>
@@ -219,15 +241,10 @@ export default function ProjectSettings() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="border-b border-border w-full justify-start rounded-none bg-transparent p-0">
             <TabsTrigger value="general" className="gap-2">
               <Settings className="h-4 w-4" />
               Général
-            </TabsTrigger>
-            <TabsTrigger value="phases" className="gap-2">
-              <Layers className="h-4 w-4" />
-              Phases
-              <Badge variant="secondary" className="ml-1">{phases?.length || 0}</Badge>
             </TabsTrigger>
             <TabsTrigger value="team" className="gap-2">
               <Users className="h-4 w-4" />
@@ -238,14 +255,20 @@ export default function ProjectSettings() {
               <Building2 className="h-4 w-4" />
               Client
             </TabsTrigger>
+            <TabsTrigger value="phases" className="gap-2">
+              <Layers className="h-4 w-4" />
+              Phases
+              <Badge variant="secondary" className="ml-1">{phases?.length || 0}</Badge>
+            </TabsTrigger>
           </TabsList>
 
           {/* General Tab */}
           <TabsContent value="general" className="space-y-6 mt-6">
+            {/* Configuration Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Informations générales</CardTitle>
-                <CardDescription>Configurez les informations de base du projet</CardDescription>
+                <CardTitle>Configuration</CardTitle>
+                <CardDescription>Paramètres de base du projet</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Internal Toggle */}
@@ -253,11 +276,42 @@ export default function ProjectSettings() {
                   <div className="flex items-center gap-3">
                     <Home className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <Label className="text-base">Projet interne</Label>
-                      <p className="text-sm text-muted-foreground">Non facturable (admin, R&D...)</p>
+                      <Label className="text-sm font-medium">Projet interne</Label>
+                      <p className="text-xs text-muted-foreground">Non facturable</p>
                     </div>
                   </div>
                   <Switch checked={isInternal} onCheckedChange={setIsInternal} />
+                </div>
+
+                {/* Status */}
+                <div className="space-y-2">
+                  <Label>Statut</Label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setStatus("active")}
+                      className={cn(
+                        "flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-all",
+                        status === "active"
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/50"
+                      )}
+                    >
+                      Ouvert
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStatus("closed")}
+                      className={cn(
+                        "flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-all",
+                        status === "closed"
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border hover:border-primary/50"
+                      )}
+                    >
+                      Fermé
+                    </button>
+                  </div>
                 </div>
 
                 {/* Project Type */}
@@ -339,8 +393,16 @@ export default function ProjectSettings() {
                     rows={4}
                   />
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* Dates */}
+            {/* Planning Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Planification</CardTitle>
+                <CardDescription>Dates du projet</CardDescription>
+              </CardHeader>
+              <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Date de début</Label>
@@ -351,45 +413,6 @@ export default function ProjectSettings() {
                     <InlineDatePicker value={endDate} onChange={setEndDate} placeholder="Sélectionner..." className="w-full" />
                   </div>
                 </div>
-
-                {/* Location & Details - only for external projects */}
-                {!isInternal && (
-                  <>
-                    <Separator />
-                    <div className="space-y-4">
-                      <Label className="text-base">Localisation & Détails</Label>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="address">Adresse</Label>
-                        <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 rue de Paris" />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="postalCode">Code postal</Label>
-                          <Input id="postalCode" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="75001" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="city">Ville</Label>
-                          <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Paris" />
-                        </div>
-                      </div>
-
-                      <div className={cn("grid gap-4", showSurface ? "grid-cols-2" : "grid-cols-1")}>
-                        {showSurface && (
-                          <div className="space-y-2">
-                            <Label htmlFor="surface">Surface (m²)</Label>
-                            <Input id="surface" type="number" value={surfaceArea} onChange={(e) => setSurfaceArea(e.target.value)} placeholder="150" />
-                          </div>
-                        )}
-                        <div className="space-y-2">
-                          <Label htmlFor="budget">Budget (€)</Label>
-                          <Input id="budget" type="number" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="50000" />
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
               </CardContent>
             </Card>
 
@@ -426,115 +449,280 @@ export default function ProjectSettings() {
             </Card>
           </TabsContent>
 
-          {/* Phases Tab */}
-          <TabsContent value="phases" className="mt-6">
+          {/* Team Tab */}
+          <TabsContent value="team" className="space-y-6 mt-6">
+            {/* Internal Team */}
             <Card>
               <CardHeader>
-                <CardTitle>Phases du projet</CardTitle>
-                <CardDescription>Gérez les phases et jalons du projet</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Équipe interne</CardTitle>
+                    <CardDescription>Membres de l'agence sur ce projet</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/projects/${id}`)}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Gérer l'équipe
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                {phases && phases.length > 0 ? (
+                {internalMembers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                    <p>Aucun membre interne</p>
+                  </div>
+                ) : (
                   <div className="space-y-2">
-                    {phases.map((phase, index) => (
-                      <div key={phase.id} className="flex items-center gap-3 p-3 rounded-lg border">
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-                          {index + 1}
+                    {internalMembers.map((member) => (
+                      <div 
+                        key={member.id}
+                        className={cn(
+                          "flex items-center gap-3 p-3 rounded-lg border",
+                          member.role === "lead" && "bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800"
+                        )}
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={member.profile?.avatar_url || undefined} />
+                          <AvatarFallback>
+                            {getInitials(member.profile?.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium truncate">
+                              {member.profile?.full_name || "Utilisateur"}
+                            </p>
+                            {member.role === "lead" && (
+                              <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {getRoleLabel(member.role, false)}
+                          </p>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-medium">{phase.name}</p>
-                          {phase.description && <p className="text-sm text-muted-foreground">{phase.description}</p>}
-                        </div>
-                        <Badge variant={phase.status === "completed" ? "default" : "secondary"}>
-                          {phase.status}
-                        </Badge>
+                        <Badge variant="outline">{getRoleLabel(member.role, false)}</Badge>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-center py-8 text-muted-foreground">Aucune phase configurée</p>
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
 
-          {/* Team Tab */}
-          <TabsContent value="team" className="mt-6">
+            {/* External Collaborators */}
             <Card>
               <CardHeader>
-                <CardTitle>Équipe projet</CardTitle>
-                <CardDescription>Membres internes et collaborateurs externes</CardDescription>
+                <CardTitle>Collaborateurs externes</CardTitle>
+                <CardDescription>Freelances, sous-traitants, partenaires</CardDescription>
               </CardHeader>
               <CardContent>
-                {members && members.length > 0 ? (
+                {externalMembers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                    <p>Aucun collaborateur externe</p>
+                  </div>
+                ) : (
                   <div className="space-y-2">
-                    {members.map((member) => (
-                      <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg border">
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                          <Users className="h-4 w-4" />
+                    {externalMembers.map((member) => (
+                      <div 
+                        key={member.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border"
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={member.contact?.avatar_url || undefined} />
+                          <AvatarFallback>
+                            {getInitials(member.contact?.name || null)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">
+                            {member.contact?.name || "Contact"}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {member.contact?.email}
+                          </p>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-medium">{member.profile?.full_name || "Membre"}</p>
-                          <p className="text-sm text-muted-foreground">{member.role}</p>
-                        </div>
+                        <Badge variant="secondary">{getRoleLabel(member.role, true)}</Badge>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-center py-8 text-muted-foreground">Aucun membre dans l'équipe</p>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Client Tab */}
-          <TabsContent value="client" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Client</CardTitle>
-                <CardDescription>Entreprise et contacts client associés</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {isInternal ? (
-                  <div className="text-center py-8">
-                    <Home className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+          <TabsContent value="client" className="space-y-6 mt-6">
+            {isInternal ? (
+              <Card>
+                <CardContent className="py-12">
+                  <div className="text-center text-muted-foreground">
+                    <Home className="h-12 w-12 mx-auto mb-3 opacity-50" />
                     <p className="font-medium">Projet interne</p>
-                    <p className="text-sm text-muted-foreground">Pas de client associé</p>
+                    <p className="text-sm">Pas de client associé à ce projet</p>
                   </div>
-                ) : (
-                  <>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Client Company */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Entreprise cliente</CardTitle>
+                    <CardDescription>Client principal du projet</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Entreprise client</Label>
-                      <Select value={crmCompanyId || "none"} onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}>
+                      <Label>Client</Label>
+                      <Select 
+                        value={crmCompanyId || ""} 
+                        onValueChange={(v) => setCrmCompanyId(v || null)}
+                      >
                         <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner un client..." />
+                          <SelectValue placeholder="Sélectionner un client" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Aucun client</SelectItem>
+                          <SelectItem value="">Aucun client</SelectItem>
                           {clientCompanies.map((company) => (
-                            <SelectItem key={company.id} value={company.id}>{company.name}</SelectItem>
+                            <SelectItem key={company.id} value={company.id}>
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4 text-muted-foreground" />
+                                {company.name}
+                              </div>
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
+                  </CardContent>
+                </Card>
 
-                    {contacts && contacts.length > 0 && (
+                {/* Client Contacts */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Contacts projet</CardTitle>
+                    <CardDescription>Interlocuteurs côté client</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ProjectContactsManager 
+                      projectId={id!} 
+                      companyId={crmCompanyId}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Location & Details */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Localisation & Détails</CardTitle>
+                    <CardDescription>Informations du chantier ou lieu d'intervention</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>
+                        <MapPin className="h-3.5 w-3.5 inline mr-1" />
+                        Adresse
+                      </Label>
+                      <Input 
+                        value={address} 
+                        onChange={(e) => setAddress(e.target.value)} 
+                        placeholder="123 rue de Paris" 
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Contacts client</Label>
-                        <div className="space-y-2">
-                          {contacts.map((contact) => (
-                            <div key={contact.id} className="flex items-center gap-3 p-3 rounded-lg border">
-                              <Building2 className="h-4 w-4 text-muted-foreground" />
-                              <div>
-                                <p className="font-medium">{contact.contact?.first_name} {contact.contact?.last_name}</p>
-                                <p className="text-sm text-muted-foreground">{contact.role}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <Label>Code postal</Label>
+                        <Input 
+                          value={postalCode} 
+                          onChange={(e) => setPostalCode(e.target.value)} 
+                          placeholder="75001" 
+                        />
                       </div>
-                    )}
-                  </>
+                      <div className="space-y-2">
+                        <Label>Ville</Label>
+                        <Input 
+                          value={city} 
+                          onChange={(e) => setCity(e.target.value)} 
+                          placeholder="Paris" 
+                        />
+                      </div>
+                    </div>
+
+                    <div className={cn("grid gap-4", showSurface ? "grid-cols-2" : "grid-cols-1")}>
+                      {showSurface && (
+                        <div className="space-y-2">
+                          <Label>Surface (m²)</Label>
+                          <Input 
+                            type="number" 
+                            value={surfaceArea} 
+                            onChange={(e) => setSurfaceArea(e.target.value)} 
+                            placeholder="150" 
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label>Budget (€)</Label>
+                        <Input 
+                          type="number" 
+                          value={budget} 
+                          onChange={(e) => setBudget(e.target.value)} 
+                          placeholder="50000" 
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+
+          {/* Phases Tab */}
+          <TabsContent value="phases" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Phases du projet</CardTitle>
+                    <CardDescription>Étapes de réalisation</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/projects/${id}`)}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Gérer les phases
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!phases || phases.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Layers className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                    <p>Aucune phase configurée</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {phases.map((phase, index) => (
+                      <div 
+                        key={phase.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border"
+                      >
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-white"
+                          style={{ backgroundColor: phase.color || "#3B82F6" }}
+                        >
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{phase.name}</p>
+                          {phase.description && (
+                            <p className="text-sm text-muted-foreground truncate">{phase.description}</p>
+                          )}
+                        </div>
+                        <Badge variant={phase.status === "completed" ? "default" : "secondary"}>
+                          {phase.status === "completed" ? "Terminée" : 
+                           phase.status === "in_progress" ? "En cours" : "À faire"}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </CardContent>
             </Card>
