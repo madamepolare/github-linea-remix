@@ -224,6 +224,7 @@ export function TeamManagementDialog({
       setSelectedUserId("");
       fetchAllMembers();
       queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project-team", projectId] });
     } catch (error: any) {
       console.error("Error adding member:", error);
       if (error.code === "23505") {
@@ -255,6 +256,7 @@ export function TeamManagementDialog({
       setSelectedContactId(null);
       fetchAllMembers();
       queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project-team", projectId] });
     } catch (error: any) {
       console.error("Error adding external member:", error);
       if (error.code === "23505") {
@@ -279,6 +281,7 @@ export function TeamManagementDialog({
       toast.success("Membre retiré");
       fetchAllMembers();
       queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project-team", projectId] });
     } catch (error) {
       console.error("Error removing member:", error);
       toast.error("Erreur lors de la suppression");
@@ -297,6 +300,7 @@ export function TeamManagementDialog({
       toast.success("Rôle mis à jour");
       fetchAllMembers();
       queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project-team", projectId] });
     } catch (error) {
       console.error("Error updating role:", error);
       toast.error("Erreur lors de la mise à jour");
