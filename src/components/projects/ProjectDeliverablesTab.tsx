@@ -75,6 +75,7 @@ import {
 import { DeliverableTasksGenerator } from "./DeliverableTasksGenerator";
 import { AIDeliverablesGenerator } from "./AIDeliverablesGenerator";
 import { DeliverableEmailDialog } from "./DeliverableEmailDialog";
+import { DeliverablesTimeline } from "./DeliverablesTimeline";
 
 interface ProjectDeliverablesTabProps {
   projectId: string;
@@ -446,6 +447,7 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
         <TabsList>
           <TabsTrigger value="by-phase">Par phase</TabsTrigger>
           <TabsTrigger value="all">Liste complète</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
 
         <TabsContent value="by-phase" className="space-y-6 mt-4">
@@ -521,6 +523,14 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
               );
             })}
           </div>
+        </TabsContent>
+
+        <TabsContent value="timeline" className="mt-4">
+          <DeliverablesTimeline 
+            projectId={projectId}
+            deliverables={filteredDeliverables}
+            onDeliverableClick={(d) => openEditDialog(d as any)}
+          />
         </TabsContent>
       </Tabs>
 
