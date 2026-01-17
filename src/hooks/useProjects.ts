@@ -75,6 +75,12 @@ export interface ProjectMember {
   };
 }
 
+export interface ProjectContactInput {
+  contact_id: string;
+  role: string;
+  is_primary?: boolean;
+}
+
 export interface CreateProjectInput {
   name: string;
   project_type: ProjectType;
@@ -89,6 +95,7 @@ export interface CreateProjectInput {
   end_date?: string | null;
   budget?: number | null;
   is_internal?: boolean;
+  client_contacts?: ProjectContactInput[];
 }
 
 export type ProjectStatus = 'active' | 'completed' | 'closed';
@@ -225,6 +232,26 @@ export function useProjects(options?: {
 
         if (phasesError) {
           console.error("Error creating phases:", phasesError);
+        }
+      }
+
+      // Create project contacts if provided
+      if (input.client_contacts && input.client_contacts.length > 0) {
+        const contactsToInsert = input.client_contacts.map((contact, index) => ({
+          workspace_id: activeWorkspace.id,
+          project_id: project.id,
+          contact_id: contact.contact_id,
+          role: contact.role,
+          is_primary: contact.is_primary || index === 0,
+          contact_type: "client",
+        }));
+
+        const { error: contactsError } = await supabase
+          .from("project_contacts")
+          .insert(contactsToInsert);
+
+        if (contactsError) {
+          console.error("Error creating project contacts:", contactsError);
         }
       }
 
