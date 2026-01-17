@@ -15,6 +15,12 @@ export interface TeamChannel {
   created_at: string;
   updated_at: string;
   is_archived: boolean;
+  // For DM channels, the other member's info
+  dm_member?: {
+    user_id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+  };
 }
 
 export interface TeamChannelMember {
@@ -54,7 +60,7 @@ export interface TeamMessageReaction {
   created_at: string;
 }
 
-// Hook: Fetch channels for workspace
+// Hook: Fetch channels for workspace with DM member info
 export function useTeamChannels() {
   const { activeWorkspace, user } = useAuth();
   
@@ -71,6 +77,53 @@ export function useTeamChannels() {
         .order("created_at", { ascending: true });
       
       if (error) throw error;
+      
+      // For DM channels, get the other member's profile
+      const dmChannels = data?.filter(c => c.channel_type === "direct") || [];
+      if (dmChannels.length > 0) {
+        const channelIds = dmChannels.map(c => c.id);
+        
+        // Get all members for DM channels
+        const { data: allMembers } = await supabase
+          .from("team_channel_members")
+          .select("channel_id, user_id")
+          .in("channel_id", channelIds);
+        
+        // Get other users (not current user)
+        const otherUserIds = [...new Set(
+          allMembers
+            ?.filter(m => m.user_id !== user?.id)
+            .map(m => m.user_id) || []
+        )];
+        
+        // Get their profiles
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, avatar_url")
+          .in("user_id", otherUserIds);
+        
+        // Create a map of channel_id -> other member profile
+        const channelMemberMap: Record<string, { user_id: string; full_name: string | null; avatar_url: string | null }> = {};
+        
+        for (const channel of dmChannels) {
+          const otherMember = allMembers?.find(m => m.channel_id === channel.id && m.user_id !== user?.id);
+          if (otherMember) {
+            const profile = profiles?.find(p => p.user_id === otherMember.user_id);
+            channelMemberMap[channel.id] = {
+              user_id: otherMember.user_id,
+              full_name: profile?.full_name || null,
+              avatar_url: profile?.avatar_url || null,
+            };
+          }
+        }
+        
+        // Attach member info to DM channels
+        return data?.map(c => ({
+          ...c,
+          dm_member: c.channel_type === "direct" ? channelMemberMap[c.id] : undefined,
+        })) as TeamChannel[];
+      }
+      
       return data as TeamChannel[];
     },
     enabled: !!activeWorkspace?.id,
