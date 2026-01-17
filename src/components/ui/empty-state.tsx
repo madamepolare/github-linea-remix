@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { LucideIcon, Plus } from "lucide-react";
+import { LucideIcon, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,10 @@ interface EmptyStateProps {
   title: string;
   description?: string;
   action?: {
+    label: string;
+    onClick: () => void;
+  };
+  secondaryAction?: {
     label: string;
     onClick: () => void;
   };
@@ -26,6 +30,7 @@ export function EmptyState({
   title,
   description,
   action,
+  secondaryAction,
   className,
   size = "md",
 }: EmptyStateProps) {
@@ -72,17 +77,25 @@ export function EmptyState({
         )}
       </motion.div>
 
-      {action && (
+      {(action || secondaryAction) && (
         <motion.div
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2, ease: [0.4, 0, 0.2, 1] }}
-          className="mt-6"
+          className="mt-6 flex items-center gap-3"
         >
-          <Button onClick={action.onClick} size="default" className="gap-2">
-            <Plus className="h-4 w-4" strokeWidth={2} />
-            {action.label}
-          </Button>
+          {secondaryAction && (
+            <Button onClick={secondaryAction.onClick} variant="outline" size="default" className="gap-2">
+              <Sparkles className="h-4 w-4" strokeWidth={2} />
+              {secondaryAction.label}
+            </Button>
+          )}
+          {action && (
+            <Button onClick={action.onClick} size="default" className="gap-2">
+              <Plus className="h-4 w-4" strokeWidth={2} />
+              {action.label}
+            </Button>
+          )}
         </motion.div>
       )}
     </motion.div>
