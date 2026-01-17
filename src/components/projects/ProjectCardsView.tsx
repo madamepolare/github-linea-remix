@@ -245,10 +245,9 @@ function ProjectCard({ project, members, index, onNavigate, onDelete, formatCurr
     >
       <Card 
         className={cn(
-          "group cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden border-l-4",
+          "group cursor-pointer hover:shadow-md transition-all duration-200",
           isClosed && "opacity-70"
         )}
-        style={{ borderLeftColor: displayColor }}
         onClick={onNavigate}
       >
         <CardContent className="p-3 sm:p-4">
