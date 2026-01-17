@@ -419,10 +419,6 @@ export function ProjectsSettings() {
             <Layers className="h-4 w-4" />
             Phases
           </TabsTrigger>
-          <TabsTrigger value="deliverables" className="gap-1.5 text-xs">
-            <FileText className="h-4 w-4" />
-            Livrables
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="categories" className="mt-6">
@@ -440,17 +436,6 @@ export function ProjectsSettings() {
           <PhasesSettings />
         </TabsContent>
 
-        <TabsContent value="deliverables" className="mt-6">
-          <GenericSettingsManager
-            settingType="tags"
-            title="Types de livrables"
-            description="Catégories de documents et livrables"
-            icon={<FileText className="h-5 w-5 text-primary" />}
-            showColor
-            showDescription
-            defaultItems={DEFAULT_DELIVERABLE_TYPES}
-          />
-        </TabsContent>
       </Tabs>
     </div>
   );
