@@ -72,6 +72,32 @@ export function PhaseSelector({
     toast.success('Mission de base chargée');
   };
 
+  const addPhaseFromTemplate = (template: typeof phaseTemplates[0]) => {
+    // Check if phase already exists
+    const exists = phases.some(p => p.phase_code === template.code);
+    if (exists) {
+      toast.error(`La phase ${template.code} existe déjà`);
+      return;
+    }
+
+    const newPhase: CommercialDocumentPhase = {
+      id: crypto.randomUUID(),
+      document_id: documentId || '',
+      phase_code: template.code,
+      phase_name: template.name,
+      phase_description: template.description || '',
+      percentage_fee: template.default_percentage,
+      amount: baseFee * template.default_percentage / 100,
+      is_included: true,
+      deliverables: template.deliverables || [],
+      sort_order: phases.length,
+      created_at: null,
+      updated_at: null,
+    };
+    onPhasesChange([...phases, newPhase]);
+    toast.success(`Phase "${template.name}" ajoutée`);
+  };
+
   const toggleExpanded = (id: string) => {
     const newExpanded = new Set(expandedPhases);
     if (newExpanded.has(id)) {
@@ -219,7 +245,11 @@ export function PhaseSelector({
                   <>
                     <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Phases de base</div>
                     {basePhaseTemplates.map((t) => (
-                      <DropdownMenuItem key={t.code} className="text-sm">
+                      <DropdownMenuItem 
+                        key={t.code} 
+                        className="text-sm cursor-pointer"
+                        onClick={() => addPhaseFromTemplate(t)}
+                      >
                         <Badge variant="outline" className="mr-2 text-xs">{t.code}</Badge>
                         {t.name} ({t.default_percentage}%)
                       </DropdownMenuItem>
@@ -232,7 +262,11 @@ export function PhaseSelector({
                     <DropdownMenuSeparator />
                     <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Complémentaires</div>
                     {complementaryPhaseTemplates.map((t) => (
-                      <DropdownMenuItem key={t.code} className="text-sm">
+                      <DropdownMenuItem 
+                        key={t.code} 
+                        className="text-sm cursor-pointer"
+                        onClick={() => addPhaseFromTemplate(t)}
+                      >
                         <Badge variant="outline" className="mr-2 text-xs">{t.code}</Badge>
                         {t.name} ({t.default_percentage}%)
                       </DropdownMenuItem>
