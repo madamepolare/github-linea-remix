@@ -656,14 +656,17 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                 <dt className="text-muted-foreground">Ville</dt>
                 <dd>{project.city || "-"}</dd>
               </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Surface</dt>
-                <dd>
-                  {project.surface_area ?? project.surface
-                    ? `${(project.surface_area ?? project.surface).toLocaleString()} m²`
-                    : "-"}
-                </dd>
-              </div>
+              {/* Surface - only for architecture/interior disciplines */}
+              {(project.project_type === "architecture" || project.project_type === "interior") && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Surface</dt>
+                  <dd>
+                    {project.surface_area ?? project.surface
+                      ? `${(project.surface_area ?? project.surface).toLocaleString()} m²`
+                      : "-"}
+                  </dd>
+                </div>
+              )}
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Budget</dt>
                 <dd>{project.budget ? `${project.budget.toLocaleString()} €` : "-"}</dd>
