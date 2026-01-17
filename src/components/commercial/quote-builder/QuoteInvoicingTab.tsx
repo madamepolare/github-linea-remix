@@ -16,7 +16,8 @@ import {
   Receipt,
   PieChart,
   Euro,
-  Percent
+  Percent,
+  Folder
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -75,13 +76,63 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
       schedule_number: index + 1,
       title: `Acompte ${phase.phase_name}`,
       description: phase.phase_description,
-      percentage: phase.percentage_fee,
+      percentage: totalAmount > 0 ? ((phase.amount || 0) / totalAmount) * 100 : 0,
       amount_ht: phase.amount || 0,
       amount_ttc: (phase.amount || 0) * (1 + vatRate / 100),
       vat_rate: vatRate,
       milestone: phase.phase_name,
       phase_ids: [phase.id]
     }));
+    
+    updateSchedule(newInvoices);
+  };
+
+  // Generate schedule from groups
+  const generateFromGroups = () => {
+    // Get all groups from lines
+    const groups = lines.filter(l => l.line_type === 'group');
+    
+    if (groups.length === 0) {
+      // Fallback to phases if no groups
+      generateFromPhases();
+      return;
+    }
+
+    const newInvoices: PlannedInvoice[] = groups.map((group, index) => {
+      // Calculate group subtotal
+      const groupLines = lines.filter(l => l.group_id === group.id && l.is_included && l.line_type !== 'discount');
+      const groupTotal = groupLines.reduce((sum, l) => sum + (l.amount || 0), 0);
+      
+      return {
+        id: crypto.randomUUID(),
+        schedule_number: index + 1,
+        title: `Acompte ${group.phase_name || `Groupe ${index + 1}`}`,
+        percentage: totalAmount > 0 ? (groupTotal / totalAmount) * 100 : 0,
+        amount_ht: groupTotal,
+        amount_ttc: groupTotal * (1 + vatRate / 100),
+        vat_rate: vatRate,
+        milestone: group.phase_name || `Groupe ${index + 1}`,
+        phase_ids: groupLines.map(l => l.id)
+      };
+    });
+
+    // Add ungrouped lines as a separate invoice if any
+    const ungroupedLines = lines.filter(l => !l.group_id && l.line_type !== 'group' && l.is_included && l.line_type !== 'discount');
+    if (ungroupedLines.length > 0) {
+      const ungroupedTotal = ungroupedLines.reduce((sum, l) => sum + (l.amount || 0), 0);
+      if (ungroupedTotal > 0) {
+        newInvoices.push({
+          id: crypto.randomUUID(),
+          schedule_number: newInvoices.length + 1,
+          title: 'Autres prestations',
+          percentage: totalAmount > 0 ? (ungroupedTotal / totalAmount) * 100 : 0,
+          amount_ht: ungroupedTotal,
+          amount_ttc: ungroupedTotal * (1 + vatRate / 100),
+          vat_rate: vatRate,
+          phase_ids: ungroupedLines.map(l => l.id)
+        });
+      }
+    }
     
     updateSchedule(newInvoices);
   };
@@ -270,7 +321,7 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
             Génération automatique
           </CardTitle>
           <CardDescription>
-            Créez un échéancier basé sur les phases du devis ou en répartition égale
+            Créez un échéancier basé sur les phases, groupes du devis ou en répartition égale
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -278,6 +329,10 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
             <Button variant="outline" size="sm" onClick={generateFromPhases}>
               <Wand2 className="h-4 w-4 mr-2" />
               Depuis les phases
+            </Button>
+            <Button variant="outline" size="sm" onClick={generateFromGroups}>
+              <Folder className="h-4 w-4 mr-2" />
+              Par groupe
             </Button>
             <Button variant="outline" size="sm" onClick={() => generateEqualSplit(2)}>
               50/50
