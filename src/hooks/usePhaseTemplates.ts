@@ -56,17 +56,46 @@ export function usePhaseTemplates(projectType?: string) {
     queryFn: async () => {
       if (!activeWorkspace?.id) return [];
 
-      let query = supabase
+      if (projectType) {
+        // Use junction table to get phases for specific project type
+        const { data: links, error: linksError } = await supabase
+          .from("phase_template_project_types")
+          .select("phase_template_id, sort_order")
+          .eq("workspace_id", activeWorkspace.id)
+          .eq("project_type", projectType)
+          .order("sort_order", { ascending: true });
+
+        if (linksError) throw linksError;
+        if (!links || links.length === 0) return [];
+
+        const phaseIds = links.map(l => l.phase_template_id);
+        
+        const { data: phases, error: phasesError } = await supabase
+          .from("phase_templates")
+          .select("*")
+          .in("id", phaseIds);
+
+        if (phasesError) throw phasesError;
+
+        // Sort by junction table's sort_order and add project_type for backward compatibility
+        const sortOrderMap = new Map(links.map(l => [l.phase_template_id, l.sort_order]));
+        return (phases || [])
+          .map(item => ({
+            ...item,
+            project_type: projectType, // Set for backward compatibility
+            deliverables: Array.isArray(item.deliverables) ? item.deliverables : [],
+            category: (item.category as PhaseCategory) || 'base',
+            sort_order: sortOrderMap.get(item.id) ?? item.sort_order ?? 0,
+          }))
+          .sort((a, b) => a.sort_order - b.sort_order) as PhaseTemplate[];
+      }
+
+      // No project type filter - get all phases
+      const { data, error } = await supabase
         .from("phase_templates")
         .select("*")
         .eq("workspace_id", activeWorkspace.id)
         .order("sort_order", { ascending: true });
-
-      if (projectType) {
-        query = query.eq("project_type", projectType);
-      }
-
-      const { data, error } = await query;
 
       if (error) throw error;
       
@@ -83,11 +112,12 @@ export function usePhaseTemplates(projectType?: string) {
     mutationFn: async (input: CreatePhaseTemplateInput) => {
       if (!activeWorkspace?.id) throw new Error("No active workspace");
 
+      // Create the phase template (project_type is now optional, kept for backward compat)
       const { data, error } = await supabase
         .from("phase_templates")
         .insert({
           workspace_id: activeWorkspace.id,
-          project_type: input.project_type,
+          project_type: input.project_type, // Still saved for backward compatibility
           code: input.code,
           name: input.name,
           description: input.description,
@@ -102,10 +132,24 @@ export function usePhaseTemplates(projectType?: string) {
         .single();
 
       if (error) throw error;
+
+      // Also create the junction record for many-to-many
+      if (data && input.project_type) {
+        await supabase
+          .from("phase_template_project_types")
+          .insert({
+            phase_template_id: data.id,
+            project_type: input.project_type,
+            workspace_id: activeWorkspace.id,
+            sort_order: input.sort_order ?? 0,
+          });
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["phase-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["phase-template-project-types"] });
       toast.success("Phase créée");
     },
     onError: (error) => {
@@ -140,6 +184,7 @@ export function usePhaseTemplates(projectType?: string) {
 
   const deleteTemplate = useMutation({
     mutationFn: async (id: string) => {
+      // Junction records are deleted automatically via ON DELETE CASCADE
       const { error } = await supabase
         .from("phase_templates")
         .delete()
@@ -149,6 +194,7 @@ export function usePhaseTemplates(projectType?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["phase-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["phase-template-project-types"] });
       toast.success("Phase supprimée");
     },
     onError: (error) => {
@@ -157,19 +203,37 @@ export function usePhaseTemplates(projectType?: string) {
     },
   });
 
+  // Reorder phases for a specific project type (updates junction table)
   const reorderTemplates = useMutation({
-    mutationFn: async (templates: { id: string; sort_order: number }[]) => {
-      const updates = templates.map(({ id, sort_order }) =>
+    mutationFn: async (templates: { id: string; sort_order: number; projectType?: string }[]) => {
+      // Update phase_templates sort_order
+      const phaseUpdates = templates.map(({ id, sort_order }) =>
         supabase
           .from("phase_templates")
           .update({ sort_order })
           .eq("id", id)
       );
 
-      await Promise.all(updates);
+      await Promise.all(phaseUpdates);
+
+      // Also update junction table if project type specified
+      const junctionUpdates = templates
+        .filter(t => t.projectType)
+        .map(({ id, sort_order, projectType }) =>
+          supabase
+            .from("phase_template_project_types")
+            .update({ sort_order })
+            .eq("phase_template_id", id)
+            .eq("project_type", projectType!)
+        );
+
+      if (junctionUpdates.length > 0) {
+        await Promise.all(junctionUpdates);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["phase-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["phase-template-project-types"] });
     },
     onError: (error) => {
       console.error("Error reordering phase templates:", error);
