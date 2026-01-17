@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTasks, Task } from "@/hooks/useTasks";
+import { useProjectDeliverables } from "@/hooks/useProjectDeliverables";
 import { RelatedEntityType } from "@/lib/taskTypes";
 import { EntitySelector } from "./EntitySelector";
 import { MultiAssigneePicker } from "./MultiAssigneePicker";
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Package } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ interface CreateTaskDialogProps {
   defaultRelatedType?: RelatedEntityType;
   defaultRelatedId?: string;
   defaultProjectId?: string;
+  defaultDeliverableId?: string;
 }
 
 const priorityOptions = [
@@ -57,6 +59,7 @@ export function CreateTaskDialog({
   defaultRelatedType,
   defaultRelatedId,
   defaultProjectId,
+  defaultDeliverableId,
 }: CreateTaskDialogProps) {
   const { createTask } = useTasks();
   const [title, setTitle] = useState("");
@@ -72,6 +75,13 @@ export function CreateTaskDialog({
   const [relatedId, setRelatedId] = useState<string | null>(
     defaultProjectId || defaultRelatedId || null
   );
+  const [selectedDeliverableId, setSelectedDeliverableId] = useState<string | null>(
+    defaultDeliverableId || null
+  );
+
+  // Fetch deliverables when a project is selected
+  const projectId = relatedType === "project" ? relatedId : null;
+  const { deliverables } = useProjectDeliverables(projectId || "");
 
   // Reset form when dialog opens with new defaults
   useEffect(() => {
@@ -83,9 +93,17 @@ export function CreateTaskDialog({
         setRelatedType(defaultRelatedType || null);
         setRelatedId(defaultRelatedId || null);
       }
+      setSelectedDeliverableId(defaultDeliverableId || null);
       setAssignees([]);
     }
-  }, [open, defaultRelatedType, defaultRelatedId, defaultProjectId]);
+  }, [open, defaultRelatedType, defaultRelatedId, defaultProjectId, defaultDeliverableId]);
+
+  // Reset deliverable when project changes
+  useEffect(() => {
+    if (relatedType !== "project" || !relatedId) {
+      setSelectedDeliverableId(null);
+    }
+  }, [relatedType, relatedId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,6 +134,11 @@ export function CreateTaskDialog({
       }
     }
 
+    // Add deliverable if selected
+    if (selectedDeliverableId) {
+      entityFields.deliverable_id = selectedDeliverableId;
+    }
+
     await createTask.mutateAsync({
       title,
       description: description || null,
@@ -137,6 +160,7 @@ export function CreateTaskDialog({
     setAssignees([]);
     setRelatedType(null);
     setRelatedId(null);
+    setSelectedDeliverableId(null);
     onOpenChange(false);
   };
 
@@ -177,6 +201,35 @@ export function CreateTaskDialog({
             onEntityTypeChange={setRelatedType}
             onEntityIdChange={setRelatedId}
           />
+
+          {/* Deliverable Selector - shown when project is selected */}
+          {relatedType === "project" && relatedId && deliverables && deliverables.length > 0 && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Livrable associé
+              </Label>
+              <Select 
+                value={selectedDeliverableId || "none"} 
+                onValueChange={(v) => setSelectedDeliverableId(v === "none" ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un livrable (optionnel)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucun livrable</SelectItem>
+                  {deliverables.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Si toutes les tâches du livrable sont terminées, il passera en "Prêt à envoyer"
+              </p>
+            </div>
+          )}
 
           {/* Assignee Picker */}
           <div className="space-y-2">
