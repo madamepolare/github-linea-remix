@@ -144,6 +144,8 @@ export function useTasks(options?: UseTasksOptions) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["deliverable-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["deliverable-full-task"] });
       toast.success("Tâche créée");
     },
     onError: (error) => {
@@ -164,6 +166,8 @@ export function useTasks(options?: UseTasksOptions) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["deliverable-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["deliverable-full-task"] });
     },
     onError: (error) => {
       toast.error("Failed to update task: " + error.message);
@@ -217,6 +221,8 @@ export function useTasks(options?: UseTasksOptions) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["deliverable-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["deliverable-full-task"] });
     },
   });
 
@@ -227,6 +233,8 @@ export function useTasks(options?: UseTasksOptions) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["deliverable-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["deliverable-full-task"] });
       toast.success("Task deleted");
     },
     onError: (error) => {
