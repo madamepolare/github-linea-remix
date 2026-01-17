@@ -87,7 +87,6 @@ export function getSettingsGroups(t: (key: string) => string): SettingsGroup[] {
       label: t('settings.groups.projects'),
       sections: [
         { id: 'projects', label: t('settings.sections.projectsConfig'), icon: <FolderKanban className="h-4 w-4" />, description: t('settings.sections.projectsConfigDesc') },
-        { id: 'phases', label: t('settings.sections.phases'), icon: <Layers className="h-4 w-4" />, description: t('settings.sections.phasesDesc') },
         { id: 'lots', label: t('settings.sections.lots'), icon: <Hammer className="h-4 w-4" />, description: t('settings.sections.lotsDesc') },
         { id: 'tasks', label: t('settings.sections.tasks'), icon: <CheckSquare className="h-4 w-4" />, description: t('settings.sections.tasksDesc') },
       ],

@@ -7,7 +7,6 @@ import { MembersSettings } from "@/components/settings/MembersSettings";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { LotsTemplatesSettings } from "@/components/settings/LotsTemplatesSettings";
 import { ProjectsSettings } from "@/components/settings/ProjectsSettings";
-import { PhasesSettings } from "@/components/settings/PhasesSettings";
 import { TasksSettings } from "@/components/settings/TasksSettings";
 import { DocumentsSettings } from "@/components/settings/DocumentsSettings";
 import { PermissionsSettings } from "@/components/settings/PermissionsSettings";
@@ -63,8 +62,7 @@ export default function Settings() {
         return <LanguageSettings />;
       case "projects":
         return <ProjectsSettings />;
-      case "phases":
-        return <PhasesSettings />;
+      // Phases are now managed within project types
       case "lots":
         return <LotsTemplatesSettings />;
       case "tasks":
