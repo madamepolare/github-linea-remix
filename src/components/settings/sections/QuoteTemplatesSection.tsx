@@ -48,7 +48,7 @@ import {
 import { Plus, Trash2, Edit, Copy, GripVertical, FileText, Download, Sparkles, ChevronDown, Loader2, CheckCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useQuoteTemplates, QuoteTemplate, QuoteTemplatePhase } from '@/hooks/useQuoteTemplates';
-import { ProjectType, PROJECT_TYPE_LABELS, PHASES_BY_PROJECT_TYPE } from '@/lib/commercialTypes';
+import { ProjectType, PROJECT_TYPE_LABELS } from '@/lib/commercialTypes';
 import { ALL_MISSION_TEMPLATES, getMissionCategories, MissionTemplate } from '@/lib/defaultMissionTemplates';
 import { toast } from 'sonner';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
@@ -195,12 +195,24 @@ export function QuoteTemplatesSection() {
 
   const handleCreateFromDefaults = async (projectTypeKey: string) => {
     const projectType = projectTypes.find(t => t.key === projectTypeKey);
-    const defaultPhases = PHASES_BY_PROJECT_TYPE[projectTypeKey as keyof typeof PHASES_BY_PROJECT_TYPE] || [];
+    
+    // Get phases from database for this project type
+    const phasesForType = allPhaseTemplates
+      .filter(p => p.is_active)
+      .map(p => ({
+        code: p.code,
+        name: p.name,
+        description: p.description || '',
+        defaultPercentage: p.default_percentage,
+        deliverables: p.deliverables || [],
+        category: p.category as 'base' | 'complementary'
+      }));
+
     await createTemplate.mutateAsync({
       name: `Nouveau template ${projectType?.label || projectTypeKey}`,
       description: '',
       project_type: projectTypeKey,
-      phases: defaultPhases,
+      phases: phasesForType,
       is_default: false,
       sort_order: templates.length
     });
@@ -248,11 +260,24 @@ export function QuoteTemplatesSection() {
     if (!newTemplate.name) return;
     
     const projectTypeKey = newTemplate.project_type || projectTypes[0]?.key || 'custom';
+    
+    // Use phases from template or from database
+    const phasesToUse = newTemplate.phases?.length ? newTemplate.phases : allPhaseTemplates
+      .filter(p => p.is_active)
+      .map(p => ({
+        code: p.code,
+        name: p.name,
+        description: p.description || '',
+        defaultPercentage: p.default_percentage,
+        deliverables: p.deliverables || [],
+        category: p.category as 'base' | 'complementary'
+      }));
+
     await createTemplate.mutateAsync({
       name: newTemplate.name,
       description: newTemplate.description,
       project_type: projectTypeKey,
-      phases: newTemplate.phases || PHASES_BY_PROJECT_TYPE[projectTypeKey as keyof typeof PHASES_BY_PROJECT_TYPE] || [],
+      phases: phasesToUse,
       is_default: false,
       sort_order: templates.length
     });
@@ -383,11 +408,24 @@ export function QuoteTemplatesSection() {
                   <Label>Type de projet (optionnel)</Label>
                   <Select
                     value={newTemplate.project_type}
-                    onValueChange={(v) => setNewTemplate({ 
-                      ...newTemplate, 
-                      project_type: v,
-                      phases: PHASES_BY_PROJECT_TYPE[v as keyof typeof PHASES_BY_PROJECT_TYPE] || []
-                    })}
+                    onValueChange={(v) => {
+                      // Load phases from database for this project type
+                      const phasesForType = allPhaseTemplates
+                        .filter(p => p.is_active)
+                        .map(p => ({
+                          code: p.code,
+                          name: p.name,
+                          description: p.description || '',
+                          defaultPercentage: p.default_percentage,
+                          deliverables: p.deliverables || [],
+                          category: p.category as 'base' | 'complementary'
+                        }));
+                      setNewTemplate({ 
+                        ...newTemplate, 
+                        project_type: v,
+                        phases: phasesForType
+                      });
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Sélectionner un type" />

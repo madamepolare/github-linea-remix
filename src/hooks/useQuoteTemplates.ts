@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { ProjectType, PhaseTemplate, PHASES_BY_PROJECT_TYPE } from '@/lib/commercialTypes';
+import { ProjectType, PhaseTemplate } from '@/lib/commercialTypes';
 import { Json } from '@/integrations/supabase/types';
 
 export interface QuoteTemplatePhase {
@@ -186,8 +186,24 @@ export const useQuoteTemplates = (projectType?: string) => {
 
       if (existing && existing.length > 0) return;
 
+      // Load phases from database instead of hardcoded constants
+      const { data: phaseTemplates } = await supabase
+        .from('phase_templates')
+        .select('*')
+        .eq('workspace_id', activeWorkspace.id)
+        .eq('is_active', true)
+        .order('sort_order');
+
+      const defaultPhases = (phaseTemplates || []).map(p => ({
+        code: p.code,
+        name: p.name,
+        description: p.description || '',
+        defaultPercentage: p.default_percentage || 0,
+        deliverables: Array.isArray(p.deliverables) ? p.deliverables : [],
+        category: p.category || 'base'
+      }));
+
       const { data: { user } } = await supabase.auth.getUser();
-      const defaultPhases = PHASES_BY_PROJECT_TYPE[type];
 
       const { error } = await supabase
         .from('quote_templates')
