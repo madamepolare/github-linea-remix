@@ -453,6 +453,32 @@ export function QuoteLinesEditor({
             />
           </DialogContent>
         </Dialog>
+
+        {/* Budget cible - moved to top action bar */}
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm gap-1.5">
+              <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Budget cible</span>
+              <span className="sm:hidden">Budget</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Ajuster vers un budget cible
+              </DialogTitle>
+            </DialogHeader>
+            <BudgetTargetForm 
+              currentTotal={totalHT} 
+              lines={lines}
+              document={document}
+              onApply={(targetBudget) => adjustToTarget(targetBudget)}
+              onApplyWithAI={(updatedLines) => onLinesChange(updatedLines)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {lines.length === 0 ? (
@@ -589,29 +615,6 @@ export function QuoteLinesEditor({
                     <TrendingUp className="h-3.5 w-3.5 mr-1" />
                     +10%
                   </Button>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 px-2 ml-2">
-                        <Target className="h-3.5 w-3.5 mr-1" />
-                        Budget cible
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                      <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                          <Target className="h-5 w-5" />
-                          Ajuster vers un budget cible
-                        </DialogTitle>
-                      </DialogHeader>
-                      <BudgetTargetForm 
-                        currentTotal={totalHT} 
-                        lines={lines}
-                        document={document}
-                        onApply={(targetBudget) => adjustToTarget(targetBudget)}
-                        onApplyWithAI={(updatedLines) => onLinesChange(updatedLines)}
-                      />
-                    </DialogContent>
-                  </Dialog>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="h-7 px-2">
