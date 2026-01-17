@@ -53,20 +53,25 @@ import { ALL_MISSION_TEMPLATES, getMissionCategories, MissionTemplate } from '@/
 import { toast } from 'sonner';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
 import { useWorkspaceDiscipline } from '@/hooks/useDiscipline';
+import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
+import { useProjectTypeSettings } from '@/hooks/useProjectTypeSettings';
 
 export function QuoteTemplatesSection() {
   const { templates, isLoadingTemplates, createTemplate, updateTemplate, deleteTemplate } = useQuoteTemplates();
   const { isGenerating, generateQuoteTemplate } = useAIGeneration();
   const { data: currentDiscipline } = useWorkspaceDiscipline();
+  const { projectTypes } = useProjectTypeSettings();
   const [editingTemplate, setEditingTemplate] = useState<QuoteTemplate | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isLoadingDefaults, setIsLoadingDefaults] = useState(false);
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
+  const [selectedProjectType, setSelectedProjectType] = useState<string>('');
   const [generatedTemplate, setGeneratedTemplate] = useState<{
     name: string;
     description: string;
     phases: QuoteTemplatePhase[];
+    projectType: string;
   } | null>(null);
   const [newTemplate, setNewTemplate] = useState<Partial<QuoteTemplate>>({
     name: '',
@@ -76,10 +81,49 @@ export function QuoteTemplatesSection() {
     is_default: false
   });
 
+  // Fetch phases for selected project type
+  const { templates: phaseTemplates } = usePhaseTemplates(selectedProjectType);
+
   const handleOpenAIDialog = () => {
     setAiPrompt('');
     setGeneratedTemplate(null);
+    // Default to first project type
+    if (projectTypes.length > 0 && !selectedProjectType) {
+      setSelectedProjectType(projectTypes[0].key);
+    }
     setShowAIDialog(true);
+  };
+
+  const handleGenerateFromPhases = () => {
+    if (!phaseTemplates || phaseTemplates.length === 0) {
+      toast.error('Aucune phase définie pour ce type de projet. Configurez les phases dans les paramètres.');
+      return;
+    }
+
+    const projectTypeLabel = projectTypes.find(t => t.key === selectedProjectType)?.label || selectedProjectType;
+    
+    // Convert phase templates to quote template phases
+    const phases: QuoteTemplatePhase[] = phaseTemplates
+      .filter(p => p.is_active)
+      .map(p => ({
+        code: p.code,
+        name: p.name,
+        description: p.description || '',
+        defaultPercentage: p.default_percentage,
+        deliverables: p.deliverables || [],
+        category: p.category as 'base' | 'complementary'
+      }));
+
+    const templateName = aiPrompt 
+      ? aiPrompt
+      : `Mission ${projectTypeLabel}`;
+
+    setGeneratedTemplate({
+      name: templateName,
+      description: `Template basé sur les phases définies pour ${projectTypeLabel}`,
+      phases,
+      projectType: selectedProjectType
+    });
   };
 
   const handleGenerateWithAI = async () => {
@@ -88,26 +132,48 @@ export function QuoteTemplatesSection() {
       return;
     }
 
+    if (!phaseTemplates || phaseTemplates.length === 0) {
+      toast.error('Aucune phase définie pour ce type de projet. Configurez les phases dans les paramètres.');
+      return;
+    }
+
     try {
+      // Pass existing phases to the AI for context
+      const existingPhases = phaseTemplates.filter(p => p.is_active).map(p => ({
+        code: p.code,
+        name: p.name,
+        percentage: p.default_percentage,
+        category: p.category
+      }));
+
       const generated = await generateQuoteTemplate(
         currentDiscipline.name,
         undefined,
-        aiPrompt || undefined
+        aiPrompt || undefined,
+        existingPhases
       );
       
-      const phases: QuoteTemplatePhase[] = generated.default_phases.map((p, idx) => ({
-        code: p.phase_code,
-        name: p.phase_name,
-        description: p.description,
-        defaultPercentage: p.percentage,
-        deliverables: [] as string[],
-        category: idx < 3 ? 'base' : 'complementary' as 'base' | 'complementary'
-      }));
+      const phases: QuoteTemplatePhase[] = generated.default_phases.map((p) => {
+        // Try to match with existing phases
+        const existingPhase = phaseTemplates.find(
+          ep => ep.code === p.phase_code || ep.name.toLowerCase() === p.phase_name.toLowerCase()
+        );
+        
+        return {
+          code: existingPhase?.code || p.phase_code,
+          name: existingPhase?.name || p.phase_name,
+          description: existingPhase?.description || p.description,
+          defaultPercentage: p.percentage,
+          deliverables: existingPhase?.deliverables || [],
+          category: existingPhase?.category as 'base' | 'complementary' || 'base'
+        };
+      });
 
       setGeneratedTemplate({
         name: generated.name,
         description: generated.description,
-        phases
+        phases,
+        projectType: selectedProjectType
       });
     } catch (error) {
       console.error('Error generating quote template:', error);
@@ -120,13 +186,13 @@ export function QuoteTemplatesSection() {
     await createTemplate.mutateAsync({
       name: generatedTemplate.name,
       description: generatedTemplate.description,
-      project_type: 'interior',
+      project_type: generatedTemplate.projectType as ProjectType,
       phases: generatedTemplate.phases,
       is_default: false,
       sort_order: templates.length
     });
 
-    toast.success('Template généré avec succès');
+    toast.success('Template créé avec succès');
     setShowAIDialog(false);
     setGeneratedTemplate(null);
   };
@@ -463,48 +529,105 @@ export function QuoteTemplatesSection() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              Générer un template avec l'IA
+              Créer un template de devis
             </DialogTitle>
             <DialogDescription>
               {currentDiscipline 
-                ? `Génération basée sur la discipline : ${currentDiscipline.name}`
+                ? `Discipline : ${currentDiscipline.name}`
                 : 'Sélectionnez une discipline dans les paramètres'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Project Type Selector */}
             <div className="space-y-2">
-              <Label>Description du template (optionnel)</Label>
-              <Textarea
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="Ex: Template pour une mission de rénovation d'appartement haussmannien avec suivi de chantier complet..."
-                rows={3}
+              <Label>Type de projet</Label>
+              <Select
+                value={selectedProjectType}
+                onValueChange={setSelectedProjectType}
                 disabled={isGenerating}
-              />
-              <p className="text-xs text-muted-foreground">
-                Laissez vide pour générer un template standard basé sur votre discipline.
-              </p>
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un type de projet" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectTypes.map((type) => (
+                    <SelectItem key={type.key} value={type.key}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="h-3 w-3 rounded-full" 
+                          style={{ backgroundColor: type.color || '#6366f1' }}
+                        />
+                        {type.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedProjectType && phaseTemplates && (
+                <p className="text-xs text-muted-foreground">
+                  {phaseTemplates.filter(p => p.is_active).length} phases définies pour ce type
+                </p>
+              )}
             </div>
 
-            {!generatedTemplate && (
-              <Button 
-                onClick={handleGenerateWithAI} 
+            {/* Template Name / Prompt */}
+            <div className="space-y-2">
+              <Label>Nom du template</Label>
+              <Input
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="Ex: Mission complète rénovation appartement"
                 disabled={isGenerating}
-                className="w-full"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Génération en cours...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Générer le template
-                  </>
-                )}
-              </Button>
+              />
+            </div>
+
+            {!generatedTemplate && selectedProjectType && (
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleGenerateFromPhases} 
+                  disabled={!phaseTemplates?.length}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Utiliser les phases définies
+                </Button>
+                <Button 
+                  onClick={handleGenerateWithAI} 
+                  disabled={isGenerating || !phaseTemplates?.length}
+                  className="flex-1"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Génération...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Générer avec l'IA
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {!selectedProjectType && (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Sélectionnez un type de projet pour continuer
+              </p>
+            )}
+
+            {selectedProjectType && phaseTemplates?.length === 0 && (
+              <div className="text-center py-4 border rounded-lg border-dashed">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Aucune phase définie pour ce type de projet
+                </p>
+                <Button variant="link" size="sm" asChild>
+                  <a href="/settings?section=phases">Configurer les phases →</a>
+                </Button>
+              </div>
             )}
 
             {generatedTemplate && (
@@ -516,7 +639,12 @@ export function QuoteTemplatesSection() {
                   </div>
                   
                   <div>
-                    <Label className="mb-2 block">Phases générées ({generatedTemplate.phases.length})</Label>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label>Phases ({generatedTemplate.phases.length})</Label>
+                      <Badge variant="secondary">
+                        Total: {generatedTemplate.phases.reduce((sum, p) => sum + p.defaultPercentage, 0)}%
+                      </Badge>
+                    </div>
                     <div className="space-y-2">
                       {generatedTemplate.phases.map((phase, index) => (
                         <div key={index} className="flex items-center gap-2 p-2 border rounded bg-background">
@@ -524,7 +652,10 @@ export function QuoteTemplatesSection() {
                             {phase.code}
                           </Badge>
                           <span className="flex-1 text-sm truncate">{phase.name}</span>
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge 
+                            variant={phase.category === 'base' ? 'secondary' : 'outline'} 
+                            className="text-xs"
+                          >
                             {phase.defaultPercentage}%
                           </Badge>
                         </div>
@@ -537,7 +668,10 @@ export function QuoteTemplatesSection() {
           </div>
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setShowAIDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowAIDialog(false);
+              setGeneratedTemplate(null);
+            }}>
               Annuler
             </Button>
             {generatedTemplate ? (
@@ -553,7 +687,7 @@ export function QuoteTemplatesSection() {
                 ) : (
                   <>
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Appliquer ce template
+                    Créer ce template
                   </>
                 )}
               </Button>
