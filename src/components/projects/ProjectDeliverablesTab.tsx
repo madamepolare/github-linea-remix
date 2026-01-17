@@ -444,6 +444,10 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
                       onDelete={() => handleDelete(deliverable.id)}
                       onStatusChange={handleStatusChange}
                       onSendEmail={() => openSendEmailDialog(deliverable)}
+                      onGenerateTasks={() => {
+                        setTasksDeliverable(deliverable);
+                        setTasksGeneratorOpen(true);
+                      }}
                     />
                   ))}
                 </div>
@@ -466,6 +470,10 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
                   onDelete={() => handleDelete(deliverable.id)}
                   onStatusChange={handleStatusChange}
                   onSendEmail={() => openSendEmailDialog(deliverable)}
+                  onGenerateTasks={() => {
+                    setTasksDeliverable(deliverable);
+                    setTasksGeneratorOpen(true);
+                  }}
                 />
               );
             })}
@@ -571,6 +579,7 @@ function DeliverableCard({
   onDelete,
   onStatusChange,
   onSendEmail,
+  onGenerateTasks,
 }: {
   deliverable: any;
   phase?: any;
@@ -578,6 +587,7 @@ function DeliverableCard({
   onEdit: () => void;
   onDelete: () => void;
   onStatusChange: (id: string, status: DeliverableStatus) => void;
+  onSendEmail: () => void;
   onGenerateTasks: () => void;
 }) {
   const statusConfig = DELIVERABLE_STATUS.find(s => s.value === deliverable.status) || DELIVERABLE_STATUS[0];
