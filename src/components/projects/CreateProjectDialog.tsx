@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -29,9 +30,9 @@ import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useContacts } from "@/hooks/useContacts";
+import { useCommercialDocuments } from "@/hooks/useCommercialDocuments";
 import { CLIENT_TEAM_ROLES } from "@/hooks/useProjectContacts";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
-import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 import { PROJECT_CATEGORIES, ProjectCategory, getProjectCategoryConfig, categoryHasFeature } from "@/lib/projectCategories";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -44,12 +45,14 @@ import {
   FolderKanban,
   Calendar,
   Users,
-  MapPin,
   Check,
   Briefcase,
   Building,
   RefreshCw,
   Wrench,
+  FileText,
+  Euro,
+  Clock,
 } from "lucide-react";
 
 interface CreateProjectDialogProps {
@@ -65,28 +68,21 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   Wrench,
 };
 
-// Disciplines that show surface field
-const SURFACE_TYPES = ["architecture", "interior", "interieur", "archi"];
-
 // Get icon component from name
 const getIconComponent = (iconName: string): React.ElementType => {
   const icons = LucideIcons as unknown as Record<string, React.ElementType>;
   return icons[iconName] || FolderKanban;
 };
 
-// Check if project type should show surface field
-function shouldShowSurface(projectType: string | null): boolean {
-  if (!projectType) return false;
-  return SURFACE_TYPES.some(t => 
-    projectType.toLowerCase().includes(t.toLowerCase())
-  );
-}
+// Budget mode type
+type BudgetMode = 'quote' | 'manual' | 'later';
 
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
   const { createProject } = useProjects();
   const { companies, isLoading: companiesLoading } = useCRMCompanies();
   const { projectTypes, isLoading: typesLoading } = useProjectTypeSettings();
   const { data: teamMembers = [], isLoading: teamLoading } = useTeamMembers();
+  const { documents = [], isLoading: docsLoading } = useCommercialDocuments();
   
   // Collapsible sections
   const [configOpen, setConfigOpen] = useState(true);
@@ -97,7 +93,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   // Configuration
   const [name, setName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory>("standard");
-  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [status, setStatus] = useState<"active" | "closed">("active");
   
   // Planning
@@ -108,14 +104,12 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   // Équipe
   const [selectedReferents, setSelectedReferents] = useState<string[]>([]);
   
-  // Client & Location
+  // Client & Budget
   const [crmCompanyId, setCrmCompanyId] = useState<string | null>(null);
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [surfaceArea, setSurfaceArea] = useState("");
   const [budget, setBudget] = useState("");
   const [monthlyBudget, setMonthlyBudget] = useState("");
+  const [budgetMode, setBudgetMode] = useState<BudgetMode>('later');
+  const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
   
   // Client contacts
   const [selectedClientContacts, setSelectedClientContacts] = useState<{id: string; role: string}[]>([]);
@@ -128,13 +122,24 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     companyId: crmCompanyId || undefined,
   });
 
-  // Get selected type config
-  const selectedTypeConfig = useMemo(() => {
-    return projectTypes.find(t => t.key === selectedType);
-  }, [projectTypes, selectedType]);
+  // Get selected type configs
+  const selectedTypeConfigs = useMemo(() => {
+    return projectTypes.filter(t => selectedTypes.includes(t.key));
+  }, [projectTypes, selectedTypes]);
 
-  // Check if surface should be shown
-  const showSurface = useMemo(() => shouldShowSurface(selectedType), [selectedType]);
+  // Get signed/accepted quotes (without project linked)
+  const availableQuotes = useMemo(() => {
+    return documents.filter(
+      d => d.document_type === 'quote' && 
+      (d.status === 'accepted' || d.status === 'signed') &&
+      !d.project_id // Only quotes not already linked to a project
+    );
+  }, [documents]);
+
+  // Get selected quote
+  const selectedQuote = useMemo(() => {
+    return availableQuotes.find(q => q.id === selectedQuoteId);
+  }, [availableQuotes, selectedQuoteId]);
 
   // Derived states from category
   const isInternal = selectedCategory === 'internal';
@@ -155,23 +160,29 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const selectedCompany = companies.find(c => c.id === crmCompanyId);
 
   const handleCreate = () => {
-    if (!name.trim() || !selectedType) return;
+    if (!name.trim() || selectedTypes.length === 0) return;
     
-    const color = selectedTypeConfig?.color || "#3B82F6";
+    // Use first type's color
+    const color = selectedTypeConfigs[0]?.color || "#3B82F6";
+    
+    // Determine budget based on mode
+    let finalBudget: number | null = null;
+    if (budgetMode === 'quote' && selectedQuote) {
+      finalBudget = selectedQuote.total_amount || null;
+    } else if (budgetMode === 'manual' && budget) {
+      finalBudget = parseFloat(budget);
+    }
     
     const input: CreateProjectInput = {
       name: name.trim(),
-      project_type: selectedType as any,
+      project_type: selectedTypes[0] as any, // Use first type as main
       project_category: selectedCategory,
       description: description.trim() || null,
       crm_company_id: isInternal ? null : crmCompanyId,
-      address: isInternal ? null : (address.trim() || null),
-      city: isInternal ? null : (city.trim() || null),
-      surface_area: showSurface && surfaceArea ? parseFloat(surfaceArea) : null,
       color,
       start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
       end_date: showEndDate && endDate ? format(endDate, "yyyy-MM-dd") : null,
-      budget: showBudget && budget ? parseFloat(budget) : null,
+      budget: showBudget ? finalBudget : null,
       monthly_budget: showMonthlyBudget && monthlyBudget ? parseFloat(monthlyBudget) : null,
       is_internal: isInternal,
       client_contacts: !isInternal && selectedClientContacts.length > 0 
@@ -191,34 +202,22 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const resetForm = () => {
     setName("");
     setSelectedCategory("standard");
-    setSelectedType(null);
+    setSelectedTypes([]);
     setStatus("active");
     setDescription("");
     setStartDate(null);
     setEndDate(null);
     setSelectedReferents([]);
     setCrmCompanyId(null);
-    setAddress("");
-    setCity("");
-    setPostalCode("");
-    setSurfaceArea("");
     setBudget("");
     setMonthlyBudget("");
+    setBudgetMode('later');
+    setSelectedQuoteId(null);
     setSelectedClientContacts([]);
     setConfigOpen(true);
     setPlanningOpen(true);
     setTeamOpen(false);
     setClientOpen(false);
-  };
-
-  const handleAddressSelect = (result: {
-    address: string;
-    city: string;
-    postalCode: string;
-    region: string;
-  }) => {
-    setCity(result.city);
-    setPostalCode(result.postalCode);
   };
 
   // Reset selected contacts when company changes
@@ -257,7 +256,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
-  const canCreate = !!name.trim() && !!selectedType;
+  const canCreate = !!name.trim() && selectedTypes.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={(open) => { if (!open) resetForm(); onOpenChange(open); }}>
@@ -291,7 +290,51 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                   />
                 </div>
 
-                {/* Type de projet */}
+                {/* Catégorie du projet */}
+                <div className="space-y-2">
+                  <Label>Catégorie *</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {PROJECT_CATEGORIES.map((cat) => {
+                      const CategoryIcon = CATEGORY_ICONS[cat.icon] || Briefcase;
+                      return (
+                        <button
+                          key={cat.key}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategory(cat.key);
+                            // Reset fields that don't apply to the new category
+                            if (!categoryHasFeature(cat.key, 'isBillable')) {
+                              setClientOpen(false);
+                            }
+                          }}
+                          className={cn(
+                            "flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all",
+                            selectedCategory === cat.key
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
+                          )}
+                        >
+                          <div 
+                            className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center",
+                              selectedCategory === cat.key ? "bg-primary text-primary-foreground" : "bg-muted"
+                            )}
+                            style={selectedCategory === cat.key ? {} : { backgroundColor: `${cat.color}15` }}
+                          >
+                            <CategoryIcon 
+                              className="h-4 w-4" 
+                              style={{ color: selectedCategory === cat.key ? undefined : cat.color }} 
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-center leading-tight">{cat.labelShort}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">{categoryConfig.description}</p>
+                </div>
+
+                {/* Type de projet (multi-select) */}
                 <div className="space-y-2">
                   <Label>Type de projet *</Label>
                   {typesLoading ? (
@@ -307,14 +350,21 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                     <div className="grid grid-cols-4 gap-2">
                       {projectTypes.map((type) => {
                         const Icon = getIconComponent(type.icon || "FolderKanban");
+                        const isSelected = selectedTypes.includes(type.key);
                         return (
                           <button
                             key={type.key}
                             type="button"
-                            onClick={() => setSelectedType(type.key)}
+                            onClick={() => {
+                              setSelectedTypes(prev => 
+                                isSelected 
+                                  ? prev.filter(t => t !== type.key)
+                                  : [...prev, type.key]
+                              );
+                            }}
                             className={cn(
                               "flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all",
-                              selectedType === type.key
+                              isSelected
                                 ? "border-primary bg-primary/5"
                                 : "border-border hover:border-primary/50"
                             )}
@@ -322,20 +372,28 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                             <div 
                               className={cn(
                                 "w-8 h-8 rounded-full flex items-center justify-center",
-                                selectedType === type.key ? "bg-primary text-primary-foreground" : "bg-muted"
+                                isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
                               )}
-                              style={selectedType === type.key ? {} : { backgroundColor: `${type.color}15` }}
+                              style={isSelected ? {} : { backgroundColor: `${type.color}15` }}
                             >
                               <Icon 
                                 className="h-4 w-4" 
-                                style={{ color: selectedType === type.key ? undefined : type.color }} 
+                                style={{ color: isSelected ? undefined : type.color }} 
                               />
                             </div>
                             <span className="text-xs font-medium text-center leading-tight">{type.label}</span>
+                            {isSelected && (
+                              <Check className="h-3 w-3 text-primary absolute top-1 right-1" />
+                            )}
                           </button>
                         );
                       })}
                     </div>
+                  )}
+                  {selectedTypes.length > 1 && (
+                    <p className="text-xs text-muted-foreground">
+                      {selectedTypes.length} types sélectionnés
+                    </p>
                   )}
                 </div>
 
@@ -623,63 +681,113 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                     </div>
                   )}
 
-                  {/* Adresse */}
-                  <div className="space-y-2">
-                    <Label>
-                      <MapPin className="h-3.5 w-3.5 inline mr-1" />
-                      Adresse du projet
-                    </Label>
-                    <AddressAutocomplete
-                      value={address}
-                      onChange={setAddress}
-                      onAddressSelect={handleAddressSelect}
-                      placeholder="Rechercher une adresse..."
-                    />
-                  </div>
-
-                  {/* Ville / CP / Surface */}
-                  <div className={cn("grid gap-4", showSurface ? "grid-cols-3" : "grid-cols-2")}>
-                    <div className="space-y-2">
-                      <Label>Code postal</Label>
-                      <Input
-                        value={postalCode}
-                        onChange={(e) => setPostalCode(e.target.value)}
-                        placeholder="75001"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Ville</Label>
-                      <Input
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="Paris"
-                      />
-                    </div>
-                    {showSurface && (
-                      <div className="space-y-2">
-                        <Label>Surface (m²)</Label>
-                        <Input
-                          type="number"
-                          value={surfaceArea}
-                          onChange={(e) => setSurfaceArea(e.target.value)}
-                          placeholder="150"
-                        />
-                      </div>
-                    )}
-                  </div>
-
                   {/* Budget */}
                   {showBudget && (
-                    <div className="space-y-2">
-                      <Label>Budget global (€)</Label>
-                      <Input
-                        type="number"
-                        value={budget}
-                        onChange={(e) => setBudget(e.target.value)}
-                        placeholder="50000"
-                      />
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Euro className="h-4 w-4 text-muted-foreground" />
+                        Budget du projet
+                      </Label>
+                      
+                      <RadioGroup 
+                        value={budgetMode} 
+                        onValueChange={(v) => setBudgetMode(v as BudgetMode)}
+                        className="space-y-2"
+                      >
+                        {/* Option: Depuis un devis */}
+                        <div className={cn(
+                          "flex items-start gap-3 p-3 rounded-lg border transition-all",
+                          budgetMode === 'quote' ? "border-primary bg-primary/5" : "border-border"
+                        )}>
+                          <RadioGroupItem value="quote" id="budget-quote" className="mt-0.5" />
+                          <div className="flex-1 space-y-2">
+                            <Label htmlFor="budget-quote" className="cursor-pointer flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              Charger depuis un devis signé
+                            </Label>
+                            {budgetMode === 'quote' && (
+                              <>
+                                {docsLoading ? (
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Chargement...
+                                  </div>
+                                ) : availableQuotes.length === 0 ? (
+                                  <p className="text-sm text-muted-foreground">
+                                    Aucun devis signé disponible
+                                  </p>
+                                ) : (
+                                  <Select 
+                                    value={selectedQuoteId || ""} 
+                                    onValueChange={setSelectedQuoteId}
+                                  >
+                                    <SelectTrigger className="h-8">
+                                      <SelectValue placeholder="Sélectionner un devis" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {availableQuotes.map((quote) => (
+                                        <SelectItem key={quote.id} value={quote.id}>
+                                          <div className="flex items-center justify-between gap-4">
+                                            <span>{quote.title || quote.document_number}</span>
+                                            {quote.total_amount && (
+                                              <span className="text-muted-foreground">
+                                                {quote.total_amount.toLocaleString('fr-FR')} €
+                                              </span>
+                                            )}
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                                {selectedQuote && (
+                                  <p className="text-sm font-medium text-primary">
+                                    Budget: {selectedQuote.total_amount?.toLocaleString('fr-FR')} €
+                                  </p>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Option: Saisie manuelle */}
+                        <div className={cn(
+                          "flex items-start gap-3 p-3 rounded-lg border transition-all",
+                          budgetMode === 'manual' ? "border-primary bg-primary/5" : "border-border"
+                        )}>
+                          <RadioGroupItem value="manual" id="budget-manual" className="mt-0.5" />
+                          <div className="flex-1 space-y-2">
+                            <Label htmlFor="budget-manual" className="cursor-pointer flex items-center gap-2">
+                              <Euro className="h-4 w-4" />
+                              Saisir manuellement
+                            </Label>
+                            {budgetMode === 'manual' && (
+                              <Input
+                                type="number"
+                                value={budget}
+                                onChange={(e) => setBudget(e.target.value)}
+                                placeholder="50000"
+                                className="h-8"
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Option: Configurer plus tard */}
+                        <div className={cn(
+                          "flex items-center gap-3 p-3 rounded-lg border transition-all",
+                          budgetMode === 'later' ? "border-primary bg-primary/5" : "border-border"
+                        )}>
+                          <RadioGroupItem value="later" id="budget-later" />
+                          <Label htmlFor="budget-later" className="cursor-pointer flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Configurer plus tard
+                          </Label>
+                        </div>
+                      </RadioGroup>
                     </div>
                   )}
+
                   {showMonthlyBudget && (
                     <div className="space-y-2">
                       <Label>Budget mensuel (€)</Label>
