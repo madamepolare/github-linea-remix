@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ModuleFiltersBar } from "@/components/shared/ModuleFiltersBar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,6 +125,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [searchQuery, setSearchQuery] = useState("");
   
   const { projects: activeProjects, isLoading: loadingActive, deleteProject } = useProjects();
   const { projects: closedProjects, isLoading: loadingClosed } = useProjects({ includeClosed: true });
@@ -155,9 +158,21 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
     }
   }, [viewFilter, activeProjects, closedProjects, archivedProjects]);
 
-  // Sort projects
+  // Filter and sort projects
   const projects = useMemo(() => {
-    const sorted = [...filteredProjects].sort((a, b) => {
+    // First apply search filter
+    let filtered = filteredProjects;
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filteredProjects.filter(p => 
+        p.name.toLowerCase().includes(query) ||
+        p.crm_company?.name?.toLowerCase().includes(query) ||
+        p.project_type?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Then sort
+    const sorted = [...filtered].sort((a, b) => {
       let comparison = 0;
       
       switch (sortField) {
@@ -185,7 +200,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
       return sortDirection === "asc" ? comparison : -comparison;
     });
     return sorted;
-  }, [filteredProjects, sortField, sortDirection]);
+  }, [filteredProjects, sortField, sortDirection, searchQuery]);
 
   // Calculate financial totals
   const financialTotals = useMemo(() => {
@@ -251,7 +266,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
 
   return (
     <div className="p-4 sm:p-6 space-y-4">
-      <div className="flex items-center justify-between overflow-x-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <Tabs value={viewFilter} onValueChange={(v) => setViewFilter(v as ViewFilter)}>
           <TabsList className="h-9">
             <TabsTrigger value="active" className="text-xs sm:text-sm">Actifs ({activeProjects.length})</TabsTrigger>
@@ -259,6 +274,39 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
             <TabsTrigger value="archived" className="text-xs sm:text-sm hidden sm:flex">Archivés ({archivedProjects.filter(p => p.is_archived).length})</TabsTrigger>
           </TabsList>
         </Tabs>
+        
+        <ModuleFiltersBar
+          search={{
+            value: searchQuery,
+            onChange: setSearchQuery,
+            placeholder: "Rechercher un projet..."
+          }}
+          filters={
+            <Select 
+              value={`${sortField}-${sortDirection}`} 
+              onValueChange={(v) => {
+                const [field, dir] = v.split("-") as [SortField, SortDirection];
+                setSortField(field);
+                setSortDirection(dir);
+              }}
+            >
+              <SelectTrigger className="h-9 w-[160px] text-xs">
+                <SelectValue placeholder="Trier par..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name-asc">Nom A→Z</SelectItem>
+                <SelectItem value="name-desc">Nom Z→A</SelectItem>
+                <SelectItem value="progress-desc">Avancement ↓</SelectItem>
+                <SelectItem value="progress-asc">Avancement ↑</SelectItem>
+                <SelectItem value="budget-desc">Budget ↓</SelectItem>
+                <SelectItem value="budget-asc">Budget ↑</SelectItem>
+                <SelectItem value="endDate-asc">Échéance proche</SelectItem>
+                <SelectItem value="endDate-desc">Échéance lointaine</SelectItem>
+                <SelectItem value="client-asc">Client A→Z</SelectItem>
+              </SelectContent>
+            </Select>
+          }
+        />
       </div>
 
       {projects.length === 0 ? (
@@ -272,45 +320,6 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
         </div>
       ) : (
         <div className="flex flex-col">
-          {/* List Header */}
-          <div className="hidden lg:flex items-center gap-4 px-4 py-2 bg-muted/50 rounded-t-lg border-b text-xs font-medium text-muted-foreground">
-            <div className="w-10 shrink-0" /> {/* Icon space */}
-            <button 
-              onClick={() => handleSort("name")}
-              className="flex items-center w-48 sm:w-56 hover:text-foreground transition-colors"
-            >
-              Projet <SortIcon field="name" />
-            </button>
-            <button 
-              onClick={() => handleSort("client")}
-              className="hidden md:flex items-center w-48 hover:text-foreground transition-colors"
-            >
-              Client <SortIcon field="client" />
-            </button>
-            <button 
-              onClick={() => handleSort("progress")}
-              className="flex items-center w-24 hover:text-foreground transition-colors"
-            >
-              Avancement <SortIcon field="progress" />
-            </button>
-            <div className="flex-1 min-w-[140px]">Phase active</div>
-            <div className="w-24 text-center">Santé</div>
-            <div className="w-24">Équipe</div>
-            <button 
-              onClick={() => handleSort("budget")}
-              className="flex items-center w-24 text-right justify-end hover:text-foreground transition-colors"
-            >
-              Budget <SortIcon field="budget" />
-            </button>
-            <button 
-              onClick={() => handleSort("endDate")}
-              className="flex items-center w-20 text-right justify-end hover:text-foreground transition-colors"
-            >
-              Échéance <SortIcon field="endDate" />
-            </button>
-            <div className="w-8" /> {/* Actions space */}
-          </div>
-          
           {/* Project rows */}
           <div className="flex flex-col gap-1">
             {projects.map((project, index) => (
