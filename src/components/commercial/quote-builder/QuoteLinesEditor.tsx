@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -53,6 +54,7 @@ import { QuoteLineItemCompact } from './QuoteLineItemCompact';
 import { QuoteMarginSummary } from './QuoteMarginSummary';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useLineFeatures } from '@/contexts/LineFeatureContext';
+import { cn } from '@/lib/utils';
 
 interface QuoteLinesEditorProps {
   lines: QuoteLine[];
@@ -73,7 +75,6 @@ export function QuoteLinesEditor({
 }: QuoteLinesEditorProps) {
   const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   // Get feature flags from context
   const features = useLineFeatures();
@@ -209,16 +210,62 @@ export function QuoteLinesEditor({
     onLinesChange(lines.map(l => l.id === lineId ? { ...l, group_id: groupId } : l));
   };
 
-  const handleDragStart = (index: number) => setDraggedIndex(index);
-  const handleDragEnd = () => setDraggedIndex(null);
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
-    const newLines = [...lines];
-    const [draggedLine] = newLines.splice(draggedIndex, 1);
-    newLines.splice(index, 0, draggedLine);
-    onLinesChange(newLines.map((l, i) => ({ ...l, sort_order: i })));
-    setDraggedIndex(index);
+  // Handle drag & drop
+  const handleDragEnd = (result: DropResult) => {
+    const { source, destination, draggableId } = result;
+    
+    if (!destination) return;
+    
+    // If dropped in same place, do nothing
+    if (source.droppableId === destination.droppableId && source.index === destination.index) {
+      return;
+    }
+
+    const draggedLine = lines.find(l => l.id === draggableId);
+    if (!draggedLine || draggedLine.line_type === 'group') return;
+
+    // Determine source and destination group IDs
+    const sourceGroupId = source.droppableId === 'ungrouped' ? undefined : source.droppableId;
+    const destGroupId = destination.droppableId === 'ungrouped' ? undefined : destination.droppableId;
+
+    // Update the line's group assignment
+    const updatedLines = lines.map(l => {
+      if (l.id === draggableId) {
+        return { ...l, group_id: destGroupId };
+      }
+      return l;
+    });
+
+    // Reorder within the destination group
+    const destLines = destGroupId 
+      ? updatedLines.filter(l => l.group_id === destGroupId && l.line_type !== 'group')
+      : updatedLines.filter(l => !l.group_id && l.line_type !== 'group');
+    
+    // Remove the dragged line from its current position
+    const withoutDragged = destLines.filter(l => l.id !== draggableId);
+    const draggedLineUpdated = updatedLines.find(l => l.id === draggableId)!;
+    
+    // Insert at new position
+    withoutDragged.splice(destination.index, 0, draggedLineUpdated);
+    
+    // Update sort orders
+    const finalLines = updatedLines.map(line => {
+      if (line.line_type === 'group') return line;
+      
+      const inDestGroup = destGroupId 
+        ? line.group_id === destGroupId 
+        : !line.group_id;
+      
+      if (inDestGroup) {
+        const newIndex = withoutDragged.findIndex(l => l.id === line.id);
+        if (newIndex !== -1) {
+          return { ...line, sort_order: newIndex };
+        }
+      }
+      return line;
+    });
+
+    onLinesChange(finalLines);
   };
 
   const baseTemplates = phaseTemplates.filter(t => t.category === 'base' && t.is_active);
@@ -227,6 +274,37 @@ export function QuoteLinesEditor({
   const allPricingItems = activePricingGrids.flatMap(grid => (grid.items || []).map((item: any) => ({ name: item.name, unit_price: item.unit_price, unit: item.unit })));
 
   const [showAIDialog, setShowAIDialog] = useState(false);
+
+  const renderDraggableLine = (line: QuoteLine, index: number, isInGroup: boolean) => (
+    <Draggable key={line.id} draggableId={line.id} index={index}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          className={cn(
+            snapshot.isDragging && "opacity-90 shadow-xl ring-2 ring-primary/50 rounded-lg"
+          )}
+        >
+          <QuoteLineItemCompact
+            line={line}
+            index={index}
+            isInGroup={isInGroup}
+            groups={groups}
+            isExpanded={expandedLines.has(line.id)}
+            dragHandleProps={provided.dragHandleProps}
+            teamMembers={teamMembers}
+            document={document}
+            toggleExpanded={toggleExpanded}
+            updateLine={updateLine}
+            duplicateLine={duplicateLine}
+            deleteLine={deleteLine}
+            assignToGroup={assignToGroup}
+            formatCurrency={formatCurrency}
+          />
+        </div>
+      )}
+    </Draggable>
+  );
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -336,39 +414,77 @@ export function QuoteLinesEditor({
       {lines.length === 0 ? (
         <Card><CardContent className="py-8 sm:py-12 text-center"><FileText className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" /><p className="text-sm sm:text-base text-muted-foreground">Aucune ligne dans ce devis</p></CardContent></Card>
       ) : (
-        <div className="space-y-2">
-          {groups.map((group) => {
-            const groupLines = getGroupLines(group.id);
-            const isGroupExpanded = expandedGroups.has(group.id);
-            return (
-              <Collapsible key={group.id} open={isGroupExpanded}>
-                <div className={`border-2 rounded-lg ${LINE_TYPE_COLORS.group}`}>
-                  <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-muted/30 flex-wrap sm:flex-nowrap">
-                    <GripVertical className="h-4 w-4 text-muted-foreground hidden sm:block" />
-                    <Folder className="h-4 w-4 text-slate-600 shrink-0" />
-                    <Input value={group.phase_name} onChange={(e) => updateLine(group.id, { phase_name: e.target.value })} className="flex-1 h-8 sm:h-9 font-medium text-sm min-w-[120px]" placeholder="Titre du groupe" autoFocus={!group.phase_name} />
-                    <Badge variant="secondary" className="text-xs shrink-0">{groupLines.length}</Badge>
-                    <span className="font-medium text-sm min-w-[80px] sm:min-w-[100px] text-right shrink-0">{formatCurrency(getGroupSubtotal(group.id))}</span>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-destructive shrink-0" onClick={() => deleteLine(group.id)}><Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></Button>
-                    <CollapsibleTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => toggleGroupExpanded(group.id)}>{isGroupExpanded ? <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}</Button></CollapsibleTrigger>
-                  </div>
-                  <CollapsibleContent>
-                    <div className="p-2 space-y-2">
-                      {groupLines.length === 0 ? <div className="text-center py-3 sm:py-4 text-xs sm:text-sm text-muted-foreground">Aucune ligne</div> : groupLines.map((line, index) => (
-                        <QuoteLineItemCompact key={line.id} line={line} index={index} isInGroup={true} groups={groups} isExpanded={expandedLines.has(line.id)} draggedIndex={draggedIndex} teamMembers={teamMembers} document={document} toggleExpanded={toggleExpanded} updateLine={updateLine} duplicateLine={duplicateLine} deleteLine={deleteLine} assignToGroup={assignToGroup} handleDragStart={handleDragStart} handleDragOver={handleDragOver} handleDragEnd={handleDragEnd} formatCurrency={formatCurrency} />
-                      ))}
-                      <Button variant="ghost" size="sm" className="w-full text-muted-foreground text-xs sm:text-sm h-8" onClick={() => addLine('service', group.id)}><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />Ajouter une ligne</Button>
-                      {groupLines.length > 0 && <Card className="bg-slate-50 border-slate-200"><CardContent className="py-2 px-3 sm:px-4"><div className="flex justify-between text-xs sm:text-sm"><span className="text-muted-foreground font-medium truncate mr-2">Sous-total {group.phase_name}</span><span className="font-semibold shrink-0">{formatCurrency(getGroupSubtotal(group.id))}</span></div></CardContent></Card>}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="space-y-2">
+            {/* Render groups */}
+            {groups.map((group) => {
+              const groupLines = getGroupLines(group.id);
+              const isGroupExpanded = expandedGroups.has(group.id);
+              return (
+                <Collapsible key={group.id} open={isGroupExpanded}>
+                  <div className={`border-2 rounded-lg ${LINE_TYPE_COLORS.group}`}>
+                    <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-muted/30 flex-wrap sm:flex-nowrap">
+                      <GripVertical className="h-4 w-4 text-muted-foreground hidden sm:block" />
+                      <Folder className="h-4 w-4 text-slate-600 shrink-0" />
+                      <Input value={group.phase_name} onChange={(e) => updateLine(group.id, { phase_name: e.target.value })} className="flex-1 h-8 sm:h-9 font-medium text-sm min-w-[120px]" placeholder="Titre du groupe" autoFocus={!group.phase_name} />
+                      <Badge variant="secondary" className="text-xs shrink-0">{groupLines.length}</Badge>
+                      <span className="font-medium text-sm min-w-[80px] sm:min-w-[100px] text-right shrink-0">{formatCurrency(getGroupSubtotal(group.id))}</span>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-destructive shrink-0" onClick={() => deleteLine(group.id)}><Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></Button>
+                      <CollapsibleTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 shrink-0" onClick={() => toggleGroupExpanded(group.id)}>{isGroupExpanded ? <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}</Button></CollapsibleTrigger>
                     </div>
-                  </CollapsibleContent>
+                    <CollapsibleContent>
+                      <Droppable droppableId={group.id}>
+                        {(provided, snapshot) => (
+                          <div 
+                            ref={provided.innerRef} 
+                            {...provided.droppableProps}
+                            className={cn(
+                              "p-2 space-y-2 min-h-[60px] transition-colors rounded-b-lg",
+                              snapshot.isDraggingOver && "bg-primary/5 ring-2 ring-primary/20 ring-inset"
+                            )}
+                          >
+                            {groupLines.length === 0 && !snapshot.isDraggingOver ? (
+                              <div className="text-center py-3 sm:py-4 text-xs sm:text-sm text-muted-foreground border-2 border-dashed rounded-lg">
+                                Glissez des lignes ici
+                              </div>
+                            ) : (
+                              groupLines.map((line, index) => renderDraggableLine(line, index, true))
+                            )}
+                            {provided.placeholder}
+                            <Button variant="ghost" size="sm" className="w-full text-muted-foreground text-xs sm:text-sm h-8" onClick={() => addLine('service', group.id)}><Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />Ajouter une ligne</Button>
+                            {groupLines.length > 0 && <Card className="bg-slate-50 border-slate-200"><CardContent className="py-2 px-3 sm:px-4"><div className="flex justify-between text-xs sm:text-sm"><span className="text-muted-foreground font-medium truncate mr-2">Sous-total {group.phase_name}</span><span className="font-semibold shrink-0">{formatCurrency(getGroupSubtotal(group.id))}</span></div></CardContent></Card>}
+                          </div>
+                        )}
+                      </Droppable>
+                    </CollapsibleContent>
+                  </div>
+                </Collapsible>
+              );
+            })}
+            
+            {/* Ungrouped lines droppable area */}
+            <Droppable droppableId="ungrouped">
+              {(provided, snapshot) => (
+                <div 
+                  ref={provided.innerRef} 
+                  {...provided.droppableProps}
+                  className={cn(
+                    "space-y-2 min-h-[40px] transition-colors rounded-lg p-1",
+                    snapshot.isDraggingOver && "bg-muted/50 ring-2 ring-muted ring-inset"
+                  )}
+                >
+                  {ungroupedLines.map((line, index) => renderDraggableLine(line, index, false))}
+                  {provided.placeholder}
+                  {ungroupedLines.length === 0 && groups.length > 0 && (
+                    <div className="text-center py-3 text-xs text-muted-foreground border-2 border-dashed rounded-lg">
+                      Lignes non groupées
+                    </div>
+                  )}
                 </div>
-              </Collapsible>
-            );
-          })}
-          {ungroupedLines.map((line, index) => (
-            <QuoteLineItemCompact key={line.id} line={line} index={index} isInGroup={false} groups={groups} isExpanded={expandedLines.has(line.id)} draggedIndex={draggedIndex} teamMembers={teamMembers} document={document} toggleExpanded={toggleExpanded} updateLine={updateLine} duplicateLine={duplicateLine} deleteLine={deleteLine} assignToGroup={assignToGroup} handleDragStart={handleDragStart} handleDragOver={handleDragOver} handleDragEnd={handleDragEnd} formatCurrency={formatCurrency} />
-          ))}
-        </div>
+              )}
+            </Droppable>
+          </div>
+        </DragDropContext>
       )}
 
       {lines.length > 0 && (
