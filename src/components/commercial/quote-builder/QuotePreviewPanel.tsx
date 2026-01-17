@@ -55,24 +55,26 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
     >
       {/* Page content */}
       <div className="p-8 text-sm text-gray-800" style={{ fontFamily: 'system-ui, sans-serif' }}>
-        {/* Header */}
-        <div className="flex justify-between items-start mb-8">
-          <div>
-            {agencyInfo?.logo_url ? (
-              <img src={agencyInfo.logo_url} alt="Logo" className="h-12 object-contain" />
-            ) : (
-              <div className="font-bold text-xl text-gray-900">
-                {agencyInfo?.name || 'Votre agence'}
-              </div>
-            )}
-            <div className="mt-2 text-xs text-gray-500">
-              {agencyInfo?.address && <div>{agencyInfo.address}</div>}
-              {(agencyInfo?.postal_code || agencyInfo?.city) && (
-                <div>{agencyInfo.postal_code} {agencyInfo.city}</div>
-              )}
-              {agencyInfo?.phone && <div>Tél: {agencyInfo.phone}</div>}
-              {agencyInfo?.email && <div>{agencyInfo.email}</div>}
+        {/* Header - Logo full width */}
+        <div className="mb-6">
+          {agencyInfo?.logo_url ? (
+            <img src={agencyInfo.logo_url} alt="Logo" className="w-full max-h-24 object-contain object-left" />
+          ) : (
+            <div className="font-bold text-2xl text-gray-900">
+              {agencyInfo?.name || 'Votre agence'}
             </div>
+          )}
+        </div>
+
+        {/* Document info row */}
+        <div className="flex justify-between items-start mb-8">
+          <div className="text-xs text-gray-500">
+            {agencyInfo?.address && <div>{agencyInfo.address}</div>}
+            {(agencyInfo?.postal_code || agencyInfo?.city) && (
+              <div>{agencyInfo.postal_code} {agencyInfo.city}</div>
+            )}
+            {agencyInfo?.phone && <div>Tél: {agencyInfo.phone}</div>}
+            {agencyInfo?.email && <div>{agencyInfo.email}</div>}
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-gray-900 uppercase">
