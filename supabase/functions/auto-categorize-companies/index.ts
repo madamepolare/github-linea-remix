@@ -76,74 +76,77 @@ serve(async (req) => {
     let userPrompt = "";
 
     if (entityType === "companies") {
-      // Build category -> types mapping
-      const categoryTypesMap: Record<string, string[]> = {};
-      (categories || []).forEach((cat: CategoryConfig) => {
-        const catTypes = (types || [])
-          .filter((t: any) => t.category === cat.key)
-          .map((t: any) => `${t.key} (${t.label})`);
-        categoryTypesMap[`${cat.key} (${cat.label})`] = catTypes;
-      });
+      // Build list of valid type keys
+      const validTypeKeys = (types || []).map((t: any) => t.key);
+      const validBetSpecKeys = (betSpecialties || []).map((s: any) => s.key);
+      
+      // Build category -> types mapping with clear key emphasis
+      const typesList = (types || [])
+        .map((t: any) => `  - KEY: "${t.key}" → ${t.label} (catégorie: ${t.category})`)
+        .join("\n");
 
-      const betSpecLabels = (betSpecialties || [])
-        .map((s: any) => `${s.key} (${s.label})`)
-        .join(", ");
+      const betSpecList = (betSpecialties || [])
+        .map((s: any) => `  - KEY: "${s.key}" → ${s.label}`)
+        .join("\n");
 
       systemPrompt = `Tu es un expert en classification d'entreprises pour le secteur de l'architecture et de la construction en France.
-Tu dois analyser chaque entreprise et suggérer la catégorie et le type les plus appropriés parmi ceux fournis.
+Tu dois analyser chaque entreprise et suggérer le TYPE le plus approprié parmi la liste EXACTE fournie.
 
-CATÉGORIES ET TYPES DISPONIBLES:
-${Object.entries(categoryTypesMap).map(([cat, typs]) => 
-  `- ${cat}:\n  Types: ${(typs as string[]).join(", ") || "aucun type spécifique"}`
-).join("\n")}
+⚠️ RÈGLE CRITIQUE: Tu DOIS utiliser UNIQUEMENT les KEYS exactes listées ci-dessous. Ne jamais inventer de nouvelles valeurs!
 
-SPÉCIALITÉS BET (pour les entreprises de type BET):
-${betSpecLabels || "Non configurées"}
+TYPES D'ENTREPRISES DISPONIBLES (utilise UNIQUEMENT ces keys):
+${typesList}
 
-RÈGLES IMPORTANTES:
-1. Pour les entreprises de type BET, tu DOIS aussi suggérer les spécialités appropriées (suggested_bet_specialties)
-2. Analyse le nom, le site web, l'email et la description pour déterminer l'activité
-3. Exemples de patterns:
-   - "Ville de...", "Mairie de...", "Communauté de..." → client public/collectivité
-   - "SARL", "SAS" + construction/bâtiment → entreprise générale ou corps d'état
-   - "Architecte", "Atelier", "Agence" → architecte
-   - "BET", "Bureau d'études", "Ingénierie" → BET (avec spécialités)
-   - "Structure", "Béton armé" → BET structure
-   - "Fluides", "CVC", "Thermique" → BET fluides
-4. Retourne un score de confiance entre 0 et 100
-5. Explique brièvement ton raisonnement
+SPÉCIALITÉS BET (uniquement si le type est "bet"):
+${betSpecList || "Non configurées"}
 
-RÉPONDS EN JSON VALIDE avec un tableau "results".`;
+EXEMPLES DE CLASSIFICATION CORRECTE:
+- "Ville de Paris", "Mairie de Nice" → type: "client_public"
+- "BET Structure SA", "Ingénierie Fluides" → type: "bet" + bet_specialties: ["structure"] ou ["fluides"]
+- "Agence Martin Architecte" → type: "architecte"
+- "Bouygues Construction" → type: "entreprise_generale"
+- "SARL Plomberie Dupont" → type: "artisan" ou "second_oeuvre"
+- "Promoteur Immobilier X" → type: "client_prive"
+- "Économiste de la construction" → type: "economiste"
+- "Bureau de contrôle" → type: "bet" + bet_specialties appropriées
 
-      userPrompt = `Analyse ces entreprises et suggère leur catégorie/type:
+RÈGLES:
+1. suggested_type DOIT être une des keys EXACTES listées: ${validTypeKeys.join(", ")}
+2. Si type = "bet", ajoute suggested_bet_specialties avec les keys EXACTES: ${validBetSpecKeys.join(", ")}
+3. Copie l'ID EXACTEMENT tel que fourni dans l'input (format UUID)
+4. confidence = score de 0 à 100
+5. reason = explication courte
+
+RÉPONDS EN JSON VALIDE.`;
+
+      userPrompt = `Analyse ces entreprises et suggère leur type (utilise UNIQUEMENT les keys valides):
 
 ${(entities as CompanyInput[]).map((e, i) => 
   `${i + 1}. ID: ${e.id}
    Nom: ${e.name}
    Site: ${e.website || "non renseigné"}
    Email: ${e.email || "non renseigné"}
-   Description: ${e.description || "non renseignée"}
-   Catégorie actuelle: ${e.current_category || "aucune"}
    Type actuel: ${e.current_industry || "aucun"}
    Spécialités BET actuelles: ${e.bet_specialties?.join(", ") || "aucune"}`
 ).join("\n\n")}
 
-Retourne un JSON avec:
+Retourne un JSON STRICT:
 {
   "results": [
     {
-      "id": "uuid",
+      "id": "COPIE_EXACTE_UUID_DE_INPUT",
       "name": "nom entreprise",
-      "suggested_category": "clé_catégorie",
-      "suggested_category_label": "Libellé Catégorie",
-      "suggested_type": "clé_type",
-      "suggested_type_label": "Libellé Type",
-      "suggested_bet_specialties": ["structure", "fluides"], // si BET
+      "suggested_type": "UNE_DES_KEYS_VALIDES",
+      "suggested_type_label": "Libellé correspondant",
+      "suggested_bet_specialties": ["key1", "key2"],
       "confidence": 85,
       "reason": "Explication courte"
     }
   ]
-}`;
+}
+
+Keys de type valides: ${validTypeKeys.join(", ")}
+Keys de spécialités BET valides: ${validBetSpecKeys.join(", ")}`;
 
     } else if (entityType === "contacts") {
       const contactTypeLabels = (contactTypes || [])
