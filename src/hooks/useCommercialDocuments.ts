@@ -491,12 +491,42 @@ export const useCommercialDocuments = () => {
           };
         });
 
-        const { error: phasesError } = await supabase
+        const { data: createdPhases, error: phasesError } = await supabase
           .from('project_phases')
-          .insert(projectPhases);
+          .insert(projectPhases)
+          .select();
 
         if (phasesError) {
           console.error('Error creating project phases:', phasesError);
+        }
+
+        // Create project deliverables from commercial document phase deliverables
+        if (createdPhases && createdPhases.length > 0) {
+          for (const createdPhase of createdPhases) {
+            const docPhase = includedPhases.find(p => p.phase_code === createdPhase.phase_code);
+            if (!docPhase?.deliverables?.length) continue;
+
+            const deliverablesToCreate = docPhase.deliverables.map((name: string, i: number) => ({
+              workspace_id: activeWorkspace.id,
+              project_id: project.id,
+              phase_id: createdPhase.id,
+              name: typeof name === 'string' ? name : (name as any).name || 'Livrable',
+              description: typeof name === 'object' ? (name as any).description : null,
+              status: 'pending',
+              due_date: createdPhase.end_date,
+              sort_order: i,
+            }));
+
+            if (deliverablesToCreate.length > 0) {
+              const { error: delError } = await supabase
+                .from('project_deliverables')
+                .insert(deliverablesToCreate);
+
+              if (delError) {
+                console.error('Error creating project deliverables:', delError);
+              }
+            }
+          }
         }
       }
 

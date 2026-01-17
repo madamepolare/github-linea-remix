@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { PHASES_BY_PROJECT_TYPE, PhaseTemplate as CommercialPhaseTemplate, PhaseCategory } from "@/lib/commercialTypes";
+import { PhaseCategory } from "@/lib/commercialTypes";
 
 export interface PhaseTemplate {
   id: string;
@@ -177,6 +177,56 @@ export function usePhaseTemplates(projectType?: string) {
     },
   });
 
+  // Generate phases using AI based on project type and discipline
+  const generateWithAI = useMutation({
+    mutationFn: async ({ projectType, discipline, customPrompt }: { 
+      projectType: string; 
+      discipline?: string; 
+      customPrompt?: string 
+    }) => {
+      if (!activeWorkspace?.id) throw new Error("No active workspace");
+
+      // Call AI edge function to generate phases
+      const { data, error } = await supabase.functions.invoke('generate-phase-templates', {
+        body: { projectType, discipline, customPrompt }
+      });
+
+      if (error) throw error;
+      if (!data?.phases) throw new Error("No phases generated");
+
+      // Insert generated phases
+      const phasesToInsert = data.phases.map((phase: any, index: number) => ({
+        workspace_id: activeWorkspace.id,
+        project_type: projectType,
+        code: phase.code,
+        name: phase.name,
+        description: phase.description,
+        default_percentage: phase.defaultPercentage || 0,
+        deliverables: phase.deliverables || [],
+        sort_order: index,
+        is_active: true,
+        category: phase.category || 'base',
+      }));
+
+      const { error: insertError } = await supabase
+        .from("phase_templates")
+        .insert(phasesToInsert);
+
+      if (insertError) throw insertError;
+
+      return phasesToInsert;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["phase-templates"] });
+      toast.success("Phases générées avec l'IA");
+    },
+    onError: (error) => {
+      console.error("Error generating phases with AI:", error);
+      toast.error("Erreur lors de la génération des phases");
+    },
+  });
+
+  // Reset and regenerate using AI
   const resetToDefaults = useMutation({
     mutationFn: async (projectType: string) => {
       if (!activeWorkspace?.id) throw new Error("No active workspace");
@@ -188,34 +238,39 @@ export function usePhaseTemplates(projectType?: string) {
         .eq("workspace_id", activeWorkspace.id)
         .eq("project_type", projectType);
 
-      // Get default phases
-      const defaultPhases = PHASES_BY_PROJECT_TYPE[projectType as keyof typeof PHASES_BY_PROJECT_TYPE] || [];
+      // Generate new ones with AI
+      const { data, error } = await supabase.functions.invoke('generate-phase-templates', {
+        body: { projectType }
+      });
 
-      // Insert default phases
-      if (defaultPhases.length > 0) {
-        const { error } = await supabase
-          .from("phase_templates")
-          .insert(
-            defaultPhases.map((phase: CommercialPhaseTemplate, index: number) => ({
-              workspace_id: activeWorkspace.id,
-              project_type: projectType,
-              code: phase.code,
-              name: phase.name,
-              description: phase.description,
-              default_percentage: phase.defaultPercentage,
-              deliverables: phase.deliverables || [],
-              sort_order: index,
-              is_active: true,
-              category: phase.category || 'base',
-            }))
-          );
-
-        if (error) throw error;
+      if (error) throw error;
+      if (!data?.phases || data.phases.length === 0) {
+        throw new Error("Aucune phase générée");
       }
+
+      // Insert generated phases
+      const phasesToInsert = data.phases.map((phase: any, index: number) => ({
+        workspace_id: activeWorkspace.id,
+        project_type: projectType,
+        code: phase.code,
+        name: phase.name,
+        description: phase.description,
+        default_percentage: phase.defaultPercentage || 0,
+        deliverables: phase.deliverables || [],
+        sort_order: index,
+        is_active: true,
+        category: phase.category || 'base',
+      }));
+
+      const { error: insertError } = await supabase
+        .from("phase_templates")
+        .insert(phasesToInsert);
+
+      if (insertError) throw insertError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["phase-templates"] });
-      toast.success("Phases réinitialisées aux valeurs par défaut");
+      toast.success("Phases réinitialisées avec l'IA");
     },
     onError: (error) => {
       console.error("Error resetting phase templates:", error);
@@ -223,6 +278,7 @@ export function usePhaseTemplates(projectType?: string) {
     },
   });
 
+  // Initialize defaults if empty using AI
   const initializeDefaultsIfEmpty = useMutation({
     mutationFn: async (projectType: string) => {
       if (!activeWorkspace?.id) throw new Error("No active workspace");
@@ -239,28 +295,39 @@ export function usePhaseTemplates(projectType?: string) {
         return; // Templates already exist
       }
 
-      // Get default phases
-      const defaultPhases = PHASES_BY_PROJECT_TYPE[projectType as keyof typeof PHASES_BY_PROJECT_TYPE] || [];
+      // Generate with AI
+      const { data, error } = await supabase.functions.invoke('generate-phase-templates', {
+        body: { projectType }
+      });
 
-      if (defaultPhases.length > 0) {
-        const { error } = await supabase
-          .from("phase_templates")
-          .insert(
-            defaultPhases.map((phase: CommercialPhaseTemplate, index: number) => ({
-              workspace_id: activeWorkspace.id,
-              project_type: projectType,
-              code: phase.code,
-              name: phase.name,
-              description: phase.description,
-              default_percentage: phase.defaultPercentage,
-              deliverables: phase.deliverables || [],
-              sort_order: index,
-              is_active: true,
-              category: phase.category || 'base',
-            }))
-          );
+      if (error) {
+        console.error("AI generation failed:", error);
+        return; // Fail silently - user can manually add phases
+      }
 
-        if (error) throw error;
+      if (!data?.phases || data.phases.length === 0) {
+        return; // No phases to insert
+      }
+
+      const phasesToInsert = data.phases.map((phase: any, index: number) => ({
+        workspace_id: activeWorkspace.id,
+        project_type: projectType,
+        code: phase.code,
+        name: phase.name,
+        description: phase.description,
+        default_percentage: phase.defaultPercentage || 0,
+        deliverables: phase.deliverables || [],
+        sort_order: index,
+        is_active: true,
+        category: phase.category || 'base',
+      }));
+
+      const { error: insertError } = await supabase
+        .from("phase_templates")
+        .insert(phasesToInsert);
+
+      if (insertError) {
+        console.error("Error inserting generated phases:", insertError);
       }
     },
     onSuccess: () => {
@@ -276,6 +343,7 @@ export function usePhaseTemplates(projectType?: string) {
     updateTemplate,
     deleteTemplate,
     reorderTemplates,
+    generateWithAI,
     resetToDefaults,
     initializeDefaultsIfEmpty,
   };
