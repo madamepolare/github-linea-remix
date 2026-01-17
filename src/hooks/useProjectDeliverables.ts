@@ -85,6 +85,9 @@ export function useProjectDeliverables(projectId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-deliverables", projectId] });
+      // Invalidate calendar events since deliverables sync to calendar
+      queryClient.invalidateQueries({ queryKey: ["calendar-events", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-events"] });
       toast.success("Livrable créé");
     },
     onError: (error) => {
@@ -107,6 +110,9 @@ export function useProjectDeliverables(projectId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-deliverables", projectId] });
+      // Invalidate calendar events since deliverables sync to calendar
+      queryClient.invalidateQueries({ queryKey: ["calendar-events", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-events"] });
     },
     onError: (error) => {
       toast.error("Erreur lors de la mise à jour");
@@ -125,6 +131,9 @@ export function useProjectDeliverables(projectId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project-deliverables", projectId] });
+      // Invalidate calendar events since deliverables sync to calendar
+      queryClient.invalidateQueries({ queryKey: ["calendar-events", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["workspace-events"] });
       toast.success("Livrable supprimé");
     },
     onError: (error) => {

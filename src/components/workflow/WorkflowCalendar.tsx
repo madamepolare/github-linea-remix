@@ -1,21 +1,37 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import resourceTimelinePlugin from "@fullcalendar/resource-timeline";
 import interactionPlugin from "@fullcalendar/interaction";
 import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
+import { useWorkspaceEvents, WorkspaceEvent } from "@/hooks/useWorkspaceEvents";
+import { useAllProjectMembers } from "@/hooks/useProjects";
 import { addHours } from "date-fns";
+import { Package } from "lucide-react";
+
+// Event type colors matching TeamPlanningGrid
+const EVENT_TYPE_COLORS: Record<string, string> = {
+  meeting: "#3b82f6", // blue
+  milestone: "#f59e0b", // amber
+  reminder: "#8b5cf6", // violet
+  rendu: "#10b981", // emerald - deliverables
+  site_visit: "#f97316", // orange
+  deadline: "#ef4444", // red
+};
 
 interface WorkflowCalendarProps {
   onEventClick?: (schedule: TaskSchedule) => void;
   onDateSelect?: (start: Date, end: Date, resourceId: string) => void;
   externalDrop?: (taskId: string, userId: string, start: Date, end: Date) => void;
+  onRenduClick?: (event: WorkspaceEvent) => void;
 }
 
-export function WorkflowCalendar({ onEventClick, onDateSelect, externalDrop }: WorkflowCalendarProps) {
+export function WorkflowCalendar({ onEventClick, onDateSelect, externalDrop, onRenduClick }: WorkflowCalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const { schedules, updateSchedule } = useTaskSchedules();
   const { data: members } = useTeamMembers();
+  const { data: workspaceEvents } = useWorkspaceEvents();
+  const { data: userProjectsMap } = useAllProjectMembers();
 
   // Convert team members to FullCalendar resources
   const resources = (members || []).map(member => ({
@@ -27,29 +43,76 @@ export function WorkflowCalendar({ onEventClick, onDateSelect, externalDrop }: W
     },
   }));
 
-  // Convert schedules to FullCalendar events
-  const events = (schedules || []).map(schedule => {
-    const projectColor = schedule.task?.project?.color || "#6366f1";
+  // Combine task schedules and rendu events
+  const events = useMemo(() => {
+    const calendarEvents: any[] = [];
     
-    return {
-      id: schedule.id,
-      resourceId: schedule.user_id,
-      title: schedule.task?.title || "Tâche",
-      start: schedule.start_datetime,
-      end: schedule.end_datetime,
-      backgroundColor: schedule.color || projectColor,
-      borderColor: schedule.color || projectColor,
-      editable: !schedule.is_locked,
-      extendedProps: {
-        schedule,
-        task: schedule.task,
-        priority: schedule.task?.priority,
-        projectName: schedule.task?.project?.name,
-      },
-    };
-  });
+    // Add task schedules
+    (schedules || []).forEach(schedule => {
+      const projectColor = schedule.task?.project?.color || "#6366f1";
+      
+      calendarEvents.push({
+        id: schedule.id,
+        resourceId: schedule.user_id,
+        title: schedule.task?.title || "Tâche",
+        start: schedule.start_datetime,
+        end: schedule.end_datetime,
+        backgroundColor: schedule.color || projectColor,
+        borderColor: schedule.color || projectColor,
+        editable: !schedule.is_locked,
+        extendedProps: {
+          type: "schedule",
+          schedule,
+          task: schedule.task,
+          priority: schedule.task?.priority,
+          projectName: schedule.task?.project?.name,
+        },
+      });
+    });
+
+    // Add rendu events for project members
+    (workspaceEvents || []).forEach(event => {
+      if (event.source !== "project") return;
+      const projectEvent = event as WorkspaceEvent;
+      
+      // Only show rendu events (deliverables)
+      if (projectEvent.event_type !== "rendu") return;
+      
+      // Find all members assigned to this project
+      members?.forEach(member => {
+        const memberProjectIds = userProjectsMap?.get(member.user_id) || new Set<string>();
+        
+        if (projectEvent.project_id && memberProjectIds.has(projectEvent.project_id)) {
+          calendarEvents.push({
+            id: `rendu-${projectEvent.id}-${member.user_id}`,
+            resourceId: member.user_id,
+            title: projectEvent.title,
+            start: projectEvent.start_datetime,
+            end: projectEvent.end_datetime || projectEvent.start_datetime,
+            backgroundColor: EVENT_TYPE_COLORS.rendu,
+            borderColor: EVENT_TYPE_COLORS.rendu,
+            editable: false,
+            extendedProps: {
+              type: "rendu",
+              event: projectEvent,
+              projectName: projectEvent.project?.name,
+              isRendu: true,
+            },
+          });
+        }
+      });
+    });
+
+    return calendarEvents;
+  }, [schedules, workspaceEvents, members, userProjectsMap]);
 
   const handleEventDrop = useCallback((info: any) => {
+    // Don't allow rendu events to be dropped
+    if (info.event.extendedProps.type === "rendu") {
+      info.revert();
+      return;
+    }
+    
     const schedule = info.event.extendedProps.schedule as TaskSchedule;
     
     updateSchedule.mutate({
@@ -61,6 +124,12 @@ export function WorkflowCalendar({ onEventClick, onDateSelect, externalDrop }: W
   }, [updateSchedule]);
 
   const handleEventResize = useCallback((info: any) => {
+    // Don't allow rendu events to be resized
+    if (info.event.extendedProps.type === "rendu") {
+      info.revert();
+      return;
+    }
+    
     const schedule = info.event.extendedProps.schedule as TaskSchedule;
     
     updateSchedule.mutate({
@@ -71,9 +140,16 @@ export function WorkflowCalendar({ onEventClick, onDateSelect, externalDrop }: W
   }, [updateSchedule]);
 
   const handleEventClick = useCallback((info: any) => {
-    const schedule = info.event.extendedProps.schedule as TaskSchedule;
-    onEventClick?.(schedule);
-  }, [onEventClick]);
+    const eventType = info.event.extendedProps.type;
+    
+    if (eventType === "rendu") {
+      const event = info.event.extendedProps.event as WorkspaceEvent;
+      onRenduClick?.(event);
+    } else {
+      const schedule = info.event.extendedProps.schedule as TaskSchedule;
+      onEventClick?.(schedule);
+    }
+  }, [onEventClick, onRenduClick]);
 
   const handleDateSelect = useCallback((info: any) => {
     onDateSelect?.(info.start, info.end, info.resource?.id);
@@ -120,16 +196,24 @@ export function WorkflowCalendar({ onEventClick, onDateSelect, externalDrop }: W
           minute: "2-digit",
           hour12: false,
         }}
-        eventContent={(arg) => (
-          <div className="px-1 py-0.5 overflow-hidden">
-            <div className="font-medium text-xs truncate">{arg.event.title}</div>
-            {arg.event.extendedProps.projectName && (
-              <div className="text-[10px] opacity-75 truncate">
-                {arg.event.extendedProps.projectName}
+        eventContent={(arg) => {
+          const isRendu = arg.event.extendedProps.isRendu;
+          return (
+            <div className="px-1 py-0.5 overflow-hidden flex items-center gap-1">
+              {isRendu && (
+                <Package className="w-3 h-3 flex-shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-xs truncate">{arg.event.title}</div>
+                {arg.event.extendedProps.projectName && (
+                  <div className="text-[10px] opacity-75 truncate">
+                    {arg.event.extendedProps.projectName}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          );
+        }}
         resourceLabelContent={(arg) => (
           <div className="flex items-center gap-2 px-2">
             {arg.resource.extendedProps.avatar ? (
