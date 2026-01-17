@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { ProjectType, generateDefaultPhases, PhaseStatus } from "@/lib/projectTypes";
+import { ProjectCategory, categoryHasFeature } from "@/lib/projectCategories";
 
 export interface Project {
   id: string;
@@ -21,8 +22,12 @@ export interface Project {
   updated_at: string;
   is_archived: boolean;
   is_internal: boolean;
-  // New fields
+  // Category and type
+  project_category: ProjectCategory;
   project_type: ProjectType | null;
+  monthly_budget: number | null;
+  auto_renew: boolean;
+  // Location and details
   crm_company_id: string | null;
   lead_id?: string | null;
   address: string | null;
@@ -84,6 +89,7 @@ export interface ProjectContactInput {
 export interface CreateProjectInput {
   name: string;
   project_type: ProjectType;
+  project_category?: ProjectCategory;
   description?: string | null;
   client?: string | null;
   crm_company_id?: string | null;
@@ -94,6 +100,8 @@ export interface CreateProjectInput {
   start_date?: string | null;
   end_date?: string | null;
   budget?: number | null;
+  monthly_budget?: number | null;
+  auto_renew?: boolean;
   is_internal?: boolean;
   client_contacts?: ProjectContactInput[];
 }
@@ -177,6 +185,10 @@ export function useProjects(options?: {
         throw new Error("Missing workspace or user");
       }
 
+      // Determine category
+      const category = input.project_category || 'standard';
+      const isInternal = category === 'internal' || input.is_internal;
+      
       // Create the project
       const { data: project, error: projectError } = await supabase
         .from("projects")
@@ -185,53 +197,58 @@ export function useProjects(options?: {
           created_by: user.id,
           name: input.name,
           project_type: input.project_type,
+          project_category: category,
           description: input.description || null,
           client: input.client || null,
-          crm_company_id: input.crm_company_id || null,
-          address: input.address || null,
-          city: input.city || null,
+          crm_company_id: isInternal ? null : (input.crm_company_id || null),
+          address: isInternal ? null : (input.address || null),
+          city: isInternal ? null : (input.city || null),
           surface_area: input.surface_area || null,
           color: input.color || "#3B82F6",
           start_date: input.start_date || null,
-          end_date: input.end_date || null,
-          budget: input.budget || null,
+          end_date: categoryHasFeature(category, 'hasEndDate') ? (input.end_date || null) : null,
+          budget: categoryHasFeature(category, 'hasBudget') ? (input.budget || null) : null,
+          monthly_budget: categoryHasFeature(category, 'hasMonthlyBudget') ? (input.monthly_budget || null) : null,
+          auto_renew: categoryHasFeature(category, 'hasAutoRenew') ? (input.auto_renew || false) : false,
           phase: "planning",
           status: "active",
-          is_internal: input.is_internal || false,
+          is_internal: isInternal,
         })
         .select()
         .single();
 
       if (projectError) throw projectError;
 
-      // Generate default phases for the project type with dates
-      const defaultPhases = generateDefaultPhases(
-        input.project_type, 
-        project.id, 
-        activeWorkspace.id,
-        input.start_date,
-        input.end_date
-      );
-      
-      if (defaultPhases.length > 0) {
-        const phasesToInsert = defaultPhases.map((phase, index) => ({
-          workspace_id: activeWorkspace.id,
-          project_id: project.id,
-          name: phase.name,
-          description: phase.description,
-          sort_order: index,
-          status: phase.status,
-          color: phase.color,
-          start_date: phase.start_date,
-          end_date: phase.end_date,
-        }));
+      // Generate default phases only for categories that support phases
+      if (categoryHasFeature(category, 'hasPhases')) {
+        const defaultPhases = generateDefaultPhases(
+          input.project_type, 
+          project.id, 
+          activeWorkspace.id,
+          input.start_date,
+          input.end_date
+        );
+        
+        if (defaultPhases.length > 0) {
+          const phasesToInsert = defaultPhases.map((phase, index) => ({
+            workspace_id: activeWorkspace.id,
+            project_id: project.id,
+            name: phase.name,
+            description: phase.description,
+            sort_order: index,
+            status: phase.status,
+            color: phase.color,
+            start_date: phase.start_date,
+            end_date: phase.end_date,
+          }));
 
-        const { error: phasesError } = await supabase
-          .from("project_phases")
-          .insert(phasesToInsert);
+          const { error: phasesError } = await supabase
+            .from("project_phases")
+            .insert(phasesToInsert);
 
-        if (phasesError) {
-          console.error("Error creating phases:", phasesError);
+          if (phasesError) {
+            console.error("Error creating phases:", phasesError);
+          }
         }
       }
 

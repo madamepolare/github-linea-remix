@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -33,6 +32,7 @@ import { useContacts } from "@/hooks/useContacts";
 import { CLIENT_TEAM_ROLES } from "@/hooks/useProjectContacts";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
+import { PROJECT_CATEGORIES, ProjectCategory, getProjectCategoryConfig, categoryHasFeature } from "@/lib/projectCategories";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import * as LucideIcons from "lucide-react";
@@ -41,19 +41,29 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
-  Home,
   FolderKanban,
   Calendar,
   Users,
   MapPin,
   Check,
-  X,
+  Briefcase,
+  Building,
+  RefreshCw,
+  Wrench,
 } from "lucide-react";
 
 interface CreateProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+// Category icon mapping
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  Briefcase,
+  Building,
+  RefreshCw,
+  Wrench,
+};
 
 // Disciplines that show surface field
 const SURFACE_TYPES = ["architecture", "interior", "interieur", "archi"];
@@ -86,8 +96,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   
   // Configuration
   const [name, setName] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<ProjectCategory>("standard");
   const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [isInternal, setIsInternal] = useState(false);
   const [status, setStatus] = useState<"active" | "closed">("active");
   
   // Planning
@@ -105,9 +115,13 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const [postalCode, setPostalCode] = useState("");
   const [surfaceArea, setSurfaceArea] = useState("");
   const [budget, setBudget] = useState("");
+  const [monthlyBudget, setMonthlyBudget] = useState("");
   
   // Client contacts
   const [selectedClientContacts, setSelectedClientContacts] = useState<{id: string; role: string}[]>([]);
+
+  // Get current category config for conditional rendering
+  const categoryConfig = useMemo(() => getProjectCategoryConfig(selectedCategory), [selectedCategory]);
 
   // Fetch contacts for selected company
   const { contacts: companyContacts = [], isLoading: contactsLoading } = useContacts({
@@ -121,6 +135,13 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
 
   // Check if surface should be shown
   const showSurface = useMemo(() => shouldShowSurface(selectedType), [selectedType]);
+
+  // Derived states from category
+  const isInternal = selectedCategory === 'internal';
+  const showClientSection = categoryConfig.features.isBillable;
+  const showEndDate = categoryConfig.features.hasEndDate;
+  const showBudget = categoryConfig.features.hasBudget;
+  const showMonthlyBudget = categoryConfig.features.hasMonthlyBudget;
 
   // Filter client companies
   const clientCompanies = companies.filter(c => 
@@ -141,6 +162,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     const input: CreateProjectInput = {
       name: name.trim(),
       project_type: selectedType as any,
+      project_category: selectedCategory,
       description: description.trim() || null,
       crm_company_id: isInternal ? null : crmCompanyId,
       address: isInternal ? null : (address.trim() || null),
@@ -148,8 +170,9 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       surface_area: showSurface && surfaceArea ? parseFloat(surfaceArea) : null,
       color,
       start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
-      end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
-      budget: isInternal ? null : (budget ? parseFloat(budget) : null),
+      end_date: showEndDate && endDate ? format(endDate, "yyyy-MM-dd") : null,
+      budget: showBudget && budget ? parseFloat(budget) : null,
+      monthly_budget: showMonthlyBudget && monthlyBudget ? parseFloat(monthlyBudget) : null,
       is_internal: isInternal,
       client_contacts: !isInternal && selectedClientContacts.length > 0 
         ? selectedClientContacts.map((c, i) => ({
@@ -167,8 +190,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
 
   const resetForm = () => {
     setName("");
+    setSelectedCategory("standard");
     setSelectedType(null);
-    setIsInternal(false);
     setStatus("active");
     setDescription("");
     setStartDate(null);
@@ -180,6 +203,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     setPostalCode("");
     setSurfaceArea("");
     setBudget("");
+    setMonthlyBudget("");
     setSelectedClientContacts([]);
     setConfigOpen(true);
     setPlanningOpen(true);
@@ -315,59 +339,48 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                   )}
                 </div>
 
-                {/* Projet interne & Statut */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                    <div className="flex items-center gap-2">
-                      <Home className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        <Label htmlFor="is-internal" className="text-sm cursor-pointer">
-                          Projet interne
-                        </Label>
-                        <p className="text-xs text-muted-foreground">Non facturable</p>
-                      </div>
-                    </div>
-                    <Switch
-                      id="is-internal"
-                      checked={isInternal}
-                      onCheckedChange={(checked) => {
-                        setIsInternal(checked);
-                        if (checked) {
-                          setClientOpen(false);
-                        }
-                      }}
-                    />
+                {/* Catégorie du projet */}
+                <div className="space-y-2">
+                  <Label>Catégorie *</Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {PROJECT_CATEGORIES.map((cat) => {
+                      const CategoryIcon = CATEGORY_ICONS[cat.icon] || Briefcase;
+                      return (
+                        <button
+                          key={cat.key}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCategory(cat.key);
+                            // Reset fields that don't apply to the new category
+                            if (!categoryHasFeature(cat.key, 'isBillable')) {
+                              setClientOpen(false);
+                            }
+                          }}
+                          className={cn(
+                            "flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all",
+                            selectedCategory === cat.key
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
+                          )}
+                        >
+                          <div 
+                            className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center",
+                              selectedCategory === cat.key ? "bg-primary text-primary-foreground" : "bg-muted"
+                            )}
+                            style={selectedCategory === cat.key ? {} : { backgroundColor: `${cat.color}15` }}
+                          >
+                            <CategoryIcon 
+                              className="h-4 w-4" 
+                              style={{ color: selectedCategory === cat.key ? undefined : cat.color }} 
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-center leading-tight">{cat.labelShort}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Statut</Label>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setStatus("active")}
-                        className={cn(
-                          "flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all",
-                          status === "active"
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border hover:border-primary/50"
-                        )}
-                      >
-                        Ouvert
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStatus("closed")}
-                        className={cn(
-                          "flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-all",
-                          status === "closed"
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border hover:border-primary/50"
-                        )}
-                      >
-                        Fermé
-                      </button>
-                    </div>
-                  </div>
+                  <p className="text-xs text-muted-foreground">{categoryConfig.description}</p>
                 </div>
               </CollapsibleContent>
             </Collapsible>
@@ -383,9 +396,9 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-4 space-y-4">
                 {/* Dates */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className={cn("grid gap-4", showEndDate ? "grid-cols-2" : "grid-cols-1")}>
                   <div className="space-y-2">
-                    <Label>Du</Label>
+                    <Label>Date de début</Label>
                     <InlineDatePicker
                       value={startDate}
                       onChange={setStartDate}
@@ -393,15 +406,17 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                       className="w-full"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Au</Label>
-                    <InlineDatePicker
-                      value={endDate}
-                      onChange={setEndDate}
-                      placeholder="Date de fin"
-                      className="w-full"
-                    />
-                  </div>
+                  {showEndDate && (
+                    <div className="space-y-2">
+                      <Label>Date de fin</Label>
+                      <InlineDatePicker
+                        value={endDate}
+                        onChange={setEndDate}
+                        placeholder="Date de fin"
+                        className="w-full"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -482,8 +497,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               </CollapsibleContent>
             </Collapsible>
 
-            {/* Section: Client & Localisation (masqué si projet interne) */}
-            {!isInternal && (
+            {/* Section: Client & Localisation (masqué si non facturable) */}
+            {showClientSection && (
               <Collapsible open={clientOpen} onOpenChange={setClientOpen}>
                 <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
                   <div className="flex items-center gap-2 font-medium">
@@ -654,15 +669,28 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                   </div>
 
                   {/* Budget */}
-                  <div className="space-y-2">
-                    <Label>Budget (€)</Label>
-                    <Input
-                      type="number"
-                      value={budget}
-                      onChange={(e) => setBudget(e.target.value)}
-                      placeholder="50000"
-                    />
-                  </div>
+                  {showBudget && (
+                    <div className="space-y-2">
+                      <Label>Budget global (€)</Label>
+                      <Input
+                        type="number"
+                        value={budget}
+                        onChange={(e) => setBudget(e.target.value)}
+                        placeholder="50000"
+                      />
+                    </div>
+                  )}
+                  {showMonthlyBudget && (
+                    <div className="space-y-2">
+                      <Label>Budget mensuel (€)</Label>
+                      <Input
+                        type="number"
+                        value={monthlyBudget}
+                        onChange={(e) => setMonthlyBudget(e.target.value)}
+                        placeholder="2500"
+                      />
+                    </div>
+                  )}
                 </CollapsibleContent>
               </Collapsible>
             )}
