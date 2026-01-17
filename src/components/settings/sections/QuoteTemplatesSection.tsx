@@ -66,63 +66,52 @@ export function QuoteTemplatesSection() {
   const [isLoadingDefaults, setIsLoadingDefaults] = useState(false);
   const [showAIDialog, setShowAIDialog] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
-  const [selectedProjectType, setSelectedProjectType] = useState<string>('');
   const [generatedTemplate, setGeneratedTemplate] = useState<{
     name: string;
     description: string;
     phases: QuoteTemplatePhase[];
-    projectType: string;
   } | null>(null);
-  const [newTemplate, setNewTemplate] = useState<Partial<QuoteTemplate>>({
+  const [newTemplate, setNewTemplate] = useState<Partial<QuoteTemplate> & { project_type?: string }>({
     name: '',
     description: '',
-    project_type: 'interior',
+    project_type: '',
     phases: [],
     is_default: false
   });
 
-  // Fetch phases for selected project type
-  const { templates: phaseTemplates } = usePhaseTemplates(selectedProjectType);
+  // Fetch ALL phases (no project type filter) - phases are universal building blocks
+  const { templates: allPhaseTemplates } = usePhaseTemplates();
 
   const handleOpenAIDialog = () => {
     setAiPrompt('');
     setGeneratedTemplate(null);
-    // Default to first project type
-    if (projectTypes.length > 0 && !selectedProjectType) {
-      setSelectedProjectType(projectTypes[0].key);
-    }
     setShowAIDialog(true);
   };
 
   const handleGenerateFromPhases = () => {
-    if (!phaseTemplates || phaseTemplates.length === 0) {
-      toast.error('Aucune phase définie pour ce type de projet. Configurez les phases dans les paramètres.');
+    const activePhases = allPhaseTemplates?.filter(p => p.is_active) || [];
+    
+    if (activePhases.length === 0) {
+      toast.error('Aucune phase définie. Configurez les phases dans les paramètres.');
       return;
     }
 
-    const projectTypeLabel = projectTypes.find(t => t.key === selectedProjectType)?.label || selectedProjectType;
-    
     // Convert phase templates to quote template phases
-    const phases: QuoteTemplatePhase[] = phaseTemplates
-      .filter(p => p.is_active)
-      .map(p => ({
-        code: p.code,
-        name: p.name,
-        description: p.description || '',
-        defaultPercentage: p.default_percentage,
-        deliverables: p.deliverables || [],
-        category: p.category as 'base' | 'complementary'
-      }));
+    const phases: QuoteTemplatePhase[] = activePhases.map(p => ({
+      code: p.code,
+      name: p.name,
+      description: p.description || '',
+      defaultPercentage: p.default_percentage,
+      deliverables: p.deliverables || [],
+      category: p.category as 'base' | 'complementary'
+    }));
 
-    const templateName = aiPrompt 
-      ? aiPrompt
-      : `Mission ${projectTypeLabel}`;
+    const templateName = aiPrompt || 'Nouveau template';
 
     setGeneratedTemplate({
       name: templateName,
-      description: `Template basé sur les phases définies pour ${projectTypeLabel}`,
+      description: 'Template basé sur les phases définies',
       phases,
-      projectType: selectedProjectType
     });
   };
 
@@ -132,30 +121,38 @@ export function QuoteTemplatesSection() {
       return;
     }
 
-    if (!phaseTemplates || phaseTemplates.length === 0) {
-      toast.error('Aucune phase définie pour ce type de projet. Configurez les phases dans les paramètres.');
+    const activePhases = allPhaseTemplates?.filter(p => p.is_active) || [];
+    
+    if (activePhases.length === 0) {
+      toast.error('Aucune phase définie. Configurez les phases dans les paramètres.');
+      return;
+    }
+
+    if (!aiPrompt.trim()) {
+      toast.error('Veuillez entrer un nom ou une description pour le template');
       return;
     }
 
     try {
-      // Pass existing phases to the AI for context
-      const existingPhases = phaseTemplates.filter(p => p.is_active).map(p => ({
+      // Pass ALL existing phases to the AI - it will select the relevant ones
+      const existingPhases = activePhases.map(p => ({
         code: p.code,
         name: p.name,
         percentage: p.default_percentage,
-        category: p.category
+        category: p.category,
+        description: p.description
       }));
 
       const generated = await generateQuoteTemplate(
         currentDiscipline.name,
         undefined,
-        aiPrompt || undefined,
+        aiPrompt,
         existingPhases
       );
       
+      // Map generated phases back to existing phase definitions
       const phases: QuoteTemplatePhase[] = generated.default_phases.map((p) => {
-        // Try to match with existing phases
-        const existingPhase = phaseTemplates.find(
+        const existingPhase = activePhases.find(
           ep => ep.code === p.phase_code || ep.name.toLowerCase() === p.phase_name.toLowerCase()
         );
         
@@ -173,7 +170,6 @@ export function QuoteTemplatesSection() {
         name: generated.name,
         description: generated.description,
         phases,
-        projectType: selectedProjectType
       });
     } catch (error) {
       console.error('Error generating quote template:', error);
@@ -186,7 +182,7 @@ export function QuoteTemplatesSection() {
     await createTemplate.mutateAsync({
       name: generatedTemplate.name,
       description: generatedTemplate.description,
-      project_type: generatedTemplate.projectType as ProjectType,
+      project_type: 'custom',
       phases: generatedTemplate.phases,
       is_default: false,
       sort_order: templates.length
@@ -197,12 +193,13 @@ export function QuoteTemplatesSection() {
     setGeneratedTemplate(null);
   };
 
-  const handleCreateFromDefaults = async (projectType: ProjectType) => {
-    const defaultPhases = PHASES_BY_PROJECT_TYPE[projectType];
+  const handleCreateFromDefaults = async (projectTypeKey: string) => {
+    const projectType = projectTypes.find(t => t.key === projectTypeKey);
+    const defaultPhases = PHASES_BY_PROJECT_TYPE[projectTypeKey as keyof typeof PHASES_BY_PROJECT_TYPE] || [];
     await createTemplate.mutateAsync({
-      name: `Nouveau template ${PROJECT_TYPE_LABELS[projectType]}`,
+      name: `Nouveau template ${projectType?.label || projectTypeKey}`,
       description: '',
-      project_type: projectType,
+      project_type: projectTypeKey,
       phases: defaultPhases,
       is_default: false,
       sort_order: templates.length
@@ -250,11 +247,12 @@ export function QuoteTemplatesSection() {
   const handleSaveNew = async () => {
     if (!newTemplate.name) return;
     
+    const projectTypeKey = newTemplate.project_type || projectTypes[0]?.key || 'custom';
     await createTemplate.mutateAsync({
       name: newTemplate.name,
       description: newTemplate.description,
-      project_type: newTemplate.project_type || 'interior',
-      phases: newTemplate.phases || PHASES_BY_PROJECT_TYPE[newTemplate.project_type || 'interior'],
+      project_type: projectTypeKey,
+      phases: newTemplate.phases || PHASES_BY_PROJECT_TYPE[projectTypeKey as keyof typeof PHASES_BY_PROJECT_TYPE] || [],
       is_default: false,
       sort_order: templates.length
     });
@@ -263,7 +261,7 @@ export function QuoteTemplatesSection() {
     setNewTemplate({
       name: '',
       description: '',
-      project_type: 'interior',
+      project_type: '',
       phases: [],
       is_default: false
     });
@@ -382,13 +380,13 @@ export function QuoteTemplatesSection() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Type de projet</Label>
+                  <Label>Type de projet (optionnel)</Label>
                   <Select
                     value={newTemplate.project_type}
                     onValueChange={(v) => setNewTemplate({ 
                       ...newTemplate, 
-                      project_type: v as ProjectType,
-                      phases: PHASES_BY_PROJECT_TYPE[v as ProjectType] || []
+                      project_type: v,
+                      phases: PHASES_BY_PROJECT_TYPE[v as keyof typeof PHASES_BY_PROJECT_TYPE] || []
                     })}
                   >
                     <SelectTrigger>
@@ -428,7 +426,7 @@ export function QuoteTemplatesSection() {
                   key={type.key}
                   variant="outline"
                   size="sm"
-                  onClick={() => handleCreateFromDefaults(type.key as ProjectType)}
+                  onClick={() => handleCreateFromDefaults(type.key)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   {type.label}
@@ -539,93 +537,57 @@ export function QuoteTemplatesSection() {
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Project Type Selector */}
-            <div className="space-y-2">
-              <Label>Type de projet</Label>
-              <Select
-                value={selectedProjectType}
-                onValueChange={setSelectedProjectType}
-                disabled={isGenerating}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un type de projet" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projectTypes.map((type) => (
-                    <SelectItem key={type.key} value={type.key}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="h-3 w-3 rounded-full" 
-                          style={{ backgroundColor: type.color || '#6366f1' }}
-                        />
-                        {type.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedProjectType && phaseTemplates && (
-                <p className="text-xs text-muted-foreground">
-                  {phaseTemplates.filter(p => p.is_active).length} phases définies pour ce type
-                </p>
-              )}
-            </div>
-
             {/* Template Name / Prompt */}
             <div className="space-y-2">
-              <Label>Nom du template</Label>
+              <Label>Type de mission ou template</Label>
               <Input
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="Ex: Mission complète rénovation appartement"
+                placeholder="Ex: Charte graphique, Identité visuelle, Rénovation appartement..."
                 disabled={isGenerating}
               />
+              <p className="text-xs text-muted-foreground">
+                Décrivez le type de mission. L'IA sélectionnera les phases pertinentes parmi vos {allPhaseTemplates?.filter(p => p.is_active).length || 0} phases définies.
+              </p>
             </div>
 
-            {!generatedTemplate && selectedProjectType && (
+            {allPhaseTemplates && allPhaseTemplates.filter(p => p.is_active).length === 0 && (
+              <div className="text-center py-4 border rounded-lg border-dashed">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Aucune phase définie
+                </p>
+                <Button variant="link" size="sm" asChild>
+                  <a href="/settings?section=phases">Configurer les phases →</a>
+                </Button>
+              </div>
+            )}
+
+            {!generatedTemplate && allPhaseTemplates && allPhaseTemplates.filter(p => p.is_active).length > 0 && (
               <div className="flex gap-2">
                 <Button 
                   onClick={handleGenerateFromPhases} 
-                  disabled={!phaseTemplates?.length}
                   variant="outline"
                   className="flex-1"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Utiliser les phases définies
+                  Toutes les phases
                 </Button>
                 <Button 
                   onClick={handleGenerateWithAI} 
-                  disabled={isGenerating || !phaseTemplates?.length}
+                  disabled={isGenerating || !aiPrompt.trim()}
                   className="flex-1"
                 >
                   {isGenerating ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Génération...
+                      Sélection IA...
                     </>
                   ) : (
                     <>
                       <Sparkles className="h-4 w-4 mr-2" />
-                      Générer avec l'IA
+                      Sélection IA
                     </>
                   )}
-                </Button>
-              </div>
-            )}
-
-            {!selectedProjectType && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Sélectionnez un type de projet pour continuer
-              </p>
-            )}
-
-            {selectedProjectType && phaseTemplates?.length === 0 && (
-              <div className="text-center py-4 border rounded-lg border-dashed">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Aucune phase définie pour ce type de projet
-                </p>
-                <Button variant="link" size="sm" asChild>
-                  <a href="/settings?section=phases">Configurer les phases →</a>
                 </Button>
               </div>
             )}
