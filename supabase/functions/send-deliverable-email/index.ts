@@ -18,6 +18,10 @@ interface DeliverableEmailRequest {
   description?: string;
   fileUrl?: string;
   senderName?: string;
+  // Notification to project manager
+  notifyProjectManager?: boolean;
+  projectManagerEmail?: string;
+  projectManagerName?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -34,7 +38,10 @@ const handler = async (req: Request): Promise<Response> => {
       phaseName,
       description,
       fileUrl,
-      senderName = "L'équipe projet"
+      senderName = "L'équipe projet",
+      notifyProjectManager = false,
+      projectManagerEmail,
+      projectManagerName,
     }: DeliverableEmailRequest = await req.json();
 
     if (!to || !deliverableName || !projectName) {
@@ -44,7 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const emailHtml = `
+    const clientEmailHtml = `
       <!DOCTYPE html>
       <html>
       <head>
@@ -104,16 +111,95 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
+    // Send main email to client
     const emailResponse = await resend.emails.send({
       from: "Projets <onboarding@resend.dev>",
       to: [to],
       subject: subject || `Livrable: ${deliverableName} - ${projectName}`,
-      html: emailHtml,
+      html: clientEmailHtml,
     });
 
-    console.log("Deliverable email sent successfully:", emailResponse);
+    console.log("Deliverable email sent successfully to client:", emailResponse);
 
-    return new Response(JSON.stringify(emailResponse), {
+    // Send notification to project manager if enabled
+    let pmNotificationResult = null;
+    if (notifyProjectManager && projectManagerEmail) {
+      const pmEmailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; }
+            .content { background: #f8f9fa; padding: 30px; border-radius: 0 0 8px 8px; }
+            .info-box { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0; }
+            .label { font-size: 12px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; }
+            .value { font-size: 14px; }
+            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0; font-size: 24px;">✅ Livrable envoyé</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">${projectName}</p>
+            </div>
+            <div class="content">
+              <p>Bonjour${projectManagerName ? ` ${projectManagerName}` : ''},</p>
+              <p>Un livrable a été envoyé au client pour le projet <strong>${projectName}</strong>.</p>
+              
+              <div class="info-box">
+                <div class="label">Livrable</div>
+                <div class="value" style="font-weight: 500;">${deliverableName}</div>
+                ${phaseName ? `
+                  <div style="margin-top: 12px;">
+                    <div class="label">Phase</div>
+                    <div class="value">${phaseName}</div>
+                  </div>
+                ` : ''}
+                <div style="margin-top: 12px;">
+                  <div class="label">Envoyé à</div>
+                  <div class="value">${to}</div>
+                </div>
+                <div style="margin-top: 12px;">
+                  <div class="label">Date d'envoi</div>
+                  <div class="value">${new Date().toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })}</div>
+                </div>
+              </div>
+              
+              <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">
+                Cette notification vous est envoyée en tant que chef de projet.
+              </p>
+            </div>
+            <div class="footer">
+              Notification automatique de votre plateforme de gestion de projet.
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      try {
+        pmNotificationResult = await resend.emails.send({
+          from: "Projets <onboarding@resend.dev>",
+          to: [projectManagerEmail],
+          subject: `[Notification] Livrable envoyé: ${deliverableName} - ${projectName}`,
+          html: pmEmailHtml,
+        });
+        console.log("PM notification sent successfully:", pmNotificationResult);
+      } catch (pmError: any) {
+        console.error("Failed to send PM notification:", pmError);
+        // Don't fail the main request if PM notification fails
+      }
+    }
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      emailResponse,
+      pmNotification: pmNotificationResult,
+    }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
