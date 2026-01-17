@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useProjectDeliverables, DeliverableStatus } from "@/hooks/useProjectDeliverables";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
 import { useProject } from "@/hooks/useProjects";
@@ -65,6 +65,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Tabs,
   TabsContent,
@@ -237,6 +238,27 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
     setIsSendEmailOpen(true);
   };
 
+  // Get project manager info for notification
+  const { data: projectTeam } = useQuery({
+    queryKey: ["project-team-for-notification", projectId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_members")
+        .select(`
+          id,
+          user_id,
+          role,
+          profile:profiles!project_members_user_id_fkey(user_id, full_name, avatar_url)
+        `)
+        .eq("project_id", projectId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId,
+  });
+
+  const projectManager = projectTeam?.find(m => m.role === "lead");
+
   const handleSendEmail = async () => {
     if (!emailTo || !emailDeliverable) return;
 
@@ -258,14 +280,26 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
 
       if (error) throw error;
 
-      // Mark as sent
+      // Update deliverable with email tracking
+      const currentSentTo = emailDeliverable.email_sent_to || [];
       await updateDeliverable.mutateAsync({
         id: emailDeliverable.id,
         status: "delivered",
         delivered_at: new Date().toISOString(),
+        email_sent_at: new Date().toISOString(),
+        email_sent_to: [...currentSentTo, emailTo],
       });
 
-      toast.success("Email envoyé et livrable marqué comme livré");
+      // Show success with PM notification info
+      if (projectManager) {
+        toast.success(
+          `Email envoyé! ${(projectManager.profile as any)?.full_name || 'Le chef de projet'} sera notifié.`,
+          { description: "Livrable marqué comme livré" }
+        );
+      } else {
+        toast.success("Email envoyé et livrable marqué comme livré");
+      }
+      
       setIsSendEmailOpen(false);
       setEmailDeliverable(null);
     } catch (error: any) {
@@ -674,9 +708,20 @@ function DeliverableCard({
       <CardContent className="p-4">
         {/* Ready to Send Alert Banner */}
         {isReadyToSend && (
-          <div className="flex items-center gap-2 p-2 mb-3 rounded-lg bg-violet-500/10 text-violet-700 text-sm">
-            <Send className="h-4 w-4 animate-pulse" />
-            <span className="font-medium">Toutes les tâches terminées — Prêt à envoyer !</span>
+          <div className="flex items-center justify-between gap-2 p-2 mb-3 rounded-lg bg-violet-500/10 text-violet-700 text-sm">
+            <div className="flex items-center gap-2">
+              <Send className="h-4 w-4 animate-pulse" />
+              <span className="font-medium">Toutes les tâches terminées — Prêt à envoyer !</span>
+            </div>
+            <Button 
+              size="sm" 
+              variant="secondary"
+              onClick={onSendEmail}
+              className="bg-violet-600 hover:bg-violet-700 text-white h-7 text-xs"
+            >
+              <Mail className="h-3 w-3 mr-1" />
+              Envoyer
+            </Button>
           </div>
         )}
         <div className="flex items-start gap-3">
@@ -774,10 +819,19 @@ function DeliverableCard({
                 </span>
               )}
               {deliverable.email_sent_at && (
-                <span className="flex items-center gap-1 text-blue-600">
-                  <MailCheck className="h-3 w-3" />
-                  Envoyé: {format(parseISO(deliverable.email_sent_at), "d MMM HH:mm", { locale: fr })}
-                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="flex items-center gap-1 text-blue-600 cursor-help">
+                      <MailCheck className="h-3 w-3" />
+                      Envoyé: {format(parseISO(deliverable.email_sent_at), "d MMM HH:mm", { locale: fr })}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">
+                      Envoyé à: {deliverable.email_sent_to?.join(", ") || "N/A"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           </div>
