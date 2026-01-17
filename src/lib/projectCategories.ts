@@ -1,7 +1,8 @@
 // Project Categories - Commercial/Billing Model Classification
-// These are fixed categories that define the economic behavior of projects
+// Categories are now dynamic and stored in workspace_settings
 
-export type ProjectCategory = 'standard' | 'internal' | 'monthly_fee' | 'maintenance';
+// ProjectCategory is now a string type since categories are user-defined
+export type ProjectCategory = string;
 
 export interface ProjectCategoryFeatures {
   hasBudget: boolean;
@@ -14,7 +15,7 @@ export interface ProjectCategoryFeatures {
 }
 
 export interface ProjectCategoryConfig {
-  key: ProjectCategory;
+  key: string;
   label: string;
   labelShort: string;
   description: string;
@@ -23,6 +24,7 @@ export interface ProjectCategoryConfig {
   features: ProjectCategoryFeatures;
 }
 
+// Default categories for reference (actual data comes from database)
 export const PROJECT_CATEGORIES: ProjectCategoryConfig[] = [
   {
     key: 'standard',
@@ -30,7 +32,7 @@ export const PROJECT_CATEGORIES: ProjectCategoryConfig[] = [
     labelShort: 'Client',
     description: 'Projet facturable avec budget et planning définis',
     icon: 'Briefcase',
-    color: '#3B82F6', // blue
+    color: '#3B82F6',
     features: {
       hasBudget: true,
       hasEndDate: true,
@@ -47,7 +49,7 @@ export const PROJECT_CATEGORIES: ProjectCategoryConfig[] = [
     labelShort: 'Interne',
     description: 'Projet non facturable (R&D, admin, interne)',
     icon: 'Building',
-    color: '#6B7280', // gray
+    color: '#6B7280',
     features: {
       hasBudget: false,
       hasEndDate: false,
@@ -58,62 +60,48 @@ export const PROJECT_CATEGORIES: ProjectCategoryConfig[] = [
       hasDeliverables: false,
     }
   },
-  {
-    key: 'monthly_fee',
-    label: 'Design Service',
-    labelShort: 'Monthly',
-    description: 'Contrat mensuel récurrent (Monthly Fee)',
-    icon: 'RefreshCw',
-    color: '#10B981', // emerald
-    features: {
-      hasBudget: false,
-      hasEndDate: false,
-      hasMonthlyBudget: true,
-      hasAutoRenew: true,
-      isBillable: true,
-      hasPhases: false,
-      hasDeliverables: true,
-    }
-  },
-  {
-    key: 'maintenance',
-    label: 'Maintenance',
-    labelShort: 'Maintenance',
-    description: 'Contrat de maintenance avec interventions ponctuelles',
-    icon: 'Wrench',
-    color: '#F59E0B', // amber
-    features: {
-      hasBudget: false,
-      hasEndDate: false,
-      hasMonthlyBudget: true,
-      hasAutoRenew: true,
-      isBillable: true,
-      hasPhases: false,
-      hasDeliverables: false,
-    }
-  }
 ];
 
-// Helper functions
-export function getProjectCategoryConfig(category: ProjectCategory): ProjectCategoryConfig {
-  return PROJECT_CATEGORIES.find(c => c.key === category) || PROJECT_CATEGORIES[0];
+// Default features fallback
+const DEFAULT_FEATURES: ProjectCategoryFeatures = {
+  hasBudget: true,
+  hasEndDate: true,
+  hasMonthlyBudget: false,
+  hasAutoRenew: false,
+  isBillable: true,
+  hasPhases: true,
+  hasDeliverables: true,
+};
+
+// Helper functions - these now work with any string category
+export function getProjectCategoryConfig(category: string): ProjectCategoryConfig {
+  const found = PROJECT_CATEGORIES.find(c => c.key === category);
+  return found || {
+    key: category,
+    label: category,
+    labelShort: category,
+    description: '',
+    icon: 'Briefcase',
+    color: '#3B82F6',
+    features: DEFAULT_FEATURES,
+  };
 }
 
-export function getProjectCategoryLabel(category: ProjectCategory): string {
+export function getProjectCategoryLabel(category: string): string {
   return getProjectCategoryConfig(category).label;
 }
 
-export function getProjectCategoryColor(category: ProjectCategory): string {
+export function getProjectCategoryColor(category: string): string {
   return getProjectCategoryConfig(category).color;
 }
 
-export function getProjectCategoryFeatures(category: ProjectCategory): ProjectCategoryFeatures {
+export function getProjectCategoryFeatures(category: string): ProjectCategoryFeatures {
   return getProjectCategoryConfig(category).features;
 }
 
 // Check if a category supports a specific feature
 export function categoryHasFeature(
-  category: ProjectCategory, 
+  category: string, 
   feature: keyof ProjectCategoryFeatures
 ): boolean {
   return getProjectCategoryFeatures(category)[feature];

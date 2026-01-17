@@ -1,22 +1,32 @@
 import { useMemo } from "react";
 import { useWorkspaceSettings } from "./useWorkspaceSettings";
-import { 
-  ProjectCategory, 
-  ProjectCategoryConfig, 
-  PROJECT_CATEGORIES,
-  getProjectCategoryConfig 
-} from "@/lib/projectCategories";
+import { ProjectCategory, ProjectCategoryFeatures, ProjectCategoryConfig } from "@/lib/projectCategories";
 
-export interface WorkspaceProjectCategory extends ProjectCategoryConfig {
+export interface WorkspaceProjectCategory {
+  key: string;
+  label: string;
+  labelShort: string;
+  description: string;
+  icon: string;
+  color: string;
+  features: ProjectCategoryFeatures;
   isEnabled: boolean;
-  customLabel?: string;
-  customDescription?: string;
 }
 
+// Default features for fallback
+const DEFAULT_FEATURES: ProjectCategoryFeatures = {
+  hasBudget: true,
+  hasEndDate: true,
+  hasMonthlyBudget: false,
+  hasAutoRenew: false,
+  isBillable: true,
+  hasPhases: true,
+  hasDeliverables: true,
+};
+
 /**
- * Hook to manage project categories per workspace
- * Categories can be enabled/disabled and labels can be customized
- * Features (hasBudget, hasPhases, etc.) remain fixed as they define business logic
+ * Hook to manage project categories from workspace settings
+ * Categories are now fully dynamic and stored in the database
  */
 export function useProjectCategorySettings() {
   const { 
@@ -24,34 +34,33 @@ export function useProjectCategorySettings() {
     isLoading, 
     createSetting, 
     updateSetting, 
-    deleteSetting 
+    deleteSetting,
+    reorderSettings,
   } = useWorkspaceSettings("project_categories");
 
-  // Merge default categories with workspace overrides
+  // Transform settings to categories
   const categories = useMemo<WorkspaceProjectCategory[]>(() => {
-    return PROJECT_CATEGORIES.map(defaultCategory => {
-      // Find workspace override for this category
-      const override = settings?.find(s => s.setting_key === defaultCategory.key);
+    return settings.map(setting => {
+      const value = setting.setting_value;
+      const features = (value.features as ProjectCategoryFeatures) || DEFAULT_FEATURES;
       
-      if (override) {
-        return {
-          ...defaultCategory,
-          isEnabled: override.is_active,
-          customLabel: override.setting_value?.label,
-          customDescription: override.setting_value?.description,
-          // Override label/description if customized
-          label: override.setting_value?.label || defaultCategory.label,
-          labelShort: (override.setting_value?.labelShort as string) || defaultCategory.labelShort,
-          description: override.setting_value?.description || defaultCategory.description,
-          color: override.setting_value?.color || defaultCategory.color,
-          icon: override.setting_value?.icon || defaultCategory.icon,
-        };
-      }
-      
-      // No override = enabled by default
       return {
-        ...defaultCategory,
-        isEnabled: true,
+        key: setting.setting_key,
+        label: value.label || setting.setting_key,
+        labelShort: (value.labelShort as string) || value.label || setting.setting_key,
+        description: value.description || "",
+        icon: (value.icon as string) || "Briefcase",
+        color: value.color || "#3B82F6",
+        features: {
+          hasBudget: features.hasBudget ?? true,
+          hasEndDate: features.hasEndDate ?? true,
+          hasMonthlyBudget: features.hasMonthlyBudget ?? false,
+          hasAutoRenew: features.hasAutoRenew ?? false,
+          isBillable: features.isBillable ?? true,
+          hasPhases: features.hasPhases ?? true,
+          hasDeliverables: features.hasDeliverables ?? true,
+        },
+        isEnabled: setting.is_active,
       };
     });
   }, [settings]);
@@ -62,87 +71,69 @@ export function useProjectCategorySettings() {
   }, [categories]);
 
   // Check if a category is enabled
-  const isCategoryEnabled = (key: ProjectCategory): boolean => {
+  const isCategoryEnabled = (key: string): boolean => {
     const category = categories.find(c => c.key === key);
-    return category?.isEnabled ?? true;
+    return category?.isEnabled ?? false;
   };
 
-  // Get category config with workspace overrides
-  const getCategoryConfig = (key: ProjectCategory): WorkspaceProjectCategory => {
-    return categories.find(c => c.key === key) || {
-      ...getProjectCategoryConfig(key),
+  // Get category config with all features
+  const getCategoryConfig = (key: string): WorkspaceProjectCategory => {
+    const found = categories.find(c => c.key === key);
+    if (found) return found;
+    
+    // Return first enabled category as fallback, or a default
+    if (enabledCategories.length > 0) {
+      return enabledCategories[0];
+    }
+    
+    // Ultimate fallback
+    return {
+      key: "standard",
+      label: "Projet client",
+      labelShort: "Client",
+      description: "Projet facturable",
+      icon: "Briefcase",
+      color: "#3B82F6",
+      features: DEFAULT_FEATURES,
       isEnabled: true,
     };
   };
 
-  // Update category settings (enable/disable, customize labels)
+  // Update category settings
   const updateCategory = async (
-    key: ProjectCategory,
-    updates: {
-      isEnabled?: boolean;
-      label?: string;
-      labelShort?: string;
-      description?: string;
-      color?: string;
-      icon?: string;
-    }
+    settingId: string,
+    updates: Partial<{
+      key: string;
+      label: string;
+      labelShort: string;
+      description: string;
+      icon: string;
+      color: string;
+      features: Partial<ProjectCategoryFeatures>;
+      isEnabled: boolean;
+    }>
   ) => {
-    const existingOverride = settings?.find(s => s.setting_key === key);
-    const defaultConfig = getProjectCategoryConfig(key);
+    const existing = settings.find(s => s.id === settingId);
+    if (!existing) return;
 
-    const settingValue = {
-      label: updates.label ?? existingOverride?.setting_value?.label ?? defaultConfig.label,
-      labelShort: updates.labelShort ?? existingOverride?.setting_value?.labelShort ?? defaultConfig.labelShort,
-      description: updates.description ?? existingOverride?.setting_value?.description ?? defaultConfig.description,
-      color: updates.color ?? existingOverride?.setting_value?.color ?? defaultConfig.color,
-      icon: updates.icon ?? existingOverride?.setting_value?.icon ?? defaultConfig.icon,
-    };
+    const currentFeatures = (existing.setting_value.features as ProjectCategoryFeatures) || DEFAULT_FEATURES;
 
-    if (existingOverride) {
-      await updateSetting.mutateAsync({
-        id: existingOverride.id,
-        setting_value: settingValue,
-        is_active: updates.isEnabled ?? existingOverride.is_active,
-      });
-    } else {
-      await createSetting.mutateAsync({
-        setting_type: "project_categories",
-        setting_key: key,
-        setting_value: settingValue,
-        is_active: updates.isEnabled ?? true,
-        sort_order: PROJECT_CATEGORIES.findIndex(c => c.key === key),
-      });
-    }
-  };
-
-  // Reset a category to defaults
-  const resetCategory = async (key: ProjectCategory) => {
-    const existingOverride = settings?.find(s => s.setting_key === key);
-    if (existingOverride) {
-      await deleteSetting.mutateAsync(existingOverride.id);
-    }
-  };
-
-  // Initialize all categories with default values
-  const initializeDefaults = async () => {
-    for (const category of PROJECT_CATEGORIES) {
-      const exists = settings?.some(s => s.setting_key === category.key);
-      if (!exists) {
-        await createSetting.mutateAsync({
-          setting_type: "project_categories",
-          setting_key: category.key,
-          setting_value: {
-            label: category.label,
-            labelShort: category.labelShort,
-            description: category.description,
-            color: category.color,
-            icon: category.icon,
-          },
-          is_active: true,
-          sort_order: PROJECT_CATEGORIES.findIndex(c => c.key === category.key),
-        });
-      }
-    }
+    await updateSetting.mutateAsync({
+      id: settingId,
+      setting_key: updates.key ?? existing.setting_key,
+      setting_value: {
+        label: updates.label ?? existing.setting_value.label,
+        labelShort: updates.labelShort ?? existing.setting_value.labelShort,
+        description: updates.description ?? existing.setting_value.description,
+        icon: updates.icon ?? existing.setting_value.icon,
+        color: updates.color ?? existing.setting_value.color,
+        features: {
+          ...currentFeatures,
+          ...updates.features,
+        },
+      },
+      is_active: updates.isEnabled ?? existing.is_active,
+    });
   };
 
   return {
@@ -152,8 +143,6 @@ export function useProjectCategorySettings() {
     isCategoryEnabled,
     getCategoryConfig,
     updateCategory,
-    resetCategory,
-    initializeDefaults,
     rawSettings: settings,
   };
 }
