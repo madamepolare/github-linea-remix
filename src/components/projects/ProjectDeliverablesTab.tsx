@@ -3,7 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useProjectDeliverables, DeliverableStatus } from "@/hooks/useProjectDeliverables";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
 import { useProject } from "@/hooks/useProjects";
-import { useDeliverableTasksCount } from "@/hooks/useDeliverableTasks";
+import { useDeliverableTasksCount, useDeliverableFullTask } from "@/hooks/useDeliverableTasks";
+import { Task } from "@/hooks/useTasks";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,6 +28,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
+import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
+import { TaskCreateSheet } from "@/components/tasks/TaskCreateSheet";
 import { format, parseISO, isPast } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -72,10 +75,28 @@ import {
 import { DeliverableTasksGenerator } from "./DeliverableTasksGenerator";
 import { AIDeliverablesGenerator } from "./AIDeliverablesGenerator";
 import { DeliverableEmailDialog } from "./DeliverableEmailDialog";
-import { useNavigate } from "react-router-dom";
 
 interface ProjectDeliverablesTabProps {
   projectId: string;
+}
+
+// Wrapper component to fetch full task and show TaskDetailSheet
+function DeliverableTaskSheetWrapper({ 
+  deliverableId, 
+  onClose 
+}: { 
+  deliverableId: string | null; 
+  onClose: () => void; 
+}) {
+  const { data: fullTask } = useDeliverableFullTask(deliverableId);
+  
+  return (
+    <TaskDetailSheet
+      task={fullTask || null}
+      open={!!deliverableId && !!fullTask}
+      onOpenChange={(open) => !open && onClose()}
+    />
+  );
 }
 
 export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProps) {
@@ -97,6 +118,10 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
   const [tasksGeneratorOpen, setTasksGeneratorOpen] = useState(false);
   const [tasksDeliverable, setTasksDeliverable] = useState<any | null>(null);
   const [aiGeneratorOpen, setAiGeneratorOpen] = useState(false);
+  
+  // Task sheet states
+  const [selectedTaskDeliverableId, setSelectedTaskDeliverableId] = useState<string | null>(null);
+  const [createTaskDeliverableId, setCreateTaskDeliverableId] = useState<string | null>(null);
 
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -462,6 +487,8 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
                         setTasksDeliverable(deliverable);
                         setTasksGeneratorOpen(true);
                       }}
+                      onOpenTask={() => setSelectedTaskDeliverableId(deliverable.id)}
+                      onAddTask={() => setCreateTaskDeliverableId(deliverable.id)}
                     />
                   ))}
                 </div>
@@ -488,6 +515,8 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
                     setTasksDeliverable(deliverable);
                     setTasksGeneratorOpen(true);
                   }}
+                  onOpenTask={() => setSelectedTaskDeliverableId(deliverable.id)}
+                  onAddTask={() => setCreateTaskDeliverableId(deliverable.id)}
                 />
               );
             })}
@@ -571,6 +600,20 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
         open={aiGeneratorOpen}
         onOpenChange={setAiGeneratorOpen}
       />
+
+      {/* Task Detail Sheet for viewing deliverable tasks */}
+      <DeliverableTaskSheetWrapper
+        deliverableId={selectedTaskDeliverableId}
+        onClose={() => setSelectedTaskDeliverableId(null)}
+      />
+
+      {/* Task Create Sheet for manually adding tasks to deliverable */}
+      <TaskCreateSheet
+        open={!!createTaskDeliverableId}
+        onOpenChange={(open) => !open && setCreateTaskDeliverableId(null)}
+        defaultProjectId={projectId}
+        defaultDeliverableId={createTaskDeliverableId}
+      />
     </div>
   );
 }
@@ -585,6 +628,8 @@ function DeliverableCard({
   onStatusChange,
   onSendEmail,
   onGenerateTasks,
+  onOpenTask,
+  onAddTask,
 }: {
   deliverable: any;
   phase?: any;
@@ -594,8 +639,9 @@ function DeliverableCard({
   onStatusChange: (id: string, status: DeliverableStatus) => void;
   onSendEmail: () => void;
   onGenerateTasks: () => void;
+  onOpenTask: () => void;
+  onAddTask: () => void;
 }) {
-  const navigate = useNavigate();
   const statusConfig = DELIVERABLE_STATUS.find(s => s.value === deliverable.status) || DELIVERABLE_STATUS[0];
   const isOverdue = deliverable.due_date && 
     isPast(parseISO(deliverable.due_date)) && 
@@ -606,13 +652,6 @@ function DeliverableCard({
   const { total: subtaskCount, completed: completedSubtasks, mainTask } = useDeliverableTasksCount(deliverable.id);
   const hasLinkedTask = !!mainTask;
   const taskProgress = subtaskCount > 0 ? Math.round((completedSubtasks / subtaskCount) * 100) : 0;
-
-  const handleTaskClick = () => {
-    if (mainTask) {
-      // Navigate to tasks page with the task selected
-      navigate(`/tasks?taskId=${mainTask.id}`);
-    }
-  };
 
   return (
     <Card className={cn(
@@ -675,7 +714,7 @@ function DeliverableCard({
             {hasLinkedTask && (
               <div 
                 className="mt-2 p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
-                onClick={handleTaskClick}
+                onClick={onOpenTask}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
@@ -745,11 +784,15 @@ function DeliverableCard({
                   </DropdownMenuItem>
                 )}
                 {hasLinkedTask && (
-                  <DropdownMenuItem onClick={handleTaskClick}>
+                  <DropdownMenuItem onClick={onOpenTask}>
                     <ListTodo className="h-4 w-4 mr-2" />
                     Voir la tâche
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem onClick={onAddTask}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter une tâche
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={onSendEmail}>
                   <Send className="h-4 w-4 mr-2" />
                   Envoyer par email
