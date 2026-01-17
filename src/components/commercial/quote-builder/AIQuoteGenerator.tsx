@@ -43,10 +43,9 @@ export function AIQuoteGenerator({
   const [mode, setMode] = useState<'idle' | 'generating' | 'review'>('idle');
   const [replaceExisting, setReplaceExisting] = useState(false);
 
-  // Get phase templates for the project type
-  const projectType = document.project_type as 'interior' | 'architecture' | 'scenography' | undefined;
-  const { templates: phaseTemplates } = usePhaseTemplates(projectType);
-  const activePhaseTemplates = phaseTemplates.filter(t => t.is_active);
+  // Get phase templates (liste universelle)
+  const { templates: phaseTemplates } = usePhaseTemplates();
+  const activePhaseTemplates = phaseTemplates.filter((t) => t.is_active);
 
   const handleGenerate = async () => {
     if (!document.project_type && !document.description) {
@@ -55,7 +54,7 @@ export function AIQuoteGenerator({
     }
 
     if (activePhaseTemplates.length === 0) {
-      toast.error('Aucune phase définie pour ce type de projet. Configurez-les dans les paramètres.');
+      toast.error('Aucune phase définie. Configurez-les dans les paramètres.');
       return;
     }
 
@@ -287,7 +286,7 @@ export function AIQuoteGenerator({
           <div className="flex items-center gap-2">
             <Settings className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm">
-              {activePhaseTemplates.length} phases définies pour <strong>{document.project_type || 'ce projet'}</strong>
+              {activePhaseTemplates.length} phases définies <strong>(liste universelle)</strong>
             </span>
           </div>
           <Link to="/settings/phases" target="_blank" className="text-xs text-primary hover:underline">
