@@ -47,7 +47,8 @@ import {
   TrendingUp,
   TrendingDown,
   Target,
-  Circle
+  Circle,
+  Loader2
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
@@ -604,7 +605,10 @@ export function QuoteLinesEditor({
                       </DialogHeader>
                       <BudgetTargetForm 
                         currentTotal={totalHT} 
+                        lines={lines}
+                        document={document}
                         onApply={(targetBudget) => adjustToTarget(targetBudget)}
+                        onApplyWithAI={(updatedLines) => onLinesChange(updatedLines)}
                       />
                     </DialogContent>
                   </Dialog>
@@ -640,12 +644,19 @@ export function QuoteLinesEditor({
 // Budget target form component
 function BudgetTargetForm({ 
   currentTotal, 
-  onApply 
+  lines,
+  document,
+  onApply,
+  onApplyWithAI
 }: { 
   currentTotal: number; 
+  lines: QuoteLine[];
+  document: Partial<QuoteDocument>;
   onApply: (target: number) => void;
+  onApplyWithAI: (lines: QuoteLine[]) => void;
 }) {
-  const [targetBudget, setTargetBudget] = useState(currentTotal.toString());
+  const [targetBudget, setTargetBudget] = useState(currentTotal > 0 ? currentTotal.toString() : '');
+  const [isGenerating, setIsGenerating] = useState(false);
   
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -653,6 +664,60 @@ function BudgetTargetForm({
   const target = parseFloat(targetBudget) || 0;
   const diff = target - currentTotal;
   const diffPercent = currentTotal > 0 ? (diff / currentTotal) * 100 : 0;
+  
+  const handleGenerateWithAI = async () => {
+    if (target <= 0) return;
+    
+    setIsGenerating(true);
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Prepare lines info for AI
+      const linesInfo = lines
+        .filter(l => l.line_type !== 'group' && l.line_type !== 'discount')
+        .map(l => ({
+          id: l.id,
+          name: l.phase_name,
+          description: l.phase_description,
+          type: l.line_type,
+          current_price: l.unit_price || 0
+        }));
+      
+      const { data, error } = await supabase.functions.invoke('distribute-budget', {
+        body: {
+          targetBudget: target,
+          lines: linesInfo,
+          projectType: document.project_type,
+          projectDescription: document.description || document.title
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Apply the AI-generated prices
+      const priceMap = new Map<string, number>(data.lines.map((l: { id: string; price: number }) => [l.id, l.price]));
+      const updatedLines: QuoteLine[] = lines.map(line => {
+        if (line.line_type === 'group' || line.line_type === 'discount') return line;
+        const newPrice = priceMap.get(line.id);
+        if (newPrice !== undefined) {
+          return {
+            ...line,
+            unit_price: newPrice,
+            amount: (line.quantity || 1) * newPrice
+          };
+        }
+        return line;
+      });
+      
+      onApplyWithAI(updatedLines);
+    } catch (error) {
+      console.error('Error generating prices with AI:', error);
+      // Fallback to proportional distribution
+      onApply(target);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
   
   return (
     <div className="space-y-4 pt-4">
@@ -664,41 +729,70 @@ function BudgetTargetForm({
             value={targetBudget}
             onChange={(e) => setTargetBudget(e.target.value)}
             className="text-right"
-            placeholder="0"
+            placeholder="Ex: 15000"
           />
           <span className="text-muted-foreground">€</span>
         </div>
       </div>
       
-      <div className="p-3 rounded-lg bg-muted/50 space-y-1 text-sm">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Budget actuel</span>
-          <span>{formatCurrency(currentTotal)}</span>
+      {currentTotal > 0 && (
+        <div className="p-3 rounded-lg bg-muted/50 space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Budget actuel</span>
+            <span>{formatCurrency(currentTotal)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Budget cible</span>
+            <span className="font-medium">{formatCurrency(target)}</span>
+          </div>
+          <Separator className="my-2" />
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Différence</span>
+            <span className={cn(
+              "font-medium",
+              diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : ""
+            )}>
+              {diff >= 0 ? '+' : ''}{formatCurrency(diff)} ({diffPercent >= 0 ? '+' : ''}{diffPercent.toFixed(1)}%)
+            </span>
+          </div>
         </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Budget cible</span>
-          <span className="font-medium">{formatCurrency(target)}</span>
-        </div>
-        <Separator className="my-2" />
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Différence</span>
-          <span className={cn(
-            "font-medium",
-            diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : ""
-          )}>
-            {diff >= 0 ? '+' : ''}{formatCurrency(diff)} ({diffPercent >= 0 ? '+' : ''}{diffPercent.toFixed(1)}%)
-          </span>
-        </div>
-      </div>
+      )}
       
-      <Button 
-        className="w-full" 
-        onClick={() => onApply(target)}
-        disabled={target <= 0}
-      >
-        <Target className="h-4 w-4 mr-2" />
-        Appliquer ce budget
-      </Button>
+      <div className="flex flex-col gap-2">
+        {currentTotal > 0 && (
+          <Button 
+            variant="outline"
+            className="w-full" 
+            onClick={() => onApply(target)}
+            disabled={target <= 0}
+          >
+            <Target className="h-4 w-4 mr-2" />
+            Ajuster proportionnellement
+          </Button>
+        )}
+        <Button 
+          className="w-full" 
+          onClick={handleGenerateWithAI}
+          disabled={target <= 0 || isGenerating || lines.filter(l => l.line_type !== 'group' && l.line_type !== 'discount').length === 0}
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Génération IA...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Répartir avec IA
+            </>
+          )}
+        </Button>
+        {lines.filter(l => l.line_type !== 'group' && l.line_type !== 'discount').length === 0 && (
+          <p className="text-xs text-muted-foreground text-center">
+            Ajoutez d'abord des lignes au devis
+          </p>
+        )}
+      </div>
     </div>
   );
 }
