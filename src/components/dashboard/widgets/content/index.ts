@@ -15,3 +15,5 @@ export { PlaceholderWidget } from "./PlaceholderWidget";
 export { RevenueChartWidget } from "./RevenueChartWidget";
 export { LeadsPipelineWidget } from "./LeadsPipelineWidget";
 export { RecentLeadsWidget } from "./RecentLeadsWidget";
+export { RevenueByCategoryWidget } from "./RevenueByCategoryWidget";
+export { RevenueByTypeWidget } from "./RevenueByTypeWidget";
