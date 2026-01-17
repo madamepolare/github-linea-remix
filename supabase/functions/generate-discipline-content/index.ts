@@ -13,6 +13,7 @@ interface GenerateRequest {
   contract_type_name?: string;
   existing_skills?: string[];
   custom_prompt?: string;
+  existing_phases?: { code: string; name: string; percentage: number; category: string }[];
 }
 
 serve(async (req) => {
@@ -21,11 +22,12 @@ serve(async (req) => {
   }
 
   try {
-    const { type, discipline_name, discipline_description, contract_type_name, existing_skills, custom_prompt } = await req.json() as GenerateRequest;
+    const { type, discipline_name, discipline_description, contract_type_name, existing_skills, custom_prompt, existing_phases } = await req.json() as GenerateRequest;
 
     console.log(`[generate-discipline-content] Generating ${type} for discipline: ${discipline_name}`);
     console.log(`[generate-discipline-content] Description: ${discipline_description || 'none'}`);
     console.log(`[generate-discipline-content] Custom prompt: ${custom_prompt || 'none'}`);
+    console.log(`[generate-discipline-content] Existing phases: ${existing_phases?.length || 0}`);
 
     // Get the API key
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -102,24 +104,33 @@ Réponds UNIQUEMENT avec un JSON valide, sans markdown, sans explication.`;
         ? `\n\nINSTRUCTIONS SPÉCIFIQUES DE L'UTILISATEUR:\n"${custom_prompt}"\n\nAdapte le template en fonction de ces instructions.`
         : '';
 
+      // Build phases context from existing phases
+      let phasesContext = '';
+      if (existing_phases && existing_phases.length > 0) {
+        const phasesList = existing_phases.map(p => `- ${p.code}: ${p.name} (${p.percentage}%, ${p.category})`).join('\n');
+        phasesContext = `
+
+PHASES DISPONIBLES (définies dans les paramètres):
+${phasesList}
+
+IMPORTANT: Tu DOIS utiliser UNIQUEMENT ces phases existantes. 
+- Utilise les codes et noms exacts fournis
+- Tu peux ajuster les pourcentages si pertinent pour le contexte
+- Ne génère PAS de nouvelles phases qui ne sont pas dans cette liste`;
+      }
+
       prompt = `${disciplineContext}
 ${customContext}
+${phasesContext}
 
 Génère un template de devis pour:
 - Type de contrat: ${contract_type_name || 'Mission standard'}
-
-IMPORTANT: Les phases doivent être SPÉCIFIQUES à la discipline "${discipline_name}".
-- Agence de comm: Brief, Conception créative, Déclinaisons, Achat média...
-- Architecture: Esquisse, APS, APD, PRO, DCE, DET, AOR...
-- Bureau d'études: Études préliminaires, Avant-projet, Études d'exécution, Synthèse...
-- Agence digitale: Discovery, UX Research, UI Design, Développement, Recette...
-
-NE PAS GÉNÉRER de phases inadaptées (ex: pas de CCTP pour une agence de comm).
 
 Inclus:
 - name: Nom du template (adapté aux instructions si fournies)
 - description: Description
 - default_phases: Array de phases avec {phase_name, phase_code (court), description, percentage}
+  ${existing_phases?.length ? '→ Utilise UNIQUEMENT les phases de la liste fournie' : ''}
 - default_terms: Conditions générales courtes
 
 Réponds avec un JSON object:
