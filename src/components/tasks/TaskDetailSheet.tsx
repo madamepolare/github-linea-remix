@@ -164,6 +164,7 @@ export function TaskDetailSheet({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showRelationChangeConfirm, setShowRelationChangeConfirm] = useState(false);
   const [pendingRelationChange, setPendingRelationChange] = useState<(() => void) | null>(null);
+  const [relationPopoverOpen, setRelationPopoverOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
   // Reset form for create mode
@@ -379,14 +380,18 @@ export function TaskDetailSheet({
   const confirmRelationChange = () => {
     if (pendingRelationChange) {
       pendingRelationChange();
+      setPendingRelationChange(null);
+    } else {
+      // If no pending callback, just open the popover
+      setRelationPopoverOpen(true);
     }
     setShowRelationChangeConfirm(false);
-    setPendingRelationChange(null);
   };
 
   const cancelRelationChange = () => {
     setShowRelationChangeConfirm(false);
     setPendingRelationChange(null);
+    setRelationPopoverOpen(false);
   };
 
   // Allow rendering in create mode even without task
@@ -483,9 +488,14 @@ export function TaskDetailSheet({
               <div className="flex items-center gap-2 mt-3 text-sm">
                 {/* Entity relation - clickable to change */}
                 {relatedType && relatedId && (
-                  <Popover>
+                  <Popover open={relationPopoverOpen} onOpenChange={setRelationPopoverOpen}>
                     <PopoverTrigger asChild>
                       <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          // Show confirmation before opening popover
+                          setShowRelationChangeConfirm(true);
+                        }}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-primary/5 text-primary hover:bg-primary/10 transition-all border border-primary/10"
                       >
                         <Link2 className="h-3 w-3" />
@@ -515,7 +525,6 @@ export function TaskDetailSheet({
                           onEntityIdChange={setRelatedId}
                           deliverableId={deliverableId}
                           onDeliverableIdChange={setDeliverableId}
-                          onRequestChange={handleRequestRelationChange}
                         />
                       </div>
                     </PopoverContent>
