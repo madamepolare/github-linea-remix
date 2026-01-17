@@ -8151,6 +8151,7 @@ export type Database = {
           parent_id: string | null
           phase: string | null
           postal_code: string | null
+          project_category: string | null
           project_type: string | null
           start_date: string | null
           status: string | null
@@ -8191,6 +8192,7 @@ export type Database = {
           parent_id?: string | null
           phase?: string | null
           postal_code?: string | null
+          project_category?: string | null
           project_type?: string | null
           start_date?: string | null
           status?: string | null
@@ -8231,6 +8233,7 @@ export type Database = {
           parent_id?: string | null
           phase?: string | null
           postal_code?: string | null
+          project_category?: string | null
           project_type?: string | null
           start_date?: string | null
           status?: string | null
