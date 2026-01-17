@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { usePhaseTemplates, PhaseTemplate, CreatePhaseTemplateInput } from "@/hooks/usePhaseTemplates";
 import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
+import { useDiscipline } from "@/hooks/useDiscipline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -79,6 +80,7 @@ const defaultFormData: PhaseFormData = {
 
 export function PhasesSettings() {
   const { projectTypes, isLoading: projectTypesLoading } = useProjectTypeSettings();
+  const { discipline, disciplineSlug } = useDiscipline();
   const [activeProjectType, setActiveProjectType] = useState<string>("");
   const { templates, isLoading, createTemplate, updateTemplate, deleteTemplate, reorderTemplates, resetToDefaults, initializeDefaultsIfEmpty } = usePhaseTemplates(activeProjectType);
   
@@ -100,7 +102,12 @@ export function PhasesSettings() {
     setIsGeneratingAI(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-phase-templates', {
-        body: { projectType: activeProjectType, projectTypeLabel }
+        body: { 
+          projectType: activeProjectType, 
+          projectTypeLabel,
+          discipline: disciplineSlug,
+          disciplineName: discipline?.name || disciplineSlug
+        }
       });
 
       if (error) throw error;
