@@ -72,11 +72,14 @@ import { ProjectPhasesTab } from "@/components/projects/ProjectPhasesTab";
 import { ProjectPlanningContainer } from "@/components/projects/ProjectPlanningContainer";
 import { ProjectBudgetTab } from "@/components/projects/ProjectBudgetTab";
 import { ProjectDeliverablesTab } from "@/components/projects/ProjectDeliverablesTab";
+import { ProjectNextActions } from "@/components/projects/ProjectNextActions";
 import { MessageCircle, Mail } from "lucide-react";
 import { FrameworkDashboard } from "@/components/projects/subprojects/FrameworkDashboard";
 import { SubProjectsList } from "@/components/projects/subprojects/SubProjectsList";
 import { ProjectContactsSummary } from "@/components/projects/ProjectContactsSummary";
 import { ProjectTeamSummary } from "@/components/projects/ProjectTeamSummary";
+import { useTasks } from "@/hooks/useTasks";
+import { useProjectDeliverables } from "@/hooks/useProjectDeliverables";
 
 // Tab configuration for project detail
 const PROJECT_TABS = [
@@ -296,6 +299,7 @@ export default function ProjectDetail() {
               onOpenTeamEdit={() => setTeamEditOpen(true)}
               onOpenClientTeam={() => setClientTeamOpen(true)}
               projectMembers={projectMembers}
+              onNavigateToTab={setActiveTab}
             />
           )}
           {activeTab === "project_planning" && <ProjectPlanningContainer projectId={project.id} />}
@@ -370,14 +374,19 @@ interface OverviewTabProps {
   onOpenTeamEdit: () => void;
   onOpenClientTeam: () => void;
   projectMembers: any[];
+  onNavigateToTab: (tab: string) => void;
 }
 
-function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary, onUpdateProject, isUpdatingProject, onOpenProjectEdit, onOpenTeamEdit, onOpenClientTeam, projectMembers }: OverviewTabProps) {
+function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary, onUpdateProject, isUpdatingProject, onOpenProjectEdit, onOpenTeamEdit, onOpenClientTeam, projectMembers, onNavigateToTab }: OverviewTabProps) {
   const completedPhases = phases.filter((p) => p.status === "completed").length;
   const { updatePhase, createPhase, createManyPhases, deletePhase, reorderPhases } = useProjectPhases(project.id);
   const { activeWorkspace } = useAuth();
   const [phaseEditOpen, setPhaseEditOpen] = useState(false);
   const [confirmPhaseId, setConfirmPhaseId] = useState<string | null>(null);
+
+  // Fetch tasks and deliverables count for next actions
+  const { tasks = [] } = useTasks({ projectId: project.id });
+  const { deliverables = [] } = useProjectDeliverables(project.id);
 
   const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
 
@@ -436,8 +445,46 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
     }
   };
 
+  // Handle next action clicks
+  const handleNextAction = (action: string) => {
+    switch (action) {
+      case 'budget':
+        onNavigateToTab('budget');
+        break;
+      case 'phases':
+        setPhaseEditOpen(true);
+        break;
+      case 'team':
+        onOpenTeamEdit();
+        break;
+      case 'dates':
+      case 'description':
+        onOpenProjectEdit();
+        break;
+      case 'tasks':
+        onNavigateToTab('tasks');
+        break;
+      case 'deliverables':
+        onNavigateToTab('deliverables');
+        break;
+      case 'ai_summary':
+        onRefreshSummary();
+        break;
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Next Actions - Guide user */}
+      <ProjectNextActions
+        project={project}
+        phases={phases}
+        projectMembers={projectMembers}
+        tasksCount={tasks.length}
+        deliverablesCount={deliverables.length}
+        onAction={handleNextAction}
+      />
+
       {/* Phase Progress - Main focus */}
       {phases.length > 0 && (
         <Card className="overflow-hidden">
