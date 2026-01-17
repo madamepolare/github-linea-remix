@@ -40,7 +40,9 @@ import {
   Grid3X3,
   Sparkles,
   FolderPlus,
-  Folder
+  Folder,
+  Download,
+  Layers
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
@@ -76,9 +78,9 @@ export function QuoteLinesEditor({
   // Get feature flags from context
   const features = useLineFeatures();
 
-  const projectType = document.project_type as 'interior' | 'architecture' | 'scenography' | undefined;
+  const projectType = document.project_type as string | undefined;
   const { templates: phaseTemplates } = usePhaseTemplates(projectType);
-  const { pricingGrids } = useQuoteTemplates(projectType);
+  const { templates: quoteTemplates, pricingGrids } = useQuoteTemplates();
   const { data: teamMembers } = useTeamMembers();
 
   const formatCurrency = (value: number) =>
@@ -152,6 +154,28 @@ export function QuoteLinesEditor({
       billing_type: 'one_time', is_optional: false, is_included: true, sort_order: lines.length
     };
     onLinesChange([...lines, newLine]);
+  };
+
+  // Load a complete quote template (all phases)
+  const loadQuoteTemplate = (template: any) => {
+    const newLines: QuoteLine[] = template.phases.map((phase: any, index: number) => ({
+      id: generateId(),
+      phase_code: phase.code,
+      phase_name: phase.name,
+      phase_description: phase.description || '',
+      line_type: 'phase' as const,
+      quantity: 1,
+      unit: 'forfait',
+      unit_price: 0,
+      amount: 0,
+      percentage_fee: phase.defaultPercentage || 0,
+      billing_type: 'one_time' as const,
+      is_optional: phase.category === 'complementary',
+      is_included: phase.category !== 'complementary',
+      deliverables: phase.deliverables || [],
+      sort_order: lines.length + index
+    }));
+    onLinesChange([...lines, ...newLines]);
   };
 
   const updateLine = (id: string, updates: Partial<QuoteLine>) => {
@@ -245,6 +269,40 @@ export function QuoteLinesEditor({
             {activePricingGrids.length > 0 && (<><DropdownMenuSeparator />{activePricingGrids.map(grid => (<DropdownMenuSub key={grid.id}><DropdownMenuSubTrigger><Grid3X3 className="h-4 w-4 mr-2" />{grid.name}</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 overflow-y-auto">{grid.items.map((item: any, idx: number) => (<DropdownMenuItem key={idx} onClick={() => addLineFromPricingGrid(item)}><div className="flex flex-col"><span>{item.name}</span>{item.unit_price && <span className="text-xs text-muted-foreground">{formatCurrency(item.unit_price)}</span>}</div></DropdownMenuItem>))}</DropdownMenuSubContent></DropdownMenuSub>))}</>)}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Load Quote Template Button */}
+        {quoteTemplates && quoteTemplates.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm gap-1.5">
+                <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Charger template</span>
+                <span className="sm:hidden">Template</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-72">
+              <div className="px-2 py-1.5 text-xs text-muted-foreground font-medium flex items-center justify-between">
+                <span>Templates de devis</span>
+                <a href="/settings?section=quote-templates" target="_blank" className="text-primary hover:underline text-xs">Gérer →</a>
+              </div>
+              <DropdownMenuSeparator />
+              {quoteTemplates.map(template => (
+                <DropdownMenuItem key={template.id} onClick={() => loadQuoteTemplate(template)}>
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{template.name}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground ml-6">
+                      {template.phases.length} phases
+                      {template.description && ` • ${template.description}`}
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
           <DialogTrigger asChild>
