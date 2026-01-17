@@ -11,14 +11,14 @@ serve(async (req) => {
   }
 
   try {
-    const { projectType, projectTypeLabel, discipline, disciplineName } = await req.json();
+    const { projectType, projectTypeLabel, discipline, disciplineName, customPrompt } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating phase templates for:", { projectType, projectTypeLabel, discipline, disciplineName });
+    console.log("Generating phase templates for:", { projectType, projectTypeLabel, discipline, disciplineName, customPrompt });
 
     // Build discipline-specific guidance
     const disciplineGuidance: Record<string, string> = {
@@ -33,30 +33,49 @@ serve(async (req) => {
       communication: `Tu es expert en communication et design graphique:
 - Phases créatives: BRIEF, AUDIT, STRAT (Stratégie), CONCEPT, CREA (Création), PROD (Production), DEPLOY (Déploiement)
 - Inclure les livrables digitaux et print
-- Adapter aux campagnes de communication, identité visuelle, branding`
+- Adapter aux campagnes de communication, identité visuelle, branding`,
+      interior: `Tu es expert en architecture d'intérieur et design d'espace:
+- Phases: DIAG (Diagnostic), CONCEPT, APS (Avant-Projet Sommaire), APD (Avant-Projet Définitif), PRO (Projet), SUIVI (Suivi de chantier)
+- Inclure les spécificités décoration, aménagement, mobilier
+- Adapter aux projets résidentiels et tertiaires`
     };
 
     const disciplineContext = disciplineGuidance[discipline] || disciplineGuidance.architecture;
 
-    const systemPrompt = `${disciplineContext}
+    // Build the user prompt based on whether there's a custom prompt
+    let userPrompt = '';
+    if (customPrompt) {
+      userPrompt = `Génère les phases de mission adaptées pour: "${customPrompt}"
 
-Tu génères des templates de phases de mission professionnelles et réalistes pour la discipline "${disciplineName || discipline}".
+Cette mission est dans le cadre de la discipline "${disciplineName || discipline}" et du type de projet "${projectTypeLabel || projectType}".
 
-Règles importantes:
-- Génère entre 5 et 12 phases de base qui totalisent exactement 100%
-- Génère 3-6 phases complémentaires optionnelles
-- Les codes doivent être courts (2-5 caractères), en majuscules
-- Respecte les standards du métier en France pour cette discipline
-- Les livrables doivent être concrets et professionnels
-- Les descriptions doivent être claires et informatives`;
+Fournis:
+1. Les phases de BASE (mission principale) dont la somme des pourcentages = 100%
+2. Les phases COMPLÉMENTAIRES (optionnelles, prestations additionnelles)
 
-    const userPrompt = `Génère les phases de mission standards pour un projet de type "${projectTypeLabel || projectType}".
+IMPORTANT: Adapte les phases spécifiquement pour "${customPrompt}". Ne génère que les phases pertinentes pour ce type de mission.`;
+    } else {
+      userPrompt = `Génère les phases de mission standards pour un projet de type "${projectTypeLabel || projectType}".
 
 Fournis:
 1. Les phases de BASE (mission principale) dont la somme des pourcentages = 100%
 2. Les phases COMPLÉMENTAIRES (optionnelles, prestations additionnelles)
 
 Chaque phase doit avoir un code court, un nom clair, une description, un pourcentage par défaut et une liste de livrables.`;
+    }
+
+    const systemPrompt = `${disciplineContext}
+
+Tu génères des templates de phases de mission professionnelles et réalistes pour la discipline "${disciplineName || discipline}".
+
+Règles importantes:
+- Génère entre 3 et 10 phases de base qui totalisent exactement 100%
+- Génère 2-5 phases complémentaires optionnelles
+- Les codes doivent être courts (2-5 caractères), en majuscules
+- Respecte les standards du métier en France pour cette discipline
+- Les livrables doivent être concrets et professionnels
+- Les descriptions doivent être claires et informatives
+- Adapte les phases au contexte spécifique demandé`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

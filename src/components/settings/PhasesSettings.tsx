@@ -93,20 +93,30 @@ export function PhasesSettings() {
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [showAIDialog, setShowAIDialog] = useState(false);
+  const [showAIPromptDialog, setShowAIPromptDialog] = useState(false);
+  const [aiCustomPrompt, setAiCustomPrompt] = useState('');
   const [generatedPhases, setGeneratedPhases] = useState<{ basePhases: any[], complementaryPhases: any[] } | null>(null);
+
+  // Open AI prompt dialog
+  const handleOpenAIPromptDialog = () => {
+    setAiCustomPrompt('');
+    setShowAIPromptDialog(true);
+  };
 
   // AI generation handler
   const handleGenerateWithAI = async () => {
     const projectTypeLabel = projectTypes.find(t => t.key === activeProjectType)?.label || activeProjectType;
     
     setIsGeneratingAI(true);
+    setShowAIPromptDialog(false);
     try {
       const { data, error } = await supabase.functions.invoke('generate-phase-templates', {
         body: { 
           projectType: activeProjectType, 
           projectTypeLabel,
           discipline: disciplineSlug,
-          disciplineName: discipline?.name || disciplineSlug
+          disciplineName: discipline?.name || disciplineSlug,
+          customPrompt: aiCustomPrompt || undefined
         }
       });
 
@@ -482,17 +492,15 @@ export function PhasesSettings() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {templates.length === 0 && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={handleGenerateWithAI}
-                          disabled={isGeneratingAI}
-                        >
-                          {isGeneratingAI ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                          Générer avec l'IA
-                        </Button>
-                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleOpenAIPromptDialog}
+                        disabled={isGeneratingAI}
+                      >
+                        {isGeneratingAI ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                        Ajouter avec IA
+                      </Button>
                       {totals.base !== 100 && groupedTemplates.base.length > 0 && (
                         <Button
                           variant="default"
@@ -857,6 +865,58 @@ export function PhasesSettings() {
                 <>
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Appliquer ces phases
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Prompt Dialog */}
+      <Dialog open={showAIPromptDialog} onOpenChange={setShowAIPromptDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Générer des phases avec l'IA
+            </DialogTitle>
+            <DialogDescription>
+              Décrivez le type de mission ou laissez vide pour des phases standards.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Type de mission (optionnel)</Label>
+              <Input
+                value={aiCustomPrompt}
+                onChange={(e) => setAiCustomPrompt(e.target.value)}
+                placeholder="Ex: Charte graphique, Identité visuelle, Rénovation complète..."
+                disabled={isGeneratingAI}
+              />
+              <p className="text-xs text-muted-foreground">
+                L'IA générera des phases adaptées à ce type de mission pour votre discipline ({discipline?.name || disciplineSlug}).
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAIPromptDialog(false)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleGenerateWithAI}
+              disabled={isGeneratingAI}
+            >
+              {isGeneratingAI ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Génération...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Générer
                 </>
               )}
             </Button>
