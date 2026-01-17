@@ -465,14 +465,14 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                       </div>
                     ) : (
                       <Select 
-                        value={crmCompanyId || ""} 
-                        onValueChange={(v) => setCrmCompanyId(v || null)}
+                        value={crmCompanyId || "none"} 
+                        onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Sélectionner un client" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Aucun client</SelectItem>
+                          <SelectItem value="none">Aucun client</SelectItem>
                           {clientCompanies.map((company) => (
                             <SelectItem key={company.id} value={company.id}>
                               <div className="flex items-center gap-2">
