@@ -218,11 +218,13 @@ export function CreateTaskDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Aucun livrable</SelectItem>
-                  {deliverables.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
+                  {deliverables
+                    .filter((d) => d.status !== 'delivered' && d.status !== 'validated')
+                    .map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
