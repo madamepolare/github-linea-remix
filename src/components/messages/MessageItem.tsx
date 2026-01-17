@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Check, MessageSquare, MoreHorizontal, Pencil, Smile, Trash2, X } from "lucide-react";
+import { Check, Download, ExternalLink, FileText, Image as ImageIcon, MessageSquare, MoreHorizontal, Pencil, Smile, Trash2, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { renderContentWithMentions } from "@/components/shared/MentionInput";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
+
+interface Attachment {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+}
 
 interface MessageItemProps {
   message: TeamMessage;
@@ -152,9 +159,65 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
             </div>
           </div>
         ) : (
-          <div className="text-sm">
-            {renderContentWithMentions(message.content, profiles)}
-          </div>
+          <>
+            <div className="text-sm">
+              {renderContentWithMentions(message.content, profiles)}
+            </div>
+            
+            {/* Attachments */}
+            {message.attachments && (message.attachments as Attachment[]).length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(message.attachments as Attachment[]).map((attachment, index) => {
+                  const isImage = attachment.type.startsWith('image/');
+                  
+                  if (isImage) {
+                    return (
+                      <a
+                        key={index}
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block relative group rounded-lg overflow-hidden border bg-muted/30 hover:border-primary/50 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <img 
+                          src={attachment.url} 
+                          alt={attachment.name}
+                          className="max-w-[200px] max-h-[150px] object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <ExternalLink className="h-5 w-5 text-white drop-shadow" />
+                        </div>
+                      </a>
+                    );
+                  }
+                  
+                  return (
+                    <a
+                      key={index}
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-medium truncate max-w-[150px]">{attachment.name}</span>
+                        <span className="text-2xs text-muted-foreground">
+                          {attachment.size < 1024 * 1024 
+                            ? `${(attachment.size / 1024).toFixed(1)} Ko`
+                            : `${(attachment.size / (1024 * 1024)).toFixed(1)} Mo`
+                          }
+                        </span>
+                      </div>
+                      <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                    </a>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
 
         {/* Reactions */}

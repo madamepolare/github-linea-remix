@@ -384,7 +384,13 @@ export function useTeamMessageMutations() {
   });
 
   const createMessage = useMutation({
-    mutationFn: async (data: { channel_id: string; content: string; parent_id?: string; mentions?: string[] }) => {
+    mutationFn: async (data: { 
+      channel_id: string; 
+      content: string; 
+      parent_id?: string; 
+      mentions?: string[]; 
+      attachments?: { url: string; name: string; type: string; size: number }[];
+    }) => {
       if (!activeWorkspace?.id || !user?.id) throw new Error("No workspace or user");
       
       const { data: message, error } = await supabase
@@ -395,6 +401,7 @@ export function useTeamMessageMutations() {
           workspace_id: activeWorkspace.id,
           content: data.content,
           mentions: data.mentions || [],
+          attachments: data.attachments || [],
           created_by: user.id,
         })
         .select()
