@@ -20,10 +20,10 @@ import {
 import { CRMCompany } from "@/hooks/useCRMCompanies";
 import { useContacts } from "@/hooks/useContacts";
 import { useLeads } from "@/hooks/useLeads";
+import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
-import { getIndustryLabel, getBETSpecialtyLabel, getIndustryColor } from "@/lib/crmConstants";
 
 interface CompanyDetailSheetProps {
   company: CRMCompany | null;
@@ -36,6 +36,7 @@ export function CompanyDetailSheet({ company, open, onOpenChange }: CompanyDetai
   
   const { contacts } = useContacts();
   const { leads } = useLeads();
+  const { getCompanyTypeLabel, getCompanyTypeColor, getBetSpecialtyLabel } = useCRMSettings();
 
   if (!company) return null;
 
@@ -51,7 +52,7 @@ export function CompanyDetailSheet({ company, open, onOpenChange }: CompanyDetai
           <div className="flex items-start gap-4">
             <div
               className="h-14 w-14 rounded-xl flex items-center justify-center text-white font-bold text-lg"
-              style={{ backgroundColor: getIndustryColor(company.industry) }}
+              style={{ backgroundColor: getCompanyTypeColor(company.industry || "") }}
             >
               {company.logo_url ? (
                 <img src={company.logo_url} alt={company.name} className="h-full w-full object-cover rounded-xl" />
@@ -64,7 +65,7 @@ export function CompanyDetailSheet({ company, open, onOpenChange }: CompanyDetai
               <div className="flex items-center gap-2 mt-1">
                 {company.industry && (
                   <Badge variant="secondary">
-                    {getIndustryLabel(company.industry)}
+                    {getCompanyTypeLabel(company.industry)}
                   </Badge>
                 )}
               </div>
@@ -79,7 +80,7 @@ export function CompanyDetailSheet({ company, open, onOpenChange }: CompanyDetai
             <div className="flex flex-wrap gap-1.5">
               {company.bet_specialties.map((spec) => (
                 <Badge key={spec} variant="outline" className="text-xs">
-                  {getBETSpecialtyLabel(spec)}
+                  {getBetSpecialtyLabel(spec)}
                 </Badge>
               ))}
             </div>
