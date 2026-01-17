@@ -388,16 +388,16 @@ export function QuoteTemplatesSection() {
                     onValueChange={(v) => setNewTemplate({ 
                       ...newTemplate, 
                       project_type: v as ProjectType,
-                      phases: PHASES_BY_PROJECT_TYPE[v as ProjectType]
+                      phases: PHASES_BY_PROJECT_TYPE[v as ProjectType] || []
                     })}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Sélectionner un type" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(['interior', 'architecture', 'scenography'] as ProjectType[]).map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {PROJECT_TYPE_LABELS[type]}
+                      {projectTypes.map((type) => (
+                        <SelectItem key={type.key} value={type.key}>
+                          {type.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -423,15 +423,15 @@ export function QuoteTemplatesSection() {
             <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground mb-4">Aucun template créé</p>
             <div className="flex flex-wrap gap-2 justify-center">
-              {(['interior', 'architecture', 'scenography'] as ProjectType[]).map((type) => (
+              {projectTypes.map((type) => (
                 <Button
-                  key={type}
+                  key={type.key}
                   variant="outline"
                   size="sm"
-                  onClick={() => handleCreateFromDefaults(type)}
+                  onClick={() => handleCreateFromDefaults(type.key as ProjectType)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  {PROJECT_TYPE_LABELS[type]}
+                  {type.label}
                 </Button>
               ))}
             </div>
@@ -447,7 +447,7 @@ export function QuoteTemplatesSection() {
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="font-medium truncate">{template.name}</h4>
                       <Badge variant="outline" className="shrink-0">
-                        {PROJECT_TYPE_LABELS[template.project_type]}
+                        {projectTypes.find(t => t.key === template.project_type)?.label || template.project_type}
                       </Badge>
                       {template.is_default && (
                         <Badge variant="secondary" className="shrink-0">Par défaut</Badge>
