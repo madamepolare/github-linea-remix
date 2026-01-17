@@ -45,6 +45,7 @@ import { InlineEditCell } from "./InlineEditCell";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
 import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
+import { AutoCategorizeHelper } from "./AutoCategorizeHelper";
 import { useContactPipelineEntries } from "@/hooks/useContactPipelineEntries";
 import { PipelineBadges } from "./PipelineBadges";
 import { CompanyMobileCard } from "./shared/CRMMobileCards";
@@ -222,6 +223,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
               }}
             />
           </div>
+          <AutoCategorizeHelper />
           <CRMDataQualityManager />
           {/* View mode toggle - hidden on mobile */}
           <div className="hidden md:flex items-center border rounded-md">

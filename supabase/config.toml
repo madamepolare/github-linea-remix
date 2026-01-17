@@ -113,3 +113,6 @@ verify_jwt = false
 
 [functions.ai-page-inspector]
 verify_jwt = false
+
+[functions.auto-categorize-companies]
+verify_jwt = false

@@ -60,6 +60,7 @@ import { useContactPipelineEntries } from "@/hooks/useContactPipelineEntries";
 import { ContactDetailSheet } from "./ContactDetailSheet";
 import { ContactFormDialog } from "./ContactFormDialog";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
+import { AutoCategorizeHelper } from "./AutoCategorizeHelper";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
 import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
 import { PipelineBadges } from "./PipelineBadges";
@@ -280,6 +281,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
             />
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <AutoCategorizeHelper />
             <CRMDataQualityManager />
             {onImportContacts && (
               <Button variant="outline" size="sm" className="h-9 hidden sm:inline-flex" onClick={onImportContacts}>
