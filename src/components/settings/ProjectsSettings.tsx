@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GenericSettingsManager } from "./GenericSettingsManager";
-import { FolderKanban, FileText, Layers } from "lucide-react";
+import { ProjectCategoriesSettings } from "./ProjectCategoriesSettings";
+import { FolderKanban, FileText, Layers, Briefcase } from "lucide-react";
 import { useWorkspaceDiscipline } from "@/hooks/useDiscipline";
 import { useMemo } from "react";
 
@@ -413,8 +414,12 @@ export function ProjectsSettings() {
         </p>
       </div>
 
-      <Tabs defaultValue="types">
+      <Tabs defaultValue="categories">
         <TabsList className="flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="categories" className="gap-1.5 text-xs">
+            <Briefcase className="h-4 w-4" />
+            Catégories
+          </TabsTrigger>
           <TabsTrigger value="types" className="gap-1.5 text-xs">
             <FolderKanban className="h-4 w-4" />
             Types de projet
@@ -428,6 +433,10 @@ export function ProjectsSettings() {
             Livrables
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="categories" className="mt-6">
+          <ProjectCategoriesSettings />
+        </TabsContent>
 
         <TabsContent value="types" className="mt-6">
           <GenericSettingsManager
