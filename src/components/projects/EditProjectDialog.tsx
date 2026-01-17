@@ -34,6 +34,7 @@ import {
   Home,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ProjectContactsManager } from "./ProjectContactsManager";
 
 interface Project {
   id: string;
@@ -286,6 +287,14 @@ export function EditProjectDialog({
                 </SelectContent>
               </Select>
             </div>
+          )}
+
+          {/* Contacts opérationnels - hidden for internal projects */}
+          {!isInternal && crmCompanyId && (
+            <ProjectContactsManager 
+              projectId={project.id}
+              companyId={crmCompanyId}
+            />
           )}
 
           {/* Location */}

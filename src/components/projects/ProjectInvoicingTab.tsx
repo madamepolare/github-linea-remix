@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Calendar, Clock, RefreshCw, Building2 } from "lucide-react";
-import { InvoicingOverviewTab } from "./invoicing/InvoicingOverviewTab";
+import { Calendar, Clock, RefreshCw, Building2 } from "lucide-react";
 import { InvoiceScheduleTab } from "./invoicing/InvoiceScheduleTab";
 import { InvoiceBuilderSheet } from "@/components/invoicing/InvoiceBuilderSheet";
 import { ChorusProPanel } from "./invoicing/ChorusProPanel";
@@ -16,7 +14,7 @@ interface ProjectInvoicingTabProps {
 }
 
 export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicingTabProps) {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("schedule");
   const [builderOpen, setBuilderOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [showChorusPanel, setShowChorusPanel] = useState(false);
@@ -64,13 +62,6 @@ export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicing
         <div className="flex items-center justify-between border-b pb-2">
           <TabsList className="bg-transparent h-auto p-0">
             <TabsTrigger
-              value="overview"
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
-            >
-              <LayoutDashboard className="h-4 w-4 mr-2" />
-              Vue d'ensemble
-            </TabsTrigger>
-            <TabsTrigger
               value="schedule"
               className="data-[state=active]:bg-transparent data-[state=active]:shadow-none rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary"
             >
@@ -104,20 +95,6 @@ export function ProjectInvoicingTab({ projectId, projectName }: ProjectInvoicing
 
         <div className="flex gap-4 mt-4">
           <div className={showChorusPanel ? "flex-1" : "w-full"}>
-            <TabsContent value="overview" className="mt-0">
-              <InvoicingOverviewTab 
-                projectId={projectId} 
-                onNavigateToTab={(tab) => {
-                  const tabMap: Record<string, string> = {
-                    'factures': 'schedule',
-                    'avoirs': 'credit-notes',
-                    'echeancier': 'schedule',
-                  };
-                  setActiveTab(tabMap[tab] || tab);
-                }}
-              />
-            </TabsContent>
-
             <TabsContent value="schedule" className="mt-0">
               <InvoiceScheduleTab 
                 projectId={projectId}
