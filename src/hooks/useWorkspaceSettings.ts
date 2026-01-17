@@ -17,7 +17,6 @@ export type SettingType =
   | "task_statuses"
   | "task_priorities"
   | "project_types"
-  | "project_subtypes"
   | "project_categories"
   | "lot_categories";
 
