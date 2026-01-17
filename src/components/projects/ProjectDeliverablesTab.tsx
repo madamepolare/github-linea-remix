@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useProjectDeliverables, DeliverableStatus } from "@/hooks/useProjectDeliverables";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
 import { useProject } from "@/hooks/useProjects";
+import { useDeliverableTasksCount } from "@/hooks/useDeliverableTasks";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +36,7 @@ import { toast } from "sonner";
 import {
   AlertCircle,
   CheckCircle2,
+  CheckSquare,
   Clock,
   ExternalLink,
   File,
@@ -70,6 +72,7 @@ import {
 import { DeliverableTasksGenerator } from "./DeliverableTasksGenerator";
 import { AIDeliverablesGenerator } from "./AIDeliverablesGenerator";
 import { DeliverableEmailDialog } from "./DeliverableEmailDialog";
+import { useNavigate } from "react-router-dom";
 
 interface ProjectDeliverablesTabProps {
   projectId: string;
@@ -592,11 +595,24 @@ function DeliverableCard({
   onSendEmail: () => void;
   onGenerateTasks: () => void;
 }) {
+  const navigate = useNavigate();
   const statusConfig = DELIVERABLE_STATUS.find(s => s.value === deliverable.status) || DELIVERABLE_STATUS[0];
   const isOverdue = deliverable.due_date && 
     isPast(parseISO(deliverable.due_date)) && 
     deliverable.status !== "delivered" && 
     deliverable.status !== "validated";
+
+  // Get linked task info
+  const { total: subtaskCount, completed: completedSubtasks, mainTask } = useDeliverableTasksCount(deliverable.id);
+  const hasLinkedTask = !!mainTask;
+  const taskProgress = subtaskCount > 0 ? Math.round((completedSubtasks / subtaskCount) * 100) : 0;
+
+  const handleTaskClick = () => {
+    if (mainTask) {
+      // Navigate to tasks page with the task selected
+      navigate(`/tasks?taskId=${mainTask.id}`);
+    }
+  };
 
   return (
     <Card className={cn(
@@ -654,6 +670,31 @@ function DeliverableCard({
                 {deliverable.description}
               </p>
             )}
+            
+            {/* Linked Task Display */}
+            {hasLinkedTask && (
+              <div 
+                className="mt-2 p-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
+                onClick={handleTaskClick}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ListTodo className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-sm font-medium truncate">{mainTask.title}</span>
+                  </div>
+                  {subtaskCount > 0 && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <CheckSquare className="h-3 w-3" />
+                        <span>{completedSubtasks}/{subtaskCount}</span>
+                      </div>
+                      <Progress value={taskProgress} className="w-16 h-1.5" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
               {deliverable.due_date && (
                 <span className={cn(
@@ -697,10 +738,18 @@ function DeliverableCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onGenerateTasks}>
-                  <ListTodo className="h-4 w-4 mr-2" />
-                  Générer tâches (IA)
-                </DropdownMenuItem>
+                {!hasLinkedTask && (
+                  <DropdownMenuItem onClick={onGenerateTasks}>
+                    <ListTodo className="h-4 w-4 mr-2" />
+                    Générer tâche (IA)
+                  </DropdownMenuItem>
+                )}
+                {hasLinkedTask && (
+                  <DropdownMenuItem onClick={handleTaskClick}>
+                    <ListTodo className="h-4 w-4 mr-2" />
+                    Voir la tâche
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={onSendEmail}>
                   <Send className="h-4 w-4 mr-2" />
                   Envoyer par email
