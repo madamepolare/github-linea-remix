@@ -26,13 +26,24 @@ export interface ProjectContact {
   };
 }
 
-export const CONTACT_ROLES = [
+// Client team roles (équipe côté client)
+export const CLIENT_TEAM_ROLES = [
+  { value: "moa", label: "Maître d'ouvrage" },
+  { value: "moa_delegue", label: "MOA délégué" },
+  { value: "directeur_projet", label: "Directeur de projet" },
+  { value: "chef_projet", label: "Chef de projet" },
+  { value: "responsable_technique", label: "Responsable technique" },
+  { value: "responsable_achats", label: "Responsable achats" },
+  { value: "responsable_financier", label: "Responsable financier" },
+  { value: "utilisateur", label: "Utilisateur final" },
+  { value: "decision_maker", label: "Décisionnaire" },
   { value: "operational", label: "Contact opérationnel" },
   { value: "billing", label: "Contact facturation" },
-  { value: "decision_maker", label: "Décisionnaire" },
-  { value: "technical", label: "Contact technique" },
   { value: "other", label: "Autre" },
 ];
+
+// Legacy alias for backward compatibility
+export const CONTACT_ROLES = CLIENT_TEAM_ROLES;
 
 export function useProjectContacts(projectId: string | null) {
   const { activeWorkspace } = useAuth();

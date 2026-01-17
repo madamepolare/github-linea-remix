@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useProjectContacts, CONTACT_ROLES } from "@/hooks/useProjectContacts";
+import { useProjectContacts, CLIENT_TEAM_ROLES } from "@/hooks/useProjectContacts";
 import { useContacts } from "@/hooks/useContacts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Label } from "@/components/ui/label";
-import { Plus, X, Star, UserCircle, Mail, Phone, Check } from "lucide-react";
+import { Plus, X, Star, Users, Mail, Phone, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ProjectContactsManagerProps {
@@ -51,7 +51,7 @@ export function ProjectContactsManager({
   
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState("operational");
+  const [selectedRole, setSelectedRole] = useState("chef_projet");
 
   // Filter contacts - prefer those from the same company
   const availableContacts = allContacts.filter(
@@ -71,7 +71,7 @@ export function ProjectContactsManager({
     }, {
       onSuccess: () => {
         setSelectedContactId(null);
-        setSelectedRole("operational");
+        setSelectedRole("chef_projet");
         setIsAddOpen(false);
       }
     });
@@ -99,7 +99,7 @@ export function ProjectContactsManager({
   };
 
   const getRoleLabel = (role: string) => {
-    return CONTACT_ROLES.find(r => r.value === role)?.label || role;
+    return CLIENT_TEAM_ROLES.find(r => r.value === role)?.label || role;
   };
 
   if (isLoading) {
@@ -109,7 +109,10 @@ export function ProjectContactsManager({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium">Contacts opérationnels</Label>
+        <Label className="text-sm font-medium flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          Équipe client
+        </Label>
         <Popover open={isAddOpen} onOpenChange={setIsAddOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="h-7 gap-1">
@@ -192,7 +195,7 @@ export function ProjectContactsManager({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CONTACT_ROLES.map((role) => (
+                    {CLIENT_TEAM_ROLES.map((role) => (
                       <SelectItem key={role.value} value={role.value}>
                         {role.label}
                       </SelectItem>
@@ -216,9 +219,9 @@ export function ProjectContactsManager({
 
       {projectContacts.length === 0 ? (
         <div className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded-lg">
-          <UserCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-          <p>Aucun contact opérationnel</p>
-          <p className="text-xs">Ajoutez des contacts pour ce projet</p>
+          <Users className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+          <p>Aucun contact côté client</p>
+          <p className="text-xs">Ajoutez les interlocuteurs du client</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -271,7 +274,7 @@ export function ProjectContactsManager({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CONTACT_ROLES.map((role) => (
+                    {CLIENT_TEAM_ROLES.map((role) => (
                       <SelectItem key={role.value} value={role.value}>
                         {role.label}
                       </SelectItem>
