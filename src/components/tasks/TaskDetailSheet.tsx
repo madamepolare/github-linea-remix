@@ -162,8 +162,8 @@ export function TaskDetailSheet({
   const [relatedId, setRelatedId] = useState<string | null>(null);
   const [deliverableId, setDeliverableId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
-  const [pendingUnlinkType, setPendingUnlinkType] = useState<RelatedEntityType | null>(null);
+  const [showRelationChangeConfirm, setShowRelationChangeConfirm] = useState(false);
+  const [pendingRelationChange, setPendingRelationChange] = useState<(() => void) | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
   // Reset form for create mode
@@ -366,25 +366,27 @@ export function TaskDetailSheet({
     setPriority(priorities[nextIndex]);
   };
 
-  // Handle relation type change with confirmation for removal
-  const handleRelatedTypeChange = (type: RelatedEntityType | null) => {
-    // If trying to remove a relation that exists
-    if (type === null && relatedType && relatedId) {
-      setPendingUnlinkType(relatedType);
-      setShowUnlinkConfirm(true);
+  // Handle relation change with confirmation when there's an existing relation
+  const handleRequestRelationChange = (callback: () => void) => {
+    if (relatedType && relatedId) {
+      setPendingRelationChange(() => callback);
+      setShowRelationChangeConfirm(true);
     } else {
-      setRelatedType(type);
-      if (type === null) {
-        setRelatedId(null);
-      }
+      callback();
     }
   };
 
-  const confirmUnlink = () => {
-    setRelatedType(null);
-    setRelatedId(null);
-    setShowUnlinkConfirm(false);
-    setPendingUnlinkType(null);
+  const confirmRelationChange = () => {
+    if (pendingRelationChange) {
+      pendingRelationChange();
+    }
+    setShowRelationChangeConfirm(false);
+    setPendingRelationChange(null);
+  };
+
+  const cancelRelationChange = () => {
+    setShowRelationChangeConfirm(false);
+    setPendingRelationChange(null);
   };
 
   // Allow rendering in create mode even without task
@@ -509,8 +511,11 @@ export function TaskDetailSheet({
                         <EntitySelector
                           entityType={relatedType}
                           entityId={relatedId}
-                          onEntityTypeChange={handleRelatedTypeChange}
+                          onEntityTypeChange={setRelatedType}
                           onEntityIdChange={setRelatedId}
+                          deliverableId={deliverableId}
+                          onDeliverableIdChange={setDeliverableId}
+                          onRequestChange={handleRequestRelationChange}
                         />
                       </div>
                     </PopoverContent>
@@ -565,8 +570,10 @@ export function TaskDetailSheet({
                       <EntitySelector
                         entityType={relatedType}
                         entityId={relatedId}
-                        onEntityTypeChange={handleRelatedTypeChange}
+                        onEntityTypeChange={setRelatedType}
                         onEntityIdChange={setRelatedId}
+                        deliverableId={deliverableId}
+                        onDeliverableIdChange={setDeliverableId}
                       />
                     </div>
                   </PopoverContent>
@@ -773,22 +780,22 @@ export function TaskDetailSheet({
         </AlertDialog>
       )}
 
-      {/* Unlink Confirmation Dialog */}
-      <AlertDialog open={showUnlinkConfirm} onOpenChange={setShowUnlinkConfirm}>
+      {/* Relation Change Confirmation Dialog */}
+      <AlertDialog open={showRelationChangeConfirm} onOpenChange={setShowRelationChangeConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer la relation ?</AlertDialogTitle>
+            <AlertDialogTitle>Modifier la relation ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer le lien entre cette tâche et l'entité associée ? Cette action peut être annulée en reliant une nouvelle entité.
+              Cette tâche est actuellement liée à une entité. Êtes-vous sûr de vouloir modifier ou supprimer cette relation ?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingUnlinkType(null)}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel onClick={cancelRelationChange}>Annuler</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmUnlink}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmRelationChange}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              Supprimer la relation
+              Confirmer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
