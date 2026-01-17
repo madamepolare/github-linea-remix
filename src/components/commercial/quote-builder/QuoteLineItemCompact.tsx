@@ -132,9 +132,8 @@ export function QuoteLineItemCompact({
   const features = useLineFeatures();
   const [activeSection, setActiveSection] = useState<string>('pricing');
   
-  // Get phase templates for phase code dropdown
-  const projectType = document.project_type as 'interior' | 'architecture' | 'scenography' | undefined;
-  const { templates: phaseTemplates } = usePhaseTemplates(projectType);
+  // Get ALL phase templates for phase code dropdown (no project_type filter)
+  const { templates: phaseTemplates } = usePhaseTemplates();
   const activeTemplates = phaseTemplates.filter(t => t.is_active);
   
   // Determine if line is external/production type
