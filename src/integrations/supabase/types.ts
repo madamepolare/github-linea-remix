@@ -6619,6 +6619,7 @@ export type Database = {
           attendees: Json | null
           created_at: string
           created_by: string | null
+          deliverable_id: string | null
           description: string | null
           end_datetime: string | null
           event_type: string
@@ -6641,6 +6642,7 @@ export type Database = {
           attendees?: Json | null
           created_at?: string
           created_by?: string | null
+          deliverable_id?: string | null
           description?: string | null
           end_datetime?: string | null
           event_type?: string
@@ -6663,6 +6665,7 @@ export type Database = {
           attendees?: Json | null
           created_at?: string
           created_by?: string | null
+          deliverable_id?: string | null
           description?: string | null
           end_datetime?: string | null
           event_type?: string
@@ -6682,6 +6685,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_calendar_events_deliverable_id_fkey"
+            columns: ["deliverable_id"]
+            isOneToOne: false
+            referencedRelation: "project_deliverables"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_calendar_events_parent_event_id_fkey"
             columns: ["parent_event_id"]
@@ -9140,6 +9150,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           crm_company_id: string | null
+          deliverable_id: string | null
           description: string | null
           due_date: string | null
           end_date: string | null
@@ -9170,6 +9181,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           crm_company_id?: string | null
+          deliverable_id?: string | null
           description?: string | null
           due_date?: string | null
           end_date?: string | null
@@ -9200,6 +9212,7 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           crm_company_id?: string | null
+          deliverable_id?: string | null
           description?: string | null
           due_date?: string | null
           end_date?: string | null
@@ -9234,6 +9247,13 @@ export type Database = {
             columns: ["crm_company_id"]
             isOneToOne: false
             referencedRelation: "crm_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_deliverable_id_fkey"
+            columns: ["deliverable_id"]
+            isOneToOne: false
+            referencedRelation: "project_deliverables"
             referencedColumns: ["id"]
           },
           {
