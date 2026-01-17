@@ -51,11 +51,12 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages?.length]);
 
-  const handleSendMessage = async (content: string, mentions: string[]) => {
+  const handleSendMessage = async (content: string, mentions: string[], attachments?: { url: string; name: string; type: string; size: number }[]) => {
     await createMessage.mutateAsync({
       channel_id: channel.id,
       content,
       mentions,
+      attachments,
     });
   };
 

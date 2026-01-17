@@ -119,6 +119,7 @@ type ViewFilter = "active" | "closed" | "archived";
 
 type SortField = "name" | "progress" | "budget" | "endDate" | "client";
 type SortDirection = "asc" | "desc";
+type GroupBy = "none" | "type" | "client";
 
 export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
   const navigate = useNavigate();
@@ -127,6 +128,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [searchQuery, setSearchQuery] = useState("");
+  const [groupBy, setGroupBy] = useState<GroupBy>("none");
   
   const { projects: activeProjects, isLoading: loadingActive, deleteProject } = useProjects();
   const { projects: closedProjects, isLoading: loadingClosed } = useProjects({ includeClosed: true });
@@ -202,6 +204,44 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
     });
     return sorted;
   }, [filteredProjects, sortField, sortDirection, searchQuery]);
+
+  // Group projects by type or client
+  const groupedProjects = useMemo(() => {
+    if (groupBy === "none") {
+      return [{ key: "all", label: "Tous les projets", projects }];
+    }
+
+    const groups: Record<string, { label: string; color?: string; icon?: string; projects: typeof projects }> = {};
+    
+    projects.forEach(project => {
+      let groupKey: string;
+      let groupLabel: string;
+      let groupColor: string | undefined;
+      let groupIcon: string | undefined;
+      
+      if (groupBy === "type") {
+        groupKey = project.project_type || "no-type";
+        const dynamicType = projectTypes?.find(t => t.key === project.project_type);
+        const staticType = PROJECT_TYPES.find(t => t.value === project.project_type);
+        groupLabel = dynamicType?.label || staticType?.label || project.project_type || "Sans type";
+        groupColor = dynamicType?.color || staticType?.color;
+        groupIcon = dynamicType?.icon || staticType?.icon;
+      } else {
+        groupKey = project.crm_company?.id || "no-client";
+        groupLabel = project.crm_company?.name || "Sans client";
+      }
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = { label: groupLabel, color: groupColor, icon: groupIcon, projects: [] };
+      }
+      groups[groupKey].projects.push(project);
+    });
+    
+    // Sort groups by label
+    return Object.entries(groups)
+      .sort(([, a], [, b]) => a.label.localeCompare(b.label))
+      .map(([key, value]) => ({ key, ...value }));
+  }, [projects, groupBy, projectTypes]);
 
   // Calculate financial totals
   const financialTotals = useMemo(() => {
@@ -283,29 +323,42 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
             placeholder: "Rechercher un projet..."
           }}
           filters={
-            <Select 
-              value={`${sortField}-${sortDirection}`} 
-              onValueChange={(v) => {
-                const [field, dir] = v.split("-") as [SortField, SortDirection];
-                setSortField(field);
-                setSortDirection(dir);
-              }}
-            >
-              <SelectTrigger className="h-9 w-[160px] text-xs">
-                <SelectValue placeholder="Trier par..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name-asc">Nom A→Z</SelectItem>
-                <SelectItem value="name-desc">Nom Z→A</SelectItem>
-                <SelectItem value="progress-desc">Avancement ↓</SelectItem>
-                <SelectItem value="progress-asc">Avancement ↑</SelectItem>
-                <SelectItem value="budget-desc">Budget ↓</SelectItem>
-                <SelectItem value="budget-asc">Budget ↑</SelectItem>
-                <SelectItem value="endDate-asc">Échéance proche</SelectItem>
-                <SelectItem value="endDate-desc">Échéance lointaine</SelectItem>
-                <SelectItem value="client-asc">Client A→Z</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Select value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
+                <SelectTrigger className="h-9 w-[140px] text-xs">
+                  <SelectValue placeholder="Grouper par..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sans groupement</SelectItem>
+                  <SelectItem value="type">Par type</SelectItem>
+                  <SelectItem value="client">Par client</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select 
+                value={`${sortField}-${sortDirection}`} 
+                onValueChange={(v) => {
+                  const [field, dir] = v.split("-") as [SortField, SortDirection];
+                  setSortField(field);
+                  setSortDirection(dir);
+                }}
+              >
+                <SelectTrigger className="h-9 w-[160px] text-xs">
+                  <SelectValue placeholder="Trier par..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name-asc">Nom A→Z</SelectItem>
+                  <SelectItem value="name-desc">Nom Z→A</SelectItem>
+                  <SelectItem value="progress-desc">Avancement ↓</SelectItem>
+                  <SelectItem value="progress-asc">Avancement ↑</SelectItem>
+                  <SelectItem value="budget-desc">Budget ↓</SelectItem>
+                  <SelectItem value="budget-asc">Budget ↑</SelectItem>
+                  <SelectItem value="endDate-asc">Échéance proche</SelectItem>
+                  <SelectItem value="endDate-desc">Échéance lointaine</SelectItem>
+                  <SelectItem value="client-asc">Client A→Z</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           }
         />
       </div>
@@ -320,23 +373,50 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
           />
         </div>
       ) : (
-        <div className="flex flex-col">
-          {/* Project rows */}
-          <div className="flex flex-col gap-1">
-            {projects.map((project, index) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                members={projectMembersByProject[project.id] || []}
-                financialData={projectsFinancialData[project.id]}
-                projectTypeSettings={projectTypes}
-                index={index}
-                onNavigate={() => navigate(`/projects/${project.id}`)}
-                onDelete={() => setDeleteProjectId(project.id)}
-                formatCurrency={formatCurrency}
-              />
-            ))}
-          </div>
+        <div className="flex flex-col gap-4">
+          {groupedProjects.map((group) => {
+            const GroupIcon = group.icon ? getIconComponent(group.icon) : (groupBy === "client" ? Building2 : FolderKanban);
+            
+            return (
+              <div key={group.key} className="flex flex-col">
+                {/* Group Header */}
+                {groupBy !== "none" && (
+                  <div className="flex items-center gap-2 mb-2 px-1">
+                    <div 
+                      className="h-7 w-7 rounded-md flex items-center justify-center"
+                      style={{ backgroundColor: group.color ? `${group.color}15` : 'hsl(var(--muted))' }}
+                    >
+                      <GroupIcon 
+                        className="h-4 w-4" 
+                        style={{ color: group.color || 'hsl(var(--muted-foreground))' }}
+                      />
+                    </div>
+                    <span className="font-medium text-sm">{group.label}</span>
+                    <Badge variant="secondary" className="text-xs">
+                      {group.projects.length}
+                    </Badge>
+                  </div>
+                )}
+                
+                {/* Projects in group */}
+                <div className="flex flex-col gap-1">
+                  {group.projects.map((project, index) => (
+                    <ProjectCard
+                      key={project.id}
+                      project={project}
+                      members={projectMembersByProject[project.id] || []}
+                      financialData={projectsFinancialData[project.id]}
+                      projectTypeSettings={projectTypes}
+                      index={index}
+                      onNavigate={() => navigate(`/projects/${project.id}`)}
+                      onDelete={() => setDeleteProjectId(project.id)}
+                      formatCurrency={formatCurrency}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
 
           {/* Financial Totals Footer */}
           {financialTotals.totalBudget > 0 && (
