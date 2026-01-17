@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useProjectDeliverables, DeliverableStatus } from "@/hooks/useProjectDeliverables";
 import { useProjectPhases } from "@/hooks/useProjectPhases";
 import { useProject } from "@/hooks/useProjects";
@@ -68,12 +69,14 @@ import {
 } from "@/components/ui/tabs";
 import { DeliverableTasksGenerator } from "./DeliverableTasksGenerator";
 import { AIDeliverablesGenerator } from "./AIDeliverablesGenerator";
+import { DeliverableEmailDialog } from "./DeliverableEmailDialog";
 
 interface ProjectDeliverablesTabProps {
   projectId: string;
 }
 
 export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProps) {
+  const queryClient = useQueryClient();
   const { deliverables, isLoading, createDeliverable, updateDeliverable, deleteDeliverable } = useProjectDeliverables(projectId);
   const { phases } = useProjectPhases(projectId);
   const { data: project } = useProject(projectId);
@@ -510,50 +513,34 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
         isEditing={!!editingDeliverable}
       />
 
-      {/* Send Email Dialog */}
-      <Dialog open={isSendEmailOpen} onOpenChange={(open) => { if (!open) setIsSendEmailOpen(false); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5" />
-              Envoyer par email
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm font-medium">{emailDeliverable?.name}</p>
-              {emailDeliverable?.description && (
-                <p className="text-xs text-muted-foreground mt-1">{emailDeliverable.description}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>Destinataire *</Label>
-              <Input
-                type="email"
-                value={emailTo}
-                onChange={(e) => setEmailTo(e.target.value)}
-                placeholder="email@exemple.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Objet</Label>
-              <Input
-                value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSendEmailOpen(false)}>
-              Annuler
-            </Button>
-            <Button onClick={handleSendEmail} disabled={!emailTo || isSendingEmail}>
-              {isSendingEmail ? "Envoi..." : "Envoyer"}
-              <Mail className="h-4 w-4 ml-2" />
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Send Email Dialog - New Enhanced Version */}
+      {emailDeliverable && (
+        <DeliverableEmailDialog
+          open={isSendEmailOpen}
+          onOpenChange={(open) => { 
+            if (!open) {
+              setIsSendEmailOpen(false);
+              setEmailDeliverable(null);
+            }
+          }}
+          deliverable={{
+            id: emailDeliverable.id,
+            name: emailDeliverable.name,
+            description: emailDeliverable.description,
+            file_url: emailDeliverable.file_url,
+            email_template: emailDeliverable.email_template,
+            email_link: emailDeliverable.email_link,
+            email_sent_at: emailDeliverable.email_sent_at,
+            email_sent_to: emailDeliverable.email_sent_to,
+            phase: emailDeliverable.phase,
+          }}
+          projectId={projectId}
+          projectName={project?.name || "Projet"}
+          onEmailSent={() => {
+            queryClient.invalidateQueries({ queryKey: ["project-deliverables", projectId] });
+          }}
+        />
+      )}
 
       {/* Tasks Generator Dialog */}
       {tasksDeliverable && (
@@ -681,6 +668,12 @@ function DeliverableCard({
                 <span className="flex items-center gap-1 text-green-600">
                   <CheckCircle2 className="h-3 w-3" />
                   Livré: {format(parseISO(deliverable.delivered_at), "d MMM yyyy", { locale: fr })}
+                </span>
+              )}
+              {deliverable.email_sent_at && (
+                <span className="flex items-center gap-1 text-blue-600">
+                  <MailCheck className="h-3 w-3" />
+                  Envoyé: {format(parseISO(deliverable.email_sent_at), "d MMM HH:mm", { locale: fr })}
                 </span>
               )}
             </div>

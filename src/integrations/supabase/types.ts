@@ -6779,6 +6779,10 @@ export type Database = {
           delivered_at: string | null
           description: string | null
           due_date: string | null
+          email_link: string | null
+          email_sent_at: string | null
+          email_sent_to: string[] | null
+          email_template: string | null
           file_url: string | null
           id: string
           name: string
@@ -6793,6 +6797,10 @@ export type Database = {
           delivered_at?: string | null
           description?: string | null
           due_date?: string | null
+          email_link?: string | null
+          email_sent_at?: string | null
+          email_sent_to?: string[] | null
+          email_template?: string | null
           file_url?: string | null
           id?: string
           name: string
@@ -6807,6 +6815,10 @@ export type Database = {
           delivered_at?: string | null
           description?: string | null
           due_date?: string | null
+          email_link?: string | null
+          email_sent_at?: string | null
+          email_sent_to?: string[] | null
+          email_template?: string | null
           file_url?: string | null
           id?: string
           name?: string
