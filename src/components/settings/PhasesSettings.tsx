@@ -754,6 +754,115 @@ export function PhasesSettings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* AI Generated Phases Preview Dialog */}
+      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Phases générées par l'IA
+            </DialogTitle>
+            <DialogDescription>
+              Vérifiez les phases proposées avant de les appliquer. Vous pourrez les modifier ensuite.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {generatedPhases && (
+            <ScrollArea className="flex-1 pr-4">
+              <div className="space-y-6">
+                {/* Base phases */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Layers className="h-4 w-4 text-primary" />
+                    <h4 className="font-medium">Phases de base ({generatedPhases.basePhases.length})</h4>
+                    <Badge variant="secondary" className="ml-auto">
+                      {generatedPhases.basePhases.reduce((sum, p) => sum + p.default_percentage, 0)}%
+                    </Badge>
+                  </div>
+                  <div className="space-y-2">
+                    {generatedPhases.basePhases.map((phase, index) => (
+                      <Card key={index} className="p-3">
+                        <div className="flex items-start gap-3">
+                          <Badge variant="outline" className="font-mono text-xs shrink-0">
+                            {phase.code}
+                          </Badge>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">{phase.name}</span>
+                              <Badge variant="secondary" className="text-xs">
+                                {phase.default_percentage}%
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">{phase.description}</p>
+                            {phase.deliverables?.length > 0 && (
+                              <div className="mt-2 text-xs text-muted-foreground">
+                                <span className="font-medium">Livrables:</span> {phase.deliverables.join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Complementary phases */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Puzzle className="h-4 w-4 text-muted-foreground" />
+                    <h4 className="font-medium">Phases complémentaires ({generatedPhases.complementaryPhases.length})</h4>
+                  </div>
+                  <div className="space-y-2">
+                    {generatedPhases.complementaryPhases.map((phase, index) => (
+                      <Card key={index} className="p-3 border-dashed">
+                        <div className="flex items-start gap-3">
+                          <Badge variant="outline" className="font-mono text-xs shrink-0">
+                            {phase.code}
+                          </Badge>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">{phase.name}</span>
+                              {phase.default_percentage > 0 && (
+                                <Badge variant="outline" className="text-xs">
+                                  {phase.default_percentage}%
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">{phase.description}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowAIDialog(false)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={applyGeneratedPhases}
+              disabled={createTemplate.isPending}
+            >
+              {createTemplate.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Création...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Appliquer ces phases
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
