@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,47 +21,22 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useProjects, CreateProjectInput } from "@/hooks/useProjects";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
-import { usePhaseTemplates } from "@/hooks/usePhaseTemplates";
 import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ProjectType,
-  PHASE_COLORS,
-} from "@/lib/projectTypes";
-import { getDefaultPhases, DisciplineSlug } from "@/lib/disciplinesConfig";
+import * as LucideIcons from "lucide-react";
 import {
   Building2,
-  Sofa,
-  Theater,
-  Megaphone,
   ChevronLeft,
   ChevronRight,
   Check,
   MapPin,
-  Calendar,
-  Wallet,
-  Hammer,
-  Maximize2,
-  FileCheck,
-  Map,
-  LayoutGrid,
-  Store,
-  Home,
-  UtensilsCrossed,
-  Building,
-  Frame,
-  Landmark,
-  PartyPopper,
-  Box,
-  Sparkles,
-  Palette,
-  Globe,
-  FileVideo,
   Loader2,
+  Home,
+  FolderKanban,
 } from "lucide-react";
 
 interface CreateProjectDialogProps {
@@ -68,176 +44,75 @@ interface CreateProjectDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Simplified steps - removed "Type" (sub-type) step
+// Simple 3-step flow
 const STEPS = [
-  { id: "discipline", label: "Discipline" },
+  { id: "type", label: "Type de projet" },
   { id: "info", label: "Informations" },
   { id: "client", label: "Client" },
-  { id: "summary", label: "Récapitulatif" },
 ];
 
 // Disciplines that show surface field
-const SURFACE_DISCIPLINES = ["architecture", "interior", "interieur", "archi"];
+const SURFACE_TYPES = ["architecture", "interior", "interieur", "archi"];
 
-// Map icon names to components
-const iconMap: Record<string, React.ElementType> = {
-  Sofa: Sofa,
-  Building2: Building2,
-  Theater: Theater,
-  Megaphone: Megaphone,
-  Hammer: Hammer,
-  Maximize2: Maximize2,
-  FileCheck: FileCheck,
-  Map: Map,
-  LayoutGrid: LayoutGrid,
-  Store: Store,
-  Home: Home,
-  UtensilsCrossed: UtensilsCrossed,
-  Building: Building,
-  Frame: Frame,
-  Landmark: Landmark,
-  PartyPopper: PartyPopper,
-  Box: Box,
-  Sparkles: Sparkles,
-  Palette: Palette,
-  Globe: Globe,
-  Calendar: Calendar,
-  FileVideo: FileVideo,
+// Get icon component from name
+const getIconComponent = (iconName: string): React.ElementType => {
+  const icons = LucideIcons as unknown as Record<string, React.ElementType>;
+  return icons[iconName] || FolderKanban;
 };
 
-// Map discipline key to legacy ProjectType
-function mapDisciplineToProjectType(disciplineKey: string): ProjectType | null {
-  const mapping: Record<string, ProjectType> = {
-    interior: "interior",
-    interieur: "interior",
-    architecture: "architecture",
-    scenography: "scenography",
-    scenographie: "scenography",
-  };
-  const normalized = disciplineKey.toLowerCase();
-  return mapping[normalized] || "interior";
-}
-
-// Map project type key to discipline slug for phase defaults
-function mapProjectTypeToDiscipline(projectType: string): DisciplineSlug | null {
-  const mapping: Record<string, DisciplineSlug> = {
-    interior: "interior",
-    interieur: "interior",
-    architecture: "architecture",
-    scenography: "scenography",
-    scenographie: "scenography",
-    campagne: "communication",
-    branding: "communication",
-    supports: "communication",
-    video: "communication",
-    photo: "communication",
-    print: "communication",
-    motion: "communication",
-    web: "communication",
-    social: "communication",
-  };
-  const normalized = projectType.toLowerCase();
-  return mapping[normalized] || null;
-}
-
-// Check if discipline should show surface field
-function shouldShowSurface(disciplineKey: string | null): boolean {
-  if (!disciplineKey) return false;
-  return SURFACE_DISCIPLINES.some(d => 
-    disciplineKey.toLowerCase().includes(d.toLowerCase())
+// Check if project type should show surface field
+function shouldShowSurface(projectType: string | null): boolean {
+  if (!projectType) return false;
+  return SURFACE_TYPES.some(t => 
+    projectType.toLowerCase().includes(t.toLowerCase())
   );
 }
 
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
   const { createProject } = useProjects();
   const { companies, isLoading: companiesLoading } = useCRMCompanies();
-  const { projectTypes: disciplines, isLoading: disciplinesLoading } = useProjectTypeSettings();
+  const { projectTypes, isLoading: typesLoading } = useProjectTypeSettings();
   
   const [step, setStep] = useState(0);
-  const [selectedDiscipline, setSelectedDiscipline] = useState<string | null>(null);
-  const [projectType, setProjectType] = useState<ProjectType | null>(null);
   
+  // Step 1: Type
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [isInternal, setIsInternal] = useState(false);
+  
+  // Step 2: Info
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [surfaceArea, setSurfaceArea] = useState("");
-  const [isInternal, setIsInternal] = useState(false);
-  
-  const [crmCompanyId, setCrmCompanyId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [budget, setBudget] = useState("");
-  const [phases, setPhases] = useState<{ name: string; description: string; color: string; code?: string; deliverables?: string[]; percentage_fee?: number }[]>([]);
+  
+  // Step 3: Client
+  const [crmCompanyId, setCrmCompanyId] = useState<string | null>(null);
 
-  // Get selected discipline config
-  const selectedDisciplineConfig = useMemo(() => {
-    return disciplines.find(d => d.key === selectedDiscipline);
-  }, [disciplines, selectedDiscipline]);
+  // Get selected type config
+  const selectedTypeConfig = useMemo(() => {
+    return projectTypes.find(t => t.key === selectedType);
+  }, [projectTypes, selectedType]);
 
   // Check if surface should be shown
-  const showSurface = useMemo(() => shouldShowSurface(selectedDiscipline), [selectedDiscipline]);
-
-  // When discipline changes, set projectType
-  useEffect(() => {
-    if (selectedDiscipline) {
-      const legacyType = mapDisciplineToProjectType(selectedDiscipline);
-      setProjectType(legacyType);
-    }
-  }, [selectedDiscipline]);
-
-  // Fetch phase templates from database
-  const { templates: phaseTemplates, initializeDefaultsIfEmpty } = usePhaseTemplates(projectType || undefined);
-
-  // Initialize phases when project type is selected
-  useEffect(() => {
-    if (projectType) {
-      initializeDefaultsIfEmpty.mutate(projectType);
-    }
-  }, [projectType]);
-
-  // Update phases when templates are loaded
-  useEffect(() => {
-    if (projectType && phaseTemplates.length > 0) {
-      const activeTemplates = phaseTemplates.filter(t => t.is_active);
-      setPhases(
-        activeTemplates.map((phase, index) => ({
-          name: phase.name,
-          description: phase.description || '',
-          color: phase.color || PHASE_COLORS[index % PHASE_COLORS.length],
-          code: phase.code,
-          deliverables: phase.deliverables,
-          percentage_fee: phase.default_percentage
-        }))
-      );
-    } else if (projectType) {
-      const disciplineSlug = mapProjectTypeToDiscipline(projectType);
-      if (disciplineSlug) {
-        const defaultPhases = getDefaultPhases(disciplineSlug);
-        setPhases(
-          defaultPhases.map((phase, index) => ({
-            name: phase.name,
-            description: phase.description || '',
-            color: PHASE_COLORS[index % PHASE_COLORS.length],
-          }))
-        );
-      }
-    }
-  }, [projectType, phaseTemplates, selectedDisciplineConfig]);
+  const showSurface = useMemo(() => shouldShowSurface(selectedType), [selectedType]);
 
   const handleCreate = () => {
-    if (!name.trim() || !projectType) return;
+    if (!name.trim() || !selectedType) return;
     
-    const color = selectedDisciplineConfig?.color || "#3B82F6";
+    const color = selectedTypeConfig?.color || "#3B82F6";
     
     const input: CreateProjectInput = {
       name: name.trim(),
-      project_type: projectType,
+      project_type: selectedType as any,
       description: description.trim() || null,
       crm_company_id: isInternal ? null : crmCompanyId,
-      address: address.trim() || null,
-      city: city.trim() || null,
+      address: isInternal ? null : (address.trim() || null),
+      city: isInternal ? null : (city.trim() || null),
       surface_area: showSurface && surfaceArea ? parseFloat(surfaceArea) : null,
       color,
       start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
@@ -253,20 +128,18 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
 
   const resetForm = () => {
     setStep(0);
-    setSelectedDiscipline(null);
-    setProjectType(null);
+    setSelectedType(null);
+    setIsInternal(false);
     setName("");
     setDescription("");
     setAddress("");
     setCity("");
     setPostalCode("");
     setSurfaceArea("");
-    setIsInternal(false);
-    setCrmCompanyId(null);
     setStartDate(null);
     setEndDate(null);
     setBudget("");
-    setPhases([]);
+    setCrmCompanyId(null);
   };
 
   const handleAddressSelect = (result: {
@@ -281,14 +154,12 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
 
   const canProceed = () => {
     switch (step) {
-      case 0: // Discipline
-        return !!selectedDiscipline;
+      case 0: // Type
+        return !!selectedType;
       case 1: // Info
         return !!name.trim();
       case 2: // Client
         return true; // Client is optional
-      case 3: // Summary
-        return true;
       default:
         return false;
     }
@@ -314,12 +185,12 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     c.industry === "client_professionnel" || 
     c.industry === "promoteur" || 
     c.industry === "investisseur" ||
-    !c.industry // Include companies without industry set
+    !c.industry
   );
 
   return (
     <Dialog open={open} onOpenChange={(open) => { if (!open) resetForm(); onOpenChange(open); }}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="pb-4 border-b border-border">
           <DialogTitle>Nouveau projet</DialogTitle>
           
@@ -341,7 +212,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 </button>
                 {index < STEPS.length - 1 && (
                   <div className={cn(
-                    "w-12 h-0.5 mx-1",
+                    "w-16 h-0.5 mx-1",
                     index < step ? "bg-primary" : "bg-muted"
                   )} />
                 )}
@@ -360,18 +231,21 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              {/* Step 0: Discipline Selection */}
+              {/* Step 0: Project Type */}
               {step === 0 && (
                 <div className="space-y-4">
                   {/* Internal Project Toggle */}
                   <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="is-internal" className="text-sm font-medium cursor-pointer">
-                        Projet interne
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Non facturable (admin, formation, commercial...)
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <Home className="h-4 w-4 text-muted-foreground" />
+                      <div className="space-y-0.5">
+                        <Label htmlFor="is-internal" className="text-sm font-medium cursor-pointer">
+                          Projet interne
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Non facturable (admin, R&D, formation...)
+                        </p>
+                      </div>
                     </div>
                     <Switch
                       id="is-internal"
@@ -381,38 +255,47 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                   </div>
 
                   <p className="text-sm text-muted-foreground">
-                    Sélectionnez la discipline pour ce projet.
+                    Sélectionnez le type de projet.
                   </p>
                   
-                  {disciplinesLoading ? (
+                  {typesLoading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
+                  ) : projectTypes.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FolderKanban className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Aucun type de projet configuré.</p>
+                      <p className="text-xs">Configurez-les dans les paramètres.</p>
+                    </div>
                   ) : (
                     <div className="grid grid-cols-3 gap-3">
-                      {disciplines.map((discipline) => {
-                        const Icon = iconMap[discipline.icon || "Building2"] || Building2;
+                      {projectTypes.map((type) => {
+                        const Icon = getIconComponent(type.icon || "FolderKanban");
                         return (
                           <button
-                            key={discipline.key}
-                            onClick={() => setSelectedDiscipline(discipline.key)}
+                            key={type.key}
+                            onClick={() => setSelectedType(type.key)}
                             className={cn(
-                              "flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all",
-                              selectedDiscipline === discipline.key
+                              "flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all",
+                              selectedType === type.key
                                 ? "border-primary bg-primary/5"
                                 : "border-border hover:border-primary/50 hover:bg-muted/50"
                             )}
                           >
                             <div 
                               className={cn(
-                                "w-12 h-12 rounded-full flex items-center justify-center",
-                                selectedDiscipline === discipline.key ? "bg-primary text-primary-foreground" : "bg-muted"
+                                "w-10 h-10 rounded-full flex items-center justify-center",
+                                selectedType === type.key ? "bg-primary text-primary-foreground" : "bg-muted"
                               )}
-                              style={selectedDiscipline === discipline.key ? {} : { backgroundColor: `${discipline.color}20` }}
+                              style={selectedType === type.key ? {} : { backgroundColor: `${type.color}20` }}
                             >
-                              <Icon className="h-6 w-6" style={{ color: selectedDiscipline === discipline.key ? undefined : discipline.color }} />
+                              <Icon 
+                                className="h-5 w-5" 
+                                style={{ color: selectedType === type.key ? undefined : type.color }} 
+                              />
                             </div>
-                            <span className="font-medium text-sm">{discipline.label}</span>
+                            <span className="font-medium text-sm text-center">{type.label}</span>
                           </button>
                         );
                       })}
@@ -425,8 +308,8 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
               {step === 1 && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-4">
-                    <Badge variant="outline" style={{ borderColor: selectedDisciplineConfig?.color, color: selectedDisciplineConfig?.color }}>
-                      {selectedDisciplineConfig?.label}
+                    <Badge variant="outline" style={{ borderColor: selectedTypeConfig?.color, color: selectedTypeConfig?.color }}>
+                      {selectedTypeConfig?.label}
                     </Badge>
                     {isInternal && (
                       <Badge variant="secondary">Projet interne</Badge>
@@ -439,8 +322,19 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                       id="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder={isInternal ? "Ex: Administration, Formation équipe" : "Ex: Rénovation appartement Haussmannien"}
+                      placeholder={isInternal ? "Ex: R&D, Formation équipe" : "Ex: Campagne été 2024"}
                       autoFocus
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Notes sur le projet..."
+                      rows={2}
                     />
                   </div>
 
@@ -494,24 +388,10 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                     </>
                   )}
 
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Décrivez brièvement le projet..."
-                      rows={3}
-                    />
-                  </div>
-
-                  {/* Dates inline */}
+                  {/* Dates */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5" />
-                        Date de début
-                      </Label>
+                      <Label>Date de début</Label>
                       <InlineDatePicker
                         value={startDate}
                         onChange={setStartDate}
@@ -520,7 +400,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Date de fin prévue</Label>
+                      <Label>Date de fin</Label>
                       <InlineDatePicker
                         value={endDate}
                         onChange={setEndDate}
@@ -532,10 +412,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
 
                   {!isInternal && (
                     <div className="space-y-2">
-                      <Label htmlFor="budget">
-                        <Wallet className="h-3.5 w-3.5 inline mr-1" />
-                        Budget estimé (€)
-                      </Label>
+                      <Label htmlFor="budget">Budget (€)</Label>
                       <Input
                         id="budget"
                         type="number"
@@ -548,210 +425,140 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                 </div>
               )}
 
-              {/* Step 2: Client Selection */}
+              {/* Step 2: Client */}
               {step === 2 && (
                 <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Badge variant="outline" style={{ borderColor: selectedTypeConfig?.color, color: selectedTypeConfig?.color }}>
+                      {selectedTypeConfig?.label}
+                    </Badge>
+                    {isInternal && (
+                      <Badge variant="secondary">Projet interne</Badge>
+                    )}
+                  </div>
+
                   {isInternal ? (
-                    <div className="text-center py-8 border border-dashed rounded-lg">
-                      <Home className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
-                      <p className="text-sm font-medium">Projet interne</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Pas de client associé aux projets internes
-                      </p>
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Home className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p className="font-medium">Projet interne</p>
+                      <p className="text-sm">Pas de client associé</p>
                     </div>
                   ) : (
                     <>
                       <p className="text-sm text-muted-foreground">
-                        Sélectionnez un client depuis le CRM ou passez cette étape.
+                        Associez un client à ce projet (optionnel).
                       </p>
-                      
-                      <div className="space-y-2">
-                        <Label>Client (optionnel)</Label>
-                        <Select 
-                          value={crmCompanyId || "none"} 
-                          onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner un client..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Aucun client</SelectItem>
-                            {clientCompanies.map((company) => (
-                              <SelectItem key={company.id} value={company.id}>
-                                {company.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
 
-                      {selectedCompany && (
-                        <div className="p-4 rounded-lg border border-border bg-muted/30">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <Building2 className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
+                      {companiesLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <Select 
+                            value={crmCompanyId || "none"} 
+                            onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionner un client..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Aucun client</SelectItem>
+                              {clientCompanies.map((company) => (
+                                <SelectItem key={company.id} value={company.id}>
+                                  <div className="flex items-center gap-2">
+                                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                                    {company.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          {selectedCompany && (
+                            <div className="p-3 rounded-lg border border-border bg-muted/30">
                               <p className="font-medium">{selectedCompany.name}</p>
                               {selectedCompany.email && (
                                 <p className="text-sm text-muted-foreground">{selectedCompany.email}</p>
                               )}
+                              {selectedCompany.phone && (
+                                <p className="text-sm text-muted-foreground">{selectedCompany.phone}</p>
+                              )}
                             </div>
-                          </div>
+                          )}
                         </div>
                       )}
                     </>
                   )}
-                </div>
-              )}
 
-              {/* Step 3: Summary */}
-              {step === 3 && (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Vérifiez les informations avant de créer le projet.
-                  </p>
-                  
-                  {/* Summary card */}
-                  <div className="p-4 rounded-lg border border-border bg-card">
-                    <div className="flex items-start gap-4">
-                      <div 
-                        className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${selectedDisciplineConfig?.color}20` }}
-                      >
-                        {(() => {
-                          const Icon = iconMap[selectedDisciplineConfig?.icon || "Building2"] || Building2;
-                          return <Icon className="h-6 w-6" style={{ color: selectedDisciplineConfig?.color }} />;
-                        })()}
+                  {/* Summary */}
+                  <div className="mt-6 p-4 rounded-lg border border-border bg-muted/20">
+                    <h4 className="font-medium mb-3">Récapitulatif</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Type</span>
+                        <span>{selectedTypeConfig?.label}</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-lg truncate">{name}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline" style={{ borderColor: selectedDisciplineConfig?.color, color: selectedDisciplineConfig?.color }}>
-                            {selectedDisciplineConfig?.label}
-                          </Badge>
-                          {isInternal && <Badge variant="secondary">Interne</Badge>}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Nom</span>
+                        <span className="font-medium">{name}</span>
+                      </div>
+                      {!isInternal && city && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Localisation</span>
+                          <span>{city}</span>
                         </div>
-                      </div>
+                      )}
+                      {startDate && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Début</span>
+                          <span>{format(startDate, "dd/MM/yyyy")}</span>
+                        </div>
+                      )}
+                      {!isInternal && selectedCompany && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Client</span>
+                          <span>{selectedCompany.name}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {/* Details */}
-                  <dl className="space-y-3 text-sm">
-                    {description && (
-                      <div>
-                        <dt className="text-muted-foreground">Description</dt>
-                        <dd className="font-medium mt-0.5">{description}</dd>
-                      </div>
-                    )}
-                    
-                    {!isInternal && (address || city) && (
-                      <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Localisation</dt>
-                        <dd className="font-medium text-right">
-                          {[address, postalCode, city].filter(Boolean).join(", ")}
-                        </dd>
-                      </div>
-                    )}
-
-                    {showSurface && surfaceArea && (
-                      <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Surface</dt>
-                        <dd className="font-medium">{parseFloat(surfaceArea).toLocaleString("fr-FR")} m²</dd>
-                      </div>
-                    )}
-
-                    {startDate && (
-                      <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Dates</dt>
-                        <dd className="font-medium">
-                          {format(startDate, "dd/MM/yyyy")}
-                          {endDate && ` → ${format(endDate, "dd/MM/yyyy")}`}
-                        </dd>
-                      </div>
-                    )}
-
-                    {selectedCompany && (
-                      <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Client</dt>
-                        <dd className="font-medium">{selectedCompany.name}</dd>
-                      </div>
-                    )}
-
-                    {budget && !isInternal && (
-                      <div className="flex justify-between">
-                        <dt className="text-muted-foreground">Budget</dt>
-                        <dd className="font-medium">{parseFloat(budget).toLocaleString("fr-FR")} €</dd>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between pt-2 border-t">
-                      <dt className="text-muted-foreground">Phases</dt>
-                      <dd className="font-medium">{phases.length} phases seront créées</dd>
-                    </div>
-                  </dl>
-
-                  {/* Phases preview */}
-                  {phases.length > 0 && (
-                    <div className="mt-4">
-                      <p className="text-xs text-muted-foreground mb-2">Phases du projet :</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {phases.map((phase, index) => (
-                          <Badge 
-                            key={index} 
-                            variant="outline" 
-                            className="text-xs"
-                            style={{ borderColor: phase.color, color: phase.color }}
-                          >
-                            {phase.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </motion.div>
           </AnimatePresence>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-4 border-t border-border">
-          <Button
-            variant="ghost"
-            onClick={step === 0 ? () => onOpenChange(false) : prevStep}
-          >
-            {step === 0 ? (
-              "Annuler"
-            ) : (
-              <>
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Retour
-              </>
-            )}
-          </Button>
-
-          {step < STEPS.length - 1 ? (
-            <Button onClick={nextStep} disabled={!canProceed()}>
-              Suivant
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleCreate} 
-              disabled={!name.trim() || !projectType || createProject.isPending}
+        <DialogFooter className="flex-shrink-0 pt-4 border-t border-border">
+          <div className="flex justify-between w-full">
+            <Button
+              variant="outline"
+              onClick={prevStep}
+              disabled={step === 0}
             >
-              {createProject.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Création...
-                </>
-              ) : (
-                "Créer le projet"
-              )}
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Précédent
             </Button>
-          )}
-        </div>
+            
+            {step < STEPS.length - 1 ? (
+              <Button
+                onClick={nextStep}
+                disabled={!canProceed()}
+              >
+                Suivant
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            ) : (
+              <Button
+                onClick={handleCreate}
+                disabled={!name.trim() || !selectedType || createProject.isPending}
+              >
+                {createProject.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Créer le projet
+              </Button>
+            )}
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -28,6 +28,7 @@ const Tasks = lazy(() => import("./pages/Tasks"));
 const TaskDetail = lazy(() => import("./pages/TaskDetail"));
 const Projects = lazy(() => import("./pages/Projects"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
+const ProjectSettings = lazy(() => import("./pages/ProjectSettings"));
 const Commercial = lazy(() => import("./pages/Commercial"));
 const CommercialDocument = lazy(() => import("./pages/CommercialDocument"));
 const QuoteBuilder = lazy(() => import("./pages/QuoteBuilder"));
@@ -135,6 +136,7 @@ const App = () => (
                   <Route path="/projects/board" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
                   <Route path="/projects/timeline" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
                   <Route path="/projects/:id" element={<Suspense fallback={<PageLoader />}><ProjectDetail /></Suspense>} />
+                  <Route path="/projects/:id/settings" element={<Suspense fallback={<PageLoader />}><ProjectSettings /></Suspense>} />
                   <Route path="/settings" element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
                   <Route path="/settings/workspace/new" element={<Suspense fallback={<PageLoader />}><CreateWorkspace /></Suspense>} />
                   <Route path="/commercial" element={<Suspense fallback={<PageLoader />}><Commercial /></Suspense>} />

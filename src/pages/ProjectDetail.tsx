@@ -335,7 +335,7 @@ export default function ProjectDetail() {
         open={projectEditOpen}
         onOpenChange={setProjectEditOpen}
         project={project}
-        onSave={(updates) => updateProject.mutate({ id: project.id, ...updates })}
+        onSave={(updates) => updateProject.mutate({ id: project.id, ...updates } as any)}
         isSaving={updateProject.isPending}
       />
 
