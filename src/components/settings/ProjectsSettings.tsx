@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GenericSettingsManager } from "./GenericSettingsManager";
 import { ProjectCategoriesSettings } from "./ProjectCategoriesSettings";
+import { ProjectTypesSettings } from "./ProjectTypesSettings";
 import { FolderKanban, FileText, Layers, Briefcase } from "lucide-react";
 import { useWorkspaceDiscipline } from "@/hooks/useDiscipline";
 import { useMemo } from "react";
@@ -439,15 +440,9 @@ export function ProjectsSettings() {
         </TabsContent>
 
         <TabsContent value="types" className="mt-6">
-          <GenericSettingsManager
-            settingType="project_types"
-            title="Types de projet"
-            description={`Catégories de projets pour ${discipline?.name || 'votre discipline'}. Associez chaque type aux catégories de projet souhaitées.`}
-            icon={<FolderKanban className="h-5 w-5 text-primary" />}
-            showColor
-            showDescription
-            showCategories
+          <ProjectTypesSettings
             defaultItems={projectTypes}
+            disciplineName={discipline?.name}
           />
         </TabsContent>
 
