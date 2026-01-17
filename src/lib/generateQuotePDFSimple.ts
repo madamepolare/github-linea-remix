@@ -149,7 +149,7 @@ export async function generateQuotePDFSimple(
   const discountLines = lines.filter(l => l.line_type === 'discount');
   
   const tableData = includedLines.map(line => [
-    line.phase_code || '-',
+    line.pricing_ref || line.phase_code || '-',
     line.phase_name || 'Prestation',
     line.quantity?.toString() || '1',
     line.unit_price ? formatCurrencyPDF(line.unit_price) : '-',

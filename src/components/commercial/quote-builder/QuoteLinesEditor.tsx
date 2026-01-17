@@ -156,10 +156,19 @@ export function QuoteLinesEditor({
 
   const addLineFromPricingGrid = (item: any) => {
     const newLine: QuoteLine = {
-      id: generateId(), phase_name: item.name, phase_description: item.description,
-      line_type: 'service', quantity: 1, unit: item.unit || 'forfait',
-      unit_price: item.unit_price || 0, amount: item.unit_price || 0,
-      billing_type: 'one_time', is_optional: false, is_included: true, sort_order: lines.length
+      id: generateId(), 
+      phase_name: item.name, 
+      phase_description: item.description,
+      pricing_ref: item.pricing_ref, // Transfer BPU reference
+      line_type: 'service', 
+      quantity: 1, 
+      unit: item.unit || 'forfait',
+      unit_price: item.unit_price || 0, 
+      amount: item.unit_price || 0,
+      billing_type: 'one_time', 
+      is_optional: false, 
+      is_included: true, 
+      sort_order: lines.length
     };
     onLinesChange([...lines, newLine]);
   };
