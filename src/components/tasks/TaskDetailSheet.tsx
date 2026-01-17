@@ -61,6 +61,7 @@ import {
   Tag,
   ExternalLink,
   ListTodo,
+  FileCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -68,6 +69,31 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
+// Component to display linked deliverable badge
+function DeliverableBadge({ deliverableId }: { deliverableId: string }) {
+  const { data: deliverable } = useQuery({
+    queryKey: ["deliverable", deliverableId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("project_deliverables")
+        .select("id, name")
+        .eq("id", deliverableId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!deliverableId,
+  });
+
+  if (!deliverable) return null;
+
+  return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-green-500/10 text-green-600">
+      <FileCheck className="h-3.5 w-3.5" />
+      {deliverable.name}
+    </span>
+  );
+}
 interface TaskDetailSheetProps {
   task: Task | null;
   open: boolean;
@@ -531,7 +557,7 @@ export function TaskDetailSheet({
                       </Button>
                     </div>
                   )}
-                </PopoverContent>
+              </PopoverContent>
               </Popover>
 
               {/* Estimation */}
@@ -557,6 +583,9 @@ export function TaskDetailSheet({
                   </div>
                 </PopoverContent>
               </Popover>
+
+              {/* Linked Deliverable Badge */}
+              {deliverableId && <DeliverableBadge deliverableId={deliverableId} />}
             </div>
           </div>
 
