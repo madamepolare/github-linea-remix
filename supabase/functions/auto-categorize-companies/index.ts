@@ -67,9 +67,9 @@ serve(async (req) => {
       );
     }
 
-    const apiKey = Deno.env.get('LOVABLE_API_KEY');
+    const apiKey = Deno.env.get('OPENAI_API_KEY');
     if (!apiKey) {
-      throw new Error("LOVABLE_API_KEY not configured");
+      throw new Error("OPENAI_API_KEY not configured");
     }
 
     let systemPrompt = "";
@@ -200,14 +200,14 @@ Retourne un JSON avec:
     console.log("Entity type:", entityType);
     console.log("Number of entities:", entities.length);
 
-    const response = await fetch("https://ai.lovable.dev/api/chat", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
+        "Authorization": `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
