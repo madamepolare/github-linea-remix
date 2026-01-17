@@ -1,19 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
 import { 
   Link2, 
   Copy, 
   ExternalLink, 
   Loader2,
   CheckCircle2,
-  Euro,
-  Calendar,
   Globe,
   Sparkles
 } from 'lucide-react';
@@ -32,10 +27,15 @@ export function QuoteSharingSettings({ document, onDocumentChange }: QuoteSharin
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
-  const formatCurrency = (value: number) => 
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
-
-  const depositAmount = (document.total_amount || 0) * ((document.deposit_percentage || 30) / 100);
+  // Auto-load existing link if document is saved
+  useEffect(() => {
+    if (document.id && document.workspace_id && !generatedLink) {
+      getOrCreatePublicQuoteLink({
+        documentId: document.id,
+        workspaceId: document.workspace_id,
+      }).then(setGeneratedLink).catch(() => {});
+    }
+  }, [document.id, document.workspace_id]);
 
   const handleGenerateLink = async () => {
     if (!document.id) {
@@ -99,51 +99,10 @@ export function QuoteSharingSettings({ document, onDocumentChange }: QuoteSharin
           <Badge variant="secondary" className="gap-1.5">
             Signature électronique
           </Badge>
-          <Badge variant="secondary" className="gap-1.5">
-            Paiement acompte intégré
-          </Badge>
-        </div>
-
-        {/* Deposit settings */}
-        <div className="space-y-4 p-4 rounded-lg bg-muted/50 border">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Euro className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <Label htmlFor="requires_deposit" className="font-medium cursor-pointer">
-                  Requiert un acompte à la signature
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Le client devra payer un acompte pour valider le devis
-                </p>
-              </div>
-            </div>
-            <Switch
-              id="requires_deposit"
-              checked={document.requires_deposit || false}
-              onCheckedChange={(checked) => onDocumentChange({ requires_deposit: checked })}
-            />
-          </div>
-
           {document.requires_deposit && (
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <Label>Pourcentage de l'acompte</Label>
-                <span className="font-medium">{document.deposit_percentage || 30}%</span>
-              </div>
-              <Slider
-                value={[document.deposit_percentage || 30]}
-                onValueChange={([value]) => onDocumentChange({ deposit_percentage: value })}
-                min={10}
-                max={100}
-                step={5}
-                className="w-full"
-              />
-              <div className="flex items-center justify-between text-sm pt-2">
-                <span className="text-muted-foreground">Montant de l'acompte</span>
-                <span className="font-semibold text-lg">{formatCurrency(depositAmount)}</span>
-              </div>
-            </div>
+            <Badge variant="secondary" className="gap-1.5">
+              Paiement acompte intégré
+            </Badge>
           )}
         </div>
 

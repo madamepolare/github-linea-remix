@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { 
   Plus, 
   Trash2, 
@@ -17,7 +20,8 @@ import {
   PieChart,
   Euro,
   Percent,
-  Folder
+  Folder,
+  CreditCard
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -312,6 +316,70 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
           </CardContent>
         </Card>
       </div>
+
+      {/* Deposit settings - moved from sharing settings for visibility */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10">
+                <CreditCard className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Acompte à la signature</CardTitle>
+                <CardDescription>
+                  Exiger un paiement anticipé pour valider le devis
+                </CardDescription>
+              </div>
+            </div>
+            <Switch
+              checked={document.requires_deposit || false}
+              onCheckedChange={(checked) => onDocumentChange({ requires_deposit: checked })}
+            />
+          </div>
+        </CardHeader>
+        {document.requires_deposit && (
+          <CardContent className="pt-0 space-y-4">
+            {/* Option: use first milestone or fixed percentage */}
+            {plannedInvoices.length > 0 && plannedInvoices[0].amount_ht > 0 ? (
+              <div className="p-3 rounded-lg bg-muted/50 border space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Basé sur la 1ère échéance</span>
+                  <Badge variant="outline">{plannedInvoices[0].title}</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground text-sm">Montant de l'acompte</span>
+                  <span className="font-semibold text-lg">{formatCurrency(plannedInvoices[0].amount_ht)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  L'acompte correspond automatiquement à la première échéance de l'échéancier.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <Label>Pourcentage de l'acompte</Label>
+                  <span className="font-medium">{document.deposit_percentage || 30}%</span>
+                </div>
+                <Slider
+                  value={[document.deposit_percentage || 30]}
+                  onValueChange={([value]) => onDocumentChange({ deposit_percentage: value })}
+                  min={10}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                />
+                <div className="flex items-center justify-between text-sm pt-2">
+                  <span className="text-muted-foreground">Montant de l'acompte</span>
+                  <span className="font-semibold text-lg">
+                    {formatCurrency((totalAmount || 0) * ((document.deposit_percentage || 30) / 100))}
+                  </span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
       
       {/* Generation actions */}
       <Card>
