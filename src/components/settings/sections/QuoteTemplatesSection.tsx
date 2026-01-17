@@ -458,6 +458,13 @@ export function QuoteTemplatesSection() {
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
                       {template.phases.length} phases
+                      {template.phases.some(p => p.defaultUnitPrice) && (
+                        <span className="ml-2 text-foreground font-medium">
+                          • {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(
+                            template.phases.reduce((sum, p) => sum + (p.defaultUnitPrice || 0), 0)
+                          )}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -603,9 +610,16 @@ export function QuoteTemplatesSection() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <Label>Phases ({generatedTemplate.phases.length})</Label>
-                      <Badge variant="secondary">
-                        Total: {generatedTemplate.phases.reduce((sum, p) => sum + p.defaultPercentage, 0)}%
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(
+                            generatedTemplate.phases.reduce((sum, p) => sum + (p.defaultUnitPrice || 0), 0)
+                          )}
+                        </Badge>
+                        <Badge variant="secondary">
+                          Total: {generatedTemplate.phases.reduce((sum, p) => sum + p.defaultPercentage, 0)}%
+                        </Badge>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       {generatedTemplate.phases.map((phase, index) => (
@@ -614,9 +628,21 @@ export function QuoteTemplatesSection() {
                             {phase.code}
                           </Badge>
                           <span className="flex-1 text-sm truncate">{phase.name}</span>
+                          <Input
+                            type="number"
+                            value={phase.defaultUnitPrice || 0}
+                            onChange={(e) => {
+                              const newPhases = [...generatedTemplate.phases];
+                              newPhases[index] = { ...newPhases[index], defaultUnitPrice: parseFloat(e.target.value) || 0 };
+                              setGeneratedTemplate({ ...generatedTemplate, phases: newPhases });
+                            }}
+                            className="w-24 text-right h-8"
+                            placeholder="0"
+                          />
+                          <span className="text-xs text-muted-foreground">€</span>
                           <Badge 
                             variant={phase.category === 'base' ? 'secondary' : 'outline'} 
-                            className="text-xs"
+                            className="text-xs shrink-0"
                           >
                             {phase.defaultPercentage}%
                           </Badge>
@@ -697,11 +723,18 @@ function QuoteTemplateEditDialog({ template, onClose, onSave }: QuoteTemplateEdi
       name: 'Nouvelle phase',
       description: '',
       defaultPercentage: 10,
+      defaultUnitPrice: 0,
       deliverables: [],
       category: 'base'
     };
     setEditedTemplate({ ...editedTemplate, phases: [...editedTemplate.phases, newPhase] });
   };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
+  };
+
+  const totalPrice = editedTemplate.phases.reduce((sum, p) => sum + (p.defaultUnitPrice || 0), 0);
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -758,7 +791,12 @@ function QuoteTemplateEditDialog({ template, onClose, onSave }: QuoteTemplateEdi
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>Phases ({editedTemplate.phases.length})</Label>
+              <div className="flex items-center gap-3">
+                <Label>Phases ({editedTemplate.phases.length})</Label>
+                <Badge variant="secondary">
+                  Total: {formatCurrency(totalPrice)}
+                </Badge>
+              </div>
               <Button size="sm" variant="outline" onClick={addPhase}>
                 <Plus className="h-4 w-4 mr-2" />
                 Ajouter
@@ -772,22 +810,34 @@ function QuoteTemplateEditDialog({ template, onClose, onSave }: QuoteTemplateEdi
                   <Input
                     value={phase.code}
                     onChange={(e) => updatePhase(index, { code: e.target.value })}
-                    className="w-20"
+                    className="w-16"
                     placeholder="Code"
                   />
                   <Input
                     value={phase.name}
                     onChange={(e) => updatePhase(index, { name: e.target.value })}
-                    className="flex-1"
+                    className="flex-1 min-w-0"
                     placeholder="Nom de la phase"
                   />
-                  <Input
-                    type="number"
-                    value={phase.defaultPercentage}
-                    onChange={(e) => updatePhase(index, { defaultPercentage: parseFloat(e.target.value) || 0 })}
-                    className="w-20 text-center"
-                  />
-                  <span className="text-sm text-muted-foreground">%</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Input
+                      type="number"
+                      value={phase.defaultUnitPrice || 0}
+                      onChange={(e) => updatePhase(index, { defaultUnitPrice: parseFloat(e.target.value) || 0 })}
+                      className="w-24 text-right"
+                      placeholder="0"
+                    />
+                    <span className="text-sm text-muted-foreground">€</span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Input
+                      type="number"
+                      value={phase.defaultPercentage}
+                      onChange={(e) => updatePhase(index, { defaultPercentage: parseFloat(e.target.value) || 0 })}
+                      className="w-16 text-center"
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
