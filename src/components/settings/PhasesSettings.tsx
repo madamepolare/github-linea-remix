@@ -306,7 +306,7 @@ export function PhasesSettings() {
     >
       <CardHeader className="py-3 px-4">
         <div className="flex items-center gap-3">
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-0.5 shrink-0">
             <Button
               variant="ghost"
               size="icon"
@@ -328,15 +328,15 @@ export function PhasesSettings() {
           </div>
           
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <Badge variant="outline" className="font-mono text-xs shrink-0">
                 {phase.code}
               </Badge>
               <CardTitle className="text-sm font-medium truncate">
                 {phase.name}
               </CardTitle>
               {!phase.is_active && (
-                <Badge variant="outline" className="text-xs text-muted-foreground">
+                <Badge variant="outline" className="text-xs text-muted-foreground shrink-0">
                   Inactive
                 </Badge>
               )}
@@ -348,7 +348,7 @@ export function PhasesSettings() {
             )}
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <Button
               variant="ghost"
               size="icon"

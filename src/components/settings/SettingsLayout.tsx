@@ -297,7 +297,7 @@ export function SettingsLayout({ activeSection, onSectionChange, children }: Set
 
         {/* Main content */}
         <ScrollArea className="flex-1">
-          <div className="p-6">
+          <div className="p-6 overflow-x-auto">
             {children}
           </div>
         </ScrollArea>
