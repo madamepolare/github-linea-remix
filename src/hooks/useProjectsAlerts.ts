@@ -60,14 +60,13 @@ export function useProjectsAlertsForList(projectIds: string[]) {
         .not("due_date", "is", null)
         .lte("due_date", sevenDaysFromNow.toISOString());
 
-      // Get upcoming deliverables (due within 7 days, not delivered)
-      const { data: upcomingDeliverables } = await supabase
+      // Get all deliverables that are not delivered (including overdue ones)
+      const { data: allDeliverables } = await supabase
         .from("project_deliverables")
         .select("id, project_id, name, due_date, status")
         .in("project_id", projectIds)
         .neq("status", "delivered")
-        .not("due_date", "is", null)
-        .lte("due_date", sevenDaysFromNow.toISOString());
+        .not("due_date", "is", null);
 
       // Calculate per-project data
       const result: Record<string, ProjectFinancialData> = {};
@@ -77,7 +76,7 @@ export function useProjectsAlertsForList(projectIds: string[]) {
         const projectTimeEntries = timeEntries?.filter(t => t.project_id === projectId) || [];
         const projectPurchases = purchases?.filter(p => p.project_id === projectId) || [];
         const projectTasks = upcomingTasks?.filter(t => t.project_id === projectId) || [];
-        const projectDeliverables = upcomingDeliverables?.filter(d => d.project_id === projectId) || [];
+        const projectDeliverables = allDeliverables?.filter(d => d.project_id === projectId) || [];
 
         const budget = project?.budget || 0;
         const tempsConsomme = projectTimeEntries.reduce((sum, t) => {
