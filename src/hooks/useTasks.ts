@@ -133,6 +133,7 @@ export function useTasks(options?: UseTasksOptions) {
           crm_company_id: newTask.crm_company_id,
           contact_id: newTask.contact_id,
           tender_id: newTask.tender_id,
+          deliverable_id: newTask.deliverable_id,
           related_type: newTask.related_type,
           related_id: newTask.related_id,
           module: newTask.module,
