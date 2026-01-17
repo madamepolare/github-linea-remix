@@ -53,6 +53,7 @@ const CGV = lazy(() => import("./pages/legal/CGV"));
 const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const Legal = lazy(() => import("./pages/legal/Legal"));
 const Workflow = lazy(() => import("./pages/Workflow"));
+const Messages = lazy(() => import("./pages/Messages"));
 const Campaigns = lazy(() => import("./pages/Campaigns"));
 const CampaignDetail = lazy(() => import("./pages/CampaignDetail"));
 const MediaPlanning = lazy(() => import("./pages/MediaPlanning"));
@@ -121,6 +122,8 @@ const App = () => (
                 >
                   <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
                   <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
+                  <Route path="/messages" element={<Suspense fallback={<PageLoader />}><Messages /></Suspense>} />
+                  <Route path="/messages/:channelId" element={<Suspense fallback={<PageLoader />}><Messages /></Suspense>} />
                   <Route path="/crm" element={<Suspense fallback={<PageLoader />}><CRM /></Suspense>} />
                   <Route path="/crm/:section" element={<Suspense fallback={<PageLoader />}><CRM /></Suspense>} />
                   <Route path="/crm/companies/:id" element={<Suspense fallback={<PageLoader />}><CompanyDetail /></Suspense>} />
