@@ -18,8 +18,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProjects, CreateProjectInput } from "@/hooks/useProjects";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjectTypeSettings, getProjectTypeIcon } from "@/hooks/useProjectTypeSettings";
+import { useProjectCategorySettings } from "@/hooks/useProjectCategorySettings";
 import { ClientSelector, SelectedClient } from "@/components/projects/ClientSelector";
-import { PROJECT_CATEGORIES, ProjectCategory, getProjectCategoryConfig } from "@/lib/projectCategories";
+import { ProjectCategory, getProjectCategoryConfig } from "@/lib/projectCategories";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,7 @@ function shouldShowSurface(projectType: string | null): boolean {
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
   const { createProject } = useProjects();
   const { companies } = useCRMCompanies();
+  const { enabledCategories, isLoading: isLoadingCategories, getCategoryConfig } = useProjectCategorySettings();
   
   const [activeTab, setActiveTab] = useState("general");
   
@@ -115,7 +117,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
 
   // Derived states
   const isInternal = projectCategory === "internal";
-  const categoryConfig = useMemo(() => getProjectCategoryConfig(projectCategory), [projectCategory]);
+  const categoryConfig = useMemo(() => getCategoryConfig(projectCategory), [getCategoryConfig, projectCategory]);
   const showSurface = useMemo(() => shouldShowSurface(projectType), [projectType]);
   const showEndDate = categoryConfig.features.hasEndDate;
   const showBudget = categoryConfig.features.hasBudget;
@@ -124,6 +126,16 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const currentTypeConfig = useMemo(() => {
     return projectTypes.find(t => t.key === projectType);
   }, [projectTypes, projectType]);
+
+  // Ensure selected category is still enabled, otherwise select first enabled
+  useMemo(() => {
+    if (!isLoadingCategories && enabledCategories.length > 0) {
+      const currentCategoryEnabled = enabledCategories.some(c => c.key === projectCategory);
+      if (!currentCategoryEnabled) {
+        setProjectCategory(enabledCategories[0].key);
+      }
+    }
+  }, [enabledCategories, isLoadingCategories]);
 
   // Reset project type when category changes if current type is not available
   useMemo(() => {
@@ -209,40 +221,50 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
             <TabsContent value="general" className="mt-0 space-y-6">
               {/* Category Selection */}
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Catégorie de projet</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {PROJECT_CATEGORIES.map((cat) => {
-                    const CategoryIcon = CATEGORY_ICONS[cat.icon] || Briefcase;
-                    const isSelected = projectCategory === cat.key;
-                    return (
-                      <button
-                        key={cat.key}
-                        type="button"
-                        onClick={() => setProjectCategory(cat.key)}
-                        className={cn(
-                          "flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all",
-                          isSelected
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        )}
-                      >
-                        <div 
+              <Label className="text-sm font-medium">Catégorie de projet</Label>
+                {isLoadingCategories ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className={cn(
+                    "grid gap-2",
+                    enabledCategories.length <= 2 ? "grid-cols-2" : 
+                    enabledCategories.length === 3 ? "grid-cols-3" : "grid-cols-4"
+                  )}>
+                    {enabledCategories.map((cat) => {
+                      const CategoryIcon = CATEGORY_ICONS[cat.icon] || Briefcase;
+                      const isSelected = projectCategory === cat.key;
+                      return (
+                        <button
+                          key={cat.key}
+                          type="button"
+                          onClick={() => setProjectCategory(cat.key)}
                           className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center",
-                            isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
+                            "flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all",
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-primary/50"
                           )}
-                          style={isSelected ? {} : { backgroundColor: `${cat.color}15` }}
                         >
-                          <CategoryIcon 
-                            className="h-4 w-4" 
-                            style={{ color: isSelected ? undefined : cat.color }} 
-                          />
-                        </div>
-                        <span className="text-xs font-medium text-center leading-tight">{cat.labelShort}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                          <div 
+                            className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center",
+                              isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
+                            )}
+                            style={isSelected ? {} : { backgroundColor: `${cat.color}15` }}
+                          >
+                            <CategoryIcon 
+                              className="h-4 w-4" 
+                              style={{ color: isSelected ? undefined : cat.color }} 
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-center leading-tight">{cat.labelShort}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">{categoryConfig.description}</p>
               </div>
 
