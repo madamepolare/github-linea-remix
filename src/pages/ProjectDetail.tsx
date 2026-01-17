@@ -65,6 +65,7 @@ import { EntityCommunications } from "@/components/shared/EntityCommunications";
 import { EntityEmailsTab } from "@/components/shared/EntityEmailsTab";
 import { ProjectElementsTab } from "@/components/projects/elements/ProjectElementsTab";
 import { ProjectPhasesTab } from "@/components/projects/ProjectPhasesTab";
+import { ProjectPlanningContainer } from "@/components/projects/ProjectPlanningContainer";
 import { ProjectBudgetTab } from "@/components/projects/ProjectBudgetTab";
 import { MessageCircle, Mail } from "lucide-react";
 import { FrameworkDashboard } from "@/components/projects/subprojects/FrameworkDashboard";
@@ -73,8 +74,7 @@ import { SubProjectsList } from "@/components/projects/subprojects/SubProjectsLi
 // Tab configuration for project detail
 const PROJECT_TABS = [
   { key: "overview", label: "Vue d'ensemble", icon: Sparkles },
-  { key: "planning", label: "Calendrier", icon: Calendar },
-  { key: "phases", label: "Phases", icon: Layers },
+  { key: "project_planning", label: "Planning projet", icon: Calendar },
   { key: "tasks", label: "Tâches", icon: ListTodo },
   { key: "budget", label: "Budget", icon: Receipt },
   { key: "emails", label: "Emails", icon: Mail },
@@ -279,8 +279,7 @@ export default function ProjectDetail() {
               onOpenProjectEdit={() => setProjectEditOpen(true)}
             />
           )}
-          {activeTab === "planning" && <ProjectPlanningTab projectId={project.id} />}
-          {activeTab === "phases" && <ProjectPhasesTab projectId={project.id} />}
+          {activeTab === "project_planning" && <ProjectPlanningContainer projectId={project.id} />}
           {activeTab === "tasks" && (
             <ProjectTasksTab projectId={project.id} />
           )}
