@@ -46,7 +46,8 @@ import {
   Layers,
   TrendingUp,
   TrendingDown,
-  Target
+  Target,
+  Circle
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
@@ -237,6 +238,17 @@ export function QuoteLinesEditor({
       const newUnitPrice = (line.unit_price || 0) * ratio;
       const newAmount = (line.quantity || 1) * newUnitPrice;
       return { ...line, unit_price: Math.round(newUnitPrice * 100) / 100, amount: Math.round(newAmount * 100) / 100 };
+    });
+    onLinesChange(updatedLines);
+  };
+
+  // Round prices to nearest 10 or 100
+  const roundPrices = (precision: number = 10) => {
+    const updatedLines = lines.map(line => {
+      if (line.line_type === 'group' || line.line_type === 'discount') return line;
+      const newUnitPrice = Math.round((line.unit_price || 0) / precision) * precision;
+      const newAmount = (line.quantity || 1) * newUnitPrice;
+      return { ...line, unit_price: newUnitPrice, amount: newAmount };
     });
     onLinesChange(updatedLines);
   };
@@ -596,6 +608,25 @@ export function QuoteLinesEditor({
                       />
                     </DialogContent>
                   </Dialog>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-7 px-2">
+                        <Circle className="h-3.5 w-3.5 mr-1" />
+                        Arrondir
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => roundPrices(10)}>
+                        Arrondir à 10€
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => roundPrices(50)}>
+                        Arrondir à 50€
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => roundPrices(100)}>
+                        Arrondir à 100€
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>
