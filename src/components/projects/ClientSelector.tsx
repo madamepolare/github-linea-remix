@@ -48,9 +48,11 @@ export function ClientSelector({
   const [activeTab, setActiveTab] = useState<ClientType>(value?.type || "company");
   
   const { companies, isLoading: companiesLoading } = useCRMCompanies();
+  // Use a large pageSize to get all contacts for the selector
   const { contacts, isLoading: contactsLoading } = useContacts({ 
     contactType: undefined, // Get all contacts
-    status: 'all'
+    status: 'all',
+    pageSize: 1000 // Get up to 1000 contacts to avoid pagination limit
   });
 
   // Filter client companies
