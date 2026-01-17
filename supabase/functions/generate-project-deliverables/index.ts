@@ -18,6 +18,8 @@ interface GenerateRequest {
   projectName: string;
   projectType: string | null;
   phases: Phase[];
+  modeContext?: string;
+  generationMode?: string;
 }
 
 serve(async (req) => {
@@ -27,7 +29,7 @@ serve(async (req) => {
   }
 
   try {
-    const { projectName, projectType, phases } = await req.json() as GenerateRequest;
+    const { projectName, projectType, phases, modeContext, generationMode } = await req.json() as GenerateRequest;
 
     if (!phases || phases.length === 0) {
       return new Response(
@@ -46,6 +48,12 @@ serve(async (req) => {
 
     const projectTypeLabel = projectType || "projet d'architecture/design";
 
+    // Build mode-specific instructions
+    let modeInstructions = "";
+    if (modeContext) {
+      modeInstructions = `\n\nINSTRUCTIONS SPÉCIFIQUES:\n${modeContext}`;
+    }
+
     const prompt = `Tu es un expert en gestion de projets d'architecture et de design. 
 
 Génère une liste de livrables professionnels pour ce projet:
@@ -54,6 +62,7 @@ Génère une liste de livrables professionnels pour ce projet:
 
 PHASES DU PROJET (utilise EXACTEMENT les IDs fournis):
 ${phasesContext}
+${modeInstructions}
 
 IMPORTANT: Tu DOIS utiliser les IDs de phase EXACTEMENT comme ils sont écrits ci-dessus (ce sont des UUIDs).
 
@@ -82,6 +91,7 @@ Réponds UNIQUEMENT avec un JSON valide, pas de texte avant ou après:
 }`;
 
     console.log("Generating deliverables for project:", projectName);
+    console.log("Mode:", generationMode || "default");
     console.log("Phases with IDs:", phases.map(p => `${p.name} (${p.id})`).join(", "));
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

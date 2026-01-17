@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +18,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Sparkles, Package, Calendar, Check, AlertCircle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Sparkles, Package, Calendar, Check, AlertCircle, Layers, MessageSquare } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
@@ -28,6 +38,8 @@ interface SuggestedDeliverable {
   due_date: string | null;
   selected: boolean;
 }
+
+type GenerationMode = "versions" | "phase" | "custom";
 
 interface AIDeliverablesGeneratorProps {
   projectId: string;
@@ -44,10 +56,38 @@ export function AIDeliverablesGenerator({ projectId, open, onOpenChange }: AIDel
   const [isCreating, setIsCreating] = useState(false);
   const [suggestions, setSuggestions] = useState<SuggestedDeliverable[]>([]);
   const [error, setError] = useState<string | null>(null);
+  
+  // Generation options
+  const [generationMode, setGenerationMode] = useState<GenerationMode>("versions");
+  const [selectedVersions, setSelectedVersions] = useState<string[]>(["V1", "V2"]);
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+  const [customPrompt, setCustomPrompt] = useState("");
+
+  const toggleVersion = (version: string) => {
+    setSelectedVersions(prev => 
+      prev.includes(version) 
+        ? prev.filter(v => v !== version)
+        : [...prev, version]
+    );
+  };
 
   const handleGenerate = async () => {
     if (!project || phases.length === 0) {
       setError("Définissez d'abord des phases pour votre projet");
+      return;
+    }
+
+    // Validation based on mode
+    if (generationMode === "versions" && selectedVersions.length === 0) {
+      setError("Sélectionnez au moins une version");
+      return;
+    }
+    if (generationMode === "phase" && !selectedPhaseId) {
+      setError("Sélectionnez une phase");
+      return;
+    }
+    if (generationMode === "custom" && !customPrompt.trim()) {
+      setError("Entrez un prompt personnalisé");
       return;
     }
 
@@ -56,17 +96,34 @@ export function AIDeliverablesGenerator({ projectId, open, onOpenChange }: AIDel
     setSuggestions([]);
 
     try {
+      // Build context based on mode
+      let modeContext = "";
+      let phasesToUse = phases;
+
+      if (generationMode === "versions") {
+        modeContext = `Génère des livrables en incluant les versions suivantes: ${selectedVersions.join(", ")}. 
+Par exemple pour un document: "${selectedVersions.map(v => `${v} Document`).join('", "')}"`;
+      } else if (generationMode === "phase") {
+        const selectedPhase = phases.find(p => p.id === selectedPhaseId);
+        phasesToUse = selectedPhase ? [selectedPhase] : [];
+        modeContext = `Génère des livrables UNIQUEMENT pour la phase: ${selectedPhase?.name}`;
+      } else if (generationMode === "custom") {
+        modeContext = `Instructions personnalisées de l'utilisateur: ${customPrompt}`;
+      }
+
       const { data, error: fnError } = await supabase.functions.invoke('generate-project-deliverables', {
         body: {
           projectName: project.name,
           projectType: project.project_type,
-          phases: phases.map(p => ({
+          phases: phasesToUse.map(p => ({
             id: p.id,
             name: p.name,
             start_date: p.start_date,
             end_date: p.end_date,
             status: p.status,
           })),
+          modeContext,
+          generationMode,
         }
       });
 
@@ -150,8 +207,13 @@ export function AIDeliverablesGenerator({ projectId, open, onOpenChange }: AIDel
     return acc;
   }, {} as Record<string, { phase: any; items: SuggestedDeliverable[] }>);
 
+  const resetState = () => {
+    setSuggestions([]);
+    setError(null);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) resetState(); }}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -159,15 +221,15 @@ export function AIDeliverablesGenerator({ projectId, open, onOpenChange }: AIDel
             Générer des livrables avec l'IA
           </DialogTitle>
           <DialogDescription>
-            L'IA analyse vos phases et le type de projet pour suggérer des livrables pertinents.
+            Choisissez un mode de génération pour obtenir des livrables adaptés.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col">
           {suggestions.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-12 px-4 text-center">
+            <div className="flex-1 flex flex-col py-4">
               {error ? (
-                <>
+                <div className="flex flex-col items-center justify-center py-8 text-center">
                   <AlertCircle className="h-12 w-12 text-destructive/50 mb-4" />
                   <p className="text-destructive">{error}</p>
                   {phases.length === 0 && (
@@ -175,29 +237,144 @@ export function AIDeliverablesGenerator({ projectId, open, onOpenChange }: AIDel
                       Ajoutez des phases dans l'onglet "Planning projet" d'abord.
                     </p>
                   )}
-                </>
+                </div>
               ) : isGenerating ? (
-                <>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
                   <p className="text-muted-foreground">Analyse du projet en cours...</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     Génération de livrables pour {phases.length} phases
                   </p>
-                </>
+                </div>
               ) : (
-                <>
-                  <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                  <p className="text-muted-foreground mb-1">
-                    Générez des livrables adaptés à votre projet
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-6">
-                    {phases.length} phase{phases.length > 1 ? "s" : ""} • {project?.project_type || "Type non défini"}
-                  </p>
-                  <Button onClick={handleGenerate} disabled={phases.length === 0}>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Générer les livrables
-                  </Button>
-                </>
+                <div className="space-y-6">
+                  {/* Generation Mode Selection */}
+                  <div className="space-y-4">
+                    <Label className="text-sm font-medium">Mode de génération</Label>
+                    <RadioGroup 
+                      value={generationMode} 
+                      onValueChange={(v) => setGenerationMode(v as GenerationMode)}
+                      className="grid grid-cols-3 gap-3"
+                    >
+                      <Label 
+                        htmlFor="mode-versions"
+                        className={cn(
+                          "flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-colors",
+                          generationMode === "versions" 
+                            ? "border-primary bg-primary/5" 
+                            : "border-muted hover:border-muted-foreground/30"
+                        )}
+                      >
+                        <RadioGroupItem value="versions" id="mode-versions" className="sr-only" />
+                        <Layers className="h-6 w-6 text-primary" />
+                        <span className="text-sm font-medium">Par versions</span>
+                        <span className="text-xs text-muted-foreground text-center">V1, V2, V3...</span>
+                      </Label>
+                      
+                      <Label 
+                        htmlFor="mode-phase"
+                        className={cn(
+                          "flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-colors",
+                          generationMode === "phase" 
+                            ? "border-primary bg-primary/5" 
+                            : "border-muted hover:border-muted-foreground/30"
+                        )}
+                      >
+                        <RadioGroupItem value="phase" id="mode-phase" className="sr-only" />
+                        <Package className="h-6 w-6 text-primary" />
+                        <span className="text-sm font-medium">Par phase</span>
+                        <span className="text-xs text-muted-foreground text-center">Une phase spécifique</span>
+                      </Label>
+                      
+                      <Label 
+                        htmlFor="mode-custom"
+                        className={cn(
+                          "flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-colors",
+                          generationMode === "custom" 
+                            ? "border-primary bg-primary/5" 
+                            : "border-muted hover:border-muted-foreground/30"
+                        )}
+                      >
+                        <RadioGroupItem value="custom" id="mode-custom" className="sr-only" />
+                        <MessageSquare className="h-6 w-6 text-primary" />
+                        <span className="text-sm font-medium">Prompt libre</span>
+                        <span className="text-xs text-muted-foreground text-center">Instructions personnalisées</span>
+                      </Label>
+                    </RadioGroup>
+                  </div>
+
+                  {/* Mode-specific options */}
+                  {generationMode === "versions" && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Versions à inclure</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {["V1", "V2", "V3", "V4", "VF"].map((version) => (
+                          <Badge
+                            key={version}
+                            variant={selectedVersions.includes(version) ? "default" : "outline"}
+                            className="cursor-pointer px-3 py-1.5 text-sm"
+                            onClick={() => toggleVersion(version)}
+                          >
+                            {version}
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Chaque livrable sera décliné dans les versions sélectionnées
+                      </p>
+                    </div>
+                  )}
+
+                  {generationMode === "phase" && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Sélectionner une phase</Label>
+                      <Select value={selectedPhaseId || ""} onValueChange={setSelectedPhaseId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choisir une phase..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {phases.map((phase) => (
+                            <SelectItem key={phase.id} value={phase.id}>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-2.5 h-2.5 rounded-full"
+                                  style={{ backgroundColor: phase.color || "#3B82F6" }}
+                                />
+                                {phase.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {generationMode === "custom" && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Instructions personnalisées</Label>
+                      <Textarea
+                        value={customPrompt}
+                        onChange={(e) => setCustomPrompt(e.target.value)}
+                        placeholder="Ex: Génère des livrables pour une phase de conception avec moodboard, plans et détails techniques..."
+                        rows={4}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Décrivez les types de livrables que vous souhaitez générer
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Project Info */}
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="text-sm text-muted-foreground">
+                      {phases.length} phase{phases.length > 1 ? "s" : ""} • {project?.project_type || "Type non défini"}
+                    </div>
+                    <Button onClick={handleGenerate} disabled={phases.length === 0}>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Générer
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           ) : (
@@ -218,11 +395,9 @@ export function AIDeliverablesGenerator({ projectId, open, onOpenChange }: AIDel
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
+                  onClick={() => { setSuggestions([]); setError(null); }}
                 >
-                  <Sparkles className="h-4 w-4 mr-1" />
-                  Regénérer
+                  Modifier options
                 </Button>
               </div>
 
