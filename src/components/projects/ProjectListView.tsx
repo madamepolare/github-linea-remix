@@ -306,10 +306,33 @@ function ProjectCard({ project, members, financialData, index, onNavigate, onDel
                 )}
               </div>
 
-              {/* Progress */}
-              <div className="hidden lg:flex items-center gap-3 w-40 shrink-0">
-                <Progress value={progressPercent} className="h-2 flex-1" />
-                <span className="text-xs font-semibold w-8 text-right">{progressPercent}%</span>
+              {/* Progress Circle */}
+              <div className="hidden lg:flex items-center gap-2 shrink-0">
+                <div className="relative h-6 w-6">
+                  <svg className="h-6 w-6 -rotate-90" viewBox="0 0 24 24">
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      className="text-muted/30"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeDasharray={`${progressPercent * 0.628} 62.8`}
+                      strokeLinecap="round"
+                      className="text-primary"
+                    />
+                  </svg>
+                </div>
+                <span className="text-xs font-semibold w-8">{progressPercent}%</span>
               </div>
 
               {/* Current Phase */}
