@@ -81,15 +81,20 @@ Réponds UNIQUEMENT avec un JSON valide, pas de texte avant ou après:
     console.log("Generating deliverables for project:", projectName);
     console.log("Phases:", phases.map(p => p.name).join(", "));
 
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
     // Call Lovable AI Gateway
-    const response = await fetch("https://ai-gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "openai/gpt-5-mini",
+        model: "google/gemini-3-flash-preview",
         messages: [
           {
             role: "system",
@@ -101,7 +106,6 @@ Réponds UNIQUEMENT avec un JSON valide, pas de texte avant ou après:
           }
         ],
         temperature: 0.7,
-        max_tokens: 2000,
       }),
     });
 
