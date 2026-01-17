@@ -210,11 +210,9 @@ export function PhasesSettings() {
     return { base, complementary };
   }, [templates]);
 
-  // Calculate totals
-  const totals = useMemo(() => {
-    const baseTotal = groupedTemplates.base.reduce((sum, t) => sum + t.default_percentage, 0);
-    const complementaryTotal = groupedTemplates.complementary.reduce((sum, t) => sum + t.default_percentage, 0);
-    return { base: baseTotal, complementary: complementaryTotal, total: baseTotal + complementaryTotal };
+  // Calculate phase counts
+  const phaseCounts = useMemo(() => {
+    return { base: groupedTemplates.base.length, complementary: groupedTemplates.complementary.length };
   }, [groupedTemplates]);
 
   // Initialize defaults when switching project type
@@ -284,32 +282,7 @@ export function PhasesSettings() {
     setResetConfirmType(null);
   };
 
-  const handleNormalizePercentages = async () => {
-    if (groupedTemplates.base.length === 0 || totals.base === 100) return;
-    
-    const ratio = 100 / totals.base;
-    const updates = groupedTemplates.base.map((phase, index, arr) => {
-      if (index === arr.length - 1) {
-        // Last phase gets the remainder to ensure exactly 100%
-        const previousSum = arr.slice(0, -1).reduce((sum, p) => {
-          return sum + Math.round(p.default_percentage * ratio);
-        }, 0);
-        return {
-          id: phase.id,
-          default_percentage: 100 - previousSum,
-        };
-      }
-      return {
-        id: phase.id,
-        default_percentage: Math.round(phase.default_percentage * ratio),
-      };
-    });
-
-    // Update each phase sequentially
-    for (const update of updates) {
-      await updateTemplate.mutateAsync(update);
-    }
-  };
+  // Note: Percentage normalization removed - percentages are now defined in quote templates
 
   const movePhase = async (phaseId: string, direction: "up" | "down", categoryTemplates: PhaseTemplate[]) => {
     const index = categoryTemplates.findIndex(t => t.id === phaseId);
@@ -361,11 +334,6 @@ export function PhasesSettings() {
               <CardTitle className="text-sm font-medium truncate">
                 {phase.name}
               </CardTitle>
-              {phase.default_percentage > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {phase.default_percentage}%
-                </Badge>
-              )}
               {!phase.is_active && (
                 <Badge variant="outline" className="text-xs text-muted-foreground">
                   Inactive
@@ -458,7 +426,7 @@ export function PhasesSettings() {
       <div>
         <h3 className="text-lg font-medium">Phases de mission</h3>
         <p className="text-sm text-muted-foreground">
-          Gérez les phases par défaut utilisées dans les devis, projets, concours, et factures. Ces phases sont centralisées ici pour assurer la cohérence à travers l'application.
+          Définissez les phases (blocs de mission) disponibles pour vos devis. Les pourcentages et tarifs sont configurés dans les templates de devis.
         </p>
       </div>
 
@@ -494,7 +462,7 @@ export function PhasesSettings() {
           {projectTypes.map((type) => (
             <TabsContent key={type.key} value={type.key} className="space-y-6 mt-6">
               {/* Summary Card */}
-              <Card className={totals.base !== 100 && groupedTemplates.base.length > 0 ? "border-orange-500" : ""}>
+              <Card>
                 <CardContent className="py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-6">
@@ -505,12 +473,6 @@ export function PhasesSettings() {
                       <div className="text-center">
                         <p className="text-2xl font-semibold">{groupedTemplates.complementary.length}</p>
                         <p className="text-xs text-muted-foreground">Complémentaires</p>
-                      </div>
-                      <div className="text-center">
-                        <p className={`text-2xl font-semibold ${totals.base === 100 ? "text-green-600" : "text-orange-500"}`}>
-                          {totals.base}%
-                        </p>
-                        <p className="text-xs text-muted-foreground">Total base</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -523,15 +485,6 @@ export function PhasesSettings() {
                         {isGeneratingAI ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
                         Ajouter avec IA
                       </Button>
-                      {totals.base !== 100 && groupedTemplates.base.length > 0 && (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => handleNormalizePercentages()}
-                        >
-                          Ajuster à 100%
-                        </Button>
-                      )}
                       <Button
                         variant="outline"
                         size="sm"
@@ -542,11 +495,6 @@ export function PhasesSettings() {
                       </Button>
                     </div>
                   </div>
-                  {totals.base !== 100 && groupedTemplates.base.length > 0 && (
-                    <p className="text-sm text-orange-500 mt-2">
-                      ⚠️ Le total des missions de base doit être égal à 100% (actuellement {totals.base}%)
-                    </p>
-                  )}
                 </CardContent>
               </Card>
 
@@ -557,7 +505,7 @@ export function PhasesSettings() {
                   <Layers className="h-5 w-5 text-primary" />
                   <h4 className="font-medium">Missions de base</h4>
                   <Badge variant="secondary" className="text-xs">
-                    {groupedTemplates.base.length} phases • {totals.base}%
+                    {groupedTemplates.base.length} phases
                   </Badge>
                 </div>
                 <Button onClick={() => handleOpenCreate('base')} size="sm" variant="outline">
@@ -588,7 +536,7 @@ export function PhasesSettings() {
                   <Puzzle className="h-5 w-5 text-orange-500" />
                   <h4 className="font-medium">Missions complémentaires</h4>
                   <Badge variant="secondary" className="text-xs">
-                    {groupedTemplates.complementary.length} phases • {totals.complementary}%
+                    {groupedTemplates.complementary.length} phases
                   </Badge>
                 </div>
                 <Button onClick={() => handleOpenCreate('complementary')} size="sm" variant="outline">
@@ -638,22 +586,7 @@ export function PhasesSettings() {
                   placeholder="ESQ"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="percentage">Pourcentage par défaut</Label>
-                <Input
-                  id="percentage"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.default_percentage}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      default_percentage: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                />
-              </div>
+              {/* Removed: default_percentage input - percentages are defined in quote templates, not phases */}
             </div>
 
             <div className="space-y-2">
@@ -806,9 +739,6 @@ export function PhasesSettings() {
                   <div className="flex items-center gap-2 mb-3">
                     <Layers className="h-4 w-4 text-primary" />
                     <h4 className="font-medium">Phases de base ({generatedPhases.basePhases.length})</h4>
-                    <Badge variant="secondary" className="ml-auto">
-                      {generatedPhases.basePhases.reduce((sum, p) => sum + p.default_percentage, 0)}%
-                    </Badge>
                   </div>
                   <div className="space-y-2">
                     {generatedPhases.basePhases.map((phase, index) => (
@@ -818,12 +748,7 @@ export function PhasesSettings() {
                             {phase.code}
                           </Badge>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">{phase.name}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                {phase.default_percentage}%
-                              </Badge>
-                            </div>
+                            <span className="font-medium text-sm">{phase.name}</span>
                             <p className="text-xs text-muted-foreground mt-1">{phase.description}</p>
                             {phase.deliverables?.length > 0 && (
                               <div className="mt-2 text-xs text-muted-foreground">
@@ -851,14 +776,7 @@ export function PhasesSettings() {
                             {phase.code}
                           </Badge>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">{phase.name}</span>
-                              {phase.default_percentage > 0 && (
-                                <Badge variant="outline" className="text-xs">
-                                  {phase.default_percentage}%
-                                </Badge>
-                              )}
-                            </div>
+                            <span className="font-medium text-sm">{phase.name}</span>
                             <p className="text-xs text-muted-foreground mt-1">{phase.description}</p>
                           </div>
                         </div>
