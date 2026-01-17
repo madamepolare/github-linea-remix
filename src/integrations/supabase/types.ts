@@ -6718,6 +6718,7 @@ export type Database = {
       project_contacts: {
         Row: {
           contact_id: string
+          contact_type: string | null
           created_at: string
           id: string
           is_primary: boolean | null
@@ -6729,6 +6730,7 @@ export type Database = {
         }
         Insert: {
           contact_id: string
+          contact_type?: string | null
           created_at?: string
           id?: string
           is_primary?: boolean | null
@@ -6740,6 +6742,7 @@ export type Database = {
         }
         Update: {
           contact_id?: string
+          contact_type?: string | null
           created_at?: string
           id?: string
           is_primary?: boolean | null
@@ -7350,7 +7353,10 @@ export type Database = {
         Row: {
           client_daily_rate: number | null
           created_at: string | null
+          external_contact_id: string | null
           id: string
+          is_external: boolean | null
+          notes: string | null
           project_id: string
           role: string | null
           user_id: string
@@ -7358,7 +7364,10 @@ export type Database = {
         Insert: {
           client_daily_rate?: number | null
           created_at?: string | null
+          external_contact_id?: string | null
           id?: string
+          is_external?: boolean | null
+          notes?: string | null
           project_id: string
           role?: string | null
           user_id: string
@@ -7366,12 +7375,22 @@ export type Database = {
         Update: {
           client_daily_rate?: number | null
           created_at?: string | null
+          external_contact_id?: string | null
           id?: string
+          is_external?: boolean | null
+          notes?: string | null
           project_id?: string
           role?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "project_members_external_contact_id_fkey"
+            columns: ["external_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "project_members_project_id_fkey"
             columns: ["project_id"]

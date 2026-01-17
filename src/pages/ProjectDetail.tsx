@@ -76,6 +76,7 @@ import { MessageCircle, Mail } from "lucide-react";
 import { FrameworkDashboard } from "@/components/projects/subprojects/FrameworkDashboard";
 import { SubProjectsList } from "@/components/projects/subprojects/SubProjectsList";
 import { ProjectContactsSummary } from "@/components/projects/ProjectContactsSummary";
+import { ProjectTeamSummary } from "@/components/projects/ProjectTeamSummary";
 
 // Tab configuration for project detail
 const PROJECT_TABS = [
@@ -750,54 +751,7 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                 Gérer
               </Button>
             </div>
-            {projectMembers.length > 0 ? (
-              <div className="space-y-2">
-                {projectMembers.map((member) => {
-                  const roleLabels: Record<string, string> = {
-                    owner: "Responsable",
-                    lead: "Chef de projet",
-                    member: "Membre",
-                    viewer: "Observateur",
-                  };
-                  return (
-                    <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.profile?.avatar_url || ""} />
-                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                          {member.profile?.full_name?.slice(0, 2).toUpperCase() || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium truncate">
-                            {member.profile?.full_name || "Membre"}
-                          </span>
-                          {member.role === "lead" && (
-                            <Crown className="h-3 w-3 text-amber-500" />
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {roleLabels[member.role] || member.role}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <Users className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">Aucun membre assigné</p>
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={onOpenTeamEdit}
-                  className="mt-2"
-                >
-                  Ajouter des membres
-                </Button>
-              </div>
-            )}
+            <ProjectTeamSummary projectId={project.id} />
           </CardContent>
         </Card>
 

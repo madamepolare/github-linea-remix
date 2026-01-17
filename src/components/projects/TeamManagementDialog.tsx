@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Users, X, Plus, Loader2, Crown, Building2 } from "lucide-react";
+import { Users, X, Plus, Loader2, Crown, UserCircle, Briefcase } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -34,17 +34,27 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
-import { useProjectContacts } from "@/hooks/useProjectContacts";
 import { useContacts } from "@/hooks/useContacts";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
 interface TeamMember {
   id: string;
-  user_id: string;
+  user_id: string | null;
   role: string;
+  is_external: boolean;
+  external_contact_id: string | null;
+  notes: string | null;
   profile?: {
     full_name: string | null;
     avatar_url: string | null;
+  };
+  contact?: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    email: string | null;
+    phone: string | null;
   };
 }
 
@@ -66,6 +76,8 @@ const EXTERNAL_ROLES = [
   { value: "consultant", label: "Consultant" },
   { value: "sous_traitant", label: "Sous-traitant" },
   { value: "partenaire", label: "Partenaire" },
+  { value: "moe", label: "Maître d'œuvre" },
+  { value: "bet", label: "BET" },
 ];
 
 export function TeamManagementDialog({
@@ -76,64 +88,73 @@ export function TeamManagementDialog({
 }: TeamManagementDialogProps) {
   const { activeWorkspace } = useAuth();
   const queryClient = useQueryClient();
+  const { contacts: allContacts } = useContacts();
   
-  // Internal team state
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const [selectedRole, setSelectedRole] = useState<string>("member");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // External collaborators state
-  const { 
-    contacts: projectContacts, 
-    isLoading: isLoadingContacts,
-    addContact, 
-    updateContact, 
-    removeContact 
-  } = useProjectContacts(projectId);
-  const { contacts: allContacts } = useContacts();
-  const [isAddExternalOpen, setIsAddExternalOpen] = useState(false);
+  // Add internal member state
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [selectedInternalRole, setSelectedInternalRole] = useState<string>("member");
+  
+  // Add external member state
+  const [isContactPopoverOpen, setIsContactPopoverOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [selectedExternalRole, setSelectedExternalRole] = useState("freelance");
-
-  // Add mode toggle
-  const [addMode, setAddMode] = useState<"internal" | "external">("internal");
+  const [selectedExternalRole, setSelectedExternalRole] = useState<string>("freelance");
 
   useEffect(() => {
     if (open && projectId) {
-      fetchMembers();
+      fetchAllMembers();
       fetchAvailableUsers();
     }
   }, [open, projectId]);
 
-  const fetchMembers = async () => {
+  const fetchAllMembers = async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from("project_members")
-        .select(`
-          id,
-          user_id,
-          role
-        `)
+        .select("*")
         .eq("project_id", projectId);
 
       if (error) throw error;
 
-      const userIds = data?.map((m) => m.user_id) || [];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, avatar_url")
-        .in("user_id", userIds);
+      // Get internal member profiles
+      const internalMembers = data?.filter(m => !m.is_external) || [];
+      const userIds = internalMembers.map((m) => m.user_id).filter(Boolean);
+      
+      let profiles: any[] = [];
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, avatar_url")
+          .in("user_id", userIds);
+        profiles = profilesData || [];
+      }
 
-      const membersWithProfiles = data?.map((member) => ({
+      // Get external member contacts
+      const externalMembers = data?.filter(m => m.is_external) || [];
+      const contactIds = externalMembers.map(m => m.external_contact_id).filter(Boolean);
+      
+      let contacts: any[] = [];
+      if (contactIds.length > 0) {
+        const { data: contactsData } = await supabase
+          .from("contacts")
+          .select("id, name, avatar_url, email, phone")
+          .in("id", contactIds);
+        contacts = contactsData || [];
+      }
+
+      // Merge all data
+      const membersWithData = data?.map((member) => ({
         ...member,
-        profile: profiles?.find((p) => p.user_id === member.user_id),
+        profile: profiles.find((p) => p.user_id === member.user_id),
+        contact: contacts.find((c) => c.id === member.external_contact_id),
       })) || [];
 
-      setMembers(membersWithProfiles);
+      setMembers(membersWithData);
     } catch (error) {
       console.error("Error fetching members:", error);
       toast.error("Erreur lors du chargement de l'équipe");
@@ -165,7 +186,7 @@ export function TeamManagementDialog({
     }
   };
 
-  const handleAddMember = async () => {
+  const handleAddInternalMember = async () => {
     if (!selectedUserId || !activeWorkspace?.id) return;
 
     setIsSaving(true);
@@ -173,22 +194,55 @@ export function TeamManagementDialog({
       const { error } = await supabase.from("project_members").insert({
         project_id: projectId,
         user_id: selectedUserId,
-        role: selectedRole,
+        role: selectedInternalRole,
         workspace_id: activeWorkspace.id,
+        is_external: false,
       });
 
       if (error) throw error;
 
-      toast.success("Membre ajouté avec succès");
+      toast.success("Membre ajouté");
       setSelectedUserId("");
-      fetchMembers();
+      fetchAllMembers();
       queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
     } catch (error: any) {
       console.error("Error adding member:", error);
       if (error.code === "23505") {
         toast.error("Ce membre fait déjà partie de l'équipe");
       } else {
-        toast.error("Erreur lors de l'ajout du membre");
+        toast.error("Erreur lors de l'ajout");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddExternalMember = async () => {
+    if (!selectedContactId || !activeWorkspace?.id) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase.from("project_members").insert({
+        project_id: projectId,
+        role: selectedExternalRole,
+        workspace_id: activeWorkspace.id,
+        is_external: true,
+        external_contact_id: selectedContactId,
+        user_id: null,
+      });
+
+      if (error) throw error;
+
+      toast.success("Collaborateur externe ajouté");
+      setSelectedContactId(null);
+      fetchAllMembers();
+      queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
+    } catch (error: any) {
+      console.error("Error adding external member:", error);
+      if (error.code === "23505") {
+        toast.error("Ce contact fait déjà partie de l'équipe");
+      } else {
+        toast.error("Erreur lors de l'ajout");
       }
     } finally {
       setIsSaving(false);
@@ -204,8 +258,8 @@ export function TeamManagementDialog({
 
       if (error) throw error;
 
-      toast.success("Membre retiré de l'équipe");
-      fetchMembers();
+      toast.success("Membre retiré");
+      fetchAllMembers();
       queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
     } catch (error) {
       console.error("Error removing member:", error);
@@ -223,28 +277,12 @@ export function TeamManagementDialog({
       if (error) throw error;
 
       toast.success("Rôle mis à jour");
-      fetchMembers();
+      fetchAllMembers();
       queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
     } catch (error) {
       console.error("Error updating role:", error);
-      toast.error("Erreur lors de la mise à jour du rôle");
+      toast.error("Erreur lors de la mise à jour");
     }
-  };
-
-  const handleAddExternalContact = () => {
-    if (!selectedContactId) return;
-    
-    addContact.mutate({
-      contactId: selectedContactId,
-      role: selectedExternalRole,
-      isPrimary: false,
-    }, {
-      onSuccess: () => {
-        setSelectedContactId(null);
-        setSelectedExternalRole("freelance");
-        setIsAddExternalOpen(false);
-      }
-    });
   };
 
   const getInitials = (name: string | null) => {
@@ -257,65 +295,60 @@ export function TeamManagementDialog({
       .slice(0, 2);
   };
 
+  const internalMembers = members.filter(m => !m.is_external);
+  const externalMembers = members.filter(m => m.is_external);
+  
   const filteredAvailableUsers = availableUsers.filter(
-    (u) => !members.some((m) => m.user_id === u.user_id)
+    (u) => !internalMembers.some((m) => m.user_id === u.user_id)
   );
 
-  // Filter external contacts (freelances, not client contacts)
-  const externalTeamContacts = projectContacts.filter(
-    pc => EXTERNAL_ROLES.some(r => r.value === pc.role)
-  );
-
-  // Filter available external contacts (not already in project)
   const availableExternalContacts = allContacts.filter(
-    c => !projectContacts.some(pc => pc.contact_id === c.id)
+    (c) => !externalMembers.some((m) => m.external_contact_id === c.id)
   );
 
-  const totalTeamCount = members.length + externalTeamContacts.length;
+  const getRoleLabel = (role: string, isExternal: boolean) => {
+    const roles = isExternal ? EXTERNAL_ROLES : INTERNAL_ROLES;
+    return roles.find(r => r.value === role)?.label || role;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-visible">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Équipe projet - {projectName}
+            Équipe projet
           </DialogTitle>
+          <p className="text-sm text-muted-foreground">{projectName}</p>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Add member section with toggle */}
-          <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Ajouter à l'équipe</Label>
-              <div className="flex gap-1">
-                <Button
-                  variant={addMode === "internal" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setAddMode("internal")}
-                  className="text-xs h-7"
-                >
-                  Interne
-                </Button>
-                <Button
-                  variant={addMode === "external" ? "secondary" : "ghost"}
-                  size="sm"
-                  onClick={() => setAddMode("external")}
-                  className="text-xs h-7"
-                >
-                  Externe
-                </Button>
-              </div>
-            </div>
+        <Tabs defaultValue="internal" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="internal" className="gap-2">
+              <UserCircle className="h-4 w-4" />
+              Interne ({internalMembers.length})
+            </TabsTrigger>
+            <TabsTrigger value="external" className="gap-2">
+              <Briefcase className="h-4 w-4" />
+              Externe ({externalMembers.length})
+            </TabsTrigger>
+          </TabsList>
 
-            {addMode === "internal" ? (
-              <div className="flex gap-2">
-                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Sélectionner un membre..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredAvailableUsers.map((user) => (
+          {/* Internal Tab */}
+          <TabsContent value="internal" className="space-y-4 mt-4">
+            {/* Add internal member */}
+            <div className="flex gap-2">
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Sélectionner un membre..." />
+                </SelectTrigger>
+                <SelectContent position="popper" sideOffset={4}>
+                  {filteredAvailableUsers.length === 0 ? (
+                    <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                      Tous les membres sont déjà assignés
+                    </div>
+                  ) : (
+                    filteredAvailableUsers.map((user) => (
                       <SelectItem key={user.user_id} value={user.user_id}>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-5 w-5">
@@ -327,251 +360,242 @@ export function TeamManagementDialog({
                           {user.profiles?.full_name || "Utilisateur"}
                         </div>
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INTERNAL_ROLES.map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  size="icon"
-                  onClick={handleAddMember}
-                  disabled={!selectedUserId || isSaving}
-                >
-                  {isSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
+                    ))
                   )}
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <Popover open={isAddExternalOpen} onOpenChange={setIsAddExternalOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      className="flex-1 justify-start text-left font-normal"
-                    >
-                      {selectedContactId ? (
-                        allContacts.find(c => c.id === selectedContactId)?.name || "Contact"
-                      ) : (
-                        <span className="text-muted-foreground">Sélectionner un contact...</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Rechercher un contact..." />
-                      <CommandList>
-                        <CommandEmpty>Aucun contact trouvé</CommandEmpty>
-                        <CommandGroup heading="Contacts disponibles">
-                          {availableExternalContacts.map((contact) => (
-                            <CommandItem
-                              key={contact.id}
-                              value={contact.name || contact.email || contact.id}
-                              onSelect={() => {
-                                setSelectedContactId(contact.id);
-                                setIsAddExternalOpen(false);
-                              }}
-                            >
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={contact.avatar_url || ""} />
-                                  <AvatarFallback className="text-xs">
-                                    {getInitials(contact.name)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm truncate">{contact.name}</p>
-                                </div>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <Select value={selectedExternalRole} onValueChange={setSelectedExternalRole}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EXTERNAL_ROLES.map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  size="icon"
-                  onClick={handleAddExternalContact}
-                  disabled={!selectedContactId || addContact.isPending}
-                >
-                  {addContact.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
+                </SelectContent>
+              </Select>
+              <Select value={selectedInternalRole} onValueChange={setSelectedInternalRole}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" sideOffset={4}>
+                  {INTERNAL_ROLES.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="icon"
+                onClick={handleAddInternalMember}
+                disabled={!selectedUserId || isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
 
-          {/* Unified team list */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">
-              Équipe ({totalTeamCount})
-            </Label>
-
-            {isLoading || isLoadingContacts ? (
+            {/* Internal members list */}
+            {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : totalTeamCount === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                Aucun membre dans l'équipe
-              </p>
+            ) : internalMembers.length === 0 ? (
+              <div className="text-center py-8 border border-dashed rounded-lg">
+                <UserCircle className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-sm font-medium">Aucun membre interne</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ajoutez des membres de votre équipe
+                </p>
+              </div>
             ) : (
-              <div className="space-y-2 max-h-[350px] overflow-y-auto">
-                {/* Internal members */}
-                {members.length > 0 && (
-                  <>
-                    <div className="flex items-center gap-2 py-1">
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Équipe interne
-                      </span>
-                      <Badge variant="secondary" className="text-xs">
-                        {members.length}
-                      </Badge>
-                    </div>
-                    {members.map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex items-center gap-3 p-2 rounded-lg border bg-background"
-                      >
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={member.profile?.avatar_url || ""} />
-                          <AvatarFallback>
-                            {getInitials(member.profile?.full_name || null)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">
-                              {member.profile?.full_name || "Utilisateur"}
-                            </p>
-                            {member.role === "lead" && (
-                              <Crown className="h-3 w-3 text-amber-500" />
-                            )}
-                          </div>
-                        </div>
-                        <Select
-                          value={member.role}
-                          onValueChange={(value) =>
-                            handleUpdateRole(member.id, value)
-                          }
-                        >
-                          <SelectTrigger className="w-28 h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {INTERNAL_ROLES.map((role) => (
-                              <SelectItem key={role.value} value={role.value}>
-                                {role.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => handleRemoveMember(member.id)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {internalMembers.map((member) => (
+                  <div
+                    key={member.id}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border bg-card",
+                      member.role === "lead" && "border-amber-500/30 bg-amber-500/5"
+                    )}
+                  >
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={member.profile?.avatar_url || ""} />
+                      <AvatarFallback>
+                        {getInitials(member.profile?.full_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm truncate">
+                          {member.profile?.full_name || "Utilisateur"}
+                        </span>
+                        {member.role === "lead" && (
+                          <Crown className="h-4 w-4 text-amber-500" />
+                        )}
                       </div>
-                    ))}
-                  </>
-                )}
-
-                {/* External collaborators */}
-                {externalTeamContacts.length > 0 && (
-                  <>
-                    {members.length > 0 && <Separator className="my-3" />}
-                    <div className="flex items-center gap-2 py-1">
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Collaborateurs externes
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        {externalTeamContacts.length}
-                      </Badge>
                     </div>
-                    {externalTeamContacts.map((pc) => (
-                      <div
-                        key={pc.id}
-                        className="flex items-center gap-3 p-2 rounded-lg border bg-background"
-                      >
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={pc.contact?.avatar_url || ""} />
-                          <AvatarFallback>
-                            {getInitials(pc.contact?.name || null)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">
-                              {pc.contact?.name || "Contact"}
-                            </p>
-                            <Building2 className="h-3 w-3 text-muted-foreground" />
-                          </div>
-                        </div>
-                        <Select
-                          value={pc.role}
-                          onValueChange={(value) =>
-                            updateContact.mutate({ id: pc.id, role: value })
-                          }
-                        >
-                          <SelectTrigger className="w-28 h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {EXTERNAL_ROLES.map((role) => (
-                              <SelectItem key={role.value} value={role.value}>
-                                {role.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => removeContact.mutate(pc.id)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </>
-                )}
+                    <Select
+                      value={member.role}
+                      onValueChange={(value) => handleUpdateRole(member.id, value)}
+                    >
+                      <SelectTrigger className="w-28 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent position="popper" sideOffset={4}>
+                        {INTERNAL_ROLES.map((role) => (
+                          <SelectItem key={role.value} value={role.value}>
+                            {role.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => handleRemoveMember(member.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
-          </div>
-        </div>
+          </TabsContent>
+
+          {/* External Tab */}
+          <TabsContent value="external" className="space-y-4 mt-4">
+            {/* Add external member */}
+            <div className="flex gap-2">
+              <Popover open={isContactPopoverOpen} onOpenChange={setIsContactPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="flex-1 justify-start text-left font-normal"
+                  >
+                    {selectedContactId ? (
+                      allContacts.find(c => c.id === selectedContactId)?.name || "Contact"
+                    ) : (
+                      <span className="text-muted-foreground">Sélectionner un contact...</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0" align="start" sideOffset={4}>
+                  <Command>
+                    <CommandInput placeholder="Rechercher..." />
+                    <CommandList className="max-h-[200px]">
+                      <CommandEmpty>Aucun contact trouvé</CommandEmpty>
+                      <CommandGroup>
+                        {availableExternalContacts.map((contact) => (
+                          <CommandItem
+                            key={contact.id}
+                            value={contact.name || contact.email || contact.id}
+                            onSelect={() => {
+                              setSelectedContactId(contact.id);
+                              setIsContactPopoverOpen(false);
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={contact.avatar_url || ""} />
+                                <AvatarFallback className="text-xs">
+                                  {getInitials(contact.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="truncate">{contact.name}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <Select value={selectedExternalRole} onValueChange={setSelectedExternalRole}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" sideOffset={4}>
+                  {EXTERNAL_ROLES.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="icon"
+                onClick={handleAddExternalMember}
+                disabled={!selectedContactId || isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+
+            {/* External members list */}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : externalMembers.length === 0 ? (
+              <div className="text-center py-8 border border-dashed rounded-lg">
+                <Briefcase className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-sm font-medium">Aucun collaborateur externe</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ajoutez des freelances, consultants ou partenaires
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {externalMembers.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+                  >
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={member.contact?.avatar_url || ""} />
+                      <AvatarFallback>
+                        {getInitials(member.contact?.name || null)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-sm truncate block">
+                        {member.contact?.name || "Contact"}
+                      </span>
+                      {member.contact?.email && (
+                        <span className="text-xs text-muted-foreground truncate block">
+                          {member.contact.email}
+                        </span>
+                      )}
+                    </div>
+                    <Select
+                      value={member.role}
+                      onValueChange={(value) => handleUpdateRole(member.id, value)}
+                    >
+                      <SelectTrigger className="w-28 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent position="popper" sideOffset={4}>
+                        {EXTERNAL_ROLES.map((role) => (
+                          <SelectItem key={role.value} value={role.value}>
+                            {role.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => handleRemoveMember(member.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

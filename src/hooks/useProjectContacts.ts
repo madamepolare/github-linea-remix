@@ -50,7 +50,7 @@ export function useProjectContacts(projectId: string | null) {
   const queryClient = useQueryClient();
 
   const { data: contacts, isLoading, error } = useQuery({
-    queryKey: ["project-contacts", projectId],
+    queryKey: ["project-contacts", projectId, "client"],
     queryFn: async () => {
       if (!projectId) return [];
 
@@ -71,6 +71,7 @@ export function useProjectContacts(projectId: string | null) {
           )
         `)
         .eq("project_id", projectId)
+        .eq("contact_type", "client")
         .order("is_primary", { ascending: false })
         .order("created_at", { ascending: true });
 
@@ -113,6 +114,7 @@ export function useProjectContacts(projectId: string | null) {
           role,
           is_primary: isPrimary,
           notes,
+          contact_type: "client",
         })
         .select()
         .single();
@@ -121,8 +123,8 @@ export function useProjectContacts(projectId: string | null) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-contacts", projectId] });
-      toast.success("Contact ajouté au projet");
+      queryClient.invalidateQueries({ queryKey: ["project-contacts", projectId, "client"] });
+      toast.success("Contact client ajouté");
     },
     onError: (error: any) => {
       if (error.code === "23505") {
@@ -163,7 +165,7 @@ export function useProjectContacts(projectId: string | null) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-contacts", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project-contacts", projectId, "client"] });
       toast.success("Contact mis à jour");
     },
     onError: (error) => {
@@ -182,8 +184,8 @@ export function useProjectContacts(projectId: string | null) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-contacts", projectId] });
-      toast.success("Contact retiré du projet");
+      queryClient.invalidateQueries({ queryKey: ["project-contacts", projectId, "client"] });
+      toast.success("Contact client retiré");
     },
     onError: (error) => {
       toast.error("Erreur lors de la suppression");
