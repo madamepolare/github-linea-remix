@@ -657,7 +657,11 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Surface</dt>
-                <dd>{project.surface ? `${project.surface} m²` : "-"}</dd>
+                <dd>
+                  {project.surface_area ?? project.surface
+                    ? `${(project.surface_area ?? project.surface).toLocaleString()} m²`
+                    : "-"}
+                </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Budget</dt>
