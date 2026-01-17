@@ -195,7 +195,6 @@ export function TeamManagementDialog({
         project_id: projectId,
         user_id: selectedUserId,
         role: selectedInternalRole,
-        workspace_id: activeWorkspace.id,
         is_external: false,
       });
 
@@ -225,7 +224,6 @@ export function TeamManagementDialog({
       const { error } = await supabase.from("project_members").insert({
         project_id: projectId,
         role: selectedExternalRole,
-        workspace_id: activeWorkspace.id,
         is_external: true,
         external_contact_id: selectedContactId,
         user_id: null,
