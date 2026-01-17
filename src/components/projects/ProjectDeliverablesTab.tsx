@@ -49,6 +49,7 @@ import {
   Mail,
   MailCheck,
   MoreHorizontal,
+  Package,
   Pencil,
   Plus,
   Send,
@@ -73,6 +74,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { DeliverableTasksGenerator } from "./DeliverableTasksGenerator";
+import { BatchTasksGenerator } from "./BatchTasksGenerator";
 import { AIDeliverablesGenerator } from "./AIDeliverablesGenerator";
 import { DeliverableEmailDialog } from "./DeliverableEmailDialog";
 import { DeliverablesTimeline } from "./DeliverablesTimeline";
@@ -119,6 +121,7 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
   const [tasksGeneratorOpen, setTasksGeneratorOpen] = useState(false);
   const [tasksDeliverable, setTasksDeliverable] = useState<any | null>(null);
   const [aiGeneratorOpen, setAiGeneratorOpen] = useState(false);
+  const [batchTasksGeneratorOpen, setBatchTasksGeneratorOpen] = useState(false);
   
   // Task sheet states
   const [selectedTaskDeliverableId, setSelectedTaskDeliverableId] = useState<string | null>(null);
@@ -464,10 +467,27 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => setAiGeneratorOpen(true)}>
-            <Sparkles className="h-4 w-4 mr-1" />
-            Générer avec IA
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline">
+                <Sparkles className="h-4 w-4 mr-1" />
+                Générer avec IA
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setAiGeneratorOpen(true)}>
+                <Package className="h-4 w-4 mr-2" />
+                Générer des livrables
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setBatchTasksGeneratorOpen(true)}
+                disabled={filteredDeliverables.length === 0}
+              >
+                <ListTodo className="h-4 w-4 mr-2" />
+                Générer les tâches
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
             <Plus className="h-4 w-4 mr-1" />
             Ajouter
@@ -642,6 +662,24 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
         projectId={projectId}
         open={aiGeneratorOpen}
         onOpenChange={setAiGeneratorOpen}
+      />
+
+      {/* Batch Tasks Generator */}
+      <BatchTasksGenerator
+        open={batchTasksGeneratorOpen}
+        onOpenChange={setBatchTasksGeneratorOpen}
+        deliverables={filteredDeliverables.map(d => ({
+          id: d.id,
+          name: d.name,
+          description: d.description,
+          due_date: d.due_date,
+          phase: d.phase ? {
+            name: d.phase.name,
+            phase_code: d.phase.name,
+          } : null,
+        }))}
+        projectId={projectId}
+        projectName={project?.name || "Projet"}
       />
 
       {/* Task Detail Sheet for viewing deliverable tasks */}
