@@ -25,6 +25,8 @@ import {
   Briefcase,
   Mail,
   Bell,
+  Layers,
+  Grid3X3,
 } from "lucide-react";
 import { WidgetConfig, WidgetModule } from "./types";
 
@@ -282,6 +284,26 @@ export const WIDGET_REGISTRY: WidgetConfig[] = [
     icon: PieChart,
     defaultSize: "wide",
     minW: 2,
+    minH: 2,
+  },
+  {
+    id: "invoicing-by-category",
+    type: "invoicing-by-category",
+    title: "CA par catégorie",
+    module: "invoicing",
+    icon: Layers,
+    defaultSize: "medium",
+    minW: 1,
+    minH: 2,
+  },
+  {
+    id: "invoicing-by-type",
+    type: "invoicing-by-type",
+    title: "CA par type de projet",
+    module: "invoicing",
+    icon: Grid3X3,
+    defaultSize: "medium",
+    minW: 1,
     minH: 2,
   },
 

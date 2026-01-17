@@ -17,6 +17,8 @@ import {
   RevenueChartWidget,
   LeadsPipelineWidget,
   RecentLeadsWidget,
+  RevenueByCategoryWidget,
+  RevenueByTypeWidget,
 } from "./content";
 
 interface WidgetRendererProps {
@@ -102,6 +104,10 @@ export function WidgetRenderer({ widgetId, isEditing, onRemove, widthCols }: Wid
         return <PlaceholderWidget title="Factures en attente" />;
       case "invoicing-chart":
         return <RevenueChartWidget />;
+      case "invoicing-by-category":
+        return <RevenueByCategoryWidget />;
+      case "invoicing-by-type":
+        return <RevenueByTypeWidget />;
 
       // Documents
       case "documents-stats":
