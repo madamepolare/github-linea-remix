@@ -12,6 +12,7 @@ interface GenerateRequest {
   discipline_description?: string;
   contract_type_name?: string;
   existing_skills?: string[];
+  custom_prompt?: string;
 }
 
 serve(async (req) => {
@@ -20,10 +21,11 @@ serve(async (req) => {
   }
 
   try {
-    const { type, discipline_name, discipline_description, contract_type_name, existing_skills } = await req.json() as GenerateRequest;
+    const { type, discipline_name, discipline_description, contract_type_name, existing_skills, custom_prompt } = await req.json() as GenerateRequest;
 
     console.log(`[generate-discipline-content] Generating ${type} for discipline: ${discipline_name}`);
     console.log(`[generate-discipline-content] Description: ${discipline_description || 'none'}`);
+    console.log(`[generate-discipline-content] Custom prompt: ${custom_prompt || 'none'}`);
 
     // Get the API key
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -96,7 +98,12 @@ Réponds avec un JSON array:
 Tu connais les phases et livrables typiques de chaque secteur.
 Réponds UNIQUEMENT avec un JSON valide, sans markdown, sans explication.`;
       
+      const customContext = custom_prompt 
+        ? `\n\nINSTRUCTIONS SPÉCIFIQUES DE L'UTILISATEUR:\n"${custom_prompt}"\n\nAdapte le template en fonction de ces instructions.`
+        : '';
+
       prompt = `${disciplineContext}
+${customContext}
 
 Génère un template de devis pour:
 - Type de contrat: ${contract_type_name || 'Mission standard'}
@@ -110,7 +117,7 @@ IMPORTANT: Les phases doivent être SPÉCIFIQUES à la discipline "${discipline_
 NE PAS GÉNÉRER de phases inadaptées (ex: pas de CCTP pour une agence de comm).
 
 Inclus:
-- name: Nom du template
+- name: Nom du template (adapté aux instructions si fournies)
 - description: Description
 - default_phases: Array de phases avec {phase_name, phase_code (court), description, percentage}
 - default_terms: Conditions générales courtes

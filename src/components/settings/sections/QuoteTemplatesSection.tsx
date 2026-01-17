@@ -45,7 +45,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Edit, Copy, GripVertical, FileText, Download, Sparkles, ChevronDown, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Edit, Copy, GripVertical, FileText, Download, Sparkles, ChevronDown, Loader2, CheckCircle } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useQuoteTemplates, QuoteTemplate, QuoteTemplatePhase } from '@/hooks/useQuoteTemplates';
 import { ProjectType, PROJECT_TYPE_LABELS, PHASES_BY_PROJECT_TYPE } from '@/lib/commercialTypes';
 import { ALL_MISSION_TEMPLATES, getMissionCategories, MissionTemplate } from '@/lib/defaultMissionTemplates';
@@ -60,6 +61,13 @@ export function QuoteTemplatesSection() {
   const [editingTemplate, setEditingTemplate] = useState<QuoteTemplate | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isLoadingDefaults, setIsLoadingDefaults] = useState(false);
+  const [showAIDialog, setShowAIDialog] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [generatedTemplate, setGeneratedTemplate] = useState<{
+    name: string;
+    description: string;
+    phases: QuoteTemplatePhase[];
+  } | null>(null);
   const [newTemplate, setNewTemplate] = useState<Partial<QuoteTemplate>>({
     name: '',
     description: '',
@@ -68,6 +76,12 @@ export function QuoteTemplatesSection() {
     is_default: false
   });
 
+  const handleOpenAIDialog = () => {
+    setAiPrompt('');
+    setGeneratedTemplate(null);
+    setShowAIDialog(true);
+  };
+
   const handleGenerateWithAI = async () => {
     if (!currentDiscipline) {
       toast.error('Veuillez d\'abord sélectionner une discipline dans les paramètres');
@@ -75,9 +89,13 @@ export function QuoteTemplatesSection() {
     }
 
     try {
-      const generated = await generateQuoteTemplate(currentDiscipline.name);
+      const generated = await generateQuoteTemplate(
+        currentDiscipline.name,
+        undefined,
+        aiPrompt || undefined
+      );
       
-      const phases = generated.default_phases.map((p, idx) => ({
+      const phases: QuoteTemplatePhase[] = generated.default_phases.map((p, idx) => ({
         code: p.phase_code,
         name: p.phase_name,
         description: p.description,
@@ -86,19 +104,31 @@ export function QuoteTemplatesSection() {
         category: idx < 3 ? 'base' : 'complementary' as 'base' | 'complementary'
       }));
 
-      await createTemplate.mutateAsync({
+      setGeneratedTemplate({
         name: generated.name,
         description: generated.description,
-        project_type: 'interior',
-        phases,
-        is_default: false,
-        sort_order: templates.length
+        phases
       });
-
-      toast.success('Template généré avec succès');
     } catch (error) {
       console.error('Error generating quote template:', error);
     }
+  };
+
+  const handleApplyGeneratedTemplate = async () => {
+    if (!generatedTemplate) return;
+    
+    await createTemplate.mutateAsync({
+      name: generatedTemplate.name,
+      description: generatedTemplate.description,
+      project_type: 'interior',
+      phases: generatedTemplate.phases,
+      is_default: false,
+      sort_order: templates.length
+    });
+
+    toast.success('Template généré avec succès');
+    setShowAIDialog(false);
+    setGeneratedTemplate(null);
   };
 
   const handleCreateFromDefaults = async (projectType: ProjectType) => {
@@ -204,14 +234,10 @@ export function QuoteTemplatesSection() {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleGenerateWithAI}
-            disabled={isGenerating || !currentDiscipline}
+            onClick={handleOpenAIDialog}
+            disabled={!currentDiscipline}
           >
-            {isGenerating ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
+            <Sparkles className="h-4 w-4 mr-2" />
             Générer par IA
           </Button>
           <DropdownMenu>
@@ -430,6 +456,111 @@ export function QuoteTemplatesSection() {
           }}
         />
       )}
+
+      {/* AI Generation Dialog */}
+      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Générer un template avec l'IA
+            </DialogTitle>
+            <DialogDescription>
+              {currentDiscipline 
+                ? `Génération basée sur la discipline : ${currentDiscipline.name}`
+                : 'Sélectionnez une discipline dans les paramètres'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Description du template (optionnel)</Label>
+              <Textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="Ex: Template pour une mission de rénovation d'appartement haussmannien avec suivi de chantier complet..."
+                rows={3}
+                disabled={isGenerating}
+              />
+              <p className="text-xs text-muted-foreground">
+                Laissez vide pour générer un template standard basé sur votre discipline.
+              </p>
+            </div>
+
+            {!generatedTemplate && (
+              <Button 
+                onClick={handleGenerateWithAI} 
+                disabled={isGenerating}
+                className="w-full"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Génération en cours...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Générer le template
+                  </>
+                )}
+              </Button>
+            )}
+
+            {generatedTemplate && (
+              <ScrollArea className="max-h-[300px] pr-4">
+                <div className="space-y-4">
+                  <div className="p-3 border rounded-lg bg-muted/30">
+                    <h4 className="font-medium">{generatedTemplate.name}</h4>
+                    <p className="text-sm text-muted-foreground">{generatedTemplate.description}</p>
+                  </div>
+                  
+                  <div>
+                    <Label className="mb-2 block">Phases générées ({generatedTemplate.phases.length})</Label>
+                    <div className="space-y-2">
+                      {generatedTemplate.phases.map((phase, index) => (
+                        <div key={index} className="flex items-center gap-2 p-2 border rounded bg-background">
+                          <Badge variant="outline" className="font-mono text-xs shrink-0">
+                            {phase.code}
+                          </Badge>
+                          <span className="flex-1 text-sm truncate">{phase.name}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {phase.defaultPercentage}%
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowAIDialog(false)}>
+              Annuler
+            </Button>
+            {generatedTemplate ? (
+              <Button 
+                onClick={handleApplyGeneratedTemplate}
+                disabled={createTemplate.isPending}
+              >
+                {createTemplate.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Appliquer ce template
+                  </>
+                )}
+              </Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

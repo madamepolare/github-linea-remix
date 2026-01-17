@@ -106,7 +106,8 @@ export function useAIGeneration() {
 
   const generateQuoteTemplate = async (
     disciplineName: string,
-    contractTypeName?: string
+    contractTypeName?: string,
+    customPrompt?: string
   ): Promise<GeneratedQuoteTemplate> => {
     setIsGenerating(true);
     try {
@@ -115,6 +116,7 @@ export function useAIGeneration() {
           type: 'quote_template',
           discipline_name: disciplineName,
           contract_type_name: contractTypeName,
+          custom_prompt: customPrompt,
         },
       });
 
