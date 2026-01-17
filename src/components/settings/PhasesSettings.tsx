@@ -304,8 +304,9 @@ export function PhasesSettings() {
       key={phase.id}
       className={!phase.is_active ? "opacity-50" : ""}
     >
-      <CardHeader className="py-3 px-4">
-        <div className="flex items-center gap-3">
+      <CardHeader className="py-2 px-3">
+        <div className="flex items-center gap-2">
+          {/* Move controls */}
           <div className="flex flex-col gap-0.5 shrink-0">
             <Button
               variant="ghost"
@@ -327,69 +328,70 @@ export function PhasesSettings() {
             </Button>
           </div>
           
+          {/* Phase info */}
+          <Badge variant="outline" className="font-mono text-xs shrink-0">
+            {phase.code}
+          </Badge>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <Badge variant="outline" className="font-mono text-xs shrink-0">
-                {phase.code}
-              </Badge>
-              <CardTitle className="text-sm font-medium truncate">
-                {phase.name}
-              </CardTitle>
-              {!phase.is_active && (
-                <Badge variant="outline" className="text-xs text-muted-foreground shrink-0">
-                  Inactive
-                </Badge>
-              )}
-            </div>
+            <CardTitle className="text-sm font-medium truncate">
+              {phase.name}
+            </CardTitle>
             {phase.description && (
-              <p className="text-xs text-muted-foreground mt-1 truncate">
+              <p className="text-xs text-muted-foreground truncate">
                 {phase.description}
               </p>
             )}
           </div>
 
-          <div className="flex items-center gap-1 shrink-0">
+          {/* Status badge */}
+          {!phase.is_active && (
+            <Badge variant="outline" className="text-xs text-muted-foreground shrink-0">
+              Inactive
+            </Badge>
+          )}
+
+          {/* Action buttons - always visible */}
+          <div className="flex items-center shrink-0 ml-auto">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
-              onClick={() =>
-                setExpandedPhase(
-                  expandedPhase === phase.id ? null : phase.id
-                )
-              }
+              className="h-7 w-7"
+              onClick={() => setExpandedPhase(expandedPhase === phase.id ? null : phase.id)}
+              title="Voir les livrables"
             >
               {expandedPhase === phase.id ? (
-                <ChevronUp className="h-4 w-4" />
+                <ChevronUp className="h-3.5 w-3.5" />
               ) : (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-3.5 w-3.5" />
               )}
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-7 w-7"
               onClick={() => handleOpenEdit(phase)}
+              title="Modifier"
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive"
+              className="h-7 w-7 text-destructive hover:text-destructive"
               onClick={() => setDeleteConfirmId(phase.id)}
+              title="Supprimer"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
       </CardHeader>
 
       {expandedPhase === phase.id && (
-        <CardContent className="pt-0 pb-3 px-4">
-          <div className="pl-10">
+        <CardContent className="pt-0 pb-3 px-3">
+          <div className="pl-8 border-l-2 border-muted ml-3">
             {phase.deliverables.length > 0 ? (
-              <div>
+              <div className="pl-3">
                 <p className="text-xs font-medium text-muted-foreground mb-1">
                   Livrables par défaut :
                 </p>
@@ -402,7 +404,7 @@ export function PhasesSettings() {
                 </ul>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground pl-3">
                 Aucun livrable défini
               </p>
             )}
@@ -465,7 +467,7 @@ export function PhasesSettings() {
               {/* Summary Card */}
               <Card>
                 <CardContent className="py-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-6">
                       <div className="text-center">
                         <p className="text-2xl font-semibold">{groupedTemplates.base.length}</p>
@@ -476,7 +478,7 @@ export function PhasesSettings() {
                         <p className="text-xs text-muted-foreground">Complémentaires</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -484,15 +486,16 @@ export function PhasesSettings() {
                         disabled={isGeneratingAI}
                       >
                         {isGeneratingAI ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                        Ajouter avec IA
+                        <span className="hidden sm:inline">Ajouter avec IA</span>
+                        <span className="sm:hidden">IA</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setResetConfirmType(type.key)}
                       >
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                        Réinitialiser
+                        <RotateCcw className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Réinitialiser</span>
                       </Button>
                     </div>
                   </div>
