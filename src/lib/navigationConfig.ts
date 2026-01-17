@@ -17,6 +17,7 @@ import {
   Megaphone,
   Calendar,
   BookOpen,
+  MessageSquare,
   LucideIcon,
 } from "lucide-react";
 
@@ -52,9 +53,23 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
     slug: "dashboard",
     title: "Dashboard",
     icon: LayoutDashboard,
-    href: "/",
+    href: "/dashboard",
     subNav: [],
     quickActions: [],
+  },
+  messages: {
+    slug: "messages",
+    title: "Messages",
+    icon: MessageSquare,
+    href: "/messages",
+    subNav: [
+      { key: "all", label: "Tous", href: "/messages" },
+      { key: "direct", label: "Messages directs", href: "/messages/direct" },
+    ],
+    quickActions: [
+      { key: "new-channel", label: "Nouveau canal", event: "open-create-channel" },
+      { key: "new-dm", label: "Nouveau message", event: "open-new-dm" },
+    ],
   },
   projects: {
     slug: "projects",
@@ -289,8 +304,8 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
   },
 };
 
-// Module display order - Dashboard, CRM, Commercial, Planning, Projets, Tâches
-export const CORE_MODULES = ["crm", "commercial", "workflow", "projects", "tasks"];
+// Module display order - Dashboard, Messages, CRM, Commercial, Planning, Projets, Tâches
+export const CORE_MODULES = ["messages", "crm", "commercial", "workflow", "projects", "tasks"];
 export const EXTENSION_MODULES = ["documentation", "documents", "team", "chantier", "tenders", "invoicing", "references", "materials", "objects", "campaigns", "media-planning"];
 
 // Helper to get module config from current path
