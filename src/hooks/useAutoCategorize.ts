@@ -103,17 +103,17 @@ export function useAutoCategorize() {
     };
   }, [allCompanies, allContacts, companyTypes, contactTypes]);
 
-  // Analyze entities with AI
+  // Analyze entities with AI - processes in batches
   const analyzeEntities = useCallback(async (entitiesToAnalyze?: (CRMCompanyEnriched | Contact)[]) => {
     setIsAnalyzing(true);
     setSuggestions([]);
 
     try {
-      let entities: any[];
+      let allEntities: any[];
       
       if (entityType === "companies") {
         const companies = (entitiesToAnalyze as CRMCompanyEnriched[]) || uncategorizedCompanies;
-        entities = companies.slice(0, 20).map(c => ({
+        allEntities = companies.map(c => ({
           id: c.id,
           name: c.name,
           website: c.website,
@@ -125,7 +125,7 @@ export function useAutoCategorize() {
         }));
       } else {
         const contacts = (entitiesToAnalyze as Contact[]) || uncategorizedContacts;
-        entities = contacts.slice(0, 20).map(c => ({
+        allEntities = contacts.map(c => ({
           id: c.id,
           name: c.name,
           role: c.role,
@@ -136,32 +136,51 @@ export function useAutoCategorize() {
         }));
       }
 
-      if (entities.length === 0) {
+      if (allEntities.length === 0) {
         toast.info("Aucune entité à analyser");
         setIsAnalyzing(false);
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('auto-categorize-companies', {
-        body: {
-          entities,
-          entityType,
-          categories: companyCategories.map(c => ({ key: c.key, label: c.label })),
-          types: companyTypes.map(t => ({ key: t.key, label: t.label, shortLabel: t.shortLabel, category: t.category })),
-          betSpecialties: betSpecialties.map(s => ({ key: s.key, label: s.label })),
-          contactTypes: contactTypes.map(t => ({ key: t.key, label: t.label })),
+      // Process in batches of 25
+      const BATCH_SIZE = 25;
+      const allResults: CategorizationSuggestion[] = [];
+      const totalBatches = Math.ceil(allEntities.length / BATCH_SIZE);
+      
+      toast.info(`Analyse de ${allEntities.length} ${entityType === "companies" ? "entreprises" : "contacts"} en ${totalBatches} lot(s)...`);
+
+      for (let i = 0; i < allEntities.length; i += BATCH_SIZE) {
+        const batch = allEntities.slice(i, i + BATCH_SIZE);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+
+        const { data, error } = await supabase.functions.invoke('auto-categorize-companies', {
+          body: {
+            entities: batch,
+            entityType,
+            categories: companyCategories.map(c => ({ key: c.key, label: c.label })),
+            types: companyTypes.map(t => ({ key: t.key, label: t.label, shortLabel: t.shortLabel, category: t.category })),
+            betSpecialties: betSpecialties.map(s => ({ key: s.key, label: s.label })),
+            contactTypes: contactTypes.map(t => ({ key: t.key, label: t.label })),
+          }
+        });
+
+        if (error) throw error;
+
+        const batchResults = (data.results || []).map((r: CategorizationSuggestion) => ({
+          ...r,
+          selected: r.confidence >= 70, // Auto-select high confidence
+        }));
+
+        allResults.push(...batchResults);
+        
+        // Update progress
+        if (totalBatches > 1) {
+          toast.info(`Lot ${batchNum}/${totalBatches} terminé (${batchResults.length} résultats)`);
         }
-      });
+      }
 
-      if (error) throw error;
-
-      const results = (data.results || []).map((r: CategorizationSuggestion) => ({
-        ...r,
-        selected: r.confidence >= 70, // Auto-select high confidence
-      }));
-
-      setSuggestions(results);
-      toast.success(`${results.length} suggestion(s) générée(s)`);
+      setSuggestions(allResults);
+      toast.success(`${allResults.length} suggestion(s) générée(s)`);
     } catch (error: any) {
       console.error("Error analyzing entities:", error);
       toast.error("Erreur lors de l'analyse: " + error.message);
