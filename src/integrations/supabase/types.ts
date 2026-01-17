@@ -7359,7 +7359,7 @@ export type Database = {
           notes: string | null
           project_id: string
           role: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           client_daily_rate?: number | null
@@ -7370,7 +7370,7 @@ export type Database = {
           notes?: string | null
           project_id: string
           role?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           client_daily_rate?: number | null
@@ -7381,7 +7381,7 @@ export type Database = {
           notes?: string | null
           project_id?: string
           role?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
