@@ -328,6 +328,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
                 project={project}
                 members={projectMembersByProject[project.id] || []}
                 financialData={projectsFinancialData[project.id]}
+                projectTypeSettings={projectTypes}
                 index={index}
                 onNavigate={() => navigate(`/projects/${project.id}`)}
                 onDelete={() => setDeleteProjectId(project.id)}
@@ -387,23 +388,31 @@ interface ProjectCardProps {
   project: Project;
   members: (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[];
   financialData?: ProjectFinancialData;
+  projectTypeSettings?: { key: string; label: string; color: string; icon?: string }[];
   index: number;
   onNavigate: () => void;
   onDelete: () => void;
   formatCurrency: (value: number) => string;
 }
 
-function ProjectCard({ project, members, financialData, index, onNavigate, onDelete, formatCurrency }: ProjectCardProps) {
-  const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
+function ProjectCard({ project, members, financialData, projectTypeSettings, index, onNavigate, onDelete, formatCurrency }: ProjectCardProps) {
+  // First try to find project type from dynamic settings, then fallback to static PROJECT_TYPES
+  const dynamicType = projectTypeSettings?.find((t) => t.key === project.project_type);
+  const staticType = PROJECT_TYPES.find((t) => t.value === project.project_type);
+  
   const phases = project.phases || [];
   const completedPhases = phases.filter((p) => p.status === "completed").length;
   const progressPercent = phases.length > 0 ? Math.round((completedPhases / phases.length) * 100) : 0;
   const currentPhase = phases.find((p) => p.status === "in_progress");
-  const displayColor = projectType?.color || project.color || "#3B82F6";
+  
+  // Use dynamic settings first, then static, then fallback
+  const displayColor = dynamicType?.color || staticType?.color || project.color || "#3B82F6";
+  const typeLabel = dynamicType?.label || staticType?.label || project.project_type;
+  const typeIcon = dynamicType?.icon || staticType?.icon || "FolderKanban";
   const isClosed = project.status === "closed";
 
   // Get project type icon
-  const TypeIcon = projectType?.icon ? getIconComponent(projectType.icon) : FolderKanban;
+  const TypeIcon = getIconComponent(typeIcon);
 
   // Calculate days remaining
   const daysRemaining = project.end_date 
@@ -442,8 +451,8 @@ function ProjectCard({ project, members, financialData, index, onNavigate, onDel
                   {isClosed && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  {projectType && (
-                    <span className="text-xs text-muted-foreground">{projectType.label}</span>
+                  {typeLabel && (
+                    <span className="text-xs text-muted-foreground">{typeLabel}</span>
                   )}
                   {project.is_internal && (
                     <Badge variant="outline" className="text-2xs">Interne</Badge>
