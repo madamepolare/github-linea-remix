@@ -19,7 +19,7 @@ export interface QuoteTemplate {
   workspace_id: string;
   name: string;
   description?: string;
-  project_type: ProjectType;
+  project_type: string; // Dynamic project types - not restricted to ProjectType enum
   phases: QuoteTemplatePhase[];
   is_default: boolean;
   sort_order: number;
@@ -62,7 +62,7 @@ const parsePricingItems = (data: Json): PricingGridItem[] => {
   return data as unknown as PricingGridItem[];
 };
 
-export const useQuoteTemplates = (projectType?: ProjectType) => {
+export const useQuoteTemplates = (projectType?: string) => {
   const { activeWorkspace } = useAuth();
   const queryClient = useQueryClient();
 
