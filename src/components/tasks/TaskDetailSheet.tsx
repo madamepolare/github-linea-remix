@@ -88,8 +88,8 @@ function DeliverableBadge({ deliverableId }: { deliverableId: string }) {
   if (!deliverable) return null;
 
   return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-green-500/10 text-green-600">
-      <FileCheck className="h-3.5 w-3.5" />
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+      <FileCheck className="h-3 w-3" />
       {deliverable.name}
     </span>
   );
@@ -453,8 +453,54 @@ export function TaskDetailSheet({
               </h2>
             )}
 
-            {/* Status & Priority pills */}
-            <div className="flex items-center gap-2 mt-3">
+            {/* Relations row - Project & Deliverable */}
+            {(relatedType || deliverableId) && (
+              <div className="flex items-center gap-2 mt-3 text-sm">
+                {/* Entity relation - clickable to change */}
+                {relatedType && relatedId && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-primary/5 text-primary hover:bg-primary/10 transition-all border border-primary/10"
+                      >
+                        <Link2 className="h-3 w-3" />
+                        <LinkedEntityBadge entityType={relatedType} entityId={relatedId} />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-3" align="start">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-medium">Entité liée</label>
+                          {relatedType && relatedId && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-xs text-muted-foreground"
+                              onClick={handleNavigateToEntity}
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              Ouvrir
+                            </Button>
+                          )}
+                        </div>
+                        <EntitySelector
+                          entityType={relatedType}
+                          entityId={relatedId}
+                          onEntityTypeChange={setRelatedType}
+                          onEntityIdChange={setRelatedId}
+                        />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+
+                {/* Linked Deliverable Badge */}
+                {deliverableId && <DeliverableBadge deliverableId={deliverableId} />}
+              </div>
+            )}
+
+            {/* Status & Priority pills + Actions */}
+            <div className="flex items-center gap-2 mt-2">
               <button
                 onClick={cycleStatus}
                 className={cn(
@@ -479,50 +525,30 @@ export function TaskDetailSheet({
                 {priorityConfig.label}
               </button>
 
-              {/* Entity relation - clickable to change */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  {relatedType && relatedId ? (
-                    <button
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-all"
-                    >
-                      <Link2 className="h-3.5 w-3.5" />
-                      <LinkedEntityBadge entityType={relatedType} entityId={relatedId} />
-                    </button>
-                  ) : (
+              {/* Link button - only show if no relation yet */}
+              {!relatedType && (
+                <Popover>
+                  <PopoverTrigger asChild>
                     <button
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-all"
                     >
                       <Link2 className="h-3.5 w-3.5" />
                       Lier
                     </button>
-                  )}
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-3" align="start">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-3" align="start">
+                    <div className="space-y-2">
                       <label className="text-sm font-medium">Entité liée</label>
-                      {relatedType && relatedId && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-xs text-muted-foreground"
-                          onClick={handleNavigateToEntity}
-                        >
-                          <ExternalLink className="h-3 w-3 mr-1" />
-                          Ouvrir
-                        </Button>
-                      )}
+                      <EntitySelector
+                        entityType={relatedType}
+                        entityId={relatedId}
+                        onEntityTypeChange={setRelatedType}
+                        onEntityIdChange={setRelatedId}
+                      />
                     </div>
-                    <EntitySelector
-                      entityType={relatedType}
-                      entityId={relatedId}
-                      onEntityTypeChange={setRelatedType}
-                      onEntityIdChange={setRelatedId}
-                    />
-                  </div>
-                </PopoverContent>
-              </Popover>
+                  </PopoverContent>
+                </Popover>
+              )}
 
               {/* Date picker - deadline only */}
               <Popover>
@@ -583,9 +609,6 @@ export function TaskDetailSheet({
                   </div>
                 </PopoverContent>
               </Popover>
-
-              {/* Linked Deliverable Badge */}
-              {deliverableId && <DeliverableBadge deliverableId={deliverableId} />}
             </div>
           </div>
 
