@@ -43,7 +43,10 @@ import {
   FolderPlus,
   Folder,
   Download,
-  Layers
+  Layers,
+  TrendingUp,
+  TrendingDown,
+  Target
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
@@ -211,6 +214,31 @@ export function QuoteLinesEditor({
 
   const assignToGroup = (lineId: string, groupId: string | undefined) => {
     onLinesChange(lines.map(l => l.id === lineId ? { ...l, group_id: groupId } : l));
+  };
+
+  // Adjust budget by percentage
+  const adjustBudget = (percentage: number) => {
+    const multiplier = 1 + percentage;
+    const updatedLines = lines.map(line => {
+      if (line.line_type === 'group' || line.line_type === 'discount') return line;
+      const newUnitPrice = (line.unit_price || 0) * multiplier;
+      const newAmount = (line.quantity || 1) * newUnitPrice;
+      return { ...line, unit_price: Math.round(newUnitPrice * 100) / 100, amount: Math.round(newAmount * 100) / 100 };
+    });
+    onLinesChange(updatedLines);
+  };
+
+  // Adjust to target budget
+  const adjustToTarget = (targetBudget: number) => {
+    if (totalHT === 0) return;
+    const ratio = targetBudget / totalHT;
+    const updatedLines = lines.map(line => {
+      if (line.line_type === 'group' || line.line_type === 'discount') return line;
+      const newUnitPrice = (line.unit_price || 0) * ratio;
+      const newAmount = (line.quantity || 1) * newUnitPrice;
+      return { ...line, unit_price: Math.round(newUnitPrice * 100) / 100, amount: Math.round(newAmount * 100) / 100 };
+    });
+    onLinesChange(updatedLines);
   };
 
   // Handle drag & drop
@@ -504,10 +532,142 @@ export function QuoteLinesEditor({
               <div className="flex justify-between text-xs sm:text-sm text-muted-foreground"><span>TVA (20%)</span><span>{formatCurrency(tva)}</span></div>
               <Separator />
               <div className="flex justify-between text-base sm:text-lg font-semibold"><span>Total TTC</span><span>{formatCurrency(totalTTC)}</span></div>
+              
+              {/* Budget adjustment buttons */}
+              <Separator />
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-xs text-muted-foreground">Ajuster le budget</span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => adjustBudget(-0.1)}
+                    title="Réduire de 10%"
+                  >
+                    <TrendingDown className="h-3.5 w-3.5 mr-1" />
+                    -10%
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+                    onClick={() => adjustBudget(-0.05)}
+                    title="Réduire de 5%"
+                  >
+                    -5%
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-green-500 hover:text-green-600 hover:bg-green-50"
+                    onClick={() => adjustBudget(0.05)}
+                    title="Augmenter de 5%"
+                  >
+                    +5%
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                    onClick={() => adjustBudget(0.1)}
+                    title="Augmenter de 10%"
+                  >
+                    <TrendingUp className="h-3.5 w-3.5 mr-1" />
+                    +10%
+                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-7 px-2 ml-2">
+                        <Target className="h-3.5 w-3.5 mr-1" />
+                        Budget cible
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Target className="h-5 w-5" />
+                          Ajuster vers un budget cible
+                        </DialogTitle>
+                      </DialogHeader>
+                      <BudgetTargetForm 
+                        currentTotal={totalHT} 
+                        onApply={(targetBudget) => adjustToTarget(targetBudget)}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
             </div>
           </CardContent></Card>
         </>
       )}
+    </div>
+  );
+}
+
+// Budget target form component
+function BudgetTargetForm({ 
+  currentTotal, 
+  onApply 
+}: { 
+  currentTotal: number; 
+  onApply: (target: number) => void;
+}) {
+  const [targetBudget, setTargetBudget] = useState(currentTotal.toString());
+  
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
+  
+  const target = parseFloat(targetBudget) || 0;
+  const diff = target - currentTotal;
+  const diffPercent = currentTotal > 0 ? (diff / currentTotal) * 100 : 0;
+  
+  return (
+    <div className="space-y-4 pt-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Budget cible HT</label>
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            value={targetBudget}
+            onChange={(e) => setTargetBudget(e.target.value)}
+            className="text-right"
+            placeholder="0"
+          />
+          <span className="text-muted-foreground">€</span>
+        </div>
+      </div>
+      
+      <div className="p-3 rounded-lg bg-muted/50 space-y-1 text-sm">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Budget actuel</span>
+          <span>{formatCurrency(currentTotal)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Budget cible</span>
+          <span className="font-medium">{formatCurrency(target)}</span>
+        </div>
+        <Separator className="my-2" />
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Différence</span>
+          <span className={cn(
+            "font-medium",
+            diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : ""
+          )}>
+            {diff >= 0 ? '+' : ''}{formatCurrency(diff)} ({diffPercent >= 0 ? '+' : ''}{diffPercent.toFixed(1)}%)
+          </span>
+        </div>
+      </div>
+      
+      <Button 
+        className="w-full" 
+        onClick={() => onApply(target)}
+        disabled={target <= 0}
+      >
+        <Target className="h-4 w-4 mr-2" />
+        Appliquer ce budget
+      </Button>
     </div>
   );
 }
