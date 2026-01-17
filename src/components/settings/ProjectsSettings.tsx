@@ -2,7 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GenericSettingsManager } from "./GenericSettingsManager";
 import { ProjectCategoriesSettings } from "./ProjectCategoriesSettings";
 import { ProjectTypesSettings } from "./ProjectTypesSettings";
-import { FolderKanban, FileText, Layers, Briefcase } from "lucide-react";
+import { FolderKanban, FileText, Briefcase } from "lucide-react";
 import { useWorkspaceDiscipline } from "@/hooks/useDiscipline";
 import { useMemo } from "react";
 
@@ -394,24 +394,13 @@ export function ProjectsSettings() {
     }));
   }, [disciplineTypes]);
 
-  // Flatten all subtypes with parent reference
-  const projectSubtypes = useMemo(() => {
-    return disciplineTypes.flatMap(type =>
-      type.subtypes.map(subtype => ({
-        key: subtype.key,
-        label: subtype.label,
-        color: subtype.color,
-        description: `${type.label} → ${subtype.description}`,
-      }))
-    );
-  }, [disciplineTypes]);
 
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium">Configuration des projets</h3>
         <p className="text-sm text-muted-foreground">
-          Gérez les types de projets, sous-types et catégories de livrables
+          Gérez les types de projets et catégories de livrables
         </p>
       </div>
 
@@ -424,10 +413,6 @@ export function ProjectsSettings() {
           <TabsTrigger value="types" className="gap-1.5 text-xs">
             <FolderKanban className="h-4 w-4" />
             Types de projet
-          </TabsTrigger>
-          <TabsTrigger value="subtypes" className="gap-1.5 text-xs">
-            <Layers className="h-4 w-4" />
-            Sous-types
           </TabsTrigger>
           <TabsTrigger value="deliverables" className="gap-1.5 text-xs">
             <FileText className="h-4 w-4" />
@@ -446,17 +431,6 @@ export function ProjectsSettings() {
           />
         </TabsContent>
 
-        <TabsContent value="subtypes" className="mt-6">
-          <GenericSettingsManager
-            settingType="project_subtypes"
-            title="Sous-types de projet"
-            description="Sous-catégories pour affiner vos types de projets"
-            icon={<Layers className="h-5 w-5 text-primary" />}
-            showColor
-            showDescription
-            defaultItems={projectSubtypes}
-          />
-        </TabsContent>
 
         <TabsContent value="deliverables" className="mt-6">
           <GenericSettingsManager
