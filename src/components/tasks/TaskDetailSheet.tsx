@@ -293,7 +293,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-0 flex flex-col h-full">
+      <SheetContent className="w-full sm:max-w-3xl overflow-y-auto p-0 flex flex-col h-full">
         {/* Header with avatars - Monday.com style */}
         <div className="sticky top-0 bg-background z-10 border-b">
           <div className="p-4 pb-3">
