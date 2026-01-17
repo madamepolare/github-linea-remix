@@ -255,9 +255,16 @@ function EntityTopBar({ config, module }: EntityTopBarProps) {
         {/* Right: Actions */}
         <div className="flex items-center gap-2 shrink-0">
           {config.actions}
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-            <MoreHorizontal className="h-4 w-4" strokeWidth={THIN_STROKE} />
-          </Button>
+          {config.onSettings && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 rounded-full"
+              onClick={config.onSettings}
+            >
+              <MoreHorizontal className="h-4 w-4" strokeWidth={THIN_STROKE} />
+            </Button>
+          )}
         </div>
       </div>
 

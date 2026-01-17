@@ -36,6 +36,8 @@ export interface TopBarEntityConfig {
   onTabChange?: (key: string) => void;
   /** Custom actions on the right */
   actions?: ReactNode;
+  /** Settings/more menu handler */
+  onSettings?: () => void;
 }
 
 interface TopBarContextValue {

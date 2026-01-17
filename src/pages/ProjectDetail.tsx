@@ -129,9 +129,9 @@ export default function ProjectDetail() {
   // Build team members display for actions slot
   const teamMembersDisplay = (
     <TooltipProvider>
-      <div className="flex items-center gap-2 mr-2">
-        {projectMembers.length > 0 && (
-          <div className="flex items-center -space-x-2">
+      <div className="flex items-center -space-x-2 mr-2">
+        {projectMembers.length > 0 ? (
+          <>
             {projectMembers.slice(0, 4).map((member) => (
               <Tooltip key={member.id}>
                 <TooltipTrigger asChild>
@@ -151,7 +151,7 @@ export default function ProjectDetail() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-2xs font-medium text-muted-foreground cursor-pointer"
+                    className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-2xs font-medium text-muted-foreground cursor-pointer hover:bg-muted/80"
                     onClick={() => setTeamEditOpen(true)}
                   >
                     +{projectMembers.length - 4}
@@ -162,19 +162,24 @@ export default function ProjectDetail() {
                 </TooltipContent>
               </Tooltip>
             )}
-          </div>
+          </>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setTeamEditOpen(true)}
+              >
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Gérer l'équipe</p>
+            </TooltipContent>
+          </Tooltip>
         )}
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="gap-2"
-          onClick={() => setTeamEditOpen(true)}
-        >
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="hidden sm:inline">Équipe</span>
-        </Button>
       </div>
     </TooltipProvider>
   );
@@ -213,6 +218,7 @@ export default function ProjectDetail() {
         activeTab,
         onTabChange: setActiveTab,
         actions: teamMembersDisplay,
+        onSettings: () => setProjectEditOpen(true),
       });
     }
 
