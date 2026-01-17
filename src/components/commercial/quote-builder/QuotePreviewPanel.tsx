@@ -46,10 +46,10 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
 
   return (
     <div 
-      className="bg-white shadow-lg rounded-lg overflow-hidden origin-top-left"
+      className="bg-white shadow-lg rounded-lg overflow-hidden origin-top w-full"
       style={{ 
         transform: `scale(${scale})`,
-        width: `${100 / scale}%`,
+        transformOrigin: 'top center',
         minHeight: '297mm'
       }}
     >

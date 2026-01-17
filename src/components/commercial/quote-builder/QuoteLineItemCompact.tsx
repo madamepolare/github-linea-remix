@@ -242,7 +242,7 @@ export function QuoteLineItemCompact({
               value={line.phase_code || '__none__'}
               onValueChange={handlePhaseCodeChange}
             >
-              <SelectTrigger className="h-8 w-[90px] text-xs font-mono shrink-0 px-2 bg-muted/30 border-muted">
+              <SelectTrigger className="h-8 w-[70px] text-xs font-mono shrink-0 px-2 bg-muted/30 border-muted">
                 <SelectValue placeholder="—" />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
@@ -251,14 +251,7 @@ export function QuoteLineItemCompact({
                 </SelectItem>
                 {activeTemplates.map((t) => (
                   <SelectItem key={t.code} value={t.code}>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs font-mono px-1.5 py-0">
-                        {t.code}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-                        {t.name}
-                      </span>
-                    </div>
+                    <span className="text-xs font-mono font-medium">{t.code}</span>
                   </SelectItem>
                 ))}
               </SelectContent>
