@@ -222,6 +222,9 @@ export function EditProjectDialog({
       is_internal: isInternal,
       status,
     });
+    
+    // Close the dialog after saving
+    onOpenChange(false);
   };
 
 
