@@ -67,6 +67,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { DeliverableTasksGenerator } from "./DeliverableTasksGenerator";
+import { AIDeliverablesGenerator } from "./AIDeliverablesGenerator";
 
 interface ProjectDeliverablesTabProps {
   projectId: string;
@@ -89,6 +90,7 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [tasksGeneratorOpen, setTasksGeneratorOpen] = useState(false);
   const [tasksDeliverable, setTasksDeliverable] = useState<any | null>(null);
+  const [aiGeneratorOpen, setAiGeneratorOpen] = useState(false);
 
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -283,8 +285,9 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
         <EmptyState
           icon={FileText}
           title="Aucun livrable"
-          description="Ajoutez des livrables pour chaque phase du projet."
+          description="Ajoutez des livrables manuellement ou générez-les automatiquement avec l'IA."
           action={{ label: "Ajouter un livrable", onClick: () => setIsCreateOpen(true) }}
+          secondaryAction={{ label: "Générer avec IA", onClick: () => setAiGeneratorOpen(true) }}
         />
         <DeliverableDialog
           isOpen={isCreateOpen}
@@ -304,6 +307,11 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
           phases={phases}
           onSubmit={handleCreate}
           isEditing={false}
+        />
+        <AIDeliverablesGenerator
+          projectId={projectId}
+          open={aiGeneratorOpen}
+          onOpenChange={setAiGeneratorOpen}
         />
       </>
     );
@@ -391,9 +399,9 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={handleGenerateDeliverables}>
+          <Button size="sm" variant="outline" onClick={() => setAiGeneratorOpen(true)}>
             <Sparkles className="h-4 w-4 mr-1" />
-            Générer par défaut
+            Générer avec IA
           </Button>
           <Button size="sm" onClick={() => { resetForm(); setIsCreateOpen(true); }}>
             <Plus className="h-4 w-4 mr-1" />
@@ -566,6 +574,13 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
           projectName={project?.name || "Projet"}
         />
       )}
+
+      {/* AI Deliverables Generator */}
+      <AIDeliverablesGenerator
+        projectId={projectId}
+        open={aiGeneratorOpen}
+        onOpenChange={setAiGeneratorOpen}
+      />
     </div>
   );
 }
