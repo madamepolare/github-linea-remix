@@ -6178,6 +6178,48 @@ export type Database = {
           },
         ]
       }
+      phase_template_project_types: {
+        Row: {
+          created_at: string
+          id: string
+          phase_template_id: string
+          project_type: string
+          sort_order: number | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          phase_template_id: string
+          project_type: string
+          sort_order?: number | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phase_template_id?: string
+          project_type?: string
+          sort_order?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phase_template_project_types_phase_template_id_fkey"
+            columns: ["phase_template_id"]
+            isOneToOne: false
+            referencedRelation: "phase_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phase_template_project_types_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       phase_templates: {
         Row: {
           category: string
@@ -6190,7 +6232,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           name: string
-          project_type: string
+          project_type: string | null
           sort_order: number | null
           updated_at: string | null
           workspace_id: string
@@ -6206,7 +6248,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name: string
-          project_type?: string
+          project_type?: string | null
           sort_order?: number | null
           updated_at?: string | null
           workspace_id: string
@@ -6222,7 +6264,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           name?: string
-          project_type?: string
+          project_type?: string | null
           sort_order?: number | null
           updated_at?: string | null
           workspace_id?: string

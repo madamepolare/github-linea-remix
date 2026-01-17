@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { usePhaseTemplates, PhaseTemplate, CreatePhaseTemplateInput } from "@/hooks/usePhaseTemplates";
+import { usePhaseTemplateProjectTypes } from "@/hooks/usePhaseTemplateProjectTypes";
 import { useDeliverableTemplates, DeliverableTemplate, DELIVERABLE_TYPE_LABELS, DeliverableType } from "@/hooks/useDeliverableTemplates";
+import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -53,6 +56,7 @@ import {
   GripVertical,
   X,
   Clock,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PhaseCategory, PHASE_CATEGORY_LABELS } from "@/lib/commercialTypes";
@@ -79,6 +83,7 @@ interface PhaseFormData {
   color: string;
   is_active: boolean;
   category: PhaseCategory;
+  linkedProjectTypes: string[]; // NEW: project types this phase is linked to
 }
 
 const defaultFormData: PhaseFormData = {
@@ -90,6 +95,7 @@ const defaultFormData: PhaseFormData = {
   color: "",
   is_active: true,
   category: "base",
+  linkedProjectTypes: [],
 };
 
 interface PhaseTemplatesEditorProps {
@@ -143,6 +149,7 @@ export function PhaseTemplatesEditor({ projectTypeKey, projectTypeLabel }: Phase
       ...defaultFormData,
       code: `PHASE_${phases.length + 1}`,
       category,
+      linkedProjectTypes: [projectTypeKey], // Default to current project type
     });
     setDeliverablesText("");
     setIsDialogOpen(true);
@@ -159,6 +166,7 @@ export function PhaseTemplatesEditor({ projectTypeKey, projectTypeLabel }: Phase
       color: phase.color || "",
       is_active: phase.is_active,
       category: phase.category,
+      linkedProjectTypes: [projectTypeKey], // Will be loaded from junction table in future
     });
     setDeliverablesText(phase.deliverables.join("\n"));
     setIsDialogOpen(true);
