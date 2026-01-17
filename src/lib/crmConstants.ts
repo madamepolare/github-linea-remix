@@ -1,12 +1,10 @@
 /**
  * CRM Shared Constants
- * Centralized constants for CRM module to avoid duplication
+ * Minimal constants for CRM module - most values now come from useCRMSettings()
  */
 
-import { COMPANY_CATEGORIES, CompanyCategory, CompanyType } from "./crmTypes";
-
 // ============================================
-// Gender Options
+// Gender Options (static, doesn't need to be dynamic)
 // ============================================
 export const GENDER_OPTIONS = [
   { value: "male", label: "Monsieur" },
@@ -17,107 +15,7 @@ export const GENDER_OPTIONS = [
 export type GenderValue = typeof GENDER_OPTIONS[number]["value"];
 
 // ============================================
-// Industry Labels
-// ============================================
-const INDUSTRY_LABELS: Record<string, string> = {
-  // Promoteurs
-  "promoteur": "Promoteur",
-  // BET
-  "bet": "BET",
-  "bet_structure": "BET Structure",
-  "bet_fluides": "BET Fluides",
-  "bet_environnement": "BET Environnement",
-  "bet_acoustique": "BET Acoustique",
-  "bet_vrd": "BET VRD",
-  "bet_electricite": "BET Électricité",
-  // Paysagiste & Agenceur
-  "paysagiste": "Paysagiste",
-  "agenceur": "Agenceur",
-  // Public entities
-  "epa_sem": "EPA/SEM",
-  // Specialists
-  "acousticien": "Acousticien",
-  "economiste": "Économiste",
-  "vrd": "VRD",
-  "electricite": "Électricité",
-  // Architecture & Construction
-  "architecte": "Architecte",
-  "constructeur": "Constructeur",
-  "maitre_ouvrage": "Maître d'ouvrage",
-  "entreprise_generale": "Entreprise Générale",
-  // Control & Coordination
-  "bureau_controle": "Bureau de Contrôle",
-  "coordinateur_sps": "Coordinateur SPS",
-  // Other professionals
-  "geometre": "Géomètre",
-  "notaire": "Notaire",
-  "assureur": "Assureur",
-  "banque": "Banque",
-};
-
-/**
- * Get a human-readable label for an industry type
- */
-export function getIndustryLabel(industry: string | null): string | null {
-  if (!industry) return null;
-  return INDUSTRY_LABELS[industry] || industry.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-}
-
-// ============================================
-// BET Specialty Labels & Colors
-// ============================================
-export const BET_SPECIALTY_LABELS: Record<string, string> = {
-  structure: "Structure",
-  fluides: "Fluides",
-  electricite: "Électricité",
-  thermique: "Thermique",
-  acoustique: "Acoustique",
-  vrd: "VRD",
-  economie: "Économie",
-  facade: "Façade",
-  paysage: "Paysage",
-};
-
-export function getBETSpecialtyLabel(specialty: string): string {
-  return BET_SPECIALTY_LABELS[specialty] || specialty;
-}
-
-// ============================================
-// Industry Colors (for visual indicators)
-// ============================================
-export const INDUSTRY_COLORS: Record<string, string> = {
-  maitre_ouvrage: "hsl(var(--info))",
-  moe: "hsl(262 80% 60%)",
-  bet: "hsl(var(--success))",
-  entreprise: "hsl(var(--warning))",
-  fournisseur: "hsl(280 70% 55%)",
-  partenaire: "hsl(330 70% 55%)",
-};
-
-export function getIndustryColor(industry: string | null): string {
-  if (!industry) return "hsl(var(--muted-foreground))";
-  return INDUSTRY_COLORS[industry] || "hsl(var(--muted-foreground))";
-}
-
-// ============================================
-// Category Helpers
-// ============================================
-
-/**
- * Find the category from an industry type
- */
-export function getCategoryFromIndustry(industry: string | null): CompanyCategory | "" {
-  if (!industry) return "";
-  for (const cat of COMPANY_CATEGORIES) {
-    if (cat.types?.includes(industry as CompanyType)) {
-      return cat.id;
-    }
-  }
-  return "";
-}
-
-// ============================================
-// Status Configuration
+// Status Configuration (static UI styling)
 // ============================================
 export const ENTITY_STATUS_CONFIG = {
   lead: {

@@ -12,8 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Building2, Search } from "lucide-react";
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
-import { COMPANY_CATEGORIES, COMPANY_TYPE_CONFIG, CompanyCategory } from "@/lib/crmTypes";
-import { getCategoryFromIndustry } from "@/lib/crmConstants";
+import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { SiretSearchInput } from "./SiretSearchInput";
 import { SiretSearchDialog } from "./SiretSearchDialog";
 import { BETSpecialtiesSelect } from "./shared/BETSpecialtiesSelect";
@@ -58,8 +57,9 @@ export function CompanyFormDialog({
   company 
 }: CompanyFormDialogProps) {
   const { createCompany, updateCompany } = useCRMCompanies();
+  const { companyCategories, companyTypes, getCompanyTypesForCategory, getCategoryFromType, isBETType } = useCRMSettings();
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<CompanyCategory | "">("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [sameAsBilling, setSameAsBilling] = useState(true);
 
   const isEdit = mode === "edit";
@@ -95,7 +95,7 @@ export function CompanyFormDialog({
     if (isEdit && company) {
       const legacyBet = company.industry?.startsWith("bet_") ? company.industry.slice("bet_".length) : null;
       const normalizedIndustry = legacyBet ? "bet" : company.industry;
-      const category = getCategoryFromIndustry(normalizedIndustry);
+      const category = getCategoryFromType(normalizedIndustry || "") || "";
       setSelectedCategory(category);
 
       const normalizedSpecs = legacyBet
@@ -142,10 +142,10 @@ export function CompanyFormDialog({
   }, [open, isEdit, form]);
 
   const categoryTypes = selectedCategory
-    ? COMPANY_CATEGORIES.find((c) => c.id === selectedCategory)?.types || []
+    ? getCompanyTypesForCategory(selectedCategory)
     : [];
 
-  const isBET = selectedCategory === "bet";
+  const isBET = selectedCategory === "bet" || isBETType(form.watch("industry") || "");
 
   const handleSiretSelect = (siretData: {
     name: string;
@@ -257,7 +257,7 @@ export function CompanyFormDialog({
                 <Select
                   value={selectedCategory}
                   onValueChange={(v) => {
-                    setSelectedCategory(v as CompanyCategory);
+                    setSelectedCategory(v);
                     form.setValue("category", v);
                     form.setValue("industry", v === "bet" ? "bet" : "");
                     setSelectedSpecialties([]);
@@ -267,8 +267,8 @@ export function CompanyFormDialog({
                     <SelectValue placeholder="Sélectionner..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {COMPANY_CATEGORIES.filter((c) => c.id !== "all").map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
+                    {companyCategories.map((cat) => (
+                      <SelectItem key={cat.key} value={cat.key}>
                         {cat.label}
                       </SelectItem>
                     ))}
@@ -287,14 +287,11 @@ export function CompanyFormDialog({
                       <SelectValue placeholder="Sélectionner..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {categoryTypes.map((type) => {
-                        const config = COMPANY_TYPE_CONFIG[type];
-                        return (
-                          <SelectItem key={type} value={type}>
-                            {config.label}
-                          </SelectItem>
-                        );
-                      })}
+                      {categoryTypes.map((type) => (
+                        <SelectItem key={type.key} value={type.key}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

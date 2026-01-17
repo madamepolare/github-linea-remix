@@ -24,7 +24,7 @@ import { Pipeline } from "@/hooks/useCRMPipelines";
 import { useContactPipeline } from "@/hooks/useContactPipeline";
 import { useContacts } from "@/hooks/useContacts";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
-import { DEFAULT_COMPANY_CATEGORIES, DEFAULT_BET_SPECIALTIES } from "@/lib/crmDefaults";
+import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { Search, Building2, User, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,6 +44,7 @@ export function BulkAddToPipelineDialog({
   const { entries, addBulkEntries } = useContactPipeline(pipeline.id);
   const { contacts } = useContacts();
   const { companies } = useCRMCompanies();
+  const { companyCategories, betSpecialties, getCompanyTypeLabel } = useCRMSettings();
 
   const [entityType, setEntityType] = useState<EntityType>(
     pipeline.target_contact_type === "company" ? "company" : "contact"
@@ -268,7 +269,7 @@ export function BulkAddToPipelineDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Toutes catégories</SelectItem>
-                  {DEFAULT_COMPANY_CATEGORIES.map((cat) => (
+                  {companyCategories.map((cat) => (
                     <SelectItem key={cat.key} value={cat.key}>
                       {cat.label}
                     </SelectItem>
@@ -283,7 +284,7 @@ export function BulkAddToPipelineDialog({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Toutes spécialités</SelectItem>
-                    {DEFAULT_BET_SPECIALTIES.map((spec) => (
+                    {betSpecialties.map((spec) => (
                       <SelectItem key={spec.key} value={spec.key}>
                         {spec.label}
                       </SelectItem>

@@ -20,7 +20,6 @@ export interface CompanyTypeItem extends CRMSettingItem {
   category: string;
 }
 
-// Company categories no longer have types array - types reference categories via category field
 export interface CompanyCategoryItem extends CRMSettingItem {}
 
 function transformSettings(
@@ -176,9 +175,37 @@ export function useCRMSettings() {
     return companyTypes.filter((t) => t.category === categoryKey);
   };
 
+  // Get the category from a company type key
   const getCategoryFromType = (typeKey: string): string | null => {
     const type = companyTypes.find((t) => t.key === typeKey);
     return type?.category || null;
+  };
+
+  // Check if a type belongs to a specific category
+  const isTypeInCategory = (typeKey: string, categoryKey: string): boolean => {
+    const category = getCategoryFromType(typeKey);
+    return category === categoryKey;
+  };
+
+  // Check if a company type is a BET type
+  const isBETType = (typeKey: string): boolean => {
+    return typeKey === 'bet' || getCategoryFromType(typeKey) === 'bet';
+  };
+
+  // Find a company type by key or label (for fuzzy matching)
+  const findCompanyType = (keyOrLabel: string): CompanyTypeItem | undefined => {
+    const normalized = keyOrLabel.toLowerCase().trim();
+    return companyTypes.find(
+      (t) => t.key.toLowerCase() === normalized || t.label.toLowerCase() === normalized
+    );
+  };
+
+  // Find a category by key or label
+  const findCompanyCategory = (keyOrLabel: string): CompanyCategoryItem | undefined => {
+    const normalized = keyOrLabel.toLowerCase().trim();
+    return companyCategories.find(
+      (c) => c.key.toLowerCase() === normalized || c.label.toLowerCase() === normalized
+    );
   };
 
   return {
@@ -214,11 +241,17 @@ export function useCRMSettings() {
     getCompanyTypeShortLabel,
     getCompanyTypeColor,
     getCompanyTypeCategory,
+    findCompanyType,
     
     // Company Category helpers
     getCompanyCategoryLabel,
     getCompanyCategoryColor,
     getCompanyTypesForCategory,
     getCategoryFromType,
+    findCompanyCategory,
+    
+    // Category/Type relationship helpers
+    isTypeInCategory,
+    isBETType,
   };
 }

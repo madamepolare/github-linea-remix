@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Search, Plus, Loader2 } from "lucide-react";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
-import { getIndustryLabel } from "@/lib/crmConstants";
+import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { cn } from "@/lib/utils";
 
 interface CompanySearchSelectProps {
@@ -27,6 +27,7 @@ export function CompanySearchSelect({
   className,
 }: CompanySearchSelectProps) {
   const { companies } = useCRMCompanies();
+  const { getCompanyTypeLabel } = useCRMSettings();
   const [search, setSearch] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -75,7 +76,7 @@ export function CompanySearchSelect({
         <span className="flex-1 text-sm truncate">{selectedCompany.name}</span>
         {selectedCompany.industry && (
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
-            {getIndustryLabel(selectedCompany.industry)}
+            {getCompanyTypeLabel(selectedCompany.industry)}
           </Badge>
         )}
         <Button
@@ -135,7 +136,7 @@ export function CompanySearchSelect({
                 <span className="truncate flex-1">{company.name}</span>
                 {company.industry && (
                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 shrink-0">
-                    {getIndustryLabel(company.industry)}
+                    {getCompanyTypeLabel(company.industry)}
                   </Badge>
                 )}
               </button>
