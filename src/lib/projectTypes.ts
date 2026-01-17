@@ -194,6 +194,12 @@ export function generateDefaultPhases(
   projectEndDate?: string | null
 ) {
   const phases = DEFAULT_PHASES[projectType];
+  
+  // If no phases defined for this project type, return empty array
+  if (!phases || phases.length === 0) {
+    return [];
+  }
+  
   const phaseCount = phases.length;
   
   // Calculate phase dates based on project dates
