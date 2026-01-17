@@ -2,8 +2,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { ProjectType, generateDefaultPhases, PhaseStatus } from "@/lib/projectTypes";
-import { ProjectCategory, categoryHasFeature } from "@/lib/projectCategories";
+import { ProjectType, PhaseStatus, PHASE_COLORS } from "@/lib/projectTypes";
+import { ProjectCategory, ProjectCategoryConfig, DEFAULT_CATEGORY_FEATURES } from "@/lib/projectCategories";
 
 export interface Project {
   id: string;
@@ -104,9 +104,19 @@ export interface CreateProjectInput {
   auto_renew?: boolean;
   is_internal?: boolean;
   client_contacts?: ProjectContactInput[];
+  // Pass category config from hook to avoid additional DB query
+  categoryConfig?: ProjectCategoryConfig;
 }
 
 export type ProjectStatus = 'active' | 'completed' | 'closed';
+
+// Helper to check if a category has a feature
+function categoryHasFeature(
+  categoryConfig: ProjectCategoryConfig | undefined,
+  feature: keyof typeof DEFAULT_CATEGORY_FEATURES
+): boolean {
+  return categoryConfig?.features?.[feature] ?? DEFAULT_CATEGORY_FEATURES[feature];
+}
 
 export function useProjects(options?: { 
   includeArchived?: boolean; 
@@ -185,7 +195,8 @@ export function useProjects(options?: {
         throw new Error("Missing workspace or user");
       }
 
-      // Determine category
+      // Get category config from input (passed from component that has the hook)
+      const categoryConfig = input.categoryConfig;
       const category = input.project_category || 'standard';
       const isInternal = category === 'internal' || input.is_internal;
       
@@ -206,10 +217,10 @@ export function useProjects(options?: {
           surface_area: input.surface_area || null,
           color: input.color || "#3B82F6",
           start_date: input.start_date || null,
-          end_date: categoryHasFeature(category, 'hasEndDate') ? (input.end_date || null) : null,
-          budget: categoryHasFeature(category, 'hasBudget') ? (input.budget || null) : null,
-          monthly_budget: categoryHasFeature(category, 'hasMonthlyBudget') ? (input.monthly_budget || null) : null,
-          auto_renew: categoryHasFeature(category, 'hasAutoRenew') ? (input.auto_renew || false) : false,
+          end_date: categoryHasFeature(categoryConfig, 'hasEndDate') ? (input.end_date || null) : null,
+          budget: categoryHasFeature(categoryConfig, 'hasBudget') ? (input.budget || null) : null,
+          monthly_budget: categoryHasFeature(categoryConfig, 'hasMonthlyBudget') ? (input.monthly_budget || null) : null,
+          auto_renew: categoryHasFeature(categoryConfig, 'hasAutoRenew') ? (input.auto_renew || false) : false,
           phase: "planning",
           status: "active",
           is_internal: isInternal,
@@ -219,27 +230,63 @@ export function useProjects(options?: {
 
       if (projectError) throw projectError;
 
-      // Generate default phases only for categories that support phases
-      if (categoryHasFeature(category, 'hasPhases')) {
-        const defaultPhases = generateDefaultPhases(
-          input.project_type, 
-          project.id, 
-          activeWorkspace.id,
-          input.start_date,
-          input.end_date
-        );
-        
-        if (defaultPhases.length > 0) {
-          const phasesToInsert = defaultPhases.map((phase, index) => ({
+      // Generate phases from phase_templates if category supports phases
+      if (categoryHasFeature(categoryConfig, 'hasPhases') && input.project_type) {
+        // Fetch phase templates from database
+        const { data: templates, error: templatesError } = await supabase
+          .from("phase_templates")
+          .select("*")
+          .eq("workspace_id", activeWorkspace.id)
+          .eq("project_type", input.project_type)
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true });
+
+        if (templatesError) {
+          console.error("Error fetching phase templates:", templatesError);
+        }
+
+        if (templates && templates.length > 0) {
+          // Calculate phase dates based on project dates
+          const phaseCount = templates.length;
+          let phaseDates: { start_date: string | null; end_date: string | null }[] = [];
+
+          if (input.start_date && input.end_date) {
+            const startDate = new Date(input.start_date);
+            const endDate = new Date(input.end_date);
+            const totalDays = Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
+            const daysPerPhase = Math.floor(totalDays / phaseCount);
+
+            let currentDate = new Date(startDate);
+
+            for (let i = 0; i < phaseCount; i++) {
+              const phaseStart = new Date(currentDate);
+              const phaseEnd = i === phaseCount - 1
+                ? new Date(endDate)
+                : new Date(currentDate.getTime() + daysPerPhase * 24 * 60 * 60 * 1000);
+
+              phaseDates.push({
+                start_date: phaseStart.toISOString().split('T')[0],
+                end_date: phaseEnd.toISOString().split('T')[0],
+              });
+
+              currentDate = new Date(phaseEnd.getTime() + 24 * 60 * 60 * 1000);
+            }
+          } else {
+            phaseDates = templates.map(() => ({ start_date: null, end_date: null }));
+          }
+
+          const phasesToInsert = templates.map((template, index) => ({
             workspace_id: activeWorkspace.id,
             project_id: project.id,
-            name: phase.name,
-            description: phase.description,
+            name: template.name,
+            phase_code: template.code,
+            description: template.description,
+            percentage_fee: template.default_percentage,
             sort_order: index,
-            status: phase.status,
-            color: phase.color,
-            start_date: phase.start_date,
-            end_date: phase.end_date,
+            status: index === 0 ? "in_progress" : "pending",
+            color: template.color || PHASE_COLORS[index % PHASE_COLORS.length],
+            start_date: phaseDates[index].start_date,
+            end_date: phaseDates[index].end_date,
           }));
 
           const { error: phasesError } = await supabase
@@ -436,7 +483,6 @@ export function useSubProjects(parentId: string | null) {
 
 export function useProject(projectId: string | null) {
   const { activeWorkspace } = useAuth();
-  const queryClient = useQueryClient();
 
   return useQuery({
     queryKey: ["project", projectId, activeWorkspace?.id],
@@ -466,6 +512,38 @@ export function useProject(projectId: string | null) {
       return { ...data, phases } as Project;
     },
     enabled: !!projectId && !!activeWorkspace?.id,
+  });
+}
+
+// Hook to get all project members for a workspace (for workflow views)
+export function useAllProjectMembers() {
+  const { activeWorkspace } = useAuth();
+
+  return useQuery({
+    queryKey: ["all-project-members", activeWorkspace?.id],
+    queryFn: async () => {
+      if (!activeWorkspace?.id) return new Map<string, Set<string>>();
+
+      const { data, error } = await supabase
+        .from("project_members")
+        .select("user_id, project_id")
+        .eq("workspace_id", activeWorkspace.id);
+
+      if (error) throw error;
+
+      // Group by user_id
+      const userProjectsMap = new Map<string, Set<string>>();
+      for (const member of data || []) {
+        if (!member.user_id) continue;
+        if (!userProjectsMap.has(member.user_id)) {
+          userProjectsMap.set(member.user_id, new Set());
+        }
+        userProjectsMap.get(member.user_id)!.add(member.project_id);
+      }
+
+      return userProjectsMap;
+    },
+    enabled: !!activeWorkspace?.id,
   });
 }
 
@@ -499,72 +577,81 @@ export function useProjectMembersForList(projectIds: string[]) {
         profiles = profilesData || [];
       }
 
-
-      // Group by project_id
-      const membersByProject: Record<string, (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[]> = {};
+      // Group by project ID with profile data
+      const groupedByProject: Record<string, ProjectMember[]> = {};
       
       for (const member of membersData) {
-        if (!membersByProject[member.project_id]) {
-          membersByProject[member.project_id] = [];
+        if (!groupedByProject[member.project_id]) {
+          groupedByProject[member.project_id] = [];
         }
-        membersByProject[member.project_id].push({
+        
+        const profile = member.user_id 
+          ? profiles.find(p => p.user_id === member.user_id) 
+          : null;
+        
+        groupedByProject[member.project_id].push({
           ...member,
-          profile: profiles?.find(p => p.user_id === member.user_id) || null
+          profile: profile || undefined
         });
       }
 
-      return membersByProject;
+      return groupedByProject;
     },
     enabled: projectIds.length > 0,
   });
 }
 
+// Hook to manage project members
 export function useProjectMembers(projectId: string | null) {
+  const { activeWorkspace, user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: members, isLoading } = useQuery({
+  const { data: members, isLoading, error } = useQuery({
     queryKey: ["project-members", projectId],
     queryFn: async () => {
       if (!projectId) return [];
 
-      // Get project members
-      const { data: membersData, error } = await supabase
+      const { data, error } = await supabase
         .from("project_members")
         .select("*")
         .eq("project_id", projectId);
 
       if (error) throw error;
-      if (!membersData || membersData.length === 0) return [];
 
-      // Get profiles for internal members only (filter out null user_ids from external members)
-      const userIds = membersData.map(m => m.user_id).filter((id): id is string => id !== null);
-      
-      let profiles: { user_id: string; full_name: string | null; avatar_url: string | null }[] = [];
-      if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from("profiles")
-          .select("user_id, full_name, avatar_url")
-          .in("user_id", userIds);
-        
-        if (profilesError) throw profilesError;
-        profiles = profilesData || [];
-      }
+      // Get profiles for these members
+      const userIds = data?.map(m => m.user_id).filter(Boolean) as string[];
+      if (userIds.length === 0) return data as ProjectMember[];
 
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, avatar_url")
+        .in("user_id", userIds);
 
-      // Join manually
-      return membersData.map(member => ({
+      if (profilesError) throw profilesError;
+
+      return data?.map(member => ({
         ...member,
-        profile: profiles?.find(p => p.user_id === member.user_id) || null
-      })) as (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[];
+        profile: profiles?.find(p => p.user_id === member.user_id) || undefined
+      })) as ProjectMember[];
     },
     enabled: !!projectId,
   });
 
   const addMember = useMutation({
-    mutationFn: async ({ projectId, userId, role = "member" }: { projectId: string; userId: string; role?: string }) => {
+    mutationFn: async ({ userId, role, clientDailyRate }: { userId: string; role: string; clientDailyRate?: number }) => {
+      if (!projectId || !activeWorkspace?.id) {
+        throw new Error("Missing project or workspace");
+      }
+
       const { data, error } = await supabase
         .from("project_members")
-        .insert({ project_id: projectId, user_id: userId, role })
+        .insert({
+          project_id: projectId,
+          workspace_id: activeWorkspace.id,
+          user_id: userId,
+          role,
+          client_daily_rate: clientDailyRate || null,
+        })
         .select()
         .single();
 
@@ -572,16 +659,38 @@ export function useProjectMembers(projectId: string | null) {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-members"] });
-      queryClient.invalidateQueries({ queryKey: ["user-project-ids"] });
-      toast.success("Membre ajouté au projet");
+      queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
+      toast.success("Membre ajouté");
     },
-    onError: (error: any) => {
-      if (error.code === "23505") {
-        toast.error("Ce membre est déjà assigné au projet");
-      } else {
-        toast.error("Erreur lors de l'ajout du membre");
-      }
+    onError: (error) => {
+      toast.error("Erreur lors de l'ajout du membre");
+      console.error(error);
+    },
+  });
+
+  const updateMember = useMutation({
+    mutationFn: async ({ id, role, clientDailyRate }: { id: string; role?: string; clientDailyRate?: number }) => {
+      const updates: Record<string, unknown> = {};
+      if (role !== undefined) updates.role = role;
+      if (clientDailyRate !== undefined) updates.client_daily_rate = clientDailyRate;
+
+      const { data, error } = await supabase
+        .from("project_members")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
+      toast.success("Membre mis à jour");
+    },
+    onError: (error) => {
+      toast.error("Erreur lors de la mise à jour");
+      console.error(error);
     },
   });
 
@@ -595,118 +704,21 @@ export function useProjectMembers(projectId: string | null) {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-members"] });
-      queryClient.invalidateQueries({ queryKey: ["user-project-ids"] });
-      toast.success("Membre retiré du projet");
+      queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
+      toast.success("Membre retiré");
     },
-  });
-
-  const setMembers = useMutation({
-    mutationFn: async ({ projectId, userIds }: { projectId: string; userIds: string[] }) => {
-      // Delete all existing members
-      await supabase
-        .from("project_members")
-        .delete()
-        .eq("project_id", projectId);
-
-      // Insert new members
-      if (userIds.length > 0) {
-        const { error } = await supabase
-          .from("project_members")
-          .insert(userIds.map(userId => ({
-            project_id: projectId,
-            user_id: userId,
-            role: "member"
-          })));
-
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-members"] });
-      queryClient.invalidateQueries({ queryKey: ["user-project-ids"] });
-    },
-    onError: () => {
-      toast.error("Erreur lors de la mise à jour des membres");
+    onError: (error) => {
+      toast.error("Erreur lors de la suppression");
+      console.error(error);
     },
   });
 
   return {
     members: members || [],
     isLoading,
+    error,
     addMember,
+    updateMember,
     removeMember,
-    setMembers,
   };
-}
-
-/**
- * Hook to get project IDs where a user is a member
- * Used for planning view to show events from assigned projects
- */
-export function useUserProjectIds(userId: string | null) {
-  const { activeWorkspace } = useAuth();
-
-  return useQuery({
-    queryKey: ["user-project-ids", userId, activeWorkspace?.id],
-    queryFn: async () => {
-      if (!userId || !activeWorkspace?.id) return new Set<string>();
-
-      const { data, error } = await supabase
-        .from("project_members")
-        .select("project_id")
-        .eq("user_id", userId);
-
-      if (error) throw error;
-
-      return new Set((data || []).map(m => m.project_id));
-    },
-    enabled: !!userId && !!activeWorkspace?.id,
-  });
-}
-
-/**
- * Hook to get all project assignments in the workspace
- * Returns a Map of userId -> Set of projectIds
- */
-export function useAllProjectMembers() {
-  const { activeWorkspace } = useAuth();
-
-  return useQuery({
-    queryKey: ["all-project-members", activeWorkspace?.id],
-    queryFn: async () => {
-      if (!activeWorkspace?.id) return new Map<string, Set<string>>();
-
-      // Get all project IDs in workspace first
-      const { data: projects, error: projectsError } = await supabase
-        .from("projects")
-        .select("id")
-        .eq("workspace_id", activeWorkspace.id);
-
-      if (projectsError) throw projectsError;
-
-      const projectIds = projects?.map(p => p.id) || [];
-      if (projectIds.length === 0) return new Map<string, Set<string>>();
-
-      // Get all members for these projects
-      const { data, error } = await supabase
-        .from("project_members")
-        .select("user_id, project_id")
-        .in("project_id", projectIds);
-
-      if (error) throw error;
-
-      // Build a map of userId -> Set of projectIds
-      const userProjectsMap = new Map<string, Set<string>>();
-      (data || []).forEach(member => {
-        if (!userProjectsMap.has(member.user_id)) {
-          userProjectsMap.set(member.user_id, new Set());
-        }
-        userProjectsMap.get(member.user_id)!.add(member.project_id);
-      });
-
-      return userProjectsMap;
-    },
-    enabled: !!activeWorkspace?.id,
-  });
 }

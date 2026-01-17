@@ -43,7 +43,7 @@ import {
 import { format, parseISO, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { PROJECT_TYPES } from "@/lib/projectTypes";
+import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
 import { ChantierDashboard } from "@/components/projects/ChantierDashboard";
 import { ProjectPlanningTab } from "@/components/projects/ProjectPlanningTab";
 import { ProjectMOESection } from "@/components/projects/ProjectMOESection";

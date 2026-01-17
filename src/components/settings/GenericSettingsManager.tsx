@@ -27,7 +27,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PROJECT_CATEGORIES, ProjectCategory } from "@/lib/projectCategories";
+import { ProjectCategory } from "@/lib/projectCategories";
+import { useProjectCategorySettings } from "@/hooks/useProjectCategorySettings";
 
 interface CategoryOption {
   key: string;

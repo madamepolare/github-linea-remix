@@ -1,5 +1,5 @@
 // Project Categories - Commercial/Billing Model Classification
-// Categories are now dynamic and stored in workspace_settings
+// Categories are now fully dynamic and stored in workspace_settings
 
 // ProjectCategory is now a string type since categories are user-defined
 export type ProjectCategory = string;
@@ -24,8 +24,19 @@ export interface ProjectCategoryConfig {
   features: ProjectCategoryFeatures;
 }
 
-// Default categories for reference (actual data comes from database)
-export const PROJECT_CATEGORIES: ProjectCategoryConfig[] = [
+// Default features fallback for unknown categories
+export const DEFAULT_CATEGORY_FEATURES: ProjectCategoryFeatures = {
+  hasBudget: true,
+  hasEndDate: true,
+  hasMonthlyBudget: false,
+  hasAutoRenew: false,
+  isBillable: true,
+  hasPhases: true,
+  hasDeliverables: true,
+};
+
+// Default categories for initial setup (used only when no categories exist in DB)
+export const DEFAULT_CATEGORIES: ProjectCategoryConfig[] = [
   {
     key: 'standard',
     label: 'Projet client',
@@ -61,48 +72,3 @@ export const PROJECT_CATEGORIES: ProjectCategoryConfig[] = [
     }
   },
 ];
-
-// Default features fallback
-const DEFAULT_FEATURES: ProjectCategoryFeatures = {
-  hasBudget: true,
-  hasEndDate: true,
-  hasMonthlyBudget: false,
-  hasAutoRenew: false,
-  isBillable: true,
-  hasPhases: true,
-  hasDeliverables: true,
-};
-
-// Helper functions - these now work with any string category
-export function getProjectCategoryConfig(category: string): ProjectCategoryConfig {
-  const found = PROJECT_CATEGORIES.find(c => c.key === category);
-  return found || {
-    key: category,
-    label: category,
-    labelShort: category,
-    description: '',
-    icon: 'Briefcase',
-    color: '#3B82F6',
-    features: DEFAULT_FEATURES,
-  };
-}
-
-export function getProjectCategoryLabel(category: string): string {
-  return getProjectCategoryConfig(category).label;
-}
-
-export function getProjectCategoryColor(category: string): string {
-  return getProjectCategoryConfig(category).color;
-}
-
-export function getProjectCategoryFeatures(category: string): ProjectCategoryFeatures {
-  return getProjectCategoryConfig(category).features;
-}
-
-// Check if a category supports a specific feature
-export function categoryHasFeature(
-  category: string, 
-  feature: keyof ProjectCategoryFeatures
-): boolean {
-  return getProjectCategoryFeatures(category)[feature];
-}
