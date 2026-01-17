@@ -149,6 +149,15 @@ export function useAutoCategorize() {
       
       toast.info(`Analyse de ${allEntities.length} ${entityType === "companies" ? "entreprises" : "contacts"} en ${totalBatches} lot(s)...`);
 
+      // UUID validation regex
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      
+      // Create a map of original entities by name for fallback matching
+      const entityMap = new Map<string, string>();
+      allEntities.forEach(e => {
+        entityMap.set(e.name.toLowerCase().trim(), e.id);
+      });
+
       for (let i = 0; i < allEntities.length; i += BATCH_SIZE) {
         const batch = allEntities.slice(i, i + BATCH_SIZE);
         const batchNum = Math.floor(i / BATCH_SIZE) + 1;
@@ -166,10 +175,31 @@ export function useAutoCategorize() {
 
         if (error) throw error;
 
-        const batchResults = (data.results || []).map((r: CategorizationSuggestion) => ({
-          ...r,
-          selected: r.confidence >= 70, // Auto-select high confidence
-        }));
+        const batchResults = (data.results || [])
+          .map((r: CategorizationSuggestion) => {
+            // Validate and fix the ID
+            let validId = r.id;
+            
+            // Check if ID is valid UUID
+            if (!uuidRegex.test(r.id)) {
+              // Try to find by name matching
+              const matchedId = entityMap.get(r.name?.toLowerCase().trim());
+              if (matchedId) {
+                validId = matchedId;
+              } else {
+                // Skip this result if we can't find a valid ID
+                console.warn(`Skipping result with invalid ID: ${r.id} for ${r.name}`);
+                return null;
+              }
+            }
+            
+            return {
+              ...r,
+              id: validId,
+              selected: r.confidence >= 70, // Auto-select high confidence
+            };
+          })
+          .filter((r): r is CategorizationSuggestion => r !== null);
 
         allResults.push(...batchResults);
         
