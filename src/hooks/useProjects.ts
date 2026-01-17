@@ -519,14 +519,20 @@ export function useProjectMembers(projectId: string | null) {
       if (error) throw error;
       if (!membersData || membersData.length === 0) return [];
 
-      // Get profiles for these members
-      const userIds = membersData.map(m => m.user_id);
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("user_id, full_name, avatar_url")
-        .in("user_id", userIds);
+      // Get profiles for internal members only (filter out null user_ids from external members)
+      const userIds = membersData.map(m => m.user_id).filter((id): id is string => id !== null);
+      
+      let profiles: { user_id: string; full_name: string | null; avatar_url: string | null }[] = [];
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, avatar_url")
+          .in("user_id", userIds);
+        
+        if (profilesError) throw profilesError;
+        profiles = profilesData || [];
+      }
 
-      if (profilesError) throw profilesError;
 
       // Join manually
       return membersData.map(member => ({
