@@ -73,6 +73,10 @@ interface TaskDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultTab?: string;
+  // Creation mode props
+  isCreateMode?: boolean;
+  defaultProjectId?: string | null;
+  defaultDeliverableId?: string | null;
 }
 
 const STATUS_CONFIG = {
@@ -89,9 +93,17 @@ const PRIORITY_CONFIG = {
   urgent: { label: "Urgente", color: "text-red-600", bg: "bg-red-500/10", dot: "bg-red-500" },
 };
 
-export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "details" }: TaskDetailSheetProps) {
-  const { activeWorkspace } = useAuth();
-  const { updateTask, deleteTask } = useTasks();
+export function TaskDetailSheet({ 
+  task, 
+  open, 
+  onOpenChange, 
+  defaultTab = "details",
+  isCreateMode = false,
+  defaultProjectId = null,
+  defaultDeliverableId = null,
+}: TaskDetailSheetProps) {
+  const { activeWorkspace, user } = useAuth();
+  const { updateTask, deleteTask, createTask } = useTasks();
   const communicationsCount = useTaskCommunicationsCount(task?.id || null);
   const navigate = useNavigate();
   const titleRef = useRef<HTMLTextAreaElement>(null);
@@ -108,7 +120,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
       if (error) throw error;
       return count || 0;
     },
-    enabled: !!task?.id,
+    enabled: !!task?.id && !isCreateMode,
   });
 
   const [title, setTitle] = useState("");
@@ -122,11 +134,31 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
   const [estimatedHours, setEstimatedHours] = useState("");
   const [relatedType, setRelatedType] = useState<RelatedEntityType | null>(null);
   const [relatedId, setRelatedId] = useState<string | null>(null);
+  const [deliverableId, setDeliverableId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
+  // Reset form for create mode
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setStatus("todo");
+    setPriority("medium");
+    setDueDate(null);
+    setStartDate(null);
+    setAssignedTo([]);
+    setTags([]);
+    setEstimatedHours("");
+    setRelatedType(defaultProjectId ? "project" : null);
+    setRelatedId(defaultProjectId);
+    setDeliverableId(defaultDeliverableId);
+    setIsEditingTitle(true); // Auto-focus title in create mode
+  };
+
   useEffect(() => {
-    if (task) {
+    if (isCreateMode && open) {
+      resetForm();
+    } else if (task) {
       setTitle(task.title);
       setDescription(task.description || "");
       setStatus(task.status);
@@ -136,6 +168,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
       setAssignedTo(task.assigned_to || []);
       setTags(task.tags || []);
       setEstimatedHours(task.estimated_hours?.toString() || "");
+      setDeliverableId(task.deliverable_id || null);
       
       if (task.related_type && task.related_id) {
         setRelatedType(task.related_type as RelatedEntityType);
@@ -160,7 +193,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
         setRelatedId(null);
       }
     }
-  }, [task]);
+  }, [task, isCreateMode, open, defaultProjectId, defaultDeliverableId]);
 
   useEffect(() => {
     if (isEditingTitle && titleRef.current) {
@@ -170,7 +203,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
   }, [isEditingTitle]);
 
   const handleClose = (isOpen: boolean) => {
-    if (!isOpen && task) {
+    if (!isOpen) {
       const entityFields: Partial<Task> = {
         related_type: relatedType,
         related_id: relatedId,
@@ -179,6 +212,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
         crm_company_id: null,
         contact_id: null,
         tender_id: null,
+        deliverable_id: deliverableId,
       };
 
       if (relatedType && relatedId) {
@@ -201,19 +235,38 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
         }
       }
 
-      updateTask.mutate({
-        id: task.id,
-        title,
-        description,
-        status,
-        priority,
-        due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
-        start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
-        assigned_to: assignedTo.length > 0 ? assignedTo : null,
-        tags: tags.length > 0 ? tags : null,
-        estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
-        ...entityFields,
-      });
+      if (isCreateMode) {
+        // Create mode - create new task
+        if (title.trim()) {
+          createTask.mutate({
+            title: title.trim(),
+            description: description || null,
+            status,
+            priority,
+            due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
+            start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
+            assigned_to: assignedTo.length > 0 ? assignedTo : null,
+            tags: tags.length > 0 ? tags : null,
+            estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
+            ...entityFields,
+          });
+        }
+      } else if (task) {
+        // Edit mode - update existing task
+        updateTask.mutate({
+          id: task.id,
+          title,
+          description,
+          status,
+          priority,
+          due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : null,
+          start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
+          assigned_to: assignedTo.length > 0 ? assignedTo : null,
+          tags: tags.length > 0 ? tags : null,
+          estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
+          ...entityFields,
+        });
+      }
     }
     onOpenChange(isOpen);
   };
@@ -285,7 +338,8 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
     setPriority(priorities[nextIndex]);
   };
 
-  if (!task) return null;
+  // Allow rendering in create mode even without task
+  if (!task && !isCreateMode) return null;
 
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.todo;
   const priorityConfig = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.medium;
@@ -340,15 +394,17 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                 )}
               />
               
-              {/* Actions */}
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" onClick={handleArchive} className="h-8 w-8">
-                  <Archive className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => setShowDeleteConfirm(true)} className="h-8 w-8 text-destructive hover:text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              {/* Actions - only show in edit mode */}
+              {!isCreateMode && task && (
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" onClick={handleArchive} className="h-8 w-8">
+                    <Archive className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setShowDeleteConfirm(true)} className="h-8 w-8 text-destructive hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Editable Title */}
@@ -504,7 +560,7 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
             </div>
           </div>
 
-          {/* Tabs */}
+          {/* Tabs - show simplified in create mode */}
           <Tabs defaultValue={defaultTab} className="w-full">
             <TabsList className="w-full justify-start rounded-none border-b-0 bg-transparent h-auto p-0 px-4">
               <TabsTrigger 
@@ -514,32 +570,36 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                 <CheckSquare className="h-4 w-4 mr-1.5" />
                 Détails
               </TabsTrigger>
-              <TabsTrigger 
-                value="subtasks" 
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3 px-4"
-              >
-                <ListTodo className="h-4 w-4 mr-1.5" />
-                Sous-tâches
-                {pendingSubtasksCount && pendingSubtasksCount > 0 ? (
-                  <span className="ml-1.5 h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">
-                    {pendingSubtasksCount}
-                  </span>
-                ) : null}
-              </TabsTrigger>
-              <TabsTrigger 
-                value="time"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3 px-4"
-              >
-                <Timer className="h-4 w-4 mr-1.5" />
-                Temps
-              </TabsTrigger>
-              <TabsTrigger 
-                value="comments"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3 px-4"
-              >
-                <MessageSquare className="h-4 w-4 mr-1.5" />
-                <span>{communicationsCount || ""}</span>
-              </TabsTrigger>
+              {!isCreateMode && task && (
+                <>
+                  <TabsTrigger 
+                    value="subtasks" 
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3 px-4"
+                  >
+                    <ListTodo className="h-4 w-4 mr-1.5" />
+                    Sous-tâches
+                    {pendingSubtasksCount && pendingSubtasksCount > 0 ? (
+                      <span className="ml-1.5 h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium flex items-center justify-center">
+                        {pendingSubtasksCount}
+                      </span>
+                    ) : null}
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="time"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3 px-4"
+                  >
+                    <Timer className="h-4 w-4 mr-1.5" />
+                    Temps
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="comments"
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none pb-3 px-4"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-1.5" />
+                    <span>{communicationsCount || ""}</span>
+                  </TabsTrigger>
+                </>
+              )}
             </TabsList>
 
             {/* Tab Content */}
@@ -575,60 +635,68 @@ export function TaskDetailSheet({ task, open, onOpenChange, defaultTab = "detail
                 </div>
               </TabsContent>
 
-              {/* Subtasks Tab */}
-              <TabsContent value="subtasks" className="mt-0">
-                {activeWorkspace && (
-                  <SubtasksManager taskId={task.id} workspaceId={activeWorkspace.id} taskDescription={description} />
-                )}
-              </TabsContent>
+              {/* Subtasks Tab - only in edit mode */}
+              {!isCreateMode && task && (
+                <TabsContent value="subtasks" className="mt-0">
+                  {activeWorkspace && (
+                    <SubtasksManager taskId={task.id} workspaceId={activeWorkspace.id} taskDescription={description} />
+                  )}
+                </TabsContent>
+              )}
 
-              {/* Time Tab */}
-              <TabsContent value="time" className="mt-0">
-                <TaskTimeTracker taskId={task.id} />
-              </TabsContent>
+              {/* Time Tab - only in edit mode */}
+              {!isCreateMode && task && (
+                <TabsContent value="time" className="mt-0">
+                  <TaskTimeTracker taskId={task.id} />
+                </TabsContent>
+              )}
 
-              {/* Communications Tab */}
-              <TabsContent value="comments" className="mt-0 h-[calc(100vh-280px)]">
-                <TaskCommunications 
-                  taskId={task.id}
-                  contextEntityType={
-                    task.project_id ? "project" : 
-                    relatedType === "lead" ? "lead" :
-                    relatedType === "company" ? "company" :
-                    relatedType === "contact" ? "contact" :
-                    undefined
-                  }
-                  contextEntityId={
-                    task.project_id ? task.project_id :
-                    relatedId || undefined
-                  }
-                />
-              </TabsContent>
+              {/* Communications Tab - only in edit mode */}
+              {!isCreateMode && task && (
+                <TabsContent value="comments" className="mt-0 h-[calc(100vh-280px)]">
+                  <TaskCommunications 
+                    taskId={task.id}
+                    contextEntityType={
+                      task.project_id ? "project" : 
+                      relatedType === "lead" ? "lead" :
+                      relatedType === "company" ? "company" :
+                      relatedType === "contact" ? "contact" :
+                      undefined
+                    }
+                    contextEntityId={
+                      task.project_id ? task.project_id :
+                      relatedId || undefined
+                    }
+                  />
+                </TabsContent>
+              )}
             </div>
           </Tabs>
         </div>
       </SheetContent>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer cette tâche ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action est irréversible. La tâche "{task.title}" sera définitivement supprimée ainsi que toutes ses sous-tâches et entrées de temps associées.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete Confirmation Dialog - only in edit mode */}
+      {!isCreateMode && task && (
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Supprimer cette tâche ?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Cette action est irréversible. La tâche "{task.title}" sera définitivement supprimée ainsi que toutes ses sous-tâches et entrées de temps associées.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Supprimer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </Sheet>
   );
 }
