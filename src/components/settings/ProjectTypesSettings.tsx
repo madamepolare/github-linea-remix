@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, FolderKanban, Layers, ChevronRight, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useProjectCategorySettings } from "@/hooks/useProjectCategorySettings";
+import { PROJECT_CATEGORIES } from "@/lib/projectCategories";
 import { PhaseTemplatesEditor } from "./PhaseTemplatesEditor";
 
 interface ProjectTypesSettingsProps {

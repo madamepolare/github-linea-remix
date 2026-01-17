@@ -8,7 +8,7 @@ import { FolderKanban, Calendar, Building2, MapPin, MoreHorizontal, Eye, Trash2,
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
-import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
+import { PROJECT_TYPES } from "@/lib/projectTypes";
 import {
   DropdownMenu,
   DropdownMenuContent,

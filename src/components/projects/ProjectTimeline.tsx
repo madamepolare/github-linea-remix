@@ -24,8 +24,7 @@ import { useProjects, useSubProjects, Project, ProjectPhase } from "@/hooks/useP
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { PHASE_STATUS_CONFIG } from "@/lib/projectTypes";
-import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
+import { PROJECT_TYPES, PHASE_STATUS_CONFIG } from "@/lib/projectTypes";
 
 const CELL_WIDTH = 28;
 const ROW_HEIGHT = 56;
