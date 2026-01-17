@@ -21,6 +21,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  Crown,
   FileCheck,
   FileText,
   FolderKanban,
@@ -744,18 +745,18 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium truncate block">
-                          {member.profile?.full_name || "Membre"}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium truncate">
+                            {member.profile?.full_name || "Membre"}
+                          </span>
+                          {member.role === "lead" && (
+                            <Crown className="h-3 w-3 text-amber-500" />
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground">
                           {roleLabels[member.role] || member.role}
                         </span>
                       </div>
-                      {member.role === "lead" && (
-                        <Badge variant="secondary" className="text-xs">
-                          Chef de projet
-                        </Badge>
-                      )}
                     </div>
                   );
                 })}
