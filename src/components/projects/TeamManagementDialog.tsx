@@ -8,10 +8,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Users, X, Plus, Loader2, Crown, UserPlus, Building2, Star } from "lucide-react";
+import { Users, X, Plus, Loader2, Crown, Building2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -35,9 +34,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
-import { useProjectContacts, CONTACT_ROLES } from "@/hooks/useProjectContacts";
+import { useProjectContacts } from "@/hooks/useProjectContacts";
 import { useContacts } from "@/hooks/useContacts";
-import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 interface TeamMember {
   id: string;
@@ -56,12 +55,17 @@ interface TeamManagementDialogProps {
   projectName: string;
 }
 
+const INTERNAL_ROLES = [
+  { value: "lead", label: "Chef de projet" },
+  { value: "member", label: "Membre" },
+  { value: "viewer", label: "Observateur" },
+];
+
 const EXTERNAL_ROLES = [
   { value: "freelance", label: "Freelance" },
   { value: "consultant", label: "Consultant" },
   { value: "sous_traitant", label: "Sous-traitant" },
   { value: "partenaire", label: "Partenaire" },
-  ...CONTACT_ROLES,
 ];
 
 export function TeamManagementDialog({
@@ -93,6 +97,9 @@ export function TeamManagementDialog({
   const [isAddExternalOpen, setIsAddExternalOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [selectedExternalRole, setSelectedExternalRole] = useState("freelance");
+
+  // Add mode toggle
+  const [addMode, setAddMode] = useState<"internal" | "external">("internal");
 
   useEffect(() => {
     if (open && projectId) {
@@ -250,20 +257,13 @@ export function TeamManagementDialog({
       .slice(0, 2);
   };
 
-  const roleLabels: Record<string, string> = {
-    owner: "Responsable",
-    lead: "Chef de projet",
-    member: "Membre",
-    viewer: "Observateur",
-  };
-
-  const getExternalRoleLabel = (role: string) => {
-    const found = EXTERNAL_ROLES.find(r => r.value === role);
-    return found?.label || role;
-  };
-
   const filteredAvailableUsers = availableUsers.filter(
     (u) => !members.some((m) => m.user_id === u.user_id)
+  );
+
+  // Filter external contacts (freelances, not client contacts)
+  const externalTeamContacts = projectContacts.filter(
+    pc => EXTERNAL_ROLES.some(r => r.value === pc.role)
   );
 
   // Filter available external contacts (not already in project)
@@ -271,33 +271,44 @@ export function TeamManagementDialog({
     c => !projectContacts.some(pc => pc.contact_id === c.id)
   );
 
+  const totalTeamCount = members.length + externalTeamContacts.length;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Équipe - {projectName}
+            Équipe projet - {projectName}
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="internal" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="internal" className="gap-2">
-              <Users className="h-4 w-4" />
-              Équipe interne
-            </TabsTrigger>
-            <TabsTrigger value="external" className="gap-2">
-              <UserPlus className="h-4 w-4" />
-              Collaborateurs
-            </TabsTrigger>
-          </TabsList>
+        <div className="space-y-4">
+          {/* Add member section with toggle */}
+          <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Ajouter à l'équipe</Label>
+              <div className="flex gap-1">
+                <Button
+                  variant={addMode === "internal" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setAddMode("internal")}
+                  className="text-xs h-7"
+                >
+                  Interne
+                </Button>
+                <Button
+                  variant={addMode === "external" ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setAddMode("external")}
+                  className="text-xs h-7"
+                >
+                  Externe
+                </Button>
+              </div>
+            </div>
 
-          {/* Internal Team Tab */}
-          <TabsContent value="internal" className="space-y-4 mt-4">
-            {/* Add member section */}
-            <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
-              <Label className="text-sm font-medium">Ajouter un membre</Label>
+            {addMode === "internal" ? (
               <div className="flex gap-2">
                 <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                   <SelectTrigger className="flex-1">
@@ -324,9 +335,11 @@ export function TeamManagementDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="lead">Chef de projet</SelectItem>
-                    <SelectItem value="member">Membre</SelectItem>
-                    <SelectItem value="viewer">Observateur</SelectItem>
+                    {INTERNAL_ROLES.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Button
@@ -341,80 +354,7 @@ export function TeamManagementDialog({
                   )}
                 </Button>
               </div>
-            </div>
-
-            {/* Members list */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">
-                Membres actuels ({members.length})
-              </Label>
-              {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : members.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  Aucun membre dans l'équipe
-                </p>
-              ) : (
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {members.map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center gap-3 p-2 rounded-lg border bg-background"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.profile?.avatar_url || ""} />
-                        <AvatarFallback>
-                          {getInitials(member.profile?.full_name || null)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium truncate">
-                            {member.profile?.full_name || "Utilisateur"}
-                          </p>
-                          {member.role === "lead" && (
-                            <Crown className="h-3 w-3 text-amber-500" />
-                          )}
-                        </div>
-                      </div>
-                      <Select
-                        value={member.role}
-                        onValueChange={(value) =>
-                          handleUpdateRole(member.id, value)
-                        }
-                      >
-                        <SelectTrigger className="w-28 h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="owner">Responsable</SelectItem>
-                          <SelectItem value="lead">Chef de projet</SelectItem>
-                          <SelectItem value="member">Membre</SelectItem>
-                          <SelectItem value="viewer">Observateur</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => handleRemoveMember(member.id)}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          {/* External Collaborators Tab */}
-          <TabsContent value="external" className="space-y-4 mt-4">
-            {/* Add external collaborator */}
-            <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
-              <Label className="text-sm font-medium">Ajouter un collaborateur externe</Label>
+            ) : (
               <div className="flex gap-2">
                 <Popover open={isAddExternalOpen} onOpenChange={setIsAddExternalOpen}>
                   <PopoverTrigger asChild>
@@ -464,7 +404,7 @@ export function TeamManagementDialog({
                   </PopoverContent>
                 </Popover>
                 <Select value={selectedExternalRole} onValueChange={setSelectedExternalRole}>
-                  <SelectTrigger className="w-36">
+                  <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -487,57 +427,135 @@ export function TeamManagementDialog({
                   )}
                 </Button>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* External collaborators list */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">
-                Collaborateurs externes ({projectContacts.length})
-              </Label>
-              {isLoadingContacts ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : projectContacts.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">
-                  Aucun collaborateur externe
-                </p>
-              ) : (
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {projectContacts.map((pc) => {
-                    const contact = pc.contact;
-                    if (!contact) return null;
-                    const displayName = contact.name || `${contact.first_name || ""} ${contact.last_name || ""}`.trim() || "Contact";
+          {/* Unified team list */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">
+              Équipe ({totalTeamCount})
+            </Label>
 
-                    return (
+            {isLoading || isLoadingContacts ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : totalTeamCount === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                Aucun membre dans l'équipe
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-[350px] overflow-y-auto">
+                {/* Internal members */}
+                {members.length > 0 && (
+                  <>
+                    <div className="flex items-center gap-2 py-1">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Équipe interne
+                      </span>
+                      <Badge variant="secondary" className="text-xs">
+                        {members.length}
+                      </Badge>
+                    </div>
+                    {members.map((member) => (
                       <div
-                        key={pc.id}
+                        key={member.id}
                         className="flex items-center gap-3 p-2 rounded-lg border bg-background"
                       >
                         <Avatar className="h-8 w-8">
-                          <AvatarImage src={contact.avatar_url || ""} />
+                          <AvatarImage src={member.profile?.avatar_url || ""} />
                           <AvatarFallback>
-                            {getInitials(displayName)}
+                            {getInitials(member.profile?.full_name || null)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium truncate">
-                              {displayName}
+                              {member.profile?.full_name || "Utilisateur"}
                             </p>
-                            {pc.is_primary && (
-                              <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                            {member.role === "lead" && (
+                              <Crown className="h-3 w-3 text-amber-500" />
                             )}
                           </div>
-                          {contact.role && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {contact.role}
-                            </p>
-                          )}
                         </div>
-                        <Badge variant="outline" className="text-xs">
-                          {getExternalRoleLabel(pc.role)}
-                        </Badge>
+                        <Select
+                          value={member.role}
+                          onValueChange={(value) =>
+                            handleUpdateRole(member.id, value)
+                          }
+                        >
+                          <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {INTERNAL_ROLES.map((role) => (
+                              <SelectItem key={role.value} value={role.value}>
+                                {role.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
+                          onClick={() => handleRemoveMember(member.id)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {/* External collaborators */}
+                {externalTeamContacts.length > 0 && (
+                  <>
+                    {members.length > 0 && <Separator className="my-3" />}
+                    <div className="flex items-center gap-2 py-1">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Collaborateurs externes
+                      </span>
+                      <Badge variant="outline" className="text-xs">
+                        {externalTeamContacts.length}
+                      </Badge>
+                    </div>
+                    {externalTeamContacts.map((pc) => (
+                      <div
+                        key={pc.id}
+                        className="flex items-center gap-3 p-2 rounded-lg border bg-background"
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={pc.contact?.avatar_url || ""} />
+                          <AvatarFallback>
+                            {getInitials(pc.contact?.name || null)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">
+                              {pc.contact?.name || "Contact"}
+                            </p>
+                            <Building2 className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </div>
+                        <Select
+                          value={pc.role}
+                          onValueChange={(value) =>
+                            updateContact.mutate({ id: pc.id, role: value })
+                          }
+                        >
+                          <SelectTrigger className="w-28 h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EXTERNAL_ROLES.map((role) => (
+                              <SelectItem key={role.value} value={role.value}>
+                                {role.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <Button
                           variant="ghost"
                           size="icon-xs"
@@ -547,13 +565,13 @@ export function TeamManagementDialog({
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
