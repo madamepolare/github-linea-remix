@@ -289,12 +289,70 @@ export function useProjects(options?: {
             end_date: phaseDates[index].end_date,
           }));
 
-          const { error: phasesError } = await supabase
+          const { data: createdPhases, error: phasesError } = await supabase
             .from("project_phases")
-            .insert(phasesToInsert);
+            .insert(phasesToInsert)
+            .select();
 
           if (phasesError) {
             console.error("Error creating phases:", phasesError);
+          }
+
+          // Create project deliverables from deliverable_templates for each phase
+          if (createdPhases && createdPhases.length > 0) {
+            for (const createdPhase of createdPhases) {
+              const template = templates.find(t => t.code === createdPhase.phase_code);
+              if (!template) continue;
+
+              // Fetch deliverable templates for this phase template
+              const { data: deliverableTemplates, error: delTplError } = await supabase
+                .from("deliverable_templates")
+                .select("*")
+                .eq("phase_template_id", template.id)
+                .eq("is_active", true)
+                .order("sort_order", { ascending: true });
+
+              if (delTplError) {
+                console.error("Error fetching deliverable templates:", delTplError);
+                continue;
+              }
+
+              // If no deliverable templates exist, fall back to legacy string array
+              const legacyDeliverables = Array.isArray(template.deliverables) 
+                ? template.deliverables as string[]
+                : [];
+
+              const deliverablesToCreate = deliverableTemplates?.length 
+                ? deliverableTemplates.map((dt, i) => ({
+                    workspace_id: activeWorkspace.id,
+                    project_id: project.id,
+                    phase_id: createdPhase.id,
+                    name: dt.name,
+                    description: dt.description,
+                    status: 'pending',
+                    due_date: createdPhase.end_date,
+                    sort_order: i,
+                  }))
+                : legacyDeliverables.map((name: string, i: number) => ({
+                    workspace_id: activeWorkspace.id,
+                    project_id: project.id,
+                    phase_id: createdPhase.id,
+                    name: name,
+                    status: 'pending',
+                    due_date: createdPhase.end_date,
+                    sort_order: i,
+                  }));
+
+              if (deliverablesToCreate.length > 0) {
+                const { error: delError } = await supabase
+                  .from("project_deliverables")
+                  .insert(deliverablesToCreate);
+
+                if (delError) {
+                  console.error("Error creating project deliverables:", delError);
+                }
+              }
+            }
           }
         }
       }

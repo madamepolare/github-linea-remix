@@ -2658,6 +2658,63 @@ export type Database = {
           },
         ]
       }
+      deliverable_templates: {
+        Row: {
+          created_at: string | null
+          deliverable_type: string | null
+          description: string | null
+          estimated_hours: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          phase_template_id: string
+          sort_order: number | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deliverable_type?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phase_template_id: string
+          sort_order?: number | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deliverable_type?: string | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phase_template_id?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deliverable_templates_phase_template_id_fkey"
+            columns: ["phase_template_id"]
+            isOneToOne: false
+            referencedRelation: "phase_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deliverable_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       design_objects: {
         Row: {
           brand: string | null
@@ -9251,6 +9308,7 @@ export type Database = {
           lead_id: string | null
           module: string | null
           parent_id: string | null
+          phase_id: string | null
           priority: string | null
           project_id: string | null
           related_id: string | null
@@ -9282,6 +9340,7 @@ export type Database = {
           lead_id?: string | null
           module?: string | null
           parent_id?: string | null
+          phase_id?: string | null
           priority?: string | null
           project_id?: string | null
           related_id?: string | null
@@ -9313,6 +9372,7 @@ export type Database = {
           lead_id?: string | null
           module?: string | null
           parent_id?: string | null
+          phase_id?: string | null
           priority?: string | null
           project_id?: string | null
           related_id?: string | null
@@ -9360,6 +9420,13 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "project_phases"
             referencedColumns: ["id"]
           },
           {
