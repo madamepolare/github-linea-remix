@@ -169,7 +169,7 @@ export default function QuoteBuilder() {
   
   const [activeTab, setActiveTab] = useState('lines');
   const [showPreview, setShowPreview] = useState(true);
-  const [zoom, setZoom] = useState(70);
+  const [zoom, setZoom] = useState(100);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
