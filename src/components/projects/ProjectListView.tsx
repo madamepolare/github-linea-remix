@@ -526,25 +526,25 @@ function ProjectCard({ project, members, financialData, projectTypeSettings, ind
             </div>
 
             {/* Left: Project info */}
-            <div className="flex-1 min-w-0 flex items-center gap-4">
+            <div className="flex-1 min-w-0 flex items-center gap-3 overflow-hidden">
               {/* Name & Type */}
-              <div className="min-w-0 w-48 sm:w-56 shrink-0">
+              <div className="min-w-0 w-40 lg:w-48 shrink-0">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-sm truncate">{project.name}</h3>
                   {isClosed && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   {typeLabel && (
-                    <span className="text-xs text-muted-foreground">{typeLabel}</span>
+                    <span className="text-xs text-muted-foreground truncate">{typeLabel}</span>
                   )}
                   {project.is_internal && (
-                    <Badge variant="outline" className="text-2xs">Interne</Badge>
+                    <Badge variant="outline" className="text-2xs shrink-0">Interne</Badge>
                   )}
                 </div>
               </div>
 
               {/* Client */}
-              <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground min-w-0 w-48 shrink-0">
+              <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground min-w-0 w-40 shrink-0">
                 {project.crm_company ? (
                   <>
                     <Building2 className="h-3.5 w-3.5 shrink-0" />
@@ -556,7 +556,7 @@ function ProjectCard({ project, members, financialData, projectTypeSettings, ind
               </div>
 
               {/* Progress Circle */}
-              <div className="hidden lg:flex items-center gap-2 w-24 shrink-0">
+              <div className="hidden lg:flex items-center gap-2 w-16 shrink-0">
                 <div className="relative h-6 w-6">
                   <svg className="h-6 w-6 -rotate-90" viewBox="0 0 24 24">
                     <circle
@@ -584,11 +584,11 @@ function ProjectCard({ project, members, financialData, projectTypeSettings, ind
               </div>
 
               {/* Current Phase */}
-              <div className="hidden xl:flex items-center min-w-[140px] flex-1">
+              <div className="hidden xl:flex items-center min-w-0 max-w-[140px]">
                 {currentPhase ? (
                   <Badge 
                     variant="secondary" 
-                    className="text-xs font-medium"
+                    className="text-xs font-medium truncate max-w-full"
                     style={{ 
                       backgroundColor: currentPhase.color ? `${currentPhase.color}20` : undefined,
                       color: currentPhase.color || undefined
