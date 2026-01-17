@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProjects, useProjectMembersForList, Project, ProjectMember } from "@/hooks/useProjects";
+import { useProjectsAlertsForList, ProjectFinancialData } from "@/hooks/useProjectsAlerts";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -42,7 +43,12 @@ import {
   Users,
   TrendingUp,
   Eye,
-  Settings
+  Settings,
+  Smile,
+  Frown,
+  Meh,
+  AlertTriangle,
+  Bell
 } from "lucide-react";
 import { PROJECT_TYPES } from "@/lib/projectTypes";
 import { cn } from "@/lib/utils";
@@ -118,6 +124,9 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
   // Fetch all project members at once
   const { data: projectMembersByProject = {} } = useProjectMembersForList(allProjectIds);
   
+  // Fetch financial data and alerts for all projects
+  const { data: projectsFinancialData = {} } = useProjectsAlertsForList(allProjectIds);
+  
   const projects = useMemo(() => {
     switch (viewFilter) {
       case "closed":
@@ -185,6 +194,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
               key={project.id}
               project={project}
               members={projectMembersByProject[project.id] || []}
+              financialData={projectsFinancialData[project.id]}
               index={index}
               onNavigate={() => navigate(`/projects/${project.id}`)}
               onDelete={() => setDeleteProjectId(project.id)}
@@ -217,13 +227,14 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
 interface ProjectCardProps {
   project: Project;
   members: (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[];
+  financialData?: ProjectFinancialData;
   index: number;
   onNavigate: () => void;
   onDelete: () => void;
   formatCurrency: (value: number) => string;
 }
 
-function ProjectCard({ project, members, index, onNavigate, onDelete, formatCurrency }: ProjectCardProps) {
+function ProjectCard({ project, members, financialData, index, onNavigate, onDelete, formatCurrency }: ProjectCardProps) {
   const projectType = PROJECT_TYPES.find((t) => t.value === project.project_type);
   const phases = project.phases || [];
   const completedPhases = phases.filter((p) => p.status === "completed").length;
@@ -311,14 +322,73 @@ function ProjectCard({ project, members, index, onNavigate, onDelete, formatCurr
             </div>
 
             {/* Right: Stats */}
-            <div className="flex items-center gap-4 sm:gap-6 shrink-0">
-              {/* Budget */}
-              <div className="hidden sm:block text-right w-20">
-                <p className="text-xs text-muted-foreground">Budget</p>
-                <p className="text-xs font-semibold">
-                  {project.budget ? formatCurrency(project.budget) : "—"}
-                </p>
-              </div>
+            <div className="flex items-center gap-3 sm:gap-5 shrink-0">
+              {/* Profitability Icon */}
+              {financialData && project.budget && project.budget > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center justify-center">
+                        {financialData.margePercent >= 20 ? (
+                          <Smile className="h-5 w-5 text-emerald-500" />
+                        ) : financialData.margePercent >= 0 ? (
+                          <Meh className="h-5 w-5 text-amber-500" />
+                        ) : (
+                          <Frown className="h-5 w-5 text-destructive" />
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Marge: {Math.round(financialData.margePercent)}%</p>
+                      <p className="text-xs text-muted-foreground">
+                        Consommé: {formatCurrency(financialData.totalConsomme)} / {formatCurrency(financialData.budget)}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {/* Alerts */}
+              {financialData && financialData.alerts.length > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1">
+                        {financialData.alerts.some(a => a.type === 'error') ? (
+                          <AlertTriangle className="h-4 w-4 text-destructive" />
+                        ) : financialData.alerts.some(a => a.type === 'warning') ? (
+                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        ) : (
+                          <Bell className="h-4 w-4 text-primary" />
+                        )}
+                        <span className="text-xs font-medium">
+                          {financialData.alerts.length}
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <div className="space-y-1">
+                        {financialData.alerts.slice(0, 4).map((alert, idx) => (
+                          <div key={idx} className={cn(
+                            "text-xs flex items-center gap-1.5",
+                            alert.type === 'error' && "text-destructive",
+                            alert.type === 'warning' && "text-amber-600",
+                            alert.type === 'info' && "text-primary"
+                          )}>
+                            <span>•</span>
+                            <span>{alert.message}</span>
+                          </div>
+                        ))}
+                        {financialData.alerts.length > 4 && (
+                          <p className="text-xs text-muted-foreground">
+                            +{financialData.alerts.length - 4} autres
+                          </p>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
 
               {/* Team */}
               <div className="hidden sm:block">
@@ -327,6 +397,14 @@ function ProjectCard({ project, members, index, onNavigate, onDelete, formatCurr
                 ) : (
                   <div className="text-xs text-muted-foreground">—</div>
                 )}
+              </div>
+
+              {/* Budget */}
+              <div className="hidden sm:block text-right w-20">
+                <p className="text-xs text-muted-foreground">Budget</p>
+                <p className="text-xs font-semibold">
+                  {project.budget ? formatCurrency(project.budget) : "—"}
+                </p>
               </div>
 
               {/* Deadline */}
