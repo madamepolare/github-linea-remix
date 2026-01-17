@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -46,8 +47,13 @@ import {
   Puzzle,
   Folder,
   AlertCircle,
+  Sparkles,
+  Loader2,
+  CheckCircle,
 } from "lucide-react";
 import { PHASE_CATEGORY_LABELS, PhaseCategory } from "@/lib/commercialTypes";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface PhaseFormData {
   code: string;
@@ -83,6 +89,73 @@ export function PhasesSettings() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [resetConfirmType, setResetConfirmType] = useState<string | null>(null);
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [showAIDialog, setShowAIDialog] = useState(false);
+  const [generatedPhases, setGeneratedPhases] = useState<{ basePhases: any[], complementaryPhases: any[] } | null>(null);
+
+  // AI generation handler
+  const handleGenerateWithAI = async () => {
+    const projectTypeLabel = projectTypes.find(t => t.key === activeProjectType)?.label || activeProjectType;
+    
+    setIsGeneratingAI(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-phase-templates', {
+        body: { projectType: activeProjectType, projectTypeLabel }
+      });
+
+      if (error) throw error;
+      
+      setGeneratedPhases(data);
+      setShowAIDialog(true);
+    } catch (error) {
+      console.error('Error generating phases:', error);
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la génération');
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
+  const applyGeneratedPhases = async () => {
+    if (!generatedPhases) return;
+    
+    try {
+      // Create all phases
+      let sortOrder = 0;
+      for (const phase of generatedPhases.basePhases) {
+        await createTemplate.mutateAsync({
+          project_type: activeProjectType,
+          code: phase.code,
+          name: phase.name,
+          description: phase.description,
+          default_percentage: phase.default_percentage,
+          deliverables: phase.deliverables,
+          category: 'base',
+          sort_order: sortOrder++,
+          is_active: true
+        });
+      }
+      for (const phase of generatedPhases.complementaryPhases) {
+        await createTemplate.mutateAsync({
+          project_type: activeProjectType,
+          code: phase.code,
+          name: phase.name,
+          description: phase.description,
+          default_percentage: phase.default_percentage,
+          deliverables: phase.deliverables,
+          category: 'complementary',
+          sort_order: sortOrder++,
+          is_active: true
+        });
+      }
+      
+      toast.success(`${generatedPhases.basePhases.length + generatedPhases.complementaryPhases.length} phases créées`);
+      setShowAIDialog(false);
+      setGeneratedPhases(null);
+    } catch (error) {
+      console.error('Error creating phases:', error);
+      toast.error('Erreur lors de la création des phases');
+    }
+  };
 
   // Set first project type as active when loaded
   useEffect(() => {
@@ -402,6 +475,17 @@ export function PhasesSettings() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      {templates.length === 0 && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={handleGenerateWithAI}
+                          disabled={isGeneratingAI}
+                        >
+                          {isGeneratingAI ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                          Générer avec l'IA
+                        </Button>
+                      )}
                       {totals.base !== 100 && groupedTemplates.base.length > 0 && (
                         <Button
                           variant="default"

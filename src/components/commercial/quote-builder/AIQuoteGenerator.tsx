@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Loader2, Wand2, FileText, AlertCircle } from 'lucide-react';
+import { Sparkles, Loader2, Wand2, FileText, AlertCircle, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,7 +10,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { QuoteDocument, QuoteLine, LINE_TYPE_LABELS } from '@/types/quoteTypes';
+import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 
 interface AIQuoteGeneratorProps {
   document: Partial<QuoteDocument>;
@@ -40,9 +42,20 @@ export function AIQuoteGenerator({
   const [selectedLines, setSelectedLines] = useState<Set<string>>(new Set());
   const [mode, setMode] = useState<'idle' | 'generating' | 'review'>('idle');
   const [replaceExisting, setReplaceExisting] = useState(false);
+
+  // Get phase templates for the project type
+  const projectType = document.project_type as 'interior' | 'architecture' | 'scenography' | undefined;
+  const { templates: phaseTemplates } = usePhaseTemplates(projectType);
+  const activePhaseTemplates = phaseTemplates.filter(t => t.is_active);
+
   const handleGenerate = async () => {
     if (!document.project_type && !document.description) {
       toast.error('Veuillez renseigner le type de projet ou une description');
+      return;
+    }
+
+    if (activePhaseTemplates.length === 0) {
+      toast.error('Aucune phase définie pour ce type de projet. Configurez-les dans les paramètres.');
       return;
     }
 
@@ -50,6 +63,16 @@ export function AIQuoteGenerator({
     setMode('generating');
 
     try {
+      // Pass phase templates to edge function so AI only uses defined phases
+      const phaseTemplatesForAI = activePhaseTemplates.map(t => ({
+        code: t.code,
+        name: t.name,
+        description: t.description,
+        default_percentage: t.default_percentage,
+        category: t.category,
+        deliverables: t.deliverables
+      }));
+
       const { data, error } = await supabase.functions.invoke('generate-full-quote', {
         body: {
           projectType: document.project_type,
@@ -58,7 +81,8 @@ export function AIQuoteGenerator({
           projectSurface: document.project_surface,
           documentType: document.document_type,
           clientInfo: document.client_company?.name,
-          existingPricingItems: pricingItems
+          existingPricingItems: pricingItems,
+          phaseTemplates: phaseTemplatesForAI
         }
       });
 
@@ -258,6 +282,29 @@ export function AIQuoteGenerator({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Phase templates info */}
+        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Settings className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">
+              {activePhaseTemplates.length} phases définies pour <strong>{document.project_type || 'ce projet'}</strong>
+            </span>
+          </div>
+          <Link to="/settings/phases" target="_blank" className="text-xs text-primary hover:underline">
+            Gérer →
+          </Link>
+        </div>
+
+        {activePhaseTemplates.length === 0 && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Aucune phase définie pour ce type de projet. 
+              <Link to="/settings/phases" className="underline ml-1">Configurez vos phases</Link> avant de générer un devis.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {!document.project_type && !document.description && !document.project_budget && (
           <Alert>
             <AlertCircle className="h-4 w-4" />
@@ -279,7 +326,7 @@ export function AIQuoteGenerator({
 
         <Button
           onClick={handleGenerate}
-          disabled={isGenerating}
+          disabled={isGenerating || activePhaseTemplates.length === 0}
           className="w-full gap-2"
         >
           {isGenerating ? (
