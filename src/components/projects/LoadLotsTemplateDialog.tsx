@@ -20,8 +20,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { getDefaultLotsForProjectType, LotTemplate, DefaultLot } from "@/lib/defaultLots";
-import { ProjectType } from "@/lib/projectTypes";
-import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
+import { ProjectType, PROJECT_TYPES } from "@/lib/projectTypes";
 import { FileStack, Package } from "lucide-react";
 
 interface LoadLotsTemplateDialogProps {

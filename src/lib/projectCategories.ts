@@ -72,3 +72,6 @@ export const DEFAULT_CATEGORIES: ProjectCategoryConfig[] = [
     }
   },
 ];
+
+// Legacy PROJECT_CATEGORIES for backward compatibility - use useProjectCategorySettings hook instead
+export const PROJECT_CATEGORIES = DEFAULT_CATEGORIES;

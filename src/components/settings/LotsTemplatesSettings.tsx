@@ -4,8 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { getDefaultLotsForProjectType } from "@/lib/defaultLots";
-import { ProjectType } from "@/lib/projectTypes";
-import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
+import { PROJECT_TYPES, ProjectType } from "@/lib/projectTypes";
 import { Package, Hammer, Info, Layers } from "lucide-react";
 import { useState } from "react";
 

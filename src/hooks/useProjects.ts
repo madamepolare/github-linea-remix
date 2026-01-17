@@ -524,7 +524,8 @@ export function useAllProjectMembers() {
     queryFn: async () => {
       if (!activeWorkspace?.id) return new Map<string, Set<string>>();
 
-      const { data, error } = await supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from("project_members")
         .select("user_id, project_id")
         .eq("workspace_id", activeWorkspace.id);
@@ -533,7 +534,7 @@ export function useAllProjectMembers() {
 
       // Group by user_id
       const userProjectsMap = new Map<string, Set<string>>();
-      for (const member of data || []) {
+      for (const member of (data || []) as { user_id: string | null; project_id: string }[]) {
         if (!member.user_id) continue;
         if (!userProjectsMap.has(member.user_id)) {
           userProjectsMap.set(member.user_id, new Set());

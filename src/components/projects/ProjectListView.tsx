@@ -56,6 +56,7 @@ import {
   ChevronDown,
   ArrowUpDown,
 } from "lucide-react";
+import { PROJECT_TYPES } from "@/lib/projectTypes";
 
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -69,7 +70,7 @@ const getIconComponent = (iconName: string): React.ElementType => {
 
 // Avatar stack component for project members
 function ProjectMemberAvatars({ members, max = 4 }: { 
-  members: (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[];
+  members: ProjectMember[];
   max?: number;
 }) {
   if (!members || members.length === 0) return null;
@@ -386,7 +387,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
 
 interface ProjectCardProps {
   project: Project;
-  members: (ProjectMember & { profile: { user_id: string; full_name: string | null; avatar_url: string | null } | null })[];
+  members: ProjectMember[];
   financialData?: ProjectFinancialData;
   projectTypeSettings?: { key: string; label: string; color: string; icon?: string }[];
   index: number;
