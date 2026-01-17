@@ -19,10 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
-import { useProjectMembers } from "@/hooks/useProjects";
 import { useProjectTypeSettings, getProjectTypeIcon } from "@/hooks/useProjectTypeSettings";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
-import { MultiAssigneePicker } from "@/components/tasks/MultiAssigneePicker";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { ProjectType } from "@/lib/projectTypes";
@@ -30,10 +28,8 @@ import * as LucideIcons from "lucide-react";
 import {
   Building2,
   Loader2,
-  Users,
   Home,
 } from "lucide-react";
-import { toast } from "sonner";
 import { ProjectContactsManager } from "./ProjectContactsManager";
 
 interface Project {
@@ -86,7 +82,6 @@ export function EditProjectDialog({
   isSaving = false 
 }: EditProjectDialogProps) {
   const { companies } = useCRMCompanies();
-  const { members, setMembers: setProjectMembers } = useProjectMembers(project.id);
   const { projectTypes: disciplines, isLoading: isLoadingDisciplines } = useProjectTypeSettings();
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description || "");
@@ -104,16 +99,6 @@ export function EditProjectDialog({
   );
   const [budget, setBudget] = useState(project.budget?.toString() || "");
   const [isInternal, setIsInternal] = useState(project.is_internal || false);
-  const [assignedMembers, setAssignedMembers] = useState<string[]>(
-    members?.map(m => m.user_id) || []
-  );
-
-  // Update assigned members when members data loads
-  useEffect(() => {
-    if (members) {
-      setAssignedMembers(members.map(m => m.user_id));
-    }
-  }, [members]);
 
   // Sync state when project changes
   useEffect(() => {
@@ -131,36 +116,23 @@ export function EditProjectDialog({
     setIsInternal(project.is_internal || false);
   }, [project]);
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!name.trim()) return;
     
-    try {
-      // Save project members
-      const currentMemberIds = members?.map(m => m.user_id) || [];
-      const hasChangedMembers = JSON.stringify(currentMemberIds.sort()) !== JSON.stringify(assignedMembers.sort());
-      
-      if (hasChangedMembers) {
-        await setProjectMembers.mutateAsync({ projectId: project.id, userIds: assignedMembers });
-      }
-      
-      onSave({
-        name: name.trim(),
-        description: description.trim() || null,
-        project_type: projectType,
-        address: address.trim() || null,
-        city: city.trim() || null,
-        surface_area: surfaceArea ? parseFloat(surfaceArea) : null,
-        color,
-        crm_company_id: isInternal ? null : crmCompanyId,
-        start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
-        end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
-        budget: isInternal ? null : (budget ? parseFloat(budget) : null),
-        is_internal: isInternal,
-      });
-    } catch (error) {
-      console.error("Error saving project:", error);
-      toast.error("Erreur lors de l'enregistrement du projet");
-    }
+    onSave({
+      name: name.trim(),
+      description: description.trim() || null,
+      project_type: projectType,
+      address: address.trim() || null,
+      city: city.trim() || null,
+      surface_area: surfaceArea ? parseFloat(surfaceArea) : null,
+      color,
+      crm_company_id: isInternal ? null : crmCompanyId,
+      start_date: startDate ? format(startDate, "yyyy-MM-dd") : null,
+      end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
+      budget: isInternal ? null : (budget ? parseFloat(budget) : null),
+      is_internal: isInternal,
+    });
   };
 
   return (
@@ -365,21 +337,6 @@ export function EditProjectDialog({
             </div>
           </div>
 
-          {/* Team Members */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Équipe projet
-            </Label>
-            <MultiAssigneePicker
-              value={assignedMembers}
-              onChange={setAssignedMembers}
-              className="w-full"
-            />
-            <p className="text-xs text-muted-foreground">
-              Les membres assignés verront les événements du projet dans leur planning
-            </p>
-          </div>
 
           {/* Description */}
           <div className="space-y-2">

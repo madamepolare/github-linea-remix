@@ -7,9 +7,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Users, X, Plus, Loader2 } from "lucide-react";
+import { Users, X, Plus, Loader2, Crown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface TeamMember {
   id: string;
@@ -44,6 +46,7 @@ export function TeamManagementDialog({
   projectName,
 }: TeamManagementDialogProps) {
   const { activeWorkspace } = useAuth();
+  const queryClient = useQueryClient();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [availableUsers, setAvailableUsers] = useState<any[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
@@ -133,6 +136,7 @@ export function TeamManagementDialog({
       toast.success("Membre ajouté avec succès");
       setSelectedUserId("");
       fetchMembers();
+      queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
     } catch (error: any) {
       console.error("Error adding member:", error);
       if (error.code === "23505") {
@@ -156,6 +160,7 @@ export function TeamManagementDialog({
 
       toast.success("Membre retiré de l'équipe");
       fetchMembers();
+      queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
     } catch (error) {
       console.error("Error removing member:", error);
       toast.error("Erreur lors de la suppression");
@@ -173,6 +178,7 @@ export function TeamManagementDialog({
 
       toast.success("Rôle mis à jour");
       fetchMembers();
+      queryClient.invalidateQueries({ queryKey: ["project-members", projectId] });
     } catch (error) {
       console.error("Error updating role:", error);
       toast.error("Erreur lors de la mise à jour du rôle");
@@ -287,9 +293,17 @@ export function TeamManagementDialog({
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {member.profile?.full_name || "Utilisateur"}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">
+                          {member.profile?.full_name || "Utilisateur"}
+                        </p>
+                        {member.role === "lead" && (
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <Crown className="h-3 w-3" />
+                            Chef
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <Select
                       value={member.role}
