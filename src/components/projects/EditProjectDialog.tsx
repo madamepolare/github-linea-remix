@@ -30,8 +30,6 @@ import {
   Loader2,
   Home,
 } from "lucide-react";
-import { ProjectContactsManager } from "./ProjectContactsManager";
-
 interface Project {
   id: string;
   name: string;
@@ -40,6 +38,7 @@ interface Project {
   crm_company_id: string | null;
   address: string | null;
   city: string | null;
+  postal_code?: string | null;
   surface_area: number | null;
   color: string | null;
   start_date: string | null;
@@ -88,6 +87,7 @@ export function EditProjectDialog({
   const [projectType, setProjectType] = useState<ProjectType | null>(project.project_type);
   const [address, setAddress] = useState(project.address || "");
   const [city, setCity] = useState(project.city || "");
+  const [postalCode, setPostalCode] = useState(project.postal_code || "");
   const [surfaceArea, setSurfaceArea] = useState(project.surface_area?.toString() || "");
   const [color, setColor] = useState(project.color || "#3B82F6");
   const [crmCompanyId, setCrmCompanyId] = useState<string | null>(project.crm_company_id);
@@ -107,6 +107,7 @@ export function EditProjectDialog({
     setProjectType(project.project_type);
     setAddress(project.address || "");
     setCity(project.city || "");
+    setPostalCode(project.postal_code || "");
     setSurfaceArea(project.surface_area?.toString() || "");
     setColor(project.color || "#3B82F6");
     setCrmCompanyId(project.crm_company_id);
@@ -125,6 +126,7 @@ export function EditProjectDialog({
       project_type: projectType,
       address: address.trim() || null,
       city: city.trim() || null,
+      postal_code: postalCode.trim() || null,
       surface_area: surfaceArea ? parseFloat(surfaceArea) : null,
       color,
       crm_company_id: isInternal ? null : crmCompanyId,
@@ -261,14 +263,6 @@ export function EditProjectDialog({
             </div>
           )}
 
-          {/* Contacts opérationnels - hidden for internal projects */}
-          {!isInternal && crmCompanyId && (
-            <ProjectContactsManager 
-              projectId={project.id}
-              companyId={crmCompanyId}
-            />
-          )}
-
           {/* Location */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -280,14 +274,25 @@ export function EditProjectDialog({
                 placeholder="123 rue de Paris"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="city">Ville</Label>
-              <Input
-                id="city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Paris"
-              />
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label htmlFor="postal_code">Code postal</Label>
+                <Input
+                  id="postal_code"
+                  value={postalCode}
+                  onChange={(e) => setPostalCode(e.target.value)}
+                  placeholder="75001"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">Ville</Label>
+                <Input
+                  id="city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Paris"
+                />
+              </div>
             </div>
           </div>
 
