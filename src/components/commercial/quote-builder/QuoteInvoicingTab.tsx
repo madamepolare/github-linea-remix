@@ -9,6 +9,15 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { 
   Plus, 
   Trash2, 
@@ -21,9 +30,10 @@ import {
   Euro,
   Percent,
   Folder,
-  CreditCard
+  CreditCard,
+  CalendarRange
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addMonths, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { QuoteDocument, QuoteLine } from '@/types/quoteTypes';
@@ -38,6 +48,8 @@ interface QuoteInvoicingTabProps {
 
 export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteInvoicingTabProps) {
   const [plannedInvoices, setPlannedInvoices] = useState<PlannedInvoice[]>([]);
+  const [monthlyDialogOpen, setMonthlyDialogOpen] = useState(false);
+  const [monthCount, setMonthCount] = useState(3);
   
   const totalAmount = document.total_amount || 0;
   const vatRate = document.vat_rate || 20;
@@ -160,6 +172,37 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
     });
     
     updateSchedule(newInvoices);
+  };
+
+  // Generate monthly schedule (end of month invoices)
+  const generateMonthlySplit = (months: number) => {
+    const startDate = document.expected_start_date 
+      ? new Date(document.expected_start_date) 
+      : new Date();
+    
+    const percentage = Math.floor(100 / months);
+    const remainder = 100 - (percentage * months);
+    
+    const newInvoices: PlannedInvoice[] = Array.from({ length: months }, (_, index) => {
+      const pct = index === 0 ? percentage + remainder : percentage;
+      // Calculate end of month date
+      const invoiceDate = endOfMonth(addMonths(startDate, index));
+      
+      return {
+        id: crypto.randomUUID(),
+        schedule_number: index + 1,
+        title: `Facture mois ${index + 1}`,
+        percentage: pct,
+        amount_ht: totalAmount * (pct / 100),
+        amount_ttc: totalAmount * (pct / 100) * (1 + vatRate / 100),
+        vat_rate: vatRate,
+        planned_date: invoiceDate.toISOString().split('T')[0],
+        milestone: format(invoiceDate, 'MMMM yyyy', { locale: fr })
+      };
+    });
+    
+    updateSchedule(newInvoices);
+    setMonthlyDialogOpen(false);
   };
   
   // Add new invoice
@@ -411,6 +454,62 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
             <Button variant="outline" size="sm" onClick={() => generateEqualSplit(4)}>
               4 quarts
             </Button>
+            
+            {/* Monthly schedule dialog */}
+            <Dialog open={monthlyDialogOpen} onOpenChange={setMonthlyDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <CalendarRange className="h-4 w-4 mr-2" />
+                  Mensuel
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[400px]">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <CalendarRange className="h-5 w-5" />
+                    Échéancier mensuel
+                  </DialogTitle>
+                  <DialogDescription>
+                    Créez des échéances mensuelles en fin de mois, à partir de la date de début du projet.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Nombre de mois</Label>
+                    <div className="flex items-center gap-4">
+                      <Slider
+                        value={[monthCount]}
+                        onValueChange={([value]) => setMonthCount(value)}
+                        min={2}
+                        max={24}
+                        step={1}
+                        className="flex-1"
+                      />
+                      <span className="font-medium text-lg w-12 text-right">{monthCount}</span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 border space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Montant par mois</span>
+                      <span className="font-medium">{formatCurrency(totalAmount / monthCount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total</span>
+                      <span className="font-semibold">{formatCurrency(totalAmount)}</span>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setMonthlyDialogOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button onClick={() => generateMonthlySplit(monthCount)}>
+                    <CalendarRange className="h-4 w-4 mr-2" />
+                    Générer {monthCount} échéances
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </CardContent>
       </Card>

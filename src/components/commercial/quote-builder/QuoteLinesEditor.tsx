@@ -81,6 +81,7 @@ export function QuoteLinesEditor({
 }: QuoteLinesEditorProps) {
   const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
 
   // Get feature flags from context
   const features = useLineFeatures();
@@ -623,7 +624,7 @@ export function QuoteLinesEditor({
         </Dialog>
 
         {/* Budget cible - moved to top action bar */}
-        <Dialog>
+        <Dialog open={budgetDialogOpen} onOpenChange={setBudgetDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm gap-1.5">
               <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -642,8 +643,12 @@ export function QuoteLinesEditor({
               currentTotal={totalHT} 
               lines={lines}
               document={document}
-              onApply={(targetBudget) => adjustToTarget(targetBudget)}
+              onApply={(targetBudget) => {
+                adjustToTarget(targetBudget);
+                setBudgetDialogOpen(false);
+              }}
               onApplyWithAI={(updatedLines) => onLinesChange(updatedLines)}
+              onClose={() => setBudgetDialogOpen(false)}
             />
           </DialogContent>
         </Dialog>
@@ -818,13 +823,15 @@ function BudgetTargetForm({
   lines,
   document,
   onApply,
-  onApplyWithAI
+  onApplyWithAI,
+  onClose
 }: { 
   currentTotal: number; 
   lines: QuoteLine[];
   document: Partial<QuoteDocument>;
   onApply: (target: number) => void;
   onApplyWithAI: (lines: QuoteLine[]) => void;
+  onClose?: () => void;
 }) {
   const [targetBudget, setTargetBudget] = useState(currentTotal > 0 ? currentTotal.toString() : '');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -881,10 +888,12 @@ function BudgetTargetForm({
       });
       
       onApplyWithAI(updatedLines);
+      onClose?.();
     } catch (error) {
       console.error('Error generating prices with AI:', error);
       // Fallback to proportional distribution
       onApply(target);
+      onClose?.();
     } finally {
       setIsGenerating(false);
     }
