@@ -181,6 +181,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       end_date: showEndDate && endDate ? format(endDate, "yyyy-MM-dd") : null,
       budget: showBudget && budget ? parseFloat(budget) : null,
       is_internal: isInternal,
+      categoryConfig: categoryConfig,
     };
     
     createProject.mutate(input);

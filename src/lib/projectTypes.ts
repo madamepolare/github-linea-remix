@@ -1,76 +1,12 @@
-// Types for project configuration
+// Project Types - Now fully dynamic from database
+// This file only contains type definitions and shared constants
 
-export type ProjectType = "interior" | "architecture" | "scenography";
+// ProjectType is now a string type since types are user-defined in workspace_settings
+export type ProjectType = string;
 
 export type PhaseStatus = "pending" | "in_progress" | "completed";
 
-export interface ProjectTypeConfig {
-  value: ProjectType;
-  label: string;
-  icon: string;
-  description: string;
-  color: string;
-}
-
-export const PROJECT_TYPES: ProjectTypeConfig[] = [
-  { 
-    value: "interior", 
-    label: "Intérieur", 
-    icon: "Sofa",
-    description: "Aménagement intérieur, design d'espace",
-    color: "#8B5CF6"
-  },
-  { 
-    value: "architecture", 
-    label: "Architecture", 
-    icon: "Building2",
-    description: "Construction, rénovation, extension",
-    color: "#3B82F6"
-  },
-  { 
-    value: "scenography", 
-    label: "Scénographie", 
-    icon: "Theater",
-    description: "Exposition, événementiel, muséographie",
-    color: "#F59E0B"
-  },
-];
-
-export const DEFAULT_PHASES: Record<ProjectType, { name: string; description?: string }[]> = {
-  interior: [
-    { name: "Brief & Programme", description: "Définition des besoins et du programme" },
-    { name: "Esquisse", description: "Premières propositions conceptuelles" },
-    { name: "APS", description: "Avant-Projet Sommaire" },
-    { name: "APD", description: "Avant-Projet Définitif" },
-    { name: "PRO", description: "Projet - Plans d'exécution" },
-    { name: "Consultation", description: "Consultation des entreprises" },
-    { name: "Chantier", description: "Suivi de réalisation" },
-    { name: "Réception", description: "Livraison et réception des travaux" }
-  ],
-  architecture: [
-    { name: "Faisabilité", description: "Études préliminaires" },
-    { name: "Esquisse", description: "Premières propositions" },
-    { name: "APS", description: "Avant-Projet Sommaire" },
-    { name: "APD", description: "Avant-Projet Définitif" },
-    { name: "PC", description: "Permis de Construire" },
-    { name: "PRO", description: "Projet technique" },
-    { name: "DCE", description: "Dossier de Consultation des Entreprises" },
-    { name: "ACT", description: "Assistance à la passation des Contrats de Travaux" },
-    { name: "VISA", description: "Visa des études d'exécution" },
-    { name: "DET", description: "Direction de l'Exécution des Travaux" },
-    { name: "AOR", description: "Assistance aux Opérations de Réception" },
-    { name: "Réception", description: "Livraison finale" }
-  ],
-  scenography: [
-    { name: "Conception", description: "Concept et intention artistique" },
-    { name: "Scénario", description: "Parcours et narration" },
-    { name: "Design graphique", description: "Identité visuelle et signalétique" },
-    { name: "Production", description: "Fabrication des éléments" },
-    { name: "Montage", description: "Installation sur site" },
-    { name: "Inauguration", description: "Ouverture au public" }
-  ]
-};
-
+// Phase colors for visual differentiation
 export const PHASE_COLORS = [
   "#3B82F6", // blue
   "#10B981", // emerald
@@ -182,67 +118,9 @@ export const DELIVERABLE_STATUS = [
   { value: "validated", label: "Validé", color: "#10B981" },
 ];
 
-export function getProjectTypeConfig(type: ProjectType): ProjectTypeConfig {
-  return PROJECT_TYPES.find(t => t.value === type) || PROJECT_TYPES[0];
-}
-
-export function generateDefaultPhases(
-  projectType: ProjectType, 
-  projectId: string, 
-  workspaceId: string,
-  projectStartDate?: string | null,
-  projectEndDate?: string | null
-) {
-  const phases = DEFAULT_PHASES[projectType];
-  
-  // If no phases defined for this project type, return empty array
-  if (!phases || phases.length === 0) {
-    return [];
-  }
-  
-  const phaseCount = phases.length;
-  
-  // Calculate phase dates based on project dates
-  let phaseDates: { start_date: string | null; end_date: string | null }[] = [];
-  
-  if (projectStartDate && projectEndDate) {
-    const startDate = new Date(projectStartDate);
-    const endDate = new Date(projectEndDate);
-    const totalDays = Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
-    const daysPerPhase = Math.floor(totalDays / phaseCount);
-    
-    let currentDate = new Date(startDate);
-    
-    for (let i = 0; i < phaseCount; i++) {
-      const phaseStart = new Date(currentDate);
-      
-      // Last phase extends to project end date
-      const phaseEnd = i === phaseCount - 1 
-        ? new Date(endDate)
-        : new Date(currentDate.getTime() + daysPerPhase * 24 * 60 * 60 * 1000);
-      
-      phaseDates.push({
-        start_date: phaseStart.toISOString().split('T')[0],
-        end_date: phaseEnd.toISOString().split('T')[0],
-      });
-      
-      // Next phase starts the day after
-      currentDate = new Date(phaseEnd.getTime() + 24 * 60 * 60 * 1000);
-    }
-  } else {
-    // No dates provided
-    phaseDates = phases.map(() => ({ start_date: null, end_date: null }));
-  }
-  
-  return phases.map((phase, index) => ({
-    project_id: projectId,
-    workspace_id: workspaceId,
-    name: phase.name,
-    description: phase.description,
-    sort_order: index,
-    color: PHASE_COLORS[index % PHASE_COLORS.length],
-    status: index === 0 ? "in_progress" : "pending",
-    start_date: phaseDates[index].start_date,
-    end_date: phaseDates[index].end_date,
-  }));
-}
+// Legacy PROJECT_TYPES for backward compatibility - use useProjectTypeSettings hook instead
+export const PROJECT_TYPES = [
+  { value: "interior", label: "Intérieur", icon: "Sofa", color: "#8B5CF6" },
+  { value: "architecture", label: "Architecture", icon: "Building2", color: "#3B82F6" },
+  { value: "scenography", label: "Scénographie", icon: "Theater", color: "#F59E0B" },
+];

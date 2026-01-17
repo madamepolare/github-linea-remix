@@ -56,7 +56,7 @@ import {
   ChevronDown,
   ArrowUpDown,
 } from "lucide-react";
-import { PROJECT_TYPES } from "@/lib/projectTypes";
+
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import * as LucideIcons from "lucide-react";
