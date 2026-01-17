@@ -39,6 +39,8 @@ import {
   File,
   FileText,
   Filter,
+  ListTodo,
+  Loader2,
   Mail,
   MailCheck,
   MoreHorizontal,
@@ -64,6 +66,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { DeliverableTasksGenerator } from "./DeliverableTasksGenerator";
 
 interface ProjectDeliverablesTabProps {
   projectId: string;
@@ -81,7 +84,11 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
   const [emailDeliverable, setEmailDeliverable] = useState<any | null>(null);
   const [emailTo, setEmailTo] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
+  const [tasksGeneratorOpen, setTasksGeneratorOpen] = useState(false);
+  const [tasksDeliverable, setTasksDeliverable] = useState<any | null>(null);
 
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -531,6 +538,26 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Tasks Generator Dialog */}
+      {tasksDeliverable && (
+        <DeliverableTasksGenerator
+          open={tasksGeneratorOpen}
+          onOpenChange={setTasksGeneratorOpen}
+          deliverable={{
+            id: tasksDeliverable.id,
+            name: tasksDeliverable.name,
+            description: tasksDeliverable.description,
+            due_date: tasksDeliverable.due_date,
+            phase: tasksDeliverable.phase ? {
+              phase_name: tasksDeliverable.phase.name,
+              phase_code: tasksDeliverable.phase.phase_code,
+            } : null,
+          }}
+          projectId={projectId}
+          projectName={project?.name || "Projet"}
+        />
+      )}
     </div>
   );
 }
@@ -551,7 +578,7 @@ function DeliverableCard({
   onEdit: () => void;
   onDelete: () => void;
   onStatusChange: (id: string, status: DeliverableStatus) => void;
-  onSendEmail: () => void;
+  onGenerateTasks: () => void;
 }) {
   const statusConfig = DELIVERABLE_STATUS.find(s => s.value === deliverable.status) || DELIVERABLE_STATUS[0];
   const isOverdue = deliverable.due_date && 
@@ -652,6 +679,10 @@ function DeliverableCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onGenerateTasks}>
+                  <ListTodo className="h-4 w-4 mr-2" />
+                  Générer tâches (IA)
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={onSendEmail}>
                   <Send className="h-4 w-4 mr-2" />
                   Envoyer par email
