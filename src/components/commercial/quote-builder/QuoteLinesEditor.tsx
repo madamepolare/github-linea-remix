@@ -51,6 +51,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, LINE_TYPE_COLORS } from '@/types/quoteTypes';
+import { supabase } from '@/integrations/supabase/client';
 import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
 import { useQuoteTemplates } from '@/hooks/useQuoteTemplates';
 import { AIQuoteGenerator } from './AIQuoteGenerator';
@@ -163,7 +164,7 @@ export function QuoteLinesEditor({
   };
 
   // Load a complete quote template (all phases)
-  const loadQuoteTemplate = (template: any) => {
+  const loadQuoteTemplate = (template: any, targetBudget?: number) => {
     const newLines: QuoteLine[] = template.phases.map((phase: any, index: number) => {
       const unitPrice = phase.defaultUnitPrice || 0;
       return {
@@ -184,7 +185,71 @@ export function QuoteLinesEditor({
         sort_order: lines.length + index
       };
     });
-    onLinesChange([...lines, ...newLines]);
+    
+    // If target budget provided, distribute using AI
+    if (targetBudget && targetBudget > 0) {
+      loadTemplateWithBudget(template, newLines, targetBudget);
+    } else {
+      onLinesChange([...lines, ...newLines]);
+    }
+  };
+
+  // Load template and distribute budget with AI
+  const loadTemplateWithBudget = async (template: any, templateLines: QuoteLine[], targetBudget: number) => {
+    try {
+      const linesInfo = templateLines
+        .filter(l => l.line_type !== 'group' && l.line_type !== 'discount')
+        .map(l => ({
+          id: l.id,
+          name: l.phase_name,
+          description: l.phase_description,
+          type: l.line_type,
+          current_price: l.unit_price || 0,
+          percentage: l.percentage_fee || 0
+        }));
+      
+      const { data, error } = await supabase.functions.invoke('distribute-budget', {
+        body: {
+          targetBudget,
+          lines: linesInfo,
+          projectType: document.project_type,
+          projectDescription: document.description || document.title
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Apply the AI-generated prices
+      const priceMap = new Map<string, number>(data.lines.map((l: { id: string; price: number }) => [l.id, l.price]));
+      const updatedLines: QuoteLine[] = templateLines.map(line => {
+        if (line.line_type === 'group' || line.line_type === 'discount') return line;
+        const newPrice = priceMap.get(line.id);
+        if (newPrice !== undefined) {
+          return {
+            ...line,
+            unit_price: newPrice,
+            amount: (line.quantity || 1) * newPrice
+          };
+        }
+        return line;
+      });
+      
+      onLinesChange([...lines, ...updatedLines]);
+    } catch (error) {
+      console.error('Error distributing budget with AI:', error);
+      // Fallback: distribute proportionally based on percentages
+      const totalPercentage = templateLines.reduce((sum, l) => sum + (l.percentage_fee || 0), 0) || templateLines.length;
+      const updatedLines = templateLines.map(line => {
+        const proportion = (line.percentage_fee || (100 / templateLines.length)) / (totalPercentage || 100);
+        const newPrice = Math.round(targetBudget * proportion);
+        return {
+          ...line,
+          unit_price: newPrice,
+          amount: (line.quantity || 1) * newPrice
+        };
+      });
+      onLinesChange([...lines, ...updatedLines]);
+    }
   };
 
   const updateLine = (id: string, updates: Partial<QuoteLine>) => {
@@ -318,6 +383,26 @@ export function QuoteLinesEditor({
   const allPricingItems = activePricingGrids.flatMap(grid => (grid.items || []).map((item: any) => ({ name: item.name, unit_price: item.unit_price, unit: item.unit })));
 
   const [showAIDialog, setShowAIDialog] = useState(false);
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [templateBudget, setTemplateBudget] = useState('');
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
+
+  const handleLoadTemplateWithBudget = async () => {
+    if (!selectedTemplate) return;
+    
+    const budget = parseFloat(templateBudget) || 0;
+    setIsLoadingTemplate(true);
+    
+    try {
+      await loadQuoteTemplate(selectedTemplate, budget > 0 ? budget : undefined);
+      setShowTemplateDialog(false);
+      setSelectedTemplate(null);
+      setTemplateBudget('');
+    } finally {
+      setIsLoadingTemplate(false);
+    }
+  };
 
   const renderDraggableLine = (line: QuoteLine, index: number, isInGroup: boolean) => (
     <Draggable key={line.id} draggableId={line.id} index={index}>
@@ -392,38 +477,121 @@ export function QuoteLinesEditor({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Load Quote Template Button */}
+        {/* Load Quote Template Button - opens dialog */}
         {quoteTemplates && quoteTemplates.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm gap-1.5">
-                <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Charger template</span>
-                <span className="sm:hidden">Template</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-72">
-              <div className="px-2 py-1.5 text-xs text-muted-foreground font-medium flex items-center justify-between">
-                <span>Templates de devis</span>
-                <a href="/settings?section=quote-templates" target="_blank" className="text-primary hover:underline text-xs">Gérer →</a>
-              </div>
-              <DropdownMenuSeparator />
-              {quoteTemplates.map(template => (
-                <DropdownMenuItem key={template.id} onClick={() => loadQuoteTemplate(template)}>
-                  <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
-                      <Layers className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{template.name}</span>
+          <>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 sm:h-9 text-xs sm:text-sm gap-1.5"
+              onClick={() => setShowTemplateDialog(true)}
+            >
+              <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Charger template</span>
+              <span className="sm:hidden">Template</span>
+            </Button>
+            
+            <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Layers className="h-5 w-5" />
+                    Charger un template de devis
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  {/* Template selection */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Template</label>
+                    <div className="grid gap-2 max-h-48 overflow-y-auto">
+                      {quoteTemplates.map(template => (
+                        <div
+                          key={template.id}
+                          onClick={() => setSelectedTemplate(template)}
+                          className={cn(
+                            "p-3 border rounded-lg cursor-pointer transition-colors",
+                            selectedTemplate?.id === template.id
+                              ? "border-primary bg-primary/5"
+                              : "hover:bg-muted/50"
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Layers className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="font-medium">{template.name}</span>
+                            <Badge variant="secondary" className="text-xs ml-auto">
+                              {template.phases.length} phases
+                            </Badge>
+                          </div>
+                          {template.description && (
+                            <p className="text-xs text-muted-foreground mt-1 ml-6">
+                              {template.description}
+                            </p>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <span className="text-xs text-muted-foreground ml-6">
-                      {template.phases.length} phases
-                      {template.description && ` • ${template.description}`}
-                    </span>
                   </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  
+                  {/* Budget target input */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Budget cible HT (optionnel)</label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={templateBudget}
+                        onChange={(e) => setTemplateBudget(e.target.value)}
+                        className="text-right"
+                        placeholder="Ex: 15000"
+                      />
+                      <span className="text-muted-foreground">€</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {templateBudget && parseFloat(templateBudget) > 0
+                        ? "L'IA répartira intelligemment ce budget entre les phases du template."
+                        : "Laissez vide pour charger le template avec les prix par défaut."}
+                    </p>
+                  </div>
+                  
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setShowTemplateDialog(false);
+                        setSelectedTemplate(null);
+                        setTemplateBudget('');
+                      }}
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={handleLoadTemplateWithBudget}
+                      disabled={!selectedTemplate || isLoadingTemplate}
+                    >
+                      {isLoadingTemplate ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Génération...
+                        </>
+                      ) : templateBudget && parseFloat(templateBudget) > 0 ? (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Charger avec IA
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 mr-2" />
+                          Charger
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>
         )}
 
         <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
