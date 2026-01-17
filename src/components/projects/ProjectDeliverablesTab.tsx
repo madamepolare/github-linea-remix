@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/select";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
-import { TaskCreateSheet } from "@/components/tasks/TaskCreateSheet";
 import { format, parseISO, isPast } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -617,10 +616,12 @@ export function ProjectDeliverablesTab({ projectId }: ProjectDeliverablesTabProp
         onClose={() => setSelectedTaskDeliverableId(null)}
       />
 
-      {/* Task Create Sheet for manually adding tasks to deliverable */}
-      <TaskCreateSheet
+      {/* Task Create Sheet using TaskDetailSheet in create mode */}
+      <TaskDetailSheet
+        task={null}
         open={!!createTaskDeliverableId}
         onOpenChange={(open) => !open && setCreateTaskDeliverableId(null)}
+        isCreateMode={true}
         defaultProjectId={projectId}
         defaultDeliverableId={createTaskDeliverableId}
       />
