@@ -32,6 +32,7 @@ interface TaskCreateSheetProps {
   onOpenChange: (open: boolean) => void;
   defaultDueDate?: Date | null;
   defaultProjectId?: string | null;
+  defaultDeliverableId?: string | null;
 }
 
 const statusOptions = [
@@ -52,7 +53,8 @@ export function TaskCreateSheet({
   open, 
   onOpenChange, 
   defaultDueDate,
-  defaultProjectId 
+  defaultProjectId,
+  defaultDeliverableId,
 }: TaskCreateSheetProps) {
   const { activeWorkspace } = useAuth();
   const { createTask } = useTasks();
@@ -128,6 +130,7 @@ export function TaskCreateSheet({
       estimated_hours: estimatedHours ? parseFloat(estimatedHours) : null,
       related_type: relatedType,
       related_id: relatedId,
+      deliverable_id: defaultDeliverableId || null,
       ...entityFields,
     }, {
       onSuccess: () => {

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Task } from "@/hooks/useTasks";
 
 export interface DeliverableTask {
   id: string;
@@ -13,6 +14,28 @@ export interface DeliverableTask {
     title: string;
     status: string;
   }[];
+}
+
+// Fetch full task for TaskDetailSheet
+export function useDeliverableFullTask(deliverableId: string | null) {
+  return useQuery({
+    queryKey: ["deliverable-full-task", deliverableId],
+    queryFn: async () => {
+      if (!deliverableId) return null;
+
+      // Get the main task linked to this deliverable (parent task)
+      const { data: mainTask, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("deliverable_id", deliverableId)
+        .is("parent_id", null)
+        .maybeSingle();
+
+      if (error) throw error;
+      return mainTask as Task | null;
+    },
+    enabled: !!deliverableId,
+  });
 }
 
 export function useDeliverableTasks(deliverableId: string | null) {

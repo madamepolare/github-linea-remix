@@ -41,6 +41,7 @@ export interface Task {
   contact_id: string | null;
   lead_id: string | null;
   tender_id: string | null;
+  deliverable_id: string | null;
   // Subtasks preview (not full Task objects)
   subtasks?: SubtaskPreview[];
 }
