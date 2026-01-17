@@ -115,7 +115,7 @@ export function QuoteLinesEditor({
 
   const addGroup = () => {
     const newGroup: QuoteLine = {
-      id: generateId(), phase_name: 'Nouveau groupe', line_type: 'group',
+      id: generateId(), phase_name: '', line_type: 'group',
       quantity: 0, unit: 'forfait', unit_price: 0, amount: 0,
       billing_type: 'one_time', is_optional: false, is_included: true, sort_order: lines.length
     };
@@ -271,7 +271,7 @@ export function QuoteLinesEditor({
                   <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 bg-muted/30 flex-wrap sm:flex-nowrap">
                     <GripVertical className="h-4 w-4 text-muted-foreground hidden sm:block" />
                     <Folder className="h-4 w-4 text-slate-600 shrink-0" />
-                    <Input value={group.phase_name} onChange={(e) => updateLine(group.id, { phase_name: e.target.value })} className="flex-1 h-8 sm:h-9 font-medium text-sm min-w-[120px]" placeholder="Nom du groupe..." />
+                    <Input value={group.phase_name} onChange={(e) => updateLine(group.id, { phase_name: e.target.value })} className="flex-1 h-8 sm:h-9 font-medium text-sm min-w-[120px]" placeholder="Titre du groupe" autoFocus={!group.phase_name} />
                     <Badge variant="secondary" className="text-xs shrink-0">{groupLines.length}</Badge>
                     <span className="font-medium text-sm min-w-[80px] sm:min-w-[100px] text-right shrink-0">{formatCurrency(getGroupSubtotal(group.id))}</span>
                     <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-destructive shrink-0" onClick={() => deleteLine(group.id)}><Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></Button>

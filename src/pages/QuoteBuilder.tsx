@@ -28,8 +28,15 @@ import {
   Calendar,
   Receipt,
   LucideIcon,
-  Trophy
+  Trophy,
+  Rocket,
+  ExternalLink
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { QuoteDocument, QuoteLine, phaseToQuoteLine, quoteLineToPhase, DOCUMENT_STATUS_LABELS, DocumentStatus } from '@/types/quoteTypes';
 import { cn } from '@/lib/utils';
 import { getOrCreatePublicQuoteLink } from '@/lib/publicQuoteLink';
@@ -65,7 +72,6 @@ import type { Json } from '@/integrations/supabase/types';
 import { ConvertQuoteToProjectDialog } from '@/components/commercial/ConvertQuoteToProjectDialog';
 import { ConvertQuoteToSubProjectDialog } from '@/components/commercial/ConvertQuoteToSubProjectDialog';
 import { SendQuoteDialog } from '@/components/commercial/SendQuoteDialog';
-import { Rocket, ExternalLink } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -637,80 +643,43 @@ export default function QuoteBuilder() {
           </div>
         </div>
         
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => setShowPreview(!showPreview)}
-            className="hidden lg:flex"
-          >
-            {showPreview ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-            {showPreview ? 'Masquer aperçu' : 'Afficher aperçu'}
-          </Button>
-          
-          <Separator orientation="vertical" className="h-6 hidden lg:block" />
-          
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleDownloadPDF}
-            className="h-8 sm:h-9 px-2 sm:px-3"
-          >
-            <Download className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">PDF</span>
-          </Button>
-          
-          <Button 
-            size="sm"
-            onClick={handleSave}
-            disabled={!canClickSave}
-            title={!activeWorkspace ? 'Aucun workspace actif' : authLoading ? 'Chargement de session…' : undefined}
-            className="h-8 sm:h-9 px-2 sm:px-3"
-          >
-            <Save className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">{isSaving ? 'Enregistrement...' : 'Enregistrer'}</span>
-          </Button>
-          
-          {/* "Gagné" button - marks as accepted and offers project/sub-project creation */}
-          {canConvertToProject && (
-            <Button 
-              variant="default"
-              size="sm"
-              onClick={handleWonClick}
-              className="h-8 sm:h-9 px-2 sm:px-3 bg-green-600 hover:bg-green-700"
-            >
-              <Trophy className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">
-                {isLinkedToFrameworkProject ? 'Valider' : 'Gagné'}
-              </span>
-            </Button>
-          )}
-          
-          {/* Link to project if already converted */}
-          {isLinkedToProject && document.project?.id && (
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/projects/${document.project?.id}`)}
-              className="h-8 sm:h-9 px-2 sm:px-3"
-            >
-              <ExternalLink className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Voir projet</span>
-            </Button>
-          )}
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreHorizontal className="h-4 w-4" />
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Toggle preview - icon only */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => setShowPreview(!showPreview)}
+                className="hidden lg:flex h-8 w-8"
+              >
+                {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setShowSendDialog(true)} disabled={isNew}>
-                <Send className="h-4 w-4 mr-2" />
-                Envoyer au client
-              </DropdownMenuItem>
-              <DropdownMenuItem 
+            </TooltipTrigger>
+            <TooltipContent>{showPreview ? 'Masquer aperçu' : 'Afficher aperçu'}</TooltipContent>
+          </Tooltip>
+          
+          {/* Download PDF - icon only */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={handleDownloadPDF}
+                className="h-8 w-8"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Télécharger PDF</TooltipContent>
+          </Tooltip>
+          
+          {/* Public link - icon only */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
                 onClick={async () => {
                   try {
                     if (!document.id || !document.workspace_id) return;
@@ -726,9 +695,78 @@ export default function QuoteBuilder() {
                   }
                 }}
                 disabled={isNew}
+                className="h-8 w-8"
               >
-                <Copy className="h-4 w-4 mr-2" />
-                Copier le lien
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Copier le lien client</TooltipContent>
+          </Tooltip>
+          
+          <Separator orientation="vertical" className="h-5 mx-1" />
+          
+          {/* Save button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost"
+                size="icon"
+                onClick={handleSave}
+                disabled={!canClickSave}
+                title={!activeWorkspace ? 'Aucun workspace actif' : authLoading ? 'Chargement de session…' : undefined}
+                className="h-8 w-8"
+              >
+                <Save className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</TooltipContent>
+          </Tooltip>
+          
+          {/* "Gagné" button - marks as accepted and offers project/sub-project creation */}
+          {canConvertToProject && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="default"
+                  size="icon"
+                  onClick={handleWonClick}
+                  className="h-8 w-8 bg-green-600 hover:bg-green-700"
+                >
+                  <Trophy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{isLinkedToFrameworkProject ? 'Valider' : 'Gagné'}</TooltipContent>
+            </Tooltip>
+          )}
+          
+          {/* Link to project if already converted */}
+          {isLinkedToProject && document.project?.id && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate(`/projects/${document.project?.id}`)}
+                  className="h-8 w-8"
+                >
+                  <Rocket className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Voir projet</TooltipContent>
+            </Tooltip>
+          )}
+          
+          {/* More actions dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-background">
+              <DropdownMenuItem onClick={() => setShowSendDialog(true)} disabled={isNew}>
+                <Send className="h-4 w-4 mr-2" />
+                Envoyer au client
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Copy className="h-4 w-4 mr-2" />
