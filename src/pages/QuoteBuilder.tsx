@@ -71,7 +71,9 @@ import { LineFeatureProvider } from '@/contexts/LineFeatureContext';
 import type { Json } from '@/integrations/supabase/types';
 import { ConvertQuoteToProjectDialog } from '@/components/commercial/ConvertQuoteToProjectDialog';
 import { ConvertQuoteToSubProjectDialog } from '@/components/commercial/ConvertQuoteToSubProjectDialog';
+import { CreateProjectFromQuoteDialog } from '@/components/commercial/CreateProjectFromQuoteDialog';
 import { SendQuoteDialog } from '@/components/commercial/SendQuoteDialog';
+import { FolderPlus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -174,6 +176,7 @@ export default function QuoteBuilder() {
   const [hasChanges, setHasChanges] = useState(false);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showConvertToSubProjectDialog, setShowConvertToSubProjectDialog] = useState(false);
+  const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
   
   const [document, setDocument] = useState<Partial<QuoteDocument>>({
@@ -519,8 +522,12 @@ export default function QuoteBuilder() {
 
   // Check if document is already linked to a project
   const isLinkedToProject = !!document.project?.id;
-  const isAcceptedOrSigned = document.status === 'accepted' || document.status === 'signed';
-  const canConvertToProject = !isNew && !isLinkedToProject && !isAcceptedOrSigned;
+  const isSigned = document.status === 'signed';
+  const isAccepted = document.status === 'accepted';
+  // Can convert: not new, not linked to project, not already accepted
+  const canConvertToProject = !isNew && !isLinkedToProject && !isAccepted && !isSigned;
+  // Can create project from signed quote: signed but no project yet
+  const canCreateProjectFromSigned = !isNew && !isLinkedToProject && isSigned;
 
   const statusVariant = document.status === 'accepted' ? 'default' : 
                         document.status === 'sent' ? 'secondary' : 
@@ -736,6 +743,23 @@ export default function QuoteBuilder() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{isLinkedToFrameworkProject ? 'Valider' : 'Gagné'}</TooltipContent>
+            </Tooltip>
+          )}
+          
+          {/* Create project from signed quote */}
+          {canCreateProjectFromSigned && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="default"
+                  size="icon"
+                  onClick={() => setShowCreateProjectDialog(true)}
+                  className="h-8 w-8"
+                >
+                  <FolderPlus className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Créer le projet</TooltipContent>
             </Tooltip>
           )}
           
@@ -979,6 +1003,15 @@ export default function QuoteBuilder() {
           onConvert={handleConvertToSubProject}
         />
       )}
+      
+      {/* Create project from signed quote - simplified dialog */}
+      <CreateProjectFromQuoteDialog
+        open={showCreateProjectDialog}
+        onOpenChange={setShowCreateProjectDialog}
+        document={document as QuoteDocument}
+        lines={lines}
+        onConvert={handleConvertToProject}
+      />
       
       {/* Send quote dialog */}
       <SendQuoteDialog
