@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useProjects, useProjectMembersForList, Project, ProjectMember } from "@/hooks/useProjects";
 import { useProjectsAlertsForList, ProjectFinancialData } from "@/hooks/useProjectsAlerts";
 import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
+import { useProjectCategorySettings } from "@/hooks/useProjectCategorySettings";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -129,11 +130,13 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [searchQuery, setSearchQuery] = useState("");
   const [groupBy, setGroupBy] = useState<GroupBy>("none");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   
   const { projects: activeProjects, isLoading: loadingActive, deleteProject } = useProjects();
   const { projects: closedProjects, isLoading: loadingClosed } = useProjects({ includeClosed: true });
   const { projects: archivedProjects, isLoading: loadingArchived } = useProjects({ includeArchived: true });
   const { projectTypes } = useProjectTypeSettings();
+  const { categories } = useProjectCategorySettings();
 
   // Get all project IDs for fetching members
   const allProjectIds = useMemo(() => {
@@ -163,11 +166,16 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
 
   // Filter and sort projects
   const projects = useMemo(() => {
-    // First apply search filter
+    // First apply category filter
     let filtered = filteredProjects;
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter(p => p.project_category === categoryFilter);
+    }
+    
+    // Then apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filteredProjects.filter(p => 
+      filtered = filtered.filter(p => 
         p.name.toLowerCase().includes(query) ||
         p.crm_company?.name?.toLowerCase().includes(query) ||
         p.project_type?.toLowerCase().includes(query)
@@ -203,7 +211,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
       return sortDirection === "asc" ? comparison : -comparison;
     });
     return sorted;
-  }, [filteredProjects, sortField, sortDirection, searchQuery]);
+  }, [filteredProjects, sortField, sortDirection, searchQuery, categoryFilter]);
 
   // Group projects by type or client
   const groupedProjects = useMemo(() => {
@@ -324,6 +332,26 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
           }}
           filters={
             <div className="flex items-center gap-2">
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="h-9 w-[140px] text-xs">
+                  <SelectValue placeholder="Catégorie..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes catégories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.key} value={cat.key}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: cat.color }}
+                        />
+                        {cat.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
               <Select value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
                 <SelectTrigger className="h-9 w-[140px] text-xs">
                   <SelectValue placeholder="Grouper par..." />
