@@ -165,24 +165,44 @@ export function TeamManagementDialog({
 
   const fetchAvailableUsers = async () => {
     if (!activeWorkspace?.id) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from("workspace_members")
-        .select(`
-          user_id,
-          profiles:user_id (
-            user_id,
-            full_name,
-            avatar_url
-          )
-        `)
-        .eq("workspace_id", activeWorkspace.id);
 
-      if (error) throw error;
-      setAvailableUsers(data || []);
+    try {
+      // Fetch workspace members first (avoid relying on PostgREST embedded relation)
+      const { data: members, error: membersError } = await supabase
+        .from("workspace_members")
+        .select("user_id, role, is_hidden")
+        .eq("workspace_id", activeWorkspace.id)
+        .neq("is_hidden", true);
+
+      if (membersError) throw membersError;
+
+      const userIds = (members || []).map((m) => m.user_id).filter(Boolean);
+      if (userIds.length === 0) {
+        setAvailableUsers([]);
+        return;
+      }
+
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, avatar_url")
+        .in("user_id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      const profileMap = new Map(
+        (profiles || []).map((p) => [p.user_id, p])
+      );
+
+      setAvailableUsers(
+        (members || []).map((m) => ({
+          user_id: m.user_id,
+          role: m.role,
+          profiles: profileMap.get(m.user_id) || null,
+        }))
+      );
     } catch (error) {
       console.error("Error fetching available users:", error);
+      setAvailableUsers([]);
     }
   };
 
@@ -473,7 +493,7 @@ export function TeamManagementDialog({
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start" sideOffset={4}>
+                <PopoverContent className="w-[300px] p-0 z-50" align="start" sideOffset={4}>
                   <Command>
                     <CommandInput placeholder="Rechercher..." />
                     <CommandList className="max-h-[200px]">
