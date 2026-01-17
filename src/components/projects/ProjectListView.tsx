@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProjects, useProjectMembersForList, Project, ProjectMember } from "@/hooks/useProjects";
 import { useProjectsAlertsForList, ProjectFinancialData } from "@/hooks/useProjectsAlerts";
+import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -48,11 +49,21 @@ import {
   Frown,
   Meh,
   AlertTriangle,
-  Bell
+  Bell,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
 } from "lucide-react";
 import { PROJECT_TYPES } from "@/lib/projectTypes";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import * as LucideIcons from "lucide-react";
+
+// Get icon component from name
+const getIconComponent = (iconName: string): React.ElementType => {
+  const icons = LucideIcons as unknown as Record<string, React.ElementType>;
+  return icons[iconName] || FolderKanban;
+};
 
 // Avatar stack component for project members
 function ProjectMemberAvatars({ members, max = 4 }: { 
@@ -103,14 +114,20 @@ interface ProjectListViewProps {
 
 type ViewFilter = "active" | "closed" | "archived";
 
+type SortField = "name" | "progress" | "budget" | "endDate" | "client";
+type SortDirection = "asc" | "desc";
+
 export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
   const navigate = useNavigate();
   const [viewFilter, setViewFilter] = useState<ViewFilter>("active");
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   
   const { projects: activeProjects, isLoading: loadingActive, deleteProject } = useProjects();
   const { projects: closedProjects, isLoading: loadingClosed } = useProjects({ includeClosed: true });
   const { projects: archivedProjects, isLoading: loadingArchived } = useProjects({ includeArchived: true });
+  const { projectTypes } = useProjectTypeSettings();
 
   // Get all project IDs for fetching members
   const allProjectIds = useMemo(() => {
@@ -127,7 +144,7 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
   // Fetch financial data and alerts for all projects
   const { data: projectsFinancialData = {} } = useProjectsAlertsForList(allProjectIds);
   
-  const projects = useMemo(() => {
+  const filteredProjects = useMemo(() => {
     switch (viewFilter) {
       case "closed":
         return closedProjects.filter(p => p.status === "closed" && !p.is_archived);
@@ -137,6 +154,56 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
         return activeProjects;
     }
   }, [viewFilter, activeProjects, closedProjects, archivedProjects]);
+
+  // Sort projects
+  const projects = useMemo(() => {
+    const sorted = [...filteredProjects].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortField) {
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "progress":
+          const aProgress = (a.phases?.filter(p => p.status === "completed").length || 0) / Math.max(a.phases?.length || 1, 1);
+          const bProgress = (b.phases?.filter(p => p.status === "completed").length || 0) / Math.max(b.phases?.length || 1, 1);
+          comparison = aProgress - bProgress;
+          break;
+        case "budget":
+          comparison = (a.budget || 0) - (b.budget || 0);
+          break;
+        case "endDate":
+          const aDate = a.end_date ? new Date(a.end_date).getTime() : 0;
+          const bDate = b.end_date ? new Date(b.end_date).getTime() : 0;
+          comparison = aDate - bDate;
+          break;
+        case "client":
+          comparison = (a.crm_company?.name || "").localeCompare(b.crm_company?.name || "");
+          break;
+      }
+      
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+    return sorted;
+  }, [filteredProjects, sortField, sortDirection]);
+
+  // Calculate financial totals
+  const financialTotals = useMemo(() => {
+    let totalBudget = 0;
+    let totalConsomme = 0;
+    
+    projects.forEach(p => {
+      if (p.budget) totalBudget += p.budget;
+      const financial = projectsFinancialData[p.id];
+      if (financial) {
+        totalConsomme += financial.totalConsomme || 0;
+      }
+    });
+    
+    const margePercent = totalBudget > 0 ? ((totalBudget - totalConsomme) / totalBudget) * 100 : 0;
+    
+    return { totalBudget, totalConsomme, margePercent };
+  }, [projects, projectsFinancialData]);
 
   const isLoading = viewFilter === "archived" ? loadingArchived : viewFilter === "closed" ? loadingClosed : loadingActive;
 
@@ -152,6 +219,22 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
       currency: "EUR",
       maximumFractionDigits: 0,
     }).format(value);
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
+    return sortDirection === "asc" 
+      ? <ChevronUp className="h-3 w-3 ml-1" /> 
+      : <ChevronDown className="h-3 w-3 ml-1" />;
   };
 
   if (isLoading) {
@@ -188,19 +271,86 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
           />
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {projects.map((project, index) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              members={projectMembersByProject[project.id] || []}
-              financialData={projectsFinancialData[project.id]}
-              index={index}
-              onNavigate={() => navigate(`/projects/${project.id}`)}
-              onDelete={() => setDeleteProjectId(project.id)}
-              formatCurrency={formatCurrency}
-            />
-          ))}
+        <div className="flex flex-col">
+          {/* List Header */}
+          <div className="hidden lg:flex items-center gap-4 px-4 py-2 bg-muted/50 rounded-t-lg border-b text-xs font-medium text-muted-foreground">
+            <div className="w-10 shrink-0" /> {/* Icon space */}
+            <button 
+              onClick={() => handleSort("name")}
+              className="flex items-center w-48 sm:w-56 hover:text-foreground transition-colors"
+            >
+              Projet <SortIcon field="name" />
+            </button>
+            <button 
+              onClick={() => handleSort("client")}
+              className="hidden md:flex items-center w-48 hover:text-foreground transition-colors"
+            >
+              Client <SortIcon field="client" />
+            </button>
+            <button 
+              onClick={() => handleSort("progress")}
+              className="flex items-center w-24 hover:text-foreground transition-colors"
+            >
+              Avancement <SortIcon field="progress" />
+            </button>
+            <div className="flex-1 min-w-[140px]">Phase active</div>
+            <div className="w-24 text-center">Santé</div>
+            <div className="w-24">Équipe</div>
+            <button 
+              onClick={() => handleSort("budget")}
+              className="flex items-center w-24 text-right justify-end hover:text-foreground transition-colors"
+            >
+              Budget <SortIcon field="budget" />
+            </button>
+            <button 
+              onClick={() => handleSort("endDate")}
+              className="flex items-center w-20 text-right justify-end hover:text-foreground transition-colors"
+            >
+              Échéance <SortIcon field="endDate" />
+            </button>
+            <div className="w-8" /> {/* Actions space */}
+          </div>
+          
+          {/* Project rows */}
+          <div className="flex flex-col gap-1">
+            {projects.map((project, index) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                members={projectMembersByProject[project.id] || []}
+                financialData={projectsFinancialData[project.id]}
+                index={index}
+                onNavigate={() => navigate(`/projects/${project.id}`)}
+                onDelete={() => setDeleteProjectId(project.id)}
+                formatCurrency={formatCurrency}
+              />
+            ))}
+          </div>
+
+          {/* Financial Totals Footer */}
+          {financialTotals.totalBudget > 0 && (
+            <div className="flex items-center justify-end gap-6 px-4 py-3 bg-muted/50 rounded-b-lg border-t mt-1">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Consommé : </span>
+                <span className="font-semibold">{formatCurrency(financialTotals.totalConsomme)}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-muted-foreground">Marge : </span>
+                <span className={cn(
+                  "font-semibold",
+                  financialTotals.margePercent >= 20 && "text-emerald-600",
+                  financialTotals.margePercent >= 0 && financialTotals.margePercent < 20 && "text-amber-600",
+                  financialTotals.margePercent < 0 && "text-destructive"
+                )}>
+                  {Math.round(financialTotals.margePercent)}%
+                </span>
+              </div>
+              <div className="text-sm">
+                <span className="text-muted-foreground">Budget total : </span>
+                <span className="font-bold text-primary">{formatCurrency(financialTotals.totalBudget)}</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -243,6 +393,9 @@ function ProjectCard({ project, members, financialData, index, onNavigate, onDel
   const displayColor = projectType?.color || project.color || "#3B82F6";
   const isClosed = project.status === "closed";
 
+  // Get project type icon
+  const TypeIcon = projectType?.icon ? getIconComponent(projectType.icon) : FolderKanban;
+
   // Calculate days remaining
   const daysRemaining = project.end_date 
     ? differenceInDays(parseISO(project.end_date), new Date())
@@ -262,7 +415,15 @@ function ProjectCard({ project, members, financialData, index, onNavigate, onDel
         onClick={onNavigate}
       >
         <CardContent className="p-3 sm:p-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Project Type Icon */}
+            <div 
+              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+              style={{ backgroundColor: `${displayColor}15` }}
+            >
+              <TypeIcon className="h-5 w-5" style={{ color: displayColor }} />
+            </div>
+
             {/* Left: Project info */}
             <div className="flex-1 min-w-0 flex items-center gap-4">
               {/* Name & Type */}
@@ -273,16 +434,7 @@ function ProjectCard({ project, members, financialData, index, onNavigate, onDel
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
                   {projectType && (
-                    <Badge 
-                      variant="secondary" 
-                      className="text-2xs"
-                      style={{ 
-                        backgroundColor: `${displayColor}15`,
-                        color: displayColor,
-                      }}
-                    >
-                      {projectType.label}
-                    </Badge>
+                    <span className="text-xs text-muted-foreground">{projectType.label}</span>
                   )}
                   {project.is_internal && (
                     <Badge variant="outline" className="text-2xs">Interne</Badge>
@@ -290,24 +442,20 @@ function ProjectCard({ project, members, financialData, index, onNavigate, onDel
                 </div>
               </div>
 
-              {/* Client & Location */}
-              <div className="hidden md:flex items-center gap-4 text-xs text-muted-foreground min-w-0 w-48 shrink-0">
-                {project.crm_company && (
-                  <div className="flex items-center gap-1.5 min-w-0">
+              {/* Client */}
+              <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground min-w-0 w-48 shrink-0">
+                {project.crm_company ? (
+                  <>
                     <Building2 className="h-3.5 w-3.5 shrink-0" />
                     <span className="truncate">{project.crm_company.name}</span>
-                  </div>
-                )}
-                {project.city && (
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{project.city}</span>
-                  </div>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground/50">—</span>
                 )}
               </div>
 
               {/* Progress Circle */}
-              <div className="hidden lg:flex items-center gap-2 shrink-0">
+              <div className="hidden lg:flex items-center gap-2 w-24 shrink-0">
                 <div className="relative h-6 w-6">
                   <svg className="h-6 w-6 -rotate-90" viewBox="0 0 24 24">
                     <circle
@@ -324,23 +472,32 @@ function ProjectCard({ project, members, financialData, index, onNavigate, onDel
                       cy="12"
                       r="10"
                       fill="none"
-                      stroke="currentColor"
+                      stroke={displayColor}
                       strokeWidth="3"
                       strokeDasharray={`${progressPercent * 0.628} 62.8`}
                       strokeLinecap="round"
-                      className="text-primary"
                     />
                   </svg>
                 </div>
-                <span className="text-xs font-semibold w-8">{progressPercent}%</span>
+                <span className="text-xs font-semibold">{progressPercent}%</span>
               </div>
 
               {/* Current Phase */}
-              <div className="hidden xl:flex items-center gap-1.5 text-xs text-muted-foreground w-36 shrink-0">
-                <TrendingUp className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">
-                  {currentPhase ? currentPhase.name : "—"}
-                </span>
+              <div className="hidden xl:flex items-center min-w-[140px] flex-1">
+                {currentPhase ? (
+                  <Badge 
+                    variant="secondary" 
+                    className="text-xs font-medium"
+                    style={{ 
+                      backgroundColor: currentPhase.color ? `${currentPhase.color}20` : undefined,
+                      color: currentPhase.color || undefined
+                    }}
+                  >
+                    {currentPhase.name}
+                  </Badge>
+                ) : (
+                  <span className="text-xs text-muted-foreground/50">—</span>
+                )}
               </div>
             </div>
 
