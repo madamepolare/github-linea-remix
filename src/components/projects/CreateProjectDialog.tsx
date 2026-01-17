@@ -20,7 +20,6 @@ import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjectTypeSettings, getProjectTypeIcon } from "@/hooks/useProjectTypeSettings";
 import { useProjectCategorySettings } from "@/hooks/useProjectCategorySettings";
 import { ClientSelector, SelectedClient } from "@/components/projects/ClientSelector";
-import { ProjectCategory, getProjectCategoryConfig } from "@/lib/projectCategories";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -96,7 +95,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [projectType, setProjectType] = useState<string | null>(null);
-  const [projectCategory, setProjectCategory] = useState<ProjectCategory>("standard");
+  const [projectCategory, setProjectCategory] = useState<string>("standard");
   const [color, setColor] = useState("#3B82F6");
   
   // Client & Location
