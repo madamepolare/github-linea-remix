@@ -37,6 +37,7 @@ import {
   Sparkles,
   Users,
   BookOpen,
+  Package,
 } from "lucide-react";
 import { format, parseISO, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -67,6 +68,7 @@ import { ProjectElementsTab } from "@/components/projects/elements/ProjectElemen
 import { ProjectPhasesTab } from "@/components/projects/ProjectPhasesTab";
 import { ProjectPlanningContainer } from "@/components/projects/ProjectPlanningContainer";
 import { ProjectBudgetTab } from "@/components/projects/ProjectBudgetTab";
+import { ProjectDeliverablesTab } from "@/components/projects/ProjectDeliverablesTab";
 import { MessageCircle, Mail } from "lucide-react";
 import { FrameworkDashboard } from "@/components/projects/subprojects/FrameworkDashboard";
 import { SubProjectsList } from "@/components/projects/subprojects/SubProjectsList";
@@ -75,6 +77,7 @@ import { SubProjectsList } from "@/components/projects/subprojects/SubProjectsLi
 const PROJECT_TABS = [
   { key: "overview", label: "Vue d'ensemble", icon: Sparkles },
   { key: "project_planning", label: "Planning projet", icon: Calendar },
+  { key: "deliverables", label: "Livrables", icon: Package },
   { key: "tasks", label: "Tâches", icon: ListTodo },
   { key: "budget", label: "Budget", icon: Receipt },
   { key: "emails", label: "Emails", icon: Mail },
@@ -280,6 +283,9 @@ export default function ProjectDetail() {
             />
           )}
           {activeTab === "project_planning" && <ProjectPlanningContainer projectId={project.id} />}
+          {activeTab === "deliverables" && (
+            <ProjectDeliverablesTab projectId={project.id} />
+          )}
           {activeTab === "tasks" && (
             <ProjectTasksTab projectId={project.id} />
           )}
