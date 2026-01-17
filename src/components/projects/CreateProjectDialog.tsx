@@ -33,6 +33,7 @@ import { useContacts } from "@/hooks/useContacts";
 import { useCommercialDocuments } from "@/hooks/useCommercialDocuments";
 import { CLIENT_TEAM_ROLES } from "@/hooks/useProjectContacts";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
+import { ClientSelector, SelectedClient } from "@/components/projects/ClientSelector";
 import { PROJECT_CATEGORIES, ProjectCategory, getProjectCategoryConfig, categoryHasFeature } from "@/lib/projectCategories";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -106,6 +107,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   
   // Client & Budget
   const [crmCompanyId, setCrmCompanyId] = useState<string | null>(null);
+  const [selectedClient, setSelectedClient] = useState<SelectedClient | null>(null);
   const [budget, setBudget] = useState("");
   const [monthlyBudget, setMonthlyBudget] = useState("");
   const [budgetMode, setBudgetMode] = useState<BudgetMode>('later');
@@ -148,7 +150,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const showBudget = categoryConfig.features.hasBudget;
   const showMonthlyBudget = categoryConfig.features.hasMonthlyBudget;
 
-  // Filter client companies
+  // Filter client companies (for backwards compatibility and contacts display)
   const clientCompanies = companies.filter(c => 
     c.industry === "client_particulier" || 
     c.industry === "client_professionnel" || 
@@ -157,7 +159,9 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     !c.industry
   );
 
-  const selectedCompany = companies.find(c => c.id === crmCompanyId);
+  const selectedCompany = selectedClient?.type === "company" 
+    ? companies.find(c => c.id === selectedClient.id) 
+    : null;
 
   const handleCreate = () => {
     if (!name.trim() || selectedTypes.length === 0) return;
@@ -569,36 +573,23 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                   {clientOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-4 space-y-4">
-                  {/* Client */}
-                  <div className="space-y-2">
-                    <Label>Client</Label>
-                    {companiesLoading ? (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Chargement...
-                      </div>
-                    ) : (
-                      <Select 
-                        value={crmCompanyId || "none"} 
-                        onValueChange={handleCompanyChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner un client" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Aucun client</SelectItem>
-                          {clientCompanies.map((company) => (
-                            <SelectItem key={company.id} value={company.id}>
-                              <div className="flex items-center gap-2">
-                                <Building2 className="h-4 w-4 text-muted-foreground" />
-                                {company.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
+                  {/* Client Selection with Search */}
+                  <ClientSelector
+                    value={selectedClient}
+                    onChange={(client) => {
+                      setSelectedClient(client);
+                      // Also update crmCompanyId for backwards compatibility
+                      if (client?.type === "company") {
+                        setCrmCompanyId(client.id);
+                      } else {
+                        setCrmCompanyId(null);
+                      }
+                      // Clear client contacts when client changes
+                      setSelectedClientContacts([]);
+                    }}
+                    companyId={crmCompanyId}
+                    onCompanyIdChange={setCrmCompanyId}
+                  />
 
                   {/* Équipe client */}
                   {crmCompanyId && (

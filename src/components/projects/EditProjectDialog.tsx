@@ -24,6 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjectTypeSettings, getProjectTypeIcon } from "@/hooks/useProjectTypeSettings";
+import { ClientSelector, SelectedClient } from "@/components/projects/ClientSelector";
 
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { format, parseISO } from "date-fns";
@@ -137,6 +138,12 @@ export function EditProjectDialog({
   
   // Client & Location
   const [crmCompanyId, setCrmCompanyId] = useState<string | null>(project.crm_company_id);
+  const [selectedClient, setSelectedClient] = useState<SelectedClient | null>(() => {
+    if (project.crm_company_id) {
+      return { type: "company", id: project.crm_company_id, name: "" };
+    }
+    return null;
+  });
   const [address, setAddress] = useState(project.address || "");
   const [city, setCity] = useState(project.city || "");
   const [postalCode, setPostalCode] = useState(project.postal_code || "");
@@ -176,6 +183,12 @@ export function EditProjectDialog({
     setSurfaceArea(project.surface_area?.toString() || "");
     setColor(project.color || "#3B82F6");
     setCrmCompanyId(project.crm_company_id);
+    // Initialize selectedClient based on crm_company_id
+    if (project.crm_company_id) {
+      setSelectedClient({ type: "company", id: project.crm_company_id, name: "" });
+    } else {
+      setSelectedClient(null);
+    }
     setStartDate(project.start_date ? parseISO(project.start_date) : null);
     setEndDate(project.end_date ? parseISO(project.end_date) : null);
     setBudget(project.budget?.toString() || "");
@@ -211,14 +224,6 @@ export function EditProjectDialog({
     });
   };
 
-  // Filter client companies
-  const clientCompanies = companies.filter(c => 
-    c.industry === "client_particulier" || 
-    c.industry === "client_professionnel" || 
-    c.industry === "promoteur" || 
-    c.industry === "investisseur" ||
-    !c.industry
-  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -481,26 +486,13 @@ export function EditProjectDialog({
                 </div>
               ) : (
                 <>
-                  {/* Client Selection */}
-                  <div className="space-y-2">
-                    <Label>Client</Label>
-                    <Select 
-                      value={crmCompanyId || "none"} 
-                      onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un client..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Aucun client</SelectItem>
-                        {clientCompanies.map((company) => (
-                          <SelectItem key={company.id} value={company.id}>
-                            {company.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Client Selection with Search */}
+                  <ClientSelector
+                    value={selectedClient}
+                    onChange={setSelectedClient}
+                    companyId={crmCompanyId}
+                    onCompanyIdChange={setCrmCompanyId}
+                  />
 
                   <Separator />
 
