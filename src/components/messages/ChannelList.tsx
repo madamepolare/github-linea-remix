@@ -2,9 +2,11 @@ import { Hash, Lock, MessageCircle, Plus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { TeamChannel, useUnreadCounts } from "@/hooks/useTeamMessages";
+import { TeamChannel, useUnreadCounts, useChannelMembers } from "@/hooks/useTeamMessages";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
+import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface ChannelListProps {
   channels: TeamChannel[];
@@ -22,6 +24,8 @@ export function ChannelList({
   onNewDirectMessage,
 }: ChannelListProps) {
   const { data: unreadCounts } = useUnreadCounts();
+  const { data: profiles = [] } = useWorkspaceProfiles();
+  const { user } = useAuth();
   
   const publicChannels = channels.filter(c => c.channel_type === "public");
   const privateChannels = channels.filter(c => c.channel_type === "private");
@@ -38,10 +42,34 @@ export function ChannelList({
     }
   };
 
+  // Get display name for DM channel
+  const getDMDisplayName = (channel: TeamChannel) => {
+    // Extract user IDs from channel name (format: dm-userId1-userId2)
+    const parts = channel.name.replace("dm-", "").split("-");
+    // Find the other user (not current user)
+    const otherUserId = parts.find(id => id !== user?.id) || parts[parts.length - 1];
+    const otherProfile = profiles.find(p => p.user_id === otherUserId);
+    return otherProfile?.full_name || "Utilisateur";
+  };
+
+  // Get avatar for DM channel
+  const getDMAvatar = (channel: TeamChannel) => {
+    const parts = channel.name.replace("dm-", "").split("-");
+    const otherUserId = parts.find(id => id !== user?.id) || parts[parts.length - 1];
+    return profiles.find(p => p.user_id === otherUserId);
+  };
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "?";
+    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  };
+
   const renderChannelItem = (channel: TeamChannel) => {
     const Icon = getChannelIcon(channel.channel_type);
     const unread = unreadCounts?.[channel.id] || 0;
     const isActive = channel.id === activeChannelId;
+    const isDM = channel.channel_type === "direct";
+    const dmProfile = isDM ? getDMAvatar(channel) : null;
 
     return (
       <button
@@ -54,12 +82,18 @@ export function ChannelList({
             : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
         )}
       >
-        <Icon className="h-4 w-4 flex-shrink-0" />
+        {isDM && dmProfile ? (
+          <Avatar className="h-5 w-5">
+            <AvatarImage src={dmProfile.avatar_url || undefined} />
+            <AvatarFallback className="text-[10px]">
+              {getInitials(dmProfile.full_name)}
+            </AvatarFallback>
+          </Avatar>
+        ) : (
+          <Icon className="h-4 w-4 flex-shrink-0" />
+        )}
         <span className="truncate flex-1">
-          {channel.channel_type === "direct" 
-            ? channel.name.replace("dm-", "").split("-").pop() 
-            : channel.name
-          }
+          {isDM ? getDMDisplayName(channel) : channel.name}
         </span>
         {unread > 0 && (
           <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs">
