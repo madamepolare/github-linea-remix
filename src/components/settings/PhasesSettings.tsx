@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePhaseTemplates, PhaseTemplate, CreatePhaseTemplateInput } from "@/hooks/usePhaseTemplates";
 import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
 import { useDiscipline } from "@/hooks/useDiscipline";
@@ -54,6 +55,7 @@ import {
 } from "lucide-react";
 import { PHASE_CATEGORY_LABELS, PhaseCategory } from "@/lib/commercialTypes";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 interface PhaseFormData {
@@ -79,6 +81,8 @@ const defaultFormData: PhaseFormData = {
 };
 
 export function PhasesSettings() {
+  const { activeWorkspace } = useAuth();
+  const queryClient = useQueryClient();
   const { projectTypes, isLoading: projectTypesLoading } = useProjectTypeSettings();
   const { discipline, disciplineSlug } = useDiscipline();
   const [activeProjectType, setActiveProjectType] = useState<string>("");
@@ -133,44 +137,62 @@ export function PhasesSettings() {
   };
 
   const applyGeneratedPhases = async () => {
-    if (!generatedPhases) return;
+    if (!generatedPhases || !activeWorkspace?.id) return;
     
     try {
-      // Create all phases
-      let sortOrder = 0;
-      for (const phase of generatedPhases.basePhases) {
-        await createTemplate.mutateAsync({
+      // Get current max sort_order for this project type
+      const existingTemplates = templates.filter(t => t.project_type === activeProjectType);
+      const maxSortOrder = existingTemplates.length > 0 
+        ? Math.max(...existingTemplates.map(t => t.sort_order)) + 1 
+        : 0;
+      
+      // Prepare all phases for batch insert
+      const allPhases = [
+        ...generatedPhases.basePhases.map((phase, index) => ({
+          workspace_id: activeWorkspace.id,
           project_type: activeProjectType,
           code: phase.code,
           name: phase.name,
-          description: phase.description,
-          default_percentage: phase.default_percentage,
-          deliverables: phase.deliverables,
-          category: 'base',
-          sort_order: sortOrder++,
+          description: phase.description || null,
+          default_percentage: Number(phase.default_percentage) || 0,
+          deliverables: Array.isArray(phase.deliverables) ? phase.deliverables : [],
+          category: 'base' as const,
+          sort_order: maxSortOrder + index,
           is_active: true
-        });
-      }
-      for (const phase of generatedPhases.complementaryPhases) {
-        await createTemplate.mutateAsync({
+        })),
+        ...generatedPhases.complementaryPhases.map((phase, index) => ({
+          workspace_id: activeWorkspace.id,
           project_type: activeProjectType,
           code: phase.code,
           name: phase.name,
-          description: phase.description,
-          default_percentage: phase.default_percentage,
-          deliverables: phase.deliverables,
-          category: 'complementary',
-          sort_order: sortOrder++,
+          description: phase.description || null,
+          default_percentage: Number(phase.default_percentage) || 0,
+          deliverables: Array.isArray(phase.deliverables) ? phase.deliverables : [],
+          category: 'complementary' as const,
+          sort_order: maxSortOrder + generatedPhases.basePhases.length + index,
           is_active: true
-        });
+        }))
+      ];
+      
+      // Direct batch insert via supabase for efficiency
+      const { error } = await supabase
+        .from("phase_templates")
+        .insert(allPhases);
+      
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw new Error(error.message);
       }
       
-      toast.success(`${generatedPhases.basePhases.length + generatedPhases.complementaryPhases.length} phases créées`);
+      // Refresh the query cache
+      queryClient.invalidateQueries({ queryKey: ["phase-templates"] });
+      
+      toast.success(`${allPhases.length} phases créées avec succès`);
       setShowAIDialog(false);
       setGeneratedPhases(null);
     } catch (error) {
       console.error('Error creating phases:', error);
-      toast.error('Erreur lors de la création des phases');
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la création des phases');
     }
   };
 
