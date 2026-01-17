@@ -18,6 +18,11 @@ export interface ProjectDeliverable {
   delivered_at: string | null;
   created_at: string;
   updated_at: string;
+  // Email tracking fields
+  email_template: string | null;
+  email_link: string | null;
+  email_sent_at: string | null;
+  email_sent_to: string[] | null;
   phase?: {
     id: string;
     name: string;
