@@ -326,7 +326,7 @@ export function PhaseTemplatesEditor({ projectTypeKey, projectTypeLabel }: Phase
     <div
       key={phase.id}
       className={cn(
-        "flex items-center gap-2 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-colors",
+        "flex flex-wrap items-center gap-2 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-colors overflow-hidden",
         !phase.is_active && "opacity-50"
       )}
     >
@@ -356,7 +356,7 @@ export function PhaseTemplatesEditor({ projectTypeKey, projectTypeLabel }: Phase
       <Badge variant="outline" className="text-xs font-mono shrink-0">
         {phase.code}
       </Badge>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <div className="text-sm font-medium truncate">{phase.name}</div>
         {phase.description && (
           <p className="text-xs text-muted-foreground truncate">{phase.description}</p>
@@ -379,7 +379,7 @@ export function PhaseTemplatesEditor({ projectTypeKey, projectTypeLabel }: Phase
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-0.5 shrink-0">
+      <div className="flex items-center gap-0.5 shrink-0 ml-auto">
         <Button
           variant="ghost"
           size="icon"
@@ -412,7 +412,7 @@ export function PhaseTemplatesEditor({ projectTypeKey, projectTypeLabel }: Phase
 
       {/* Expanded deliverables */}
       {expandedPhase === phase.id && (
-        <div className="col-span-full pl-12 pb-2">
+        <div className="w-full pl-12 pb-2">
           <div className="border-l-2 border-muted pl-3">
             {phase.deliverables.length > 0 ? (
               <div>
