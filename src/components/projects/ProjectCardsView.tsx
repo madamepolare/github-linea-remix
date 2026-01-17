@@ -179,7 +179,7 @@ export function ProjectCardsView({ onCreateProject }: ProjectCardsViewProps) {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="flex flex-col gap-3">
           {projects.map((project, index) => (
             <ProjectCard
               key={project.id}
@@ -239,143 +239,136 @@ function ProjectCard({ project, members, index, onNavigate, onDelete, formatCurr
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.2, delay: index * 0.03 }}
     >
       <Card 
         className={cn(
-          "group cursor-pointer hover:shadow-lg transition-all duration-200 overflow-hidden border-l-4",
+          "group cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden border-l-4",
           isClosed && "opacity-70"
         )}
         style={{ borderLeftColor: displayColor }}
         onClick={onNavigate}
       >
-        <CardContent className="p-4 space-y-4">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-sm line-clamp-1">{project.name}</h3>
-                {isClosed && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-center gap-4">
+            {/* Left: Project info */}
+            <div className="flex-1 min-w-0 flex items-center gap-4">
+              {/* Name & Type */}
+              <div className="min-w-0 w-48 sm:w-56 shrink-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-sm truncate">{project.name}</h3>
+                  {isClosed && <Lock className="h-3 w-3 text-muted-foreground flex-shrink-0" />}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {projectType && (
+                    <Badge 
+                      variant="secondary" 
+                      className="text-2xs"
+                      style={{ 
+                        backgroundColor: `${displayColor}15`,
+                        color: displayColor,
+                      }}
+                    >
+                      {projectType.label}
+                    </Badge>
+                  )}
+                  {project.is_internal && (
+                    <Badge variant="outline" className="text-2xs">Interne</Badge>
+                  )}
+                </div>
               </div>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {projectType && (
-                  <Badge 
-                    variant="secondary" 
-                    className="text-2xs"
-                    style={{ 
-                      backgroundColor: `${displayColor}15`,
-                      color: displayColor,
-                    }}
-                  >
-                    {projectType.label}
-                  </Badge>
-                )}
-                {project.is_internal && (
-                  <Badge variant="outline" className="text-2xs">Interne</Badge>
-                )}
-              </div>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem onClick={onNavigate}>
-                  <Eye className="h-4 w-4 mr-2" />
-                  Voir le projet
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.location.href = `/projects/${project.id}/settings`; }}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Paramètres
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive focus:text-destructive">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Supprimer
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
 
-          {/* Client & Location */}
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            {project.crm_company && (
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Building2 className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{project.crm_company.name}</span>
+              {/* Client & Location */}
+              <div className="hidden md:flex items-center gap-4 text-xs text-muted-foreground min-w-0 w-48 shrink-0">
+                {project.crm_company && (
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Building2 className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{project.crm_company.name}</span>
+                  </div>
+                )}
+                {project.city && (
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{project.city}</span>
+                  </div>
+                )}
               </div>
-            )}
-            {project.city && (
-              <div className="flex items-center gap-1.5 min-w-0">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{project.city}</span>
-              </div>
-            )}
-          </div>
 
-          {/* Progress */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <TrendingUp className="h-3.5 w-3.5" />
+              {/* Progress */}
+              <div className="hidden lg:flex items-center gap-3 w-40 shrink-0">
+                <Progress value={progressPercent} className="h-2 flex-1" />
+                <span className="text-xs font-semibold w-8 text-right">{progressPercent}%</span>
+              </div>
+
+              {/* Current Phase */}
+              <div className="hidden xl:flex items-center gap-1.5 text-xs text-muted-foreground w-36 shrink-0">
+                <TrendingUp className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">
-                  {currentPhase ? currentPhase.name : "Aucune phase active"}
+                  {currentPhase ? currentPhase.name : "—"}
                 </span>
               </div>
-              <span className="font-semibold">{progressPercent}%</span>
-            </div>
-            <Progress value={progressPercent} className="h-2" />
-          </div>
-
-          {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
-            {/* Budget */}
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-0.5">
-                <Wallet className="h-3 w-3" />
-                <span>Budget</span>
-              </div>
-              <p className="text-xs font-semibold">
-                {project.budget ? formatCurrency(project.budget) : "-"}
-              </p>
             </div>
 
-            {/* Team */}
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-0.5">
-                <Users className="h-3 w-3" />
-                <span>Équipe</span>
+            {/* Right: Stats */}
+            <div className="flex items-center gap-4 sm:gap-6 shrink-0">
+              {/* Budget */}
+              <div className="hidden sm:block text-right w-20">
+                <p className="text-xs text-muted-foreground">Budget</p>
+                <p className="text-xs font-semibold">
+                  {project.budget ? formatCurrency(project.budget) : "—"}
+                </p>
               </div>
-              <div className="flex justify-center">
+
+              {/* Team */}
+              <div className="hidden sm:block">
                 {members.length > 0 ? (
-                  <ProjectMemberAvatars members={members} max={3} />
+                  <ProjectMemberAvatars members={members} max={4} />
                 ) : (
-                  <p className="text-xs font-semibold">-</p>
+                  <div className="text-xs text-muted-foreground">—</div>
                 )}
               </div>
-            </div>
 
-            {/* Deadline */}
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mb-0.5">
-                <Calendar className="h-3 w-3" />
-                <span>Échéance</span>
+              {/* Deadline */}
+              <div className="text-right w-16">
+                <p className="text-xs text-muted-foreground">Échéance</p>
+                {project.end_date ? (
+                  <p className={cn(
+                    "text-xs font-semibold",
+                    daysRemaining !== null && daysRemaining < 0 && "text-destructive",
+                    daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 7 && "text-amber-500"
+                  )}>
+                    {format(parseISO(project.end_date), "d MMM", { locale: fr })}
+                  </p>
+                ) : (
+                  <p className="text-xs font-semibold">—</p>
+                )}
               </div>
-              {project.end_date ? (
-                <p className={cn(
-                  "text-xs font-semibold",
-                  daysRemaining !== null && daysRemaining < 0 && "text-destructive",
-                  daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 7 && "text-amber-500"
-                )}>
-                  {format(parseISO(project.end_date), "d MMM", { locale: fr })}
-                </p>
-              ) : (
-                <p className="text-xs font-semibold">-</p>
-              )}
+
+              {/* Actions */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onClick={onNavigate}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Voir le projet
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.location.href = `/projects/${project.id}/settings`; }}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Paramètres
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive focus:text-destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Supprimer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardContent>
