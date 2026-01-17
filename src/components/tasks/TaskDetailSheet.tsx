@@ -162,6 +162,8 @@ export function TaskDetailSheet({
   const [relatedId, setRelatedId] = useState<string | null>(null);
   const [deliverableId, setDeliverableId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false);
+  const [pendingUnlinkType, setPendingUnlinkType] = useState<RelatedEntityType | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
   // Reset form for create mode
@@ -364,6 +366,27 @@ export function TaskDetailSheet({
     setPriority(priorities[nextIndex]);
   };
 
+  // Handle relation type change with confirmation for removal
+  const handleRelatedTypeChange = (type: RelatedEntityType | null) => {
+    // If trying to remove a relation that exists
+    if (type === null && relatedType && relatedId) {
+      setPendingUnlinkType(relatedType);
+      setShowUnlinkConfirm(true);
+    } else {
+      setRelatedType(type);
+      if (type === null) {
+        setRelatedId(null);
+      }
+    }
+  };
+
+  const confirmUnlink = () => {
+    setRelatedType(null);
+    setRelatedId(null);
+    setShowUnlinkConfirm(false);
+    setPendingUnlinkType(null);
+  };
+
   // Allow rendering in create mode even without task
   if (!task && !isCreateMode) return null;
 
@@ -486,7 +509,7 @@ export function TaskDetailSheet({
                         <EntitySelector
                           entityType={relatedType}
                           entityId={relatedId}
-                          onEntityTypeChange={setRelatedType}
+                          onEntityTypeChange={handleRelatedTypeChange}
                           onEntityIdChange={setRelatedId}
                         />
                       </div>
@@ -542,7 +565,7 @@ export function TaskDetailSheet({
                       <EntitySelector
                         entityType={relatedType}
                         entityId={relatedId}
-                        onEntityTypeChange={setRelatedType}
+                        onEntityTypeChange={handleRelatedTypeChange}
                         onEntityIdChange={setRelatedId}
                       />
                     </div>
@@ -749,6 +772,27 @@ export function TaskDetailSheet({
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {/* Unlink Confirmation Dialog */}
+      <AlertDialog open={showUnlinkConfirm} onOpenChange={setShowUnlinkConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer la relation ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer le lien entre cette tâche et l'entité associée ? Cette action peut être annulée en reliant une nouvelle entité.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingUnlinkType(null)}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmUnlink}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer la relation
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }
