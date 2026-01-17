@@ -48,6 +48,7 @@ import { ProjectPlanningTab } from "@/components/projects/ProjectPlanningTab";
 import { ProjectMOESection } from "@/components/projects/ProjectMOESection";
 import { PhaseQuickEditDialog } from "@/components/projects/PhaseQuickEditDialog";
 import { EditProjectDialog } from "@/components/projects/EditProjectDialog";
+import { TeamManagementDialog } from "@/components/projects/TeamManagementDialog";
 import { ModulesSelector } from "@/components/projects/ModulesSelector";
 import { ProjectTasksTab } from "@/components/projects/ProjectTasksTab";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,6 +73,7 @@ import { ProjectDeliverablesTab } from "@/components/projects/ProjectDeliverable
 import { MessageCircle, Mail } from "lucide-react";
 import { FrameworkDashboard } from "@/components/projects/subprojects/FrameworkDashboard";
 import { SubProjectsList } from "@/components/projects/subprojects/SubProjectsList";
+import { ProjectContactsSummary } from "@/components/projects/ProjectContactsSummary";
 
 // Tab configuration for project detail
 const PROJECT_TABS = [
@@ -107,6 +109,7 @@ export default function ProjectDetail() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [projectEditOpen, setProjectEditOpen] = useState(false);
+  const [teamEditOpen, setTeamEditOpen] = useState(false);
 
   // Filter tabs based on discipline (hide construction tabs for communication agencies)
   const filteredTabs = useMemo(() => {
@@ -131,7 +134,7 @@ export default function ProjectDetail() {
             {projectMembers.slice(0, 4).map((member) => (
               <Tooltip key={member.id}>
                 <TooltipTrigger asChild>
-                  <Avatar className="h-7 w-7 border-2 border-background ring-0 cursor-pointer hover:z-10 hover:scale-110 transition-transform" onClick={() => setProjectEditOpen(true)}>
+                  <Avatar className="h-7 w-7 border-2 border-background ring-0 cursor-pointer hover:z-10 hover:scale-110 transition-transform" onClick={() => setTeamEditOpen(true)}>
                     <AvatarImage src={member.profile?.avatar_url || ""} />
                     <AvatarFallback className="text-2xs bg-primary/10 text-primary">
                       {member.profile?.full_name?.slice(0, 2).toUpperCase() || "?"}
@@ -148,7 +151,7 @@ export default function ProjectDetail() {
                 <TooltipTrigger asChild>
                   <div
                     className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-2xs font-medium text-muted-foreground cursor-pointer"
-                    onClick={() => setProjectEditOpen(true)}
+                    onClick={() => setTeamEditOpen(true)}
                   >
                     +{projectMembers.length - 4}
                   </div>
@@ -166,7 +169,7 @@ export default function ProjectDetail() {
           variant="ghost"
           size="sm"
           className="gap-2"
-          onClick={() => setProjectEditOpen(true)}
+          onClick={() => setTeamEditOpen(true)}
         >
           <Users className="h-4 w-4 text-muted-foreground" />
           <span className="hidden sm:inline">Équipe</span>
@@ -280,6 +283,8 @@ export default function ProjectDetail() {
               onUpdateProject={(updates) => updateProject.mutate({ id: project.id, ...updates })}
               isUpdatingProject={updateProject.isPending}
               onOpenProjectEdit={() => setProjectEditOpen(true)}
+              onOpenTeamEdit={() => setTeamEditOpen(true)}
+              projectMembers={projectMembers}
             />
           )}
           {activeTab === "project_planning" && <ProjectPlanningContainer projectId={project.id} />}
@@ -322,6 +327,13 @@ export default function ProjectDetail() {
         onSave={(updates) => updateProject.mutate({ id: project.id, ...updates })}
         isSaving={updateProject.isPending}
       />
+
+      <TeamManagementDialog
+        open={teamEditOpen}
+        onOpenChange={setTeamEditOpen}
+        projectId={project.id}
+        projectName={project.name}
+      />
     </>
   );
 }
@@ -335,9 +347,11 @@ interface OverviewTabProps {
   onUpdateProject: (updates: any) => void;
   isUpdatingProject: boolean;
   onOpenProjectEdit: () => void;
+  onOpenTeamEdit: () => void;
+  projectMembers: any[];
 }
 
-function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary, onUpdateProject, isUpdatingProject, onOpenProjectEdit }: OverviewTabProps) {
+function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGeneratingSummary, onUpdateProject, isUpdatingProject, onOpenProjectEdit, onOpenTeamEdit, projectMembers }: OverviewTabProps) {
   const completedPhases = phases.filter((p) => p.status === "completed").length;
   const { updatePhase, createPhase, createManyPhases, deletePhase, reorderPhases } = useProjectPhases(project.id);
   const { activeWorkspace } = useAuth();
@@ -691,6 +705,103 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
           entityId={project.id}
           workspaceId={activeWorkspace?.id}
         />
+      </div>
+
+      {/* Team & Contacts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Team Card */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Équipe projet
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onOpenTeamEdit}
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                Gérer
+              </Button>
+            </div>
+            {projectMembers.length > 0 ? (
+              <div className="space-y-2">
+                {projectMembers.map((member) => {
+                  const roleLabels: Record<string, string> = {
+                    owner: "Responsable",
+                    lead: "Chef de projet",
+                    member: "Membre",
+                    viewer: "Observateur",
+                  };
+                  return (
+                    <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={member.profile?.avatar_url || ""} />
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                          {member.profile?.full_name?.slice(0, 2).toUpperCase() || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium truncate block">
+                          {member.profile?.full_name || "Membre"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {roleLabels[member.role] || member.role}
+                        </span>
+                      </div>
+                      {member.role === "lead" && (
+                        <Badge variant="secondary" className="text-xs">
+                          Chef de projet
+                        </Badge>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <Users className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground">Aucun membre assigné</p>
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={onOpenTeamEdit}
+                  className="mt-2"
+                >
+                  Ajouter des membres
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Contacts Card */}
+        {!project.is_internal && (
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Client et Contacts
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onOpenProjectEdit}
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                  Modifier
+                </Button>
+              </div>
+              <ProjectContactsSummary
+                projectId={project.id}
+                companyName={project.crm_company?.name}
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Activity Timeline & MOE */}
