@@ -56,7 +56,6 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import frLocale from "@fullcalendar/core/locales/fr";
 import { toast } from "sonner";
-import { TaskCreateSheet } from "@/components/tasks/TaskCreateSheet";
 import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 import { Task } from "@/hooks/useTasks";
 
@@ -1484,10 +1483,11 @@ export function ProjectPlanningTab({ projectId }: ProjectPlanningTabProps) {
         </DialogContent>
       </Dialog>
 
-      <TaskCreateSheet
+      <TaskDetailSheet
+        task={null}
         open={isProjectTaskSheetOpen}
         onOpenChange={setIsProjectTaskSheetOpen}
-        defaultDueDate={quickCreateDate ? parseISO(quickCreateDate) : null}
+        isCreateMode={true}
         defaultProjectId={projectId}
       />
 
