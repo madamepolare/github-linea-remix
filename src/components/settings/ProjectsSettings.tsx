@@ -442,10 +442,11 @@ export function ProjectsSettings() {
           <GenericSettingsManager
             settingType="project_types"
             title="Types de projet"
-            description={`Catégories de projets pour ${discipline?.name || 'votre discipline'}`}
+            description={`Catégories de projets pour ${discipline?.name || 'votre discipline'}. Associez chaque type aux catégories de projet souhaitées.`}
             icon={<FolderKanban className="h-5 w-5 text-primary" />}
             showColor
             showDescription
+            showCategories
             defaultItems={projectTypes}
           />
         </TabsContent>

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PROJECT_CATEGORIES, ProjectCategory } from "@/lib/projectCategories";
+
+interface CategoryOption {
+  key: string;
+  label: string;
+}
 
 interface GenericSettingsManagerProps {
   settingType: SettingType;
@@ -35,8 +42,10 @@ interface GenericSettingsManagerProps {
   showColor?: boolean;
   showDescription?: boolean;
   showProbability?: boolean;
+  showCategories?: boolean;
   colorOptions?: string[];
-  defaultItems?: Array<{ key: string; label: string; color?: string; description?: string }>;
+  categoryOptions?: CategoryOption[];
+  defaultItems?: Array<{ key: string; label: string; color?: string; description?: string; categories?: string[] }>;
 }
 
 const DEFAULT_COLORS = [
@@ -52,7 +61,9 @@ export function GenericSettingsManager({
   showColor = true,
   showDescription = false,
   showProbability = false,
+  showCategories = false,
   colorOptions = DEFAULT_COLORS,
+  categoryOptions = PROJECT_CATEGORIES.map(c => ({ key: c.key, label: c.labelShort })),
   defaultItems = [],
 }: GenericSettingsManagerProps) {
   const { settings, isLoading, createSetting, updateSetting, deleteSetting, reorderSettings } = useWorkspaceSettings(settingType);
@@ -67,6 +78,7 @@ export function GenericSettingsManager({
     color: colorOptions[0],
     description: "",
     probability: 0,
+    categories: [] as string[],
     isActive: true,
   });
 
@@ -78,6 +90,7 @@ export function GenericSettingsManager({
       color: colorOptions[0],
       description: "",
       probability: 0,
+      categories: [],
       isActive: true,
     });
     setIsDialogOpen(true);
@@ -91,6 +104,7 @@ export function GenericSettingsManager({
       color: item.setting_value.color || colorOptions[0],
       description: item.setting_value.description || "",
       probability: item.setting_value.probability || 0,
+      categories: (item.setting_value.categories as string[]) || [],
       isActive: item.is_active,
     });
     setIsDialogOpen(true);
@@ -104,6 +118,9 @@ export function GenericSettingsManager({
     if (showColor) settingValue.color = formData.color;
     if (showDescription) settingValue.description = formData.description;
     if (showProbability) settingValue.probability = formData.probability;
+    if (showCategories && formData.categories.length > 0) {
+      (settingValue as any).categories = formData.categories;
+    }
 
     if (editingItem) {
       await updateSetting.mutateAsync({
@@ -246,7 +263,7 @@ export function GenericSettingsManager({
                   )}
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium truncate">
                         {item.setting_value.label}
                       </span>
@@ -257,6 +274,19 @@ export function GenericSettingsManager({
                         <Badge variant="secondary" className="text-xs">
                           Inactif
                         </Badge>
+                      )}
+                      {/* Display category badges */}
+                      {showCategories && (item.setting_value as any).categories && (
+                        <div className="flex gap-1">
+                          {((item.setting_value as any).categories as string[]).map(catKey => {
+                            const cat = categoryOptions.find(c => c.key === catKey);
+                            return cat ? (
+                              <Badge key={catKey} variant="secondary" className="text-2xs">
+                                {cat.label}
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
                       )}
                     </div>
                     {showDescription && item.setting_value.description && (
@@ -360,6 +390,48 @@ export function GenericSettingsManager({
                   value={formData.probability}
                   onChange={(e) => setFormData({ ...formData, probability: parseInt(e.target.value) || 0 })}
                 />
+              </div>
+            )}
+
+            {showCategories && (
+              <div className="space-y-2">
+                <Label>Catégories de projet</Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Sélectionnez les catégories pour lesquelles ce type est disponible
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {categoryOptions.map((cat) => {
+                    const isSelected = formData.categories.includes(cat.key);
+                    return (
+                      <button
+                        key={cat.key}
+                        type="button"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            categories: isSelected
+                              ? formData.categories.filter(c => c !== cat.key)
+                              : [...formData.categories, cat.key]
+                          });
+                        }}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all",
+                          isSelected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border hover:border-primary/50 hover:bg-muted/50"
+                        )}
+                      >
+                        {isSelected && <span className="text-xs">✓</span>}
+                        {cat.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {formData.categories.length === 0 && (
+                  <p className="text-xs text-amber-600">
+                    ⚠️ Sans catégorie, ce type sera disponible pour toutes les catégories
+                  </p>
+                )}
               </div>
             )}
 

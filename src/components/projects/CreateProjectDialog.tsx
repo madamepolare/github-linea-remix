@@ -87,7 +87,6 @@ function shouldShowSurface(projectType: string | null): boolean {
 export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogProps) {
   const { createProject } = useProjects();
   const { companies } = useCRMCompanies();
-  const { projectTypes, isLoading: isLoadingTypes } = useProjectTypeSettings();
   
   const [activeTab, setActiveTab] = useState("general");
   
@@ -111,6 +110,9 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
 
+  // Fetch project types filtered by category
+  const { projectTypes, isLoading: isLoadingTypes } = useProjectTypeSettings(projectCategory);
+
   // Derived states
   const isInternal = projectCategory === "internal";
   const categoryConfig = useMemo(() => getProjectCategoryConfig(projectCategory), [projectCategory]);
@@ -122,6 +124,16 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const currentTypeConfig = useMemo(() => {
     return projectTypes.find(t => t.key === projectType);
   }, [projectTypes, projectType]);
+
+  // Reset project type when category changes if current type is not available
+  useMemo(() => {
+    if (projectType && projectTypes.length > 0) {
+      const typeStillAvailable = projectTypes.some(t => t.key === projectType);
+      if (!typeStillAvailable) {
+        setProjectType(null);
+      }
+    }
+  }, [projectCategory, projectTypes]);
 
   const resetForm = () => {
     setName("");
