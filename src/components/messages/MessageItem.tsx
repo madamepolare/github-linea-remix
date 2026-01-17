@@ -37,8 +37,10 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const isOwn = message.created_by === user?.id;
+  const showActions = isHovered || isDropdownOpen;
   const messageReactions = reactions?.filter(r => r.message_id === message.id) || [];
   
   // Group reactions by emoji
@@ -157,27 +159,28 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
 
         {/* Reactions */}
         {!isEditing && Object.keys(reactionGroups).length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
+          <div className="flex items-center gap-1 mt-2 flex-wrap">
             {Object.entries(reactionGroups).map(([emoji, data]) => (
               <button
                 key={emoji}
                 onClick={() => toggleReaction.mutate({ message_id: message.id, emoji })}
                 className={cn(
-                  "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs border transition-colors",
+                  "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-all",
+                  "border hover:bg-muted",
                   data.hasOwn
                     ? "bg-primary/10 border-primary/30 text-primary"
-                    : "bg-muted border-transparent hover:border-border"
+                    : "bg-muted/50 border-border"
                 )}
               >
                 <span>{emoji}</span>
-                <span>{data.count}</span>
+                <span className="font-medium">{data.count}</span>
               </button>
             ))}
           </div>
         )}
 
-        {/* Thread indicator */}
-        {!isEditing && !isThreadMessage && message.reply_count && message.reply_count > 0 && (
+        {/* Thread indicator - only show when reply_count > 0 */}
+        {!isEditing && !isThreadMessage && typeof message.reply_count === 'number' && message.reply_count > 0 && (
           <button
             onClick={onOpenThread}
             className="flex items-center gap-1 mt-1 text-xs text-primary hover:underline"
@@ -189,7 +192,7 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
       </div>
 
       {/* Actions (hover) */}
-      {isHovered && !isEditing && (
+      {showActions && !isEditing && (
         <div className="absolute right-2 top-0 flex items-center gap-0.5 bg-background border rounded-md shadow-sm p-0.5">
           <Popover>
             <PopoverTrigger asChild>
@@ -219,20 +222,26 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
           )}
 
           {isOwn && (
-            <DropdownMenu>
+            <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon-xs">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleStartEdit}>
+                <DropdownMenuItem onClick={() => {
+                  setIsDropdownOpen(false);
+                  handleStartEdit();
+                }}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Modifier
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="text-destructive"
-                  onClick={() => deleteMessage.mutate({ id: message.id, channel_id: message.channel_id })}
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    deleteMessage.mutate({ id: message.id, channel_id: message.channel_id });
+                  }}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Supprimer
