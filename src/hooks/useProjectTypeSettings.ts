@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useWorkspaceSettings } from "./useWorkspaceSettings";
+import { ProjectCategory } from "@/lib/projectCategories";
 
 export interface ProjectTypeSetting {
   key: string;
@@ -7,6 +8,7 @@ export interface ProjectTypeSetting {
   color: string;
   description?: string;
   icon?: string;
+  categories?: string[]; // Categories this type is available for
 }
 
 // Default icon mapping based on common project type keys
@@ -73,13 +75,13 @@ function getIconForKey(key: string): string {
   return "FolderKanban";
 }
 
-export function useProjectTypeSettings() {
+export function useProjectTypeSettings(filterByCategory?: ProjectCategory) {
   const { settings, isLoading, createSetting, updateSetting, deleteSetting } = useWorkspaceSettings("project_types");
 
   const projectTypes = useMemo<ProjectTypeSetting[]>(() => {
     if (!settings || settings.length === 0) return [];
 
-    return settings
+    const allTypes = settings
       .filter(s => s.is_active)
       .map(setting => {
         const value = setting.setting_value;
@@ -90,9 +92,24 @@ export function useProjectTypeSettings() {
           color: value.color || "#3B82F6",
           description: value.description,
           icon: value.icon || getIconForKey(setting.setting_key),
+          categories: (value as any).categories as string[] | undefined,
         };
       });
-  }, [settings]);
+
+    // If filtering by category, return only types that match or have no category restriction
+    if (filterByCategory) {
+      return allTypes.filter(type => {
+        // If no categories specified, type is available for all categories
+        if (!type.categories || type.categories.length === 0) {
+          return true;
+        }
+        // Otherwise, check if the category is in the list
+        return type.categories.includes(filterByCategory);
+      });
+    }
+
+    return allTypes;
+  }, [settings, filterByCategory]);
 
   return {
     projectTypes,
