@@ -663,23 +663,35 @@ function DeliverableCard({
   const { total: subtaskCount, completed: completedSubtasks, mainTask } = useDeliverableTasksCount(deliverable.id);
   const hasLinkedTask = !!mainTask;
   const taskProgress = subtaskCount > 0 ? Math.round((completedSubtasks / subtaskCount) * 100) : 0;
+  const isReadyToSend = deliverable.status === "ready_to_send";
 
   return (
     <Card className={cn(
       "transition-colors",
-      isOverdue && "border-destructive/50 bg-destructive/5"
+      isOverdue && "border-destructive/50 bg-destructive/5",
+      isReadyToSend && "border-violet-500/50 bg-violet-500/5 ring-2 ring-violet-500/20"
     )}>
       <CardContent className="p-4">
+        {/* Ready to Send Alert Banner */}
+        {isReadyToSend && (
+          <div className="flex items-center gap-2 p-2 mb-3 rounded-lg bg-violet-500/10 text-violet-700 text-sm">
+            <Send className="h-4 w-4 animate-pulse" />
+            <span className="font-medium">Toutes les tâches terminées — Prêt à envoyer !</span>
+          </div>
+        )}
         <div className="flex items-start gap-3">
           <div className={cn(
             "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
             deliverable.status === "validated" ? "bg-green-100 text-green-600" :
             deliverable.status === "delivered" ? "bg-blue-100 text-blue-600" :
+            deliverable.status === "ready_to_send" ? "bg-violet-100 text-violet-600" :
             deliverable.status === "in_progress" ? "bg-amber-100 text-amber-600" :
             "bg-muted text-muted-foreground"
           )}>
             {deliverable.status === "validated" ? (
               <CheckCircle2 className="h-5 w-5" />
+            ) : deliverable.status === "ready_to_send" ? (
+              <Send className="h-5 w-5 animate-pulse" />
             ) : isOverdue ? (
               <AlertCircle className="h-5 w-5 text-destructive" />
             ) : (
