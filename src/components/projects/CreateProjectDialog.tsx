@@ -25,10 +25,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useProjects, CreateProjectInput } from "@/hooks/useProjects";
+import { useProjects, CreateProjectInput, ProjectContactInput } from "@/hooks/useProjects";
 import { useCRMCompanies } from "@/hooks/useCRMCompanies";
 import { useProjectTypeSettings } from "@/hooks/useProjectTypeSettings";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
+import { useContacts } from "@/hooks/useContacts";
+import { CLIENT_TEAM_ROLES } from "@/hooks/useProjectContacts";
 import { InlineDatePicker } from "@/components/tasks/InlineDatePicker";
 import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 import { format } from "date-fns";
@@ -103,6 +105,14 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   const [postalCode, setPostalCode] = useState("");
   const [surfaceArea, setSurfaceArea] = useState("");
   const [budget, setBudget] = useState("");
+  
+  // Client contacts
+  const [selectedClientContacts, setSelectedClientContacts] = useState<{id: string; role: string}[]>([]);
+
+  // Fetch contacts for selected company
+  const { contacts: companyContacts = [], isLoading: contactsLoading } = useContacts({
+    companyId: crmCompanyId || undefined,
+  });
 
   // Get selected type config
   const selectedTypeConfig = useMemo(() => {
@@ -141,6 +151,13 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
       end_date: endDate ? format(endDate, "yyyy-MM-dd") : null,
       budget: isInternal ? null : (budget ? parseFloat(budget) : null),
       is_internal: isInternal,
+      client_contacts: !isInternal && selectedClientContacts.length > 0 
+        ? selectedClientContacts.map((c, i) => ({
+            contact_id: c.id,
+            role: c.role,
+            is_primary: i === 0,
+          }))
+        : undefined,
     };
     
     createProject.mutate(input);
@@ -163,6 +180,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
     setPostalCode("");
     setSurfaceArea("");
     setBudget("");
+    setSelectedClientContacts([]);
     setConfigOpen(true);
     setPlanningOpen(true);
     setTeamOpen(false);
@@ -177,6 +195,29 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
   }) => {
     setCity(result.city);
     setPostalCode(result.postalCode);
+  };
+
+  // Reset selected contacts when company changes
+  const handleCompanyChange = (value: string) => {
+    const newCompanyId = value === "none" ? null : value;
+    setCrmCompanyId(newCompanyId);
+    setSelectedClientContacts([]);
+  };
+
+  const toggleClientContact = (contactId: string) => {
+    setSelectedClientContacts(prev => {
+      const existing = prev.find(c => c.id === contactId);
+      if (existing) {
+        return prev.filter(c => c.id !== contactId);
+      }
+      return [...prev, { id: contactId, role: "operational" }];
+    });
+  };
+
+  const updateContactRole = (contactId: string, role: string) => {
+    setSelectedClientContacts(prev => 
+      prev.map(c => c.id === contactId ? { ...c, role } : c)
+    );
   };
 
   const toggleReferent = (userId: string) => {
@@ -466,7 +507,7 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                     ) : (
                       <Select 
                         value={crmCompanyId || "none"} 
-                        onValueChange={(v) => setCrmCompanyId(v === "none" ? null : v)}
+                        onValueChange={handleCompanyChange}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Sélectionner un client" />
@@ -485,6 +526,87 @@ export function CreateProjectDialog({ open, onOpenChange }: CreateProjectDialogP
                       </Select>
                     )}
                   </div>
+
+                  {/* Équipe client */}
+                  {crmCompanyId && (
+                    <div className="space-y-3">
+                      <Label className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        Équipe client
+                        {selectedClientContacts.length > 0 && (
+                          <Badge variant="secondary">{selectedClientContacts.length}</Badge>
+                        )}
+                      </Label>
+                      
+                      {contactsLoading ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Chargement des contacts...
+                        </div>
+                      ) : companyContacts.length === 0 ? (
+                        <div className="text-sm text-muted-foreground py-3 px-3 border border-dashed rounded-lg text-center">
+                          <Users className="h-5 w-5 mx-auto mb-1 opacity-50" />
+                          Aucun contact pour cette société
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {companyContacts.map((contact) => {
+                            const isSelected = selectedClientContacts.some(c => c.id === contact.id);
+                            const selectedContact = selectedClientContacts.find(c => c.id === contact.id);
+                            return (
+                              <div 
+                                key={contact.id}
+                                className={cn(
+                                  "flex items-center gap-3 p-2 rounded-lg border transition-all",
+                                  isSelected
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:border-primary/50"
+                                )}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => toggleClientContact(contact.id)}
+                                  className="flex items-center gap-3 flex-1 text-left"
+                                >
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage src={contact.avatar_url || undefined} />
+                                    <AvatarFallback className="text-xs">
+                                      {getInitials(contact.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium truncate">{contact.name}</p>
+                                    {contact.role && (
+                                      <p className="text-xs text-muted-foreground truncate">{contact.role}</p>
+                                    )}
+                                  </div>
+                                  {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                                </button>
+                                
+                                {isSelected && (
+                                  <Select 
+                                    value={selectedContact?.role || "operational"}
+                                    onValueChange={(v) => updateContactRole(contact.id, v)}
+                                  >
+                                    <SelectTrigger className="h-7 w-[130px] text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {CLIENT_TEAM_ROLES.map((role) => (
+                                        <SelectItem key={role.value} value={role.value}>
+                                          {role.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Adresse */}
                   <div className="space-y-2">
