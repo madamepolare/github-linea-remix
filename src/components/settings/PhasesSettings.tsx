@@ -80,15 +80,40 @@ const defaultFormData: PhaseFormData = {
   category: "base",
 };
 
+const CATEGORY_SORT_OFFSET: Record<PhaseCategory, number> = {
+  base: 0,
+  complementary: 1000,
+};
+
 export function PhasesSettings() {
   const { activeWorkspace } = useAuth();
   const queryClient = useQueryClient();
   const { projectTypes, isLoading: projectTypesLoading } = useProjectTypeSettings();
   const { discipline, disciplineSlug } = useDiscipline();
-  const [activeProjectType, setActiveProjectType] = useState<string>("universal");
-  // Fetch ALL phases without project type filter for universal list
-  const { templates, isLoading, createTemplate, updateTemplate, deleteTemplate, reorderTemplates, resetToDefaults, initializeDefaultsIfEmpty } = usePhaseTemplates();
-  
+
+  const [activeProjectType, setActiveProjectType] = useState<string>("");
+
+  // Fetch ALL phases without project type filter (other parts of the app need the full list),
+  // then filter locally for the active typology.
+  const {
+    templates,
+    isLoading,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+    reorderTemplates,
+    resetToDefaults,
+    initializeDefaultsIfEmpty,
+  } = usePhaseTemplates();
+
+  const templatesForActiveType = useMemo(() => {
+    if (!activeProjectType) return [];
+    return templates
+      .filter((t) => t.project_type === activeProjectType)
+      .slice()
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  }, [templates, activeProjectType]);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPhase, setEditingPhase] = useState<PhaseTemplate | null>(null);
   const [formData, setFormData] = useState<PhaseFormData>(defaultFormData);
@@ -111,13 +136,13 @@ export function PhasesSettings() {
   // AI generation handler
   const handleGenerateWithAI = async () => {
     const projectTypeLabel = projectTypes.find(t => t.key === activeProjectType)?.label || activeProjectType;
-    
+
     setIsGeneratingAI(true);
     setShowAIPromptDialog(false);
     try {
       const { data, error } = await supabase.functions.invoke('generate-phase-templates', {
-        body: { 
-          projectType: activeProjectType, 
+        body: {
+          projectType: activeProjectType,
           projectTypeLabel,
           discipline: disciplineSlug,
           disciplineName: discipline?.name || disciplineSlug,
@@ -126,7 +151,7 @@ export function PhasesSettings() {
       });
 
       if (error) throw error;
-      
+
       setGeneratedPhases(data);
       setShowAIDialog(true);
     } catch (error) {
@@ -138,15 +163,14 @@ export function PhasesSettings() {
   };
 
   const applyGeneratedPhases = async () => {
-    if (!generatedPhases || !activeWorkspace?.id) return;
-    
+    if (!generatedPhases || !activeWorkspace?.id || !activeProjectType) return;
+
     try {
       // Get current max sort_order for this project type
-      const existingTemplates = templates.filter(t => t.project_type === activeProjectType);
-      const maxSortOrder = existingTemplates.length > 0 
-        ? Math.max(...existingTemplates.map(t => t.sort_order)) + 1 
+      const maxSortOrder = templatesForActiveType.length > 0
+        ? Math.max(...templatesForActiveType.map(t => t.sort_order)) + 1
         : 0;
-      
+
       // Prepare all phases for batch insert
       const allPhases = [
         ...generatedPhases.basePhases.map((phase, index) => ({
@@ -174,20 +198,20 @@ export function PhasesSettings() {
           is_active: true
         }))
       ];
-      
+
       // Direct batch insert via supabase for efficiency
       const { error } = await supabase
         .from("phase_templates")
         .insert(allPhases);
-      
+
       if (error) {
         console.error('Supabase insert error:', error);
         throw new Error(error.message);
       }
-      
+
       // Refresh the query cache
       queryClient.invalidateQueries({ queryKey: ["phase-templates"] });
-      
+
       toast.success(`${allPhases.length} phases créées avec succès`);
       setShowAIDialog(false);
       setGeneratedPhases(null);
@@ -197,19 +221,21 @@ export function PhasesSettings() {
     }
   };
 
-  // Set first project type as active when loaded
+  // Ensure we always have a valid active typology for the Tabs
   useEffect(() => {
-    if (projectTypes.length > 0 && !activeProjectType) {
+    if (projectTypes.length === 0) return;
+    const isValid = projectTypes.some((t) => t.key === activeProjectType);
+    if (!activeProjectType || !isValid) {
       setActiveProjectType(projectTypes[0].key);
     }
   }, [projectTypes, activeProjectType]);
 
-  // Group templates by category
+  // Group templates by category (scoped to active typology)
   const groupedTemplates = useMemo(() => {
-    const base = templates.filter(t => t.category === 'base');
-    const complementary = templates.filter(t => t.category === 'complementary');
+    const base = templatesForActiveType.filter(t => t.category === 'base');
+    const complementary = templatesForActiveType.filter(t => t.category === 'complementary');
     return { base, complementary };
-  }, [templates]);
+  }, [templatesForActiveType]);
 
   // Calculate phase counts
   const phaseCounts = useMemo(() => {
@@ -227,7 +253,7 @@ export function PhasesSettings() {
     setEditingPhase(null);
     setFormData({
       ...defaultFormData,
-      code: `PHASE_${templates.length + 1}`,
+      code: `PHASE_${templatesForActiveType.length + 1}`,
       category,
     });
     setDeliverablesText("");
@@ -263,11 +289,15 @@ export function PhasesSettings() {
         deliverables,
       });
     } else {
+      const category = formData.category;
+      const offset = CATEGORY_SORT_OFFSET[category];
+      const nextIndex = templatesForActiveType.filter((t) => t.category === category).length;
+
       await createTemplate.mutateAsync({
         project_type: activeProjectType,
         ...formData,
         deliverables,
-        sort_order: templates.length,
+        sort_order: offset + nextIndex,
       } as CreatePhaseTemplateInput);
     }
     setIsDialogOpen(false);
@@ -285,7 +315,12 @@ export function PhasesSettings() {
 
   // Note: Percentage normalization removed - percentages are now defined in quote templates
 
-  const movePhase = async (phaseId: string, direction: "up" | "down", categoryTemplates: PhaseTemplate[]) => {
+  const movePhase = async (
+    phaseId: string,
+    direction: "up" | "down",
+    categoryTemplates: PhaseTemplate[],
+    category: PhaseCategory
+  ) => {
     const index = categoryTemplates.findIndex(t => t.id === phaseId);
     const newIndex = direction === "up" ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= categoryTemplates.length) return;
@@ -294,8 +329,10 @@ export function PhasesSettings() {
     const [movedItem] = reorderedTemplates.splice(index, 1);
     reorderedTemplates.splice(newIndex, 0, movedItem);
 
+    const offset = CATEGORY_SORT_OFFSET[category];
+
     await reorderTemplates.mutateAsync(
-      reorderedTemplates.map((t, i) => ({ id: t.id, sort_order: i }))
+      reorderedTemplates.map((t, i) => ({ id: t.id, sort_order: offset + i }))
     );
   };
 
@@ -313,7 +350,7 @@ export function PhasesSettings() {
               size="icon"
               className="h-5 w-5"
               disabled={index === 0}
-              onClick={() => movePhase(phase.id, "up", categoryTemplates)}
+              onClick={() => movePhase(phase.id, "up", categoryTemplates, phase.category)}
             >
               <ChevronUp className="h-3 w-3" />
             </Button>
@@ -322,7 +359,7 @@ export function PhasesSettings() {
               size="icon"
               className="h-5 w-5"
               disabled={index === categoryTemplates.length - 1}
-              onClick={() => movePhase(phase.id, "down", categoryTemplates)}
+              onClick={() => movePhase(phase.id, "down", categoryTemplates, phase.category)}
             >
               <ChevronDown className="h-3 w-3" />
             </Button>
