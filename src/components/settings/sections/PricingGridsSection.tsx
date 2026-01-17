@@ -120,14 +120,38 @@ export function PricingGridsSection() {
 
     setIsImporting(true);
     try {
-      const content = await file.text();
+      const fileName = file.name.toLowerCase();
+      const isXLS = fileName.endsWith('.xls') || fileName.endsWith('.xlsx');
+      
+      let requestBody: any = {
+        fileName: file.name,
+        useAI: true
+      };
+
+      if (isXLS) {
+        // Parse XLS on frontend using xlsx library
+        const XLSX = await import('xlsx');
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        
+        // Get first sheet
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        
+        // Convert to array of arrays
+        const xlsData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+        
+        requestBody.xlsData = xlsData;
+        requestBody.fileContent = ''; // Not needed for XLS
+        console.log(`Parsed XLS file with ${xlsData.length} rows`);
+      } else {
+        // For CSV/TXT, read as text
+        const content = await file.text();
+        requestBody.fileContent = content;
+      }
       
       const { data, error } = await supabase.functions.invoke('parse-bpu-file', {
-        body: {
-          fileContent: content,
-          fileName: file.name,
-          useAI: true
-        }
+        body: requestBody
       });
 
       if (error) throw error;
@@ -137,7 +161,7 @@ export function PricingGridsSection() {
         setImportedItems(data.items);
         setImportGridName(`Import BPU - ${file.name.replace(/\.[^.]+$/, '')}`);
         setIsImportDialogOpen(true);
-        toast.success(`${data.items.length} postes importés`);
+        toast.success(`${data.items.length} postes importés avec mapping IA`);
       } else {
         toast.error('Aucun poste tarifaire trouvé dans le fichier');
       }

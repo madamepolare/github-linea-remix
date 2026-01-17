@@ -23,21 +23,27 @@ serve(async (req) => {
   }
 
   try {
-    const { fileContent, fileName, useAI } = await req.json();
+    const { fileContent, fileName, useAI, isBase64, xlsData } = await req.json();
     
-    if (!fileContent) {
+    if (!fileContent && !xlsData) {
       throw new Error('No file content provided');
     }
 
-    console.log(`Parsing BPU file: ${fileName}, useAI: ${useAI}`);
+    console.log(`Parsing BPU file: ${fileName}, useAI: ${useAI}, isBase64: ${isBase64}, hasXlsData: ${!!xlsData}`);
 
     let items: BPUItem[] = [];
 
     // Detect file type and parse accordingly
     const isCSV = fileName?.toLowerCase().endsWith('.csv');
     const isTXT = fileName?.toLowerCase().endsWith('.txt');
+    const isXLS = fileName?.toLowerCase().endsWith('.xls') || fileName?.toLowerCase().endsWith('.xlsx');
 
-    if (isCSV || isTXT) {
+    if (isXLS && xlsData) {
+      // XLS data is already parsed on the frontend using xlsx library
+      console.log(`Received ${xlsData.length} rows from XLS`);
+      items = parseXLSData(xlsData);
+      console.log(`Parsed ${items.length} items from XLS data`);
+    } else if (isCSV || isTXT) {
       // Parse CSV/TXT file
       items = parseCSVContent(fileContent);
       console.log(`Parsed ${items.length} items from CSV/TXT`);
@@ -50,13 +56,14 @@ serve(async (req) => {
     // If AI enrichment requested and we have items
     if (useAI && items.length > 0) {
       console.log('Enriching items with AI...');
-      items = await enrichWithAI(items);
+      items = await enrichWithAI(items, fileName);
     }
 
     // If parsing yielded no results but we have content, try AI extraction
-    if (items.length === 0 && fileContent.trim().length > 0) {
+    if (items.length === 0 && (fileContent?.trim().length > 0 || (xlsData && xlsData.length > 0))) {
       console.log('No items parsed, trying AI extraction...');
-      items = await extractWithAI(fileContent);
+      const contentForAI = xlsData ? JSON.stringify(xlsData) : fileContent;
+      items = await extractWithAI(contentForAI);
     }
 
     return new Response(
@@ -77,6 +84,99 @@ serve(async (req) => {
     );
   }
 });
+
+// Parse XLS data that was parsed on the frontend
+function parseXLSData(rows: any[][]): BPUItem[] {
+  if (!rows || rows.length < 2) return [];
+
+  const items: BPUItem[] = [];
+  
+  // Find header row (first row with content)
+  const headers = rows[0].map(h => String(h || '').toLowerCase().trim());
+  
+  // Find column indices
+  const refIndex = headers.findIndex(h => 
+    h.includes('ref') || h.includes('code') || h.includes('n°') || h === 'réf' || h === 'référence'
+  );
+  const nameIndex = headers.findIndex(h => 
+    h.includes('désignation') || h.includes('libellé') || h.includes('name') || 
+    h.includes('description') || h.includes('intitulé') || h.includes('prestation')
+  );
+  const unitIndex = headers.findIndex(h => 
+    h.includes('unité') || h.includes('unit') || h === 'u' || h === 'unité'
+  );
+  const priceIndex = headers.findIndex(h => 
+    h.includes('prix') || h.includes('tarif') || h.includes('price') || 
+    h.includes('pu') || h.includes('p.u') || h.includes('montant') || h.includes('€')
+  );
+  const categoryIndex = headers.findIndex(h => 
+    h.includes('catégorie') || h.includes('category') || h.includes('lot') || h.includes('chapitre')
+  );
+
+  console.log(`XLS parsing - columns: ref=${refIndex}, name=${nameIndex}, unit=${unitIndex}, price=${priceIndex}, category=${categoryIndex}`);
+
+  // Parse data rows (skip header)
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length === 0) continue;
+
+    const ref = refIndex >= 0 ? String(row[refIndex] || '').trim() : '';
+    // If no name column found, use first non-empty cell
+    let name = '';
+    if (nameIndex >= 0) {
+      name = String(row[nameIndex] || '').trim();
+    } else {
+      // Try to find first meaningful text cell
+      for (let j = 0; j < row.length; j++) {
+        const val = String(row[j] || '').trim();
+        if (val && val.length > 2 && isNaN(parseFloat(val.replace(',', '.')))) {
+          name = val;
+          break;
+        }
+      }
+    }
+    
+    const unit = unitIndex >= 0 ? String(row[unitIndex] || 'u').trim() : 'u';
+    const priceVal = priceIndex >= 0 ? row[priceIndex] : null;
+    const category = categoryIndex >= 0 ? String(row[categoryIndex] || '').trim() : '';
+
+    // Parse price (handle various formats)
+    let price = 0;
+    if (priceVal !== null && priceVal !== undefined) {
+      if (typeof priceVal === 'number') {
+        price = priceVal;
+      } else {
+        const priceStr = String(priceVal).replace(/[^\d.,\-]/g, '').replace(',', '.');
+        price = parseFloat(priceStr) || 0;
+      }
+    }
+
+    // Skip rows without a name or with zero/negative price
+    if (name && price > 0) {
+      items.push({
+        id: `bpu-${i}-${Date.now()}`,
+        pricing_ref: ref || `BPU-${String(items.length + 1).padStart(3, '0')}`,
+        name,
+        unit: normalizeUnit(unit),
+        unit_price: Math.round(price * 100) / 100,
+        category
+      });
+    }
+  }
+
+  return items;
+}
+
+function normalizeUnit(unit: string): string {
+  const u = unit.toLowerCase().trim();
+  if (u === 'h' || u === 'heure' || u === 'heures') return 'h';
+  if (u === 'j' || u === 'jour' || u === 'jours') return 'j';
+  if (u === 'm²' || u === 'm2' || u === 'mètre carré') return 'm²';
+  if (u === 'ml' || u === 'm' || u === 'mètre linéaire') return 'ml';
+  if (u === 'forfait' || u === 'f' || u === 'ens' || u === 'ensemble') return 'forfait';
+  if (u === 'u' || u === 'unité' || u === 'pce' || u === 'pièce') return 'u';
+  return unit || 'u';
+}
 
 function parseCSVContent(content: string): BPUItem[] {
   const lines = content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -112,12 +212,12 @@ function parseCSVContent(content: string): BPUItem[] {
     // Parse price (handle French format with comma)
     const price = parseFloat(priceStr.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
 
-    if (name) {
+    if (name && price > 0) {
       items.push({
         id: `bpu-${i}-${Date.now()}`,
         pricing_ref: ref || `BPU-${String(i).padStart(3, '0')}`,
         name,
-        unit,
+        unit: normalizeUnit(unit),
         unit_price: price,
         category
       });
@@ -132,8 +232,6 @@ function parseTextContent(content: string): BPUItem[] {
   const items: BPUItem[] = [];
 
   // Pattern matching for common BPU formats
-  // Format: REF - DESIGNATION - UNIT - PRICE
-  // or: DESIGNATION (UNIT) PRICE €
   const pricePattern = /(\d+[.,]?\d*)\s*€?/;
   const unitPattern = /\((h|j|m²|u|forfait|jour|heure)\)/i;
 
@@ -173,7 +271,7 @@ function parseTextContent(content: string): BPUItem[] {
           id: `bpu-${i}-${Date.now()}`,
           pricing_ref: ref || `BPU-${String(items.length + 1).padStart(3, '0')}`,
           name,
-          unit,
+          unit: normalizeUnit(unit),
           unit_price: price
         });
       }
@@ -183,7 +281,7 @@ function parseTextContent(content: string): BPUItem[] {
   return items;
 }
 
-async function enrichWithAI(items: BPUItem[]): Promise<BPUItem[]> {
+async function enrichWithAI(items: BPUItem[], fileName?: string): Promise<BPUItem[]> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!apiKey) {
     console.log('No LOVABLE_API_KEY, skipping AI enrichment');
@@ -191,16 +289,20 @@ async function enrichWithAI(items: BPUItem[]): Promise<BPUItem[]> {
   }
 
   try {
-    const prompt = `Tu es un expert en chiffrage de projets. Voici une liste de postes BPU à enrichir.
-Pour chaque poste, suggère une catégorie appropriée (ex: "Honoraires", "Études", "Production", "Coordination", etc.) si elle n'est pas déjà définie.
+    const prompt = `Tu es un expert en chiffrage de projets BTP/Architecture. Voici une liste de postes BPU importés du fichier "${fileName || 'BPU'}".
+
+Pour chaque poste:
+1. Suggère une catégorie appropriée si elle n'existe pas (ex: "Études préliminaires", "Conception", "Suivi de chantier", "Maîtrise d'œuvre", "Coordination", "Frais", etc.)
+2. Améliore la description si elle est vague
+3. Vérifie que l'unité est cohérente
 
 Postes:
-${items.map(item => `- ${item.pricing_ref}: ${item.name} (${item.unit_price}€/${item.unit})`).join('\n')}
+${items.slice(0, 50).map(item => `- Réf: ${item.pricing_ref} | ${item.name} | ${item.unit_price}€/${item.unit} | Cat: ${item.category || 'non définie'}`).join('\n')}
 
-Réponds en JSON avec le format:
-[{ "pricing_ref": "...", "category": "..." }]`;
+Réponds UNIQUEMENT en JSON valide avec le format:
+[{ "pricing_ref": "...", "category": "...", "description": "...", "unit": "..." }]`;
 
-    const response = await fetch('https://ai.lovable.dev/api/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -219,11 +321,19 @@ Réponds en JSON avec le format:
     // Extract JSON from response
     const jsonMatch = content.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
-      const categories = JSON.parse(jsonMatch[0]);
+      const enrichments = JSON.parse(jsonMatch[0]);
       
       return items.map(item => {
-        const match = categories.find((c: any) => c.pricing_ref === item.pricing_ref);
-        return match ? { ...item, category: match.category } : item;
+        const match = enrichments.find((c: any) => c.pricing_ref === item.pricing_ref);
+        if (match) {
+          return { 
+            ...item, 
+            category: match.category || item.category,
+            description: match.description || item.description,
+            unit: match.unit ? normalizeUnit(match.unit) : item.unit
+          };
+        }
+        return item;
       });
     }
   } catch (error) {
@@ -244,20 +354,24 @@ async function extractWithAI(content: string): Promise<BPUItem[]> {
     const prompt = `Tu es un expert en chiffrage de projets. Extrait les postes tarifaires du contenu suivant (BPU - Bordereau des Prix Unitaires).
 
 Contenu:
-${content.substring(0, 4000)}
+${content.substring(0, 6000)}
 
-Réponds en JSON avec le format exact:
+Réponds UNIQUEMENT en JSON valide avec le format exact:
 [{
   "pricing_ref": "code ou référence du poste",
   "name": "désignation du poste",
+  "description": "description détaillée si disponible",
   "unit": "unité (h, j, m², u, forfait)",
-  "unit_price": nombre (prix unitaire),
+  "unit_price": nombre (prix unitaire HT),
   "category": "catégorie si identifiable"
 }]
 
-Si tu ne trouves pas de postes tarifaires valides, réponds avec un tableau vide [].`;
+Règles:
+- Ignore les lignes de totaux et sous-totaux
+- Ne garde que les postes avec un prix unitaire valide > 0
+- Si tu ne trouves pas de postes tarifaires valides, réponds avec un tableau vide []`;
 
-    const response = await fetch('https://ai.lovable.dev/api/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -282,8 +396,8 @@ Si tu ne trouves pas de postes tarifaires valides, réponds avec un tableau vide
         pricing_ref: item.pricing_ref || `AI-${String(index + 1).padStart(3, '0')}`,
         name: item.name || '',
         description: item.description || '',
-        unit: item.unit || 'u',
-        unit_price: parseFloat(item.unit_price) || 0,
+        unit: normalizeUnit(item.unit || 'u'),
+        unit_price: Math.round((parseFloat(item.unit_price) || 0) * 100) / 100,
         category: item.category || ''
       })).filter((item: BPUItem) => item.name && item.unit_price > 0);
     }
