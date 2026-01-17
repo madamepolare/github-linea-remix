@@ -1,5 +1,7 @@
 import { useState, useMemo, useRef, useEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   format,
   startOfMonth,
@@ -14,11 +16,12 @@ import {
   parseISO,
 } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, FolderKanban, ChevronDown, Lock, FolderOpen, CornerDownRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, FolderKanban, ChevronDown, Lock, FolderOpen, CornerDownRight, FileCheck, Diamond } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { useProjects, useSubProjects, Project, ProjectPhase } from "@/hooks/useProjects";
+import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PROJECT_TYPES, PHASE_STATUS_CONFIG } from "@/lib/projectTypes";
@@ -26,6 +29,15 @@ import { PROJECT_TYPES, PHASE_STATUS_CONFIG } from "@/lib/projectTypes";
 const CELL_WIDTH = 28;
 const ROW_HEIGHT = 56;
 const PROJECT_COLUMN_WIDTH = 288; // w-72 = 18rem = 288px
+
+// Deliverable status colors
+const DELIVERABLE_STATUS_COLORS: Record<string, { bg: string; border: string; text: string }> = {
+  pending: { bg: "bg-slate-100", border: "border-slate-300", text: "text-slate-600" },
+  in_progress: { bg: "bg-blue-100", border: "border-blue-400", text: "text-blue-700" },
+  ready_to_send: { bg: "bg-amber-100", border: "border-amber-400", text: "text-amber-700" },
+  delivered: { bg: "bg-emerald-100", border: "border-emerald-400", text: "text-emerald-700" },
+  validated: { bg: "bg-green-100", border: "border-green-500", text: "text-green-700" },
+};
 
 interface ProjectTimelineProps {
   onCreateProject?: () => void;
@@ -82,11 +94,42 @@ function SubProjectTimelineRows({
 
 export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
   const navigate = useNavigate();
+  const { activeWorkspace } = useAuth();
   const { projects, isLoading } = useProjects();
   const [viewDate, setViewDate] = useState(new Date());
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch all deliverables for visible projects
+  const projectIds = projects.map(p => p.id);
+  const { data: allDeliverables = [] } = useQuery({
+    queryKey: ["timeline-deliverables", projectIds],
+    queryFn: async () => {
+      if (!activeWorkspace?.id || projectIds.length === 0) return [];
+      
+      const { data, error } = await supabase
+        .from("project_deliverables")
+        .select("id, project_id, name, status, due_date")
+        .eq("workspace_id", activeWorkspace.id)
+        .in("project_id", projectIds)
+        .not("due_date", "is", null);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!activeWorkspace?.id && projectIds.length > 0,
+  });
+
+  // Group deliverables by project
+  const deliverablesByProject = useMemo(() => {
+    const map: Record<string, typeof allDeliverables> = {};
+    allDeliverables.forEach(d => {
+      if (!map[d.project_id]) map[d.project_id] = [];
+      map[d.project_id].push(d);
+    });
+    return map;
+  }, [allDeliverables]);
 
   // Calculate visible range - show 2 months before and 2 months after current view date
   const { visibleStart, visibleEnd, visibleDays, visibleMonths, todayOffset } = useMemo(() => {
@@ -163,6 +206,18 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
     return {
       left: startOffset * CELL_WIDTH,
       width: Math.max(width * CELL_WIDTH, 100),
+    };
+  };
+
+  // Get deliverable marker position (single day)
+  const getDeliverablePosition = (dueDate: string) => {
+    const date = parseISO(dueDate);
+    const offset = differenceInDays(date, visibleStart);
+    
+    if (offset < 0 || offset >= visibleDays.length) return null;
+    
+    return {
+      left: offset * CELL_WIDTH + CELL_WIDTH / 2, // Center on the day
     };
   };
 
@@ -372,6 +427,7 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
               {projects.map((project) => {
                 const projectBar = getProjectBarPosition(project);
                 const phases = project.phases || [];
+                const projectDeliverables = deliverablesByProject[project.id] || [];
 
                 return (
                   <div
@@ -459,6 +515,51 @@ export function ProjectTimeline({ onCreateProject }: ProjectTimelineProps) {
                         )}
                       </div>
                     )}
+
+                    {/* Deliverable markers (diamond shapes) */}
+                    {projectDeliverables.map((deliverable) => {
+                      if (!deliverable.due_date) return null;
+                      const position = getDeliverablePosition(deliverable.due_date);
+                      if (!position) return null;
+
+                      const statusColors = DELIVERABLE_STATUS_COLORS[deliverable.status] || DELIVERABLE_STATUS_COLORS.pending;
+
+                      return (
+                        <Tooltip key={deliverable.id}>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={cn(
+                                "absolute top-1/2 -translate-y-1/2 w-4 h-4 rotate-45 border-2 cursor-pointer transition-all hover:scale-125 z-10",
+                                statusColors.bg,
+                                statusColors.border
+                              )}
+                              style={{
+                                left: position.left - 8, // Center the diamond
+                              }}
+                              onClick={() => navigate(`/projects/${project.id}?tab=deliverables`)}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                <FileCheck className="h-3 w-3 text-emerald-600" />
+                                <p className="font-medium text-sm">{deliverable.name}</p>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                Échéance: {format(parseISO(deliverable.due_date), "d MMMM yyyy", { locale: fr })}
+                              </p>
+                              <p className={cn("text-xs font-medium", statusColors.text)}>
+                                {deliverable.status === "pending" && "En attente"}
+                                {deliverable.status === "in_progress" && "En cours"}
+                                {deliverable.status === "ready_to_send" && "Prêt à envoyer"}
+                                {deliverable.status === "delivered" && "Livré"}
+                                {deliverable.status === "validated" && "Validé"}
+                              </p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
                   </div>
                 );
               })}
