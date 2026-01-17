@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { usePhaseTemplates, PhaseTemplate, CreatePhaseTemplateInput } from "@/hooks/usePhaseTemplates";
+import { useDeliverableTemplates, DeliverableTemplate, DELIVERABLE_TYPE_LABELS, DeliverableType } from "@/hooks/useDeliverableTemplates";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,13 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Plus,
   Pencil,
   Trash2,
@@ -43,6 +51,8 @@ import {
   Sparkles,
   Loader2,
   GripVertical,
+  X,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PhaseCategory, PHASE_CATEGORY_LABELS } from "@/lib/commercialTypes";
@@ -50,6 +60,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDiscipline } from "@/hooks/useDiscipline";
 import { toast } from "sonner";
+
+interface DeliverableFormItem {
+  id?: string;
+  name: string;
+  description: string;
+  deliverable_type: DeliverableType;
+  estimated_hours: number;
+  isNew?: boolean;
+}
 
 interface PhaseFormData {
   code: string;
@@ -151,23 +170,50 @@ export function PhaseTemplatesEditor({ projectTypeKey, projectTypeLabel }: Phase
       .map((d) => d.trim())
       .filter((d) => d.length > 0);
 
+    let savedPhaseId: string | undefined;
+
     if (editingPhase) {
       await updateTemplate.mutateAsync({
         id: editingPhase.id,
         ...formData,
         deliverables,
       });
+      savedPhaseId = editingPhase.id;
     } else {
       const nextIndex = phases.filter(t => t.category === formData.category).length;
       const offset = formData.category === "base" ? 0 : 1000;
 
-      await createTemplate.mutateAsync({
+      const result = await createTemplate.mutateAsync({
         project_type: projectTypeKey,
         ...formData,
         deliverables,
         sort_order: offset + nextIndex,
       } as CreatePhaseTemplateInput);
+      savedPhaseId = result?.id;
     }
+
+    // Sync deliverables to deliverable_templates table
+    if (savedPhaseId && activeWorkspace?.id) {
+      // Delete existing deliverable templates for this phase
+      await supabase
+        .from("deliverable_templates")
+        .delete()
+        .eq("phase_template_id", savedPhaseId);
+
+      // Insert new deliverable templates
+      if (deliverables.length > 0) {
+        const deliverableTemplates = deliverables.map((name, index) => ({
+          workspace_id: activeWorkspace.id,
+          phase_template_id: savedPhaseId,
+          name,
+          sort_order: index,
+        }));
+
+        await supabase.from("deliverable_templates").insert(deliverableTemplates);
+        queryClient.invalidateQueries({ queryKey: ["deliverable-templates"] });
+      }
+    }
+
     setIsDialogOpen(false);
   };
 
