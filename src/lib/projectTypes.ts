@@ -177,6 +177,7 @@ export const OBSERVATION_STATUS = [
 export const DELIVERABLE_STATUS = [
   { value: "pending", label: "En attente", color: "#6B7280" },
   { value: "in_progress", label: "En cours", color: "#F59E0B" },
+  { value: "ready_to_send", label: "Prêt à envoyer", color: "#8B5CF6" },
   { value: "delivered", label: "Livré", color: "#3B82F6" },
   { value: "validated", label: "Validé", color: "#10B981" },
 ];
