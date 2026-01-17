@@ -11,28 +11,42 @@ serve(async (req) => {
   }
 
   try {
-    const { projectType, projectTypeLabel } = await req.json();
+    const { projectType, projectTypeLabel, discipline, disciplineName } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating phase templates for:", { projectType, projectTypeLabel });
+    console.log("Generating phase templates for:", { projectType, projectTypeLabel, discipline, disciplineName });
 
-    const systemPrompt = `Tu es un expert en gestion de projets dans les domaines de l'architecture, du design d'intérieur, de la communication et de la scénographie en France.
+    // Build discipline-specific guidance
+    const disciplineGuidance: Record<string, string> = {
+      architecture: `Tu es expert en architecture en France. Base-toi sur la loi MOP:
+- Phases de base: ESQ (Esquisse), APS (Avant-Projet Sommaire), APD (Avant-Projet Définitif), PRO (Projet), ACT (Assistance Contrats Travaux), VISA (Visa), DET (Direction Exécution Travaux), AOR (Assistance Opérations Réception)
+- Les livrables doivent être conformes aux standards de la profession d'architecte
+- Respecte les usages et terminologies de l'Ordre des Architectes`,
+      scenographie: `Tu es expert en scénographie d'exposition et muséographie en France:
+- Phases typiques: DIAG (Diagnostic), CONCEPT (Conception), AVP (Avant-Projet), DEV (Développement), TECH (Études Techniques), PROD (Production), MONTAGE, EXPLOITATION
+- Inclure les spécificités muséographiques: parcours visiteur, éclairage scénique, médiation, interactivité
+- Adapter aux standards des musées et lieux d'exposition`,
+      communication: `Tu es expert en communication et design graphique:
+- Phases créatives: BRIEF, AUDIT, STRAT (Stratégie), CONCEPT, CREA (Création), PROD (Production), DEPLOY (Déploiement)
+- Inclure les livrables digitaux et print
+- Adapter aux campagnes de communication, identité visuelle, branding`
+    };
 
-Tu génères des templates de phases de mission professionnelles et réalistes.
+    const disciplineContext = disciplineGuidance[discipline] || disciplineGuidance.architecture;
+
+    const systemPrompt = `${disciplineContext}
+
+Tu génères des templates de phases de mission professionnelles et réalistes pour la discipline "${disciplineName || discipline}".
 
 Règles importantes:
 - Génère entre 5 et 12 phases de base qui totalisent exactement 100%
 - Génère 3-6 phases complémentaires optionnelles
 - Les codes doivent être courts (2-5 caractères), en majuscules
-- Respecte les standards du métier en France
-- Pour l'architecture: base-toi sur la loi MOP (ESQ, APS, APD, PRO, ACT, VISA, DET, AOR)
-- Pour le design d'intérieur: phases similaires adaptées (AVP, APS, APD, EXE, SUIVI)
-- Pour la communication: phases créatives (BRIEF, CONCEPT, CREATION, PROD, DEPLOIEMENT)
-- Pour la scénographie: phases spécifiques (DIAG, CONCEPT, DEV, TECH, PROD, MONTAGE)
+- Respecte les standards du métier en France pour cette discipline
 - Les livrables doivent être concrets et professionnels
 - Les descriptions doivent être claires et informatives`;
 
