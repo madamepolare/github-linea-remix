@@ -1,6 +1,8 @@
-import { Hash, Lock, MessageCircle, Plus, CheckSquare, FolderKanban, FileText, Building2, User, Target } from "lucide-react";
+import { useState } from "react";
+import { Hash, Lock, MessageCircle, Plus, CheckSquare, FolderKanban, FileText, Building2, User, Target, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { TeamChannel, useUnreadCounts } from "@/hooks/useTeamMessages";
 import { useEntityConversations, EntityConversation } from "@/hooks/useEntityConversations";
@@ -32,6 +34,15 @@ export function ChannelList({
   const privateChannels = channels.filter(c => c.channel_type === "private");
   const directMessages = channels.filter(c => c.channel_type === "direct");
 
+  const [expandedEntityTypes, setExpandedEntityTypes] = useState<Record<EntityType, boolean>>({
+    task: true,
+    project: true,
+    tender: false,
+    company: false,
+    contact: false,
+    lead: false,
+  });
+
   const entityIcons: Record<EntityType, typeof CheckSquare> = {
     task: CheckSquare,
     project: FolderKanban,
@@ -40,6 +51,28 @@ export function ChannelList({
     contact: User,
     lead: Target,
   };
+
+  const entityLabels: Record<EntityType, string> = {
+    task: "Tâches",
+    project: "Projets",
+    tender: "Appels d'offres",
+    company: "Entreprises",
+    contact: "Contacts",
+    lead: "Leads",
+  };
+
+  const toggleEntityType = (type: EntityType) => {
+    setExpandedEntityTypes(prev => ({ ...prev, [type]: !prev[type] }));
+  };
+
+  // Group entity conversations by type
+  const groupedEntityConversations = entityConversations?.reduce((acc, conv) => {
+    if (!acc[conv.entity_type]) {
+      acc[conv.entity_type] = [];
+    }
+    acc[conv.entity_type].push(conv);
+    return acc;
+  }, {} as Record<EntityType, EntityConversation[]>) || {};
 
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "?";
@@ -181,17 +214,38 @@ export function ChannelList({
             </div>
           </div>
 
-          {/* Entity Conversations */}
-          {entityConversations && entityConversations.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between px-2 mb-1">
+          {/* Entity Conversations by Type */}
+          {Object.keys(groupedEntityConversations).length > 0 && (
+            <div className="space-y-2">
+              <div className="px-2">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Fils de discussion
                 </span>
               </div>
-              <div className="space-y-0.5">
-                {entityConversations.map(renderEntityConversation)}
-              </div>
+              {(Object.entries(groupedEntityConversations) as [EntityType, EntityConversation[]][]).map(([type, conversations]) => {
+                const Icon = entityIcons[type];
+                const isExpanded = expandedEntityTypes[type];
+                
+                return (
+                  <Collapsible key={type} open={isExpanded} onOpenChange={() => toggleEntityType(type)}>
+                    <CollapsibleTrigger asChild>
+                      <button className="w-full flex items-center gap-2 px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                        {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{entityLabels[type]}</span>
+                        <Badge variant="outline" className="h-4 min-w-4 px-1 text-[10px] ml-auto">
+                          {conversations.length}
+                        </Badge>
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="space-y-0.5 mt-0.5">
+                        {conversations.map(renderEntityConversation)}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })}
             </div>
           )}
         </div>
