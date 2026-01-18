@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
+import { useQuoteThemes } from '@/hooks/useQuoteThemes';
 import { QuoteDocument, QuoteLine, LINE_TYPE_LABELS } from '@/types/quoteTypes';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -8,10 +9,17 @@ interface QuotePreviewPanelProps {
   document: Partial<QuoteDocument>;
   lines: QuoteLine[];
   zoom: number;
+  selectedThemeId?: string | null;
 }
 
-export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelProps) {
+export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: QuotePreviewPanelProps) {
   const { agencyInfo } = useAgencyInfo();
+  const { themes } = useQuoteThemes();
+  
+  // Get selected theme or default
+  const currentTheme = selectedThemeId 
+    ? themes.find(t => t.id === selectedThemeId)
+    : themes.find(t => t.is_default);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -43,6 +51,25 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
   const totalTTC = totalHT + tva;
 
   const scale = zoom / 100;
+  
+  // Theme-based styles
+  const themeStyles = currentTheme ? {
+    primaryColor: currentTheme.primary_color,
+    secondaryColor: currentTheme.secondary_color,
+    accentColor: currentTheme.accent_color,
+    backgroundColor: currentTheme.background_color,
+    headingFont: currentTheme.heading_font,
+    bodyFont: currentTheme.body_font,
+    tableHeaderBg: currentTheme.table_header_bg,
+  } : {
+    primaryColor: '#0a0a0a',
+    secondaryColor: '#737373',
+    accentColor: '#7c3aed',
+    backgroundColor: '#ffffff',
+    headingFont: 'system-ui, sans-serif',
+    bodyFont: 'system-ui, sans-serif',
+    tableHeaderBg: '#f5f5f5',
+  };
 
   return (
     <div 
@@ -50,11 +77,18 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
       style={{ 
         transform: `scale(${scale})`,
         transformOrigin: 'top center',
-        minHeight: '297mm'
+        minHeight: '297mm',
+        backgroundColor: themeStyles.backgroundColor,
       }}
     >
       {/* Page content */}
-      <div className="p-8 text-sm text-gray-800" style={{ fontFamily: 'system-ui, sans-serif' }}>
+      <div 
+        className="p-8 text-sm" 
+        style={{ 
+          fontFamily: themeStyles.bodyFont,
+          color: themeStyles.primaryColor,
+        }}
+      >
         {/* Header - Logo full width */}
         <div className="mb-6">
           {agencyInfo?.logo_url ? (
@@ -68,7 +102,7 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
 
         {/* Document info row */}
         <div className="flex justify-between items-start mb-8">
-          <div className="text-xs text-gray-500">
+          <div className="text-xs" style={{ color: themeStyles.secondaryColor }}>
             {agencyInfo?.address && <div>{agencyInfo.address}</div>}
             {(agencyInfo?.postal_code || agencyInfo?.city) && (
               <div>{agencyInfo.postal_code} {agencyInfo.city}</div>
@@ -77,14 +111,17 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
             {agencyInfo?.email && <div>{agencyInfo.email}</div>}
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-gray-900 uppercase">
+            <div 
+              className="text-2xl font-bold uppercase"
+              style={{ color: themeStyles.accentColor, fontFamily: themeStyles.headingFont }}
+            >
               {document.document_type === 'quote' ? 'Devis' : 
                document.document_type === 'contract' ? 'Contrat' : 'Proposition'}
             </div>
-            <div className="text-gray-500 mt-1">
+            <div style={{ color: themeStyles.secondaryColor }} className="mt-1">
               {document.document_number || 'BROUILLON'}
             </div>
-            <div className="text-xs text-gray-400 mt-1">
+            <div className="text-xs mt-1" style={{ color: themeStyles.secondaryColor }}>
               {formatDate(document.created_at) || format(new Date(), 'd MMMM yyyy', { locale: fr })}
             </div>
           </div>
@@ -126,12 +163,12 @@ export function QuotePreviewPanel({ document, lines, zoom }: QuotePreviewPanelPr
         {/* Lines table with groups */}
         <table className="w-full mb-6" style={{ fontSize: '11px' }}>
           <thead>
-            <tr className="border-b-2 border-gray-200">
-              <th className="text-left py-2 font-medium">Réf.</th>
-              <th className="text-left py-2 font-medium">Désignation</th>
-              <th className="text-right py-2 font-medium w-20">Qté</th>
-              <th className="text-right py-2 font-medium w-24">P.U.</th>
-              <th className="text-right py-2 font-medium w-28">Montant HT</th>
+            <tr style={{ borderBottomWidth: 2, borderColor: themeStyles.accentColor }}>
+              <th className="text-left py-2 font-medium" style={{ backgroundColor: themeStyles.tableHeaderBg }}>Réf.</th>
+              <th className="text-left py-2 font-medium" style={{ backgroundColor: themeStyles.tableHeaderBg }}>Désignation</th>
+              <th className="text-right py-2 font-medium w-20" style={{ backgroundColor: themeStyles.tableHeaderBg }}>Qté</th>
+              <th className="text-right py-2 font-medium w-24" style={{ backgroundColor: themeStyles.tableHeaderBg }}>P.U.</th>
+              <th className="text-right py-2 font-medium w-28" style={{ backgroundColor: themeStyles.tableHeaderBg }}>Montant HT</th>
             </tr>
           </thead>
           <tbody>
