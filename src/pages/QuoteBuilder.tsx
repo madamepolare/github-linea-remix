@@ -60,7 +60,8 @@ import { ThemePreviewSelector } from '@/components/commercial/ThemePreviewSelect
 import { isArchitectureContractType, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
 import { getDefaultConditionsForType, serializeConditions } from '@/lib/contractConditionsUnified';
-import { generateCleanQuotePDF, generateCleanContractPDF } from '@/lib/generateCleanPDF';
+import { printQuoteHtml } from '@/lib/generateHtmlPDF';
+import { useQuoteThemes } from '@/hooks/useQuoteThemes';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { useAuth } from '@/contexts/AuthContext';
@@ -96,6 +97,7 @@ export default function QuoteBuilder() {
   
   const { createDocument, updateDocument, getDocument, getDocumentPhases, createPhase, updatePhase, deletePhase, acceptAndCreateProject, acceptAndCreateSubProject } = useCommercialDocuments();
   const { agencyInfo } = useAgencyInfo();
+  const { themes } = useQuoteThemes();
   
   // Use getDocument from the hook for existing documents
   const documentQuery = getDocument(isNew ? '' : (id || ''));
@@ -446,35 +448,42 @@ export default function QuoteBuilder() {
     }
   };
 
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = () => {
     try {
-      toast.info('Génération du PDF...');
+      toast.info('Ouverture de l\'impression... Choisissez "Enregistrer en PDF" dans la boîte de dialogue.');
       
-      let blob: Blob;
+      // Get selected theme
+      const selectedTheme = selectedThemeId 
+        ? themes.find(t => t.id === selectedThemeId)
+        : themes.find(t => t.is_default);
       
-      if (document.document_type === 'contract') {
-        // Pour les contrats : utiliser le template clean avec page de garde
-        blob = await generateCleanContractPDF(
-          document,
-          lines,
-          agencyInfo,
-          currentContractType?.code || null
-        );
-      } else {
-        // Pour les devis : utiliser le template clean avec page de garde
-        blob = await generateCleanQuotePDF(document, lines, agencyInfo);
-      }
+      // Agency info for template
+      const agencyData = {
+        name: agencyInfo?.name,
+        logo_url: agencyInfo?.logo_url,
+        address: agencyInfo?.address,
+        city: agencyInfo?.city,
+        postal_code: agencyInfo?.postal_code,
+        phone: agencyInfo?.phone,
+        email: agencyInfo?.email,
+        website: agencyInfo?.website,
+        siret: agencyInfo?.siret,
+        siren: agencyInfo?.siren,
+        vat_number: agencyInfo?.vat_number,
+        capital_social: agencyInfo?.capital_social,
+        forme_juridique: agencyInfo?.forme_juridique,
+        rcs_city: agencyInfo?.rcs_city,
+        code_naf: agencyInfo?.code_naf,
+      };
       
-      const url = URL.createObjectURL(blob);
-      const link = window.document.createElement('a');
-      link.href = url;
-      link.download = `${document.document_type === 'quote' ? 'devis' : 'contrat'}-${document.document_number || 'brouillon'}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
-      toast.success('PDF téléchargé');
+      const filename = `${document.document_type === 'quote' ? 'Devis' : 'Contrat'} ${document.document_number || 'brouillon'}`;
+      
+      // Use native print dialog - user can save as PDF
+      printQuoteHtml(document, lines, agencyData, selectedTheme, filename);
+      
     } catch (err) {
-      console.error('Error generating PDF:', err);
-      toast.error('Erreur lors de la génération du PDF');
+      console.error('Error printing PDF:', err);
+      toast.error('Erreur lors de l\'ouverture de l\'impression');
     }
   };
 
