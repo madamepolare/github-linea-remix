@@ -1,10 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
@@ -13,225 +10,89 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
   Code2,
   Eye,
-  Upload,
-  Wand2,
   Loader2,
-  Maximize2,
-  Minimize2,
-  Download,
   Copy,
   Check,
   RefreshCw,
   FileCode,
-  Image,
-  Sparkles,
-  Trash2,
+  ChevronDown,
+  ChevronRight,
   SplitSquareHorizontal,
-  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { 
   getSampleTemplateData, 
   renderHtmlTemplate, 
   TEMPLATE_VARIABLES,
   TEMPLATE_ARRAYS,
-  TemplateData 
+  TemplateData,
+  TemplateVariableDefinition,
+  TemplateArrayDefinition,
 } from '@/lib/quoteTemplateVariables';
+import { DEFAULT_HTML_TEMPLATE } from '@/lib/generateHtmlPDF';
 
 interface QuoteHtmlEditorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   htmlTemplate: string;
   onHtmlChange: (html: string) => void;
-  cssVariables?: Record<string, string>;
-  onCssVariablesChange?: (vars: Record<string, string>) => void;
-  fontsUsed?: string[];
-  onFontsChange?: (fonts: string[]) => void;
   onSave: () => void;
   isSaving?: boolean;
 }
 
-// Use centralized sample data from quoteTemplateVariables
+// Use centralized sample data
 const SAMPLE_DATA = getSampleTemplateData();
 
-const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: 'Inter', sans-serif; 
-      font-size: 11px; 
-      color: #0a0a0a;
-      background: white;
-      padding: 40px;
-      max-width: 210mm;
-      margin: 0 auto;
-    }
-    .header { 
-      display: flex; 
-      justify-content: space-between; 
-      margin-bottom: 40px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #7c3aed;
-    }
-    .logo img { max-height: 60px; }
-    .agency-info { text-align: right; font-size: 10px; color: #737373; }
-    .document-title { 
-      font-size: 24px; 
-      font-weight: 700; 
-      color: #7c3aed;
-      margin-bottom: 30px;
-    }
-    .info-grid { 
-      display: grid; 
-      grid-template-columns: 1fr 1fr; 
-      gap: 40px; 
-      margin-bottom: 40px;
-    }
-    .info-box { padding: 20px; background: #f9fafb; border-radius: 8px; }
-    .info-box h3 { font-size: 12px; font-weight: 600; margin-bottom: 10px; color: #7c3aed; }
-    .info-box p { margin: 4px 0; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-    th { 
-      background: #7c3aed; 
-      color: white; 
-      padding: 12px; 
-      text-align: left;
-      font-weight: 600;
-    }
-    td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
-    tr:nth-child(even) td { background: #f9fafb; }
-    .totals { text-align: right; margin-top: 20px; }
-    .totals .row { display: flex; justify-content: flex-end; gap: 40px; padding: 8px 0; }
-    .totals .total { font-size: 16px; font-weight: 700; color: #7c3aed; }
-    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 9px; color: #737373; }
-    .signature-area { margin-top: 60px; display: flex; justify-content: flex-end; }
-    .signature-box { border: 1px dashed #d1d5db; padding: 40px 60px; text-align: center; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="logo">
-      <img src="{{agency_logo_url}}" alt="Logo">
-    </div>
-    <div class="agency-info">
-      <strong>{{agency_name}}</strong><br>
-      {{agency_address}}<br>
-      {{agency_phone}}<br>
-      {{agency_email}}
-    </div>
-  </div>
+// Group variables by category
+const groupedVariables = TEMPLATE_VARIABLES.reduce((acc, v) => {
+  if (!acc[v.category]) acc[v.category] = [];
+  acc[v.category].push(v);
+  return acc;
+}, {} as Record<string, TemplateVariableDefinition[]>);
 
-  <h1 class="document-title">DEVIS N° {{document_number}}</h1>
-
-  <div class="info-grid">
-    <div class="info-box">
-      <h3>CLIENT</h3>
-      <p><strong>{{client_name}}</strong></p>
-      <p>{{client_address}}</p>
-      <p>{{client_email}}</p>
-    </div>
-    <div class="info-box">
-      <h3>PROJET</h3>
-      <p><strong>{{project_name}}</strong></p>
-      <p>{{project_address}}</p>
-      <p>{{project_city}}</p>
-    </div>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Code</th>
-        <th>Phase</th>
-        <th style="text-align: right;">%</th>
-        <th style="text-align: right;">Montant HT</th>
-      </tr>
-    </thead>
-    <tbody>
-      {{#phases}}
-      <tr>
-        <td>{{phase_code}}</td>
-        <td>{{phase_name}}</td>
-        <td style="text-align: right;">{{phase_percentage}}</td>
-        <td style="text-align: right;">{{phase_amount}}</td>
-      </tr>
-      {{/phases}}
-    </tbody>
-  </table>
-
-  <div class="totals">
-    <div class="row">
-      <span>Total HT</span>
-      <span>{{total_ht}}</span>
-    </div>
-    <div class="row">
-      <span>TVA (20%)</span>
-      <span>{{tva_amount}}</span>
-    </div>
-    <div class="row total">
-      <span>Total TTC</span>
-      <span>{{total_ttc}}</span>
-    </div>
-  </div>
-
-  <div class="signature-area">
-    <div class="signature-box">
-      Signature du client<br>
-      <small>Date et mention "Bon pour accord"</small>
-    </div>
-  </div>
-
-  <div class="footer">
-    <p>{{payment_terms}} • {{general_conditions}}</p>
-    <p>Devis valable jusqu'au {{validity_date}}</p>
-  </div>
-</body>
-</html>`;
+const CATEGORY_LABELS: Record<string, string> = {
+  document: '📄 Document',
+  agency: '🏢 Agence',
+  client: '👤 Client',
+  project: '📐 Projet',
+  financial: '💰 Financier',
+  conditions: '📋 Conditions',
+  dates: '📅 Dates',
+  meta: '⚙️ Méta',
+};
 
 export function QuoteHtmlEditor({
   open,
   onOpenChange,
   htmlTemplate,
   onHtmlChange,
-  cssVariables = {},
-  onCssVariablesChange,
-  fontsUsed = [],
-  onFontsChange,
   onSave,
   isSaving = false,
 }: QuoteHtmlEditorProps) {
-  const { activeWorkspace } = useAuth();
-  const [activeTab, setActiveTab] = useState<'editor' | 'preview' | 'split'>('split');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [showVariables, setShowVariables] = useState(true);
+  const [showArrays, setShowArrays] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(['document', 'financial']);
+  const [activeView, setActiveView] = useState<'split' | 'code' | 'preview'>('split');
   const [copied, setCopied] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLIFrameElement>(null);
 
   const currentHtml = htmlTemplate || DEFAULT_HTML_TEMPLATE;
 
-  // Render preview with Mustache-like variable replacement
-  // Use centralized rendering function
+  // Render preview
   const renderPreview = useCallback((html: string) => {
     return renderHtmlTemplate(html, SAMPLE_DATA as TemplateData);
   }, []);
 
   useEffect(() => {
-    if (previewRef.current && activeTab !== 'editor') {
+    if (previewRef.current && activeView !== 'code') {
       const doc = previewRef.current.contentDocument;
       if (doc) {
         doc.open();
@@ -239,53 +100,14 @@ export function QuoteHtmlEditor({
         doc.close();
       }
     }
-  }, [currentHtml, activeTab, renderPreview]);
+  }, [currentHtml, activeView, renderPreview]);
 
-  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast.error('Veuillez sélectionner une image');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setReferenceImage(event.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-  }, []);
-
-  const handleGenerateFromImage = async () => {
-    if (!referenceImage) {
-      toast.error('Veuillez d\'abord uploader une image de référence');
-      return;
-    }
-
-    setIsGenerating(true);
+  const handleCopyVariable = async (variable: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('generate-quote-html', {
-        body: { image_url: referenceImage }
-      });
-
-      if (error) throw error;
-
-      if (data?.html) {
-        onHtmlChange(data.html);
-        if (data.css_variables && onCssVariablesChange) {
-          onCssVariablesChange(data.css_variables);
-        }
-        if (data.fonts_used && onFontsChange) {
-          onFontsChange(data.fonts_used);
-        }
-        toast.success('Template HTML généré par l\'IA !');
-      }
-    } catch (error) {
-      console.error('Error generating HTML:', error);
-      toast.error('Erreur lors de la génération du template');
-    } finally {
-      setIsGenerating(false);
+      await navigator.clipboard.writeText(`{{${variable}}}`);
+      toast.success(`{{${variable}}} copié`);
+    } catch {
+      toast.error('Erreur lors de la copie');
     }
   };
 
@@ -295,182 +117,250 @@ export function QuoteHtmlEditor({
       setCopied(true);
       toast.success('HTML copié !');
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors de la copie');
     }
   };
 
   const handleResetToDefault = () => {
     onHtmlChange(DEFAULT_HTML_TEMPLATE);
-    toast.success('Template réinitialisé');
+    toast.success('Template réinitialisé au défaut');
+  };
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-6 py-4 border-b">
+        <DialogHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500">
-                <Code2 className="h-5 w-5 text-white" />
+              <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-primary/70">
+                <Code2 className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
                 <DialogTitle className="text-lg">Éditeur HTML de Devis</DialogTitle>
                 <p className="text-sm text-muted-foreground">
-                  Personnalisez entièrement le design de vos devis avec HTML/CSS
+                  Personnalisez le design avec HTML/CSS
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono text-xs">
-                {currentHtml.length.toLocaleString()} caractères
-              </Badge>
+            
+            {/* View Toggle */}
+            <div className="flex items-center gap-2 bg-muted rounded-lg p-1">
+              <Button
+                variant={activeView === 'code' ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setActiveView('code')}
+              >
+                <Code2 className="h-3.5 w-3.5 mr-1" />
+                Code
+              </Button>
+              <Button
+                variant={activeView === 'split' ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setActiveView('split')}
+              >
+                <SplitSquareHorizontal className="h-3.5 w-3.5 mr-1" />
+                Split
+              </Button>
+              <Button
+                variant={activeView === 'preview' ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setActiveView('preview')}
+              >
+                <Eye className="h-3.5 w-3.5 mr-1" />
+                Aperçu
+              </Button>
             </div>
           </div>
         </DialogHeader>
 
-        {/* Toolbar */}
-        <div className="px-6 py-3 border-b bg-muted/30 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-              <TabsList className="h-8">
-                <TabsTrigger value="editor" className="text-xs h-7 px-3">
-                  <Code2 className="h-3.5 w-3.5 mr-1.5" />
-                  Code
-                </TabsTrigger>
-                <TabsTrigger value="split" className="text-xs h-7 px-3">
-                  <SplitSquareHorizontal className="h-3.5 w-3.5 mr-1.5" />
-                  Split
-                </TabsTrigger>
-                <TabsTrigger value="preview" className="text-xs h-7 px-3">
-                  <Eye className="h-3.5 w-3.5 mr-1.5" />
-                  Aperçu
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            <Separator orientation="vertical" className="h-6 mx-2" />
-
-            <Button variant="ghost" size="sm" onClick={handleCopyHtml}>
-              {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
-              {copied ? 'Copié' : 'Copier'}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleResetToDefault}>
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Réinitialiser
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageUpload}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Image className="h-4 w-4 mr-1" />
-              Uploader image
-            </Button>
-            {referenceImage && (
-              <Button
-                size="sm"
-                onClick={handleGenerateFromImage}
-                disabled={isGenerating}
-                className="bg-gradient-to-r from-purple-500 to-blue-500 text-white"
-              >
-                {isGenerating ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                ) : (
-                  <Wand2 className="h-4 w-4 mr-1" />
-                )}
-                Générer avec IA
-              </Button>
-            )}
-          </div>
-        </div>
-
         {/* Main content */}
-        <div className="flex-1 overflow-hidden">
-          {referenceImage && (
-            <div className="px-6 py-3 bg-purple-50 dark:bg-purple-950/30 border-b flex items-center gap-4">
-              <div className="relative w-16 h-20 rounded border overflow-hidden bg-white shrink-0">
-                <img 
-                  src={referenceImage} 
-                  alt="Reference" 
-                  className="w-full h-full object-cover"
-                />
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-0.5 right-0.5 h-5 w-5"
-                  onClick={() => setReferenceImage(null)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="h-4 w-4 text-purple-500" />
-                  <span className="text-sm font-medium">Image de référence chargée</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Cliquez sur "Générer avec IA" pour créer un template HTML qui reproduit exactement ce design.
-                </p>
-              </div>
+        <div className="flex-1 flex overflow-hidden">
+          {/* Variables sidebar */}
+          <div className="w-72 border-r bg-muted/30 flex flex-col shrink-0">
+            <div className="p-3 border-b space-y-2">
+              <Button
+                variant={showVariables ? 'secondary' : 'ghost'}
+                size="sm"
+                className="w-full justify-start text-xs"
+                onClick={() => setShowVariables(!showVariables)}
+              >
+                {showVariables ? <ChevronDown className="h-3.5 w-3.5 mr-2" /> : <ChevronRight className="h-3.5 w-3.5 mr-2" />}
+                Variables simples
+                <Badge variant="outline" className="ml-auto text-xs">{TEMPLATE_VARIABLES.length}</Badge>
+              </Button>
+              <Button
+                variant={showArrays ? 'secondary' : 'ghost'}
+                size="sm"
+                className="w-full justify-start text-xs"
+                onClick={() => setShowArrays(!showArrays)}
+              >
+                {showArrays ? <ChevronDown className="h-3.5 w-3.5 mr-2" /> : <ChevronRight className="h-3.5 w-3.5 mr-2" />}
+                Boucles (arrays)
+                <Badge variant="outline" className="ml-auto text-xs">{TEMPLATE_ARRAYS.length}</Badge>
+              </Button>
             </div>
-          )}
 
+            <ScrollArea className="flex-1">
+              <div className="p-2 space-y-1">
+                {/* Simple variables */}
+                {showVariables && Object.entries(groupedVariables).map(([category, variables]) => (
+                  <Collapsible
+                    key={category}
+                    open={expandedCategories.includes(category)}
+                    onOpenChange={() => toggleCategory(category)}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start text-xs font-medium h-7"
+                      >
+                        {expandedCategories.includes(category) ? (
+                          <ChevronDown className="h-3 w-3 mr-1.5" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3 mr-1.5" />
+                        )}
+                        {CATEGORY_LABELS[category] || category}
+                        <span className="ml-auto text-muted-foreground">{variables.length}</span>
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="pl-4 space-y-0.5 py-1">
+                        {variables.map(v => (
+                          <button
+                            key={v.key}
+                            className="w-full text-left px-2 py-1 text-xs rounded hover:bg-accent group flex items-center justify-between"
+                            onClick={() => handleCopyVariable(v.key)}
+                            title={v.description}
+                          >
+                            <code className="text-primary font-mono text-[10px]">{`{{${v.key}}}`}</code>
+                            <Copy className="h-3 w-3 opacity-0 group-hover:opacity-50" />
+                          </button>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+
+                {/* Array variables */}
+                {showArrays && TEMPLATE_ARRAYS.map((arr: TemplateArrayDefinition) => (
+                  <Collapsible key={arr.key}>
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start text-xs font-medium h-7"
+                      >
+                        <ChevronRight className="h-3 w-3 mr-1.5" />
+                        🔄 {arr.label}
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="pl-4 py-2 space-y-1 bg-muted/50 rounded-md m-1">
+                        <p className="text-[10px] text-muted-foreground px-2 mb-2">{arr.description}</p>
+                        <code className="block text-[10px] text-primary px-2 py-1 bg-background rounded">
+                          {`{{#${arr.key}}}...{{/${arr.key}}}`}
+                        </code>
+                        <div className="pl-2 pt-2 space-y-0.5">
+                          {arr.innerVariables.map(v => (
+                            <button
+                              key={v.key}
+                              className="w-full text-left px-2 py-0.5 text-[10px] rounded hover:bg-accent group flex items-center justify-between"
+                              onClick={() => handleCopyVariable(v.key)}
+                              title={v.description}
+                            >
+                              <code className="text-secondary-foreground font-mono">{`{{${v.key}}}`}</code>
+                              <Copy className="h-2.5 w-2.5 opacity-0 group-hover:opacity-50" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Editor / Preview area */}
           <div className={cn(
-            "h-full",
-            activeTab === 'split' && "grid grid-cols-2 divide-x"
+            "flex-1 flex overflow-hidden",
+            activeView === 'split' && "divide-x"
           )}>
-            {/* Editor */}
-            {(activeTab === 'editor' || activeTab === 'split') && (
-              <div className="h-full flex flex-col">
-                <div className="px-4 py-2 bg-muted/50 border-b flex items-center gap-2">
-                  <FileCode className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs font-medium">template.html</span>
+            {/* Code Editor */}
+            {(activeView === 'code' || activeView === 'split') && (
+              <div className={cn(
+                "flex flex-col bg-background",
+                activeView === 'split' ? "w-1/2" : "w-full"
+              )}>
+                <div className="px-3 py-2 bg-muted/50 border-b flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2">
+                    <FileCode className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs font-medium">template.html</span>
+                    <Badge variant="outline" className="text-[10px] font-mono">
+                      {currentHtml.length.toLocaleString()} chars
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleCopyHtml}>
+                      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleResetToDefault}>
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
                 <Textarea
                   value={currentHtml}
                   onChange={(e) => onHtmlChange(e.target.value)}
-                  className="flex-1 font-mono text-xs resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="flex-1 font-mono text-xs resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-zinc-950 text-zinc-100"
                   placeholder="Entrez votre HTML ici..."
-                  style={{ minHeight: '100%' }}
+                  spellCheck={false}
                 />
               </div>
             )}
 
             {/* Preview */}
-            {(activeTab === 'preview' || activeTab === 'split') && (
-              <div className="h-full flex flex-col bg-gray-100 dark:bg-gray-900">
-                <div className="px-4 py-2 bg-muted/50 border-b flex items-center justify-between">
+            {(activeView === 'preview' || activeView === 'split') && (
+              <div className={cn(
+                "flex flex-col bg-zinc-100 dark:bg-zinc-900",
+                activeView === 'split' ? "w-1/2" : "w-full"
+              )}>
+                <div className="px-3 py-2 bg-muted/50 border-b flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2">
                     <Eye className="h-4 w-4 text-muted-foreground" />
                     <span className="text-xs font-medium">Aperçu A4</span>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="text-[10px]">
                     Données d'exemple
                   </Badge>
                 </div>
-                <div className="flex-1 overflow-auto p-6 flex justify-center">
-                  <div className="bg-white shadow-xl" style={{ 
-                    width: '210mm', 
-                    minHeight: '297mm',
-                    transform: 'scale(0.7)',
-                    transformOrigin: 'top center'
-                  }}>
+                <div className="flex-1 overflow-auto p-4 flex justify-center">
+                  <div 
+                    className="bg-white shadow-xl origin-top"
+                    style={{ 
+                      width: '210mm', 
+                      minHeight: '297mm',
+                      transform: activeView === 'split' ? 'scale(0.6)' : 'scale(0.75)',
+                    }}
+                  >
                     <iframe
                       ref={previewRef}
-                      className="w-full h-full border-0"
+                      className="w-full border-0"
                       title="Preview"
-                      style={{ minHeight: '297mm' }}
+                      style={{ width: '210mm', minHeight: '297mm' }}
                     />
                   </div>
                 </div>
@@ -480,20 +370,18 @@ export function QuoteHtmlEditor({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-muted/30 flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">
-            Variables disponibles : <code className="bg-muted px-1 rounded">{'{{document_number}}'}</code>,{' '}
-            <code className="bg-muted px-1 rounded">{'{{client_name}}'}</code>,{' '}
-            <code className="bg-muted px-1 rounded">{'{{#phases}}...{{/phases}}'}</code>
-          </div>
+        <div className="px-6 py-3 border-t bg-muted/30 flex items-center justify-between shrink-0">
+          <p className="text-xs text-muted-foreground">
+            Cliquez sur une variable pour la copier • Syntaxe Mustache
+          </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Annuler
             </Button>
-            <Button onClick={onSave} disabled={isSaving}>
+            <Button size="sm" onClick={onSave} disabled={isSaving}>
               {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               <Check className="h-4 w-4 mr-2" />
-              Enregistrer le template
+              Enregistrer
             </Button>
           </div>
         </div>

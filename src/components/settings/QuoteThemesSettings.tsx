@@ -844,12 +844,7 @@ export function QuoteThemesSettings() {
         onOpenChange={setHtmlEditorOpen}
         htmlTemplate={customHtml}
         onHtmlChange={setCustomHtml}
-        cssVariables={cssVariables}
-        onCssVariablesChange={setCssVariables}
-        fontsUsed={fontsUsed}
-        onFontsChange={setFontsUsed}
         onSave={handleSaveHtmlTemplate}
-        isSaving={false}
       />
     </div>
   );
