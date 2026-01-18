@@ -55,24 +55,14 @@ export function ClientSelector({
     pageSize: 1000 // Get up to 1000 contacts to avoid pagination limit
   });
 
-  // Filter client companies
+  // Show all companies (no filtering by industry)
   const clientCompanies = useMemo(() => {
-    return companies.filter(c => 
-      c.industry === "client_particulier" || 
-      c.industry === "client_professionnel" || 
-      c.industry === "promoteur" || 
-      c.industry === "investisseur" ||
-      !c.industry
-    );
+    return companies;
   }, [companies]);
 
-  // Filter private contacts (individuals without company or marked as private clients)
+  // Show all contacts (no filtering)
   const privateContacts = useMemo(() => {
-    return contacts.filter(c => 
-      !c.crm_company_id || 
-      c.contact_type === "client_prive" ||
-      c.contact_type === "particulier"
-    );
+    return contacts;
   }, [contacts]);
 
   // Search filtering

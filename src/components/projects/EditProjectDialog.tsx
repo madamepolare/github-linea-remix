@@ -50,6 +50,9 @@ import {
 // Disciplines that show surface field
 const SURFACE_TYPES = ["architecture", "interior", "interieur", "archi"];
 
+// Disciplines that show location/address fields
+const LOCATION_TYPES = ["architecture", "interior", "interieur", "archi", "paysage", "urbanisme"];
+
 // Progress tracking types
 const PROGRESS_TYPES = [
   { value: "manual", label: "Manuel", description: "Avancement saisi manuellement" },
@@ -115,6 +118,14 @@ function shouldShowSurface(projectType: string | null): boolean {
   );
 }
 
+// Check if project type should show location fields
+function shouldShowLocation(projectType: string | null): boolean {
+  if (!projectType) return false;
+  return LOCATION_TYPES.some(t => 
+    projectType.toLowerCase().includes(t.toLowerCase())
+  );
+}
+
 export function EditProjectDialog({ 
   open, 
   onOpenChange, 
@@ -166,6 +177,9 @@ export function EditProjectDialog({
 
   // Check if surface should be shown based on project type
   const showSurface = useMemo(() => shouldShowSurface(projectType), [projectType]);
+  
+  // Check if location should be shown based on project type
+  const showLocation = useMemo(() => shouldShowLocation(projectType), [projectType]);
 
   // Get current type config
   const currentTypeConfig = useMemo(() => {
@@ -205,14 +219,14 @@ export function EditProjectDialog({
   const handleSave = () => {
     if (!name.trim()) return;
     
-    // Only save fields that exist in the database
+    // Save all fields that exist in the database
     onSave({
       name: name.trim(),
       description: description.trim() || null,
       project_type: projectType as any,
-      address: isInternal ? null : (address.trim() || null),
-      city: isInternal ? null : (city.trim() || null),
-      postal_code: isInternal ? null : (postalCode.trim() || null),
+      address: isInternal || !showLocation ? null : (address.trim() || null),
+      city: isInternal || !showLocation ? null : (city.trim() || null),
+      postal_code: isInternal || !showLocation ? null : (postalCode.trim() || null),
       surface_area: showSurface && surfaceArea ? parseFloat(surfaceArea) : null,
       color,
       crm_company_id: isInternal ? null : crmCompanyId,
@@ -221,6 +235,11 @@ export function EditProjectDialog({
       budget: isInternal ? null : (budget ? parseFloat(budget) : null),
       is_internal: isInternal,
       status,
+      is_restricted: isRestricted,
+      progress_type: progressType,
+      invoice_details: isInternal ? null : (invoiceDetails.trim() || null),
+      show_quote_on_invoice: isInternal ? null : showQuoteOnInvoice,
+      market_reference: isInternal ? null : (marketReference.trim() || null),
     });
     
     // Close the dialog after saving
@@ -497,81 +516,51 @@ export function EditProjectDialog({
                     onCompanyIdChange={setCrmCompanyId}
                   />
 
-                  <Separator />
 
-                  {/* Location */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      Lieu d'exécution
-                    </div>
+                  {/* Location - only for architecture/interior types */}
+                  {showLocation && (
+                    <>
+                      <Separator />
 
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Adresse</Label>
-                      <Input
-                        id="address"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder="123 rue de Paris"
-                      />
-                    </div>
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          Lieu d'exécution
+                        </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="postal_code">Code postal</Label>
-                        <Input
-                          id="postal_code"
-                          value={postalCode}
-                          onChange={(e) => setPostalCode(e.target.value)}
-                          placeholder="75001"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="city">Ville</Label>
-                        <Input
-                          id="city"
-                          value={city}
-                          onChange={(e) => setCity(e.target.value)}
-                          placeholder="Paris"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Budget & Surface */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <Wallet className="h-4 w-4" />
-                      Budget & Détails
-                    </div>
-
-                    <div className={cn("grid gap-4", showSurface ? "grid-cols-2" : "grid-cols-1")}>
-                      <div className="space-y-2">
-                        <Label htmlFor="budget">Budget HT (€)</Label>
-                        <Input
-                          id="budget"
-                          type="number"
-                          value={budget}
-                          onChange={(e) => setBudget(e.target.value)}
-                          placeholder="50000"
-                        />
-                      </div>
-                      {showSurface && (
                         <div className="space-y-2">
-                          <Label htmlFor="surface">Surface (m²)</Label>
+                          <Label htmlFor="address">Adresse</Label>
                           <Input
-                            id="surface"
-                            type="number"
-                            value={surfaceArea}
-                            onChange={(e) => setSurfaceArea(e.target.value)}
-                            placeholder="150"
+                            id="address"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            placeholder="123 rue de Paris"
                           />
                         </div>
-                      )}
-                    </div>
-                  </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="postal_code">Code postal</Label>
+                            <Input
+                              id="postal_code"
+                              value={postalCode}
+                              onChange={(e) => setPostalCode(e.target.value)}
+                              placeholder="75001"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="city">Ville</Label>
+                            <Input
+                              id="city"
+                              value={city}
+                              onChange={(e) => setCity(e.target.value)}
+                              placeholder="Paris"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </TabsContent>
@@ -642,6 +631,41 @@ export function EditProjectDialog({
                 </div>
               ) : (
                 <>
+                  {/* Budget & Surface */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <Wallet className="h-4 w-4" />
+                      Budget & Détails
+                    </div>
+
+                    <div className={cn("grid gap-4", showSurface ? "grid-cols-2" : "grid-cols-1")}>
+                      <div className="space-y-2">
+                        <Label htmlFor="budget">Budget HT (€)</Label>
+                        <Input
+                          id="budget"
+                          type="number"
+                          value={budget}
+                          onChange={(e) => setBudget(e.target.value)}
+                          placeholder="50000"
+                        />
+                      </div>
+                      {showSurface && (
+                        <div className="space-y-2">
+                          <Label htmlFor="surface">Surface (m²)</Label>
+                          <Input
+                            id="surface"
+                            type="number"
+                            value={surfaceArea}
+                            onChange={(e) => setSurfaceArea(e.target.value)}
+                            placeholder="150"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <Separator />
+
                   {/* Invoice Details */}
                   <div className="space-y-2">
                     <Label htmlFor="invoice_details">Détails à ajouter sur les factures</Label>
