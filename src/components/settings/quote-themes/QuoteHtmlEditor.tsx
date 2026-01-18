@@ -35,11 +35,19 @@ import {
   Sparkles,
   Trash2,
   SplitSquareHorizontal,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { 
+  getSampleTemplateData, 
+  renderHtmlTemplate, 
+  TEMPLATE_VARIABLES,
+  TEMPLATE_ARRAYS,
+  TemplateData 
+} from '@/lib/quoteTemplateVariables';
 
 interface QuoteHtmlEditorProps {
   open: boolean;
@@ -54,37 +62,8 @@ interface QuoteHtmlEditorProps {
   isSaving?: boolean;
 }
 
-// Sample data for preview
-const SAMPLE_DATA = {
-  document_number: 'DEV-2025-001',
-  date: '18 janvier 2025',
-  validity_date: '18 février 2025',
-  agency_name: 'Mon Agence',
-  agency_address: '123 Rue de l\'Exemple',
-  agency_city: '75001 Paris',
-  agency_phone: '01 23 45 67 89',
-  agency_email: 'contact@agence.fr',
-  agency_logo_url: 'https://via.placeholder.com/150x50?text=LOGO',
-  client_name: 'Client Exemple SARL',
-  client_address: '456 Avenue du Client',
-  client_city: '69001 Lyon',
-  client_email: 'client@exemple.fr',
-  project_name: 'Projet Résidence Les Jardins',
-  project_address: '789 Boulevard du Projet',
-  project_city: 'Bordeaux',
-  phases: [
-    { phase_code: 'ESQ', phase_name: 'Esquisse', phase_amount: '5 000 €', phase_percentage: '10%' },
-    { phase_code: 'APS', phase_name: 'Avant-Projet Sommaire', phase_amount: '10 000 €', phase_percentage: '20%' },
-    { phase_code: 'APD', phase_name: 'Avant-Projet Définitif', phase_amount: '15 000 €', phase_percentage: '30%' },
-    { phase_code: 'PRO', phase_name: 'Projet', phase_amount: '10 000 €', phase_percentage: '20%' },
-    { phase_code: 'EXE', phase_name: 'Exécution', phase_amount: '10 000 €', phase_percentage: '20%' },
-  ],
-  total_ht: '50 000 €',
-  tva_amount: '10 000 €',
-  total_ttc: '60 000 €',
-  payment_terms: 'Paiement à 30 jours',
-  general_conditions: 'Conditions générales de vente applicables.',
-};
+// Use centralized sample data from quoteTemplateVariables
+const SAMPLE_DATA = getSampleTemplateData();
 
 const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
 <html lang="fr">
@@ -246,33 +225,9 @@ export function QuoteHtmlEditor({
   const currentHtml = htmlTemplate || DEFAULT_HTML_TEMPLATE;
 
   // Render preview with Mustache-like variable replacement
+  // Use centralized rendering function
   const renderPreview = useCallback((html: string) => {
-    let rendered = html;
-    
-    // Replace simple variables
-    Object.entries(SAMPLE_DATA).forEach(([key, value]) => {
-      if (typeof value === 'string') {
-        const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-        rendered = rendered.replace(regex, value);
-      }
-    });
-
-    // Handle phases array (simplified Mustache-like)
-    const phasesMatch = rendered.match(/\{\{#phases\}\}([\s\S]*?)\{\{\/phases\}\}/);
-    if (phasesMatch) {
-      const phaseTemplate = phasesMatch[1];
-      const phasesHtml = SAMPLE_DATA.phases.map(phase => {
-        let phaseHtml = phaseTemplate;
-        Object.entries(phase).forEach(([key, value]) => {
-          const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-          phaseHtml = phaseHtml.replace(regex, value);
-        });
-        return phaseHtml;
-      }).join('');
-      rendered = rendered.replace(/\{\{#phases\}\}[\s\S]*?\{\{\/phases\}\}/, phasesHtml);
-    }
-
-    return rendered;
+    return renderHtmlTemplate(html, SAMPLE_DATA as TemplateData);
   }, []);
 
   useEffect(() => {
