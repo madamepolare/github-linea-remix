@@ -6,6 +6,7 @@ import { ChannelView } from "@/components/messages/ChannelView";
 import { CreateChannelDialog } from "@/components/messages/CreateChannelDialog";
 import { DirectMessageDialog } from "@/components/messages/DirectMessageDialog";
 import { ThreadPanel } from "@/components/messages/ThreadPanel";
+import { EntityConversationView } from "@/components/messages/EntityConversationView";
 import { Hash, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -57,6 +58,9 @@ export default function Messages() {
     setSelectedThreadId(messageId);
   };
 
+  // Check if the active channel is an entity conversation
+  const isEntityConversation = activeChannelId?.startsWith("entity-");
+
   const activeChannel = channels?.find(c => c.id === activeChannelId);
 
   if (isLoading) {
@@ -82,7 +86,15 @@ export default function Messages() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {activeChannel ? (
+        {isEntityConversation && activeChannelId ? (
+          <EntityConversationView
+            entityKey={activeChannelId}
+            onClose={() => {
+              setActiveChannelId(null);
+              navigate("/messages");
+            }}
+          />
+        ) : activeChannel ? (
           <ChannelView
             channel={activeChannel}
             onOpenThread={handleOpenThread}

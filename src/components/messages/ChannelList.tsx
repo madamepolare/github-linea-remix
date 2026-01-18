@@ -1,10 +1,14 @@
-import { Hash, Lock, MessageCircle, Plus } from "lucide-react";
+import { Hash, Lock, MessageCircle, Plus, CheckSquare, FolderKanban, FileText, Building2, User, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { TeamChannel, useUnreadCounts } from "@/hooks/useTeamMessages";
+import { useEntityConversations, EntityConversation } from "@/hooks/useEntityConversations";
+import { EntityType } from "@/hooks/useCommunications";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 interface ChannelListProps {
   channels: TeamChannel[];
@@ -22,14 +26,55 @@ export function ChannelList({
   onNewDirectMessage,
 }: ChannelListProps) {
   const { data: unreadCounts } = useUnreadCounts();
+  const { data: entityConversations } = useEntityConversations();
   
   const publicChannels = channels.filter(c => c.channel_type === "public");
   const privateChannels = channels.filter(c => c.channel_type === "private");
   const directMessages = channels.filter(c => c.channel_type === "direct");
 
+  const entityIcons: Record<EntityType, typeof CheckSquare> = {
+    task: CheckSquare,
+    project: FolderKanban,
+    tender: FileText,
+    company: Building2,
+    contact: User,
+    lead: Target,
+  };
+
   const getInitials = (name: string | null | undefined) => {
     if (!name) return "?";
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  };
+
+  const renderEntityConversation = (conv: EntityConversation) => {
+    const isActive = conv.id === activeChannelId;
+    const Icon = entityIcons[conv.entity_type] || FileText;
+
+    return (
+      <button
+        key={conv.id}
+        onClick={() => onSelectChannel(conv.id)}
+        className={cn(
+          "w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors text-left",
+          isActive
+            ? "bg-primary/10 text-primary font-medium"
+            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+        )}
+      >
+        <Icon className="h-4 w-4 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <span className="truncate block">{conv.entity_name}</span>
+          <span className="text-xs text-muted-foreground truncate block">
+            {format(new Date(conv.last_message_at), "d MMM", { locale: fr })}
+          </span>
+        </div>
+        {conv.message_count > 0 && (
+          <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs">
+            {conv.message_count}
+          </Badge>
+        )}
+      </button>
+    );
   };
 
   const renderChannelItem = (channel: TeamChannel) => {
@@ -135,6 +180,20 @@ export function ChannelList({
               )}
             </div>
           </div>
+
+          {/* Entity Conversations */}
+          {entityConversations && entityConversations.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between px-2 mb-1">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Fils de discussion
+                </span>
+              </div>
+              <div className="space-y-0.5">
+                {entityConversations.map(renderEntityConversation)}
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>
