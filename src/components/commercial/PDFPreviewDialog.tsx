@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { 
   CommercialDocument, 
   CommercialDocumentPhase
@@ -19,6 +20,7 @@ import { type AgencyPDFInfo } from '@/lib/pdfUtils';
 import { type ContractType } from '@/hooks/useContractTypes';
 import { type PDFDocumentConfig } from '@/lib/pdfBlockTypes';
 import { type QuoteLine } from '@/types/quoteTypes';
+import { ThemePreviewSelector } from './ThemePreviewSelector';
 
 type PDFTemplate = 'quote' | 'contract';
 
@@ -29,6 +31,8 @@ interface PDFPreviewDialogProps {
   phases: CommercialDocumentPhase[];
   total: number;
   contractType?: ContractType | null;
+  selectedThemeId?: string | null;
+  onThemeChange?: (themeId: string | null) => void;
 }
 
 const TEMPLATES: { id: PDFTemplate; label: string; description: string; icon: React.ReactNode }[] = [
@@ -52,7 +56,9 @@ export function PDFPreviewDialog({
   document,
   phases,
   total,
-  contractType
+  contractType,
+  selectedThemeId,
+  onThemeChange
 }: PDFPreviewDialogProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -163,6 +169,17 @@ export function PDFPreviewDialog({
         </DialogHeader>
 
         <div className="flex-1 flex flex-col gap-4 min-h-0">
+          {/* Theme Selector */}
+          {onThemeChange && (
+            <div className="shrink-0 flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+              <Label className="text-sm font-medium">Thème visuel</Label>
+              <ThemePreviewSelector
+                selectedThemeId={selectedThemeId || null}
+                onThemeChange={onThemeChange}
+              />
+            </div>
+          )}
+
           {/* Template Selection */}
           <div className="shrink-0">
             <Label className="text-sm font-medium mb-3 block">Format du document</Label>
