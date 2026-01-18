@@ -113,15 +113,15 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
   return (
     <div 
       ref={containerRef}
-      className="w-full h-full flex justify-center items-start overflow-auto bg-muted/30"
+      className="w-full h-full flex justify-center items-start overflow-y-auto overflow-x-hidden bg-muted/30"
       style={{ padding }}
     >
       {/* Wrapper that takes the scaled dimensions */}
       <div 
         className="flex-shrink-0"
         style={{ 
-          width: scaledWidth,
-          height: scaledHeight,
+          width: Math.floor(scaledWidth),
+          height: Math.floor(scaledHeight),
         }}
       >
         {/* A4 paper that gets scaled */}
