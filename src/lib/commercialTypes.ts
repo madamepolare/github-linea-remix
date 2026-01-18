@@ -1,6 +1,6 @@
 // Types for Commercial Module
 
-export type DocumentType = 'quote' | 'contract';
+export type DocumentType = 'quote';
 export type ProjectType = 'interior' | 'architecture' | 'scenography';
 export type DocumentStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'signed';
 export type FeeMode = 'fixed' | 'percentage' | 'hourly' | 'mixed';
@@ -155,8 +155,7 @@ export const PHASES_BY_PROJECT_TYPE: Record<ProjectType, PhaseTemplate[]> = {
 };
 
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
-  quote: 'Devis',
-  contract: 'Contrat'
+  quote: 'Devis'
 };
 
 export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {

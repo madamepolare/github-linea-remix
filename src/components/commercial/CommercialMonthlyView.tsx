@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO, startOfYear, addMonths, isSameMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, FileText, FileSignature } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -65,11 +65,7 @@ export const CommercialMonthlyView = ({ documents }: CommercialMonthlyViewProps)
   }, [documents, currentYear]);
 
   const getDocumentIcon = (type: DocumentType) => {
-    switch (type) {
-      case 'quote': return FileText;
-      case 'contract': return FileSignature;
-      default: return FileText;
-    }
+    return FileText;
   };
 
   const formatCurrency = (value: number) => {

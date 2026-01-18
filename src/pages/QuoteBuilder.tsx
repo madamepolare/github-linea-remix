@@ -55,7 +55,6 @@ import { QuotePlanningTab } from '@/components/commercial/quote-builder/QuotePla
 import { QuoteInvoicingTab } from '@/components/commercial/quote-builder/QuoteInvoicingTab';
 import { QuoteConditionsTab } from '@/components/commercial/quote-builder/QuoteConditionsTab';
 import { QuotePreviewPanel } from '@/components/commercial/quote-builder/QuotePreviewPanel';
-import { ContractPreviewPanel } from '@/components/commercial/quote-builder/ContractPreviewPanel';
 import { ThemePreviewSelector } from '@/components/commercial/ThemePreviewSelector';
 import { isArchitectureContractType, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
@@ -184,14 +183,14 @@ export default function QuoteBuilder() {
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   
   const [document, setDocument] = useState<Partial<QuoteDocument>>({
-    document_type: (documentType === 'quote' || documentType === 'contract') ? documentType : 'contract',
+    document_type: 'quote',
     title: '',
     status: 'draft',
     fee_mode: 'fixed',
     currency: 'EUR',
     validity_days: 30,
     total_amount: 0,
-    project_type: 'architecture' // Default to architecture for contracts
+    project_type: 'architecture'
   });
   
   const [lines, setLines] = useState<QuoteLine[]>([]);
@@ -615,25 +614,10 @@ export default function QuoteBuilder() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           
-          {/* Document type toggle */}
-          <div className="flex items-center bg-muted rounded-lg p-0.5 shrink-0">
-            <Button
-              variant={document.document_type === 'quote' ? 'default' : 'ghost'}
-              size="sm"
-              className="h-7 px-3 text-xs"
-              onClick={() => handleDocumentChange({ document_type: 'quote' })}
-            >
-              Devis
-            </Button>
-            <Button
-              variant={document.document_type === 'contract' ? 'default' : 'ghost'}
-              size="sm"
-              className="h-7 px-3 text-xs"
-              onClick={() => handleDocumentChange({ document_type: 'contract' })}
-            >
-              Contrat
-            </Button>
-          </div>
+          {/* Document badge */}
+          <Badge variant="secondary" className="shrink-0 text-xs">
+            Devis
+          </Badge>
           
           <Separator orientation="vertical" className="h-6 hidden sm:block" />
           
@@ -1011,21 +995,12 @@ export default function QuoteBuilder() {
               </div>
             </div>
             <div className="flex-1 overflow-hidden">
-              {document.document_type === 'contract' ? (
-                <ContractPreviewPanel
-                  document={document}
-                  lines={lines}
-                  zoom={zoom}
-                  contractTypeCode={currentContractType?.code || null}
-                />
-              ) : (
-                <QuotePreviewPanel 
-                  document={document} 
-                  lines={lines} 
-                  zoom={zoom}
-                  selectedThemeId={selectedThemeId}
-                />
-              )}
+              <QuotePreviewPanel 
+                document={document} 
+                lines={lines} 
+                zoom={zoom}
+                selectedThemeId={selectedThemeId}
+              />
             </div>
           </div>
         )}
