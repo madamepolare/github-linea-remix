@@ -34,15 +34,7 @@ export function useMyProjects() {
 
       const { data: projects, error: projectsError } = await supabase
         .from("projects")
-        .select(`
-          id,
-          name,
-          status,
-          color,
-          start_date,
-          end_date,
-          client_company_id
-        `)
+        .select("id, name, status, color, start_date, end_date")
         .eq("workspace_id", activeWorkspace.id)
         .in("id", projectIds)
         .order("updated_at", { ascending: false });
@@ -50,7 +42,12 @@ export function useMyProjects() {
       if (projectsError) throw projectsError;
 
       return (projects || []).map(p => ({
-        ...p,
+        id: p.id,
+        name: p.name,
+        status: p.status,
+        color: p.color,
+        start_date: p.start_date,
+        end_date: p.end_date,
         client_company: null
       })) as MyProject[];
     },
