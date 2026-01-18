@@ -407,7 +407,7 @@ export function mapDocumentToTemplateData(
   // Document type labels
   const docTypeLabels: Record<string, string> = {
     quote: 'Devis',
-    contract: 'Contrat',
+    proposal: 'Proposition',
   };
 
   // Status labels

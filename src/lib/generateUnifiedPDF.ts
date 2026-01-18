@@ -100,10 +100,6 @@ export async function generateUnifiedPDF(
     switch (block.block_type) {
       case 'cover':
         y = renderCoverBlock(pdf, context, margin, pageWidth, pageHeight, docType);
-        if (docType === 'contract') {
-          pdf.addPage();
-          y = 20;
-        }
         break;
         
       case 'header':
@@ -273,7 +269,7 @@ function renderHeaderBlock(
 
   // Document type on right
   const docType = (document as any).document_type || 'quote';
-  const typeLabels: Record<string, string> = { quote: 'DEVIS', contract: 'CONTRAT', proposal: 'PROPOSITION' };
+  const typeLabels: Record<string, string> = { quote: 'DEVIS', proposal: 'PROPOSITION' };
   
   pdf.setFontSize(18);
   pdf.setFont('helvetica', 'bold');

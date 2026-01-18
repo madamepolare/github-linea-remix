@@ -37,7 +37,7 @@ Types de projet:
 - "architecture": Architecture (construction, extension)
 - "scenography": Scénographie (exposition, muséographie)`;
 
-    const userPrompt = `Projet: ${documentType === 'quote' ? 'Devis' : documentType === 'contract' ? 'Contrat' : 'Proposition'}
+    const userPrompt = `Projet: ${documentType === 'quote' ? 'Devis' : 'Proposition'}
 Type: ${projectType === 'interior' ? 'Architecture d\'intérieur' : projectType === 'architecture' ? 'Architecture' : 'Scénographie'}
 ${projectDescription ? `Description: ${projectDescription}` : ''}
 ${projectBudget ? `Budget travaux estimé: ${projectBudget}€` : ''}

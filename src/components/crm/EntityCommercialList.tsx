@@ -32,7 +32,6 @@ interface EntityCommercialListProps {
 
 const documentTypeLabels: Record<string, string> = {
   quote: "Devis",
-  contract: "Contrat",
   proposal: "Proposition",
 };
 

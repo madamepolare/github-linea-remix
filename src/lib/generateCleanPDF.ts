@@ -127,7 +127,7 @@ function drawCoverPage(
   pdf.setFontSize(24);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(50, 50, 50);
-  const typeLabel = documentType === 'contract' ? 'CONTRAT' : 'DEVIS';
+  const typeLabel = 'DEVIS';
   pdf.text(typeLabel, pageWidth / 2, badgeY + 20, { align: 'center' });
   
   // Document number - small gray badge

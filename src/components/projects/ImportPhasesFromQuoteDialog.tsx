@@ -77,7 +77,7 @@ export function ImportPhasesFromQuoteDialog({
         .select("id, title, document_number, document_type, status")
         .eq("project_id", projectId)
         .eq("workspace_id", activeWorkspace.id)
-        .in("document_type", ["quote", "contract", "proposal"])
+        .in("document_type", ["quote", "proposal"])
         .order("created_at", { ascending: false });
 
       if (docsError) throw docsError;
@@ -176,8 +176,6 @@ export function ImportPhasesFromQuoteDialog({
     switch (type) {
       case "quote":
         return "Devis";
-      case "contract":
-        return "Contrat";
       case "proposal":
         return "Proposition";
       default:
