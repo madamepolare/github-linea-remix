@@ -509,6 +509,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate("/profile")}>
+              <User className="h-3.5 w-3.5 mr-2" strokeWidth={THIN_STROKE} />
+              Mon Profil
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/settings")}>
               <Settings className="h-3.5 w-3.5 mr-2" strokeWidth={THIN_STROKE} />
               Paramètres
