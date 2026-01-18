@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, FileText, FileSignature, Search, LayoutList, Kanban, Calendar } from 'lucide-react';
+import { Plus, FileText, FileSignature, Search, LayoutList, Kanban, Calendar, Trophy } from 'lucide-react';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
 import { useAuth } from '@/contexts/AuthContext';
 import { CommercialPipeline } from '@/components/commercial/CommercialPipeline';
@@ -35,6 +36,7 @@ const Commercial = () => {
   const { documents, isLoading, deleteDocument, duplicateDocument, updateDocument } = useCommercialDocuments();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all');
+  const [activeTab, setActiveTab] = useState<'active' | 'won'>('active');
   
   // Derive viewMode from URL path
   const getViewModeFromPath = (): 'list' | 'pipeline' | 'monthly' => {
@@ -55,7 +57,19 @@ const Commercial = () => {
     navigate(`/commercial/${mode}`);
   };
 
-  const filteredDocuments = documents.filter(doc => {
+  // Separate won documents (accepted/signed) from active ones
+  const wonDocuments = documents.filter(doc => 
+    doc.status === 'accepted' || doc.status === 'signed'
+  );
+  
+  const activeDocuments = documents.filter(doc => 
+    doc.status !== 'accepted' && doc.status !== 'signed'
+  );
+
+  // Apply filters on the appropriate document set
+  const baseDocuments = activeTab === 'won' ? wonDocuments : activeDocuments;
+  
+  const filteredDocuments = baseDocuments.filter(doc => {
     const matchesSearch = doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.document_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
       doc.client_company?.name?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -65,11 +79,12 @@ const Commercial = () => {
     return matchesSearch && matchesStatus;
   });
 
-  // KPIs
-  const totalDraft = documents.filter(d => d.status === 'draft').length;
-  const totalSent = documents.filter(d => d.status === 'sent').length;
-  const totalAccepted = documents.filter(d => d.status === 'accepted' || d.status === 'signed').length;
-  const potentialRevenue = documents
+  // KPIs - based on active tab
+  const totalDraft = activeDocuments.filter(d => d.status === 'draft').length;
+  const totalSent = activeDocuments.filter(d => d.status === 'sent').length;
+  const totalWon = wonDocuments.length;
+  const wonRevenue = wonDocuments.reduce((sum, d) => sum + (d.total_amount || 0), 0);
+  const potentialRevenue = activeDocuments
     .filter(d => d.status === 'sent')
     .reduce((sum, d) => sum + (d.total_amount || 0), 0);
 
@@ -152,9 +167,27 @@ const Commercial = () => {
       }
 >
 
-      {/* KPIs - Hide for monthly view */}
+      {/* Tabs for Active vs Won */}
       {viewMode !== 'monthly' && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'active' | 'won')} className="mb-4">
+          <TabsList>
+            <TabsTrigger value="active" className="gap-2">
+              <FileText className="h-4 w-4" />
+              En cours
+              <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">{activeDocuments.length}</span>
+            </TabsTrigger>
+            <TabsTrigger value="won" className="gap-2">
+              <Trophy className="h-4 w-4" />
+              Gagnés
+              <span className="ml-1 text-xs bg-muted px-1.5 py-0.5 rounded-full">{wonDocuments.length}</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+
+      {/* KPIs - Hide for monthly view, show different KPIs based on tab */}
+      {viewMode !== 'monthly' && activeTab === 'active' && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <Card>
             <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
               <div className="text-xs sm:text-sm text-muted-foreground">Brouillons</div>
@@ -169,15 +202,28 @@ const Commercial = () => {
           </Card>
           <Card>
             <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
-              <div className="text-xs sm:text-sm text-muted-foreground">Acceptés</div>
-              <div className="text-xl sm:text-2xl font-bold text-green-600">{totalAccepted}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">CA potentiel</div>
+              <div className="text-lg sm:text-2xl font-bold truncate">
+                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(potentialRevenue)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {viewMode !== 'monthly' && activeTab === 'won' && (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <Card>
+            <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+              <div className="text-xs sm:text-sm text-muted-foreground">Devis gagnés</div>
+              <div className="text-xl sm:text-2xl font-bold text-success">{totalWon}</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
-              <div className="text-xs sm:text-sm text-muted-foreground">CA potentiel</div>
-              <div className="text-lg sm:text-2xl font-bold truncate">
-                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(potentialRevenue)}
+              <div className="text-xs sm:text-sm text-muted-foreground">CA gagné</div>
+              <div className="text-lg sm:text-2xl font-bold text-success truncate">
+                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(wonRevenue)}
               </div>
             </CardContent>
           </Card>
@@ -196,21 +242,21 @@ const Commercial = () => {
               className="pl-10"
             />
           </div>
-          <div className="flex gap-2 sm:gap-4">
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as DocumentStatus | 'all')}>
-              <SelectTrigger className="w-full sm:w-[140px]">
-                <SelectValue placeholder="Statut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                <SelectItem value="draft">Brouillon</SelectItem>
-                <SelectItem value="sent">Envoyé</SelectItem>
-                <SelectItem value="accepted">Accepté</SelectItem>
-                <SelectItem value="rejected">Refusé</SelectItem>
-                <SelectItem value="signed">Signé</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {activeTab === 'active' && (
+            <div className="flex gap-2 sm:gap-4">
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as DocumentStatus | 'all')}>
+                <SelectTrigger className="w-full sm:w-[140px]">
+                  <SelectValue placeholder="Statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  <SelectItem value="draft">Brouillon</SelectItem>
+                  <SelectItem value="sent">Envoyé</SelectItem>
+                  <SelectItem value="rejected">Refusé</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       )}
 
