@@ -71,7 +71,7 @@ export default function Documents() {
                         <div>
                           <p className="font-medium">{doc.title}</p>
                           <p className="text-sm text-muted-foreground">
-                            {doc.document_number} • {doc.document_type === 'quote' ? 'Devis' : doc.document_type === 'contract' ? 'Contrat' : 'Proposition'}
+                            {doc.document_number} • {doc.document_type === 'quote' ? 'Devis' : 'Proposition'}
                           </p>
                         </div>
                       </div>

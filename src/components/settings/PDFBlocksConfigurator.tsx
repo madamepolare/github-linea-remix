@@ -31,18 +31,13 @@ interface PDFBlocksConfiguratorProps {
   isLoading?: boolean;
 }
 
-type DocumentTypeTab = 'quote' | 'contract' | 'proposal';
+type DocumentTypeTab = 'quote' | 'proposal';
 
 const DOC_TYPE_INFO: Record<DocumentTypeTab, { label: string; icon: React.ReactNode; description: string }> = {
   quote: {
     label: 'Devis',
     icon: <FileText className="h-4 w-4" />,
     description: 'Document compact, format portrait'
-  },
-  contract: {
-    label: 'Contrat',
-    icon: <FileSignature className="h-4 w-4" />,
-    description: 'Document complet multi-pages'
   },
   proposal: {
     label: 'Proposition',

@@ -82,6 +82,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function QuoteBuilder() {
   const { id } = useParams<{ id?: string }>();
@@ -180,6 +190,7 @@ export default function QuoteBuilder() {
   const [showConvertToSubProjectDialog, setShowConvertToSubProjectDialog] = useState(false);
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   
   const [document, setDocument] = useState<Partial<QuoteDocument>>({
@@ -229,9 +240,7 @@ export default function QuoteBuilder() {
     if (!isNew && existingDoc) {
       const docData = {
         ...existingDoc,
-        document_type: (existingDoc.document_type === 'quote' || existingDoc.document_type === 'contract') 
-          ? existingDoc.document_type 
-          : 'contract',
+        document_type: existingDoc.document_type === 'quote' ? 'quote' : 'quote',
         // Ensure valid project_type
         project_type: ensureValidProjectType(existingDoc.project_type),
         // Ensure invoice_schedule is an array
@@ -475,7 +484,7 @@ export default function QuoteBuilder() {
         code_naf: agencyInfo?.code_naf,
       };
       
-      const filename = `${document.document_type === 'quote' ? 'Devis' : 'Contrat'} ${document.document_number || 'brouillon'}`;
+      const filename = `Devis ${document.document_number || 'brouillon'}`;
       
       // Use native print dialog - user can save as PDF
       printQuoteHtml(document, lines, agencyData, selectedTheme, filename);
@@ -488,8 +497,14 @@ export default function QuoteBuilder() {
 
   const handleBack = () => {
     if (hasChanges) {
-      // TODO: Add confirmation dialog
+      setShowUnsavedChangesDialog(true);
+      return;
     }
+    navigate(-1);
+  };
+  
+  const handleConfirmBack = () => {
+    setShowUnsavedChangesDialog(false);
     navigate(-1);
   };
 
@@ -1046,6 +1061,24 @@ export default function QuoteBuilder() {
           documentQuery.refetch();
         }}
       />
+      
+      {/* Unsaved changes confirmation dialog */}
+      <AlertDialog open={showUnsavedChangesDialog} onOpenChange={setShowUnsavedChangesDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Modifications non enregistrées</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vous avez des modifications non enregistrées. Voulez-vous vraiment quitter sans sauvegarder ?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmBack} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Quitter sans sauvegarder
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </LineFeatureProvider>
   );

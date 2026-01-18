@@ -686,7 +686,7 @@ export function printQuoteHtml(
   printWindow.document.close();
   
   // Set window title for PDF filename
-  printWindow.document.title = filename || `${document.document_type === 'quote' ? 'Devis' : 'Contrat'} ${document.document_number || 'brouillon'}`;
+  printWindow.document.title = filename || `Devis ${document.document_number || 'brouillon'}`;
   
   // Wait for content to load then trigger print
   printWindow.onload = () => {

@@ -70,7 +70,7 @@ ${phaseTemplatesContext}`;
 
     const userPrompt = `Crée un devis complet pour ce projet:
 
-Type de document: ${documentType === 'quote' ? 'Devis' : documentType === 'contract' ? 'Contrat' : 'Proposition'}
+Type de document: ${documentType === 'quote' ? 'Devis' : 'Proposition'}
 Type de projet: ${projectType || 'Général'}
 ${projectDescription ? `Description: ${projectDescription}` : ''}
 ${projectBudget ? `Budget travaux/référence: ${projectBudget}€` : ''}
