@@ -8,6 +8,7 @@ import { CommercialDocumentBuilder } from '@/components/commercial/CommercialDoc
 import { DocumentPreviewPanel } from '@/components/commercial/DocumentPreviewPanel';
 import { PDFPreviewDialog } from '@/components/commercial/PDFPreviewDialog';
 import { DocumentVersionHistory } from '@/components/commercial/DocumentVersionHistory';
+import { ThemePreviewSelector } from '@/components/commercial/ThemePreviewSelector';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -57,6 +58,7 @@ const CommercialDocument = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   
   // State for project creation dialog
   const [useAIPlanning, setUseAIPlanning] = useState(true);
@@ -423,6 +425,8 @@ const CommercialDocument = () => {
                   document={documentData}
                   phases={phases}
                   total={calculateTotal()}
+                  selectedThemeId={selectedThemeId}
+                  onThemeChange={setSelectedThemeId}
                 />
               </div>
             )}
@@ -437,6 +441,8 @@ const CommercialDocument = () => {
         document={documentData}
         phases={phases}
         total={calculateTotal()}
+        selectedThemeId={selectedThemeId}
+        onThemeChange={setSelectedThemeId}
       />
     </>
   );

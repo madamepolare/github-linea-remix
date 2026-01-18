@@ -8,26 +8,54 @@ import {
   PROJECT_TYPE_LABELS,
   STATUS_LABELS
 } from '@/lib/commercialTypes';
+import { ThemePreviewSelector } from './ThemePreviewSelector';
+import { useQuoteThemes } from '@/hooks/useQuoteThemes';
 
 interface DocumentPreviewPanelProps {
   document: Partial<CommercialDocument>;
   phases: CommercialDocumentPhase[];
   total: number;
+  selectedThemeId?: string | null;
+  onThemeChange?: (themeId: string | null) => void;
 }
 
 export function DocumentPreviewPanel({
   document,
   phases,
-  total
+  total,
+  selectedThemeId,
+  onThemeChange
 }: DocumentPreviewPanelProps) {
   const includedPhases = phases.filter(p => p.is_included);
+  const { themes } = useQuoteThemes();
+  const currentTheme = themes.find(t => t.id === selectedThemeId);
+
+  // Apply theme styles
+  const themeStyles = currentTheme ? {
+    '--theme-primary': currentTheme.primary_color,
+    '--theme-accent': currentTheme.accent_color,
+    '--theme-bg': currentTheme.background_color,
+    '--theme-secondary': currentTheme.secondary_color,
+  } as React.CSSProperties : {};
 
   return (
-    <Card className="sticky top-6">
-      <CardHeader className="bg-muted/50">
+    <Card className="sticky top-6" style={themeStyles}>
+      {/* Theme Selector */}
+      {onThemeChange && (
+        <div className="px-4 py-2 border-b bg-muted/30">
+          <ThemePreviewSelector
+            selectedThemeId={selectedThemeId || null}
+            onThemeChange={onThemeChange}
+            compact
+          />
+        </div>
+      )}
+      <CardHeader className="bg-muted/50" style={currentTheme ? { backgroundColor: currentTheme.accent_color + '10' } : {}}>
         <div className="text-center space-y-2">
-          <Badge>{DOCUMENT_TYPE_LABELS[document.document_type || 'quote']}</Badge>
-          <CardTitle className="text-xl">
+          <Badge style={currentTheme ? { backgroundColor: currentTheme.accent_color, color: '#fff' } : {}}>
+            {DOCUMENT_TYPE_LABELS[document.document_type || 'quote']}
+          </Badge>
+          <CardTitle className="text-xl" style={currentTheme ? { color: currentTheme.primary_color } : {}}>
             {document.title || 'Sans titre'}
           </CardTitle>
           {document.document_number && (
