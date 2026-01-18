@@ -11734,6 +11734,50 @@ export type Database = {
           },
         ]
       }
+      workspace_usage_logs: {
+        Row: {
+          created_at: string
+          credits_used: number | null
+          id: string
+          metadata: Json | null
+          service_name: string
+          tokens_used: number | null
+          usage_type: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_used?: number | null
+          id?: string
+          metadata?: Json | null
+          service_name: string
+          tokens_used?: number | null
+          usage_type: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_used?: number | null
+          id?: string
+          metadata?: Json | null
+          service_name?: string
+          tokens_used?: number | null
+          usage_type?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_usage_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspaces: {
         Row: {
           accent_color: string | null
@@ -11852,7 +11896,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      workspace_usage_stats: {
+        Row: {
+          call_count: number | null
+          month: string | null
+          service_name: string | null
+          total_credits: number | null
+          total_tokens: number | null
+          usage_type: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_usage_logs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_workspace_invite: { Args: { invite_token: string }; Returns: Json }

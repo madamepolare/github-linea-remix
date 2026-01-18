@@ -14,10 +14,14 @@ import {
   HardDrive,
   CreditCard,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Bot,
+  Activity,
+  TrendingUp
 } from "lucide-react";
 import { usePlans, useWorkspaceSubscription, useSubscriptionMutations, Plan } from "@/hooks/usePlans";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useWorkspaceUsage } from "@/hooks/useWorkspaceUsage";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +30,7 @@ export function PlanSettings() {
   const { data: subscription, isLoading: subLoading } = useWorkspaceSubscription();
   const { subscribeToPlan } = useSubscriptionMutations();
   const { isOwner } = usePermissions();
+  const { usageStats, isLoading: usageLoading } = useWorkspaceUsage();
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
 
   const currentPlan = subscription?.plan || plans?.find(p => p.slug === "free");
@@ -41,6 +46,18 @@ export function PlanSettings() {
   const getUsagePercent = (current: number, max: number) => {
     if (max === -1) return 0; // Unlimited
     return Math.min((current / max) * 100, 100);
+  };
+
+  const formatServiceName = (name: string) => {
+    const labels: Record<string, string> = {
+      "ai-planning": "Planification IA",
+      "contact-import": "Import contacts",
+      "email-send": "Envoi emails",
+      "ai-chat": "Chat IA",
+      "ai-suggestions": "Suggestions IA",
+      "document-generation": "Génération documents",
+    };
+    return labels[name] || name.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase());
   };
 
   if (isLoading) {
@@ -125,6 +142,113 @@ export function PlanSettings() {
               <Progress value={getUsagePercent(usage.storage, currentPlan?.max_storage_gb || 1)} className="h-2" />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* AI & API Usage Stats */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-accent/20 flex items-center justify-center">
+                <Bot className="h-5 w-5 text-accent-foreground" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Usage des extensions</CardTitle>
+                <CardDescription>
+                  {usageStats?.current_month || "Ce mois"}
+                </CardDescription>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {usageLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Skeleton className="h-24" />
+              <Skeleton className="h-24" />
+            </div>
+          ) : (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                    <Sparkles className="h-4 w-4" />
+                    Appels IA
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {usageStats?.ai_credits.total_calls || 0}
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg bg-info/5 border border-info/10">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                    <TrendingUp className="h-4 w-4" />
+                    Tokens utilisés
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {(usageStats?.ai_credits.total_tokens || 0).toLocaleString("fr-FR")}
+                  </div>
+                </div>
+                <div className="p-4 rounded-lg bg-success/5 border border-success/10">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                    <Activity className="h-4 w-4" />
+                    Appels API
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {usageStats?.api_calls.total_calls || 0}
+                  </div>
+                </div>
+              </div>
+
+              {/* Detailed breakdown by service */}
+              {usageStats && Object.keys(usageStats.ai_credits.by_service).length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Détail par service IA</h4>
+                  <div className="space-y-2">
+                    {Object.entries(usageStats.ai_credits.by_service).map(([service, data]) => (
+                      <div key={service} className="flex items-center justify-between text-sm py-2 px-3 rounded-md bg-muted/50">
+                        <span className="flex items-center gap-2">
+                          <Bot className="h-4 w-4 text-primary" />
+                          {formatServiceName(service)}
+                        </span>
+                        <div className="flex items-center gap-4 text-muted-foreground">
+                          <span>{data.calls} appels</span>
+                          <span>{data.tokens.toLocaleString("fr-FR")} tokens</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {usageStats && Object.keys(usageStats.api_calls.by_service).length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Détail par API</h4>
+                  <div className="space-y-2">
+                    {Object.entries(usageStats.api_calls.by_service).map(([service, calls]) => (
+                      <div key={service} className="flex items-center justify-between text-sm py-2 px-3 rounded-md bg-muted/50">
+                        <span className="flex items-center gap-2">
+                          <Activity className="h-4 w-4 text-info" />
+                          {formatServiceName(service)}
+                        </span>
+                        <span className="text-muted-foreground">{calls} appels</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(!usageStats || 
+                (Object.keys(usageStats.ai_credits.by_service).length === 0 && 
+                 Object.keys(usageStats.api_calls.by_service).length === 0)) && (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Bot className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Aucune utilisation ce mois-ci</p>
+                </div>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 
