@@ -129,6 +129,39 @@ export function QuoteHtmlEditor({
     toast.success('Template réinitialisé au défaut');
   };
 
+  const handleCopyAllVariables = async () => {
+    // Build a comprehensive reference text
+    let text = '=== VARIABLES SIMPLES ===\n\n';
+    
+    Object.entries(groupedVariables).forEach(([category, variables]) => {
+      text += `--- ${CATEGORY_LABELS[category] || category} ---\n`;
+      variables.forEach(v => {
+        text += `{{${v.key}}} - ${v.description} (ex: ${v.example || 'N/A'})\n`;
+      });
+      text += '\n';
+    });
+    
+    text += '\n=== BOUCLES / ARRAYS ===\n\n';
+    
+    TEMPLATE_ARRAYS.forEach((arr: TemplateArrayDefinition) => {
+      text += `--- ${arr.label} ---\n`;
+      text += `${arr.description}\n`;
+      text += `Syntaxe: {{#${arr.key}}}...{{/${arr.key}}}\n\n`;
+      text += 'Variables internes:\n';
+      arr.innerVariables.forEach(v => {
+        text += `  {{${v.key}}} - ${v.description} (ex: ${v.example || 'N/A'})\n`;
+      });
+      text += '\n';
+    });
+    
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Toutes les variables copiées !');
+    } catch {
+      toast.error('Erreur lors de la copie');
+    }
+  };
+
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => 
       prev.includes(category) 
@@ -191,6 +224,15 @@ export function QuoteHtmlEditor({
             {showArrays ? <ChevronDown className="h-3.5 w-3.5 mr-2" /> : <ChevronRight className="h-3.5 w-3.5 mr-2" />}
             Boucles (arrays)
             <Badge variant="outline" className="ml-auto text-xs">{TEMPLATE_ARRAYS.length}</Badge>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-center text-xs mt-2"
+            onClick={handleCopyAllVariables}
+          >
+            <Copy className="h-3.5 w-3.5 mr-2" />
+            Copier toutes les variables
           </Button>
         </div>
 
