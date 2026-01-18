@@ -163,7 +163,7 @@ export function EntityConversationView({ entityKey, onClose }: EntityConversatio
                     <div className={cn(
                       "p-3 rounded-lg",
                       isOwn 
-                        ? "bg-primary text-primary-foreground" 
+                        ? "bg-primary/10 text-foreground" 
                         : "bg-muted"
                     )}>
                       <p className="text-sm whitespace-pre-wrap">{comm.content}</p>
