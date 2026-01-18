@@ -67,6 +67,7 @@ const CompanyPortal = lazy(() => import("./pages/CompanyPortal"));
 const FrameworkRequest = lazy(() => import("./pages/FrameworkRequest"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const DesignSystem = lazy(() => import("./pages/DesignSystem"));
+const Profile = lazy(() => import("./pages/Profile"));
 
 // Loading fallback
 const PageLoader = () => (
@@ -121,6 +122,7 @@ const App = () => (
                   }
                 >
                   <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
+                  <Route path="/profile" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
                   <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
                   <Route path="/messages" element={<Suspense fallback={<PageLoader />}><Messages /></Suspense>} />
                   <Route path="/messages/:channelId" element={<Suspense fallback={<PageLoader />}><Messages /></Suspense>} />
