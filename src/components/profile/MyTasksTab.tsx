@@ -35,7 +35,7 @@ export function MyTasksTab() {
   const [tab, setTab] = useState("active");
   const { tasks, isLoading } = useTasks({ assignedTo: user?.id });
 
-  const activeTasks = tasks?.filter(t => t.status !== "done" && t.status !== "cancelled") || [];
+  const activeTasks = tasks?.filter(t => t.status !== "done" && t.status !== "archived") || [];
   const completedTasks = tasks?.filter(t => t.status === "done") || [];
 
   if (isLoading) {
@@ -92,9 +92,6 @@ export function MyTasksTab() {
                   </div>
                   
                   <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                    {task.project?.name && (
-                      <span className="truncate max-w-[150px]">{task.project.name}</span>
-                    )}
                     <Badge variant="outline" className="text-xs">
                       {statusLabels[task.status] || task.status}
                     </Badge>

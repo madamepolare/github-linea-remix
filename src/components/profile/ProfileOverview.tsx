@@ -26,7 +26,7 @@ export function ProfileOverview() {
 
   const myAbsences = absences?.filter(a => a.user_id === user?.id) || [];
   const pendingRequests = requests?.filter(r => r.status === "pending") || [];
-  const activeTasks = allTasks?.filter(t => t.status !== "done" && t.status !== "cancelled") || [];
+  const activeTasks = allTasks?.filter(t => t.status !== "done" && t.status !== "archived") || [];
   const weeklyMinutes = timeEntries?.reduce((sum, e) => sum + e.duration_minutes, 0) || 0;
   const weeklyHours = Math.floor(weeklyMinutes / 60);
 
@@ -113,7 +113,7 @@ export function ProfileOverview() {
               <div key={task.id} className="flex items-center justify-between py-2 border-b last:border-0">
                 <div className="truncate flex-1">
                   <p className="font-medium truncate">{task.title}</p>
-                  <p className="text-xs text-muted-foreground">{task.project?.name}</p>
+                  <p className="text-xs text-muted-foreground">{task.status}</p>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded ${
                   task.priority === "high" || task.priority === "urgent" 
