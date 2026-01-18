@@ -449,42 +449,43 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
         )}
 
         {/* ===== LINES TABLE WITH GROUPS ===== */}
-        <table className="w-full mb-6" style={{ fontSize: '11px' }}>
+        <table className="w-full mb-6" style={{ fontSize: '11px', borderCollapse: 'collapse' }}>
           <thead>
             <tr 
-              className={tableBorderClass}
               style={{ 
                 borderBottomWidth: 2, 
+                borderBottomStyle: ts.tableBorderStyle === 'none' ? 'none' : ts.tableBorderStyle,
                 borderColor: ts.accentColor,
+                backgroundColor: ts.tableHeaderBg,
               }}
             >
               <th 
-                className="text-left py-2 px-1 font-medium" 
-                style={{ backgroundColor: ts.tableHeaderBg, color: ts.primaryColor }}
+                className="text-left py-2 px-2 font-semibold" 
+                style={{ color: ts.primaryColor, fontFamily: ts.bodyFont }}
               >
                 Réf.
               </th>
               <th 
-                className="text-left py-2 px-1 font-medium" 
-                style={{ backgroundColor: ts.tableHeaderBg, color: ts.primaryColor }}
+                className="text-left py-2 px-2 font-semibold" 
+                style={{ color: ts.primaryColor, fontFamily: ts.bodyFont }}
               >
                 Désignation
               </th>
               <th 
-                className="text-right py-2 px-1 font-medium w-16" 
-                style={{ backgroundColor: ts.tableHeaderBg, color: ts.primaryColor }}
+                className="text-center py-2 px-2 font-semibold w-16" 
+                style={{ color: ts.primaryColor, fontFamily: ts.bodyFont }}
               >
                 Qté
               </th>
               <th 
-                className="text-right py-2 px-1 font-medium w-20" 
-                style={{ backgroundColor: ts.tableHeaderBg, color: ts.primaryColor }}
+                className="text-right py-2 px-2 font-semibold w-20" 
+                style={{ color: ts.primaryColor, fontFamily: ts.bodyFont }}
               >
                 P.U.
               </th>
               <th 
-                className="text-right py-2 px-1 font-medium w-24" 
-                style={{ backgroundColor: ts.tableHeaderBg, color: ts.primaryColor }}
+                className="text-right py-2 px-2 font-semibold w-24" 
+                style={{ color: ts.primaryColor, fontFamily: ts.bodyFont }}
               >
                 Montant HT
               </th>
@@ -502,13 +503,23 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
                   <tr style={{ backgroundColor: ts.tableHeaderBg }}>
                     <td 
                       colSpan={5} 
-                      className="py-2 px-2 font-semibold"
-                      style={{ color: ts.primaryColor }}
+                      className="py-3 px-2 font-bold"
+                      style={{ 
+                        color: ts.accentColor,
+                        fontFamily: ts.headingFont,
+                        fontSize: '13px',
+                        borderBottomWidth: 1,
+                        borderBottomStyle: ts.tableBorderStyle === 'none' ? 'none' : 'solid',
+                        borderColor: `${ts.accentColor}40`,
+                      }}
                     >
                       {group.phase_name || 'Groupe'}
                       {group.phase_description && (
-                        <span className="font-normal ml-2" style={{ color: ts.secondaryColor }}>
-                          - {group.phase_description}
+                        <span 
+                          className="font-normal ml-2 text-sm"
+                          style={{ color: ts.secondaryColor }}
+                        >
+                          — {group.phase_description}
                         </span>
                       )}
                     </td>
@@ -517,30 +528,41 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
                   {/* Group lines */}
                   {groupLines.map((line, idx) => (
                     <tr 
-                      key={line.id} 
-                      className={`${tableBorderClass}`}
+                      key={line.id}
                       style={{ 
                         borderBottomWidth: 1,
-                        borderColor: `${ts.secondaryColor}30`,
+                        borderBottomStyle: ts.tableBorderStyle === 'none' ? 'none' : 'solid',
+                        borderColor: `${ts.secondaryColor}20`,
                         backgroundColor: getRowBg(idx),
                       }}
                     >
-                      <td className="py-2 px-1 pl-4 align-top text-xs font-mono" style={{ color: ts.secondaryColor }}>
+                      <td 
+                        className="py-3 px-2 pl-4 align-top font-mono text-xs"
+                        style={{ color: ts.accentColor }}
+                      >
                         {line.pricing_ref || line.phase_code || '-'}
                       </td>
-                      <td className="py-2 px-1">
-                        <div className="font-medium" style={{ color: ts.primaryColor }}>
+                      <td className="py-3 px-2">
+                        <div 
+                          className="font-semibold"
+                          style={{ color: ts.primaryColor, fontFamily: ts.bodyFont }}
+                        >
                           {line.phase_name || 'Ligne sans titre'}
                         </div>
                         {line.phase_description && (
-                          <div className="text-xs mt-0.5" style={{ color: ts.secondaryColor }}>
+                          <div 
+                            className="text-xs mt-1 leading-relaxed"
+                            style={{ color: ts.secondaryColor }}
+                          >
                             {line.phase_description}
                           </div>
                         )}
                         {/* Deliverables */}
                         {line.deliverables && line.deliverables.length > 0 && (
-                          <div className="text-xs mt-1" style={{ color: ts.secondaryColor }}>
-                            <span className="font-medium">Livrables:</span>{' '}
+                          <div className="text-xs mt-2" style={{ color: ts.secondaryColor }}>
+                            <span className="font-semibold" style={{ color: ts.accentColor }}>
+                              Livrables:
+                            </span>{' '}
                             {line.deliverables.join(', ')}
                           </div>
                         )}
@@ -552,13 +574,27 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
                           </div>
                         )}
                       </td>
-                      <td className="text-right py-2 px-1 align-top" style={{ color: ts.primaryColor }}>
-                        {line.quantity} {line.unit !== 'forfait' && line.unit}
+                      <td 
+                        className="text-center py-3 px-2 align-top"
+                        style={{ color: ts.primaryColor }}
+                      >
+                        {line.quantity}
+                        {line.unit !== 'forfait' && (
+                          <span className="text-xs ml-1" style={{ color: ts.secondaryColor }}>
+                            {line.unit}
+                          </span>
+                        )}
                       </td>
-                      <td className="text-right py-2 px-1 align-top" style={{ color: ts.secondaryColor }}>
+                      <td 
+                        className="text-right py-3 px-2 align-top"
+                        style={{ color: ts.secondaryColor }}
+                      >
                         {line.unit_price ? formatCurrency(line.unit_price) : '-'}
                       </td>
-                      <td className="text-right py-2 px-1 align-top font-medium" style={{ color: ts.primaryColor }}>
+                      <td 
+                        className="text-right py-3 px-2 align-top font-semibold"
+                        style={{ color: ts.accentColor }}
+                      >
                         {formatCurrency(line.amount || 0)}
                       </td>
                     </tr>
@@ -567,17 +603,24 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
                   {/* Group subtotal */}
                   {groupLines.length > 0 && (
                     <tr 
-                      className={tableBorderClass}
                       style={{ 
-                        backgroundColor: `${ts.tableHeaderBg}80`,
-                        borderBottomWidth: 1,
-                        borderColor: ts.secondaryColor,
+                        backgroundColor: `${ts.accentColor}10`,
+                        borderBottomWidth: 2,
+                        borderBottomStyle: ts.tableBorderStyle === 'none' ? 'none' : 'solid',
+                        borderColor: ts.accentColor,
                       }}
                     >
-                      <td colSpan={4} className="py-1.5 px-2 text-right text-xs font-medium" style={{ color: ts.secondaryColor }}>
+                      <td 
+                        colSpan={4} 
+                        className="py-2 px-2 text-right text-xs font-semibold"
+                        style={{ color: ts.primaryColor }}
+                      >
                         Sous-total {group.phase_name}
                       </td>
-                      <td className="text-right py-1.5 px-1 font-semibold" style={{ color: ts.primaryColor }}>
+                      <td 
+                        className="text-right py-2 px-2 font-bold"
+                        style={{ color: ts.accentColor }}
+                      >
                         {formatCurrency(groupSubtotal)}
                       </td>
                     </tr>
@@ -589,30 +632,41 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
             {/* Ungrouped lines */}
             {ungroupedLines.filter(l => l.is_included).map((line, idx) => (
               <tr 
-                key={line.id} 
-                className={tableBorderClass}
+                key={line.id}
                 style={{ 
                   borderBottomWidth: 1,
-                  borderColor: `${ts.secondaryColor}30`,
+                  borderBottomStyle: ts.tableBorderStyle === 'none' ? 'none' : 'solid',
+                  borderColor: `${ts.secondaryColor}20`,
                   backgroundColor: getRowBg(idx),
                 }}
               >
-                <td className="py-2 px-1 align-top text-xs font-mono" style={{ color: ts.secondaryColor }}>
+                <td 
+                  className="py-3 px-2 align-top font-mono text-xs"
+                  style={{ color: ts.accentColor }}
+                >
                   {line.pricing_ref || line.phase_code || '-'}
                 </td>
-                <td className="py-2 px-1">
-                  <div className="font-medium" style={{ color: ts.primaryColor }}>
+                <td className="py-3 px-2">
+                  <div 
+                    className="font-semibold"
+                    style={{ color: ts.primaryColor, fontFamily: ts.bodyFont }}
+                  >
                     {line.phase_name || 'Ligne sans titre'}
                   </div>
                   {line.phase_description && (
-                    <div className="text-xs mt-0.5" style={{ color: ts.secondaryColor }}>
+                    <div 
+                      className="text-xs mt-1 leading-relaxed"
+                      style={{ color: ts.secondaryColor }}
+                    >
                       {line.phase_description}
                     </div>
                   )}
                   {/* Deliverables */}
                   {line.deliverables && line.deliverables.length > 0 && (
-                    <div className="text-xs mt-1" style={{ color: ts.secondaryColor }}>
-                      <span className="font-medium">Livrables:</span>{' '}
+                    <div className="text-xs mt-2" style={{ color: ts.secondaryColor }}>
+                      <span className="font-semibold" style={{ color: ts.accentColor }}>
+                        Livrables:
+                      </span>{' '}
                       {line.deliverables.join(', ')}
                     </div>
                   )}
@@ -624,13 +678,27 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
                     </div>
                   )}
                 </td>
-                <td className="text-right py-2 px-1 align-top" style={{ color: ts.primaryColor }}>
-                  {line.quantity} {line.unit !== 'forfait' && line.unit}
+                <td 
+                  className="text-center py-3 px-2 align-top"
+                  style={{ color: ts.primaryColor }}
+                >
+                  {line.quantity}
+                  {line.unit !== 'forfait' && (
+                    <span className="text-xs ml-1" style={{ color: ts.secondaryColor }}>
+                      {line.unit}
+                    </span>
+                  )}
                 </td>
-                <td className="text-right py-2 px-1 align-top" style={{ color: ts.secondaryColor }}>
+                <td 
+                  className="text-right py-3 px-2 align-top"
+                  style={{ color: ts.secondaryColor }}
+                >
                   {line.unit_price ? formatCurrency(line.unit_price) : '-'}
                 </td>
-                <td className="text-right py-2 px-1 align-top font-medium" style={{ color: ts.primaryColor }}>
+                <td 
+                  className="text-right py-3 px-2 align-top font-semibold"
+                  style={{ color: ts.accentColor }}
+                >
                   {formatCurrency(line.amount || 0)}
                 </td>
               </tr>
@@ -640,28 +708,32 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
             {discountLines.length > 0 && discountLines.map((line) => (
               <tr 
                 key={line.id}
-                className={tableBorderClass}
                 style={{ 
                   borderBottomWidth: 1,
-                  borderColor: `${ts.secondaryColor}30`,
+                  borderBottomStyle: ts.tableBorderStyle === 'none' ? 'none' : 'solid',
+                  borderColor: `${ts.secondaryColor}20`,
+                  backgroundColor: '#fef2f2',
                 }}
               >
-                <td className="py-2 px-1 align-top text-xs font-mono" style={{ color: ts.secondaryColor }}>
+                <td 
+                  className="py-3 px-2 align-top font-mono text-xs"
+                  style={{ color: '#dc2626' }}
+                >
                   {line.pricing_ref || '-'}
                 </td>
-                <td className="py-2 px-1" style={{ color: '#dc2626' }}>
-                  <div className="font-medium">{line.phase_name || 'Remise'}</div>
+                <td className="py-3 px-2" style={{ color: '#dc2626' }}>
+                  <div className="font-semibold">{line.phase_name || 'Remise'}</div>
                   {line.phase_description && (
-                    <div className="text-xs mt-0.5">{line.phase_description}</div>
+                    <div className="text-xs mt-1">{line.phase_description}</div>
                   )}
                 </td>
-                <td className="text-right py-2 px-1 align-top" style={{ color: '#dc2626' }}>
+                <td className="text-center py-3 px-2 align-top" style={{ color: '#dc2626' }}>
                   {line.quantity !== 1 && `${line.quantity}`}
                 </td>
-                <td className="text-right py-2 px-1 align-top" style={{ color: '#dc2626' }}>
+                <td className="text-right py-3 px-2 align-top" style={{ color: '#dc2626' }}>
                   {line.percentage_fee ? `-${line.percentage_fee}%` : ''}
                 </td>
-                <td className="text-right py-2 px-1 align-top font-medium" style={{ color: '#dc2626' }}>
+                <td className="text-right py-3 px-2 align-top font-bold" style={{ color: '#dc2626' }}>
                   -{formatCurrency(Math.abs(line.amount || 0))}
                 </td>
               </tr>
@@ -672,27 +744,44 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
         {/* ===== OPTIONAL ITEMS ===== */}
         {optionalItems.length > 0 && (
           <div className="mb-6">
-            <div className="text-xs uppercase mb-2" style={{ color: ts.secondaryColor }}>
+            <div 
+              className="text-xs uppercase font-semibold mb-2 pb-1"
+              style={{ 
+                color: ts.accentColor,
+                borderBottomWidth: 1,
+                borderBottomStyle: 'dashed',
+                borderColor: `${ts.accentColor}40`,
+              }}
+            >
               Options (non incluses dans le total)
             </div>
             <table className="w-full" style={{ fontSize: '11px' }}>
               <tbody>
                 {optionalItems.map((line) => (
                   <tr 
-                    key={line.id} 
-                    className="border-b border-dashed"
-                    style={{ borderColor: `${ts.secondaryColor}40` }}
+                    key={line.id}
+                    style={{ 
+                      borderBottomWidth: 1,
+                      borderBottomStyle: 'dashed',
+                      borderColor: `${ts.secondaryColor}30`,
+                    }}
                   >
-                    <td className="py-1.5 text-xs font-mono" style={{ color: ts.secondaryColor }}>
+                    <td 
+                      className="py-2 text-xs font-mono w-16"
+                      style={{ color: ts.accentColor, opacity: 0.7 }}
+                    >
                       {line.pricing_ref || line.phase_code || '-'}
                     </td>
-                    <td className="py-1.5" style={{ color: ts.secondaryColor }}>
-                      {line.phase_name}
+                    <td className="py-2" style={{ color: ts.secondaryColor }}>
+                      <span className="font-medium">{line.phase_name}</span>
                       {line.phase_description && (
-                        <span className="text-xs ml-2">- {line.phase_description}</span>
+                        <span className="text-xs ml-2">— {line.phase_description}</span>
                       )}
                     </td>
-                    <td className="text-right py-1.5" style={{ color: ts.secondaryColor }}>
+                    <td 
+                      className="text-right py-2 font-medium w-24"
+                      style={{ color: ts.accentColor, opacity: 0.7 }}
+                    >
                       {formatCurrency(line.amount || 0)}
                     </td>
                   </tr>
@@ -704,43 +793,59 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
 
         {/* ===== TOTALS ===== */}
         <div className="flex justify-end mb-8">
-          <div className="w-72">
+          <div 
+            className="w-80 p-4 rounded"
+            style={{ backgroundColor: `${ts.tableHeaderBg}60` }}
+          >
             {totalDiscount > 0 && (
               <>
-                <div className="flex justify-between py-1" style={{ color: ts.secondaryColor }}>
+                <div className="flex justify-between py-1.5" style={{ color: ts.secondaryColor }}>
                   <span>Sous-total</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
-                <div className="flex justify-between py-1" style={{ color: '#dc2626' }}>
+                <div className="flex justify-between py-1.5" style={{ color: '#dc2626' }}>
                   <span>Remise</span>
-                  <span>-{formatCurrency(totalDiscount)}</span>
+                  <span className="font-medium">-{formatCurrency(totalDiscount)}</span>
                 </div>
               </>
             )}
-            <div className="flex justify-between py-1" style={{ color: ts.primaryColor }}>
-              <span>Total HT</span>
-              <span className="font-medium">{formatCurrency(totalHT)}</span>
+            <div className="flex justify-between py-1.5" style={{ color: ts.primaryColor }}>
+              <span className="font-medium">Total HT</span>
+              <span className="font-semibold">{formatCurrency(totalHT)}</span>
             </div>
-            <div className="flex justify-between py-1" style={{ color: ts.secondaryColor }}>
+            <div className="flex justify-between py-1.5" style={{ color: ts.secondaryColor }}>
               <span>TVA ({vatRate}%)</span>
               <span>{formatCurrency(tva)}</span>
             </div>
             <div 
-              className="flex justify-between py-2 mt-1"
-              style={{ borderTopWidth: 2, borderColor: ts.primaryColor }}
+              className="flex justify-between py-3 mt-2"
+              style={{ 
+                borderTopWidth: 2, 
+                borderTopStyle: 'solid',
+                borderColor: ts.accentColor,
+              }}
             >
-              <span className="font-bold" style={{ color: ts.primaryColor }}>Total TTC</span>
-              <span className="font-bold text-lg" style={{ color: ts.accentColor }}>
+              <span className="font-bold text-lg" style={{ color: ts.primaryColor }}>Total TTC</span>
+              <span className="font-bold text-xl" style={{ color: ts.accentColor }}>
                 {formatCurrency(totalTTC)}
               </span>
             </div>
 
             {/* Deposit info */}
             {document.requires_deposit && document.deposit_percentage && (
-              <div className="mt-2 pt-2 border-t" style={{ borderColor: `${ts.secondaryColor}40` }}>
-                <div className="flex justify-between text-sm" style={{ color: ts.accentColor }}>
-                  <span>Acompte à la commande ({document.deposit_percentage}%)</span>
-                  <span className="font-medium">
+              <div 
+                className="mt-3 pt-3"
+                style={{ 
+                  borderTopWidth: 1, 
+                  borderTopStyle: 'dashed',
+                  borderColor: `${ts.accentColor}40`,
+                }}
+              >
+                <div className="flex justify-between text-sm">
+                  <span style={{ color: ts.primaryColor }}>
+                    Acompte à la commande ({document.deposit_percentage}%)
+                  </span>
+                  <span className="font-semibold" style={{ color: ts.accentColor }}>
                     {formatCurrency(totalTTC * (document.deposit_percentage / 100))}
                   </span>
                 </div>
