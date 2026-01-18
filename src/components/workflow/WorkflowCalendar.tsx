@@ -112,7 +112,7 @@ export function WorkflowCalendar({ onEventClick, onDateSelect, externalDrop, onR
   const handleEventDrop = useCallback((info: any) => {
     // Mark that we just dragged - prevent click handler from opening modal
     justDraggedRef.current = true;
-    setTimeout(() => { justDraggedRef.current = false; }, 100);
+    setTimeout(() => { justDraggedRef.current = false; }, 300);
     
     // Don't allow rendu events to be dropped
     if (info.event.extendedProps.type === "rendu") {
@@ -133,7 +133,7 @@ export function WorkflowCalendar({ onEventClick, onDateSelect, externalDrop, onR
   const handleEventResize = useCallback((info: any) => {
     // Mark that we just resized - prevent click handler from opening modal
     justDraggedRef.current = true;
-    setTimeout(() => { justDraggedRef.current = false; }, 100);
+    setTimeout(() => { justDraggedRef.current = false; }, 300);
     
     // Don't allow rendu events to be resized
     if (info.event.extendedProps.type === "rendu") {
