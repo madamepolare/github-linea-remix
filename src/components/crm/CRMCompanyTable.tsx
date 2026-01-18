@@ -44,6 +44,7 @@ import { CompanyFormDialog } from "./CompanyFormDialog";
 import { InlineEditCell } from "./InlineEditCell";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
 import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
+import { CRMBulkEmailDialog } from "./CRMBulkEmailDialog";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { AutoCategorizeHelper } from "./AutoCategorizeHelper";
 import { useContactPipelineEntries } from "@/hooks/useContactPipelineEntries";
@@ -93,6 +94,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
   const [editingCompany, setEditingCompany] = useState<CRMCompanyEnriched | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
 
   // Auto-switch to cards on mobile
   const effectiveViewMode = isMobile ? "cards" : viewMode;
@@ -552,7 +554,17 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
         selectedCount={selectedIds.size}
         onClearSelection={() => setSelectedIds(new Set())}
         onDelete={handleBulkDelete}
+        onSendEmail={() => setBulkEmailOpen(true)}
         entityType="companies"
+      />
+
+      {/* Bulk email dialog */}
+      <CRMBulkEmailDialog
+        open={bulkEmailOpen}
+        onOpenChange={setBulkEmailOpen}
+        companies={companies.filter(c => selectedIds.has(c.id))}
+        entityType="companies"
+        onComplete={() => setSelectedIds(new Set())}
       />
 
       {/* Edit dialog */}

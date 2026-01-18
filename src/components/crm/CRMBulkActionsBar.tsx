@@ -83,7 +83,7 @@ export function CRMBulkActionsBar({
 
         {/* Primary actions */}
         <div className="flex items-center gap-1">
-          {onSendEmail && entityType === "contacts" && (
+          {onSendEmail && (entityType === "contacts" || entityType === "companies") && (
             <Button
               variant="ghost"
               size="sm"
