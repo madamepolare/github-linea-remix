@@ -514,6 +514,22 @@ export function useTeamMessageMutations() {
     },
   });
 
+  const removeMember = useMutation({
+    mutationFn: async (data: { channelId: string; userId: string }) => {
+      const { error } = await supabase
+        .from("team_channel_members")
+        .delete()
+        .eq("channel_id", data.channelId)
+        .eq("user_id", data.userId);
+      
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["team-channel-members", variables.channelId] });
+      queryClient.invalidateQueries({ queryKey: ["channel-members"] });
+    },
+  });
+
   return {
     createChannel,
     createMessage,
@@ -522,6 +538,7 @@ export function useTeamMessageMutations() {
     toggleReaction,
     markChannelAsRead,
     joinChannel,
+    removeMember,
   };
 }
 

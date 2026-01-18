@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Hash, Lock, MessageCircle, UserPlus, Users } from "lucide-react";
+import { Hash, Lock, MessageCircle, UserMinus, UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TeamChannel, useChannelMessages, useChannelMembers, useTeamMessageMutations } from "@/hooks/useTeamMessages";
@@ -10,6 +10,8 @@ import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { InviteMembersDialog } from "./InviteMembersDialog";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface ChannelViewProps {
   channel: TeamChannel;
@@ -18,14 +20,19 @@ interface ChannelViewProps {
 
 export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { data: messages, isLoading } = useChannelMessages(channel.id);
   const { data: members = [], refetch: refetchMembers } = useChannelMembers(channel.id);
-  const { createMessage, markChannelAsRead } = useTeamMessageMutations();
+  const { createMessage, markChannelAsRead, removeMember } = useTeamMessageMutations();
   const { data: profiles = [] } = useWorkspaceProfiles();
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [showMembers, setShowMembers] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+
+  // Check if current user is admin of this channel
+  const currentUserMember = members.find(m => m.user_id === user?.id);
+  const isAdmin = currentUserMember?.role === "admin";
 
   const isDM = channel.channel_type === "direct";
   const dmMember = channel.dm_member;
@@ -178,24 +185,49 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
           )}
           
           <div className="mt-4 space-y-2">
-            {memberProfiles.map((member) => (
-              <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={member.profile?.avatar_url || undefined} />
-                  <AvatarFallback className="text-xs">
-                    {getInitials(member.profile?.full_name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">
-                    {member.profile?.full_name || "Utilisateur"}
-                  </p>
-                  {member.role === "admin" && (
-                    <span className="text-xs text-muted-foreground">Admin</span>
+            {memberProfiles.map((member) => {
+              const canRemove = !isDM && isAdmin && member.user_id !== user?.id;
+              
+              return (
+                <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 group">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={member.profile?.avatar_url || undefined} />
+                    <AvatarFallback className="text-xs">
+                      {getInitials(member.profile?.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">
+                      {member.profile?.full_name || "Utilisateur"}
+                    </p>
+                    {member.role === "admin" && (
+                      <span className="text-xs text-muted-foreground">Admin</span>
+                    )}
+                  </div>
+                  {canRemove && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={async () => {
+                        try {
+                          await removeMember.mutateAsync({
+                            channelId: channel.id,
+                            userId: member.user_id,
+                          });
+                          refetchMembers();
+                          toast.success("Membre retiré du canal");
+                        } catch (error) {
+                          toast.error("Erreur lors du retrait du membre");
+                        }
+                      }}
+                    >
+                      <UserMinus className="h-4 w-4" />
+                    </Button>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {memberProfiles.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 Aucun membre
