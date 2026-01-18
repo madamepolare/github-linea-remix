@@ -68,22 +68,24 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
   
   return (
     <div 
-      className="bg-white shadow-lg rounded-lg overflow-hidden origin-top w-full"
+      className="bg-white shadow-lg rounded-lg origin-top"
       style={{ 
         transform: `scale(${scale})`,
         transformOrigin: 'top center',
         width: '210mm',
         minHeight: '297mm',
+        overflow: 'visible',
       }}
     >
       <iframe
         ref={iframeRef}
-        className="w-full border-0"
+        className="border-0"
         style={{ 
           width: '210mm',
           minHeight: '297mm', 
           height: '100%',
-          background: 'white'
+          background: 'white',
+          display: 'block',
         }}
         title="Aperçu du devis"
       />
