@@ -351,6 +351,31 @@ export function TenderGeneralTab({ tender, onUpdateStatus }: TenderGeneralTabPro
             </div>
           )}
 
+          {/* No-Go reason display - Always visible when No-Go */}
+          {tender.status === 'no_go' && (
+            <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 space-y-2">
+              <div className="flex items-center gap-2">
+                <XCircle className="h-4 w-4 text-destructive" />
+                <span className="font-medium text-destructive">Appel d'offres abandonné (No-Go)</span>
+              </div>
+              {tender.go_decision_notes ? (
+                <div className="pl-6">
+                  <p className="text-sm text-muted-foreground mb-1">Raison de l'abandon :</p>
+                  <p className="text-sm italic bg-background/50 rounded p-2">
+                    "{tender.go_decision_notes}"
+                  </p>
+                  {tender.go_decision_date && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Décision prise le {format(new Date(tender.go_decision_date), "dd MMMM yyyy", { locale: fr })}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground pl-6">Aucune raison spécifiée</p>
+              )}
+            </div>
+          )}
+
           {/* No-Go button */}
           {tender.status !== 'no_go' && tender.status !== 'perdu' && (
             <div className="flex justify-end">

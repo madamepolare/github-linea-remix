@@ -586,87 +586,87 @@ export function PipelineSettings() {
                 ))}
               </div>
             </div>
-
-            {/* AI Stage Generation Section - Only for new pipelines */}
-            {!editingPipeline && (
-              <div className="space-y-3 pt-2 border-t">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <Label className="font-medium">Générer des étapes avec l'IA</Label>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Objectif du pipeline (optionnel)</Label>
-                  <Textarea
-                    value={pipelineForm.objective}
-                    onChange={(e) => setPipelineForm({ ...pipelineForm, objective: e.target.value })}
-                    placeholder="Ex: Qualifier et convertir des promoteurs immobiliers en clients..."
-                    className="h-16 text-sm"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerateStages}
-                  disabled={isGeneratingStages || !pipelineForm.name}
-                  className="w-full"
-                >
-                  {isGeneratingStages ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Génération en cours...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Générer les étapes
-                    </>
-                  )}
-                </Button>
-
-                {/* Display generated stages preview */}
-                {generatedStages.length > 0 && (
-                  <div className="space-y-2 mt-3">
-                    <Label className="text-xs text-muted-foreground">
-                      Étapes générées ({generatedStages.length})
-                    </Label>
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                      {generatedStages.map((stage, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 p-2 rounded bg-muted/50 text-sm"
-                        >
-                          <div
-                            className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: stage.color }}
-                          />
-                          <span className="flex-1 truncate">{stage.name}</span>
-                          <Badge variant="outline" className="text-[10px] h-4">
-                            {stage.probability}%
-                          </Badge>
-                          {stage.requires_email_on_enter && (
-                            <Mail className="h-3 w-3 text-primary" />
-                          )}
-                          {stage.is_final_stage && (
-                            <Badge variant="secondary" className="text-[10px] h-4">Final</Badge>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setGeneratedStages([])}
-                      className="text-xs text-muted-foreground"
-                    >
-                      Effacer les étapes générées
-                    </Button>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
+
+          {/* AI Stage Generation Section - Only for new pipelines - MOVED TO END */}
+          {!editingPipeline && (
+            <div className="space-y-3 pt-4 border-t">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <Label className="font-medium">Générer des étapes avec l'IA</Label>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Objectif du pipeline (optionnel)</Label>
+                <Textarea
+                  value={pipelineForm.objective}
+                  onChange={(e) => setPipelineForm({ ...pipelineForm, objective: e.target.value })}
+                  placeholder="Ex: Qualifier et convertir des promoteurs immobiliers en clients..."
+                  className="h-16 text-sm"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateStages}
+                disabled={isGeneratingStages || !pipelineForm.name}
+                className="w-full"
+              >
+                {isGeneratingStages ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Génération en cours...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Générer les étapes
+                  </>
+                )}
+              </Button>
+
+              {/* Display generated stages preview */}
+              {generatedStages.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  <Label className="text-xs text-muted-foreground">
+                    Étapes générées ({generatedStages.length})
+                  </Label>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {generatedStages.map((stage, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 p-2 rounded bg-muted/50 text-sm"
+                      >
+                        <div
+                          className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: stage.color }}
+                        />
+                        <span className="flex-1 truncate">{stage.name}</span>
+                        <Badge variant="outline" className="text-[10px] h-4">
+                          {stage.probability}%
+                        </Badge>
+                        {stage.requires_email_on_enter && (
+                          <Mail className="h-3 w-3 text-primary" />
+                        )}
+                        {stage.is_final_stage && (
+                          <Badge variant="secondary" className="text-[10px] h-4">Final</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setGeneratedStages([])}
+                    className="text-xs text-muted-foreground"
+                  >
+                    Effacer les étapes générées
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPipelineDialogOpen(false)}>
               Annuler

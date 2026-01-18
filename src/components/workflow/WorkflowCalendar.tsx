@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo } from "react";
+import { useRef, useCallback, useMemo, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import resourceTimelinePlugin from "@fullcalendar/resource-timeline";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -32,6 +32,9 @@ export function WorkflowCalendar({ onEventClick, onDateSelect, externalDrop, onR
   const { data: members } = useTeamMembers();
   const { data: workspaceEvents } = useWorkspaceEvents();
   const { data: userProjectsMap } = useAllProjectMembers();
+  
+  // Track if we just performed a drag/drop or resize to prevent modal from opening
+  const justDraggedRef = useRef(false);
 
   // Convert team members to FullCalendar resources
   const resources = (members || []).map(member => ({
@@ -107,6 +110,10 @@ export function WorkflowCalendar({ onEventClick, onDateSelect, externalDrop, onR
   }, [schedules, workspaceEvents, members, userProjectsMap]);
 
   const handleEventDrop = useCallback((info: any) => {
+    // Mark that we just dragged - prevent click handler from opening modal
+    justDraggedRef.current = true;
+    setTimeout(() => { justDraggedRef.current = false; }, 100);
+    
     // Don't allow rendu events to be dropped
     if (info.event.extendedProps.type === "rendu") {
       info.revert();
@@ -124,6 +131,10 @@ export function WorkflowCalendar({ onEventClick, onDateSelect, externalDrop, onR
   }, [updateSchedule]);
 
   const handleEventResize = useCallback((info: any) => {
+    // Mark that we just resized - prevent click handler from opening modal
+    justDraggedRef.current = true;
+    setTimeout(() => { justDraggedRef.current = false; }, 100);
+    
     // Don't allow rendu events to be resized
     if (info.event.extendedProps.type === "rendu") {
       info.revert();
@@ -140,6 +151,11 @@ export function WorkflowCalendar({ onEventClick, onDateSelect, externalDrop, onR
   }, [updateSchedule]);
 
   const handleEventClick = useCallback((info: any) => {
+    // Don't open modal if we just finished dragging or resizing
+    if (justDraggedRef.current) {
+      return;
+    }
+    
     const eventType = info.event.extendedProps.type;
     
     if (eventType === "rendu") {
