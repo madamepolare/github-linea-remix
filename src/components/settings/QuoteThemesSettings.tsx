@@ -3,24 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Tabs,
@@ -42,19 +31,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Plus,
   Palette,
-  Type,
-  Layout,
-  Table,
-  FileText,
   Trash2,
   Star,
   Sparkles,
   Upload,
-  Image,
   Wand2,
   Check,
   Loader2,
-  Eye,
   Code2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -63,6 +46,7 @@ import { cn } from '@/lib/utils';
 import { useQuoteThemes, QuoteTheme, QuoteThemeInput } from '@/hooks/useQuoteThemes';
 import { supabase } from '@/integrations/supabase/client';
 import { QuoteHtmlEditor } from './quote-themes/QuoteHtmlEditor';
+import { QuoteThemeStylesEditor } from './quote-themes/QuoteThemeStylesEditor';
 
 const DEFAULT_THEME: QuoteThemeInput = {
   name: 'Nouveau thème',
@@ -89,37 +73,14 @@ const DEFAULT_THEME: QuoteThemeInput = {
   is_ai_generated: false,
 };
 
-const FONT_OPTIONS = [
-  'Inter',
-  'Roboto',
-  'Poppins',
-  'Nunito',
-  'Playfair Display',
-  'Source Sans 3',
-  'DM Sans',
-  'Space Grotesk',
-  'Montserrat',
-  'Lato',
-];
-
-const HEADER_STYLES = [
-  { value: 'classic', label: 'Classique', description: 'Logo à gauche, infos à droite' },
-  { value: 'modern', label: 'Moderne', description: 'Bande colorée avec logo centré' },
-  { value: 'minimal', label: 'Minimaliste', description: 'Logo discret, espaces généreux' },
-  { value: 'centered', label: 'Centré', description: 'Tout centré, symétrique' },
-];
-
 export function QuoteThemesSettings() {
   const { themes, isLoading, createTheme, updateTheme, deleteTheme, setDefaultTheme } = useQuoteThemes();
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTheme, setEditingTheme] = useState<Partial<QuoteTheme> | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [htmlEditorOpen, setHtmlEditorOpen] = useState(false);
   const [customHtml, setCustomHtml] = useState('');
-  const [cssVariables, setCssVariables] = useState<Record<string, string>>({});
-  const [fontsUsed, setFontsUsed] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEditing = !!editingTheme?.id;
@@ -128,34 +89,14 @@ export function QuoteThemesSettings() {
     setEditingTheme({ ...DEFAULT_THEME });
     setReferenceImage(null);
     setCustomHtml('');
-    setCssVariables({});
-    setFontsUsed([]);
-    setDialogOpen(true);
+    setHtmlEditorOpen(true); // Open HTML editor directly
   };
 
   const handleEdit = (theme: QuoteTheme) => {
     setEditingTheme(theme);
     setReferenceImage(theme.reference_image_url || null);
     setCustomHtml((theme as any).custom_html_template || '');
-    setCssVariables((theme as any).css_variables || {});
-    setFontsUsed((theme as any).fonts_used || []);
-    setDialogOpen(true);
-  };
-
-  const handleOpenHtmlEditor = () => {
-    setHtmlEditorOpen(true);
-  };
-
-  const handleSaveHtmlTemplate = () => {
-    setEditingTheme(prev => prev ? {
-      ...prev,
-      custom_html_template: customHtml,
-      css_variables: cssVariables,
-      fonts_used: fontsUsed,
-      use_custom_html: !!customHtml,
-    } as any : null);
-    setHtmlEditorOpen(false);
-    toast.success('Template HTML enregistré');
+    setHtmlEditorOpen(true); // Open HTML editor directly
   };
 
   const handleSave = async () => {
@@ -165,21 +106,25 @@ export function QuoteThemesSettings() {
     }
 
     try {
+      const themeData = {
+        ...editingTheme,
+        custom_html_template: customHtml,
+        use_custom_html: !!customHtml,
+        reference_image_url: referenceImage || undefined,
+      };
+
       if (isEditing) {
         await updateTheme.mutateAsync({
           id: editingTheme.id!,
-          ...editingTheme,
-          reference_image_url: referenceImage || undefined,
+          ...themeData,
         } as QuoteTheme);
       } else {
-        await createTheme.mutateAsync({
-          ...editingTheme,
-          reference_image_url: referenceImage || undefined,
-        } as QuoteThemeInput);
+        await createTheme.mutateAsync(themeData as QuoteThemeInput);
       }
-      setDialogOpen(false);
+      setHtmlEditorOpen(false);
       setEditingTheme(null);
       setReferenceImage(null);
+      setCustomHtml('');
     } catch (error) {
       console.error('Error saving theme:', error);
     }
@@ -252,7 +197,7 @@ export function QuoteThemesSettings() {
                 Thèmes de devis
               </CardTitle>
               <CardDescription>
-                Créez et gérez des thèmes visuels pour vos devis. Utilisez l'IA pour générer un thème à partir d'une image.
+                Créez et gérez des thèmes visuels pour vos devis
               </CardDescription>
             </div>
             <Button onClick={handleCreateNew}>
@@ -287,7 +232,7 @@ export function QuoteThemesSettings() {
                   >
                     <Card 
                       className={cn(
-                        "cursor-pointer transition-all hover:shadow-md",
+                        "cursor-pointer transition-all hover:shadow-md group relative",
                         theme.is_default && "ring-2 ring-primary"
                       )}
                       onClick={() => handleEdit(theme)}
@@ -338,13 +283,37 @@ export function QuoteThemesSettings() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 mt-3">
-                          <Badge variant="outline" className="text-xs">
-                            {HEADER_STYLES.find(s => s.value === theme.header_style)?.label || theme.header_style}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {theme.heading_font} / {theme.body_font}
-                          </span>
+                        <div className="flex items-center gap-2 mt-3 text-xs text-muted-foreground">
+                          <Code2 className="h-3 w-3" />
+                          {theme.heading_font} / {theme.body_font}
+                        </div>
+
+                        {/* Quick actions on hover */}
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                          {!theme.is_default && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDefaultTheme.mutate(theme.id);
+                              }}
+                            >
+                              <Star className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirmId(theme.id);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -356,466 +325,153 @@ export function QuoteThemesSettings() {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>
-              {isEditing ? 'Modifier le thème' : 'Créer un thème'}
-            </DialogTitle>
-            <DialogDescription>
-              Personnalisez l'apparence de vos devis ou laissez l'IA générer un thème à partir d'une image.
-            </DialogDescription>
+      {/* HTML Editor Dialog - Main editing interface */}
+      <Dialog open={htmlEditorOpen} onOpenChange={(open) => {
+        if (!open) {
+          setHtmlEditorOpen(false);
+          setEditingTheme(null);
+          setCustomHtml('');
+        }
+      }}>
+        <DialogContent className="max-w-[95vw] w-[1400px] h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 py-4 border-b shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-primary/70">
+                  <Code2 className="h-5 w-5 text-primary-foreground" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Input
+                    value={editingTheme?.name || ''}
+                    onChange={(e) => updateField('name', e.target.value)}
+                    className="h-8 w-48 text-sm font-medium"
+                    placeholder="Nom du thème"
+                  />
+                  <Input
+                    value={editingTheme?.description || ''}
+                    onChange={(e) => updateField('description', e.target.value)}
+                    className="h-8 w-64 text-sm"
+                    placeholder="Description..."
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => {
+                  setHtmlEditorOpen(false);
+                  setEditingTheme(null);
+                }}>
+                  Annuler
+                </Button>
+                <Button size="sm" onClick={handleSave} disabled={createTheme.isPending || updateTheme.isPending}>
+                  {(createTheme.isPending || updateTheme.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  <Check className="h-4 w-4 mr-2" />
+                  Enregistrer
+                </Button>
+              </div>
+            </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden">
-            <ScrollArea className="h-[60vh]">
-              <div className="space-y-6 pr-4">
-                {/* Name and description */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Nom du thème</Label>
-                    <Input
-                      value={editingTheme?.name || ''}
-                      onChange={(e) => updateField('name', e.target.value)}
-                      placeholder="Mon thème personnalisé"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Input
-                      value={editingTheme?.description || ''}
-                      onChange={(e) => updateField('description', e.target.value)}
-                      placeholder="Description optionnelle..."
-                    />
-                  </div>
-                </div>
+          <div className="flex-1 flex overflow-hidden">
+            <Tabs defaultValue="html" className="flex-1 flex flex-col">
+              <div className="px-6 py-2 border-b bg-muted/30">
+                <TabsList className="h-8">
+                  <TabsTrigger value="html" className="text-xs">
+                    <Code2 className="h-3.5 w-3.5 mr-1.5" />
+                    Template HTML
+                  </TabsTrigger>
+                  <TabsTrigger value="styles" className="text-xs">
+                    <Palette className="h-3.5 w-3.5 mr-1.5" />
+                    Styles
+                  </TabsTrigger>
+                  <TabsTrigger value="ai" className="text-xs">
+                    <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                    Génération IA
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-                {/* AI Generation */}
-                <Card className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-1">
-                        <h4 className="font-medium flex items-center gap-2 mb-2">
-                          <Sparkles className="h-4 w-4 text-purple-500" />
-                          Génération IA
-                        </h4>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          Uploadez une image de mise en page de devis et l'IA génèrera un thème correspondant.
-                        </p>
+              <TabsContent value="html" className="flex-1 m-0 overflow-hidden">
+                <QuoteHtmlEditor
+                  open={true}
+                  onOpenChange={() => {}}
+                  htmlTemplate={customHtml}
+                  onHtmlChange={setCustomHtml}
+                  onSave={handleSave}
+                  embedded
+                />
+              </TabsContent>
 
-                        <div className="flex items-center gap-3">
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleImageUpload}
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => fileInputRef.current?.click()}
-                          >
-                            <Upload className="h-4 w-4 mr-2" />
-                            Uploader une image
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleGenerateFromImage}
-                            disabled={!referenceImage || isGenerating}
-                          >
-                            {isGenerating ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Wand2 className="h-4 w-4 mr-2" />
-                            )}
-                            Générer le thème
-                          </Button>
-                        </div>
-                      </div>
+              <TabsContent value="styles" className="flex-1 m-0 overflow-auto p-6">
+                {editingTheme && (
+                  <QuoteThemeStylesEditor 
+                    theme={editingTheme} 
+                    onChange={updateField} 
+                  />
+                )}
+              </TabsContent>
 
-                      {referenceImage && (
-                        <div className="relative w-32 h-32 rounded-lg overflow-hidden border bg-white">
-                          <img
-                            src={referenceImage}
-                            alt="Reference"
-                            className="w-full h-full object-cover"
-                          />
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-1 right-1 h-6 w-6"
-                            onClick={() => setReferenceImage(null)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      )}
+              <TabsContent value="ai" className="flex-1 m-0 overflow-auto p-6">
+                <div className="max-w-xl">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium flex items-center gap-2 mb-2">
+                        <Sparkles className="h-4 w-4 text-purple-500" />
+                        Génération IA
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Uploadez une image de mise en page et l'IA génèrera un thème correspondant.
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
 
-                {/* HTML Editor Button */}
-                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-medium flex items-center gap-2 mb-2">
-                          <Code2 className="h-4 w-4 text-blue-500" />
-                          Design HTML personnalisé
-                        </h4>
-                        <p className="text-sm text-muted-foreground">
-                          Créez un design 100% personnalisé avec HTML/CSS. Uploadez une image de devis et l'IA génèrera le template exact.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        {customHtml && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Check className="h-3 w-3 mr-1" />
-                            Template défini
-                          </Badge>
+                    <div className="flex items-center gap-3">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Uploader une image
+                      </Button>
+                      <Button
+                        onClick={handleGenerateFromImage}
+                        disabled={!referenceImage || isGenerating}
+                      >
+                        {isGenerating ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Wand2 className="h-4 w-4 mr-2" />
                         )}
-                        <Button onClick={handleOpenHtmlEditor}>
-                          <Code2 className="h-4 w-4 mr-2" />
-                          Ouvrir l'éditeur
+                        Générer le thème
+                      </Button>
+                    </div>
+
+                    {referenceImage && (
+                      <div className="relative w-64 h-64 rounded-lg overflow-hidden border bg-white">
+                        <img
+                          src={referenceImage}
+                          alt="Reference"
+                          className="w-full h-full object-contain"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 h-7 w-7"
+                          onClick={() => setReferenceImage(null)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Tabs defaultValue="colors" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="colors" className="text-xs">
-                      <Palette className="h-4 w-4 mr-1" />
-                      Couleurs
-                    </TabsTrigger>
-                    <TabsTrigger value="typography" className="text-xs">
-                      <Type className="h-4 w-4 mr-1" />
-                      Typo
-                    </TabsTrigger>
-                    <TabsTrigger value="layout" className="text-xs">
-                      <Layout className="h-4 w-4 mr-1" />
-                      Layout
-                    </TabsTrigger>
-                    <TabsTrigger value="table" className="text-xs">
-                      <Table className="h-4 w-4 mr-1" />
-                      Tableau
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="colors" className="space-y-4 mt-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Couleur principale</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="color"
-                            value={editingTheme?.primary_color || '#0a0a0a'}
-                            onChange={(e) => updateField('primary_color', e.target.value)}
-                            className="w-12 h-10 p-1 cursor-pointer"
-                          />
-                          <Input
-                            value={editingTheme?.primary_color || ''}
-                            onChange={(e) => updateField('primary_color', e.target.value)}
-                            className="flex-1 font-mono"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Couleur secondaire</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="color"
-                            value={editingTheme?.secondary_color || '#737373'}
-                            onChange={(e) => updateField('secondary_color', e.target.value)}
-                            className="w-12 h-10 p-1 cursor-pointer"
-                          />
-                          <Input
-                            value={editingTheme?.secondary_color || ''}
-                            onChange={(e) => updateField('secondary_color', e.target.value)}
-                            className="flex-1 font-mono"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Couleur d'accent</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="color"
-                            value={editingTheme?.accent_color || '#7c3aed'}
-                            onChange={(e) => updateField('accent_color', e.target.value)}
-                            className="w-12 h-10 p-1 cursor-pointer"
-                          />
-                          <Input
-                            value={editingTheme?.accent_color || ''}
-                            onChange={(e) => updateField('accent_color', e.target.value)}
-                            className="flex-1 font-mono"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Couleur de fond</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="color"
-                            value={editingTheme?.background_color || '#ffffff'}
-                            onChange={(e) => updateField('background_color', e.target.value)}
-                            className="w-12 h-10 p-1 cursor-pointer"
-                          />
-                          <Input
-                            value={editingTheme?.background_color || ''}
-                            onChange={(e) => updateField('background_color', e.target.value)}
-                            className="flex-1 font-mono"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="typography" className="space-y-4 mt-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Police titres</Label>
-                        <Select
-                          value={editingTheme?.heading_font || 'Inter'}
-                          onValueChange={(v) => updateField('heading_font', v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FONT_OPTIONS.map(font => (
-                              <SelectItem key={font} value={font}>{font}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Police texte</Label>
-                        <Select
-                          value={editingTheme?.body_font || 'Inter'}
-                          onValueChange={(v) => updateField('body_font', v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {FONT_OPTIONS.map(font => (
-                              <SelectItem key={font} value={font}>{font}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Taille titres</Label>
-                        <Input
-                          value={editingTheme?.heading_size || '24px'}
-                          onChange={(e) => updateField('heading_size', e.target.value)}
-                          placeholder="24px"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Taille texte</Label>
-                        <Input
-                          value={editingTheme?.body_size || '11px'}
-                          onChange={(e) => updateField('body_size', e.target.value)}
-                          placeholder="11px"
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="layout" className="space-y-4 mt-4">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Style d'en-tête</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {HEADER_STYLES.map(style => (
-                            <div
-                              key={style.value}
-                              className={cn(
-                                "p-3 rounded-lg border-2 cursor-pointer transition-all",
-                                editingTheme?.header_style === style.value
-                                  ? "border-primary bg-primary/5"
-                                  : "border-border hover:border-muted-foreground/50"
-                              )}
-                              onClick={() => updateField('header_style', style.value as any)}
-                            >
-                              <p className="font-medium text-sm">{style.label}</p>
-                              <p className="text-xs text-muted-foreground">{style.description}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Position logo</Label>
-                          <Select
-                            value={editingTheme?.logo_position || 'left'}
-                            onValueChange={(v) => updateField('logo_position', v as any)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="left">Gauche</SelectItem>
-                              <SelectItem value="center">Centre</SelectItem>
-                              <SelectItem value="right">Droite</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Taille logo</Label>
-                          <Select
-                            value={editingTheme?.logo_size || 'medium'}
-                            onValueChange={(v) => updateField('logo_size', v as any)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="small">Petit</SelectItem>
-                              <SelectItem value="medium">Moyen</SelectItem>
-                              <SelectItem value="large">Grand</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Style pied de page</Label>
-                          <Select
-                            value={editingTheme?.footer_style || 'simple'}
-                            onValueChange={(v) => updateField('footer_style', v as any)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="simple">Simple</SelectItem>
-                              <SelectItem value="detailed">Détaillé</SelectItem>
-                              <SelectItem value="minimal">Minimal</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label>Afficher le logo</Label>
-                          <p className="text-xs text-muted-foreground">Afficher le logo de l'agence</p>
-                        </div>
-                        <Switch
-                          checked={editingTheme?.show_logo ?? true}
-                          onCheckedChange={(v) => updateField('show_logo', v)}
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label>Zone de signature</Label>
-                          <p className="text-xs text-muted-foreground">Afficher la zone de signature client</p>
-                        </div>
-                        <Switch
-                          checked={editingTheme?.show_signature_area ?? true}
-                          onCheckedChange={(v) => updateField('show_signature_area', v)}
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="table" className="space-y-4 mt-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Fond en-tête tableau</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="color"
-                            value={editingTheme?.table_header_bg || '#f5f5f5'}
-                            onChange={(e) => updateField('table_header_bg', e.target.value)}
-                            className="w-12 h-10 p-1 cursor-pointer"
-                          />
-                          <Input
-                            value={editingTheme?.table_header_bg || ''}
-                            onChange={(e) => updateField('table_header_bg', e.target.value)}
-                            className="flex-1 font-mono"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Style bordures</Label>
-                        <Select
-                          value={editingTheme?.table_border_style || 'solid'}
-                          onValueChange={(v) => updateField('table_border_style', v as any)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="solid">Trait plein</SelectItem>
-                            <SelectItem value="dashed">Pointillés</SelectItem>
-                            <SelectItem value="none">Aucune</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Lignes alternées</Label>
-                        <p className="text-xs text-muted-foreground">Alterner la couleur des lignes du tableau</p>
-                      </div>
-                      <Switch
-                        checked={editingTheme?.table_stripe_rows ?? false}
-                        onCheckedChange={(v) => updateField('table_stripe_rows', v)}
-                      />
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </ScrollArea>
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between pt-4">
-            <div className="flex items-center gap-2">
-              {isEditing && (
-                <>
-                  <Button
-                    variant="outline"
-                    onClick={() => setDefaultTheme.mutateAsync(editingTheme.id!)}
-                    disabled={editingTheme.is_default}
-                  >
-                    <Star className="h-4 w-4 mr-2" />
-                    Définir par défaut
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      setDialogOpen(false);
-                      setDeleteConfirmId(editingTheme.id!);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Supprimer
-                  </Button>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                Annuler
-              </Button>
-              <Button onClick={handleSave} disabled={createTheme.isPending || updateTheme.isPending}>
-                {(createTheme.isPending || updateTheme.isPending) && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                <Check className="h-4 w-4 mr-2" />
-                {isEditing ? 'Enregistrer' : 'Créer'}
-              </Button>
-            </div>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </DialogContent>
       </Dialog>
@@ -831,21 +487,12 @@ export function QuoteThemesSettings() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction onClick={handleDelete}>
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* HTML Editor Dialog */}
-      <QuoteHtmlEditor
-        open={htmlEditorOpen}
-        onOpenChange={setHtmlEditorOpen}
-        htmlTemplate={customHtml}
-        onHtmlChange={setCustomHtml}
-        onSave={handleSaveHtmlTemplate}
-      />
     </div>
   );
 }
