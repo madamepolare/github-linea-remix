@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
-import { useQuoteThemes, QuoteTheme } from '@/hooks/useQuoteThemes';
+import { useQuoteThemes } from '@/hooks/useQuoteThemes';
 import { QuoteDocument, QuoteLine } from '@/types/quoteTypes';
 import { generateQuoteHtml } from '@/lib/generateHtmlPDF';
 import { AgencyInfo } from '@/lib/quoteTemplateVariables';
@@ -12,10 +12,9 @@ interface QuotePreviewPanelProps {
   selectedThemeId?: string | null;
 }
 
-// A4 dimensions in mm
-const A4_WIDTH_MM = 210;
-const A4_HEIGHT_MM = 297;
-const A4_RATIO = A4_HEIGHT_MM / A4_WIDTH_MM;
+// A4 dimensions
+const A4_WIDTH_PX = 794; // 210mm at 96dpi
+const A4_HEIGHT_PX = 1123; // 297mm at 96dpi
 
 /**
  * QuotePreviewPanel - 100% HTML Rendering
@@ -29,7 +28,7 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
   const { themes } = useQuoteThemes();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   
   // Get selected theme or default
   const currentTheme = selectedThemeId 
@@ -71,55 +70,80 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
     }
   }, [htmlPreview]);
 
-  // Measure container width for proper scaling
-  const updateContainerWidth = useCallback(() => {
+  // Measure container size for proper scaling
+  const updateContainerSize = useCallback(() => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      setContainerWidth(rect.width);
+      setContainerSize({ width: rect.width, height: rect.height });
     }
   }, []);
 
   useEffect(() => {
-    updateContainerWidth();
-    window.addEventListener('resize', updateContainerWidth);
-    return () => window.removeEventListener('resize', updateContainerWidth);
-  }, [updateContainerWidth]);
+    updateContainerSize();
+    
+    // Use ResizeObserver for more accurate updates
+    const observer = new ResizeObserver(updateContainerSize);
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+    
+    return () => observer.disconnect();
+  }, [updateContainerSize]);
 
-  // Calculate scale based on container width and zoom
-  // A4 width is 210mm ≈ 794px at 96dpi
-  const A4_WIDTH_PX = 794;
-  const padding = 48; // 24px padding on each side
-  const availableWidth = containerWidth - padding;
-  const baseScale = availableWidth > 0 ? availableWidth / A4_WIDTH_PX : 0.6;
+  // Calculate scale to fit A4 within container with padding
+  const padding = 32; // 16px on each side
+  const availableWidth = containerSize.width - padding * 2;
+  const availableHeight = containerSize.height - padding * 2;
+  
+  // Calculate base scale to fit within container (fit both width and height)
+  let baseScale = 0.5;
+  if (availableWidth > 0 && availableHeight > 0) {
+    const scaleToFitWidth = availableWidth / A4_WIDTH_PX;
+    const scaleToFitHeight = availableHeight / A4_HEIGHT_PX;
+    baseScale = Math.min(scaleToFitWidth, scaleToFitHeight);
+  }
+  
+  // Apply user zoom on top of base scale
   const scale = baseScale * (zoom / 100);
   
-  // Calculate the height needed for the scaled content
-  const scaledHeight = A4_WIDTH_PX * A4_RATIO * scale;
+  // Calculate scaled dimensions for the wrapper
+  const scaledWidth = A4_WIDTH_PX * scale;
+  const scaledHeight = A4_HEIGHT_PX * scale;
 
   return (
     <div 
       ref={containerRef}
-      className="w-full h-full flex justify-center items-start p-6 overflow-auto bg-muted/30"
+      className="w-full h-full flex justify-center items-start overflow-auto bg-muted/30"
+      style={{ padding }}
     >
+      {/* Wrapper that takes the scaled dimensions */}
       <div 
-        className="bg-white shadow-xl rounded-sm flex-shrink-0"
+        className="flex-shrink-0"
         style={{ 
-          width: A4_WIDTH_PX,
-          height: A4_WIDTH_PX * A4_RATIO,
-          transform: `scale(${scale})`,
-          transformOrigin: 'top center',
+          width: scaledWidth,
+          height: scaledHeight,
         }}
       >
-        <iframe
-          ref={iframeRef}
-          className="border-0 block"
+        {/* A4 paper that gets scaled */}
+        <div 
+          className="bg-white shadow-xl rounded-sm origin-top-left"
           style={{ 
             width: A4_WIDTH_PX,
-            height: A4_WIDTH_PX * A4_RATIO, 
-            background: 'white',
+            height: A4_HEIGHT_PX,
+            transform: `scale(${scale})`,
           }}
-          title="Aperçu du devis"
-        />
+        >
+          <iframe
+            ref={iframeRef}
+            className="border-0 block w-full h-full"
+            style={{ 
+              width: A4_WIDTH_PX,
+              height: A4_HEIGHT_PX, 
+              background: 'white',
+            }}
+            title="Aperçu du devis"
+          />
+        </div>
       </div>
     </div>
   );
