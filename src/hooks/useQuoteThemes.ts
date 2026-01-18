@@ -41,6 +41,12 @@ export interface QuoteTheme {
   reference_image_url?: string;
   ai_generated_css?: string;
   
+  // Custom HTML template (for full customization)
+  custom_html_template?: string;
+  css_variables?: Record<string, string>;
+  fonts_used?: string[];
+  use_custom_html?: boolean;
+  
   // Meta
   is_default: boolean;
   is_ai_generated: boolean;
