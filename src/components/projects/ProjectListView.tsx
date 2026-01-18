@@ -612,7 +612,7 @@ function ProjectCard({ project, members, financialData, projectTypeSettings, ind
               </div>
 
               {/* Current Phase */}
-              <div className="hidden xl:flex items-center min-w-0 max-w-[140px]">
+              <div className="hidden md:flex items-center min-w-0 max-w-[140px]">
                 {currentPhase ? (
                   <Badge 
                     variant="secondary" 
