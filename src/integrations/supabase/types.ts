@@ -8709,7 +8709,10 @@ export type Database = {
           body_size: string | null
           created_at: string | null
           created_by: string | null
+          css_variables: Json | null
+          custom_html_template: string | null
           description: string | null
+          fonts_used: string[] | null
           footer_style: string | null
           header_bg_color: string | null
           header_style: string | null
@@ -8730,6 +8733,7 @@ export type Database = {
           table_header_bg: string | null
           table_stripe_rows: boolean | null
           updated_at: string | null
+          use_custom_html: boolean | null
           workspace_id: string
         }
         Insert: {
@@ -8740,7 +8744,10 @@ export type Database = {
           body_size?: string | null
           created_at?: string | null
           created_by?: string | null
+          css_variables?: Json | null
+          custom_html_template?: string | null
           description?: string | null
+          fonts_used?: string[] | null
           footer_style?: string | null
           header_bg_color?: string | null
           header_style?: string | null
@@ -8761,6 +8768,7 @@ export type Database = {
           table_header_bg?: string | null
           table_stripe_rows?: boolean | null
           updated_at?: string | null
+          use_custom_html?: boolean | null
           workspace_id: string
         }
         Update: {
@@ -8771,7 +8779,10 @@ export type Database = {
           body_size?: string | null
           created_at?: string | null
           created_by?: string | null
+          css_variables?: Json | null
+          custom_html_template?: string | null
           description?: string | null
+          fonts_used?: string[] | null
           footer_style?: string | null
           header_bg_color?: string | null
           header_style?: string | null
@@ -8792,6 +8803,7 @@ export type Database = {
           table_header_bg?: string | null
           table_stripe_rows?: boolean | null
           updated_at?: string | null
+          use_custom_html?: boolean | null
           workspace_id?: string
         }
         Relationships: [

@@ -55,12 +55,14 @@ import {
   Check,
   Loader2,
   Eye,
+  Code2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useQuoteThemes, QuoteTheme, QuoteThemeInput } from '@/hooks/useQuoteThemes';
 import { supabase } from '@/integrations/supabase/client';
+import { QuoteHtmlEditor } from './quote-themes/QuoteHtmlEditor';
 
 const DEFAULT_THEME: QuoteThemeInput = {
   name: 'Nouveau thème',
@@ -114,6 +116,10 @@ export function QuoteThemesSettings() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [htmlEditorOpen, setHtmlEditorOpen] = useState(false);
+  const [customHtml, setCustomHtml] = useState('');
+  const [cssVariables, setCssVariables] = useState<Record<string, string>>({});
+  const [fontsUsed, setFontsUsed] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isEditing = !!editingTheme?.id;
@@ -121,13 +127,35 @@ export function QuoteThemesSettings() {
   const handleCreateNew = () => {
     setEditingTheme({ ...DEFAULT_THEME });
     setReferenceImage(null);
+    setCustomHtml('');
+    setCssVariables({});
+    setFontsUsed([]);
     setDialogOpen(true);
   };
 
   const handleEdit = (theme: QuoteTheme) => {
     setEditingTheme(theme);
     setReferenceImage(theme.reference_image_url || null);
+    setCustomHtml((theme as any).custom_html_template || '');
+    setCssVariables((theme as any).css_variables || {});
+    setFontsUsed((theme as any).fonts_used || []);
     setDialogOpen(true);
+  };
+
+  const handleOpenHtmlEditor = () => {
+    setHtmlEditorOpen(true);
+  };
+
+  const handleSaveHtmlTemplate = () => {
+    setEditingTheme(prev => prev ? {
+      ...prev,
+      custom_html_template: customHtml,
+      css_variables: cssVariables,
+      fonts_used: fontsUsed,
+      use_custom_html: !!customHtml,
+    } as any : null);
+    setHtmlEditorOpen(false);
+    toast.success('Template HTML enregistré');
   };
 
   const handleSave = async () => {
@@ -424,6 +452,35 @@ export function QuoteThemesSettings() {
                           </Button>
                         </div>
                       )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* HTML Editor Button */}
+                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-medium flex items-center gap-2 mb-2">
+                          <Code2 className="h-4 w-4 text-blue-500" />
+                          Design HTML personnalisé
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          Créez un design 100% personnalisé avec HTML/CSS. Uploadez une image de devis et l'IA génèrera le template exact.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-4">
+                        {customHtml && (
+                          <Badge variant="secondary" className="text-xs">
+                            <Check className="h-3 w-3 mr-1" />
+                            Template défini
+                          </Badge>
+                        )}
+                        <Button onClick={handleOpenHtmlEditor}>
+                          <Code2 className="h-4 w-4 mr-2" />
+                          Ouvrir l'éditeur
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -780,6 +837,20 @@ export function QuoteThemesSettings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* HTML Editor Dialog */}
+      <QuoteHtmlEditor
+        open={htmlEditorOpen}
+        onOpenChange={setHtmlEditorOpen}
+        htmlTemplate={customHtml}
+        onHtmlChange={setCustomHtml}
+        cssVariables={cssVariables}
+        onCssVariablesChange={setCssVariables}
+        fontsUsed={fontsUsed}
+        onFontsChange={setFontsUsed}
+        onSave={handleSaveHtmlTemplate}
+        isSaving={false}
+      />
     </div>
   );
 }
