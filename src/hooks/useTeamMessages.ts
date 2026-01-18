@@ -525,8 +525,7 @@ export function useTeamMessageMutations() {
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["team-channel-members", variables.channelId] });
-      queryClient.invalidateQueries({ queryKey: ["channel-members"] });
+      queryClient.invalidateQueries({ queryKey: ["channel-members", variables.channelId] });
     },
   });
 
