@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { useQuoteThemes, QuoteTheme } from '@/hooks/useQuoteThemes';
 import { QuoteDocument, QuoteLine, LINE_TYPE_LABELS } from '@/types/quoteTypes';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { getQuotePreviewHtml } from '@/lib/generateHtmlPDF';
+import { AgencyInfo } from '@/lib/quoteTemplateVariables';
 
 interface QuotePreviewPanelProps {
   document: Partial<QuoteDocument>;
@@ -106,11 +108,52 @@ function getLogoAlignClass(position: 'left' | 'center' | 'right'): string {
 export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: QuotePreviewPanelProps) {
   const { agencyInfo } = useAgencyInfo();
   const { themes } = useQuoteThemes();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   
   // Get selected theme or default
   const currentTheme = selectedThemeId 
     ? themes.find(t => t.id === selectedThemeId)
     : themes.find(t => t.is_default);
+
+  // Check if theme uses custom HTML
+  const useCustomHtml = currentTheme?.use_custom_html && currentTheme?.custom_html_template;
+
+  // Generate HTML preview for custom template
+  const customHtmlPreview = useMemo(() => {
+    if (!useCustomHtml || !currentTheme) return null;
+    
+    const agencyData: AgencyInfo = {
+      name: agencyInfo?.name,
+      logo_url: agencyInfo?.logo_url,
+      address: agencyInfo?.address,
+      city: agencyInfo?.city,
+      postal_code: agencyInfo?.postal_code,
+      phone: agencyInfo?.phone,
+      email: agencyInfo?.email,
+      website: agencyInfo?.website,
+      siret: agencyInfo?.siret,
+      siren: agencyInfo?.siren,
+      vat_number: agencyInfo?.vat_number,
+      capital_social: agencyInfo?.capital_social,
+      forme_juridique: agencyInfo?.forme_juridique,
+      rcs_city: agencyInfo?.rcs_city,
+      code_naf: agencyInfo?.code_naf,
+    };
+    
+    return getQuotePreviewHtml(document, lines, agencyData, currentTheme);
+  }, [useCustomHtml, currentTheme, document, lines, agencyInfo]);
+
+  // Update iframe content when custom HTML changes
+  useEffect(() => {
+    if (iframeRef.current && customHtmlPreview) {
+      const doc = iframeRef.current.contentDocument;
+      if (doc) {
+        doc.open();
+        doc.write(customHtmlPreview);
+        doc.close();
+      }
+    }
+  }, [customHtmlPreview]);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -163,6 +206,28 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
     return index % 2 === 1 ? `${ts.tableHeaderBg}40` : 'transparent';
   };
 
+  // If using custom HTML template, render iframe
+  if (useCustomHtml) {
+    return (
+      <div 
+        className="bg-white shadow-lg rounded-lg overflow-hidden origin-top w-full"
+        style={{ 
+          transform: `scale(${scale})`,
+          transformOrigin: 'top center',
+          minHeight: '297mm',
+        }}
+      >
+        <iframe
+          ref={iframeRef}
+          className="w-full border-0"
+          style={{ minHeight: '297mm', height: '100%' }}
+          title="Quote Preview"
+        />
+      </div>
+    );
+  }
+
+  // Standard theme-based preview
   return (
     <div 
       className="bg-white shadow-lg rounded-lg overflow-hidden origin-top w-full"
