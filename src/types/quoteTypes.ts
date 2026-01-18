@@ -3,7 +3,7 @@
 import type { ContractType } from '@/hooks/useContractTypes';
 import type { LineCategory, BillingType } from '@/hooks/useQuoteLineTemplates';
 
-export type DocumentType = 'quote' | 'contract';
+export type DocumentType = 'quote';
 export type DocumentStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'signed';
 export type FeeMode = 'fixed' | 'percentage' | 'hourly' | 'mixed';
 
@@ -150,8 +150,7 @@ export interface QuoteDocument {
 }
 
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
-  quote: 'Devis',
-  contract: 'Contrat'
+  quote: 'Devis'
 };
 
 export const DOCUMENT_STATUS_LABELS: Record<DocumentStatus, string> = {

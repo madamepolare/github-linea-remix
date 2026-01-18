@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileDown, Loader2, FileText, FileSignature } from 'lucide-react';
+import { FileDown, Loader2, FileText } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,7 @@ import { type PDFDocumentConfig } from '@/lib/pdfBlockTypes';
 import { type QuoteLine } from '@/types/quoteTypes';
 import { ThemePreviewSelector } from './ThemePreviewSelector';
 
-type PDFTemplate = 'quote' | 'contract';
+type PDFTemplate = 'quote';
 
 interface PDFPreviewDialogProps {
   open: boolean;
@@ -39,14 +39,8 @@ const TEMPLATES: { id: PDFTemplate; label: string; description: string; icon: Re
   {
     id: 'quote',
     label: 'Devis',
-    description: 'Format compact A4, 1 page max',
+    description: 'Format compact A4',
     icon: <FileText className="h-5 w-5" />
-  },
-  {
-    id: 'contract',
-    label: 'Contrat',
-    description: 'Document complet multi-pages',
-    icon: <FileSignature className="h-5 w-5" />
   }
 ];
 

@@ -188,10 +188,9 @@ function renderCoverBlock(
   pdf.setTextColor(100);
   
   const typeLabels: Record<DocumentType, string> = {
-    quote: 'DEVIS',
-    contract: 'CONTRAT DE MAÎTRISE D\'ŒUVRE'
+    quote: 'DEVIS'
   };
-  pdf.text(typeLabels[docType], margin, y);
+  pdf.text(typeLabels[docType] || 'DEVIS', margin, y);
 
   y += 20;
   
@@ -644,6 +643,6 @@ export async function generateContractPDFUnified(
     sort_order: p.sort_order,
   }));
   
-  return generateUnifiedPDF(document, lines, total, agencyInfo, pdfConfig, 'contract');
+  return generateUnifiedPDF(document, lines, total, agencyInfo, pdfConfig, 'quote');
 }
 

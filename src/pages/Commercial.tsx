@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, FileText, FileSignature, Search, LayoutList, Kanban, Calendar, Trophy } from 'lucide-react';
+import { Plus, FileText, Search, LayoutList, Kanban, Calendar, Trophy } from 'lucide-react';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -109,11 +109,7 @@ const Commercial = () => {
   };
 
   const getDocumentIcon = (type: DocumentType) => {
-    switch (type) {
-      case 'quote': return FileText;
-      case 'contract': return FileSignature;
-      default: return FileText;
-    }
+    return FileText;
   };
 
   return (
@@ -155,11 +151,7 @@ const Commercial = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => handleNewDocument('quote')}>
                 <FileText className="h-4 w-4 mr-2" />
-                Devis
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleNewDocument('contract')}>
-                <FileSignature className="h-4 w-4 mr-2" />
-                Contrat
+                Nouveau devis
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
