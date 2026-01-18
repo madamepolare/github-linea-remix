@@ -21,9 +21,11 @@ import {
   LogOut,
   User,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGlobalSearch } from "@/hooks/useGlobalSearch";
+import { LineaAssistantDialog } from "./LineaAssistantDialog";
 
 interface CommandItemType {
   id: string;
@@ -43,10 +45,18 @@ const typeIcons = {
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [lineaOpen, setLineaOpen] = useState(false);
+  const [lineaQuestion, setLineaQuestion] = useState("");
   const navigate = useNavigate();
   const { signOut } = useAuth();
   
   const { data: searchResults, isLoading: isSearching } = useGlobalSearch(search);
+
+  // Check if search looks like a question for Linea
+  const isLineaQuery = search.startsWith("@linea ") || search.startsWith("/ask ") || 
+    (search.length > 10 && (search.includes("?") || search.toLowerCase().startsWith("combien") || 
+     search.toLowerCase().startsWith("quel") || search.toLowerCase().startsWith("quels") ||
+     search.toLowerCase().startsWith("quelle") || search.toLowerCase().startsWith("quelles")));
 
   // Toggle dark mode
   const toggleTheme = useCallback(() => {
@@ -171,99 +181,169 @@ export function CommandPalette() {
   const hasSearchResults = searchResults && searchResults.length > 0;
   const showStaticCommands = search.length < 2;
 
+  const handleOpenLinea = (question?: string) => {
+    setOpen(false);
+    setLineaQuestion(question || "");
+    setTimeout(() => setLineaOpen(true), 100);
+  };
+
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput 
-        placeholder="Rechercher tâches, projets, contacts..." 
-        value={search}
-        onValueChange={setSearch}
-      />
-      <CommandList>
-        <CommandEmpty>
-          {isSearching ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            "Aucun résultat trouvé."
+    <>
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput 
+          placeholder="Rechercher ou demander à Linea (@linea votre question)..." 
+          value={search}
+          onValueChange={setSearch}
+        />
+        <CommandList>
+          <CommandEmpty>
+            {isSearching ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            ) : isLineaQuery ? (
+              <div className="py-6 text-center">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Voulez-vous poser cette question à Linea ?
+                </p>
+                <button
+                  onClick={() => handleOpenLinea(search.replace(/^@linea\s*/i, "").replace(/^\/ask\s*/i, ""))}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-medium hover:from-violet-600 hover:to-purple-700 transition-colors"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Demander à Linea
+                </button>
+              </div>
+            ) : (
+              "Aucun résultat trouvé."
+            )}
+          </CommandEmpty>
+          
+          {/* Linea suggestion when typing a question */}
+          {isLineaQuery && (
+            <CommandGroup heading="Assistant IA">
+              <CommandItem
+                value="ask-linea"
+                onSelect={() => handleOpenLinea(search.replace(/^@linea\s*/i, "").replace(/^\/ask\s*/i, ""))}
+                className="bg-gradient-to-r from-violet-500/10 to-purple-500/10"
+              >
+                <div className="p-1 rounded-md bg-gradient-to-br from-violet-500 to-purple-600 mr-2">
+                  <Sparkles className="h-3.5 w-3.5 text-white" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-medium">Demander à Linea</span>
+                  <span className="text-xs text-muted-foreground">
+                    "{search.replace(/^@linea\s*/i, "").replace(/^\/ask\s*/i, "")}"
+                  </span>
+                </div>
+              </CommandItem>
+            </CommandGroup>
           )}
-        </CommandEmpty>
-        
-        {/* Search Results */}
-        {hasSearchResults && (
-          <>
-            <CommandGroup heading="Résultats">
-              {searchResults.map((result) => {
-                const Icon = typeIcons[result.type];
-                return (
+          
+          {/* Search Results */}
+          {hasSearchResults && (
+            <>
+              <CommandGroup heading="Résultats">
+                {searchResults.map((result) => {
+                  const Icon = typeIcons[result.type];
+                  return (
+                    <CommandItem
+                      key={`${result.type}-${result.id}`}
+                      value={`${result.title} ${result.subtitle || ""}`}
+                      onSelect={() => runCommand(() => navigate(result.url))}
+                    >
+                      <Icon className="mr-2 h-4 w-4 text-muted-foreground" />
+                      <div className="flex flex-col">
+                        <span>{result.title}</span>
+                        {result.subtitle && (
+                          <span className="text-xs text-muted-foreground">{result.subtitle}</span>
+                        )}
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          )}
+          
+          {/* Static Commands (show when no search or search is short) */}
+          {showStaticCommands && (
+            <>
+              {/* Linea shortcut at the top */}
+              <CommandGroup heading="Assistant IA">
+                <CommandItem
+                  value="linea assistant ia question"
+                  onSelect={() => handleOpenLinea()}
+                  className="bg-gradient-to-r from-violet-500/5 to-purple-500/5"
+                >
+                  <div className="p-1 rounded-md bg-gradient-to-br from-violet-500 to-purple-600 mr-2">
+                    <Sparkles className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-medium">Linea Assistant</span>
+                    <span className="text-xs text-muted-foreground">
+                      Posez une question sur vos données
+                    </span>
+                  </div>
+                </CommandItem>
+              </CommandGroup>
+              
+              <CommandSeparator />
+              
+              <CommandGroup heading="Navigation">
+                {navigationCommands.map((command) => (
                   <CommandItem
-                    key={`${result.type}-${result.id}`}
-                    value={`${result.title} ${result.subtitle || ""}`}
-                    onSelect={() => runCommand(() => navigate(result.url))}
+                    key={command.id}
+                    value={`${command.label} ${command.keywords?.join(" ") || ""}`}
+                    onSelect={() => runCommand(command.action)}
                   >
-                    <Icon className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <div className="flex flex-col">
-                      <span>{result.title}</span>
-                      {result.subtitle && (
-                        <span className="text-xs text-muted-foreground">{result.subtitle}</span>
-                      )}
-                    </div>
+                    <command.icon className="mr-2 h-4 w-4" />
+                    <span>{command.label}</span>
                   </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            <CommandSeparator />
-          </>
-        )}
-        
-        {/* Static Commands (show when no search or search is short) */}
-        {showStaticCommands && (
-          <>
-            <CommandGroup heading="Navigation">
-              {navigationCommands.map((command) => (
-                <CommandItem
-                  key={command.id}
-                  value={`${command.label} ${command.keywords?.join(" ") || ""}`}
-                  onSelect={() => runCommand(command.action)}
-                >
-                  <command.icon className="mr-2 h-4 w-4" />
-                  <span>{command.label}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-            
-            <CommandSeparator />
-            
-            <CommandGroup heading="Actions rapides">
-              {actionCommands.map((command) => (
-                <CommandItem
-                  key={command.id}
-                  value={`${command.label} ${command.keywords?.join(" ") || ""}`}
-                  onSelect={() => runCommand(command.action)}
-                >
-                  <command.icon className="mr-2 h-4 w-4" />
-                  <span>{command.label}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-            
-            <CommandSeparator />
-            
-            <CommandGroup heading="Paramètres">
-              {settingsCommands.map((command) => (
-                <CommandItem
-                  key={command.id}
-                  value={`${command.label} ${command.keywords?.join(" ") || ""}`}
-                  onSelect={() => runCommand(command.action)}
-                >
-                  <command.icon className="mr-2 h-4 w-4" />
-                  <span>{command.label}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </>
-        )}
-      </CommandList>
-    </CommandDialog>
+                ))}
+              </CommandGroup>
+              
+              <CommandSeparator />
+              
+              <CommandGroup heading="Actions rapides">
+                {actionCommands.map((command) => (
+                  <CommandItem
+                    key={command.id}
+                    value={`${command.label} ${command.keywords?.join(" ") || ""}`}
+                    onSelect={() => runCommand(command.action)}
+                  >
+                    <command.icon className="mr-2 h-4 w-4" />
+                    <span>{command.label}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              
+              <CommandSeparator />
+              
+              <CommandGroup heading="Paramètres">
+                {settingsCommands.map((command) => (
+                  <CommandItem
+                    key={command.id}
+                    value={`${command.label} ${command.keywords?.join(" ") || ""}`}
+                    onSelect={() => runCommand(command.action)}
+                  >
+                    <command.icon className="mr-2 h-4 w-4" />
+                    <span>{command.label}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </>
+          )}
+        </CommandList>
+      </CommandDialog>
+
+      {/* Linea Assistant Dialog */}
+      <LineaAssistantDialog
+        open={lineaOpen}
+        onOpenChange={setLineaOpen}
+        initialQuestion={lineaQuestion}
+      />
+    </>
   );
 }
