@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { useQuoteThemes, QuoteTheme } from '@/hooks/useQuoteThemes';
 import { QuoteDocument, QuoteLine } from '@/types/quoteTypes';
@@ -12,6 +12,11 @@ interface QuotePreviewPanelProps {
   selectedThemeId?: string | null;
 }
 
+// A4 dimensions in mm
+const A4_WIDTH_MM = 210;
+const A4_HEIGHT_MM = 297;
+const A4_RATIO = A4_HEIGHT_MM / A4_WIDTH_MM;
+
 /**
  * QuotePreviewPanel - 100% HTML Rendering
  * 
@@ -23,6 +28,8 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
   const { agencyInfo } = useAgencyInfo();
   const { themes } = useQuoteThemes();
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
   
   // Get selected theme or default
   const currentTheme = selectedThemeId 
@@ -64,31 +71,56 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
     }
   }, [htmlPreview]);
 
-  const scale = zoom / 100;
+  // Measure container width for proper scaling
+  const updateContainerWidth = useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setContainerWidth(rect.width);
+    }
+  }, []);
+
+  useEffect(() => {
+    updateContainerWidth();
+    window.addEventListener('resize', updateContainerWidth);
+    return () => window.removeEventListener('resize', updateContainerWidth);
+  }, [updateContainerWidth]);
+
+  // Calculate scale based on container width and zoom
+  // A4 width is 210mm ≈ 794px at 96dpi
+  const A4_WIDTH_PX = 794;
+  const padding = 48; // 24px padding on each side
+  const availableWidth = containerWidth - padding;
+  const baseScale = availableWidth > 0 ? availableWidth / A4_WIDTH_PX : 0.6;
+  const scale = baseScale * (zoom / 100);
   
+  // Calculate the height needed for the scaled content
+  const scaledHeight = A4_WIDTH_PX * A4_RATIO * scale;
+
   return (
     <div 
-      className="bg-white shadow-lg rounded-lg origin-top"
-      style={{ 
-        transform: `scale(${scale})`,
-        transformOrigin: 'top center',
-        width: '210mm',
-        minHeight: '297mm',
-        overflow: 'visible',
-      }}
+      ref={containerRef}
+      className="w-full h-full flex justify-center items-start p-6 overflow-auto bg-muted/30"
     >
-      <iframe
-        ref={iframeRef}
-        className="border-0"
+      <div 
+        className="bg-white shadow-xl rounded-sm flex-shrink-0"
         style={{ 
-          width: '210mm',
-          minHeight: '297mm', 
-          height: '100%',
-          background: 'white',
-          display: 'block',
+          width: A4_WIDTH_PX,
+          height: A4_WIDTH_PX * A4_RATIO,
+          transform: `scale(${scale})`,
+          transformOrigin: 'top center',
         }}
-        title="Aperçu du devis"
-      />
+      >
+        <iframe
+          ref={iframeRef}
+          className="border-0 block"
+          style={{ 
+            width: A4_WIDTH_PX,
+            height: A4_WIDTH_PX * A4_RATIO, 
+            background: 'white',
+          }}
+          title="Aperçu du devis"
+        />
+      </div>
     </div>
   );
 }
