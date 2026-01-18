@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Hash, Lock, MessageCircle, Settings, Users, X } from "lucide-react";
+import { Hash, Lock, MessageCircle, UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TeamChannel, useChannelMessages, useChannelMembers, useTeamMessageMutations } from "@/hooks/useTeamMessages";
@@ -8,6 +8,8 @@ import { MessageInput } from "./MessageInput";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { InviteMembersDialog } from "./InviteMembersDialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ChannelViewProps {
   channel: TeamChannel;
@@ -15,13 +17,15 @@ interface ChannelViewProps {
 }
 
 export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
+  const queryClient = useQueryClient();
   const { data: messages, isLoading } = useChannelMessages(channel.id);
-  const { data: members = [] } = useChannelMembers(channel.id);
+  const { data: members = [], refetch: refetchMembers } = useChannelMembers(channel.id);
   const { createMessage, markChannelAsRead } = useTeamMessageMutations();
   const { data: profiles = [] } = useWorkspaceProfiles();
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [showMembers, setShowMembers] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
 
   const isDM = channel.channel_type === "direct";
   const dmMember = channel.dm_member;
@@ -157,6 +161,22 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
               {isDM ? "Participants" : `Membres de #${channel.name}`}
             </SheetTitle>
           </SheetHeader>
+          
+          {/* Add members button - only for non-DM channels */}
+          {!isDM && (
+            <Button
+              variant="outline"
+              className="w-full mt-4"
+              onClick={() => {
+                setShowMembers(false);
+                setShowInvite(true);
+              }}
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Inviter des membres
+            </Button>
+          )}
+          
           <div className="mt-4 space-y-2">
             {memberProfiles.map((member) => (
               <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
@@ -184,6 +204,19 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Invite Members Dialog */}
+      <InviteMembersDialog
+        open={showInvite}
+        onOpenChange={setShowInvite}
+        channelId={channel.id}
+        channelName={channel.name}
+        existingMemberIds={members.map(m => m.user_id)}
+        onMembersAdded={() => {
+          refetchMembers();
+          queryClient.invalidateQueries({ queryKey: ["team-channel-members", channel.id] });
+        }}
+      />
     </div>
   );
 }

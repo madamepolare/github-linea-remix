@@ -566,6 +566,25 @@ export function MentionInput({
   );
 }
 
+// Helper to get URL for entity type
+function getEntityUrl(entityType: string, entityId: string): string | null {
+  switch (entityType) {
+    case "project":
+      return `/projects/${entityId}`;
+    case "quote":
+      return `/commercial/quotes/${entityId}`;
+    case "task":
+      return `/tasks/${entityId}`;
+    case "deliverable":
+      // Deliverables are shown within a project context
+      return null;
+    case "event":
+      return `/calendar?event=${entityId}`;
+    default:
+      return null;
+  }
+}
+
 // Helper to render content with styled mentions and entity references
 export function renderContentWithMentions(content: string, profiles: WorkspaceProfile[]): React.ReactNode {
   const parts: React.ReactNode[] = [];
@@ -613,17 +632,39 @@ export function renderContentWithMentions(content: string, profiles: WorkspacePr
       };
 
       const Icon = getIcon();
+      const entityUrl = getEntityUrl(entityType, entityId);
 
-      parts.push(
-        <span
-          key={`entity-${match.index}`}
-          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground font-medium text-sm cursor-pointer hover:bg-secondary/80"
-          title={`${entityType}: ${entityName}`}
-        >
-          <Icon className="h-3 w-3" />
-          {entityName}
-        </span>
-      );
+      if (entityUrl) {
+        parts.push(
+          <a
+            key={`entity-${match.index}`}
+            href={entityUrl}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // Use window navigation to avoid needing useNavigate hook
+              window.history.pushState({}, '', entityUrl);
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground font-medium text-sm cursor-pointer hover:bg-secondary/80 hover:underline transition-colors"
+            title={`Ouvrir ${entityType}: ${entityName}`}
+          >
+            <Icon className="h-3 w-3" />
+            {entityName}
+          </a>
+        );
+      } else {
+        parts.push(
+          <span
+            key={`entity-${match.index}`}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground font-medium text-sm"
+            title={`${entityType}: ${entityName}`}
+          >
+            <Icon className="h-3 w-3" />
+            {entityName}
+          </span>
+        );
+      }
     }
 
     lastIndex = match.index + match[0].length;
