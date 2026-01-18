@@ -56,6 +56,7 @@ import { QuoteInvoicingTab } from '@/components/commercial/quote-builder/QuoteIn
 import { QuoteConditionsTab } from '@/components/commercial/quote-builder/QuoteConditionsTab';
 import { QuotePreviewPanel } from '@/components/commercial/quote-builder/QuotePreviewPanel';
 import { ContractPreviewPanel } from '@/components/commercial/quote-builder/ContractPreviewPanel';
+import { ThemePreviewSelector } from '@/components/commercial/ThemePreviewSelector';
 import { isArchitectureContractType, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
 import { getDefaultConditionsForType, serializeConditions } from '@/lib/contractConditionsUnified';
@@ -178,6 +179,7 @@ export default function QuoteBuilder() {
   const [showConvertToSubProjectDialog, setShowConvertToSubProjectDialog] = useState(false);
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
+  const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   
   const [document, setDocument] = useState<Partial<QuoteDocument>>({
     document_type: (documentType === 'quote' || documentType === 'contract') ? documentType : 'contract',
@@ -969,24 +971,34 @@ export default function QuoteBuilder() {
           <div className="hidden lg:flex w-[45%] flex-col bg-muted/20 border-l">
             <div className="flex items-center justify-between px-4 py-2.5 border-b bg-card shrink-0">
               <span className="text-sm font-medium text-muted-foreground">Aperçu</span>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => setZoom(Math.max(50, zoom - 10))}
-                >
-                  <ZoomOut className="h-3.5 w-3.5" />
-                </Button>
-                <span className="text-xs text-muted-foreground w-10 text-center tabular-nums">{zoom}%</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => setZoom(Math.min(150, zoom + 10))}
-                >
-                  <ZoomIn className="h-3.5 w-3.5" />
-                </Button>
+              <div className="flex items-center gap-2">
+                {/* Theme Selector */}
+                <ThemePreviewSelector
+                  selectedThemeId={selectedThemeId}
+                  onThemeChange={setSelectedThemeId}
+                  compact
+                />
+                <Separator orientation="vertical" className="h-5" />
+                {/* Zoom Controls */}
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setZoom(Math.max(50, zoom - 10))}
+                  >
+                    <ZoomOut className="h-3.5 w-3.5" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground w-10 text-center tabular-nums">{zoom}%</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setZoom(Math.min(150, zoom + 10))}
+                  >
+                    <ZoomIn className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             </div>
             <div className="flex-1 overflow-auto p-4 flex justify-center">
@@ -998,7 +1010,12 @@ export default function QuoteBuilder() {
                   contractTypeCode={currentContractType?.code || null}
                 />
               ) : (
-                <QuotePreviewPanel document={document} lines={lines} zoom={zoom} />
+                <QuotePreviewPanel 
+                  document={document} 
+                  lines={lines} 
+                  zoom={zoom}
+                  selectedThemeId={selectedThemeId}
+                />
               )}
             </div>
           </div>
