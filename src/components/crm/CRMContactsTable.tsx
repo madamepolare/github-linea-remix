@@ -63,6 +63,7 @@ import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { AutoCategorizeHelper } from "./AutoCategorizeHelper";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
 import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
+import { CRMBulkEmailDialog } from "./CRMBulkEmailDialog";
 import { PipelineBadges } from "./PipelineBadges";
 import { ContactMobileCard } from "./shared/CRMMobileCards";
 import { cn } from "@/lib/utils";
@@ -91,6 +92,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [pageSize, setPageSize] = useState<number>(50);
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
 
   const effectiveSearch = externalSearch || searchQuery;
 
@@ -642,7 +644,17 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
         selectedCount={selectedIds.size}
         onClearSelection={() => setSelectedIds(new Set())}
         onDelete={handleBulkDelete}
+        onSendEmail={() => setBulkEmailOpen(true)}
         entityType="contacts"
+      />
+
+      {/* Bulk email dialog */}
+      <CRMBulkEmailDialog
+        open={bulkEmailOpen}
+        onOpenChange={setBulkEmailOpen}
+        contacts={contacts.filter(c => selectedIds.has(c.id))}
+        entityType="contacts"
+        onComplete={() => setSelectedIds(new Set())}
       />
 
       {/* Detail sheet */}
