@@ -977,7 +977,7 @@ export default function QuoteBuilder() {
 
         {/* Preview Panel - Hidden on mobile */}
         {showPreview && (
-          <div className="hidden lg:flex w-[45%] flex-col bg-muted/20 border-l">
+          <div className="hidden lg:flex w-[55%] flex-col bg-muted/20 border-l">
             <div className="flex items-center justify-between px-4 py-2.5 border-b bg-card shrink-0">
               <span className="text-sm font-medium text-muted-foreground">Aperçu</span>
               <div className="flex items-center gap-2">
