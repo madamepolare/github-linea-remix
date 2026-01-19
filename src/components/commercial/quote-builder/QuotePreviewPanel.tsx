@@ -12,8 +12,11 @@ interface QuotePreviewPanelProps {
   selectedThemeId?: string | null;
 }
 
-// A4 aspect ratio (297/210 = 1.414)
-const A4_ASPECT_RATIO = 297 / 210;
+// A4 dimensions (210×297mm @ 96dpi)
+// Keep the internal "paper" size fixed and scale it with CSS transform,
+// otherwise the iframe will show its own scrollbars/cropping.
+const A4_WIDTH_PX = 794;
+const A4_HEIGHT_PX = 1123;
 
 /**
  * QuotePreviewPanel - 100% HTML Rendering
@@ -88,45 +91,49 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
     return () => observer.disconnect();
   }, [updateContainerWidth]);
 
-  // Calculate dimensions to fill the container width
+  // Calculate scale to fit the preview column width (no horizontal scroll at 100%)
   const padding = 24;
-  const availableWidth = containerWidth - padding * 2;
-  
-  // The preview width fills the available space
-  const previewWidth = Math.max(availableWidth, 300);
-  // Height follows A4 aspect ratio
-  const previewHeight = previewWidth * A4_ASPECT_RATIO;
-  
-  // Apply zoom
+  const availableWidth = Math.max(0, containerWidth - padding * 2);
+
+  // Fit-to-width scale, then apply user zoom on top
+  const fitScale = availableWidth > 0 ? availableWidth / A4_WIDTH_PX : 0.5;
   const zoomFactor = zoom / 100;
-  const displayWidth = previewWidth * zoomFactor;
-  const displayHeight = previewHeight * zoomFactor;
+  const scale = Math.max(0.1, fitScale * zoomFactor);
+
+  // Wrapper uses the scaled size so outer scroll is handled by our container (not the iframe)
+  const scaledWidth = Math.floor(A4_WIDTH_PX * scale);
+  const scaledHeight = Math.floor(A4_HEIGHT_PX * scale);
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="w-full h-full flex flex-col items-center overflow-y-auto overflow-x-hidden bg-muted/30"
       style={{ padding }}
     >
-      {/* A4 paper container */}
-      <div 
-        className="bg-white shadow-xl rounded-sm flex-shrink-0"
-        style={{ 
-          width: displayWidth,
-          height: displayHeight,
-        }}
-      >
-        <iframe
-          ref={iframeRef}
-          className="border-0 block"
-          style={{ 
-            width: '100%',
-            height: '100%',
-            background: 'white',
-            transformOrigin: 'top left',
+      {/* Wrapper with scaled dimensions */}
+      <div className="flex-shrink-0" style={{ width: scaledWidth, height: scaledHeight }}>
+        {/* Fixed-size A4 paper scaled down/up */}
+        <div
+          className="bg-white shadow-xl rounded-sm origin-top-left overflow-hidden"
+          style={{
+            width: A4_WIDTH_PX,
+            height: A4_HEIGHT_PX,
+            transform: `scale(${scale})`,
           }}
-          title="Aperçu du devis"
-        />
+        >
+          <iframe
+            ref={iframeRef}
+            title="Aperçu du devis"
+            scrolling="no"
+            className="border-0 block"
+            style={{
+              width: A4_WIDTH_PX,
+              height: A4_HEIGHT_PX,
+              background: 'white',
+              overflow: 'hidden',
+            }}
+          />
+        </div>
       </div>
     </div>
   );
