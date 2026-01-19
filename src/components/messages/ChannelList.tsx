@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Hash, Lock, MessageCircle, Plus, CheckSquare, FolderKanban, FileText, Building2, User, Target, ChevronDown, ChevronRight } from "lucide-react";
+import { motion } from "framer-motion";
+import { Hash, Lock, MessageCircle, Plus, CheckSquare, FolderKanban, FileText, Building2, User, Target, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { TeamChannel, useUnreadCounts } from "@/hooks/useTeamMessages";
@@ -11,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { THIN_STROKE } from "@/components/ui/icon";
 
 interface ChannelListProps {
   channels: TeamChannel[];
@@ -29,6 +32,7 @@ export function ChannelList({
 }: ChannelListProps) {
   const { data: unreadCounts } = useUnreadCounts();
   const { data: entityConversations } = useEntityConversations();
+  const [searchQuery, setSearchQuery] = useState("");
   
   const publicChannels = channels.filter(c => c.channel_type === "public");
   const privateChannels = channels.filter(c => c.channel_type === "private");
@@ -65,6 +69,22 @@ export function ChannelList({
     setExpandedEntityTypes(prev => ({ ...prev, [type]: !prev[type] }));
   };
 
+  // Filter channels by search
+  const filterChannels = (channelList: TeamChannel[]) => {
+    if (!searchQuery.trim()) return channelList;
+    const query = searchQuery.toLowerCase();
+    return channelList.filter(c => {
+      const name = c.channel_type === "direct" 
+        ? c.dm_member?.full_name || "" 
+        : c.name;
+      return name.toLowerCase().includes(query);
+    });
+  };
+
+  const filteredPublic = filterChannels(publicChannels);
+  const filteredPrivate = filterChannels(privateChannels);
+  const filteredDMs = filterChannels(directMessages);
+
   // Group entity conversations by type
   const groupedEntityConversations = entityConversations?.reduce((acc, conv) => {
     if (!acc[conv.entity_type]) {
@@ -84,29 +104,35 @@ export function ChannelList({
     const Icon = entityIcons[conv.entity_type] || FileText;
 
     return (
-      <button
+      <motion.button
         key={conv.id}
         onClick={() => onSelectChannel(conv.id)}
         className={cn(
-          "w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors text-left",
+          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all text-left touch-manipulation",
           isActive
             ? "bg-primary/10 text-primary font-medium"
-            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            : "text-muted-foreground hover:bg-muted/50 active:bg-muted hover:text-foreground"
         )}
+        whileTap={{ scale: 0.98 }}
       >
-        <Icon className="h-4 w-4 flex-shrink-0" />
+        <div className={cn(
+          "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+          isActive ? "bg-primary/20" : "bg-muted"
+        )}>
+          <Icon className="h-4 w-4" />
+        </div>
         <div className="flex-1 min-w-0">
-          <span className="truncate block">{conv.entity_name}</span>
+          <span className="truncate block font-medium">{conv.entity_name}</span>
           <span className="text-xs text-muted-foreground truncate block">
             {format(new Date(conv.last_message_at), "d MMM", { locale: fr })}
           </span>
         </div>
         {conv.message_count > 0 && (
-          <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs">
+          <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs shrink-0">
             {conv.message_count}
           </Badge>
         )}
-      </button>
+      </motion.button>
     );
   };
 
@@ -117,97 +143,113 @@ export function ChannelList({
     const dmMember = channel.dm_member;
 
     return (
-      <button
+      <motion.button
         key={channel.id}
         onClick={() => onSelectChannel(channel.id)}
         className={cn(
-          "w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors text-left",
+          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all text-left touch-manipulation",
           isActive
             ? "bg-primary/10 text-primary font-medium"
-            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+            : "text-muted-foreground hover:bg-muted/50 active:bg-muted hover:text-foreground"
         )}
+        whileTap={{ scale: 0.98 }}
       >
         {isDM ? (
-          <Avatar className="h-5 w-5">
+          <Avatar className="h-8 w-8 shrink-0">
             <AvatarImage src={dmMember?.avatar_url || undefined} />
-            <AvatarFallback className="text-[10px]">
+            <AvatarFallback className="text-xs font-medium">
               {getInitials(dmMember?.full_name)}
             </AvatarFallback>
           </Avatar>
-        ) : channel.channel_type === "private" ? (
-          <Lock className="h-4 w-4 flex-shrink-0" />
         ) : (
-          <Hash className="h-4 w-4 flex-shrink-0" />
+          <div className={cn(
+            "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+            isActive ? "bg-primary/20" : "bg-muted"
+          )}>
+            {channel.channel_type === "private" ? (
+              <Lock className="h-4 w-4" />
+            ) : (
+              <Hash className="h-4 w-4" />
+            )}
+          </div>
         )}
-        <span className="truncate flex-1">
+        <span className="truncate flex-1 font-medium">
           {isDM ? (dmMember?.full_name || "Utilisateur") : channel.name}
         </span>
         {unread > 0 && (
-          <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs">
+          <Badge className="h-5 min-w-5 px-1.5 text-xs bg-primary text-primary-foreground shrink-0">
             {unread}
           </Badge>
         )}
-      </button>
+      </motion.button>
     );
   };
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="p-4 border-b">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Messages</h2>
-          <Button variant="ghost" size="icon-sm" onClick={onCreateChannel}>
-            <Plus className="h-4 w-4" />
-          </Button>
+      {/* Search - Desktop only, mobile has it in header */}
+      <div className="p-3 hidden md:block">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" strokeWidth={THIN_STROKE} />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Rechercher..."
+            className="pl-9 h-9 bg-muted/50 border-0"
+          />
         </div>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-4">
           {/* Public Channels */}
-          {publicChannels.length > 0 && (
+          {filteredPublic.length > 0 && (
             <div>
-              <div className="flex items-center justify-between px-2 mb-1">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <div className="flex items-center justify-between px-3 mb-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Canaux
                 </span>
               </div>
               <div className="space-y-0.5">
-                {publicChannels.map(renderChannelItem)}
+                {filteredPublic.map(renderChannelItem)}
               </div>
             </div>
           )}
 
           {/* Private Channels */}
-          {privateChannels.length > 0 && (
+          {filteredPrivate.length > 0 && (
             <div>
-              <div className="flex items-center justify-between px-2 mb-1">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <div className="flex items-center justify-between px-3 mb-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Canaux privés
                 </span>
               </div>
               <div className="space-y-0.5">
-                {privateChannels.map(renderChannelItem)}
+                {filteredPrivate.map(renderChannelItem)}
               </div>
             </div>
           )}
 
           {/* Direct Messages */}
           <div>
-            <div className="flex items-center justify-between px-2 mb-1">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="flex items-center justify-between px-3 mb-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Messages directs
               </span>
-              <Button variant="ghost" size="icon-xs" onClick={onNewDirectMessage}>
-                <Plus className="h-3 w-3" />
+              <Button 
+                variant="ghost" 
+                size="icon-xs" 
+                onClick={onNewDirectMessage}
+                className="h-6 w-6"
+              >
+                <Plus className="h-3.5 w-3.5" />
               </Button>
             </div>
             <div className="space-y-0.5">
-              {directMessages.length > 0 ? (
-                directMessages.map(renderChannelItem)
+              {filteredDMs.length > 0 ? (
+                filteredDMs.map(renderChannelItem)
               ) : (
-                <p className="text-xs text-muted-foreground px-3 py-2">
+                <p className="text-xs text-muted-foreground px-3 py-4 text-center">
                   Aucune conversation
                 </p>
               )}
@@ -217,8 +259,8 @@ export function ChannelList({
           {/* Entity Conversations by Type */}
           {Object.keys(groupedEntityConversations).length > 0 && (
             <div className="space-y-2">
-              <div className="px-2">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <div className="px-3">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Fils de discussion
                 </span>
               </div>
@@ -229,17 +271,17 @@ export function ChannelList({
                 return (
                   <Collapsible key={type} open={isExpanded} onOpenChange={() => toggleEntityType(type)}>
                     <CollapsibleTrigger asChild>
-                      <button className="w-full flex items-center gap-2 px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-                        {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                      <button className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted/50">
+                        {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                         <Icon className="h-3.5 w-3.5" />
                         <span>{entityLabels[type]}</span>
-                        <Badge variant="outline" className="h-4 min-w-4 px-1 text-[10px] ml-auto">
+                        <Badge variant="outline" className="h-5 min-w-5 px-1.5 text-[10px] ml-auto">
                           {conversations.length}
                         </Badge>
                       </button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="space-y-0.5 mt-0.5">
+                      <div className="space-y-0.5 mt-1">
                         {conversations.map(renderEntityConversation)}
                       </div>
                     </CollapsibleContent>

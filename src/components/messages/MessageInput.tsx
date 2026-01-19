@@ -255,7 +255,7 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
     >
       {/* Drop overlay */}
       {isDragging && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-lg">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary/10 border-2 border-dashed border-primary rounded-xl">
           <div className="text-center">
             <Paperclip className="h-8 w-8 mx-auto mb-2 text-primary" />
             <p className="text-sm font-medium text-primary">Déposez vos fichiers ici</p>
@@ -265,14 +265,14 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
 
       {/* Reply indicator */}
       {replyingTo && (
-        <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-muted/50 rounded-lg border-l-2 border-primary">
+        <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-muted/50 rounded-xl border-l-2 border-primary">
           <Reply className="h-4 w-4 text-primary shrink-0" />
           <div className="flex-1 min-w-0">
             <span className="text-xs text-primary font-medium">
               Réponse à {replyingTo.author?.full_name || "Utilisateur"}
             </span>
             <p className="text-xs text-muted-foreground truncate">
-              {replyingTo.content.slice(0, 100)}{replyingTo.content.length > 100 ? "..." : ""}
+              {replyingTo.content.slice(0, 80)}{replyingTo.content.length > 80 ? "..." : ""}
             </p>
           </div>
           <Button
@@ -288,7 +288,7 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
 
       {/* Attachments preview */}
       {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-2 p-2 bg-muted/30 rounded-lg border">
+        <div className="flex flex-wrap gap-2 mb-2 p-2 bg-muted/30 rounded-xl border">
           {attachments.map((attachment, index) => {
             const Icon = getFileIcon(attachment.type);
             const isImage = attachment.type.startsWith('image/');
@@ -296,7 +296,7 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
             return (
               <div 
                 key={index}
-                className="relative group flex items-center gap-2 px-2 py-1.5 bg-background rounded border"
+                className="relative group flex items-center gap-2 px-2 py-1.5 bg-background rounded-lg border"
               >
                 {isImage ? (
                   <img 
@@ -308,8 +308,8 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
                   <Icon className="h-5 w-5 text-muted-foreground" />
                 )}
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-medium truncate max-w-[120px]">{attachment.name}</span>
-                  <span className="text-2xs text-muted-foreground">{formatFileSize(attachment.size)}</span>
+                  <span className="text-xs font-medium truncate max-w-[100px] md:max-w-[120px]">{attachment.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{formatFileSize(attachment.size)}</span>
                 </div>
                 <button
                   onClick={() => removeAttachment(index)}
@@ -324,23 +324,23 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
       )}
 
       <div className={cn(
-        "flex items-end gap-2 bg-muted/50 rounded-lg border p-2 transition-colors",
+        "flex items-end gap-1.5 md:gap-2 bg-muted/50 rounded-xl border p-1.5 md:p-2 transition-colors",
         isDragging && "opacity-0"
       )}>
-        <div className="flex-1" onKeyDown={handleKeyDown}>
+        <div className="flex-1 min-w-0" onKeyDown={handleKeyDown}>
           <MentionInput
             value={content}
             onChange={(val, extractedMentions) => {
               setContent(val);
               setMentions(extractedMentions);
             }}
-            placeholder={placeholder || `Message #${channelName}`}
+            placeholder={placeholder || `Message...`}
             minHeight="40px"
-            className="border-0 bg-transparent shadow-none focus-visible:ring-0 resize-none"
+            className="border-0 bg-transparent shadow-none focus-visible:ring-0 resize-none text-base"
           />
         </div>
 
-        <div className="flex items-center gap-1 pb-1">
+        <div className="flex items-center gap-0.5 pb-0.5">
           <input
             ref={fileInputRef}
             type="file"
@@ -354,6 +354,7 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
             size="icon-sm" 
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
+            className="h-9 w-9"
           >
             {isUploading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -362,10 +363,10 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
             )}
           </Button>
 
-          {/* GIF Picker */}
+          {/* GIF Picker - Hidden on mobile */}
           <Popover open={showGifPicker} onOpenChange={setShowGifPicker}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon-sm">
+              <Button variant="ghost" size="icon-sm" className="h-9 w-9 hidden md:flex">
                 <GifIcon className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
@@ -377,10 +378,10 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
             </PopoverContent>
           </Popover>
 
-          {/* Emoji Picker - Full picker */}
+          {/* Emoji Picker - Hidden on mobile */}
           <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon-sm">
+              <Button variant="ghost" size="icon-sm" className="h-9 w-9 hidden md:flex">
                 <Smile className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
@@ -393,9 +394,10 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
           </Popover>
 
           <Button 
-            size="icon-sm" 
+            size="icon" 
             onClick={handleSubmit}
             disabled={(!content.trim() && attachments.length === 0) || isLoading || isUploading}
+            className="h-9 w-9 rounded-xl"
           >
             <Send className="h-4 w-4" />
           </Button>

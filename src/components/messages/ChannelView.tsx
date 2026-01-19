@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Hash, Lock, MessageCircle, UserMinus, UserPlus, Users } from "lucide-react";
+import { motion } from "framer-motion";
+import { Hash, Lock, MessageCircle, UserMinus, UserPlus, Users, ChevronLeft, MoreVertical, Phone, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TeamChannel, TeamMessage, useChannelMessages, useChannelMembers, useTeamMessageMutations } from "@/hooks/useTeamMessages";
 import { MessageItem } from "./MessageItem";
 import { MessageInput } from "./MessageInput";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { InviteMembersDialog } from "./InviteMembersDialog";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,13 +15,17 @@ import { toast } from "sonner";
 import { useTypingIndicator } from "@/hooks/useTypingIndicator";
 import { TypingIndicator } from "./TypingIndicator";
 import { AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { THIN_STROKE } from "@/components/ui/icon";
+import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 
 interface ChannelViewProps {
   channel: TeamChannel;
   onOpenThread: (messageId: string) => void;
+  onBack?: () => void;
 }
 
-export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
+export function ChannelView({ channel, onOpenThread, onBack }: ChannelViewProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { data: messages, isLoading } = useChannelMessages(channel.id);
@@ -90,62 +94,97 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
   const Icon = isDM ? MessageCircle : (channel.channel_type === "private" ? Lock : Hash);
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Channel Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center gap-3">
-          {isDM && dmMember ? (
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={dmMember.avatar_url || undefined} />
-              <AvatarFallback className="text-xs">
-                {getInitials(dmMember.full_name)}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <Icon className="h-5 w-5 text-muted-foreground" />
-          )}
-          <div>
-            <h2 className="font-semibold">{displayName}</h2>
-            {channel.description && !isDM && (
-              <span className="text-sm text-muted-foreground">
-                {channel.description}
-              </span>
-            )}
+    <div className="flex flex-col h-full bg-background">
+      {/* Channel Header - Mobile optimized */}
+      <motion.header 
+        initial={{ y: -10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="flex items-center gap-2 px-2 md:px-4 py-2 md:py-3 border-b bg-background/95 backdrop-blur-xl sticky top-0 z-10 safe-area-inset-top"
+      >
+        {/* Back button - Mobile only */}
+        {onBack && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onBack}
+            className="h-9 w-9 md:hidden shrink-0"
+          >
+            <ChevronLeft className="h-5 w-5" strokeWidth={THIN_STROKE} />
+          </Button>
+        )}
+
+        {/* Avatar/Icon */}
+        {isDM && dmMember ? (
+          <Avatar className="h-9 w-9 shrink-0">
+            <AvatarImage src={dmMember.avatar_url || undefined} />
+            <AvatarFallback className="text-xs font-medium">
+              {getInitials(dmMember.full_name)}
+            </AvatarFallback>
+          </Avatar>
+        ) : (
+          <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+            <Icon className="h-4 w-4 text-muted-foreground" />
           </div>
+        )}
+
+        {/* Title */}
+        <div className="flex-1 min-w-0">
+          <h2 className="font-semibold text-sm md:text-base truncate">{displayName}</h2>
+          {channel.description && !isDM && (
+            <p className="text-xs text-muted-foreground truncate hidden md:block">
+              {channel.description}
+            </p>
+          )}
+          {isDM && (
+            <p className="text-xs text-muted-foreground">En ligne</p>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon-sm" onClick={() => setShowMembers(true)}>
-            <Users className="h-4 w-4" />
+
+        {/* Actions */}
+        <div className="flex items-center gap-1 shrink-0">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setShowMembers(true)}
+            className="h-9 w-9"
+          >
+            <Users className="h-4 w-4" strokeWidth={THIN_STROKE} />
           </Button>
         </div>
-      </div>
+      </motion.header>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 px-4" ref={scrollRef}>
-        <div className="py-4 space-y-1">
+      <ScrollArea className="flex-1" ref={scrollRef}>
+        <div className="px-3 md:px-4 py-4 space-y-0.5">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : messages?.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-12"
+            >
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mx-auto mb-4">
                 {isDM && dmMember ? (
-                  <Avatar className="h-12 w-12">
+                  <Avatar className="h-14 w-14">
                     <AvatarImage src={dmMember.avatar_url || undefined} />
-                    <AvatarFallback>{getInitials(dmMember.full_name)}</AvatarFallback>
+                    <AvatarFallback className="text-lg">{getInitials(dmMember.full_name)}</AvatarFallback>
                   </Avatar>
                 ) : (
-                  <Icon className="h-8 w-8 text-muted-foreground" />
+                  <Icon className="h-8 w-8 text-primary" />
                 )}
               </div>
-              <h3 className="font-medium mb-1">
-                {isDM ? `Conversation avec ${displayName}` : `Bienvenue dans #${channel.name}`}
+              <h3 className="font-semibold text-lg mb-1">
+                {isDM ? `Conversation avec ${displayName}` : `#${channel.name}`}
               </h3>
-              <p className="text-sm text-muted-foreground">
-                C'est le début de la conversation{isDM ? "" : " dans ce canal"}.
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+                {isDM 
+                  ? "C'est le début de votre conversation." 
+                  : "Bienvenue ! C'est le début de ce canal."}
               </p>
-            </div>
+            </motion.div>
           ) : (
             messages?.map((message, index) => {
               const prevMessage = messages[index - 1];
@@ -175,8 +214,8 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
         )}
       </AnimatePresence>
 
-      {/* Message Input */}
-      <div className="p-4 border-t">
+      {/* Message Input - Fixed at bottom for mobile */}
+      <div className="p-2 md:p-4 border-t bg-background/95 backdrop-blur-xl safe-area-inset-bottom">
         <MessageInput
           channelName={displayName}
           onSend={handleSendMessage}
@@ -189,7 +228,7 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
 
       {/* Members Sheet */}
       <Sheet open={showMembers} onOpenChange={setShowMembers}>
-        <SheetContent>
+        <SheetContent side="right" className="w-full sm:max-w-md">
           <SheetHeader>
             <SheetTitle>
               {isDM ? "Participants" : `Membres de #${channel.name}`}
@@ -211,15 +250,18 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
             </Button>
           )}
           
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 space-y-1">
             {memberProfiles.map((member) => {
               const canRemove = !isDM && isAdmin && member.user_id !== user?.id;
               
               return (
-                <div key={member.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 group">
-                  <Avatar className="h-9 w-9">
+                <div 
+                  key={member.id} 
+                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 group transition-colors"
+                >
+                  <Avatar className="h-10 w-10">
                     <AvatarImage src={member.profile?.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs">
+                    <AvatarFallback className="text-sm">
                       {getInitials(member.profile?.full_name)}
                     </AvatarFallback>
                   </Avatar>
@@ -228,7 +270,7 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
                       {member.profile?.full_name || "Utilisateur"}
                     </p>
                     {member.role === "admin" && (
-                      <span className="text-xs text-muted-foreground">Admin</span>
+                      <span className="text-xs text-primary">Admin</span>
                     )}
                   </div>
                   {canRemove && (
@@ -256,7 +298,7 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
               );
             })}
             {memberProfiles.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">
+              <p className="text-sm text-muted-foreground text-center py-8">
                 Aucun membre
               </p>
             )}

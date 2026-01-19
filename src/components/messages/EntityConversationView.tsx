@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 interface EntityConversationViewProps {
   entityKey: string; // Format: entity-{type}-{entityId}
   onClose: () => void;
+  onBack?: () => void;
 }
 
 const entityIcons: Record<EntityType, typeof CheckSquare> = {
@@ -45,7 +46,7 @@ const entityRoutes: Record<EntityType, (id: string) => string> = {
   lead: (id) => `/crm/leads/${id}`,
 };
 
-export function EntityConversationView({ entityKey, onClose }: EntityConversationViewProps) {
+export function EntityConversationView({ entityKey, onClose, onBack }: EntityConversationViewProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: profiles } = useWorkspaceProfiles();
@@ -104,26 +105,39 @@ export function EntityConversationView({ entityKey, onClose }: EntityConversatio
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
-      <div className="p-4 border-b flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-muted">
-            <Icon className="h-4 w-4" />
-          </div>
-          <div>
-            <h2 className="font-semibold">{getEntityTypeLabel(entityType)}</h2>
-            <p className="text-sm text-muted-foreground">
-              {communications?.length || 0} message(s)
-            </p>
-          </div>
+      <div className="px-2 md:px-4 py-2 md:py-3 border-b flex items-center gap-2 bg-background/95 backdrop-blur-xl sticky top-0 z-10">
+        {/* Back button - Mobile only */}
+        {onBack && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onBack}
+            className="h-9 w-9 md:hidden shrink-0"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        )}
+        
+        <div className="p-2 rounded-lg bg-muted shrink-0">
+          <Icon className="h-4 w-4" />
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={handleOpenEntity}>
+        <div className="flex-1 min-w-0">
+          <h2 className="font-semibold text-sm md:text-base truncate">{getEntityTypeLabel(entityType)}</h2>
+          <p className="text-xs text-muted-foreground">
+            {communications?.length || 0} message(s)
+          </p>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button variant="ghost" size="sm" onClick={handleOpenEntity} className="hidden md:flex">
             <ExternalLink className="h-4 w-4 mr-2" />
             Voir
           </Button>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={handleOpenEntity} className="h-9 w-9 md:hidden">
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hidden md:flex">
             <X className="h-4 w-4" />
           </Button>
         </div>
