@@ -9996,7 +9996,7 @@ export type Database = {
           panel_members: string[] | null
           rating: number | null
           reminder_sent: boolean | null
-          scheduled_date: string
+          scheduled_date: string | null
           status: string
           updated_at: string
           user_id: string
@@ -10017,7 +10017,7 @@ export type Database = {
           panel_members?: string[] | null
           rating?: number | null
           reminder_sent?: boolean | null
-          scheduled_date: string
+          scheduled_date?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -10038,7 +10038,7 @@ export type Database = {
           panel_members?: string[] | null
           rating?: number | null
           reminder_sent?: boolean | null
-          scheduled_date?: string
+          scheduled_date?: string | null
           status?: string
           updated_at?: string
           user_id?: string
