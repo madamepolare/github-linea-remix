@@ -115,6 +115,8 @@ export const TEMPLATE_VARIABLES: TemplateVariableDefinition[] = [
   { key: 'requires_deposit', label: 'Acompte requis', description: 'Indicateur acompte (Oui/Non)', category: 'financial', example: 'Oui' },
   { key: 'deposit_percentage', label: 'Pourcentage acompte', description: 'Pourcentage d\'acompte', category: 'financial', example: '30%' },
   { key: 'deposit_amount', label: 'Montant acompte', description: 'Montant de l\'acompte', category: 'financial', example: '18 000 €' },
+  { key: 'retention_guarantee_percentage', label: 'Retenue de garantie (%)', description: 'Pourcentage de retenue de garantie', category: 'financial', example: '5%' },
+  { key: 'retention_guarantee_amount', label: 'Montant retenue', description: 'Montant de la retenue de garantie', category: 'financial', example: '2 500 €' },
   { key: 'currency', label: 'Devise', description: 'Devise utilisée', category: 'financial', example: 'EUR' },
   
   // ===== CONDITIONS =====
@@ -330,6 +332,8 @@ export function mapDocumentToTemplateData(
   const depositAmount = document.requires_deposit && document.deposit_percentage 
     ? totalTTC * (document.deposit_percentage / 100)
     : 0;
+  const retentionGuaranteePercentage = document.retention_guarantee_percentage || 0;
+  const retentionGuaranteeAmount = totalHT * (retentionGuaranteePercentage / 100);
   
   // Validity date
   const validityDate = document.valid_until 
@@ -506,6 +510,8 @@ export function mapDocumentToTemplateData(
     requires_deposit: document.requires_deposit ? 'Oui' : 'Non',
     deposit_percentage: document.deposit_percentage ? formatPercentage(document.deposit_percentage) : '',
     deposit_amount: formatCurrency(depositAmount),
+    retention_guarantee_percentage: retentionGuaranteePercentage > 0 ? formatPercentage(retentionGuaranteePercentage) : '',
+    retention_guarantee_amount: retentionGuaranteePercentage > 0 ? formatCurrency(retentionGuaranteeAmount) : '',
     currency: document.currency || 'EUR',
     
     // ===== CONDITIONS =====
