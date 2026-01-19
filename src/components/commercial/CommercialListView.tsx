@@ -8,10 +8,15 @@ import {
   Eye, 
   X,
   Building2,
-  ArrowUpDown,
   Mail,
   Download,
-  FileText
+  FileText,
+  FileSignature,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Calendar
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -19,6 +24,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,14 +32,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { 
   CommercialDocument,
   STATUS_LABELS, 
@@ -49,6 +47,15 @@ interface CommercialListViewProps {
   onBulkSendEmail?: (ids: string[]) => void;
 }
 
+const statusConfig: Record<string, { icon: typeof FileText; color: string; bgColor: string }> = {
+  draft: { icon: FileSignature, color: 'text-muted-foreground', bgColor: 'bg-muted' },
+  sent: { icon: Clock, color: 'text-blue-600', bgColor: 'bg-blue-500/10' },
+  accepted: { icon: CheckCircle, color: 'text-emerald-600', bgColor: 'bg-emerald-500/10' },
+  signed: { icon: CheckCircle, color: 'text-emerald-600', bgColor: 'bg-emerald-500/10' },
+  rejected: { icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-500/10' },
+  expired: { icon: AlertCircle, color: 'text-amber-600', bgColor: 'bg-amber-500/10' },
+};
+
 export const CommercialListView = ({ 
   documents, 
   onDelete, 
@@ -58,8 +65,6 @@ export const CommercialListView = ({
 }: CommercialListViewProps) => {
   const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<string>("created_at");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('fr-FR', { 
@@ -68,31 +73,6 @@ export const CommercialListView = ({
       maximumFractionDigits: 0 
     }).format(value);
   };
-
-  // Sorting
-  const sortedDocuments = useMemo(() => {
-    return [...documents].sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case "document_number":
-          comparison = a.document_number.localeCompare(b.document_number);
-          break;
-        case "title":
-          comparison = a.title.localeCompare(b.title);
-          break;
-        case "client":
-          comparison = (a.client_company?.name || "").localeCompare(b.client_company?.name || "");
-          break;
-        case "total_amount":
-          comparison = (a.total_amount || 0) - (b.total_amount || 0);
-          break;
-        case "created_at":
-        default:
-          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      }
-      return sortDir === "asc" ? comparison : -comparison;
-    });
-  }, [documents, sortBy, sortDir]);
 
   // Calculate totals
   const totals = useMemo(() => ({
@@ -106,13 +86,15 @@ export const CommercialListView = ({
     switch (status) {
       case 'accepted':
       case 'signed':
-        return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+        return 'bg-emerald-500/10 text-emerald-600';
       case 'sent':
-        return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+        return 'bg-blue-500/10 text-blue-600';
       case 'draft':
         return 'bg-muted text-muted-foreground';
       case 'rejected':
-        return 'bg-red-500/10 text-red-600 border-red-500/20';
+        return 'bg-red-500/10 text-red-600';
+      case 'expired':
+        return 'bg-amber-500/10 text-amber-600';
       default:
         return 'bg-muted text-muted-foreground';
     }
@@ -123,7 +105,8 @@ export const CommercialListView = ({
     setSelectedIds(checked ? new Set(documents.map(d => d.id)) : new Set());
   };
 
-  const handleSelectOne = (id: string, checked: boolean) => {
+  const handleSelectOne = (id: string, checked: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
     const newSet = new Set(selectedIds);
     checked ? newSet.add(id) : newSet.delete(id);
     setSelectedIds(newSet);
@@ -146,15 +129,6 @@ export const CommercialListView = ({
     onBulkSendEmail?.(Array.from(selectedIds));
   };
 
-  const handleSort = (column: string) => {
-    if (sortBy === column) {
-      setSortDir(prev => prev === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortDir("asc");
-    }
-  };
-
   const allSelected = documents.length > 0 && selectedIds.size === documents.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < documents.length;
 
@@ -173,210 +147,182 @@ export const CommercialListView = ({
   }
 
   return (
-    <div className="space-y-0">
-      {/* Totals bar */}
-      <div className="flex items-center gap-2 px-1 py-2 text-xs">
-        <span className="text-muted-foreground">{totals.count} documents</span>
-        <span className="text-muted-foreground">•</span>
-        <span className="font-medium">{formatCurrency(totals.total)}</span>
-        {totals.sent > 0 && (
-          <>
-            <span className="text-muted-foreground">•</span>
-            <span className="text-blue-600">{formatCurrency(totals.sent)} en attente</span>
-          </>
-        )}
-        {totals.accepted > 0 && (
-          <>
-            <span className="text-muted-foreground">•</span>
-            <span className="text-emerald-600">{formatCurrency(totals.accepted)} accepté</span>
-          </>
-        )}
+    <div className="space-y-3">
+      {/* Header with totals */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Checkbox
+            checked={allSelected}
+            onCheckedChange={handleSelectAll}
+            ref={(el) => el && ((el as any).indeterminate = someSelected)}
+            className="ml-1"
+          />
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{totals.count} documents</span>
+            <span>•</span>
+            <span className="font-medium text-foreground">{formatCurrency(totals.total)}</span>
+            {totals.sent > 0 && (
+              <>
+                <span>•</span>
+                <span className="text-blue-600">{formatCurrency(totals.sent)} en attente</span>
+              </>
+            )}
+            {totals.accepted > 0 && (
+              <>
+                <span>•</span>
+                <span className="text-emerald-600">{formatCurrency(totals.accepted)} accepté</span>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Table */}
-      <div className="border rounded-lg bg-background">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
-              <TableHead className="w-10 px-3">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={handleSelectAll}
-                  ref={(el) => el && ((el as any).indeterminate = someSelected)}
-                />
-              </TableHead>
-              <TableHead 
-                className="w-32 px-3 cursor-pointer hover:text-foreground"
-                onClick={() => handleSort("document_number")}
+      {/* Cards list */}
+      <div className="space-y-2">
+        {documents.map((doc, index) => {
+          const isSelected = selectedIds.has(doc.id);
+          const config = statusConfig[doc.status] || statusConfig.draft;
+          const StatusIcon = config.icon;
+          
+          return (
+            <motion.div
+              key={doc.id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2, delay: index * 0.03 }}
+            >
+              <Card 
+                className={cn(
+                  "group cursor-pointer hover:shadow-md transition-all duration-200",
+                  isSelected && "ring-2 ring-primary/50"
+                )}
+                onClick={() => navigate(`/commercial/quote/${doc.id}`)}
               >
-                <div className="flex items-center gap-1.5 text-xs font-medium">
-                  Numéro
-                  <ArrowUpDown className={cn("h-3 w-3", sortBy === "document_number" ? "text-foreground" : "text-muted-foreground/40")} />
-                </div>
-              </TableHead>
-              <TableHead 
-                className="px-3 cursor-pointer hover:text-foreground"
-                onClick={() => handleSort("title")}
-              >
-                <div className="flex items-center gap-1.5 text-xs font-medium">
-                  Projet
-                  <ArrowUpDown className={cn("h-3 w-3", sortBy === "title" ? "text-foreground" : "text-muted-foreground/40")} />
-                </div>
-              </TableHead>
-              <TableHead 
-                className="px-3 hidden md:table-cell cursor-pointer hover:text-foreground"
-                onClick={() => handleSort("client")}
-              >
-                <div className="flex items-center gap-1.5 text-xs font-medium">
-                  Client
-                  <ArrowUpDown className={cn("h-3 w-3", sortBy === "client" ? "text-foreground" : "text-muted-foreground/40")} />
-                </div>
-              </TableHead>
-              <TableHead className="px-3 w-24 hidden lg:table-cell text-xs font-medium">Statut</TableHead>
-              <TableHead 
-                className="px-3 w-28 hidden lg:table-cell cursor-pointer hover:text-foreground"
-                onClick={() => handleSort("created_at")}
-              >
-                <div className="flex items-center gap-1.5 text-xs font-medium">
-                  Date
-                  <ArrowUpDown className={cn("h-3 w-3", sortBy === "created_at" ? "text-foreground" : "text-muted-foreground/40")} />
-                </div>
-              </TableHead>
-              <TableHead 
-                className="px-3 w-28 text-right cursor-pointer hover:text-foreground"
-                onClick={() => handleSort("total_amount")}
-              >
-                <div className="flex items-center justify-end gap-1.5 text-xs font-medium">
-                  Montant HT
-                  <ArrowUpDown className={cn("h-3 w-3", sortBy === "total_amount" ? "text-foreground" : "text-muted-foreground/40")} />
-                </div>
-              </TableHead>
-              <TableHead className="w-10 px-2"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedDocuments.map((doc) => {
-              const isSelected = selectedIds.has(doc.id);
-              
-              return (
-                <TableRow
-                  key={doc.id}
-                  className={cn(
-                    "group cursor-pointer transition-colors",
-                    isSelected ? "bg-primary/5" : "hover:bg-muted/30"
-                  )}
-                  onClick={() => navigate(`/commercial/quote/${doc.id}`)}
-                >
-                  <TableCell className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleSelectOne(doc.id, checked as boolean)}
-                    />
-                  </TableCell>
-
-                  {/* Reference */}
-                  <TableCell className="px-3 py-2.5">
-                    <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
-                      {doc.document_number}
-                    </span>
-                  </TableCell>
-
-                  {/* Title */}
-                  <TableCell className="px-3 py-2.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-medium text-sm truncate">{doc.title}</span>
-                      {/* Status badge on mobile */}
-                      <Badge 
-                        variant="outline" 
-                        className={cn("text-[10px] px-1.5 py-0 lg:hidden shrink-0 border-0", getStatusStyle(doc.status))}
-                      >
-                        {STATUS_LABELS[doc.status]}
-                      </Badge>
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-3">
+                    {/* Checkbox */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) => handleSelectOne(doc.id, checked as boolean, { stopPropagation: () => {} } as React.MouseEvent)}
+                      />
                     </div>
-                    {/* Client on mobile */}
-                    {doc.client_company && (
-                      <p className="text-xs text-muted-foreground truncate md:hidden mt-0.5">
-                        {doc.client_company.name}
-                      </p>
-                    )}
-                  </TableCell>
 
-                  {/* Client */}
-                  <TableCell className="px-3 py-2.5 hidden md:table-cell">
-                    {doc.client_company ? (
-                      <span className="text-sm text-foreground/80 truncate">
-                        {doc.client_company.name}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground/40">—</span>
-                    )}
-                  </TableCell>
-
-                  {/* Status */}
-                  <TableCell className="px-3 py-2.5 hidden lg:table-cell">
-                    <Badge 
-                      variant="outline" 
-                      className={cn("text-[10px] px-2 py-0.5 border-0 font-medium", getStatusStyle(doc.status))}
+                    {/* Status Icon */}
+                    <div 
+                      className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                        config.bgColor
+                      )}
                     >
-                      {STATUS_LABELS[doc.status]}
-                    </Badge>
-                  </TableCell>
+                      <StatusIcon className={cn("h-5 w-5", config.color)} />
+                    </div>
 
-                  {/* Date */}
-                  <TableCell className="px-3 py-2.5 hidden lg:table-cell">
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      {format(new Date(doc.created_at), 'dd MMM yyyy', { locale: fr })}
-                    </span>
-                  </TableCell>
+                    {/* Main info */}
+                    <div className="flex-1 min-w-0 flex items-center gap-3 overflow-hidden">
+                      {/* Title & Reference */}
+                      <div className="min-w-0 w-48 lg:w-56 shrink-0">
+                        <h3 className="font-semibold text-sm truncate">{doc.title}</h3>
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {doc.document_number}
+                        </span>
+                      </div>
 
-                  {/* Amount */}
-                  <TableCell className="px-3 py-2.5 text-right">
-                    <span className="font-semibold text-sm tabular-nums">
-                      {formatCurrency(doc.total_amount || 0)}
-                    </span>
-                  </TableCell>
+                      {/* Client */}
+                      <div className="hidden md:flex items-center gap-1.5 text-xs text-muted-foreground min-w-0 w-40 shrink-0">
+                        {doc.client_company ? (
+                          <>
+                            <Building2 className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{doc.client_company.name}</span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground/50">—</span>
+                        )}
+                      </div>
 
-                  {/* Actions */}
-                  <TableCell className="px-2 py-2.5" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                      {/* Status Badge */}
+                      <div className="hidden lg:block w-24 shrink-0">
+                        <Badge 
+                          variant="secondary"
+                          className={cn("text-xs font-medium", getStatusStyle(doc.status))}
                         >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem onClick={() => navigate(`/commercial/quote/${doc.id}`)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          Voir
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onDuplicate(doc.id)}>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Dupliquer
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Send className="h-4 w-4 mr-2" />
-                          Envoyer
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => confirm('Supprimer ce document ?') && onDelete(doc.id)}
+                          {STATUS_LABELS[doc.status]}
+                        </Badge>
+                      </div>
+
+                      {/* Date */}
+                      <div className="hidden xl:flex items-center gap-1.5 text-xs text-muted-foreground w-28 shrink-0">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {format(new Date(doc.created_at), 'dd MMM yyyy', { locale: fr })}
+                      </div>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="text-right shrink-0 min-w-20">
+                      <span className="font-semibold text-sm tabular-nums">
+                        {formatCurrency(doc.total_amount || 0)}
+                      </span>
+                      {/* Mobile: show status badge here */}
+                      <div className="lg:hidden mt-0.5">
+                        <Badge 
+                          variant="secondary"
+                          className={cn("text-2xs font-medium", getStatusStyle(doc.status))}
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Supprimer
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                          {STATUS_LABELS[doc.status]}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem onClick={() => navigate(`/commercial/quote/${doc.id}`)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Voir
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onDuplicate(doc.id)}>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Dupliquer
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Send className="h-4 w-4 mr-2" />
+                            Envoyer
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => confirm('Supprimer ce document ?') && onDelete(doc.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Supprimer
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  {/* Mobile: Client info */}
+                  {doc.client_company && (
+                    <div className="md:hidden flex items-center gap-1.5 text-xs text-muted-foreground mt-2 ml-14">
+                      <Building2 className="h-3 w-3" />
+                      <span className="truncate">{doc.client_company.name}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* Bulk Actions Bar */}
