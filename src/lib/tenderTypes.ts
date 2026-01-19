@@ -1,7 +1,7 @@
 // ============= TENDER TYPES =============
 
-// New Pipeline Status (configurable columns)
-export type PipelineStatus = 'a_approuver' | 'en_cours' | 'deposes' | 'gagnes' | 'perdus' | 'archives';
+// New Pipeline Status (configurable columns) - unifié avec no_go
+export type PipelineStatus = 'a_approuver' | 'en_cours' | 'deposes' | 'gagnes' | 'perdus' | 'no_go' | 'archives';
 
 export const PIPELINE_STATUS_LABELS: Record<PipelineStatus, string> = {
   a_approuver: 'À approuver',
@@ -9,6 +9,7 @@ export const PIPELINE_STATUS_LABELS: Record<PipelineStatus, string> = {
   deposes: 'Déposés',
   gagnes: 'Gagnés',
   perdus: 'Perdus',
+  no_go: 'No-Go',
   archives: 'Archivés',
 };
 
@@ -18,6 +19,7 @@ export const PIPELINE_STATUS_COLORS: Record<PipelineStatus, string> = {
   deposes: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
   gagnes: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
   perdus: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  no_go: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
   archives: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
 };
 
@@ -69,15 +71,18 @@ export function mapStatusToPipeline(status: TenderStatus): PipelineStatus {
   switch (status) {
     case 'repere':
     case 'en_analyse':
-    case 'no_go':
       return 'a_approuver';
     case 'go':
     case 'en_montage':
       return 'en_cours';
     case 'depose':
-    case 'gagne':
-    case 'perdu':
       return 'deposes';
+    case 'gagne':
+      return 'gagnes';
+    case 'perdu':
+      return 'perdus';
+    case 'no_go':
+      return 'no_go';
     default:
       return 'a_approuver';
   }

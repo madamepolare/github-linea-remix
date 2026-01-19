@@ -51,6 +51,7 @@ const PIPELINE_COLUMN_COLORS: Record<PipelineStatus, string> = {
   deposes: "#a855f7",
   gagnes: "#10b981",
   perdus: "#ef4444",
+  no_go: "#f97316",
   archives: "#6b7280",
 };
 
