@@ -1,32 +1,41 @@
-import { useParams } from "react-router-dom";
+import { useParams, Navigate } from "react-router-dom";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { TeamUsersTab } from "@/components/team/TeamUsersTab";
 import { TimeTrackingTab } from "@/components/team/TimeTrackingTab";
-import { TimeValidationTab } from "@/components/team/TimeValidationTab";
-import { RecruitmentTab } from "@/components/team/RecruitmentTab";
 import { AbsencesTab } from "@/components/team/AbsencesTab";
 import { PayrollExportTab } from "@/components/team/PayrollExportTab";
-import { TeamRequestsTab } from "@/components/team/TeamRequestsTab";
 import { EvaluationsTab } from "@/components/team/EvaluationsTab";
 import { HRDashboard } from "@/components/team/HRDashboard";
 import { SEOHead } from "@/components/seo/SEOHead";
 
-type TeamSection = "dashboard" | "users" | "time-tracking" | "time-validation" | "recruitment" | "absences" | "payroll" | "requests" | "evaluations";
+type TeamSection = "dashboard" | "users" | "time-tracking" | "absences" | "payroll" | "evaluations";
 
 const sectionDescriptions: Record<TeamSection, string> = {
   dashboard: "Vue d'ensemble RH",
   users: "Équipe et annuaire",
-  "time-tracking": "Suivi du temps",
-  "time-validation": "Validation des heures",
-  recruitment: "Recrutement",
-  absences: "Congés et absences",
+  "time-tracking": "Suivi et validation du temps",
+  absences: "Congés, absences et soldes",
   payroll: "Variables de paie",
-  requests: "Demandes",
   evaluations: "Entretiens et objectifs",
+};
+
+// Redirect old routes to new ones
+const routeRedirects: Record<string, string> = {
+  "directory": "users",
+  "leave-balances": "absences",
+  "time-validation": "time-tracking",
+  "recruitment": "evaluations",
+  "requests": "dashboard",
 };
 
 export default function Team() {
   const { section } = useParams();
+  
+  // Handle old routes
+  if (section && routeRedirects[section]) {
+    return <Navigate to={`/team/${routeRedirects[section]}`} replace />;
+  }
+  
   const activeSection = (section as TeamSection) || "dashboard";
 
   const renderContent = () => {
@@ -37,16 +46,10 @@ export default function Team() {
         return <TeamUsersTab />;
       case "time-tracking":
         return <TimeTrackingTab />;
-      case "time-validation":
-        return <TimeValidationTab />;
-      case "recruitment":
-        return <RecruitmentTab />;
       case "absences":
         return <AbsencesTab />;
       case "payroll":
         return <PayrollExportTab />;
-      case "requests":
-        return <TeamRequestsTab />;
       case "evaluations":
         return <EvaluationsTab />;
       default:
