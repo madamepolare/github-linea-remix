@@ -12059,6 +12059,10 @@ export type Database = {
         }
         Returns: number
       }
+      can_access_crm_data: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       can_access_emails: {
         Args: { _created_by: string; _user_id: string; _workspace_id: string }
         Returns: boolean
