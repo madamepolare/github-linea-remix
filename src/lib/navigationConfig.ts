@@ -18,6 +18,7 @@ import {
   Calendar,
   BookOpen,
   MessageSquare,
+  BarChart3,
   LucideIcon,
 } from "lucide-react";
 
@@ -96,6 +97,21 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
     ],
     quickActions: [
       { key: "create-task", label: "Nouvelle tâche", event: "open-create-task" },
+    ],
+  },
+  reports: {
+    slug: "reports",
+    title: "Rapports",
+    icon: BarChart3,
+    href: "/reports",
+    subNav: [
+      { key: "finance", label: "Finance", href: "/reports/finance" },
+      { key: "projects", label: "Projets", href: "/reports/projects" },
+      { key: "time", label: "Temps", href: "/reports/time" },
+      { key: "hr", label: "RH", href: "/reports/hr" },
+    ],
+    quickActions: [
+      { key: "export", label: "Exporter", event: "open-export-reports" },
     ],
   },
   crm: {
@@ -301,8 +317,8 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
   },
 };
 
-// Module display order - Dashboard, Messages, CRM, Commercial, Planning, Projets, Tâches
-export const CORE_MODULES = ["messages", "crm", "commercial", "workflow", "projects", "tasks"];
+// Module display order - Dashboard, Messages, CRM, Commercial, Planning, Projets, Tâches, Rapports
+export const CORE_MODULES = ["messages", "crm", "commercial", "workflow", "projects", "tasks", "reports"];
 export const EXTENSION_MODULES = ["documentation", "documents", "team", "chantier", "tenders", "invoicing", "references", "materials", "objects", "campaigns", "media-planning"];
 
 // Helper to get module config from current path
