@@ -28,10 +28,14 @@ import { EventSchedulerDialog } from "@/components/workflow/EventSchedulerDialog
 import { CheckInModal } from "@/components/checkin/CheckInModal";
 import { CheckOutModal } from "@/components/checkin/CheckOutModal";
 import { useFavicon } from "@/hooks/useFavicon";
+import { useWorkspaceIcon } from "@/hooks/useWorkspaceIcon";
 
 export function MainLayout() {
   // Apply workspace favicon
   useFavicon();
+  
+  // Get workspace icon for mobile header
+  const { iconUrl: workspaceIconUrl, workspaceName, fallbackLetter } = useWorkspaceIcon();
   
   // Guard: redirect to home if current module not enabled in new workspace
   useWorkspaceModuleGuard();
@@ -100,22 +104,22 @@ export function MainLayout() {
           className="flex items-center gap-2 px-1.5 py-1 rounded-xl active:bg-muted/50 touch-manipulation"
           whileTap={{ scale: 0.97 }}
         >
-          {activeWorkspace?.logo_url ? (
+          {workspaceIconUrl ? (
             <img 
-              src={activeWorkspace.logo_url} 
-              alt={activeWorkspace.name}
+              src={workspaceIconUrl} 
+              alt={workspaceName}
               className="h-8 w-8 rounded-xl object-cover shadow-sm"
             />
           ) : (
             <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-foreground to-foreground/80 flex items-center justify-center shadow-sm">
               <span className="text-xs font-bold text-background">
-                {activeWorkspace?.name?.slice(0, 1).toUpperCase() || "L"}
+                {fallbackLetter}
               </span>
             </div>
           )}
           <div className="flex flex-col items-start">
             <span className="font-semibold text-sm text-foreground leading-tight">
-              {activeWorkspace?.name || "Linea"}
+              {workspaceName}
             </span>
             <span className="text-[10px] text-muted-foreground leading-tight">Espace de travail</span>
           </div>
