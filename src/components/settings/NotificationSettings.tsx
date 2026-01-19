@@ -4,7 +4,8 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, MessageSquare, AtSign, CheckSquare, FolderKanban, UserPlus, Moon, Mail, Bell, Heart, Reply } from "lucide-react";
+import { Loader2, MessageSquare, AtSign, CheckSquare, FolderKanban, UserPlus, Moon, Mail, Bell, Heart, Reply, Smartphone } from "lucide-react";
+import { PushNotificationToggle } from "./PushNotificationToggle";
 
 interface NotificationToggleProps {
   id: string;
@@ -267,6 +268,8 @@ export function NotificationSettings() {
             onCheckedChange={(checked) => handleToggle('push_enabled', checked)}
             disabled={updatePreferences.isPending}
           />
+          <Separator />
+          <PushNotificationToggle />
           <Separator />
           <NotificationToggle
             id="email_enabled"
