@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { logEntityActivity } from '@/hooks/useEntityActivities';
 
@@ -62,7 +62,6 @@ export function useConvertTenderToProject(workspaceId: string | undefined) {
           budget: input.budget || tender.estimated_budget,
           start_date: input.expectedStartDate,
           end_date: input.expectedEndDate,
-          crm_company_id: tender.client_company_id,
           tender_id: input.tenderId,
           status: 'active',
           created_by: user?.id,

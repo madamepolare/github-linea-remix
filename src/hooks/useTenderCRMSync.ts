@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useWorkspaceContext } from '@/hooks/useWorkspaceContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 interface SyncTenderClientInput {
@@ -23,8 +22,7 @@ interface SyncTenderPartnerInput {
 
 export function useTenderCRMSync() {
   const queryClient = useQueryClient();
-  const { activeWorkspace } = useWorkspaceContext();
-  const { user } = useAuth();
+  const { activeWorkspace, user } = useAuth();
 
   // Sync client (MOA) to CRM
   const syncClientToCRM = useMutation({
@@ -86,12 +84,6 @@ export function useTenderCRMSync() {
             });
         }
       }
-
-      // Link company to tender
-      await supabase
-        .from('tenders')
-        .update({ client_company_id: companyId })
-        .eq('id', input.tenderId);
 
       return { companyId };
     },
@@ -206,7 +198,7 @@ export function useTenderCRMSync() {
         .select(`
           *,
           company:crm_companies(id, name),
-          contact:contacts(id, name)
+          contact:contacts(id, name, email)
         `)
         .eq('tender_id', tenderId);
 
@@ -218,27 +210,14 @@ export function useTenderCRMSync() {
       };
 
       for (const member of teamMembers || []) {
-        // Skip if already linked to CRM
-        if (member.company_id) {
+        // Skip if already linked to CRM company
+        if (member.company_id && member.company) {
           results.skipped++;
           continue;
         }
 
-        // If we have company name but no link, sync it
-        if (member.company_name) {
-          try {
-            await syncPartnerToCRM.mutateAsync({
-              tenderId,
-              companyName: member.company_name,
-              specialty: member.specialty || 'other',
-              contactName: member.contact_name,
-              contactEmail: member.contact_email,
-            });
-            results.synced++;
-          } catch (e) {
-            console.warn('Failed to sync member:', member.company_name, e);
-          }
-        }
+        // All members should already have company_id, just count them
+        results.skipped++;
       }
 
       return results;
