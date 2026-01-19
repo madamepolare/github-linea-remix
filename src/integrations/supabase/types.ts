@@ -3860,6 +3860,110 @@ export type Database = {
           },
         ]
       }
+      evaluation_criteria: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          weight: number | null
+          workspace_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          weight?: number | null
+          workspace_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          weight?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_criteria_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_panel_feedback: {
+        Row: {
+          created_at: string | null
+          evaluation_id: string
+          feedback_text: string | null
+          id: string
+          improvements: string[] | null
+          panel_member_id: string
+          rating: number | null
+          recommendation: string | null
+          strengths: string[] | null
+          submitted_at: string | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          evaluation_id: string
+          feedback_text?: string | null
+          id?: string
+          improvements?: string[] | null
+          panel_member_id: string
+          rating?: number | null
+          recommendation?: string | null
+          strengths?: string[] | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          evaluation_id?: string
+          feedback_text?: string | null
+          id?: string
+          improvements?: string[] | null
+          panel_member_id?: string
+          rating?: number | null
+          recommendation?: string | null
+          strengths?: string[] | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_panel_feedback_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "team_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_panel_feedback_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback_entries: {
         Row: {
           author_id: string | null
@@ -9880,12 +9984,18 @@ export type Database = {
         Row: {
           completed_date: string | null
           created_at: string
+          duration_minutes: number | null
           evaluation_type: string
           evaluator_id: string
+          feedback: Json | null
           id: string
+          location: string | null
+          meeting_link: string | null
           notes: string | null
           objectives: Json | null
+          panel_members: string[] | null
           rating: number | null
+          reminder_sent: boolean | null
           scheduled_date: string
           status: string
           updated_at: string
@@ -9895,12 +10005,18 @@ export type Database = {
         Insert: {
           completed_date?: string | null
           created_at?: string
+          duration_minutes?: number | null
           evaluation_type?: string
           evaluator_id: string
+          feedback?: Json | null
           id?: string
+          location?: string | null
+          meeting_link?: string | null
           notes?: string | null
           objectives?: Json | null
+          panel_members?: string[] | null
           rating?: number | null
+          reminder_sent?: boolean | null
           scheduled_date: string
           status?: string
           updated_at?: string
@@ -9910,12 +10026,18 @@ export type Database = {
         Update: {
           completed_date?: string | null
           created_at?: string
+          duration_minutes?: number | null
           evaluation_type?: string
           evaluator_id?: string
+          feedback?: Json | null
           id?: string
+          location?: string | null
+          meeting_link?: string | null
           notes?: string | null
           objectives?: Json | null
+          panel_members?: string[] | null
           rating?: number | null
+          reminder_sent?: boolean | null
           scheduled_date?: string
           status?: string
           updated_at?: string

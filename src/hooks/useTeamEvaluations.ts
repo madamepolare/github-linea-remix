@@ -15,6 +15,12 @@ export interface TeamEvaluation {
   objectives: any[];
   notes: string | null;
   rating: number | null;
+  panel_members: string[];
+  location: string | null;
+  meeting_link: string | null;
+  duration_minutes: number;
+  reminder_sent: boolean;
+  feedback: Record<string, any>;
   created_at: string;
   updated_at: string;
 }
