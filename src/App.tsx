@@ -15,6 +15,7 @@ import '@/i18n/config';
 
 // Lazy load pages for better performance
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Reports = lazy(() => import("./pages/Reports"));
 const Auth = lazy(() => import("./pages/Auth"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
@@ -136,6 +137,8 @@ const App = () => (
                   <Route path="/tasks/list" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
                   <Route path="/tasks/archive" element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
                   <Route path="/tasks/:taskId" element={<Suspense fallback={<PageLoader />}><TaskDetail /></Suspense>} />
+                  <Route path="/reports" element={<Suspense fallback={<PageLoader />}><Reports /></Suspense>} />
+                  <Route path="/reports/:section" element={<Suspense fallback={<PageLoader />}><Reports /></Suspense>} />
                   <Route path="/projects" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
                   <Route path="/projects/list" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
                   <Route path="/projects/board" element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
