@@ -36,11 +36,11 @@ export function useTeamMembers() {
       if (membersError) throw membersError;
       if (!members || members.length === 0) return [];
 
-      // Fetch profiles separately
+      // Fetch profiles separately (including email and department)
       const userIds = members.map(m => m.user_id);
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("user_id, id, full_name, avatar_url, job_title, phone")
+        .select("user_id, id, full_name, avatar_url, job_title, phone, email, department")
         .in("user_id", userIds);
 
       if (profilesError) throw profilesError;
@@ -62,10 +62,10 @@ export function useTeamMembers() {
             id: profile.id,
             full_name: profile.full_name,
             avatar_url: profile.avatar_url,
-            email: null,
+            email: profile.email || null,
             job_title: profile.job_title,
             phone: profile.phone,
-            department: null,
+            department: profile.department || null,
           } : null,
         };
       });
