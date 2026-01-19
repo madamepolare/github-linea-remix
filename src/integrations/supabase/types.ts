@@ -3735,6 +3735,78 @@ export type Database = {
           },
         ]
       }
+      employee_objectives: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          current_value: string | null
+          description: string | null
+          due_date: string | null
+          evaluation_id: string | null
+          evaluator_id: string | null
+          id: string
+          progress: number | null
+          status: string | null
+          target_value: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+          weight: number | null
+          workspace_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          current_value?: string | null
+          description?: string | null
+          due_date?: string | null
+          evaluation_id?: string | null
+          evaluator_id?: string | null
+          id?: string
+          progress?: number | null
+          status?: string | null
+          target_value?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+          weight?: number | null
+          workspace_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          current_value?: string | null
+          description?: string | null
+          due_date?: string | null
+          evaluation_id?: string | null
+          evaluator_id?: string | null
+          id?: string
+          progress?: number | null
+          status?: string | null
+          target_value?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+          weight?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_objectives_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "team_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_objectives_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entity_activities: {
         Row: {
           activity_type: string
@@ -6084,63 +6156,81 @@ export type Database = {
       }
       payroll_variables: {
         Row: {
+          advance_payment: number | null
           bonuses: Json | null
           cp_remaining: number | null
           cp_taken: number | null
           created_at: string | null
           deductions: Json | null
+          expense_reimbursement: number | null
           id: string
+          meal_vouchers_count: number | null
           notes: string | null
           overtime_hours: number | null
           period_id: string
+          remote_allowance: number | null
+          remote_work_days: number | null
           rtt_remaining: number | null
           rtt_taken: number | null
           sick_days: number | null
           sick_days_without_pay: number | null
           total_worked_hours: number | null
           training_days: number | null
+          transport_allowance: number | null
           unpaid_leave_days: number | null
           updated_at: string | null
           user_id: string
           workspace_id: string
         }
         Insert: {
+          advance_payment?: number | null
           bonuses?: Json | null
           cp_remaining?: number | null
           cp_taken?: number | null
           created_at?: string | null
           deductions?: Json | null
+          expense_reimbursement?: number | null
           id?: string
+          meal_vouchers_count?: number | null
           notes?: string | null
           overtime_hours?: number | null
           period_id: string
+          remote_allowance?: number | null
+          remote_work_days?: number | null
           rtt_remaining?: number | null
           rtt_taken?: number | null
           sick_days?: number | null
           sick_days_without_pay?: number | null
           total_worked_hours?: number | null
           training_days?: number | null
+          transport_allowance?: number | null
           unpaid_leave_days?: number | null
           updated_at?: string | null
           user_id: string
           workspace_id: string
         }
         Update: {
+          advance_payment?: number | null
           bonuses?: Json | null
           cp_remaining?: number | null
           cp_taken?: number | null
           created_at?: string | null
           deductions?: Json | null
+          expense_reimbursement?: number | null
           id?: string
+          meal_vouchers_count?: number | null
           notes?: string | null
           overtime_hours?: number | null
           period_id?: string
+          remote_allowance?: number | null
+          remote_work_days?: number | null
           rtt_remaining?: number | null
           rtt_taken?: number | null
           sick_days?: number | null
           sick_days_without_pay?: number | null
           total_worked_hours?: number | null
           training_days?: number | null
+          transport_allowance?: number | null
           unpaid_leave_days?: number | null
           updated_at?: string | null
           user_id?: string
@@ -9635,6 +9725,7 @@ export type Database = {
           absence_type: string
           approved_at: string | null
           approved_by: string | null
+          computed_days: number | null
           created_at: string
           days_count: number | null
           deducted_from_balance: boolean | null
@@ -9656,6 +9747,7 @@ export type Database = {
           absence_type?: string
           approved_at?: string | null
           approved_by?: string | null
+          computed_days?: number | null
           created_at?: string
           days_count?: number | null
           deducted_from_balance?: boolean | null
@@ -9677,6 +9769,7 @@ export type Database = {
           absence_type?: string
           approved_at?: string | null
           approved_by?: string | null
+          computed_days?: number | null
           created_at?: string
           days_count?: number | null
           deducted_from_balance?: boolean | null

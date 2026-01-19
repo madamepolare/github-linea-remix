@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval } from "date-fns";
 import { fr } from "date-fns/locale";
-import { useMyTimeEntries, useCreateTimeEntry, useDeleteTimeEntry } from "@/hooks/useTeamTimeEntries";
+import { useMyTimeEntries, useCreateTimeEntry, useDeleteTimeEntry, useUpdateTimeEntry } from "@/hooks/useTeamTimeEntries";
 import { useProjects } from "@/hooks/useProjects";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +48,7 @@ export function TimeTrackingTab() {
   const { projects } = useProjects();
   const createEntry = useCreateTimeEntry();
   const deleteEntry = useDeleteTimeEntry();
+  const updateEntry = useUpdateTimeEntry();
 
   const entriesByDate = entries?.reduce((acc, entry) => {
     if (!acc[entry.date]) acc[entry.date] = [];
@@ -79,7 +80,7 @@ export function TimeTrackingTab() {
     // Submit all draft entries for validation
     const draftEntries = entries?.filter((e) => e.status === "draft") || [];
     for (const entry of draftEntries) {
-      await (await import("@/hooks/useTeamTimeEntries")).useUpdateTimeEntry().mutateAsync({
+      await updateEntry.mutateAsync({
         id: entry.id,
         status: "pending_validation",
       });
