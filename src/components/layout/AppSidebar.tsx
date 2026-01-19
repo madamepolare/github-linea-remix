@@ -55,6 +55,7 @@ import {
 } from "@/lib/founderSwitch";
 import { useToast } from "@/hooks/use-toast";
 import { SupportChatDrawer } from "@/components/support/SupportChatDrawer";
+import { useWorkspaceIcon } from "@/hooks/useWorkspaceIcon";
 
 interface NavItem {
   title: string;
@@ -79,6 +80,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   
   const canQuickSwitch = useCanQuickSwitch(user?.email);
   const { toast } = useToast();
+  const { iconUrl: workspaceIconUrl, fallbackLetter } = useWorkspaceIcon();
   
   // Get modules data
   const { data: modules = [] } = useModules();
@@ -293,16 +295,16 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               <button 
                 className="flex flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/50"
               >
-                {/* Logo */}
-                {activeWorkspace.logo_url ? (
+                {/* Logo - uses favicon > logo fallback */}
+                {workspaceIconUrl ? (
                   <img 
-                    src={activeWorkspace.logo_url} 
+                    src={workspaceIconUrl} 
                     alt={activeWorkspace.name} 
                     className="h-8 w-8 rounded-lg object-cover"
                   />
                 ) : (
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground/5 text-foreground font-medium text-sm">
-                    {activeWorkspace.name.slice(0, 1).toUpperCase()}
+                    {fallbackLetter}
                   </div>
                 )}
                 
