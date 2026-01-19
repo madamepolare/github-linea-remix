@@ -145,14 +145,19 @@ export function TaskBoard({
     );
   }
 
+  // Only show internal filters if no external filters are provided
+  const showInternalFilters = !externalFilters;
+
   return (
     <>
-      {/* Filters bar */}
-      <TaskKanbanFilters
-        filters={filters}
-        onChange={setFilters}
-        availableTags={availableTags}
-      />
+      {/* Filters bar - only show if not using external filters */}
+      {showInternalFilters && (
+        <TaskKanbanFilters
+          filters={filters}
+          onChange={setFilters}
+          availableTags={availableTags}
+        />
+      )}
 
       <KanbanBoard<Task>
         columns={kanbanColumns}
