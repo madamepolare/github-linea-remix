@@ -8,29 +8,41 @@ import { CasPratiqueBlock, AuditionBlock } from "./CommunicationBlocks";
 import { LotsBlock, SortantsBlock } from "./LotsBlock";
 import { CriteresBlock } from "./CriteresBlock";
 
-// Architecture blocks (already exist or inline)
-import { TenderKeyMetrics } from "./TenderKeyMetrics";
-import { TenderCriteriaChart } from "./TenderCriteriaChart";
+// Architecture blocks
+import { BudgetBlock } from "./BudgetBlock";
+import { HonorairesBlock } from "./HonorairesBlock";
+import { SurfaceBlock } from "./SurfaceBlock";
+import { MissionsBlock } from "./MissionsBlock";
+import { VisiteBlock } from "./VisiteBlock";
+import { EquipeRequisBlock } from "./EquipeRequisBlock";
 
 interface DynamicSynthesisBlocksProps {
   tender: any;
   disciplineSlug: DisciplineSlug;
+  onNavigateToTab?: (tab: string) => void;
 }
 
 // Map component names to actual components
-const BLOCK_COMPONENTS: Record<string, React.ComponentType<{ tender: any }>> = {
+const BLOCK_COMPONENTS: Record<string, React.ComponentType<{ tender: any; onNavigateToTab?: (tab: string) => void }>> = {
+  // Architecture blocks
+  BudgetBlock,
+  HonorairesBlock,
+  SurfaceBlock,
+  MissionsBlock,
+  VisiteBlock,
+  EquipeRequisBlock,
   // Communication blocks
   AccordCadreBlock,
   CasPratiqueBlock,
   AuditionBlock,
   LotsBlock,
   SortantsBlock,
+  AnciensTitulairesBlock: SortantsBlock,
+  // Shared blocks
   CriteresBlock,
-  // Note: Architecture blocks like BudgetBlock, HonorairesBlock, SurfaceBlock
-  // are rendered inline in TenderSyntheseTab for now
 };
 
-export function DynamicSynthesisBlocks({ tender, disciplineSlug }: DynamicSynthesisBlocksProps) {
+export function DynamicSynthesisBlocks({ tender, disciplineSlug, onNavigateToTab }: DynamicSynthesisBlocksProps) {
   const blocks = useTenderSynthesisBlocks(disciplineSlug);
   
   // Filter only blocks that have a component and are visible
@@ -43,15 +55,27 @@ export function DynamicSynthesisBlocks({ tender, disciplineSlug }: DynamicSynthe
   if (visibleBlocks.length === 0) return null;
 
   return (
-    <div className="space-y-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {visibleBlocks.map(block => {
         const Component = BLOCK_COMPONENTS[block.component];
         if (!Component) return null;
-        return <Component key={block.key} tender={tender} />;
+        return <Component key={block.key} tender={tender} onNavigateToTab={onNavigateToTab} />;
       })}
     </div>
   );
 }
 
 // Export individual blocks for direct use
-export { AccordCadreBlock, CasPratiqueBlock, AuditionBlock, LotsBlock, SortantsBlock };
+export { 
+  AccordCadreBlock, 
+  CasPratiqueBlock, 
+  AuditionBlock, 
+  LotsBlock, 
+  SortantsBlock,
+  BudgetBlock,
+  HonorairesBlock,
+  SurfaceBlock,
+  MissionsBlock,
+  VisiteBlock,
+  EquipeRequisBlock,
+};
