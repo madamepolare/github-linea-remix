@@ -5,16 +5,18 @@ import { TimeTrackingTab } from "@/components/team/TimeTrackingTab";
 import { AbsencesTab } from "@/components/team/AbsencesTab";
 import { PayrollExportTab } from "@/components/team/PayrollExportTab";
 import { EvaluationsTab } from "@/components/team/EvaluationsTab";
+import { SalariesTab } from "@/components/team/SalariesTab";
 import { HRDashboard } from "@/components/team/HRDashboard";
 import { SEOHead } from "@/components/seo/SEOHead";
 
-type TeamSection = "dashboard" | "users" | "time-tracking" | "absences" | "payroll" | "evaluations";
+type TeamSection = "dashboard" | "users" | "time-tracking" | "absences" | "salaries" | "payroll" | "evaluations";
 
 const sectionDescriptions: Record<TeamSection, string> = {
   dashboard: "Vue d'ensemble RH",
   users: "Équipe et annuaire",
   "time-tracking": "Suivi et validation du temps",
   absences: "Congés, absences et soldes",
+  salaries: "Rémunérations et contrats",
   payroll: "Variables de paie",
   evaluations: "Entretiens et objectifs",
 };
@@ -48,6 +50,8 @@ export default function Team() {
         return <TimeTrackingTab />;
       case "absences":
         return <AbsencesTab />;
+      case "salaries":
+        return <SalariesTab />;
       case "payroll":
         return <PayrollExportTab />;
       case "evaluations":
