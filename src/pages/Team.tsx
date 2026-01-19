@@ -11,11 +11,13 @@ import { PayrollExportTab } from "@/components/team/PayrollExportTab";
 import { TeamRequestsTab } from "@/components/team/TeamRequestsTab";
 import { EvaluationsTab } from "@/components/team/EvaluationsTab";
 import { DirectoryTab } from "@/components/team/DirectoryTab";
+import { HRDashboard } from "@/components/team/HRDashboard";
 import { SEOHead } from "@/components/seo/SEOHead";
 
-type TeamSection = "users" | "time-tracking" | "time-validation" | "recruitment" | "absences" | "leave-balances" | "payroll" | "requests" | "evaluations" | "directory";
+type TeamSection = "dashboard" | "users" | "time-tracking" | "time-validation" | "recruitment" | "absences" | "leave-balances" | "payroll" | "requests" | "evaluations" | "directory";
 
 const sectionDescriptions: Record<TeamSection, string> = {
+  dashboard: "Vue d'ensemble des ressources humaines",
   users: "Gérez les membres de votre équipe",
   "time-tracking": "Suivi du temps de travail",
   "time-validation": "Validation des heures",
@@ -30,10 +32,12 @@ const sectionDescriptions: Record<TeamSection, string> = {
 
 export default function Team() {
   const { section } = useParams();
-  const activeSection = (section as TeamSection) || "users";
+  const activeSection = (section as TeamSection) || "dashboard";
 
   const renderContent = () => {
     switch (activeSection) {
+      case "dashboard":
+        return <HRDashboard />;
       case "users":
         return <TeamUsersTab />;
       case "time-tracking":
