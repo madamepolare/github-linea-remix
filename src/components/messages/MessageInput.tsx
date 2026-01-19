@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Send, Paperclip, Smile, X, FileText, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Send, Paperclip, Smile, X, FileText, Image as ImageIcon, Loader2, Reply } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MentionInput } from "@/components/shared/MentionInput";
 import {
@@ -7,12 +7,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { QUICK_REACTIONS } from "@/hooks/useTeamMessages";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { GifPicker } from "./GifPicker";
+import { EmojiPicker } from "./EmojiPicker";
+import { TeamMessage } from "@/hooks/useTeamMessages";
 
 // GIF icon component
 const GifIcon = ({ className }: { className?: string }) => (
@@ -30,12 +31,23 @@ const GifIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+export interface ReplyingTo {
+  id: string;
+  content: string;
+  author?: {
+    full_name: string | null;
+    avatar_url: string | null;
+  };
+}
+
 interface MessageInputProps {
   channelName: string;
-  onSend: (content: string, mentions: string[], attachments?: AttachmentData[]) => Promise<void>;
+  onSend: (content: string, mentions: string[], attachments?: AttachmentData[], parentId?: string) => Promise<void>;
   isLoading?: boolean;
   placeholder?: string;
   onTypingChange?: (isTyping: boolean) => void;
+  replyingTo?: ReplyingTo | null;
+  onCancelReply?: () => void;
 }
 
 export interface AttachmentData {
@@ -55,7 +67,7 @@ const ALLOWED_TYPES = [
   'text/plain', 'text/csv',
 ];
 
-export function MessageInput({ channelName, onSend, isLoading, placeholder, onTypingChange }: MessageInputProps) {
+export function MessageInput({ channelName, onSend, isLoading, placeholder, onTypingChange, replyingTo, onCancelReply }: MessageInputProps) {
   const { user, activeWorkspace } = useAuth();
   const [content, setContent] = useState("");
   const [mentions, setMentions] = useState<string[]>([]);
@@ -63,6 +75,7 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -191,10 +204,11 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
     // Stop typing when sending
     onTypingChange?.(false);
     
-    await onSend(content, mentions, attachments.length > 0 ? attachments : undefined);
+    await onSend(content, mentions, attachments.length > 0 ? attachments : undefined, replyingTo?.id);
     setContent("");
     setMentions([]);
     setAttachments([]);
+    onCancelReply?.();
   };
 
   const handleGifSelect = (gif: { url: string; previewUrl: string; title: string }) => {
@@ -246,6 +260,29 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
             <Paperclip className="h-8 w-8 mx-auto mb-2 text-primary" />
             <p className="text-sm font-medium text-primary">Déposez vos fichiers ici</p>
           </div>
+        </div>
+      )}
+
+      {/* Reply indicator */}
+      {replyingTo && (
+        <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-muted/50 rounded-lg border-l-2 border-primary">
+          <Reply className="h-4 w-4 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="text-xs text-primary font-medium">
+              Réponse à {replyingTo.author?.full_name || "Utilisateur"}
+            </span>
+            <p className="text-xs text-muted-foreground truncate">
+              {replyingTo.content.slice(0, 100)}{replyingTo.content.length > 100 ? "..." : ""}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={onCancelReply}
+            className="shrink-0"
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
         </div>
       )}
 
@@ -340,25 +377,18 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
             </PopoverContent>
           </Popover>
 
-          {/* Emoji Picker */}
-          <Popover>
+          {/* Emoji Picker - Full picker */}
+          <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon-sm">
                 <Smile className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-2" align="end">
-              <div className="flex gap-1">
-                {QUICK_REACTIONS.map(emoji => (
-                  <button
-                    key={emoji}
-                    onClick={() => insertEmoji(emoji)}
-                    className="p-1.5 hover:bg-muted rounded transition-colors text-lg"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
+            <PopoverContent className="w-auto p-0" align="end" sideOffset={8}>
+              <EmojiPicker 
+                onSelect={insertEmoji}
+                onClose={() => setShowEmojiPicker(false)}
+              />
             </PopoverContent>
           </Popover>
 

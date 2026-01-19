@@ -6,11 +6,13 @@ import { RealtimeChannel } from "@supabase/supabase-js";
 export interface TypingUser {
   user_id: string;
   full_name: string | null;
+  avatar_url?: string | null;
 }
 
 interface PresenceState {
   user_id: string;
   full_name: string | null;
+  avatar_url: string | null;
   isTyping: boolean;
 }
 
@@ -43,6 +45,7 @@ export function useTypingIndicator(channelId: string | undefined) {
               typing.push({
                 user_id: presence.user_id,
                 full_name: presence.full_name,
+                avatar_url: presence.avatar_url,
               });
             }
           }
@@ -55,6 +58,7 @@ export function useTypingIndicator(channelId: string | undefined) {
           await presenceChannel.track({
             user_id: user.id,
             full_name: profile?.full_name || null,
+            avatar_url: profile?.avatar_url || null,
             isTyping: false,
           });
         }
@@ -68,7 +72,7 @@ export function useTypingIndicator(channelId: string | undefined) {
       }
       presenceChannel.unsubscribe();
     };
-  }, [channelId, user?.id, profile?.full_name]);
+  }, [channelId, user?.id, profile?.full_name, profile?.avatar_url]);
 
   const setTyping = useCallback(
     (isTyping: boolean) => {
@@ -80,10 +84,11 @@ export function useTypingIndicator(channelId: string | undefined) {
         typingTimeoutRef.current = null;
       }
 
-      // Update presence
+      // Update presence with avatar
       channelRef.current.track({
         user_id: user.id,
         full_name: profile?.full_name || null,
+        avatar_url: profile?.avatar_url || null,
         isTyping,
       });
 
@@ -93,12 +98,13 @@ export function useTypingIndicator(channelId: string | undefined) {
           channelRef.current?.track({
             user_id: user.id,
             full_name: profile?.full_name || null,
+            avatar_url: profile?.avatar_url || null,
             isTyping: false,
           });
         }, 3000);
       }
     },
-    [user?.id, profile?.full_name]
+    [user?.id, profile?.full_name, profile?.avatar_url]
   );
 
   const stopTyping = useCallback(() => {

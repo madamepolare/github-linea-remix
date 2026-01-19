@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Hash, Lock, MessageCircle, UserMinus, UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { TeamChannel, useChannelMessages, useChannelMembers, useTeamMessageMutations } from "@/hooks/useTeamMessages";
+import { TeamChannel, TeamMessage, useChannelMessages, useChannelMembers, useTeamMessageMutations } from "@/hooks/useTeamMessages";
 import { MessageItem } from "./MessageItem";
 import { MessageInput } from "./MessageInput";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -32,6 +32,7 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [showMembers, setShowMembers] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; content: string; author?: { full_name: string | null; avatar_url: string | null } } | null>(null);
   
   // Typing indicator
   const { typingUsers, setTyping } = useTypingIndicator(channel.id);
@@ -68,12 +69,21 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages?.length]);
 
-  const handleSendMessage = async (content: string, mentions: string[], attachments?: { url: string; name: string; type: string; size: number }[]) => {
+  const handleSendMessage = async (content: string, mentions: string[], attachments?: { url: string; name: string; type: string; size: number }[], parentId?: string) => {
     await createMessage.mutateAsync({
       channel_id: channel.id,
       content,
       mentions,
       attachments,
+      parent_id: parentId,
+    });
+  };
+
+  const handleReply = (message: TeamMessage) => {
+    setReplyingTo({
+      id: message.id,
+      content: message.content,
+      author: message.author,
     });
   };
 
@@ -149,6 +159,7 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
                   message={message}
                   showAuthor={showAuthor}
                   onOpenThread={() => onOpenThread(message.id)}
+                  onReply={() => handleReply(message)}
                 />
               );
             })
@@ -171,6 +182,8 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
           onSend={handleSendMessage}
           isLoading={createMessage.isPending}
           onTypingChange={setTyping}
+          replyingTo={replyingTo}
+          onCancelReply={() => setReplyingTo(null)}
         />
       </div>
 
