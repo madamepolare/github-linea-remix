@@ -27,19 +27,20 @@ export interface NotificationWithActor extends Notification {
 }
 
 export function useNotifications() {
-  const { user } = useAuth();
+  const { user, activeWorkspace } = useAuth();
   const queryClient = useQueryClient();
 
   const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ["notifications", user?.id],
+    queryKey: ["notifications", user?.id, activeWorkspace?.id],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!user?.id || !activeWorkspace?.id) return [];
       
-      // First get notifications
+      // First get notifications - FILTERED BY WORKSPACE
       const { data: notifs, error } = await supabase
         .from("notifications")
         .select("*")
         .eq("user_id", user.id)
+        .eq("workspace_id", activeWorkspace.id)
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -70,15 +71,15 @@ export function useNotifications() {
         actor: n.actor_id ? actorProfiles[n.actor_id] || null : null,
       })) as NotificationWithActor[];
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!activeWorkspace?.id,
   });
 
-  // Real-time subscription
+  // Real-time subscription - FILTERED BY WORKSPACE
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !activeWorkspace?.id) return;
 
     const channel = supabase
-      .channel("notifications-realtime")
+      .channel(`notifications-realtime-${activeWorkspace.id}`)
       .on(
         "postgres_changes",
         {
@@ -87,8 +88,15 @@ export function useNotifications() {
           table: "notifications",
           filter: `user_id=eq.${user.id}`,
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+        (payload) => {
+          // Only invalidate if the notification belongs to the active workspace
+          const newRecord = payload.new as Notification | undefined;
+          const oldRecord = payload.old as Notification | undefined;
+          const record = newRecord || oldRecord;
+          
+          if (record && record.workspace_id === activeWorkspace.id) {
+            queryClient.invalidateQueries({ queryKey: ["notifications", user.id, activeWorkspace.id] });
+          }
         }
       )
       .subscribe();
@@ -96,7 +104,7 @@ export function useNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, queryClient]);
+  }, [user?.id, activeWorkspace?.id, queryClient]);
 
   const markAsRead = useMutation({
     mutationFn: async (notificationId: string) => {
@@ -108,24 +116,26 @@ export function useNotifications() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", user?.id, activeWorkspace?.id] });
     },
   });
 
   const markAllAsRead = useMutation({
     mutationFn: async () => {
-      if (!user?.id) return;
+      if (!user?.id || !activeWorkspace?.id) return;
       
+      // Mark all as read - FILTERED BY WORKSPACE
       const { error } = await supabase
         .from("notifications")
         .update({ is_read: true })
         .eq("user_id", user.id)
+        .eq("workspace_id", activeWorkspace.id)
         .eq("is_read", false);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", user?.id, activeWorkspace?.id] });
     },
   });
 
@@ -139,7 +149,7 @@ export function useNotifications() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", user?.id, activeWorkspace?.id] });
     },
   });
 
