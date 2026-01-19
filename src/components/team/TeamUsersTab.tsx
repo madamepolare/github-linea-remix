@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
 import { useTeams } from "@/hooks/useTeams";
@@ -7,12 +7,9 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -21,13 +18,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -35,19 +25,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, MoreHorizontal, Mail, Shield, Trash2, Search, GraduationCap, Calendar, UsersRound, UserRoundPlus, Pencil } from "lucide-react";
-import { ROLE_LABELS } from "@/lib/permissions";
+import { UserPlus, UsersRound, UserRoundPlus, Search } from "lucide-react";
 import { ApprenticeScheduleDialog } from "./ApprenticeScheduleDialog";
 import { TeamManagementDialog } from "./TeamManagementDialog";
 import { CreateMemberDialog } from "./CreateMemberDialog";
 import { EditMemberDialog } from "./EditMemberDialog";
-
-const roleColors: Record<string, string> = {
-  owner: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-  admin: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  member: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  viewer: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
-};
+import { MemberCard } from "./MemberCard";
+import { TeamFiltersBar, TeamFiltersState, defaultTeamFilters } from "./TeamFiltersBar";
 
 export function TeamUsersTab() {
   const { data: members, isLoading } = useTeamMembers();
@@ -329,106 +313,5 @@ export function TeamUsersTab() {
         member={editMember}
       />
     </div>
-  );
-}
-
-function MemberCard({
-  member,
-  isApprentice,
-  canManage,
-  onUpdateRole,
-  onRemove,
-  onManageApprentice,
-  onEdit,
-}: {
-  member: TeamMember;
-  isApprentice: boolean;
-  canManage: boolean;
-  onUpdateRole: (role: "admin" | "member" | "viewer") => void;
-  onRemove: () => void;
-  onManageApprentice: () => void;
-  onEdit: () => void;
-}) {
-  const initials = member.profile?.full_name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase() || "?";
-
-  return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={member.profile?.avatar_url || undefined} />
-              <AvatarFallback>{initials}</AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-medium">{member.profile?.full_name || "Sans nom"}</h3>
-                {isApprentice && (
-                  <Badge variant="secondary" className="text-xs">
-                    <GraduationCap className="h-3 w-3 mr-1" />
-                    Alternant
-                  </Badge>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground">{member.profile?.job_title || "—"}</p>
-            </div>
-          </div>
-          {canManage && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onEdit}>
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Modifier le profil
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onManageApprentice}>
-                  <GraduationCap className="h-4 w-4 mr-2" />
-                  {isApprentice ? "Modifier planning alternance" : "Configurer alternance"}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => onUpdateRole("admin")}>
-                  <Shield className="h-4 w-4 mr-2" />
-                  Passer admin
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onUpdateRole("member")}>
-                  <Shield className="h-4 w-4 mr-2" />
-                  Passer membre
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onUpdateRole("viewer")}>
-                  <Shield className="h-4 w-4 mr-2" />
-                  Passer lecteur
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive" onClick={onRemove}>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Retirer
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-        <div className="mt-3 flex items-center gap-2">
-          <Badge className={roleColors[member.role]}>
-            {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] || member.role}
-          </Badge>
-          {member.profile?.email && (
-            <a
-              href={`mailto:${member.profile.email}`}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <Mail className="h-4 w-4" />
-            </a>
-          )}
-        </div>
-      </CardContent>
-    </Card>
   );
 }
