@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -26,21 +25,17 @@ import { useTeamMembers } from "@/hooks/useTeamMembers";
 import { useProjects } from "@/hooks/useProjects";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TaskFiltersState } from "@/hooks/useTaskFilters";
 
-export interface TaskKanbanFiltersState {
-  search: string;
-  priorities: string[];
-  assignees: string[];
-  projects: string[];
-  dueDateFilter: string | null;
-  tags: string[];
-  isScheduled: boolean | null;
-}
+// Re-export types from hook for backward compatibility
+export type { TaskFiltersState as TaskKanbanFiltersState } from "@/hooks/useTaskFilters";
+export { defaultTaskFilters as defaultFilters } from "@/hooks/useTaskFilters";
 
-interface TaskKanbanFiltersProps {
-  filters: TaskKanbanFiltersState;
-  onChange: (filters: TaskKanbanFiltersState) => void;
+interface TaskFiltersProps {
+  filters: TaskFiltersState;
+  onChange: (filters: TaskFiltersState) => void;
   availableTags?: string[];
+  compact?: boolean;
 }
 
 const priorityOptions = [
@@ -57,7 +52,7 @@ const dueDateOptions = [
   { value: "no_date", label: "Sans date", icon: Calendar, color: "text-muted-foreground" },
 ];
 
-export function TaskKanbanFilters({ filters, onChange, availableTags = [] }: TaskKanbanFiltersProps) {
+export function TaskKanbanFilters({ filters, onChange, availableTags = [], compact = false }: TaskFiltersProps) {
   const { data: teamMembers } = useTeamMembers();
   const { projects } = useProjects();
   
@@ -81,7 +76,7 @@ export function TaskKanbanFilters({ filters, onChange, availableTags = [] }: Tas
     });
   };
 
-  const toggleArrayFilter = (key: keyof Pick<TaskKanbanFiltersState, 'priorities' | 'assignees' | 'projects' | 'tags'>, value: string) => {
+  const toggleArrayFilter = (key: keyof Pick<TaskFiltersState, 'priorities' | 'assignees' | 'projects' | 'tags'>, value: string) => {
     const current = filters[key];
     const updated = current.includes(value)
       ? current.filter(v => v !== value)
@@ -437,14 +432,3 @@ export function TaskKanbanFilters({ filters, onChange, availableTags = [] }: Tas
     </div>
   );
 }
-
-// Default empty filters
-export const defaultFilters: TaskKanbanFiltersState = {
-  search: "",
-  priorities: [],
-  assignees: [],
-  projects: [],
-  dueDateFilter: null,
-  tags: [],
-  isScheduled: null,
-};

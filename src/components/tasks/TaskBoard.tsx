@@ -5,6 +5,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { useScheduledTaskIds } from "@/hooks/useScheduledTaskIds";
 import { useTaskCommunicationsCounts } from "@/hooks/useTaskCommunicationsCounts";
+import { useTaskFilters, TaskFiltersState, defaultTaskFilters } from "@/hooks/useTaskFilters";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -13,14 +14,14 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CheckSquare, Calendar, FolderKanban, Building2, FileText, Target, CheckCircle2, CalendarClock, MessageCircle } from "lucide-react";
-import { format, isPast, isToday, startOfDay, endOfWeek, startOfWeek } from "date-fns";
+import { format, isPast, isToday } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { TASK_STATUSES, TASK_PRIORITIES } from "@/lib/taskTypes";
 import { WorkspaceProfile } from "@/hooks/useWorkspaceProfiles";
 import { motion } from "framer-motion";
 import confetti from "canvas-confetti";
-import { TaskKanbanFilters, TaskKanbanFiltersState, defaultFilters } from "./TaskKanbanFilters";
+import { TaskKanbanFilters } from "./TaskKanbanFilters";
 
 const COLUMNS: { id: Task["status"]; label: string; color: string }[] = TASK_STATUSES
   .filter(s => s.id !== 'archived')
@@ -31,17 +32,36 @@ interface TaskBoardProps {
   priorityFilter?: string | null;
   projectId?: string | null;
   onCreateTask?: () => void;
+  // Allow external filter control for unified filtering
+  externalFilters?: TaskFiltersState;
+  onExternalFiltersChange?: (filters: TaskFiltersState) => void;
 }
 
-export function TaskBoard({ statusFilter, priorityFilter, projectId, onCreateTask }: TaskBoardProps) {
+export function TaskBoard({ 
+  statusFilter, 
+  priorityFilter, 
+  projectId, 
+  onCreateTask,
+  externalFilters,
+  onExternalFiltersChange,
+}: TaskBoardProps) {
   const { tasks, isLoading, updateTaskStatus } = useTasks(projectId ? { projectId } : undefined);
   const { companies } = useCRMCompanies();
   const { projects } = useProjects();
   const { data: profiles } = useWorkspaceProfiles();
   const { data: scheduledTaskIds } = useScheduledTaskIds();
   
-  // Filter state
-  const [filters, setFilters] = useState<TaskKanbanFiltersState>(defaultFilters);
+  // Use hook for filtering
+  const {
+    filters: internalFilters,
+    setFilters: setInternalFilters,
+    filteredTasks: hookFilteredTasks,
+    availableTags,
+  } = useTaskFilters(tasks, { scheduledTaskIds });
+  
+  // Use external filters if provided, otherwise use internal
+  const filters = externalFilters ?? internalFilters;
+  const setFilters = onExternalFiltersChange ?? setInternalFilters;
   
   // Get all task IDs for fetching communication counts
   const taskIds = useMemo(() => tasks?.map(t => t.id) || [], [tasks]);
@@ -50,15 +70,6 @@ export function TaskBoard({ statusFilter, priorityFilter, projectId, onCreateTas
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTaskTab, setSelectedTaskTab] = useState<string>("details");
   const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(new Set());
-
-  // Extract unique tags from all tasks
-  const availableTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    tasks?.forEach(task => {
-      task.tags?.forEach(tag => tagSet.add(tag));
-    });
-    return Array.from(tagSet).sort();
-  }, [tasks]);
 
   const handleDrop = (taskId: string, _fromColumn: string, toColumn: string) => {
     // Check if moving to "done" column
@@ -89,83 +100,14 @@ export function TaskBoard({ statusFilter, priorityFilter, projectId, onCreateTas
     updateTaskStatus.mutate({ id: taskId, status: toColumn as Task["status"] });
   };
 
-  // Advanced filtering logic
+  // Use the hook's filtered tasks, but also apply legacy priorityFilter from props
   const filteredTasks = useMemo(() => {
-    let result = tasks || [];
-    
-    // Legacy priority filter (from props)
+    let result = hookFilteredTasks;
     if (priorityFilter) {
       result = result.filter((task) => task.priority === priorityFilter);
     }
-    
-    // Search filter
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      result = result.filter(task => 
-        task.title.toLowerCase().includes(searchLower) ||
-        task.description?.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // Priority filter (multi-select)
-    if (filters.priorities.length > 0) {
-      result = result.filter(task => filters.priorities.includes(task.priority));
-    }
-    
-    // Assignee filter (multi-select)
-    if (filters.assignees.length > 0) {
-      result = result.filter(task => 
-        task.assigned_to?.some(userId => filters.assignees.includes(userId))
-      );
-    }
-    
-    // Project filter (multi-select)
-    if (filters.projects.length > 0) {
-      result = result.filter(task => 
-        task.project_id && filters.projects.includes(task.project_id)
-      );
-    }
-    
-    // Due date filter
-    if (filters.dueDateFilter) {
-      const today = startOfDay(new Date());
-      const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
-      
-      result = result.filter(task => {
-        switch (filters.dueDateFilter) {
-          case "overdue":
-            return task.due_date && isPast(new Date(task.due_date)) && task.status !== "done";
-          case "today":
-            return task.due_date && isToday(new Date(task.due_date));
-          case "week":
-            if (!task.due_date) return false;
-            const dueDate = new Date(task.due_date);
-            return dueDate >= today && dueDate <= weekEnd;
-          case "no_date":
-            return !task.due_date;
-          default:
-            return true;
-        }
-      });
-    }
-    
-    // Tags filter (multi-select)
-    if (filters.tags.length > 0) {
-      result = result.filter(task => 
-        task.tags?.some(tag => filters.tags.includes(tag))
-      );
-    }
-    
-    // Scheduled filter
-    if (filters.isScheduled !== null) {
-      result = result.filter(task => {
-        const isTaskScheduled = scheduledTaskIds?.has(task.id) || false;
-        return filters.isScheduled ? isTaskScheduled : !isTaskScheduled;
-      });
-    }
-    
     return result;
-  }, [tasks, priorityFilter, filters, scheduledTaskIds]);
+  }, [hookFilteredTasks, priorityFilter]);
 
   const columnsToShow = statusFilter
     ? COLUMNS.filter((col) => col.id === statusFilter)
