@@ -12,6 +12,9 @@ import { InviteMembersDialog } from "./InviteMembersDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useTypingIndicator } from "@/hooks/useTypingIndicator";
+import { TypingIndicator } from "./TypingIndicator";
+import { AnimatePresence } from "framer-motion";
 
 interface ChannelViewProps {
   channel: TeamChannel;
@@ -29,6 +32,9 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [showMembers, setShowMembers] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  
+  // Typing indicator
+  const { typingUsers, setTyping } = useTypingIndicator(channel.id);
 
   // Check if current user is admin of this channel
   const currentUserMember = members.find(m => m.user_id === user?.id);
@@ -151,12 +157,20 @@ export function ChannelView({ channel, onOpenThread }: ChannelViewProps) {
         </div>
       </ScrollArea>
 
+      {/* Typing Indicator */}
+      <AnimatePresence>
+        {typingUsers.length > 0 && (
+          <TypingIndicator typingUsers={typingUsers} />
+        )}
+      </AnimatePresence>
+
       {/* Message Input */}
       <div className="p-4 border-t">
         <MessageInput
           channelName={displayName}
           onSend={handleSendMessage}
           isLoading={createMessage.isPending}
+          onTypingChange={setTyping}
         />
       </div>
 

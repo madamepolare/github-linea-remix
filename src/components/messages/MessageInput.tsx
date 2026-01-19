@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Send, Paperclip, Smile, X, FileText, Image as ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MentionInput } from "@/components/shared/MentionInput";
@@ -12,12 +12,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { GifPicker } from "./GifPicker";
+
+// GIF icon component
+const GifIcon = ({ className }: { className?: string }) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <rect x="2" y="4" width="20" height="16" rx="2" />
+    <text x="6" y="15" fontSize="8" fontWeight="bold" stroke="none" fill="currentColor">GIF</text>
+  </svg>
+);
 
 interface MessageInputProps {
   channelName: string;
   onSend: (content: string, mentions: string[], attachments?: AttachmentData[]) => Promise<void>;
   isLoading?: boolean;
   placeholder?: string;
+  onTypingChange?: (isTyping: boolean) => void;
 }
 
 export interface AttachmentData {
@@ -37,15 +55,44 @@ const ALLOWED_TYPES = [
   'text/plain', 'text/csv',
 ];
 
-export function MessageInput({ channelName, onSend, isLoading, placeholder }: MessageInputProps) {
+export function MessageInput({ channelName, onSend, isLoading, placeholder, onTypingChange }: MessageInputProps) {
   const { user, activeWorkspace } = useAuth();
   const [content, setContent] = useState("");
   const [mentions, setMentions] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<AttachmentData[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle typing indicator
+  useEffect(() => {
+    if (!onTypingChange) return;
+
+    if (content.trim()) {
+      onTypingChange(true);
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Stop typing after 2 seconds of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        onTypingChange(false);
+      }, 2000);
+    } else {
+      onTypingChange(false);
+    }
+
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [content, onTypingChange]);
 
   const uploadFile = async (file: File): Promise<AttachmentData | null> => {
     if (!user?.id || !activeWorkspace?.id) {
@@ -141,10 +188,24 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder }: Me
   const handleSubmit = async () => {
     if ((!content.trim() && attachments.length === 0) || isLoading || isUploading) return;
     
+    // Stop typing when sending
+    onTypingChange?.(false);
+    
     await onSend(content, mentions, attachments.length > 0 ? attachments : undefined);
     setContent("");
     setMentions([]);
     setAttachments([]);
+  };
+
+  const handleGifSelect = (gif: { url: string; previewUrl: string; title: string }) => {
+    setAttachments(prev => [...prev, {
+      url: gif.url,
+      name: gif.title || "GIF",
+      type: "image/gif",
+      size: 0,
+    }]);
+    setShowGifPicker(false);
+    toast.success("GIF ajouté");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -264,6 +325,22 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder }: Me
             )}
           </Button>
 
+          {/* GIF Picker */}
+          <Popover open={showGifPicker} onOpenChange={setShowGifPicker}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon-sm">
+                <GifIcon className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end" sideOffset={8}>
+              <GifPicker 
+                onSelect={handleGifSelect}
+                onClose={() => setShowGifPicker(false)}
+              />
+            </PopoverContent>
+          </Popover>
+
+          {/* Emoji Picker */}
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon-sm">
