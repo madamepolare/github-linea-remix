@@ -24,11 +24,17 @@ export const defaultTaskFilters: TaskFiltersState = {
 
 interface UseTaskFiltersOptions {
   scheduledTaskIds?: Set<string>;
+  // Allow passing external filters for controlled mode
+  externalFilters?: TaskFiltersState;
 }
 
 export function useTaskFilters(tasks: Task[] | undefined, options: UseTaskFiltersOptions = {}) {
-  const { scheduledTaskIds } = options;
-  const [filters, setFilters] = useState<TaskFiltersState>(defaultTaskFilters);
+  const { scheduledTaskIds, externalFilters } = options;
+  const [internalFilters, setInternalFilters] = useState<TaskFiltersState>(defaultTaskFilters);
+  
+  // Use external filters if provided, otherwise internal
+  const filters = externalFilters ?? internalFilters;
+  const setFilters = setInternalFilters;
 
   // Extract unique tags from all tasks
   const availableTags = useMemo(() => {

@@ -5,8 +5,8 @@ import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import { TaskArchiveView } from "@/components/tasks/TaskArchiveView";
 import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
-import { TaskKanbanFilters } from "@/components/tasks/TaskKanbanFilters";
-import { useTaskFilters, defaultTaskFilters } from "@/hooks/useTaskFilters";
+import { TaskFiltersBar } from "@/components/tasks/TaskFiltersBar";
+import { defaultTaskFilters, TaskFiltersState } from "@/hooks/useTaskFilters";
 import { useTasks } from "@/hooks/useTasks";
 import { useScheduledTaskIds } from "@/hooks/useScheduledTaskIds";
 
@@ -20,14 +20,18 @@ export default function Tasks() {
   const view: ViewType = (lastSegment === "list" || lastSegment === "archive") ? lastSegment : "board";
   const [createOpen, setCreateOpen] = useState(false);
 
-  // Unified filters state
+  // Unified filters state at page level
+  const [filters, setFilters] = useState<TaskFiltersState>(defaultTaskFilters);
+  
+  // Get tasks for extracting available tags
   const { tasks } = useTasks();
   const { data: scheduledTaskIds } = useScheduledTaskIds();
-  const { 
-    filters, 
-    setFilters, 
-    availableTags 
-  } = useTaskFilters(tasks, { scheduledTaskIds });
+  
+  // Extract available tags from tasks
+  const availableTags = tasks?.reduce((tags, task) => {
+    task.tags?.forEach(tag => tags.add(tag));
+    return tags;
+  }, new Set<string>()) || new Set<string>();
 
   // Listen for command palette event
   useEffect(() => {
@@ -44,10 +48,10 @@ export default function Tasks() {
       >
         {/* Unified filters bar (shown for board and list views, not archive) */}
         {view !== "archive" && (
-          <TaskKanbanFilters
+          <TaskFiltersBar
             filters={filters}
             onChange={setFilters}
-            availableTags={availableTags}
+            availableTags={Array.from(availableTags)}
           />
         )}
 
