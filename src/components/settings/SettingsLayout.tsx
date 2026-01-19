@@ -43,6 +43,7 @@ import {
   Plug,
   Menu,
   ChevronLeft,
+  Bell,
 } from 'lucide-react';
 
 export interface SettingsSection {
@@ -80,6 +81,7 @@ export function getSettingsGroups(t: (key: string) => string): SettingsGroup[] {
         { id: 'permissions', label: t('settings.sections.permissions'), icon: <Shield className="h-4 w-4" />, description: t('settings.sections.permissionsDesc') },
         { id: 'profile', label: t('settings.sections.profile'), icon: <User className="h-4 w-4" />, description: t('settings.sections.profileDesc') },
         { id: 'language', label: t('settings.sections.language'), icon: <Globe className="h-4 w-4" />, description: t('settings.sections.languageDesc') },
+        { id: 'notifications', label: 'Notifications', icon: <Bell className="h-4 w-4" />, description: 'Gérer vos préférences de notifications' },
       ],
     },
     {

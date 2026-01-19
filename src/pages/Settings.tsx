@@ -26,6 +26,7 @@ import { TenderSettings } from "@/components/settings/TenderSettings";
 import { CalendarIntegrationsSettings } from "@/components/settings/CalendarIntegrationsSettings";
 import { IntegrationsSettings } from "@/components/settings/IntegrationsSettings";
 import { LanguageSettings } from "@/components/settings/LanguageSettings";
+import { NotificationSettings } from "@/components/settings/NotificationSettings";
 
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import {
@@ -60,6 +61,8 @@ export default function Settings() {
         return <ProfileSettings />;
       case "language":
         return <LanguageSettings />;
+      case "notifications":
+        return <NotificationSettings />;
       case "projects":
         return <ProjectsSettings />;
       // Phases are now managed within project types

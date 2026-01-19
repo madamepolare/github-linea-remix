@@ -5839,6 +5839,80 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          created_at: string | null
+          dnd_end: string | null
+          dnd_start: string | null
+          do_not_disturb: boolean | null
+          email_enabled: boolean | null
+          id: string
+          notify_comment_replies: boolean | null
+          notify_invites: boolean | null
+          notify_mentions: boolean | null
+          notify_new_messages: boolean | null
+          notify_project_updates: boolean | null
+          notify_reactions: boolean | null
+          notify_task_assigned: boolean | null
+          notify_task_completed: boolean | null
+          notify_task_created: boolean | null
+          push_enabled: boolean | null
+          updated_at: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dnd_end?: string | null
+          dnd_start?: string | null
+          do_not_disturb?: boolean | null
+          email_enabled?: boolean | null
+          id?: string
+          notify_comment_replies?: boolean | null
+          notify_invites?: boolean | null
+          notify_mentions?: boolean | null
+          notify_new_messages?: boolean | null
+          notify_project_updates?: boolean | null
+          notify_reactions?: boolean | null
+          notify_task_assigned?: boolean | null
+          notify_task_completed?: boolean | null
+          notify_task_created?: boolean | null
+          push_enabled?: boolean | null
+          updated_at?: string | null
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dnd_end?: string | null
+          dnd_start?: string | null
+          do_not_disturb?: boolean | null
+          email_enabled?: boolean | null
+          id?: string
+          notify_comment_replies?: boolean | null
+          notify_invites?: boolean | null
+          notify_mentions?: boolean | null
+          notify_new_messages?: boolean | null
+          notify_project_updates?: boolean | null
+          notify_reactions?: boolean | null
+          notify_task_assigned?: boolean | null
+          notify_task_completed?: boolean | null
+          notify_task_created?: boolean | null
+          push_enabled?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_url: string | null
