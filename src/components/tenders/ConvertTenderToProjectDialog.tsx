@@ -27,11 +27,13 @@ import {
   ClipboardList
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useWorkspaceContext } from '@/hooks/useWorkspaceContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useConvertTenderToProject } from '@/hooks/useConvertTenderToProject';
-import { formatCurrency } from '@/lib/formatters';
 import confetti from 'canvas-confetti';
 import { cn } from '@/lib/utils';
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
 
 interface Tender {
   id: string;
@@ -61,7 +63,7 @@ export function ConvertTenderToProjectDialog({
   tender,
 }: ConvertTenderToProjectDialogProps) {
   const navigate = useNavigate();
-  const { activeWorkspace } = useWorkspaceContext();
+  const { activeWorkspace } = useAuth();
   const convertTender = useConvertTenderToProject(activeWorkspace?.id);
   
   const [step, setStep] = useState<Step>('summary');

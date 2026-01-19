@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useWorkspaceContext } from '@/hooks/useWorkspaceContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { addDays, format, parseISO } from 'date-fns';
 
@@ -99,8 +98,7 @@ const DEFAULT_TASK_TEMPLATES: TaskTemplate[] = [
 
 export function useTenderTaskTemplates() {
   const queryClient = useQueryClient();
-  const { activeWorkspace } = useWorkspaceContext();
-  const { user } = useAuth();
+  const { activeWorkspace, user } = useAuth();
 
   // Generate tasks from templates
   const generateTenderTasks = useMutation({
