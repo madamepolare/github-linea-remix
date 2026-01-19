@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProjects, useProjectMembersForList, Project, ProjectMember } from "@/hooks/useProjects";
 import { useProjectsAlertsForList, ProjectFinancialData } from "@/hooks/useProjectsAlerts";
@@ -637,7 +637,7 @@ function ProjectCard({ project, members, financialData, projectTypeSettings, ind
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="flex items-center justify-center">
+                      <button type="button" className="flex items-center justify-center focus:outline-none">
                         {financialData.margePercent >= 20 ? (
                           <Smile className="h-5 w-5 text-emerald-500" />
                         ) : financialData.margePercent >= 0 ? (
@@ -645,7 +645,7 @@ function ProjectCard({ project, members, financialData, projectTypeSettings, ind
                         ) : (
                           <Frown className="h-5 w-5 text-destructive" />
                         )}
-                      </div>
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>Marge: {Math.round(financialData.margePercent)}%</p>
@@ -662,7 +662,7 @@ function ProjectCard({ project, members, financialData, projectTypeSettings, ind
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="flex items-center gap-1">
+                      <button type="button" className="flex items-center gap-1 focus:outline-none">
                         {financialData.alerts.some(a => a.type === 'error') ? (
                           <AlertTriangle className="h-4 w-4 text-destructive" />
                         ) : financialData.alerts.some(a => a.type === 'warning') ? (
@@ -673,7 +673,7 @@ function ProjectCard({ project, members, financialData, projectTypeSettings, ind
                         <span className="text-xs font-medium">
                           {financialData.alerts.length}
                         </span>
-                      </div>
+                      </button>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <div className="space-y-1">
