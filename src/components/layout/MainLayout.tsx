@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useLocation, Outlet } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, StickyNote } from "lucide-react";
+import { X, StickyNote, Bell, Search } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { TopBar } from "./TopBar";
 import { GlobalTopBar } from "./GlobalTopBar";
 import { PostItSidebar } from "./PostItSidebar";
+import { NotificationsSidebar } from "./NotificationsSidebar";
 import { PageTransition } from "./PageTransition";
 import { WorkspaceStylesLoader } from "./WorkspaceStylesLoader";
 import { MobileBottomNav } from "./MobileBottomNav";
@@ -22,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getModuleFromPath } from "@/lib/navigationConfig";
 import { THIN_STROKE } from "@/components/ui/icon";
 import { usePostItTasks } from "@/hooks/usePostItTasks";
+import { useNotifications } from "@/hooks/useNotifications";
 import { EventSchedulerDialog } from "@/components/workflow/EventSchedulerDialog";
 import { CheckInModal } from "@/components/checkin/CheckInModal";
 import { CheckOutModal } from "@/components/checkin/CheckOutModal";
@@ -38,10 +40,14 @@ export function MainLayout() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [postItOpen, setPostItOpen] = useState(false);
+  const [notifSidebarOpen, setNotifSidebarOpen] = useState(false);
   const [eventSchedulerOpen, setEventSchedulerOpen] = useState(false);
   
   // Get pending post-it count
   const { pendingCount } = usePostItTasks();
+  
+  // Get notifications
+  const { unreadCount } = useNotifications();
 
   // Listen for open-event-scheduler event
   useEffect(() => {
@@ -86,44 +92,72 @@ export function MainLayout() {
       {/* Load and apply workspace-specific styles */}
       <WorkspaceStylesLoader />
       
-      {/* Mobile Header - Simplified */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-14 px-4 bg-background/95 backdrop-blur-lg border-b border-border safe-area-inset-top">
-        {/* Left: Menu trigger area (invisible but tappable) */}
-        <button 
+      {/* Mobile Header - App-like design */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-14 px-3 bg-background/95 backdrop-blur-xl border-b border-border/50 safe-area-inset-top">
+        {/* Left: Workspace logo + name */}
+        <motion.button 
           onClick={() => setMobileMenuOpen(true)}
-          className="flex items-center gap-2.5 -ml-1 px-1 py-1 active:opacity-70 touch-manipulation"
+          className="flex items-center gap-2 px-1.5 py-1 rounded-xl active:bg-muted/50 touch-manipulation"
+          whileTap={{ scale: 0.97 }}
         >
           {activeWorkspace?.logo_url ? (
             <img 
               src={activeWorkspace.logo_url} 
               alt={activeWorkspace.name}
-              className="h-7 w-7 rounded-lg object-cover"
+              className="h-8 w-8 rounded-xl object-cover shadow-sm"
             />
           ) : (
-            <div className="h-7 w-7 rounded-lg bg-foreground flex items-center justify-center">
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-foreground to-foreground/80 flex items-center justify-center shadow-sm">
               <span className="text-xs font-bold text-background">
                 {activeWorkspace?.name?.slice(0, 1).toUpperCase() || "L"}
               </span>
             </div>
           )}
-          <span className="font-semibold text-sm text-foreground">
-            {activeWorkspace?.name || "Linea"}
-          </span>
-        </button>
+          <div className="flex flex-col items-start">
+            <span className="font-semibold text-sm text-foreground leading-tight">
+              {activeWorkspace?.name || "Linea"}
+            </span>
+            <span className="text-[10px] text-muted-foreground leading-tight">Espace de travail</span>
+          </div>
+        </motion.button>
         
-        {/* Right: Quick actions */}
-        <div className="flex items-center gap-1">
-          <button 
+        {/* Right: Quick actions - Notifications + Post-it */}
+        <div className="flex items-center gap-0.5">
+          {/* Notifications */}
+          <motion.button 
+            onClick={() => setNotifSidebarOpen(true)}
+            className="relative p-2.5 rounded-xl hover:bg-muted/50 active:bg-muted/70 touch-manipulation"
+            whileTap={{ scale: 0.92 }}
+          >
+            <Bell className="h-5 w-5" strokeWidth={THIN_STROKE} />
+            {unreadCount > 0 && (
+              <motion.span 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute top-1 right-1 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full shadow-sm"
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </motion.span>
+            )}
+          </motion.button>
+          
+          {/* Post-it */}
+          <motion.button 
             onClick={() => setPostItOpen(true)}
-            className="relative p-2 rounded-full hover:bg-muted active:bg-muted/70 touch-manipulation"
+            className="relative p-2.5 rounded-xl hover:bg-muted/50 active:bg-muted/70 touch-manipulation"
+            whileTap={{ scale: 0.92 }}
           >
             <StickyNote className="h-5 w-5 text-amber-500" />
             {pendingCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] font-medium bg-amber-500 text-white rounded-full">
+              <motion.span 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute top-1 right-1 h-4 min-w-4 px-1 flex items-center justify-center text-[10px] font-bold bg-amber-500 text-white rounded-full shadow-sm"
+              >
                 {pendingCount > 9 ? '9+' : pendingCount}
-              </span>
+              </motion.span>
             )}
-          </button>
+          </motion.button>
         </div>
       </header>
 
@@ -174,7 +208,7 @@ export function MainLayout() {
       <div 
         className={cn(
           "min-h-screen flex flex-col transition-all duration-200 ease-out",
-          "pt-14 pb-[72px] lg:pt-0 lg:pb-0", // Account for mobile header (h-14) + bottom nav (h-[72px] with safe area)
+          "pt-14 pb-20 lg:pt-0 lg:pb-0", // Account for mobile header (h-14) + bottom nav (h-16 + safe area padding)
           collapsed ? "lg:pl-[72px]" : "lg:pl-[260px]"
         )}
       >
@@ -213,6 +247,9 @@ export function MainLayout() {
 
       {/* Post-it Sidebar */}
       <PostItSidebar open={postItOpen} onOpenChange={setPostItOpen} />
+      
+      {/* Notifications Sidebar - for mobile */}
+      <NotificationsSidebar open={notifSidebarOpen} onClose={() => setNotifSidebarOpen(false)} />
 
       {/* Global Time Tracker Overlay */}
       <GlobalTimeTracker />
