@@ -865,7 +865,7 @@ export default function QuoteBuilder() {
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Editor Panel */}
-        <div className={`flex flex-col ${showPreview ? 'w-full lg:w-[55%]' : 'w-full'} border-r bg-background`}>
+        <div className={`flex flex-col ${showPreview ? 'w-full lg:w-[45%]' : 'w-full'} border-r bg-background`}>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1">
             <div className="px-4 sm:px-6 py-3 border-b bg-card shrink-0 overflow-x-auto">
               <TabsList className="h-9 w-max bg-muted/50 p-1 rounded-lg gap-0.5">
@@ -976,35 +976,35 @@ export default function QuoteBuilder() {
 
         {/* Preview Panel - Hidden on mobile */}
         {showPreview && (
-          <div className="hidden lg:flex w-[55%] flex-col bg-muted/20 border-l">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b bg-card shrink-0">
-              <span className="text-sm font-medium text-muted-foreground">Aperçu</span>
-              <div className="flex items-center gap-2">
+          <div className="hidden lg:flex lg:w-[55%] flex-col bg-muted/20 border-l min-w-0">
+            <div className="flex items-center justify-between px-2 xl:px-4 py-2 border-b bg-card shrink-0">
+              <span className="text-xs xl:text-sm font-medium text-muted-foreground">Aperçu</span>
+              <div className="flex items-center gap-1 xl:gap-2">
                 {/* Theme Selector */}
                 <ThemePreviewSelector
                   selectedThemeId={selectedThemeId}
                   onThemeChange={setSelectedThemeId}
                   compact
                 />
-                <Separator orientation="vertical" className="h-5" />
+                <Separator orientation="vertical" className="h-4 xl:h-5" />
                 {/* Zoom Controls */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="h-6 w-6"
                     onClick={() => setZoom(Math.max(50, zoom - 10))}
                   >
-                    <ZoomOut className="h-3.5 w-3.5" />
+                    <ZoomOut className="h-3 w-3" />
                   </Button>
-                  <span className="text-xs text-muted-foreground w-10 text-center tabular-nums">{zoom}%</span>
+                  <span className="text-xs text-muted-foreground w-8 text-center tabular-nums">{zoom}%</span>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="h-6 w-6"
                     onClick={() => setZoom(Math.min(150, zoom + 10))}
                   >
-                    <ZoomIn className="h-3.5 w-3.5" />
+                    <ZoomIn className="h-3 w-3" />
                   </Button>
                 </div>
               </div>
