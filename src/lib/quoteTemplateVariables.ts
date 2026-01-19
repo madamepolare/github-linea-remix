@@ -50,6 +50,10 @@ export const TEMPLATE_VARIABLES: TemplateVariableDefinition[] = [
   { key: 'market_reference', label: 'Référence marché', description: 'Référence du marché public', category: 'document', example: 'MP-2025-001' },
   { key: 'is_public_market', label: 'Marché public', description: 'Indicateur marché public (Oui/Non)', category: 'document', example: 'Oui' },
   { key: 'is_amendment', label: 'Avenant', description: 'Indicateur avenant (Oui/Non)', category: 'document', example: 'Non' },
+  { key: 'topbar_text', label: 'Texte topbar', description: 'Texte affiché dans la barre supérieure du PDF', category: 'document', example: 'Document à usage interne - Ne pas diffuser' },
+  { key: 'author_name', label: 'Nom de l\'auteur', description: 'Nom du créateur du devis', category: 'document', example: 'Jean Martin' },
+  { key: 'author_email', label: 'Email auteur', description: 'Email du créateur', category: 'document', example: 'jean.martin@studio.fr' },
+  { key: 'author_phone', label: 'Téléphone auteur', description: 'Téléphone du créateur', category: 'document', example: '06 12 34 56 78' },
   
   // ===== AGENCE =====
   { key: 'agency_name', label: 'Nom de l\'agence', description: 'Raison sociale', category: 'agency', example: 'Studio Architecture' },
@@ -74,8 +78,14 @@ export const TEMPLATE_VARIABLES: TemplateVariableDefinition[] = [
   { key: 'client_address', label: 'Adresse client', description: 'Adresse complète du client', category: 'client', example: '456 Avenue du Client' },
   { key: 'client_city', label: 'Ville client', description: 'Ville du client', category: 'client', example: 'Lyon' },
   { key: 'client_postal_code', label: 'Code postal client', description: 'Code postal du client', category: 'client', example: '69001' },
+  { key: 'client_phone', label: 'Téléphone client', description: 'Téléphone de l\'entreprise cliente', category: 'client', example: '01 23 45 67 89' },
+  { key: 'client_siret', label: 'SIRET client', description: 'Numéro SIRET du client', category: 'client', example: '987 654 321 00012' },
+  { key: 'client_siren', label: 'SIREN client', description: 'Numéro SIREN du client', category: 'client', example: '987 654 321' },
+  { key: 'client_vat_number', label: 'N° TVA client', description: 'Numéro de TVA du client', category: 'client', example: 'FR98765432101' },
+  { key: 'client_legal_form', label: 'Forme juridique client', description: 'Forme juridique du client', category: 'client', example: 'SAS' },
   { key: 'client_contact_name', label: 'Contact client', description: 'Nom du contact principal', category: 'client', example: 'Jean Dupont' },
   { key: 'client_contact_email', label: 'Email contact', description: 'Email du contact principal', category: 'client', example: 'jean.dupont@example.fr' },
+  { key: 'client_contact_phone', label: 'Téléphone contact', description: 'Téléphone du contact principal', category: 'client', example: '06 12 34 56 78' },
   { key: 'client_contact_role', label: 'Fonction contact', description: 'Rôle du contact dans l\'entreprise', category: 'client', example: 'Directeur Général' },
   { key: 'billing_contact_name', label: 'Contact facturation', description: 'Nom du contact facturation', category: 'client', example: 'Marie Martin' },
   { key: 'billing_contact_email', label: 'Email facturation', description: 'Email du contact facturation', category: 'client', example: 'comptabilite@example.fr' },
@@ -431,6 +441,10 @@ export function mapDocumentToTemplateData(
     market_reference: document.market_reference || '',
     is_public_market: document.is_public_market ? 'Oui' : 'Non',
     is_amendment: document.is_amendment ? 'Oui' : 'Non',
+    topbar_text: '', // Can be customized via workspace settings
+    author_name: '', // Would need to fetch from profiles table
+    author_email: '',
+    author_phone: '',
     
     // ===== AGENCE =====
     agency_name: agencyInfo?.name || '',
@@ -455,8 +469,14 @@ export function mapDocumentToTemplateData(
     client_address: '', // Would need billing profile data
     client_city: '', // Would need billing profile data
     client_postal_code: '', // Would need billing profile data
+    client_phone: '', // Would need company data
+    client_siret: '', // Would need company data
+    client_siren: '', // Would need company data
+    client_vat_number: '', // Would need company data
+    client_legal_form: '', // Would need company data
     client_contact_name: document.client_contact?.name || '',
     client_contact_email: document.client_contact?.email || '',
+    client_contact_phone: '', // Would need contact data
     client_contact_role: '', // Would need contact data
     billing_contact_name: document.billing_contact?.name || '',
     billing_contact_email: document.billing_contact?.email || '',
