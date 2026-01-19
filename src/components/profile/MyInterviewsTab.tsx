@@ -37,9 +37,11 @@ export function MyInterviewsTab() {
     return acc;
   }, {} as Record<string, typeof members[0]>);
 
-  // Evaluations where I'm being evaluated or I'm the evaluator
+  // Evaluations where I'm being evaluated, I'm the evaluator, or I'm in the panel
   const myEvaluations = evaluations?.filter(
-    e => e.user_id === user?.id || e.evaluator_id === user?.id
+    e => e.user_id === user?.id || 
+         e.evaluator_id === user?.id || 
+         (e.panel_members && e.panel_members.includes(user?.id || ""))
   ) || [];
 
   const upcomingEvaluations = myEvaluations.filter(
