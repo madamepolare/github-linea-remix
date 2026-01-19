@@ -194,10 +194,10 @@ export const CommercialListView = ({
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg overflow-hidden bg-background">
+      <div className="border rounded-lg bg-background">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/30 hover:bg-muted/30">
+            <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
               <TableHead className="w-10 px-3">
                 <Checkbox
                   checked={allSelected}
@@ -206,11 +206,11 @@ export const CommercialListView = ({
                 />
               </TableHead>
               <TableHead 
-                className="px-3 cursor-pointer hover:text-foreground"
+                className="w-32 px-3 cursor-pointer hover:text-foreground"
                 onClick={() => handleSort("document_number")}
               >
-                <div className="flex items-center gap-1.5 text-xs">
-                  Réf.
+                <div className="flex items-center gap-1.5 text-xs font-medium">
+                  Numéro
                   <ArrowUpDown className={cn("h-3 w-3", sortBy === "document_number" ? "text-foreground" : "text-muted-foreground/40")} />
                 </div>
               </TableHead>
@@ -218,8 +218,8 @@ export const CommercialListView = ({
                 className="px-3 cursor-pointer hover:text-foreground"
                 onClick={() => handleSort("title")}
               >
-                <div className="flex items-center gap-1.5 text-xs">
-                  Titre
+                <div className="flex items-center gap-1.5 text-xs font-medium">
+                  Projet
                   <ArrowUpDown className={cn("h-3 w-3", sortBy === "title" ? "text-foreground" : "text-muted-foreground/40")} />
                 </div>
               </TableHead>
@@ -227,35 +227,35 @@ export const CommercialListView = ({
                 className="px-3 hidden md:table-cell cursor-pointer hover:text-foreground"
                 onClick={() => handleSort("client")}
               >
-                <div className="flex items-center gap-1.5 text-xs">
+                <div className="flex items-center gap-1.5 text-xs font-medium">
                   Client
                   <ArrowUpDown className={cn("h-3 w-3", sortBy === "client" ? "text-foreground" : "text-muted-foreground/40")} />
                 </div>
               </TableHead>
-              <TableHead className="px-3 hidden lg:table-cell text-xs">Statut</TableHead>
+              <TableHead className="px-3 w-24 hidden lg:table-cell text-xs font-medium">Statut</TableHead>
               <TableHead 
-                className="px-3 hidden lg:table-cell cursor-pointer hover:text-foreground"
+                className="px-3 w-28 hidden lg:table-cell cursor-pointer hover:text-foreground"
                 onClick={() => handleSort("created_at")}
               >
-                <div className="flex items-center gap-1.5 text-xs">
+                <div className="flex items-center gap-1.5 text-xs font-medium">
                   Date
                   <ArrowUpDown className={cn("h-3 w-3", sortBy === "created_at" ? "text-foreground" : "text-muted-foreground/40")} />
                 </div>
               </TableHead>
               <TableHead 
-                className="px-3 text-right cursor-pointer hover:text-foreground"
+                className="px-3 w-28 text-right cursor-pointer hover:text-foreground"
                 onClick={() => handleSort("total_amount")}
               >
-                <div className="flex items-center justify-end gap-1.5 text-xs">
-                  Montant
+                <div className="flex items-center justify-end gap-1.5 text-xs font-medium">
+                  Montant HT
                   <ArrowUpDown className={cn("h-3 w-3", sortBy === "total_amount" ? "text-foreground" : "text-muted-foreground/40")} />
                 </div>
               </TableHead>
-              <TableHead className="w-12 px-3"></TableHead>
+              <TableHead className="w-10 px-2"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedDocuments.map((doc, index) => {
+            {sortedDocuments.map((doc) => {
               const isSelected = selectedIds.has(doc.id);
               
               return (
@@ -263,11 +263,11 @@ export const CommercialListView = ({
                   key={doc.id}
                   className={cn(
                     "group cursor-pointer transition-colors",
-                    isSelected ? "bg-primary/5" : "hover:bg-muted/40"
+                    isSelected ? "bg-primary/5" : "hover:bg-muted/30"
                   )}
                   onClick={() => navigate(`/commercial/quote/${doc.id}`)}
                 >
-                  <TableCell className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={(checked) => handleSelectOne(doc.id, checked as boolean)}
@@ -275,87 +275,80 @@ export const CommercialListView = ({
                   </TableCell>
 
                   {/* Reference */}
-                  <TableCell className="px-3 py-2">
-                    <code className="text-[11px] font-mono text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
+                  <TableCell className="px-3 py-2.5">
+                    <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
                       {doc.document_number}
-                    </code>
+                    </span>
                   </TableCell>
 
                   {/* Title */}
-                  <TableCell className="px-3 py-2">
+                  <TableCell className="px-3 py-2.5">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-medium text-sm truncate">{doc.title}</span>
                       {/* Status badge on mobile */}
                       <Badge 
                         variant="outline" 
-                        className={cn("text-[10px] px-1.5 py-0 lg:hidden shrink-0", getStatusStyle(doc.status))}
+                        className={cn("text-[10px] px-1.5 py-0 lg:hidden shrink-0 border-0", getStatusStyle(doc.status))}
                       >
                         {STATUS_LABELS[doc.status]}
                       </Badge>
                     </div>
                     {/* Client on mobile */}
                     {doc.client_company && (
-                      <p className="text-[11px] text-muted-foreground truncate md:hidden mt-0.5">
+                      <p className="text-xs text-muted-foreground truncate md:hidden mt-0.5">
                         {doc.client_company.name}
                       </p>
                     )}
                   </TableCell>
 
                   {/* Client */}
-                  <TableCell className="px-3 py-2 hidden md:table-cell">
+                  <TableCell className="px-3 py-2.5 hidden md:table-cell">
                     {doc.client_company ? (
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="h-6 w-6 rounded bg-muted flex items-center justify-center shrink-0">
-                          <span className="text-[9px] font-medium">
-                            {doc.client_company.name.slice(0, 2).toUpperCase()}
-                          </span>
-                        </div>
-                        <span className="text-sm text-muted-foreground truncate">
-                          {doc.client_company.name}
-                        </span>
-                      </div>
+                      <span className="text-sm text-foreground/80 truncate">
+                        {doc.client_company.name}
+                      </span>
                     ) : (
-                      <span className="text-muted-foreground/50">—</span>
+                      <span className="text-muted-foreground/40">—</span>
                     )}
                   </TableCell>
 
                   {/* Status */}
-                  <TableCell className="px-3 py-2 hidden lg:table-cell">
+                  <TableCell className="px-3 py-2.5 hidden lg:table-cell">
                     <Badge 
                       variant="outline" 
-                      className={cn("text-[10px] px-1.5 py-0", getStatusStyle(doc.status))}
+                      className={cn("text-[10px] px-2 py-0.5 border-0 font-medium", getStatusStyle(doc.status))}
                     >
                       {STATUS_LABELS[doc.status]}
                     </Badge>
                   </TableCell>
 
                   {/* Date */}
-                  <TableCell className="px-3 py-2 hidden lg:table-cell">
-                    <span className="text-xs text-muted-foreground">
+                  <TableCell className="px-3 py-2.5 hidden lg:table-cell">
+                    <span className="text-xs text-muted-foreground tabular-nums">
                       {format(new Date(doc.created_at), 'dd MMM yyyy', { locale: fr })}
                     </span>
                   </TableCell>
 
                   {/* Amount */}
-                  <TableCell className="px-3 py-2 text-right">
+                  <TableCell className="px-3 py-2.5 text-right">
                     <span className="font-semibold text-sm tabular-nums">
                       {formatCurrency(doc.total_amount || 0)}
                     </span>
                   </TableCell>
 
                   {/* Actions */}
-                  <TableCell className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className="px-2 py-2.5" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuContent align="end" className="w-40">
                         <DropdownMenuItem onClick={() => navigate(`/commercial/quote/${doc.id}`)}>
                           <Eye className="h-4 w-4 mr-2" />
                           Voir
@@ -370,7 +363,7 @@ export const CommercialListView = ({
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
-                          className="text-destructive"
+                          className="text-destructive focus:text-destructive"
                           onClick={() => confirm('Supprimer ce document ?') && onDelete(doc.id)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
