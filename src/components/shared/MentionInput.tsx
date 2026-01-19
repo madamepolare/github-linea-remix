@@ -586,34 +586,39 @@ function getEntityUrl(entityType: string, entityId: string): string | null {
 }
 
 // Helper to render content with styled mentions and entity references
+// Also converts URLs to clickable links with target="_blank"
 export function renderContentWithMentions(content: string, profiles: WorkspaceProfile[]): React.ReactNode {
   const parts: React.ReactNode[] = [];
-  // Match both @mentions and /entity references
-  const combinedRegex = /(@\[([^\]]+)\]\(([^)]+)\))|(\/\[([^\]]+)\]\(([^:]+):([^)]+)\))/g;
-  let lastIndex = 0;
+  
+  // Combined regex for @mentions, /entity references, and URLs
+  const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g;
+  const mentionEntityRegex = /(@\[([^\]]+)\]\(([^)]+)\))|(\/\[([^\]]+)\]\(([^:]+):([^)]+)\))/g;
+  
+  // First, split by mentions and entities
+  let processedContent = content;
+  const mentionsAndEntities: { index: number; length: number; node: React.ReactNode }[] = [];
+  
   let match;
-
-  while ((match = combinedRegex.exec(content)) !== null) {
-    // Add text before match
-    if (match.index > lastIndex) {
-      parts.push(content.slice(lastIndex, match.index));
-    }
-
+  while ((match = mentionEntityRegex.exec(content)) !== null) {
     if (match[1]) {
       // It's a @mention
       const mentionName = match[2];
       const userId = match[3];
       const profile = profiles.find((p) => p.user_id === userId);
 
-      parts.push(
-        <span
-          key={`mention-${match.index}`}
-          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium text-sm"
-        >
-          <AtSign className="h-3 w-3" />
-          {profile?.full_name || mentionName}
-        </span>
-      );
+      mentionsAndEntities.push({
+        index: match.index,
+        length: match[0].length,
+        node: (
+          <span
+            key={`mention-${match.index}`}
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium text-sm"
+          >
+            <AtSign className="h-3 w-3" />
+            {profile?.full_name || mentionName}
+          </span>
+        ),
+      });
     } else if (match[4]) {
       // It's an /entity reference
       const entityName = match[5];
@@ -635,45 +640,107 @@ export function renderContentWithMentions(content: string, profiles: WorkspacePr
       const entityUrl = getEntityUrl(entityType, entityId);
 
       if (entityUrl) {
-        parts.push(
-          <a
-            key={`entity-${match.index}`}
-            href={entityUrl}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              // Use window navigation to avoid needing useNavigate hook
-              window.history.pushState({}, '', entityUrl);
-              window.dispatchEvent(new PopStateEvent('popstate'));
-            }}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground font-medium text-sm cursor-pointer hover:bg-secondary/80 hover:underline transition-colors"
-            title={`Ouvrir ${entityType}: ${entityName}`}
-          >
-            <Icon className="h-3 w-3" />
-            {entityName}
-          </a>
-        );
+        mentionsAndEntities.push({
+          index: match.index,
+          length: match[0].length,
+          node: (
+            <a
+              key={`entity-${match.index}`}
+              href={entityUrl}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.history.pushState({}, '', entityUrl);
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground font-medium text-sm cursor-pointer hover:bg-secondary/80 hover:underline transition-colors"
+              title={`Ouvrir ${entityType}: ${entityName}`}
+            >
+              <Icon className="h-3 w-3" />
+              {entityName}
+            </a>
+          ),
+        });
       } else {
-        parts.push(
-          <span
-            key={`entity-${match.index}`}
-            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground font-medium text-sm"
-            title={`${entityType}: ${entityName}`}
-          >
-            <Icon className="h-3 w-3" />
-            {entityName}
-          </span>
-        );
+        mentionsAndEntities.push({
+          index: match.index,
+          length: match[0].length,
+          node: (
+            <span
+              key={`entity-${match.index}`}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground font-medium text-sm"
+              title={`${entityType}: ${entityName}`}
+            >
+              <Icon className="h-3 w-3" />
+              {entityName}
+            </span>
+          ),
+        });
       }
     }
+  }
 
-    lastIndex = match.index + match[0].length;
+  // Now process the content with mentions, entities, and URLs
+  let lastIndex = 0;
+  
+  // Sort mentions and entities by index
+  mentionsAndEntities.sort((a, b) => a.index - b.index);
+  
+  for (const item of mentionsAndEntities) {
+    // Add text before this item (may contain URLs)
+    if (item.index > lastIndex) {
+      const textBefore = content.slice(lastIndex, item.index);
+      parts.push(...renderTextWithUrls(textBefore, lastIndex));
+    }
+    
+    parts.push(item.node);
+    lastIndex = item.index + item.length;
   }
 
   // Add remaining text
   if (lastIndex < content.length) {
-    parts.push(content.slice(lastIndex));
+    const remainingText = content.slice(lastIndex);
+    parts.push(...renderTextWithUrls(remainingText, lastIndex));
   }
 
   return parts.length > 0 ? parts : content;
+}
+
+// Helper to render URLs as clickable links with target="_blank"
+function renderTextWithUrls(text: string, baseIndex: number): React.ReactNode[] {
+  const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = urlRegex.exec(text)) !== null) {
+    // Add text before URL
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    
+    // Add clickable URL
+    const url = match[1];
+    parts.push(
+      <a
+        key={`url-${baseIndex}-${match.index}`}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary hover:underline break-all"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {url}
+      </a>
+    );
+    
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : [text];
 }

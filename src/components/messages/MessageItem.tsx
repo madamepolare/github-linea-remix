@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Check, Download, ExternalLink, FileText, Image as ImageIcon, MessageSquare, MoreHorizontal, Pencil, Smile, Trash2, X } from "lucide-react";
+import { Check, Download, ExternalLink, FileText, Image as ImageIcon, MessageSquare, MoreHorizontal, Pencil, Reply, Smile, Trash2, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,9 +34,10 @@ interface MessageItemProps {
   showAuthor: boolean;
   onOpenThread: () => void;
   isThreadMessage?: boolean;
+  onReply?: () => void;
 }
 
-export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage = false }: MessageItemProps) {
+export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage = false, onReply }: MessageItemProps) {
   const { user } = useAuth();
   const { data: profiles = [] } = useWorkspaceProfiles();
   const { toggleReaction, deleteMessage, updateMessage } = useTeamMessageMutations();
@@ -278,8 +279,14 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
             </PopoverContent>
           </Popover>
 
+          {!isThreadMessage && onReply && (
+            <Button variant="ghost" size="icon-xs" onClick={onReply} title="Répondre">
+              <Reply className="h-4 w-4" />
+            </Button>
+          )}
+
           {!isThreadMessage && (
-            <Button variant="ghost" size="icon-xs" onClick={onOpenThread}>
+            <Button variant="ghost" size="icon-xs" onClick={onOpenThread} title="Ouvrir le fil">
               <MessageSquare className="h-4 w-4" />
             </Button>
           )}
