@@ -11,7 +11,7 @@ export interface TeamEvaluation {
   evaluation_type: "annual" | "probation" | "objective_review" | "other";
   scheduled_date: string;
   completed_date: string | null;
-  status: "scheduled" | "in_progress" | "completed" | "cancelled";
+  status: "pending" | "scheduled" | "in_progress" | "completed" | "cancelled";
   objectives: any[];
   notes: string | null;
   rating: number | null;
@@ -30,6 +30,14 @@ export const evaluationTypeLabels: Record<TeamEvaluation["evaluation_type"], str
   probation: "Fin de période d'essai",
   objective_review: "Revue des objectifs",
   other: "Autre",
+};
+
+export const evaluationStatusLabels: Record<TeamEvaluation["status"], string> = {
+  pending: "À planifier",
+  scheduled: "Planifié",
+  in_progress: "En cours",
+  completed: "Terminé",
+  cancelled: "Annulé",
 };
 
 export function useTeamEvaluations(filters?: { userId?: string; status?: string }) {

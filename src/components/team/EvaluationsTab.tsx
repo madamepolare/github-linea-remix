@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/collapsible";
 
 const statusLabels: Record<string, string> = {
+  pending: "À planifier",
   scheduled: "Planifié",
   in_progress: "En cours",
   completed: "Terminé",
@@ -42,6 +43,7 @@ const statusLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
+  pending: "bg-purple-100 text-purple-800",
   scheduled: "bg-blue-100 text-blue-800",
   in_progress: "bg-yellow-100 text-yellow-800",
   completed: "bg-green-100 text-green-800",
@@ -49,9 +51,10 @@ const statusColors: Record<string, string> = {
 };
 
 export function EvaluationsTab() {
-  const [tab, setTab] = useState("upcoming");
+  const [tab, setTab] = useState("pending");
   const [createOpen, setCreateOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [schedulingEvaluation, setSchedulingEvaluation] = useState<TeamEvaluation | null>(null);
 
   const { data: evaluations, isLoading } = useTeamEvaluations();
   const { data: members } = useTeamMembers();
@@ -62,6 +65,11 @@ export function EvaluationsTab() {
   const currentUserRole = members?.find((m) => m.user_id === user?.id)?.role;
   const canCreate = currentUserRole === "owner" || currentUserRole === "admin";
 
+  // Pending = auto-generated, needs scheduling
+  const pendingEvaluations = evaluations?.filter(
+    (e) => e.status === "pending"
+  ) || [];
+  // Upcoming = scheduled or in progress
   const upcomingEvaluations = evaluations?.filter(
     (e) => e.status === "scheduled" || e.status === "in_progress"
   ) || [];
@@ -79,16 +87,32 @@ export function EvaluationsTab() {
   }, {} as Record<string, typeof members[0]>);
 
   const handleSchedule = async (data: ScheduleData) => {
-    await createEvaluation.mutateAsync({
-      user_id: data.user_id,
-      evaluation_type: data.evaluation_type,
-      scheduled_date: new Date(data.scheduled_date).toISOString(),
-      notes: data.notes,
-      panel_members: data.panel_members,
-      location: data.location,
-      meeting_link: data.meeting_link,
-      duration_minutes: data.duration_minutes,
-    });
+    if (schedulingEvaluation) {
+      // Update existing pending evaluation to scheduled
+      await updateEvaluation.mutateAsync({
+        id: schedulingEvaluation.id,
+        status: "scheduled",
+        scheduled_date: new Date(data.scheduled_date).toISOString(),
+        notes: data.notes,
+        panel_members: data.panel_members,
+        location: data.location,
+        meeting_link: data.meeting_link,
+        duration_minutes: data.duration_minutes,
+      });
+      setSchedulingEvaluation(null);
+    } else {
+      // Create new evaluation
+      await createEvaluation.mutateAsync({
+        user_id: data.user_id,
+        evaluation_type: data.evaluation_type,
+        scheduled_date: new Date(data.scheduled_date).toISOString(),
+        notes: data.notes,
+        panel_members: data.panel_members,
+        location: data.location,
+        meeting_link: data.meeting_link,
+        duration_minutes: data.duration_minutes,
+      });
+    }
     setCreateOpen(false);
   };
 
@@ -261,6 +285,18 @@ export function EvaluationsTab() {
             {/* Actions */}
             {showActions && canManage && evaluation.status !== "completed" && (
               <div className="flex flex-col gap-2">
+                {evaluation.status === "pending" && (
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      setSchedulingEvaluation(evaluation);
+                      setCreateOpen(true);
+                    }}
+                  >
+                    <Calendar className="h-4 w-4 mr-1" />
+                    Planifier
+                  </Button>
+                )}
                 {evaluation.status === "scheduled" && (
                   <Button size="sm" variant="outline" onClick={() => handleStart(evaluation.id)}>
                     Démarrer
@@ -282,24 +318,52 @@ export function EvaluationsTab() {
       <Tabs value={tab} onValueChange={setTab}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <TabsList>
+            <TabsTrigger value="pending">
+              À planifier
+              {pendingEvaluations.length > 0 && (
+                <Badge variant="destructive" className="ml-2">
+                  {pendingEvaluations.length}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="upcoming">
-              À venir
+              Planifiés
               {upcomingEvaluations.length > 0 && (
                 <Badge variant="secondary" className="ml-2">
                   {upcomingEvaluations.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="completed">Terminées</TabsTrigger>
+            <TabsTrigger value="completed">Terminés</TabsTrigger>
             <TabsTrigger value="my">Mes entretiens</TabsTrigger>
           </TabsList>
           {canCreate && (
-            <Button onClick={() => setCreateOpen(true)}>
+            <Button onClick={() => { setSchedulingEvaluation(null); setCreateOpen(true); }}>
               <Plus className="h-4 w-4 mr-2" />
-              Planifier
+              Nouveau
             </Button>
           )}
         </div>
+
+        <TabsContent value="pending" className="mt-6">
+          {pendingEvaluations.length > 0 ? (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4 inline mr-2" />
+                Ces entretiens ont été générés automatiquement. Cliquez sur "Planifier" pour définir la date et le jury.
+              </div>
+              {pendingEvaluations.map((evaluation) => 
+                renderEvaluationCard(evaluation, true)
+              )}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Calendar}
+              title="Aucun entretien à planifier"
+              description="Les entretiens semestriels seront générés automatiquement."
+            />
+          )}
+        </TabsContent>
 
         <TabsContent value="upcoming" className="mt-6">
           {upcomingEvaluations.length > 0 ? (
@@ -315,7 +379,7 @@ export function EvaluationsTab() {
               description="Planifiez des entretiens pour suivre vos collaborateurs."
               action={canCreate ? {
                 label: "Planifier un entretien",
-                onClick: () => setCreateOpen(true),
+                onClick: () => { setSchedulingEvaluation(null); setCreateOpen(true); },
               } : undefined}
             />
           )}
@@ -356,9 +420,22 @@ export function EvaluationsTab() {
 
       <InterviewScheduler
         open={createOpen}
-        onOpenChange={setCreateOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) setSchedulingEvaluation(null);
+        }}
         onSchedule={handleSchedule}
-        isLoading={createEvaluation.isPending}
+        isLoading={createEvaluation.isPending || updateEvaluation.isPending}
+        initialData={schedulingEvaluation ? {
+          user_id: schedulingEvaluation.user_id,
+          evaluation_type: schedulingEvaluation.evaluation_type,
+          scheduled_date: schedulingEvaluation.scheduled_date.slice(0, 16), // Format for datetime-local
+          duration_minutes: schedulingEvaluation.duration_minutes || 60,
+          location: schedulingEvaluation.location || "",
+          meeting_link: schedulingEvaluation.meeting_link || "",
+          panel_members: schedulingEvaluation.panel_members || [],
+          notes: schedulingEvaluation.notes || "",
+        } : undefined}
       />
     </div>
   );
