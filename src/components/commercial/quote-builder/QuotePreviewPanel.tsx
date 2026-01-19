@@ -12,9 +12,8 @@ interface QuotePreviewPanelProps {
   selectedThemeId?: string | null;
 }
 
-// A4 dimensions
-const A4_WIDTH_PX = 794; // 210mm at 96dpi
-const A4_HEIGHT_PX = 1123; // 297mm at 96dpi
+// A4 aspect ratio (297/210 = 1.414)
+const A4_ASPECT_RATIO = 297 / 210;
 
 /**
  * QuotePreviewPanel - 100% HTML Rendering
@@ -28,7 +27,7 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
   const { themes } = useQuoteThemes();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [containerWidth, setContainerWidth] = useState(0);
   
   // Get selected theme or default
   const currentTheme = selectedThemeId 
@@ -70,80 +69,64 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
     }
   }, [htmlPreview]);
 
-  // Measure container size for proper scaling
-  const updateContainerSize = useCallback(() => {
+  // Measure container width for proper scaling
+  const updateContainerWidth = useCallback(() => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      setContainerSize({ width: rect.width, height: rect.height });
+      setContainerWidth(rect.width);
     }
   }, []);
 
   useEffect(() => {
-    updateContainerSize();
+    updateContainerWidth();
     
-    // Use ResizeObserver for more accurate updates
-    const observer = new ResizeObserver(updateContainerSize);
+    const observer = new ResizeObserver(updateContainerWidth);
     if (containerRef.current) {
       observer.observe(containerRef.current);
     }
     
     return () => observer.disconnect();
-  }, [updateContainerSize]);
+  }, [updateContainerWidth]);
 
-  // Calculate scale to fit A4 within container with padding
-  const padding = 32; // 16px on each side
-  const availableWidth = containerSize.width - padding * 2;
-  const availableHeight = containerSize.height - padding * 2;
+  // Calculate dimensions to fill the container width
+  const padding = 24;
+  const availableWidth = containerWidth - padding * 2;
   
-  // Calculate base scale to fit within container (fit both width and height)
-  let baseScale = 0.5;
-  if (availableWidth > 0 && availableHeight > 0) {
-    const scaleToFitWidth = availableWidth / A4_WIDTH_PX;
-    const scaleToFitHeight = availableHeight / A4_HEIGHT_PX;
-    baseScale = Math.min(scaleToFitWidth, scaleToFitHeight);
-  }
+  // The preview width fills the available space
+  const previewWidth = Math.max(availableWidth, 300);
+  // Height follows A4 aspect ratio
+  const previewHeight = previewWidth * A4_ASPECT_RATIO;
   
-  // Apply user zoom on top of base scale
-  const scale = baseScale * (zoom / 100);
-  
-  // Calculate scaled dimensions for the wrapper
-  const scaledWidth = A4_WIDTH_PX * scale;
-  const scaledHeight = A4_HEIGHT_PX * scale;
+  // Apply zoom
+  const zoomFactor = zoom / 100;
+  const displayWidth = previewWidth * zoomFactor;
+  const displayHeight = previewHeight * zoomFactor;
 
   return (
     <div 
       ref={containerRef}
-      className="w-full h-full flex justify-center items-start overflow-y-auto overflow-x-hidden bg-muted/30"
+      className="w-full h-full flex flex-col items-center overflow-y-auto overflow-x-hidden bg-muted/30"
       style={{ padding }}
     >
-      {/* Wrapper that takes the scaled dimensions */}
+      {/* A4 paper container */}
       <div 
-        className="flex-shrink-0"
+        className="bg-white shadow-xl rounded-sm flex-shrink-0"
         style={{ 
-          width: Math.floor(scaledWidth),
-          height: Math.floor(scaledHeight),
+          width: displayWidth,
+          height: displayHeight,
         }}
       >
-        {/* A4 paper that gets scaled */}
-        <div 
-          className="bg-white shadow-xl rounded-sm origin-top-left"
+        <iframe
+          ref={iframeRef}
+          className="border-0 block"
           style={{ 
-            width: A4_WIDTH_PX,
-            height: A4_HEIGHT_PX,
-            transform: `scale(${scale})`,
+            width: '100%',
+            height: '100%',
+            background: 'white',
+            transformOrigin: 'top left',
           }}
-        >
-          <iframe
-            ref={iframeRef}
-            className="border-0 block w-full h-full"
-            style={{ 
-              width: A4_WIDTH_PX,
-              height: A4_HEIGHT_PX, 
-              background: 'white',
-            }}
-            title="Aperçu du devis"
-          />
-        </div>
+          title="Aperçu du devis"
+        />
       </div>
     </div>
   );
