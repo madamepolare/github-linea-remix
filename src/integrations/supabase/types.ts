@@ -1297,6 +1297,8 @@ export type Database = {
           quote_theme_id: string | null
           reference_client: string | null
           requires_deposit: boolean | null
+          retention_guarantee_amount: number | null
+          retention_guarantee_percentage: number | null
           sent_at: string | null
           signed_at: string | null
           signed_pdf_url: string | null
@@ -1354,6 +1356,8 @@ export type Database = {
           quote_theme_id?: string | null
           reference_client?: string | null
           requires_deposit?: boolean | null
+          retention_guarantee_amount?: number | null
+          retention_guarantee_percentage?: number | null
           sent_at?: string | null
           signed_at?: string | null
           signed_pdf_url?: string | null
@@ -1411,6 +1415,8 @@ export type Database = {
           quote_theme_id?: string | null
           reference_client?: string | null
           requires_deposit?: boolean | null
+          retention_guarantee_amount?: number | null
+          retention_guarantee_percentage?: number | null
           sent_at?: string | null
           signed_at?: string | null
           signed_pdf_url?: string | null

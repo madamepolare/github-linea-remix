@@ -31,7 +31,8 @@ import {
   Percent,
   Folder,
   CreditCard,
-  CalendarRange
+  CalendarRange,
+  Shield
 } from 'lucide-react';
 import { format, addMonths, endOfMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -420,6 +421,66 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
                 </div>
               </div>
             )}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Retention guarantee settings */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <Shield className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Retenue de garantie</CardTitle>
+                <CardDescription>
+                  Pourcentage retenu sur le solde final, libéré après la période de garantie
+                </CardDescription>
+              </div>
+            </div>
+            <Switch
+              checked={(document.retention_guarantee_percentage || 0) > 0}
+              onCheckedChange={(checked) => onDocumentChange({ 
+                retention_guarantee_percentage: checked ? 5 : 0 
+              })}
+            />
+          </div>
+        </CardHeader>
+        {(document.retention_guarantee_percentage || 0) > 0 && (
+          <CardContent className="pt-0 space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <Label>Pourcentage de retenue</Label>
+                <span className="font-medium">{document.retention_guarantee_percentage || 5}%</span>
+              </div>
+              <Slider
+                value={[document.retention_guarantee_percentage || 5]}
+                onValueChange={([value]) => onDocumentChange({ retention_guarantee_percentage: value })}
+                min={1}
+                max={10}
+                step={1}
+                className="w-full"
+              />
+              <div className="p-3 rounded-lg bg-muted/50 border space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Montant retenu</span>
+                  <span className="font-semibold text-lg">
+                    {formatCurrency((totalAmount || 0) * ((document.retention_guarantee_percentage || 5) / 100))}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Solde net payé</span>
+                  <span className="font-medium">
+                    {formatCurrency((totalAmount || 0) * (1 - (document.retention_guarantee_percentage || 5) / 100))}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground pt-1">
+                  La retenue sera déduite du dernier versement et libérée à l'issue de la période de garantie (généralement 1 an).
+                </p>
+              </div>
+            </div>
           </CardContent>
         )}
       </Card>

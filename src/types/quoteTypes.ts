@@ -130,6 +130,9 @@ export interface QuoteDocument {
   requires_deposit?: boolean;
   deposit_percentage?: number;
   
+  // Retention guarantee (retenue de garantie)
+  retention_guarantee_percentage?: number;
+  
   // Status
   status: DocumentStatus;
   sent_at?: string;

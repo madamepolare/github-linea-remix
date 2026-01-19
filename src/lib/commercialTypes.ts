@@ -63,6 +63,8 @@ export interface CommercialDocument {
   expected_signature_date?: string;
   internal_owner_id?: string;
   invoice_schedule?: unknown; // Stored as JSONB in DB
+  // Retention guarantee
+  retention_guarantee_percentage?: number;
   // Timestamps and tracking
   sent_at?: string;
   accepted_at?: string;
