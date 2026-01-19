@@ -11333,6 +11333,8 @@ export type Database = {
           nb_reconductions: number | null
           negotiation_candidates_count: number | null
           negotiation_method: string | null
+          no_go_date: string | null
+          no_go_reason: string | null
           oeuvres_estimees: number | null
           offer_validity_days: number | null
           pipeline_status: string | null
@@ -11436,6 +11438,8 @@ export type Database = {
           nb_reconductions?: number | null
           negotiation_candidates_count?: number | null
           negotiation_method?: string | null
+          no_go_date?: string | null
+          no_go_reason?: string | null
           oeuvres_estimees?: number | null
           offer_validity_days?: number | null
           pipeline_status?: string | null
@@ -11539,6 +11543,8 @@ export type Database = {
           nb_reconductions?: number | null
           negotiation_candidates_count?: number | null
           negotiation_method?: string | null
+          no_go_date?: string | null
+          no_go_reason?: string | null
           oeuvres_estimees?: number | null
           offer_validity_days?: number | null
           pipeline_status?: string | null
