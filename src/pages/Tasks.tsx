@@ -5,6 +5,10 @@ import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import { TaskArchiveView } from "@/components/tasks/TaskArchiveView";
 import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
+import { TaskKanbanFilters } from "@/components/tasks/TaskKanbanFilters";
+import { useTaskFilters, defaultTaskFilters } from "@/hooks/useTaskFilters";
+import { useTasks } from "@/hooks/useTasks";
+import { useScheduledTaskIds } from "@/hooks/useScheduledTaskIds";
 
 type ViewType = "board" | "list" | "archive";
 
@@ -15,6 +19,15 @@ export default function Tasks() {
   const lastSegment = pathSegments[pathSegments.length - 1];
   const view: ViewType = (lastSegment === "list" || lastSegment === "archive") ? lastSegment : "board";
   const [createOpen, setCreateOpen] = useState(false);
+
+  // Unified filters state
+  const { tasks } = useTasks();
+  const { data: scheduledTaskIds } = useScheduledTaskIds();
+  const { 
+    filters, 
+    setFilters, 
+    availableTags 
+  } = useTaskFilters(tasks, { scheduledTaskIds });
 
   // Listen for command palette event
   useEffect(() => {
@@ -29,15 +42,29 @@ export default function Tasks() {
         title="Tâches"
         description="Gérez et suivez vos tâches"
       >
+        {/* Unified filters bar (shown for board and list views, not archive) */}
+        {view !== "archive" && (
+          <TaskKanbanFilters
+            filters={filters}
+            onChange={setFilters}
+            availableTags={availableTags}
+          />
+        )}
+
         {view === "board" && (
           <TaskBoard 
             statusFilter={null} 
             priorityFilter={null}
             onCreateTask={() => setCreateOpen(true)}
+            externalFilters={filters}
+            onExternalFiltersChange={setFilters}
           />
         )}
         {view === "list" && (
-          <TaskListView />
+          <TaskListView 
+            externalFilters={filters}
+            onExternalFiltersChange={setFilters}
+          />
         )}
         {view === "archive" && <TaskArchiveView />}
       </PageLayout>

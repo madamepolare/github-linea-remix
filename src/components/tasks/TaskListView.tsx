@@ -6,6 +6,7 @@ import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { useTaskCommunicationsCounts } from "@/hooks/useTaskCommunicationsCounts";
 import { useScheduledTaskIds } from "@/hooks/useScheduledTaskIds";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTaskFilters, TaskFiltersState } from "@/hooks/useTaskFilters";
 import { TaskDetailSheet } from "./TaskDetailSheet";
 import { QuickTaskRow } from "./QuickTaskRow";
 import { TextEditCell, StatusEditCell, PriorityEditCell, DateEditCell, AssigneeEditCell } from "./InlineTaskEditCell";
@@ -48,6 +49,9 @@ import {
 interface TaskListViewProps {
   entityFilter?: string;
   projectId?: string | null;
+  // Allow external filter control for unified filtering
+  externalFilters?: TaskFiltersState;
+  onExternalFiltersChange?: (filters: TaskFiltersState) => void;
 }
 
 type SortColumn = "title" | "status" | "due_date" | "priority" | "relation";
@@ -61,13 +65,29 @@ const STATUS_COLORS: Record<string, { bg: string; border: string; text: string }
   done: { bg: "bg-success/10 dark:bg-success/20", border: "border-l-success", text: "text-success" },
 };
 
-export function TaskListView({ entityFilter = "all", projectId }: TaskListViewProps) {
+export function TaskListView({ 
+  entityFilter = "all", 
+  projectId,
+  externalFilters,
+  onExternalFiltersChange,
+}: TaskListViewProps) {
   const isMobile = useIsMobile();
   const { tasks, isLoading, updateTaskStatus, updateTask } = useTasks(projectId ? { projectId } : undefined);
   const { companies } = useCRMCompanies();
   const { projects } = useProjects();
   const { data: profiles } = useWorkspaceProfiles();
   const { data: scheduledTaskIds } = useScheduledTaskIds();
+  
+  // Use hook for filtering
+  const {
+    filters: internalFilters,
+    setFilters: setInternalFilters,
+    filteredTasks: hookFilteredTasks,
+  } = useTaskFilters(tasks, { scheduledTaskIds });
+  
+  // Use external filters if provided, otherwise use internal
+  const filters = externalFilters ?? internalFilters;
+  const baseFilteredTasks = externalFilters ? hookFilteredTasks : hookFilteredTasks;
   
   // Get all task IDs for fetching communication counts
   const taskIds = useMemo(() => tasks?.map(t => t.id) || [], [tasks]);
@@ -213,7 +233,8 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
   };
 
   const groupedTasks = useMemo(() => {
-    let filtered = tasks || [];
+    // Use filtered tasks from hook (respects external filters)
+    let filtered = hookFilteredTasks || [];
     
     if (entityFilter && entityFilter !== "all") {
       filtered = filtered.filter((task) => task.related_type === entityFilter);
@@ -279,7 +300,7 @@ export function TaskListView({ entityFilter = "all", projectId }: TaskListViewPr
     });
 
     return groups;
-  }, [tasks, entityFilter, sortColumn, sortDirection, groupBy]);
+  }, [hookFilteredTasks, entityFilter, sortColumn, sortDirection, groupBy]);
 
   // Get sorted group keys based on groupBy type
   const getGroupOrder = useMemo(() => {
