@@ -51,13 +51,16 @@ export function TaskBoard({
   const { data: profiles } = useWorkspaceProfiles();
   const { data: scheduledTaskIds } = useScheduledTaskIds();
   
-  // Use hook for filtering
+  // Use hook for filtering - pass external filters when available
   const {
     filters: internalFilters,
     setFilters: setInternalFilters,
     filteredTasks: hookFilteredTasks,
     availableTags,
-  } = useTaskFilters(tasks, { scheduledTaskIds });
+  } = useTaskFilters(tasks, { 
+    scheduledTaskIds,
+    externalFilters: externalFilters,
+  });
   
   // Use external filters if provided, otherwise use internal
   const filters = externalFilters ?? internalFilters;

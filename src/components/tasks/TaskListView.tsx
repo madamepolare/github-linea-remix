@@ -78,16 +78,13 @@ export function TaskListView({
   const { data: profiles } = useWorkspaceProfiles();
   const { data: scheduledTaskIds } = useScheduledTaskIds();
   
-  // Use hook for filtering
+  // Use hook for filtering - pass external filters when available
   const {
-    filters: internalFilters,
-    setFilters: setInternalFilters,
     filteredTasks: hookFilteredTasks,
-  } = useTaskFilters(tasks, { scheduledTaskIds });
-  
-  // Use external filters if provided, otherwise use internal
-  const filters = externalFilters ?? internalFilters;
-  const baseFilteredTasks = externalFilters ? hookFilteredTasks : hookFilteredTasks;
+  } = useTaskFilters(tasks, { 
+    scheduledTaskIds,
+    externalFilters: externalFilters,
+  });
   
   // Get all task IDs for fetching communication counts
   const taskIds = useMemo(() => tasks?.map(t => t.id) || [], [tasks]);
