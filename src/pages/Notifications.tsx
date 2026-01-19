@@ -108,6 +108,12 @@ const notificationTypeConfig: Record<string, {
     color: "text-green-600 dark:text-green-400",
     bgColor: "bg-green-100 dark:bg-green-900/30"
   },
+  task_assigned: { 
+    icon: CheckSquare, 
+    label: "Tâche assignée", 
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30"
+  },
   project_update: { 
     icon: FolderKanban, 
     label: "Projet", 
@@ -119,6 +125,12 @@ const notificationTypeConfig: Record<string, {
     label: "Mention", 
     color: "text-purple-600 dark:text-purple-400",
     bgColor: "bg-purple-100 dark:bg-purple-900/30"
+  },
+  new_message: { 
+    icon: MessageSquare, 
+    label: "Message", 
+    color: "text-cyan-600 dark:text-cyan-400",
+    bgColor: "bg-cyan-100 dark:bg-cyan-900/30"
   },
   invite: { 
     icon: UserPlus, 
@@ -138,8 +150,8 @@ const categoryConfig: Record<NotificationCategory, { label: string; icon: typeof
   all: { label: "Toutes", icon: Inbox },
   unread: { label: "Non lues", icon: Bell },
   mentions: { label: "Mentions", icon: AtSign, types: ["mention"] },
-  messages: { label: "Messages", icon: MessageSquare, types: ["comment_reply", "reaction"] },
-  tasks: { label: "Tâches", icon: CheckSquare, types: ["task_created"] },
+  messages: { label: "Messages", icon: MessageSquare, types: ["comment_reply", "reaction", "new_message"] },
+  tasks: { label: "Tâches", icon: CheckSquare, types: ["task_created", "task_assigned"] },
   projects: { label: "Projets", icon: FolderKanban, types: ["project_update"] },
 };
 
