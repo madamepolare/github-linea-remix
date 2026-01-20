@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Copy, Download, Check, Sparkles } from "lucide-react";
+import { Copy, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,35 +12,58 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { RoadmapIdea, RoadmapItem } from "@/hooks/useRoadmap";
+import { RoadmapFeedback } from "@/hooks/useRoadmapFeedback";
 
 interface ExportIdeasButtonProps {
   ideas: RoadmapIdea[];
   roadmapItems: RoadmapItem[];
+  allFeedbacks?: RoadmapFeedback[];
 }
 
-export function ExportIdeasButton({ ideas, roadmapItems }: ExportIdeasButtonProps) {
+export function ExportIdeasButton({ ideas, roadmapItems, allFeedbacks = [] }: ExportIdeasButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const generatePrompt = () => {
-    const delivered = roadmapItems.filter(i => i.status === 'delivered');
     const inProgress = roadmapItems.filter(i => i.status === 'in_progress');
     const planned = roadmapItems.filter(i => i.status === 'planned');
     const vision = roadmapItems.filter(i => i.status === 'vision');
+    const delivered = roadmapItems.filter(i => i.status === 'delivered');
     const pendingIdeas = ideas.filter(i => i.status === 'pending' || i.status === 'approved');
+
+    // Group feedbacks by roadmap_item_id
+    const feedbacksByItem = new Map<string | null, RoadmapFeedback[]>();
+    allFeedbacks.forEach(fb => {
+      const key = fb.roadmap_item_id;
+      if (!feedbacksByItem.has(key)) {
+        feedbacksByItem.set(key, []);
+      }
+      feedbacksByItem.get(key)!.push(fb);
+    });
 
     let prompt = `# État actuel de la Roadmap Linea
 
-## Modules & Fonctionnalités Livrés (${delivered.length})
-${delivered.map(i => `- **${i.title}**: ${i.description || 'N/A'}`).join('\n')}
-
-## En Cours de Développement (${inProgress.length})
-${inProgress.length > 0 ? inProgress.map(i => `- **${i.title}**: ${i.description || 'N/A'} ${i.quarter ? `(${i.quarter})` : ''}`).join('\n') : 'Aucun'}
+## Modules En Cours de Développement (${inProgress.length})
+${inProgress.length > 0 ? inProgress.map(i => {
+  const feedbacks = feedbacksByItem.get(i.id) || [];
+  let text = `### ${i.title}
+${i.description || 'N/A'}`;
+  if (feedbacks.length > 0) {
+    text += `\n\n**Retours utilisateurs (${feedbacks.length}):**`;
+    feedbacks.forEach(fb => {
+      text += `\n- "${fb.content}" - ${fb.author?.full_name || 'Utilisateur anonyme'}`;
+    });
+  }
+  return text;
+}).join('\n\n') : 'Aucun'}
 
 ## Planifié (${planned.length})
 ${planned.length > 0 ? planned.map(i => `- **${i.title}**: ${i.description || 'N/A'} ${i.quarter ? `(${i.quarter})` : ''}`).join('\n') : 'Aucun'}
 
 ## Vision Long Terme (${vision.length})
 ${vision.length > 0 ? vision.map(i => `- **${i.title}**: ${i.description || 'N/A'}`).join('\n') : 'Aucun'}
+
+## Déjà Livré (${delivered.length})
+${delivered.length > 0 ? delivered.map(i => `- ${i.title}`).join('\n') : 'Aucun'}
 
 ## Idées Utilisateurs en Attente (${pendingIdeas.length})
 ${pendingIdeas.length > 0 
@@ -49,15 +72,26 @@ ${pendingIdeas.length > 0
 
 ---
 
+## Résumé des Retours Utilisateurs
+
+Total: ${allFeedbacks.length} retour(s) collecté(s)
+
+${allFeedbacks.length > 0 ? 
+  allFeedbacks.map(fb => `- "${fb.content}" (${fb.author?.full_name || 'Anonyme'})`).join('\n') 
+  : 'Aucun retour pour le moment'}
+
+---
+
 ## Instructions pour l'IA
 
-Utilise cette roadmap pour:
+Utilise cette roadmap et les retours utilisateurs pour:
 1. Comprendre l'état actuel des fonctionnalités de l'application
-2. Prioriser les développements en fonction des votes utilisateurs
-3. Identifier les opportunités d'amélioration cohérentes avec la vision
-4. Proposer des implémentations pour les idées les plus demandées
+2. Prendre en compte les retours utilisateurs pour chaque module
+3. Prioriser les améliorations en fonction des votes et des retours
+4. Identifier les points de friction mentionnés par les utilisateurs
+5. Proposer des solutions concrètes pour les problèmes soulevés
 
-Les idées avec le plus de votes doivent être prioritaires. Assure-toi de maintenir la cohérence avec les modules existants.`;
+Les retours avec le plus de récurrence doivent être prioritaires. Assure-toi de maintenir la cohérence avec les modules existants.`;
 
     return prompt;
   };
@@ -86,7 +120,7 @@ Les idées avec le plus de votes doivent être prioritaires. Assure-toi de maint
             Prompt Roadmap pour IA
           </DialogTitle>
           <DialogDescription>
-            Copiez ce prompt pour donner le contexte complet de la roadmap à une IA
+            Copiez ce prompt pour donner le contexte complet de la roadmap et des retours utilisateurs à votre GPT
           </DialogDescription>
         </DialogHeader>
 

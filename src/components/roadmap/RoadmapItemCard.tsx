@@ -10,9 +10,10 @@ interface RoadmapItemCardProps {
   item: RoadmapItem;
   onVote?: (itemId: string, remove: boolean) => void;
   showVotes?: boolean;
+  onClick?: () => void;
 }
 
-export function RoadmapItemCard({ item, onVote, showVotes = true }: RoadmapItemCardProps) {
+export function RoadmapItemCard({ item, onVote, showVotes = true, onClick }: RoadmapItemCardProps) {
   const statusConfig = ROADMAP_STATUSES.find(s => s.value === item.status);
 
   const getModuleHref = () => {
@@ -42,7 +43,13 @@ export function RoadmapItemCard({ item, onVote, showVotes = true }: RoadmapItemC
   const href = getModuleHref();
 
   return (
-    <div className="group flex items-start gap-4 p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-all">
+    <div 
+      className={cn(
+        "group flex items-start gap-4 p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-all",
+        onClick && "cursor-pointer"
+      )}
+      onClick={onClick}
+    >
       {/* Vote button */}
       {showVotes && onVote && (
         <button
