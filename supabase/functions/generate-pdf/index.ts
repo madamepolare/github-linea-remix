@@ -57,9 +57,16 @@ serve(async (req) => {
       );
     }
 
-    // Get PDF as base64
+    // Get PDF as base64 - use chunked approach to avoid stack overflow
     const pdfBuffer = await response.arrayBuffer();
-    const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfBuffer)));
+    const bytes = new Uint8Array(pdfBuffer);
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, i + chunkSize);
+      binary += String.fromCharCode(...chunk);
+    }
+    const pdfBase64 = btoa(binary);
 
     return new Response(
       JSON.stringify({ 
