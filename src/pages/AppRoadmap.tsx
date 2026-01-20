@@ -51,6 +51,7 @@ export default function AppRoadmap() {
     voteIdea,
     voteRoadmapItem,
     updateIdeaStatus,
+    updateRoadmapItemStatus,
     deleteIdea,
   } = useRoadmap();
 
@@ -148,6 +149,7 @@ export default function AppRoadmap() {
                 item={item as any}
                 showVotes={!item.id.startsWith('static-')}
                 onVote={(id, remove) => voteRoadmapItem.mutate({ itemId: id, remove })}
+                onStatusChange={(id, status) => updateRoadmapItemStatus.mutate({ itemId: id, status })}
                 onClick={() => setSelectedItem(item as any)}
                 feedbackCount={getFeedbackCount(item)}
               />
@@ -167,6 +169,7 @@ export default function AppRoadmap() {
                   key={item.id}
                   item={item}
                   onVote={(id, remove) => voteRoadmapItem.mutate({ itemId: id, remove })}
+                  onStatusChange={(id, status) => updateRoadmapItemStatus.mutate({ itemId: id, status })}
                   onClick={() => setSelectedItem(item)}
                   feedbackCount={getFeedbackCount(item)}
                 />
@@ -187,6 +190,7 @@ export default function AppRoadmap() {
                   key={item.id}
                   item={item}
                   onVote={(id, remove) => voteRoadmapItem.mutate({ itemId: id, remove })}
+                  onStatusChange={(id, status) => updateRoadmapItemStatus.mutate({ itemId: id, status })}
                   onClick={() => setSelectedItem(item)}
                   feedbackCount={getFeedbackCount(item)}
                 />

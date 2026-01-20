@@ -277,6 +277,22 @@ export function useRoadmap() {
     },
   });
 
+  // Update roadmap item status (admin only)
+  const updateRoadmapItemStatus = useMutation({
+    mutationFn: async ({ itemId, status }: { itemId: string; status: RoadmapItem['status'] }) => {
+      const { error } = await supabase
+        .from('roadmap_items')
+        .update({ status })
+        .eq('id', itemId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roadmap_items'] });
+      toast.success('Statut mis à jour');
+    },
+  });
+
   // Delete idea
   const deleteIdea = useMutation({
     mutationFn: async (ideaId: string) => {
@@ -317,6 +333,7 @@ export function useRoadmap() {
     voteIdea,
     voteRoadmapItem,
     updateIdeaStatus,
+    updateRoadmapItemStatus,
     deleteIdea,
   };
 }
