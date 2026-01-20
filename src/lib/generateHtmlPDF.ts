@@ -963,7 +963,7 @@ export function printQuoteHtml(
 
 /**
  * Télécharge le devis en PDF directement (sans boîte de dialogue d'impression)
- * Utilise html2canvas + jsPDF pour un rendu fidèle
+ * Utilise html2canvas + jsPDF pour un rendu fidèle avec découpage propre des pages
  */
 export async function downloadQuotePdf(
   document: Partial<QuoteDocument>,
@@ -977,24 +977,29 @@ export async function downloadQuotePdf(
   
   const html = generateQuoteHtml(document, lines, agencyInfo, theme);
   
+  // A4 dimensions at 96 DPI
+  const A4_WIDTH_PX = 794;
+  const A4_HEIGHT_PX = 1123;
+  const SCALE = 2; // Higher quality (2x resolution)
+  
   // Create a hidden container for rendering
   const container = window.document.createElement('div');
   container.style.cssText = `
     position: fixed;
     left: -9999px;
     top: 0;
-    width: 794px;
+    width: ${A4_WIDTH_PX}px;
     height: auto;
     background: white;
     z-index: -1;
   `;
   window.document.body.appendChild(container);
   
-  // Create iframe for isolated rendering with exact A4 dimensions
+  // Create iframe for isolated rendering
   const iframe = window.document.createElement('iframe');
   iframe.style.cssText = `
-    width: 794px;
-    height: 1123px;
+    width: ${A4_WIDTH_PX}px;
+    height: ${A4_HEIGHT_PX * 10}px;
     border: none;
     background: white;
   `;
@@ -1015,19 +1020,9 @@ export async function downloadQuotePdf(
   await new Promise(resolve => setTimeout(resolve, 500));
   
   try {
-    // A4 width at 96 DPI
-    const A4_WIDTH_PX = 794;
-    
-    // Render FULL document to canvas (no height limit)
-    const canvas = await html2canvas(iframeDoc.body, {
-      scale: 2, // Higher quality (2x resolution)
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      width: A4_WIDTH_PX,
-      windowWidth: A4_WIDTH_PX,
-      logging: false,
-    });
+    // Get actual content height
+    const contentHeight = iframeDoc.body.scrollHeight;
+    const totalPages = Math.ceil(contentHeight / A4_HEIGHT_PX);
     
     // Create PDF (A4 dimensions in mm)
     const pdf = new jsPDF({
@@ -1036,28 +1031,38 @@ export async function downloadQuotePdf(
       format: 'a4',
     });
     
-    const imgData = canvas.toDataURL('image/png', 1.0);
-    
     // A4 in mm
     const pdfWidth = 210;
     const pdfHeight = 297;
     
-    // Calculate image height in mm (scale 2x so divide canvas dimensions)
-    const imgWidthPx = canvas.width / 2;
-    const imgHeightPx = canvas.height / 2;
-    const imgHeightMm = (imgHeightPx / imgWidthPx) * pdfWidth;
-    
-    // Calculate number of pages needed
-    const totalPages = Math.ceil(imgHeightMm / pdfHeight);
-    
-    // Add each page by offsetting the image
+    // Render each page separately by scrolling and capturing
     for (let page = 0; page < totalPages; page++) {
       if (page > 0) {
         pdf.addPage();
       }
-      // Shift image up for each subsequent page
-      const yOffset = -(page * pdfHeight);
-      pdf.addImage(imgData, 'PNG', 0, yOffset, pdfWidth, imgHeightMm);
+      
+      // Calculate the Y offset for this page
+      const yOffset = page * A4_HEIGHT_PX;
+      
+      // Render this page section to canvas
+      const canvas = await html2canvas(iframeDoc.body, {
+        scale: SCALE,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: A4_WIDTH_PX,
+        height: A4_HEIGHT_PX,
+        windowWidth: A4_WIDTH_PX,
+        windowHeight: A4_HEIGHT_PX,
+        x: 0,
+        y: yOffset,
+        logging: false,
+      });
+      
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      
+      // Add the page image - exactly fills the A4 page
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
     }
     
     // Download PDF
