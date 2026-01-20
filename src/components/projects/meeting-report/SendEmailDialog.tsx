@@ -65,17 +65,14 @@ export function SendEmailDialog({
 
     setIsSending(true);
     try {
-      // Try Gmail first if connected
-      if (gmailConnection.connected && projectId) {
-        await gmailConnection.sendEmail({
-          to: emails,
-          subject,
-          body: message.replace(/\n/g, "<br>"),
-          projectId,
-        });
-      } else {
-        await onSend(emails, subject, message);
-      }
+      // Always use workspace Gmail
+      await gmailConnection.sendEmail({
+        to: emails,
+        subject,
+        body: message.replace(/\n/g, "<br>"),
+        projectId,
+        sendVia: 'workspace',
+      });
       onOpenChange(false);
     } finally {
       setIsSending(false);

@@ -208,6 +208,7 @@ export function BulkEmailDialog({
           to: recipient.email!,
           subject: personalizedSubject,
           body: personalizedBody.replace(/\n/g, "<br>"),
+          sendVia: 'workspace',
         });
 
         // Update last_email_sent_at for the entry

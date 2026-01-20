@@ -152,27 +152,16 @@ export function PipelineEmailModal({
 
     setIsSending(true);
     try {
-      // Try Gmail first, fall back to Resend
-      if (gmailConnection.connected) {
-        await gmailConnection.sendEmail({
-          to: recipientEmail,
-          subject,
-          body: body.replace(/\n/g, "<br>"),
-          contactId: entry.contact_id || undefined,
-          companyId: entry.company_id || undefined,
-        });
-        toast.success("Email envoyé via Gmail");
-      } else {
-        await sendEmail.mutateAsync({
-          entryId: entry.id,
-          stageId: stage.id,
-          toEmail: recipientEmail,
-          subject,
-          bodyHtml: body.replace(/\n/g, "<br>"),
-          templateId: stage.email_template_id || undefined,
-        });
-        toast.success("Email envoyé");
-      }
+      // Always use workspace Gmail
+      await gmailConnection.sendEmail({
+        to: recipientEmail,
+        subject,
+        body: body.replace(/\n/g, "<br>"),
+        contactId: entry.contact_id || undefined,
+        companyId: entry.company_id || undefined,
+        sendVia: 'workspace',
+      });
+      toast.success("Email envoyé via Gmail workspace");
       onEmailSent();
     } catch (error) {
       console.error("Error sending email:", error);
