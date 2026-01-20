@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Sparkles,
   User,
+  Map,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -446,6 +447,12 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             <TooltipContent side="right">Aide & Support</TooltipContent>
           </Tooltip>
         )}
+
+        {/* Roadmap */}
+        <NavItemComponent 
+          item={{ title: "Roadmap", icon: Map, href: "/roadmap" }} 
+          onClick={onNavigate} 
+        />
       </div>
 
       {/* User Profile */}
