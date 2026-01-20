@@ -12147,6 +12147,7 @@ export type Database = {
           display_name: string | null
           email_type: string
           gmail_email: string
+          history_id: number | null
           id: string
           is_active: boolean | null
           is_default: boolean | null
@@ -12162,6 +12163,7 @@ export type Database = {
           display_name?: string | null
           email_type?: string
           gmail_email: string
+          history_id?: number | null
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
@@ -12177,6 +12179,7 @@ export type Database = {
           display_name?: string | null
           email_type?: string
           gmail_email?: string
+          history_id?: number | null
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
