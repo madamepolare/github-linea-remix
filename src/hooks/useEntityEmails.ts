@@ -123,8 +123,10 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
           }
           contactEmails.forEach(email => {
             if (email) {
-              orConditions.push(`from_email.ilike.${email}`);
-              orConditions.push(`to_email.ilike.${email}`);
+              // Use wildcards for proper ilike matching
+              const escapedEmail = email.replace(/[%_]/g, '\\$&');
+              orConditions.push(`from_email.ilike.%${escapedEmail}%`);
+              orConditions.push(`to_email.ilike.%${escapedEmail}%`);
             }
           });
           
@@ -175,8 +177,9 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
             orConditions.push(`contact_id.in.(${contactIds.join(',')})`);
           }
           contactEmails.forEach(email => {
-            orConditions.push(`from_email.ilike.${email}`);
-            orConditions.push(`to_email.ilike.${email}`);
+            const escapedEmail = email.replace(/[%_]/g, '\\$&');
+            orConditions.push(`from_email.ilike.%${escapedEmail}%`);
+            orConditions.push(`to_email.ilike.%${escapedEmail}%`);
           });
           
           query = query.or(orConditions.join(','));
@@ -221,8 +224,9 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
             orConditions.push(`company_id.in.(${candidateCompanyIds.join(',')})`);
           }
           candidateEmails.forEach(email => {
-            orConditions.push(`from_email.ilike.${email}`);
-            orConditions.push(`to_email.ilike.${email}`);
+            const escapedEmail = email.replace(/[%_]/g, '\\$&');
+            orConditions.push(`from_email.ilike.%${escapedEmail}%`);
+            orConditions.push(`to_email.ilike.%${escapedEmail}%`);
           });
           
           query = query.or(orConditions.join(','));
@@ -265,8 +269,9 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
             orConditions.push(`company_id.eq.${lead.crm_company_id}`);
           }
           if (contactEmail) {
-            orConditions.push(`from_email.ilike.${contactEmail}`);
-            orConditions.push(`to_email.ilike.${contactEmail}`);
+            const escapedEmail = contactEmail.replace(/[%_]/g, '\\$&');
+            orConditions.push(`from_email.ilike.%${escapedEmail}%`);
+            orConditions.push(`to_email.ilike.%${escapedEmail}%`);
           }
           
           query = query.or(orConditions.join(','));
@@ -288,7 +293,7 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
     enabled: enabled && !!entityId,
   });
 
-  // Real-time subscription for new emails
+  // Real-time subscription for new emails - always invalidate and let query logic handle filtering
   useEffect(() => {
     if (!entityId || !enabled) return;
 
@@ -305,18 +310,22 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
           // Check if the email is relevant to our entity
           const record = payload.new as Email | undefined;
           if (record) {
-            const isRelevant = 
+            // More relaxed relevance check - also invalidate if from/to emails might match
+            // This ensures we catch emails even when contact_id/company_id association is delayed
+            const isDirectlyRelevant = 
               (entityType === 'contact' && record.contact_id === entityId) ||
               (entityType === 'company' && record.company_id === entityId) ||
               (entityType === 'lead' && record.lead_id === entityId) ||
               (entityType === 'project' && record.project_id === entityId) ||
               (entityType === 'tender' && record.tender_id === entityId);
 
-            if (isRelevant) {
+            // Always invalidate for any new email - let the query logic filter properly
+            // This is more robust for cases where email association happens after insert
+            if (isDirectlyRelevant || payload.eventType === 'INSERT') {
               queryClient.invalidateQueries({ queryKey });
               
-              // Show toast for new inbound emails
-              if (payload.eventType === 'INSERT' && record.direction === 'inbound') {
+              // Show toast for new inbound emails that are directly relevant
+              if (payload.eventType === 'INSERT' && record.direction === 'inbound' && isDirectlyRelevant) {
                 toast.info('Nouveau email reçu', {
                   description: record.subject,
                 });
