@@ -40,9 +40,9 @@ export interface QuickFilter {
   description?: string;
 }
 
-interface CRMQuickFiltersProps {
-  search: string;
-  onSearchChange: (value: string) => void;
+export interface CRMQuickFiltersProps {
+  search?: string;
+  onSearchChange?: (value: string) => void;
   categories?: FilterOption[];
   selectedCategory?: string;
   onCategoryChange?: (category: string) => void;
@@ -57,10 +57,11 @@ interface CRMQuickFiltersProps {
   onClearAllFilters?: () => void;
   totalCount?: number;
   filteredCount?: number;
+  compactMode?: boolean;
 }
 
 export function CRMQuickFilters({
-  search,
+  search = "",
   onSearchChange,
   categories = [],
   selectedCategory = "all",
@@ -76,6 +77,7 @@ export function CRMQuickFilters({
   onClearAllFilters,
   totalCount,
   filteredCount,
+  compactMode = false,
 }: CRMQuickFiltersProps) {
   const [typePopoverOpen, setTypePopoverOpen] = useState(false);
 
@@ -89,174 +91,184 @@ export function CRMQuickFilters({
     onTypesChange(newTypes);
   };
 
+  const renderTypeFilter = (compact = false) => {
+    if (types.length === 0 || !onTypesChange) return null;
+    
+    return (
+      <Popover open={typePopoverOpen} onOpenChange={setTypePopoverOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(
+              compact ? "h-7 gap-1 text-xs" : "h-9 gap-1.5",
+              selectedTypes.length > 0 && "border-primary"
+            )}
+          >
+            <Filter className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+            Type
+            {selectedTypes.length > 0 && (
+              <Badge variant="secondary" className={compact ? "ml-1 h-4 px-1 text-[10px]" : "ml-1 h-5 px-1.5 text-xs"}>
+                {selectedTypes.length}
+              </Badge>
+            )}
+            <ChevronDown className={compact ? "h-3 w-3" : "h-3.5 w-3.5 ml-0.5"} />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Filtrer les types..." />
+            <CommandList>
+              <CommandEmpty>Aucun type trouvé</CommandEmpty>
+              <CommandGroup>
+                {types.map((type) => (
+                  <CommandItem
+                    key={type.id}
+                    value={type.id}
+                    onSelect={() => handleTypeToggle(type.id)}
+                  >
+                    <div
+                      className={cn(
+                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                        selectedTypes.includes(type.id)
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : "border-muted-foreground/30"
+                      )}
+                    >
+                      {selectedTypes.includes(type.id) && <Check className="h-3 w-3" />}
+                    </div>
+                    <div className="flex items-center gap-2 flex-1">
+                      {type.color && (
+                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: type.color }} />
+                      )}
+                      <span className="text-sm">{type.label}</span>
+                    </div>
+                    {type.count !== undefined && (
+                      <span className="text-xs text-muted-foreground">{type.count}</span>
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+          {selectedTypes.length > 0 && (
+            <div className="border-t p-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full h-7 text-xs"
+                onClick={() => {
+                  onTypesChange([]);
+                  setTypePopoverOpen(false);
+                }}
+              >
+                Effacer la sélection
+              </Button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
+  const renderCategoryChips = (compact = false) => {
+    if (categories.length === 0 || !onCategoryChange) return null;
+    
+    return categories.map((cat) => (
+      <Button
+        key={cat.id}
+        variant={selectedCategory === cat.id ? "default" : "outline"}
+        size="sm"
+        className={cn(
+          "h-7 text-xs gap-1.5 transition-all",
+          selectedCategory === cat.id && "shadow-sm"
+        )}
+        onClick={() => onCategoryChange(cat.id)}
+      >
+        {cat.color && (
+          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: cat.color }} />
+        )}
+        {cat.label}
+        {cat.count !== undefined && cat.count > 0 && (
+          <Badge
+            variant={selectedCategory === cat.id ? "secondary" : "outline"}
+            className="ml-0.5 h-4 px-1 text-[10px]"
+          >
+            {cat.count}
+          </Badge>
+        )}
+      </Button>
+    ));
+  };
+
+  // Compact mode: only category chips and type filter inline
+  if (compactMode) {
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {renderCategoryChips(true)}
+        {renderTypeFilter(true)}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2 sm:space-y-3">
       {/* Search bar row */}
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={placeholder}
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-8 sm:pl-9 h-9 text-sm bg-background"
-          />
-          {search && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
-              onClick={() => onSearchChange("")}
-            >
-              <X className="h-3 w-3" />
+      {onSearchChange && (
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={placeholder}
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-8 sm:pl-9 h-9 text-sm bg-background"
+            />
+            {search && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                onClick={() => onSearchChange("")}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+
+          {renderTypeFilter()}
+
+          {showAdvancedFilters && (
+            <Button variant="outline" size="sm" className="h-9 gap-1.5">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Plus de filtres
             </Button>
           )}
+
+          {hasActiveFilters && onClearAllFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 text-muted-foreground hover:text-foreground"
+              onClick={onClearAllFilters}
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              Effacer
+            </Button>
+          )}
+
+          {filteredCount !== undefined && totalCount !== undefined && filteredCount !== totalCount && (
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {filteredCount} sur {totalCount}
+            </span>
+          )}
         </div>
-
-        {/* Type multi-select filter */}
-        {types.length > 0 && onTypesChange && (
-          <Popover open={typePopoverOpen} onOpenChange={setTypePopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "h-9 gap-1.5",
-                  selectedTypes.length > 0 && "border-primary"
-                )}
-              >
-                <Filter className="h-3.5 w-3.5" />
-                Type
-                {selectedTypes.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {selectedTypes.length}
-                  </Badge>
-                )}
-                <ChevronDown className="h-3.5 w-3.5 ml-0.5" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Filtrer les types..." />
-                <CommandList>
-                  <CommandEmpty>Aucun type trouvé</CommandEmpty>
-                  <CommandGroup>
-                    {types.map((type) => (
-                      <CommandItem
-                        key={type.id}
-                        value={type.id}
-                        onSelect={() => handleTypeToggle(type.id)}
-                      >
-                        <div
-                          className={cn(
-                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
-                            selectedTypes.includes(type.id)
-                              ? "bg-primary border-primary text-primary-foreground"
-                              : "border-muted-foreground/30"
-                          )}
-                        >
-                          {selectedTypes.includes(type.id) && (
-                            <Check className="h-3 w-3" />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 flex-1">
-                          {type.color && (
-                            <div
-                              className="h-2 w-2 rounded-full"
-                              style={{ backgroundColor: type.color }}
-                            />
-                          )}
-                          <span className="text-sm">{type.label}</span>
-                        </div>
-                        {type.count !== undefined && (
-                          <span className="text-xs text-muted-foreground">
-                            {type.count}
-                          </span>
-                        )}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-              {selectedTypes.length > 0 && (
-                <div className="border-t p-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full h-7 text-xs"
-                    onClick={() => {
-                      onTypesChange([]);
-                      setTypePopoverOpen(false);
-                    }}
-                  >
-                    Effacer la sélection
-                  </Button>
-                </div>
-              )}
-            </PopoverContent>
-          </Popover>
-        )}
-
-        {/* Advanced filters button */}
-        {showAdvancedFilters && (
-          <Button variant="outline" size="sm" className="h-9 gap-1.5">
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            Plus de filtres
-          </Button>
-        )}
-
-        {/* Clear all button */}
-        {hasActiveFilters && onClearAllFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-9 text-muted-foreground hover:text-foreground"
-            onClick={onClearAllFilters}
-          >
-            <X className="h-3.5 w-3.5 mr-1" />
-            Effacer
-          </Button>
-        )}
-
-        {/* Count indicator */}
-        {filteredCount !== undefined && totalCount !== undefined && filteredCount !== totalCount && (
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            {filteredCount} sur {totalCount}
-          </span>
-        )}
-      </div>
+      )}
 
       {/* Category chips row */}
       {categories.length > 0 && onCategoryChange && (
         <div className="flex items-center gap-1.5 flex-wrap">
-          {categories.map((cat) => (
-            <Button
-              key={cat.id}
-              variant={selectedCategory === cat.id ? "default" : "outline"}
-              size="sm"
-              className={cn(
-                "h-7 text-xs gap-1.5 transition-all",
-                selectedCategory === cat.id && "shadow-sm"
-              )}
-              onClick={() => onCategoryChange(cat.id)}
-            >
-              {cat.color && (
-                <div
-                  className="h-2 w-2 rounded-full"
-                  style={{ backgroundColor: cat.color }}
-                />
-              )}
-              {cat.label}
-              {cat.count !== undefined && cat.count > 0 && (
-                <Badge
-                  variant={selectedCategory === cat.id ? "secondary" : "outline"}
-                  className="ml-0.5 h-4 px-1 text-[10px]"
-                >
-                  {cat.count}
-                </Badge>
-              )}
-            </Button>
-          ))}
+          {renderCategoryChips()}
         </div>
       )}
 
@@ -275,9 +287,7 @@ export function CRMQuickFilters({
                   "h-6 text-xs",
                   activeQuickFilter === filter.id && "bg-secondary"
                 )}
-                onClick={() => 
-                  onQuickFilterChange(activeQuickFilter === filter.id ? null : filter.id)
-                }
+                onClick={() => onQuickFilterChange(activeQuickFilter === filter.id ? null : filter.id)}
               >
                 {filter.icon}
                 {filter.label}
