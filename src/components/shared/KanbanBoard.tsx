@@ -296,12 +296,13 @@ export function KanbanCard({ children, onClick, accentColor, className, isComple
       } : {}}
       transition={{ duration: 0.3 }}
       className={cn(
-        "p-3 sm:p-4 rounded-lg bg-white dark:bg-background border border-border/30 cursor-pointer transition-all duration-200",
+        "p-3 sm:p-4 rounded-lg bg-white dark:bg-background border cursor-pointer transition-all duration-200",
         "hover:border-border/60",
         isCompleted && "opacity-50",
+        accentColor ? "border-2" : "border-border/30",
         className
       )}
-      style={accentColor ? { borderLeftColor: accentColor, borderLeftWidth: 2 } : undefined}
+      style={accentColor ? { borderColor: accentColor } : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">{children}</div>
