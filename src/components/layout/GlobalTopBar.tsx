@@ -18,6 +18,7 @@ import {
   CalendarPlus,
   Sunrise,
   Moon,
+  PenLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ import { differenceInMinutes } from "date-fns";
 import { useCheckinStore } from "@/hooks/useCheckinStore";
 import { useUserCheckins } from "@/hooks/useUserCheckins";
 import { useIsModuleEnabled } from "@/hooks/useModules";
+import { useFeedbackMode } from "@/hooks/useFeedbackMode";
 
 // Quick actions config
 const quickActions = [
@@ -96,6 +98,9 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
   const hasRecentNotification = notifications.some(
     (n) => !n.is_read && differenceInMinutes(new Date(), new Date(n.created_at)) < 5
   );
+
+  // Feedback mode
+  const { isEnabled: feedbackEnabled, toggleSidebar: toggleFeedback, isSidebarOpen: feedbackSidebarOpen } = useFeedbackMode();
 
   // User initials
   const userInitials = profile?.full_name
@@ -316,6 +321,22 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
             </>
           )}
         </Button>
+
+        {/* Feedback Mode Button - Only show when enabled */}
+        {feedbackEnabled && (
+          <Button
+            variant={feedbackSidebarOpen ? "default" : "ghost"}
+            size="icon-sm"
+            onClick={toggleFeedback}
+            className={cn(
+              "h-8 w-8",
+              feedbackSidebarOpen && "bg-primary text-primary-foreground"
+            )}
+            title="Mode feedback"
+          >
+            <PenLine className="h-4 w-4" strokeWidth={THIN_STROKE} />
+          </Button>
+        )}
 
         {/* Separator */}
         <div className="w-px h-6 bg-border mx-1" />

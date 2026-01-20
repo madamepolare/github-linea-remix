@@ -258,8 +258,7 @@ export function MainLayout() {
       {/* Global Time Tracker Overlay */}
       <GlobalTimeTracker />
 
-      {/* Feedback Mode Components */}
-      <FeedbackButton />
+      {/* Feedback Sidebar - Button moved to GlobalTopBar */}
       <FeedbackSidebar />
 
       {/* Event Scheduler Dialog */}
