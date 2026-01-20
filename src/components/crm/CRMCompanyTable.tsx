@@ -72,9 +72,11 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
     companies, 
     allCompanies, 
     isLoading, 
+    isFetching,
     deleteCompany, 
     updateCompany, 
     statsByCategory,
+    availableLetters,
     pagination,
     goToPage,
     nextPage,
@@ -160,7 +162,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
 
   const isAllSelected = filteredCompanies.length > 0 && selectedIds.size === filteredCompanies.length;
 
-  if (isLoading) {
+  if (isLoading && !isFetching) {
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-3">
@@ -251,9 +253,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
         {/* Alphabet filter - hide on mobile */}
         <div className="hidden sm:flex items-center gap-0.5 overflow-x-auto scrollbar-none pb-1">
           {alphabet.map((letter) => {
-            const hasCompanies = filteredCompanies.some((c) =>
-              c.name.toUpperCase().startsWith(letter)
-            );
+            const hasCompanies = availableLetters.includes(letter);
             return (
               <Button
                 key={letter}
@@ -270,6 +270,9 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
               </Button>
             );
           })}
+          {isFetching && (
+            <div className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          )}
         </div>
 
         {/* Content - Table or Cards */}

@@ -32,6 +32,7 @@ export interface UseContactsOptions {
   status?: ContactStatus | 'all';
   selectedTypes?: string[];
   pageSize?: number;
+  letterFilter?: string;
 }
 
 export function useContacts(options?: UseContactsOptions) {
@@ -45,7 +46,7 @@ export function useContacts(options?: UseContactsOptions) {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [options?.search, options?.status, options?.contactType, options?.companyId, JSON.stringify(options?.selectedTypes)]);
+  }, [options?.search, options?.status, options?.contactType, options?.companyId, options?.letterFilter, JSON.stringify(options?.selectedTypes)]);
 
   // Build filters for the query
   const buildQuery = useCallback((countOnly = false) => {
@@ -76,10 +77,15 @@ export function useContacts(options?: UseContactsOptions) {
       query = query.or(`name.ilike.%${options.search}%,email.ilike.%${options.search}%,role.ilike.%${options.search}%`);
     }
 
-    return query;
-  }, [activeWorkspace?.id, options?.companyId, options?.contactType, options?.selectedTypes, options?.status, options?.search]);
+    // Apply letter filter server-side
+    if (options?.letterFilter) {
+      query = query.ilike("name", `${options.letterFilter}%`);
+    }
 
-  const queryKey = ["contacts", activeWorkspace?.id, page, pageSize, options?.search, options?.status, options?.contactType, options?.companyId, JSON.stringify(options?.selectedTypes)];
+    return query;
+  }, [activeWorkspace?.id, options?.companyId, options?.contactType, options?.selectedTypes, options?.status, options?.search, options?.letterFilter]);
+
+  const queryKey = ["contacts", activeWorkspace?.id, page, pageSize, options?.search, options?.status, options?.contactType, options?.companyId, options?.letterFilter, JSON.stringify(options?.selectedTypes)];
 
   const { data: contacts, isLoading, error } = useQuery({
     queryKey,
@@ -99,13 +105,51 @@ export function useContacts(options?: UseContactsOptions) {
 
   // Count query for pagination
   const { data: totalCount = 0 } = useQuery({
-    queryKey: ["contacts-count", activeWorkspace?.id, options?.search, options?.status, options?.contactType, options?.companyId, JSON.stringify(options?.selectedTypes)],
+    queryKey: ["contacts-count", activeWorkspace?.id, options?.search, options?.status, options?.contactType, options?.companyId, options?.letterFilter, JSON.stringify(options?.selectedTypes)],
     queryFn: async () => {
       const { count, error } = await buildQuery(true);
       if (error) throw error;
       return count || 0;
     },
     enabled: !!activeWorkspace?.id,
+  });
+
+  // Fetch available letters for A-Z filter (across all filtered results, not just current page)
+  const { data: availableLetters = [] } = useQuery({
+    queryKey: ["contacts-available-letters", activeWorkspace?.id, options?.search, options?.status, options?.contactType, JSON.stringify(options?.selectedTypes)],
+    queryFn: async () => {
+      if (!activeWorkspace?.id) return [];
+      
+      // Build query without letter filter to get all matching contacts
+      let query = supabase
+        .from("contacts")
+        .select("name")
+        .eq("workspace_id", activeWorkspace.id);
+
+      if (options?.companyId) {
+        query = query.eq("crm_company_id", options.companyId);
+      }
+      if (options?.contactType) {
+        query = query.eq("contact_type", options.contactType);
+      }
+      if (options?.selectedTypes && options.selectedTypes.length > 0) {
+        query = query.in("contact_type", options.selectedTypes);
+      }
+      if (options?.status && options.status !== 'all') {
+        query = query.eq("status", options.status);
+      }
+      if (options?.search) {
+        query = query.or(`name.ilike.%${options.search}%,email.ilike.%${options.search}%,role.ilike.%${options.search}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      const letters = new Set(data?.map(c => c.name?.[0]?.toUpperCase()).filter(Boolean));
+      return Array.from(letters).sort();
+    },
+    enabled: !!activeWorkspace?.id,
+    staleTime: 60000,
   });
 
   // All contacts count (unfiltered) for stats
@@ -308,6 +352,7 @@ export function useContacts(options?: UseContactsOptions) {
     error,
     statsByType: statsByType || {},
     statsByStatus: statsByStatus || { all: 0, lead: 0, confirmed: 0 },
+    availableLetters,
     createContact,
     updateContact,
     deleteContact,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -50,12 +50,13 @@ interface CompanyFormDialogProps {
   company?: CRMCompanyEnriched | null;
 }
 
-export function CompanyFormDialog({ 
-  open, 
-  onOpenChange, 
-  mode,
-  company 
-}: CompanyFormDialogProps) {
+export const CompanyFormDialog = forwardRef<HTMLDivElement, CompanyFormDialogProps>(
+  function CompanyFormDialog({ 
+    open, 
+    onOpenChange, 
+    mode,
+    company 
+  }, ref) {
   const { createCompany, updateCompany } = useCRMCompanies();
   const { companyCategories, companyTypes, getCompanyTypesForCategory, getCategoryFromType, isBETType } = useCRMSettings();
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
@@ -452,4 +453,4 @@ export function CompanyFormDialog({
       </DialogContent>
     </Dialog>
   );
-}
+});
