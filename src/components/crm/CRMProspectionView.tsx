@@ -7,6 +7,7 @@ import { ContactFormDialog } from "./ContactFormDialog";
 import { CompanyFormDialog } from "./CompanyFormDialog";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { CRMAddDropdown } from "./CRMAddDropdown";
+import { CRMEmailSyncButton } from "./CRMEmailSyncButton";
 import { ContentFiltersBar } from "@/components/shared/ContentFiltersBar";
 import { ViewModeToggle } from "@/components/shared/filters";
 import { Button } from "@/components/ui/button";
@@ -98,6 +99,7 @@ export function CRMProspectionView({ searchQuery = "" }: CRMProspectionViewProps
   // Actions on the right
   const actions = (
     <div className="flex items-center gap-2">
+      <CRMEmailSyncButton />
       <CRMAddDropdown
         onCreateContact={() => setCreateContactOpen(true)}
         onCreateCompany={() => setCreateCompanyOpen(true)}
