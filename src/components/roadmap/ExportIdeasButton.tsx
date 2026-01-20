@@ -30,14 +30,28 @@ export function ExportIdeasButton({ ideas, roadmapItems, allFeedbacks = [] }: Ex
     const delivered = roadmapItems.filter(i => i.status === 'delivered');
     const pendingIdeas = ideas.filter(i => i.status === 'pending' || i.status === 'approved');
 
-    // Group feedbacks by roadmap_item_id
+    // Separate roadmap feedbacks from feedback mode entries
+    const roadmapFeedbacks = allFeedbacks.filter(fb => fb.source === 'roadmap');
+    const feedbackModeEntries = allFeedbacks.filter(fb => fb.source === 'feedback_mode');
+
+    // Group roadmap feedbacks by item
     const feedbacksByItem = new Map<string | null, RoadmapFeedback[]>();
-    allFeedbacks.forEach(fb => {
+    roadmapFeedbacks.forEach(fb => {
       const key = fb.roadmap_item_id;
       if (!feedbacksByItem.has(key)) {
         feedbacksByItem.set(key, []);
       }
       feedbacksByItem.get(key)!.push(fb);
+    });
+
+    // Group feedback mode entries by route
+    const feedbacksByRoute = new Map<string, RoadmapFeedback[]>();
+    feedbackModeEntries.forEach(fb => {
+      const route = fb.route_path || '/unknown';
+      if (!feedbacksByRoute.has(route)) {
+        feedbacksByRoute.set(route, []);
+      }
+      feedbacksByRoute.get(route)!.push(fb);
     });
 
     let prompt = `# État actuel de la Roadmap Linea
@@ -72,13 +86,22 @@ ${pendingIdeas.length > 0
 
 ---
 
-## Résumé des Retours Utilisateurs
+## Retours du Mode Feedback (par page)
 
-Total: ${allFeedbacks.length} retour(s) collecté(s)
+${feedbackModeEntries.length > 0 ? 
+  Array.from(feedbacksByRoute.entries()).map(([route, fbs]) => {
+    return `### ${route} (${fbs.length} retour${fbs.length > 1 ? 's' : ''})
+${fbs.map(fb => `- [${fb.feedback_type || 'suggestion'}] "${fb.content}" - ${fb.author?.full_name || 'Anonyme'}`).join('\n')}`;
+  }).join('\n\n')
+  : 'Aucun retour du mode feedback'}
 
-${allFeedbacks.length > 0 ? 
-  allFeedbacks.map(fb => `- "${fb.content}" (${fb.author?.full_name || 'Anonyme'})`).join('\n') 
-  : 'Aucun retour pour le moment'}
+---
+
+## Résumé Global
+
+- **Retours Roadmap:** ${roadmapFeedbacks.length}
+- **Retours Mode Feedback:** ${feedbackModeEntries.length}
+- **Total:** ${allFeedbacks.length} retour(s)
 
 ---
 
@@ -87,9 +110,10 @@ ${allFeedbacks.length > 0 ?
 Utilise cette roadmap et les retours utilisateurs pour:
 1. Comprendre l'état actuel des fonctionnalités de l'application
 2. Prendre en compte les retours utilisateurs pour chaque module
-3. Prioriser les améliorations en fonction des votes et des retours
-4. Identifier les points de friction mentionnés par les utilisateurs
-5. Proposer des solutions concrètes pour les problèmes soulevés
+3. Analyser les retours du mode feedback regroupés par page/route
+4. Prioriser les améliorations en fonction des votes et des retours
+5. Identifier les points de friction mentionnés par les utilisateurs
+6. Proposer des solutions concrètes pour les problèmes soulevés
 
 Les retours avec le plus de récurrence doivent être prioritaires. Assure-toi de maintenir la cohérence avec les modules existants.`;
 

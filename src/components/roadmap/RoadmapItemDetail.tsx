@@ -28,6 +28,7 @@ interface RoadmapItemDetailProps {
     color: string | null;
     status: string;
     category: string;
+    module_slug?: string | null;
   } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -37,7 +38,10 @@ export function RoadmapItemDetail({ item, open, onOpenChange }: RoadmapItemDetai
   const { user } = useAuth();
   const [content, setContent] = useState("");
   
-  const { feedbacks, isLoading, createFeedback, deleteFeedback } = useRoadmapFeedback(item?.id || null);
+  const { feedbacks, isLoading, createFeedback, deleteFeedback } = useRoadmapFeedback(
+    item?.id || null, 
+    item?.module_slug || null
+  );
 
   const handleSubmit = () => {
     if (!content.trim() || !item) return;
@@ -152,6 +156,8 @@ interface FeedbackCardProps {
 }
 
 function FeedbackCard({ feedback, isOwner, onDelete }: FeedbackCardProps) {
+  const isFeedbackMode = feedback.source === 'feedback_mode';
+  
   return (
     <div className="p-3 rounded-lg border bg-card space-y-2">
       <div className="flex items-start justify-between gap-2">
@@ -165,13 +171,18 @@ function FeedbackCard({ feedback, isOwner, onDelete }: FeedbackCardProps) {
           <span className="text-sm font-medium">
             {feedback.author?.full_name || "Utilisateur"}
           </span>
+          {isFeedbackMode && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              via Mode Feedback
+            </Badge>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {format(new Date(feedback.created_at), "d MMM HH:mm", { locale: fr })}
           </span>
-          {isOwner && (
+          {isOwner && feedback.source === 'roadmap' && (
             <Button
               variant="ghost"
               size="icon"
@@ -183,6 +194,11 @@ function FeedbackCard({ feedback, isOwner, onDelete }: FeedbackCardProps) {
           )}
         </div>
       </div>
+      {isFeedbackMode && feedback.route_path && (
+        <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">
+          {feedback.route_path}
+        </code>
+      )}
       <p className="text-sm whitespace-pre-wrap">{feedback.content}</p>
     </div>
   );
