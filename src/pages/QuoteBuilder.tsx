@@ -59,7 +59,7 @@ import { ThemePreviewSelector } from '@/components/commercial/ThemePreviewSelect
 import { isArchitectureContractType, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
 import { getDefaultConditionsForType, serializeConditions } from '@/lib/contractConditionsUnified';
-import { printQuoteHtml } from '@/lib/generateHtmlPDF';
+import { downloadQuotePdf } from '@/lib/generateHtmlPDF';
 import { useQuoteThemes } from '@/hooks/useQuoteThemes';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
@@ -456,9 +456,9 @@ export default function QuoteBuilder() {
     }
   };
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     try {
-      toast.info('Ouverture de l\'impression... Choisissez "Enregistrer en PDF" dans la boîte de dialogue.');
+      toast.info('Génération du PDF en cours...');
       
       // Get selected theme
       const selectedTheme = selectedThemeId 
@@ -486,12 +486,13 @@ export default function QuoteBuilder() {
       
       const filename = `Devis ${document.document_number || 'brouillon'}`;
       
-      // Use native print dialog - user can save as PDF
-      printQuoteHtml(document, lines, agencyData, selectedTheme, filename);
+      // Download PDF directly without print dialog
+      await downloadQuotePdf(document, lines, agencyData, selectedTheme, filename);
       
+      toast.success('PDF téléchargé');
     } catch (err) {
-      console.error('Error printing PDF:', err);
-      toast.error('Erreur lors de l\'ouverture de l\'impression');
+      console.error('Error downloading PDF:', err);
+      toast.error('Erreur lors du téléchargement du PDF');
     }
   };
 
