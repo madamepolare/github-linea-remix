@@ -23,6 +23,16 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       size: A4; 
       margin: 0; 
     }
+    
+    /* Force A4 dimensions globally (critical for PDFShift) */
+    html {
+      width: 210mm;
+      min-width: 210mm;
+      max-width: 210mm;
+      margin: 0;
+      padding: 0;
+    }
+    
     @media print {
       html, body { 
         width: 210mm;
@@ -45,6 +55,9 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       background: var(--background-color, #fff);
       line-height: 1.5;
       font-weight: 400;
+      width: 210mm;
+      min-width: 210mm;
+      max-width: 210mm;
       margin: 0;
       padding: 0;
     }
