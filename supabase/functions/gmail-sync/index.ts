@@ -112,6 +112,7 @@ serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
   const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
   const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
   const WORKSPACE_GOOGLE_CLIENT_ID = Deno.env.get('WORKSPACE_GOOGLE_CLIENT_ID');
@@ -123,11 +124,21 @@ serve(async (req) => {
     // Check if this is a user-triggered sync or cron
     const authHeader = req.headers.get('authorization');
     let targetConnections: ConnectionToSync[] = [];
-    let userWorkspaceId: string | null = null;
+    let isUserTriggered = false;
 
-    if (authHeader && !authHeader.includes(Deno.env.get('SUPABASE_ANON_KEY')!)) {
+    // Determine if this is a user-triggered call or a cron/anonymous call
+    // Cron calls use the anon key in the Authorization header
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      // If the token is NOT the anon key, it's a user JWT
+      if (token !== SUPABASE_ANON_KEY) {
+        isUserTriggered = true;
+      }
+    }
+
+    if (isUserTriggered && authHeader) {
       // User-triggered sync
-      const supabaseUser = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         global: { headers: { Authorization: authHeader } }
       });
 
@@ -136,7 +147,7 @@ serve(async (req) => {
         throw new Error('User not authenticated');
       }
 
-      const { data: profile } = await supabaseUser
+      const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('active_workspace_id')
         .eq('user_id', user.id)
@@ -146,7 +157,7 @@ serve(async (req) => {
         throw new Error('No active workspace');
       }
 
-      userWorkspaceId = profile.active_workspace_id;
+      const userWorkspaceId = profile.active_workspace_id;
 
       // Get personal connection
       const { data: personalConn } = await supabaseAdmin
@@ -187,24 +198,11 @@ serve(async (req) => {
         }
       }
     } else {
-      // Cron-triggered sync - sync all active connections
-      
-      // Personal connections
-      const { data: personalConns } = await supabaseAdmin
-        .from('gmail_connections')
-        .select('*')
-        .eq('is_active', true);
+      // Cron-triggered sync - sync all active workspace email accounts
+      // We only sync workspace accounts via cron (not personal accounts) for privacy
+      console.log('Cron-triggered sync: syncing all active workspace email accounts');
 
-      if (personalConns) {
-        for (const conn of personalConns) {
-          targetConnections.push({
-            ...conn,
-            is_workspace_account: false,
-          });
-        }
-      }
-
-      // Workspace email accounts
+      // Workspace email accounts only for cron
       const { data: workspaceAccounts } = await supabaseAdmin
         .from('workspace_email_accounts')
         .select('*')
