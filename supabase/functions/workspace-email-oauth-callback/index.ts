@@ -34,13 +34,13 @@ serve(async (req) => {
       throw new Error('Invalid state parameter');
     }
 
-    const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
-    const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
+    const WORKSPACE_GOOGLE_CLIENT_ID = Deno.env.get('WORKSPACE_GOOGLE_CLIENT_ID');
+    const WORKSPACE_GOOGLE_CLIENT_SECRET = Deno.env.get('WORKSPACE_GOOGLE_CLIENT_SECRET');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      throw new Error('Google OAuth credentials not configured');
+    if (!WORKSPACE_GOOGLE_CLIENT_ID || !WORKSPACE_GOOGLE_CLIENT_SECRET) {
+      throw new Error('Workspace Google OAuth credentials not configured');
     }
 
     // Exchange code for tokens
@@ -49,8 +49,8 @@ serve(async (req) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
+        client_id: WORKSPACE_GOOGLE_CLIENT_ID,
+        client_secret: WORKSPACE_GOOGLE_CLIENT_SECRET,
         redirect_uri: `${SUPABASE_URL}/functions/v1/workspace-email-oauth-callback`,
         grant_type: 'authorization_code',
       }),
