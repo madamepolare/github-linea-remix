@@ -977,7 +977,7 @@ export async function downloadQuotePdf(
   await new Promise(resolve => setTimeout(resolve, 500));
   
   try {
-    // Render to canvas
+    // Render to canvas - capture the full document
     const canvas = await html2canvas(iframeDoc.body, {
       scale: 2, // Higher quality
       useCORS: true,
@@ -999,18 +999,17 @@ export async function downloadQuotePdf(
     const pdfWidth = 210; // A4 width in mm
     const pdfHeight = 297; // A4 height in mm
     
-    // Calculate image dimensions to fit A4
-    const imgWidth = canvas.width;
-    const imgHeight = canvas.height;
-    const ratio = Math.min(pdfWidth / (imgWidth / 2), pdfHeight / (imgHeight / 2));
+    // Fill the entire A4 page width, maintain aspect ratio for height
+    // Canvas is rendered at scale 2x, so divide by 2 to get original pixel dimensions
+    const imgWidthPx = canvas.width / 2;
+    const imgHeightPx = canvas.height / 2;
     
-    const finalWidth = (imgWidth / 2) * ratio;
-    const finalHeight = (imgHeight / 2) * ratio;
+    // Calculate the height proportionally based on A4 width
+    const aspectRatio = imgHeightPx / imgWidthPx;
+    const finalHeight = pdfWidth * aspectRatio;
     
-    // Center the image on the page
-    const xOffset = (pdfWidth - finalWidth) / 2;
-    
-    pdf.addImage(imgData, 'PNG', xOffset, 0, finalWidth, finalHeight);
+    // Add image at position (0, 0) filling the full A4 width
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(finalHeight, pdfHeight));
     
     // Download PDF
     const pdfFilename = filename || `Devis ${document.document_number || 'brouillon'}`;
