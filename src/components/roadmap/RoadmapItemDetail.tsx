@@ -38,13 +38,16 @@ export function RoadmapItemDetail({ item, open, onOpenChange }: RoadmapItemDetai
   const { user } = useAuth();
   const [content, setContent] = useState("");
   
+  // Check if this is a static item (not in database)
+  const isStaticItem = item?.id.startsWith('static-') || false;
+  
   const { feedbacks, isLoading, createFeedback, deleteFeedback } = useRoadmapFeedback(
-    item?.id || null, 
+    isStaticItem ? null : (item?.id || null), 
     item?.module_slug || null
   );
 
   const handleSubmit = () => {
-    if (!content.trim() || !item) return;
+    if (!content.trim() || !item || isStaticItem) return;
     createFeedback.mutate(
       { roadmapItemId: item.id, content: content.trim() },
       { onSuccess: () => setContent("") }
@@ -90,28 +93,36 @@ export function RoadmapItemDetail({ item, open, onOpenChange }: RoadmapItemDetai
         </SheetHeader>
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          {/* Feedback Form */}
-          <div className="p-4 border-b space-y-3 bg-muted/30">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <MessageSquare className="h-4 w-4" />
-              Donnez votre retour
+          {/* Feedback Form - only for non-static items */}
+          {isStaticItem ? (
+            <div className="p-4 border-b bg-muted/30">
+              <p className="text-sm text-muted-foreground text-center">
+                💡 Utilisez le <strong>Mode Feedback</strong> sur la page du module pour laisser un retour
+              </p>
             </div>
-            <Textarea
-              placeholder="Partagez votre expérience, vos suggestions d'amélioration..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="min-h-[80px] resize-none"
-            />
-            <Button
-              onClick={handleSubmit}
-              disabled={!content.trim() || createFeedback.isPending}
-              size="sm"
-              className="gap-2"
-            >
-              <Send className="h-4 w-4" />
-              Envoyer
-            </Button>
-          </div>
+          ) : (
+            <div className="p-4 border-b space-y-3 bg-muted/30">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <MessageSquare className="h-4 w-4" />
+                Donnez votre retour
+              </div>
+              <Textarea
+                placeholder="Partagez votre expérience, vos suggestions d'amélioration..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="min-h-[80px] resize-none"
+              />
+              <Button
+                onClick={handleSubmit}
+                disabled={!content.trim() || createFeedback.isPending}
+                size="sm"
+                className="gap-2"
+              >
+                <Send className="h-4 w-4" />
+                Envoyer
+              </Button>
+            </div>
+          )}
 
           {/* Feedbacks List */}
           <div className="flex-1 overflow-hidden">
