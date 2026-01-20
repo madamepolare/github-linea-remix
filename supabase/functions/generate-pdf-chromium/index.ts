@@ -10,6 +10,11 @@ const corsHeaders = {
  * 
  * Uses Browserless.io's Chrome API to render HTML to a true vector PDF.
  * This produces the same quality as Chrome's native print-to-PDF.
+ * 
+ * Key settings to avoid margins:
+ * - preferCSSPageSize: true (respect @page CSS)
+ * - margin: all 0
+ * - scale: 1 (no scaling)
  */
 serve(async (req) => {
   // Handle CORS preflight
@@ -38,7 +43,7 @@ serve(async (req) => {
     console.log('[PDF-Chromium] Generating PDF via Browserless...');
     console.log('[PDF-Chromium] HTML length:', html.length);
 
-    // Browserless PDF API - uses Chrome's native PDF rendering
+    // Browserless PDF API v2 - uses Chrome's native PDF rendering
     // Docs: https://docs.browserless.io/docs/pdf
     const response = await fetch(`https://chrome.browserless.io/pdf?token=${apiKey}`, {
       method: 'POST',
@@ -51,16 +56,25 @@ serve(async (req) => {
           format: 'A4',
           printBackground: true,
           preferCSSPageSize: true,
+          // Critical: zero margins
           margin: {
-            top: '0',
-            right: '0',
-            bottom: '0',
-            left: '0',
+            top: '0mm',
+            right: '0mm',
+            bottom: '0mm',
+            left: '0mm',
           },
+          // Prevent any scaling
+          scale: 1,
+          // Disable header/footer that Chrome might add
+          displayHeaderFooter: false,
         },
         gotoOptions: {
-          waitUntil: 'networkidle2',
+          // Wait for all fonts/images to load
+          waitUntil: 'networkidle0',
+          timeout: 30000,
         },
+        // Wait extra time for fonts to render
+        waitFor: 500,
       }),
     });
 
