@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Check, Download, ExternalLink, FileText, Image as ImageIcon, MessageSquare, MoreHorizontal, Pencil, Reply, Smile, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Download, ExternalLink, FileText, Image as ImageIcon, MessageSquare, MoreHorizontal, Pencil, Reply, Send, Smile, Trash2, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,11 +16,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { TeamMessage, useMessageReactions, useTeamMessageMutations, QUICK_REACTIONS } from "@/hooks/useTeamMessages";
+import { TeamMessage, useMessageReactions, useTeamMessageMutations, useThreadMessages, QUICK_REACTIONS } from "@/hooks/useTeamMessages";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { renderContentWithMentions } from "@/components/shared/MentionInput";
+import { renderContentWithMentions, MentionInput } from "@/components/shared/MentionInput";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Attachment {
   url: string;
@@ -35,18 +36,24 @@ interface MessageItemProps {
   onOpenThread: () => void;
   isThreadMessage?: boolean;
   onReply?: () => void;
+  showInlineReplies?: boolean;
 }
 
-export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage = false, onReply }: MessageItemProps) {
+export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage = false, onReply, showInlineReplies = true }: MessageItemProps) {
   const { user } = useAuth();
   const { data: profiles = [] } = useWorkspaceProfiles();
-  const { toggleReaction, deleteMessage, updateMessage } = useTeamMessageMutations();
+  const { toggleReaction, deleteMessage, updateMessage, createMessage } = useTeamMessageMutations();
   const { data: reactions } = useMessageReactions([message.id]);
+  const hasReplies = !isThreadMessage && showInlineReplies && (message.reply_count || 0) > 0;
   const [isHovered, setIsHovered] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
+  const [isThreadExpanded, setIsThreadExpanded] = useState(false);
+  const [showInlineReplyInput, setShowInlineReplyInput] = useState(false);
+  const [inlineReplyContent, setInlineReplyContent] = useState("");
+  const [inlineReplyMentions, setInlineReplyMentions] = useState<string[]>([]);
 
   const isOwn = message.created_by === user?.id;
   const showActions = isHovered || isDropdownOpen;
@@ -256,13 +263,13 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
             </div>
           )}
 
-          {/* Thread indicator */}
+          {/* Thread indicator - click to expand inline */}
           {!isEditing && !isThreadMessage && typeof message.reply_count === 'number' && message.reply_count > 0 && (
             <button
-              onClick={onOpenThread}
+              onClick={() => setIsThreadExpanded(!isThreadExpanded)}
               className="flex items-center gap-1.5 mt-2 text-xs text-primary hover:underline active:opacity-70 touch-manipulation"
             >
-              <MessageSquare className="h-3.5 w-3.5" />
+              {isThreadExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
               {message.reply_count} réponse{message.reply_count > 1 ? "s" : ""}
             </button>
           )}
