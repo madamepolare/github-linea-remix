@@ -71,7 +71,8 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
     .topbar {
       width: 100%;
       background: #f5f5f5;
-      padding: 6px 40px;
+      /* Use physical units so PDF rendering matches the preview */
+      padding: 2mm 12mm;
       font-size: 8px;
       color: #666;
       font-family: system-ui, sans-serif;
@@ -81,7 +82,8 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
     
     /* ===== MAIN CONTENT ===== */
     .main-content {
-      padding: 32px 40px 60px;
+      /* Use physical units so PDF rendering matches the preview */
+      padding: 10mm 12mm 18mm;
     }
     
     /* ===== TYPOGRAPHY ===== */
