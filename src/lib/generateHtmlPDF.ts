@@ -49,7 +49,7 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       box-sizing: border-box; 
     }
     body { 
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+      font-family: var(--body-font, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif); 
       font-size: var(--body-size, 10px); 
       color: var(--primary-color, #1a1a1a);
       background: var(--background-color, #fff);

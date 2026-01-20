@@ -60,6 +60,7 @@ import { isArchitectureContractType, getDefaultMOEConfig } from '@/lib/moeContra
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
 import { getDefaultConditionsForType, serializeConditions } from '@/lib/contractConditionsUnified';
 import { downloadChromiumPdf } from '@/lib/generateChromiumPDF';
+import { useWorkspaceStyles } from '@/hooks/useWorkspaceStyles';
 import { useQuoteThemes } from '@/hooks/useQuoteThemes';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
@@ -107,6 +108,7 @@ export default function QuoteBuilder() {
   const { createDocument, updateDocument, getDocument, getDocumentPhases, createPhase, updatePhase, deletePhase, acceptAndCreateProject, acceptAndCreateSubProject } = useCommercialDocuments();
   const { agencyInfo } = useAgencyInfo();
   const { themes } = useQuoteThemes();
+  const { styleSettings } = useWorkspaceStyles();
   
   // Use getDocument from the hook for existing documents
   const documentQuery = getDocument(isNew ? '' : (id || ''));
@@ -486,8 +488,13 @@ export default function QuoteBuilder() {
       
       const filename = `Devis_${document.document_number || 'brouillon'}`;
       
+      // Get custom fonts from workspace settings (with dataUrl for embedding)
+      const customFonts = (styleSettings?.customFonts || [])
+        .filter(f => f.dataUrl)
+        .map(f => ({ fontFamily: f.fontFamily, dataUrl: f.dataUrl! }));
+      
       // Download vector PDF via Chromium (Browserless)
-      await downloadChromiumPdf(document, lines, agencyData, selectedTheme, filename);
+      await downloadChromiumPdf(document, lines, agencyData, selectedTheme, filename, customFonts);
       
       toast.success('PDF vectoriel téléchargé');
     } catch (err) {
