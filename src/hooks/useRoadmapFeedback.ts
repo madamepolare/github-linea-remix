@@ -251,11 +251,30 @@ export function useRoadmapFeedback(roadmapItemId: string | null, moduleSlug?: st
     },
   });
 
+  // Mark feedback_entry as resolved
+  const markAsResolved = useMutation({
+    mutationFn: async ({ feedbackId, isResolved }: { feedbackId: string; isResolved: boolean }) => {
+      const { error } = await supabase
+        .from('feedback_entries')
+        .update({ is_resolved: isResolved })
+        .eq('id', feedbackId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roadmap_feedback'] });
+      queryClient.invalidateQueries({ queryKey: ['roadmap_feedback_all'] });
+      queryClient.invalidateQueries({ queryKey: ['feedback-entries'] });
+      toast.success('Statut mis à jour');
+    },
+  });
+
   return {
     feedbacks,
     allFeedbacks,
     isLoading,
     createFeedback,
     deleteFeedback,
+    markAsResolved,
   };
 }

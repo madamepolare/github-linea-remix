@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Clock, Target, Lightbulb, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRoadmap, DELIVERED_MODULES, RoadmapItem } from "@/hooks/useRoadmap";
 import { useRoadmapFeedback } from "@/hooks/useRoadmapFeedback";
+import { useFeedbackEntries } from "@/hooks/useFeedbackEntries";
 import { RoadmapHeader } from "@/components/roadmap/RoadmapHeader";
 import { RoadmapSection } from "@/components/roadmap/RoadmapSection";
 import { RoadmapItemCard } from "@/components/roadmap/RoadmapItemCard";
@@ -11,6 +12,27 @@ import { IdeaCard } from "@/components/roadmap/IdeaCard";
 import { SubmitIdeaDialog } from "@/components/roadmap/SubmitIdeaDialog";
 import { ExportIdeasButton } from "@/components/roadmap/ExportIdeasButton";
 import { usePermissions } from "@/hooks/usePermissions";
+
+// Map module slugs to route patterns for counting
+const MODULE_ROUTE_MAP: Record<string, string[]> = {
+  dashboard: ['/dashboard'],
+  crm: ['/crm', '/contacts', '/leads', '/companies'],
+  projects: ['/projects'],
+  tasks: ['/tasks'],
+  commercial: ['/commercial', '/quote-builder'],
+  tenders: ['/tenders'],
+  invoicing: ['/invoicing', '/invoices'],
+  messages: ['/messages'],
+  notifications: ['/notifications'],
+  team: ['/team'],
+  reports: ['/reports'],
+  chantier: ['/chantier'],
+  documents: ['/documents'],
+  portal: ['/client-portal', '/portal'],
+  libraries: ['/materials', '/libraries'],
+  ai: ['/ai'],
+  permissions: ['/settings'],
+};
 
 export default function AppRoadmap() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
@@ -33,6 +55,37 @@ export default function AppRoadmap() {
   } = useRoadmap();
 
   const { allFeedbacks } = useRoadmapFeedback(null);
+  const { entries: feedbackEntries } = useFeedbackEntries();
+
+  // Calculate feedback counts per module
+  const feedbackCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    // Count feedback_entries by route
+    feedbackEntries?.forEach(entry => {
+      Object.entries(MODULE_ROUTE_MAP).forEach(([slug, routes]) => {
+        if (routes.some(route => entry.route_path.startsWith(route))) {
+          counts[slug] = (counts[slug] || 0) + 1;
+        }
+      });
+    });
+
+    // Count roadmap feedbacks by item id
+    allFeedbacks?.forEach(fb => {
+      if (fb.roadmap_item_id && fb.source === 'roadmap') {
+        counts[fb.roadmap_item_id] = (counts[fb.roadmap_item_id] || 0) + 1;
+      }
+    });
+
+    return counts;
+  }, [feedbackEntries, allFeedbacks]);
+
+  // Get feedback count for an item
+  const getFeedbackCount = (item: any) => {
+    const byId = feedbackCounts[item.id] || 0;
+    const bySlug = item.module_slug ? (feedbackCounts[item.module_slug] || 0) : 0;
+    return byId + bySlug;
+  };
 
   // Use static modules if none in DB - now in_progress
   const displayedInProgress = inProgressItems.length > 0 
@@ -96,6 +149,7 @@ export default function AppRoadmap() {
                 showVotes={!item.id.startsWith('static-')}
                 onVote={(id, remove) => voteRoadmapItem.mutate({ itemId: id, remove })}
                 onClick={() => setSelectedItem(item as any)}
+                feedbackCount={getFeedbackCount(item)}
               />
             ))}
           </RoadmapSection>
@@ -108,12 +162,13 @@ export default function AppRoadmap() {
               count={plannedItems.length}
               colorClass="bg-orange-500/10"
             >
-              {plannedItems.map((item) => (
+          {plannedItems.map((item) => (
                 <RoadmapItemCard
                   key={item.id}
                   item={item}
                   onVote={(id, remove) => voteRoadmapItem.mutate({ itemId: id, remove })}
                   onClick={() => setSelectedItem(item)}
+                  feedbackCount={getFeedbackCount(item)}
                 />
               ))}
             </RoadmapSection>
@@ -133,6 +188,7 @@ export default function AppRoadmap() {
                   item={item}
                   onVote={(id, remove) => voteRoadmapItem.mutate({ itemId: id, remove })}
                   onClick={() => setSelectedItem(item)}
+                  feedbackCount={getFeedbackCount(item)}
                 />
               ))}
             </RoadmapSection>
