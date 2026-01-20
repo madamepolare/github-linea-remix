@@ -71,7 +71,7 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
     .topbar {
       width: 100%;
       background: #f5f5f5;
-      padding: 6px 56px;
+      padding: 6px 40px;
       font-size: 8px;
       color: #666;
       font-family: system-ui, sans-serif;
@@ -81,7 +81,7 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
     
     /* ===== MAIN CONTENT ===== */
     .main-content {
-      padding: 42px 56px 76px;
+      padding: 32px 40px 60px;
     }
     
     /* ===== TYPOGRAPHY ===== */
