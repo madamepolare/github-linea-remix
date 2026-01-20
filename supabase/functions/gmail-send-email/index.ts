@@ -339,6 +339,51 @@ serve(async (req) => {
 
     // Record email in CRM
     const toEmail = Array.isArray(to) ? to[0] : to;
+    
+    // Auto-resolve contact/company from to_email if not provided
+    let resolvedContactId = contactId || null;
+    let resolvedCompanyId = companyId || null;
+    
+    if (!resolvedContactId && toEmail) {
+      // Try to find a contact with this email in the workspace
+      const { data: matchedContact } = await supabaseAdmin
+        .from('contacts')
+        .select('id, crm_company_id')
+        .eq('workspace_id', workspaceId)
+        .ilike('email', toEmail.trim())
+        .maybeSingle();
+      
+      if (matchedContact) {
+        resolvedContactId = matchedContact.id;
+        // If contact has a company, use that too (ensures consistency)
+        if (matchedContact.crm_company_id && !resolvedCompanyId) {
+          resolvedCompanyId = matchedContact.crm_company_id;
+        }
+      }
+    }
+    
+    // If still no company, try to match company email directly
+    if (!resolvedCompanyId && toEmail) {
+      const { data: matchedCompany } = await supabaseAdmin
+        .from('crm_companies')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .ilike('email', toEmail.trim())
+        .maybeSingle();
+      
+      if (matchedCompany) {
+        resolvedCompanyId = matchedCompany.id;
+      }
+    }
+    
+    console.log('Resolved email recipients:', { 
+      toEmail, 
+      resolvedContactId, 
+      resolvedCompanyId,
+      originalContactId: contactId,
+      originalCompanyId: companyId 
+    });
+    
     const { data: emailRecord, error: emailError } = await supabaseAdmin
       .from('crm_emails')
       .insert({
@@ -350,8 +395,8 @@ serve(async (req) => {
         status: 'sent',
         sent_at: new Date().toISOString(),
         created_by: user.id,
-        contact_id: contactId || null,
-        company_id: companyId || null,
+        contact_id: resolvedContactId,
+        company_id: resolvedCompanyId,
         lead_id: leadId || null,
         project_id: projectId || null,
         tender_id: tenderId || null,
@@ -359,6 +404,8 @@ serve(async (req) => {
         gmail_thread_id: gmailResult.threadId,
         direction: 'outbound',
         synced_from_gmail: false,
+        workspace_email_account_id: isWorkspaceAccount ? connection.id : null,
+        sent_via: isWorkspaceAccount ? 'workspace' : 'personal',
       })
       .select()
       .single();
