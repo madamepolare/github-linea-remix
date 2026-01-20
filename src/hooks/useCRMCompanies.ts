@@ -64,11 +64,12 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
     setPage(1);
   }, [filters?.search, filters?.category, filters?.letterFilter]);
 
-  const queryKey = ["crm-companies", activeWorkspace?.id, page, pageSize, filters?.search, filters?.category, filters?.letterFilter];
+  const queryKey = ["crm-companies", activeWorkspace?.id, page, pageSize, filters?.search, filters?.category, filters?.letterFilter, filters?.sortBy, filters?.sortDir];
+  const countQueryKey = ["crm-companies-count", activeWorkspace?.id, filters?.search, filters?.category, filters?.letterFilter];
 
   // Fetch total count for pagination
-  const { data: totalCount = 0 } = useQuery({
-    queryKey: ["crm-companies-count", activeWorkspace?.id, filters?.search, filters?.category, filters?.letterFilter],
+  const { data: totalCount = 0, isFetching: isCountFetching } = useQuery({
+    queryKey: countQueryKey,
     queryFn: async () => {
       if (!activeWorkspace?.id) return 0;
 
@@ -95,8 +96,35 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
     staleTime: 60000,
   });
 
+  // Fetch available letters for A-Z filter (across all filtered results, not just current page)
+  const { data: availableLetters = [] } = useQuery({
+    queryKey: ["crm-companies-available-letters", activeWorkspace?.id, filters?.search, filters?.category],
+    queryFn: async () => {
+      if (!activeWorkspace?.id) return [];
+      
+      let query = supabase
+        .from("crm_companies")
+        .select("name")
+        .eq("workspace_id", activeWorkspace.id);
+
+      // Apply search filter (without letter filter to see all available letters)
+      if (filters?.search) {
+        query = query.or(`name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,city.ilike.%${filters.search}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      const letters = new Set(data?.map(c => c.name?.[0]?.toUpperCase()).filter(Boolean));
+      return Array.from(letters).sort();
+    },
+    enabled: !!activeWorkspace?.id,
+    staleTime: 60000,
+  });
+
+
   // Fetch paginated companies
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isFetching, error } = useQuery({
     queryKey,
     queryFn: async () => {
       if (!activeWorkspace?.id) return [];
@@ -397,9 +425,11 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
     leadCompanies,
     confirmedCompanies,
     isLoading,
+    isFetching,
     error,
     statsByCategory,
     statsByStatus,
+    availableLetters,
     createCompany,
     updateCompany,
     deleteCompany,

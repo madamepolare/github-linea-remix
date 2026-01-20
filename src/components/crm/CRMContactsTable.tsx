@@ -93,8 +93,10 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [pageSize, setPageSize] = useState<number>(50);
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [letterFilter, setLetterFilter] = useState<string | null>(null);
 
   const effectiveSearch = externalSearch || searchQuery;
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
   // Use hook with server-side filtering
   const { 
@@ -106,12 +108,14 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
     confirmContact, 
     statsByType, 
     statsByStatus,
+    availableLetters,
     pagination 
   } = useContacts({
     search: effectiveSearch,
     status: selectedStatus as 'lead' | 'confirmed' | 'all',
     selectedTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
     pageSize,
+    letterFilter: letterFilter || undefined,
   });
 
   // Auto-switch to cards on mobile
@@ -279,6 +283,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                 setSearchQuery("");
                 setSelectedTypes([]);
                 setSelectedStatus("all");
+                setLetterFilter(null);
               }}
             />
           </div>
@@ -313,6 +318,28 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
           </div>
         </div>
 
+        {/* Alphabet filter - hide on mobile */}
+        <div className="hidden sm:flex items-center gap-0.5 overflow-x-auto scrollbar-none pb-1">
+          {alphabet.map((letter) => {
+            const hasContacts = availableLetters.includes(letter);
+            return (
+              <Button
+                key={letter}
+                variant={letterFilter === letter ? "default" : "ghost"}
+                size="sm"
+                className={cn(
+                  "h-6 w-6 p-0 text-[10px] font-medium shrink-0",
+                  !hasContacts && "text-muted-foreground/30"
+                )}
+                onClick={() => setLetterFilter(letterFilter === letter ? null : letter)}
+                disabled={!hasContacts}
+              >
+                {letter}
+              </Button>
+            );
+          })}
+        </div>
+
         {/* Content - Table or Cards */}
         {sortedContacts.length === 0 ? (
           <Card className="overflow-hidden">
@@ -323,6 +350,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
               <Button variant="link" size="sm" onClick={() => {
                 setSearchQuery("");
                 setSelectedTypes([]);
+                setLetterFilter(null);
               }}>
                 Effacer les filtres
               </Button>
