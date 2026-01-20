@@ -262,27 +262,60 @@ serve(async (req) => {
             .eq('id', connection.id);
         }
 
-        // Get known contacts for this workspace
+        // Get ONLY contacts/companies that are in a pipeline (not all contacts)
+        const { data: pipelineEntries } = await supabaseAdmin
+          .from('contact_pipeline_entries')
+          .select('contact_id, company_id')
+          .eq('workspace_id', connection.workspace_id);
+
+        const pipelineContactIds = new Set(
+          (pipelineEntries || []).filter(e => e.contact_id).map(e => e.contact_id)
+        );
+        const pipelineCompanyIds = new Set(
+          (pipelineEntries || []).filter(e => e.company_id).map(e => e.company_id)
+        );
+
+        // Get contacts that are in pipelines
         const { data: contacts } = await supabaseAdmin
           .from('contacts')
           .select('id, email, crm_company_id')
           .eq('workspace_id', connection.workspace_id)
           .not('email', 'is', null);
 
-        // Also get known companies
+        // Get companies that are in pipelines
         const { data: companies } = await supabaseAdmin
           .from('crm_companies')
           .select('id, email')
           .eq('workspace_id', connection.workspace_id)
           .not('email', 'is', null);
 
+        // Filter to only pipeline contacts/companies
+        const pipelineContacts = (contacts || []).filter(c => 
+          pipelineContactIds.has(c.id) || pipelineCompanyIds.has(c.crm_company_id)
+        );
+        const pipelineCompanies = (companies || []).filter(c => 
+          pipelineCompanyIds.has(c.id)
+        );
+
         const contactsByEmail = new Map(
-          (contacts || []).map(c => [c.email?.toLowerCase(), c])
+          pipelineContacts.map(c => [c.email?.toLowerCase(), c])
         );
 
         const companiesByEmail = new Map(
-          (companies || []).map(c => [c.email?.toLowerCase(), { id: c.id }])
+          pipelineCompanies.map(c => [c.email?.toLowerCase(), { id: c.id }])
         );
+
+        // Build list of emails to track (only pipeline-related)
+        const trackedEmails = new Set<string>();
+        pipelineContacts.forEach(c => c.email && trackedEmails.add(c.email.toLowerCase()));
+        pipelineCompanies.forEach(c => c.email && trackedEmails.add(c.email.toLowerCase()));
+
+        if (trackedEmails.size === 0) {
+          console.log(`No pipeline contacts/companies for ${connection.gmail_email}, skipping sync`);
+          continue;
+        }
+
+        console.log(`${connection.gmail_email}: tracking ${trackedEmails.size} pipeline-related email addresses`);
 
         // Fetch recent messages from Gmail (last 50)
         const listUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=50&q=newer_than:7d`;
@@ -337,11 +370,18 @@ serve(async (req) => {
 
             const fromEmail = extractEmail(from);
             const toEmail = extractEmail(to);
-            const body = extractBody(message.payload);
 
             // Determine direction
             const isInbound = toEmail === connection.gmail_email.toLowerCase();
             const otherEmail = isInbound ? fromEmail : toEmail;
+
+            // ONLY sync if the other party is in a pipeline
+            if (!trackedEmails.has(otherEmail)) {
+              // Skip this email - not related to any pipeline entry
+              continue;
+            }
+
+            const body = extractBody(message.payload);
 
             // Try to match to a contact or company by address
             const matchedContact = contactsByEmail.get(otherEmail);
