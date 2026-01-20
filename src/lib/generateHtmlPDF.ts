@@ -977,20 +977,17 @@ export async function downloadQuotePdf(
   await new Promise(resolve => setTimeout(resolve, 500));
   
   try {
-    // A4 dimensions at 96 DPI
+    // A4 width at 96 DPI
     const A4_WIDTH_PX = 794;
-    const A4_HEIGHT_PX = 1123;
     
-    // Render to canvas - capture exactly A4 dimensions
+    // Render FULL document to canvas (no height limit)
     const canvas = await html2canvas(iframeDoc.body, {
       scale: 2, // Higher quality (2x resolution)
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
       width: A4_WIDTH_PX,
-      height: A4_HEIGHT_PX,
       windowWidth: A4_WIDTH_PX,
-      windowHeight: A4_HEIGHT_PX,
       logging: false,
     });
     
@@ -1003,12 +1000,27 @@ export async function downloadQuotePdf(
     
     const imgData = canvas.toDataURL('image/png', 1.0);
     
-    // A4 in mm - place image to fill exactly
+    // A4 in mm
     const pdfWidth = 210;
     const pdfHeight = 297;
     
-    // Add image at (0,0) covering full A4 page
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    // Calculate image height in mm (scale 2x so divide canvas dimensions)
+    const imgWidthPx = canvas.width / 2;
+    const imgHeightPx = canvas.height / 2;
+    const imgHeightMm = (imgHeightPx / imgWidthPx) * pdfWidth;
+    
+    // Calculate number of pages needed
+    const totalPages = Math.ceil(imgHeightMm / pdfHeight);
+    
+    // Add each page by offsetting the image
+    for (let page = 0; page < totalPages; page++) {
+      if (page > 0) {
+        pdf.addPage();
+      }
+      // Shift image up for each subsequent page
+      const yOffset = -(page * pdfHeight);
+      pdf.addImage(imgData, 'PNG', 0, yOffset, pdfWidth, imgHeightMm);
+    }
     
     // Download PDF
     const pdfFilename = filename || `Devis ${document.document_number || 'brouillon'}`;
