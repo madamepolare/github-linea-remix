@@ -45,9 +45,9 @@ serve(async (req) => {
         use_print: true,
         disable_backgrounds: false,
         margin: 0,
-        // Force viewport to exact A4 pixel width (794px at 96dpi)
-        // This ensures the browser renders at the same width as the preview
-        viewport: { width: 794, height: 1123 },
+        // Force viewport (PDFShift expects a string, not an object)
+        // 794x1123 ~= A4 at 96dpi
+        viewport: '794x1123',
       }),
     });
 
