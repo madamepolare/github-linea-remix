@@ -11,80 +11,198 @@ export interface RoadmapFeedback {
   created_at: string;
   updated_at: string;
   workspace_id: string;
+  source: 'roadmap' | 'feedback_mode';
+  route_path?: string;
+  feedback_type?: string;
   author?: {
     full_name: string | null;
     avatar_url: string | null;
   };
 }
 
-export function useRoadmapFeedback(roadmapItemId: string | null) {
+// Map module slugs to route patterns
+const MODULE_ROUTE_MAP: Record<string, string[]> = {
+  dashboard: ['/dashboard'],
+  crm: ['/crm', '/contacts', '/leads', '/companies'],
+  projects: ['/projects'],
+  tasks: ['/tasks'],
+  commercial: ['/commercial', '/quote-builder'],
+  tenders: ['/tenders'],
+  invoicing: ['/invoicing', '/invoices'],
+  messages: ['/messages'],
+  notifications: ['/notifications'],
+  team: ['/team'],
+  reports: ['/reports'],
+  chantier: ['/chantier'],
+  documents: ['/documents'],
+  portal: ['/client-portal', '/portal'],
+  libraries: ['/materials', '/libraries'],
+  ai: ['/ai'],
+  permissions: ['/settings'],
+};
+
+export function useRoadmapFeedback(roadmapItemId: string | null, moduleSlug?: string | null) {
   const { activeWorkspace, user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch feedbacks for a specific roadmap item
+  // Fetch feedbacks for a specific roadmap item + related route feedbacks
   const { data: feedbacks = [], isLoading } = useQuery({
-    queryKey: ['roadmap_feedback', roadmapItemId],
+    queryKey: ['roadmap_feedback', roadmapItemId, moduleSlug],
     queryFn: async () => {
-      if (!roadmapItemId) return [];
+      const allFeedbacks: RoadmapFeedback[] = [];
 
-      const { data, error } = await supabase
-        .from('roadmap_feedback')
-        .select('*')
-        .eq('roadmap_item_id', roadmapItemId)
-        .order('created_at', { ascending: false });
+      // 1. Fetch direct roadmap feedbacks
+      if (roadmapItemId && !roadmapItemId.startsWith('static-')) {
+        const { data, error } = await supabase
+          .from('roadmap_feedback')
+          .select('*')
+          .eq('roadmap_item_id', roadmapItemId)
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
+        if (!error && data) {
+          const userIds = [...new Set(data.map(d => d.user_id))];
+          let profileMap = new Map();
+          if (userIds.length > 0) {
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('user_id, full_name, avatar_url')
+              .in('user_id', userIds);
+            profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+          }
 
-      // Get author profiles
-      const userIds = [...new Set(data.map(d => d.user_id))];
-      if (userIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, avatar_url')
-          .in('user_id', userIds);
-
-        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-
-        return data.map(fb => ({
-          ...fb,
-          author: profileMap.get(fb.user_id) || null,
-        })) as RoadmapFeedback[];
+          data.forEach(fb => {
+            allFeedbacks.push({
+              ...fb,
+              source: 'roadmap',
+              author: profileMap.get(fb.user_id) || null,
+            });
+          });
+        }
       }
 
-      return data as RoadmapFeedback[];
+      // 2. Fetch feedback_entries by route if moduleSlug is provided
+      if (moduleSlug && MODULE_ROUTE_MAP[moduleSlug]) {
+        const routes = MODULE_ROUTE_MAP[moduleSlug];
+        
+        const { data: routeFeedbacks, error } = await supabase
+          .from('feedback_entries')
+          .select('*')
+          .eq('workspace_id', activeWorkspace!.id)
+          .order('created_at', { ascending: false });
+
+        if (!error && routeFeedbacks) {
+          // Filter by route patterns
+          const matchingFeedbacks = routeFeedbacks.filter(fb => 
+            routes.some(route => fb.route_path.startsWith(route))
+          );
+
+          const userIds = [...new Set(matchingFeedbacks.map(d => d.author_id).filter(Boolean))];
+          let profileMap = new Map();
+          if (userIds.length > 0) {
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('user_id, full_name, avatar_url')
+              .in('user_id', userIds as string[]);
+            profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+          }
+
+          matchingFeedbacks.forEach(fb => {
+            allFeedbacks.push({
+              id: fb.id,
+              roadmap_item_id: null,
+              user_id: fb.author_id || '',
+              content: fb.content,
+              created_at: fb.created_at,
+              updated_at: fb.updated_at,
+              workspace_id: fb.workspace_id,
+              source: 'feedback_mode',
+              route_path: fb.route_path,
+              feedback_type: fb.feedback_type,
+              author: profileMap.get(fb.author_id) || null,
+            });
+          });
+        }
+      }
+
+      // Sort all by created_at desc
+      return allFeedbacks.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
     },
-    enabled: !!roadmapItemId && !!activeWorkspace?.id,
+    enabled: !!activeWorkspace?.id && (!!roadmapItemId || !!moduleSlug),
   });
 
-  // Fetch ALL feedbacks for the workspace (for export)
+  // Fetch ALL feedbacks for the workspace (for export) - includes both sources
   const { data: allFeedbacks = [] } = useQuery({
     queryKey: ['roadmap_feedback_all', activeWorkspace?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const combined: RoadmapFeedback[] = [];
+
+      // 1. Roadmap feedbacks
+      const { data: roadmapData, error: roadmapError } = await supabase
         .from('roadmap_feedback')
         .select('*')
         .eq('workspace_id', activeWorkspace!.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (!roadmapError && roadmapData) {
+        const userIds = [...new Set(roadmapData.map(d => d.user_id))];
+        let profileMap = new Map();
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, avatar_url')
+            .in('user_id', userIds);
+          profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+        }
 
-      // Get author profiles
-      const userIds = [...new Set(data.map(d => d.user_id))];
-      if (userIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, avatar_url')
-          .in('user_id', userIds);
-
-        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-
-        return data.map(fb => ({
-          ...fb,
-          author: profileMap.get(fb.user_id) || null,
-        })) as RoadmapFeedback[];
+        roadmapData.forEach(fb => {
+          combined.push({
+            ...fb,
+            source: 'roadmap',
+            author: profileMap.get(fb.user_id) || null,
+          });
+        });
       }
 
-      return data as RoadmapFeedback[];
+      // 2. Feedback mode entries
+      const { data: feedbackData, error: feedbackError } = await supabase
+        .from('feedback_entries')
+        .select('*')
+        .eq('workspace_id', activeWorkspace!.id)
+        .order('created_at', { ascending: false });
+
+      if (!feedbackError && feedbackData) {
+        const userIds = [...new Set(feedbackData.map(d => d.author_id).filter(Boolean))];
+        let profileMap = new Map();
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, avatar_url')
+            .in('user_id', userIds as string[]);
+          profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+        }
+
+        feedbackData.forEach(fb => {
+          combined.push({
+            id: fb.id,
+            roadmap_item_id: null,
+            user_id: fb.author_id || '',
+            content: fb.content,
+            created_at: fb.created_at,
+            updated_at: fb.updated_at,
+            workspace_id: fb.workspace_id,
+            source: 'feedback_mode',
+            route_path: fb.route_path,
+            feedback_type: fb.feedback_type,
+            author: profileMap.get(fb.author_id) || null,
+          });
+        });
+      }
+
+      return combined.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
     },
     enabled: !!activeWorkspace?.id,
   });
