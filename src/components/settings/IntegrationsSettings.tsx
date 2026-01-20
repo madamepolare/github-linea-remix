@@ -16,6 +16,7 @@ import {
   Zap
 } from "lucide-react";
 import { CalendarIntegrationsSettings } from "./CalendarIntegrationsSettings";
+import { WorkspaceEmailSettings } from "./WorkspaceEmailSettings";
 
 interface Integration {
   id: string;
@@ -228,6 +229,9 @@ export function IntegrationsSettings() {
           <div className="text-sm text-muted-foreground mb-4">
             Configurez les services d'envoi et de réception d'emails.
           </div>
+          
+          {/* Workspace Email Settings */}
+          <WorkspaceEmailSettings />
           
           {/* Other email integrations */}
           {getIntegrationsByCategory("email").map(renderIntegrationCard)}
