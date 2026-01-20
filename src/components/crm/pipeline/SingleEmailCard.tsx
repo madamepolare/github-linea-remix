@@ -2,21 +2,18 @@ import { useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
-  Mail, 
   Reply, 
   CornerUpRight,
-  Send,
   Paperclip,
-  Sparkles,
   ChevronDown,
   ChevronUp,
   ArrowDownLeft,
-  ArrowUpRight
+  ArrowUpRight,
+  MessageSquareReply
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { Email } from "@/hooks/useEntityEmails";
 
@@ -37,19 +34,27 @@ export function SingleEmailCard({
   const isInbound = email.direction === 'inbound';
   const isUnread = !email.is_read && isInbound;
   
+  // Detect if this is a reply based on subject
+  const isReply = email.subject?.toLowerCase().startsWith('re:') || 
+                  email.subject?.toLowerCase().startsWith('rép:') ||
+                  email.subject?.toLowerCase().startsWith('tr:');
+  
   const sender = isInbound ? email.from_email : 'Moi';
   const senderInitials = isInbound 
     ? (email.from_email?.slice(0, 2).toUpperCase() || 'IN') 
     : 'ME';
 
-  // Clean body for preview
+  // Clean body for preview - strip quoted content for cleaner preview
   const cleanBody = email.body
     .replace(/<[^>]+>/g, ' ')
+    .replace(/On .+ wrote:/gi, '') // Remove quote headers
+    .replace(/Le .+ a écrit :/gi, '')
+    .replace(/>.+/g, '') // Remove quoted lines
     .replace(/\s+/g, ' ')
     .trim();
   
-  const bodyPreview = cleanBody.length > 120 
-    ? cleanBody.slice(0, 120) + '...' 
+  const bodyPreview = cleanBody.length > 100 
+    ? cleanBody.slice(0, 100) + '...' 
     : cleanBody;
 
   const handleExpand = () => {
@@ -64,8 +69,7 @@ export function SingleEmailCard({
     if (email.body.includes('<')) {
       return (
         <div 
-          className="prose prose-sm max-w-none dark:prose-invert break-words overflow-x-hidden"
-          style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+          className="prose prose-sm max-w-none dark:prose-invert break-words"
           dangerouslySetInnerHTML={{ 
             __html: email.body
               .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -74,202 +78,196 @@ export function SingleEmailCard({
         />
       );
     }
-    return <p className="whitespace-pre-wrap break-words" style={{ wordBreak: 'break-word' }}>{email.body}</p>;
+    return <p className="whitespace-pre-wrap break-words text-sm">{email.body}</p>;
   };
 
   const emailDate = email.sent_at || email.received_at || email.created_at;
 
   return (
-    <div className={cn(
-      "relative w-full overflow-hidden",
-      isInbound && "animate-in slide-in-from-left-2 duration-300"
-    )}>
-      {/* Direction indicator bar */}
-      <div className={cn(
-        "absolute left-0 top-0 bottom-0 w-1 rounded-l-md",
+    <div 
+      className={cn(
+        "group relative rounded-lg border transition-all cursor-pointer",
         isInbound 
-          ? "bg-gradient-to-b from-green-500 to-emerald-400" 
-          : "bg-gradient-to-b from-blue-500 to-indigo-400"
-      )} />
-      
-      <Card className={cn(
-        "transition-all cursor-pointer hover:shadow-md ml-0.5 overflow-hidden",
-        isInbound 
-          ? "bg-green-50/80 dark:bg-green-950/30 border-green-200 dark:border-green-800" 
-          : "bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800",
-        isUnread && "ring-2 ring-green-400/50 shadow-lg shadow-green-100/50"
-      )}>
-        <CardContent className="p-3">
-          {/* Direction badge - very visible */}
-          <div className="flex items-center justify-between mb-2">
+          ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/60 dark:border-emerald-800/40 hover:border-emerald-300" 
+          : "bg-slate-50/50 dark:bg-slate-900/30 border-slate-200/60 dark:border-slate-700/40 hover:border-slate-300",
+        isUnread && "ring-1 ring-emerald-400/50 bg-emerald-50 dark:bg-emerald-950/30"
+      )}
+      onClick={handleExpand}
+    >
+      <div className="p-3 space-y-2">
+        {/* Top row: Direction + Reply indicator + Time */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            {/* Direction badge */}
             <Badge 
-              variant="outline" 
+              variant="secondary" 
               className={cn(
-                "text-[10px] font-semibold gap-1",
+                "h-5 text-[10px] font-medium gap-1 px-1.5",
                 isInbound 
-                  ? "bg-green-100 text-green-700 border-green-300 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700" 
-                  : "bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700"
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300" 
+                  : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
               )}
             >
               {isInbound ? (
-                <>
-                  <ArrowDownLeft className="h-3 w-3" />
-                  Reçu
-                </>
+                <ArrowDownLeft className="h-3 w-3" />
               ) : (
-                <>
-                  <ArrowUpRight className="h-3 w-3" />
-                  Envoyé
-                </>
+                <ArrowUpRight className="h-3 w-3" />
               )}
+              {isInbound ? "Reçu" : "Envoyé"}
             </Badge>
             
-            {/* Unread pulse badge */}
-            {isUnread && (
-              <Badge className="bg-green-500 text-white animate-pulse text-[10px] px-1.5">
-                <Sparkles className="h-3 w-3 mr-0.5" />
-                Nouveau !
+            {/* Reply indicator */}
+            {isReply && (
+              <Badge 
+                variant="outline" 
+                className="h-5 text-[10px] gap-1 px-1.5 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800"
+              >
+                <MessageSquareReply className="h-3 w-3" />
+                Réponse
               </Badge>
             )}
             
-            <span className="text-[10px] text-muted-foreground">
+            {/* Unread badge */}
+            {isUnread && (
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            )}
+          </div>
+          
+          <span className="text-[10px] text-muted-foreground shrink-0">
+            {emailDate 
+              ? formatDistanceToNow(new Date(emailDate), { addSuffix: true, locale: fr })
+              : ''
+            }
+          </span>
+        </div>
+
+        {/* Sender + Subject row */}
+        <div className="flex items-start gap-2.5">
+          <Avatar className={cn(
+            "h-8 w-8 shrink-0 border-2",
+            isInbound 
+              ? "border-emerald-300 dark:border-emerald-700" 
+              : "border-slate-300 dark:border-slate-600"
+          )}>
+            <AvatarFallback className={cn(
+              "text-xs font-semibold",
+              isInbound 
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" 
+                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            )}>
+              {senderInitials}
+            </AvatarFallback>
+          </Avatar>
+          
+          <div className="flex-1 min-w-0 space-y-0.5">
+            <p className={cn(
+              "text-sm truncate",
+              isUnread ? "font-semibold" : "font-medium text-foreground/90"
+            )}>
+              {sender}
+            </p>
+            
+            <p className={cn(
+              "text-sm line-clamp-1",
+              isUnread ? "font-medium text-foreground" : "text-muted-foreground"
+            )}>
+              {email.subject}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {email.attachments && email.attachments.length > 0 && (
+              <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
+            <ChevronDown className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform",
+              isExpanded && "rotate-180"
+            )} />
+          </div>
+        </div>
+
+        {/* Preview (when collapsed) */}
+        {!isExpanded && bodyPreview && (
+          <p className="text-xs text-muted-foreground line-clamp-2 pl-10">
+            {bodyPreview}
+          </p>
+        )}
+
+        {/* Expanded content */}
+        {isExpanded && (
+          <div className="mt-2 pt-3 border-t border-border/40 space-y-3">
+            {/* Date */}
+            <p className="text-xs text-muted-foreground">
               {emailDate 
-                ? formatDistanceToNow(new Date(emailDate), { addSuffix: true, locale: fr })
+                ? format(new Date(emailDate), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })
                 : ''
               }
-            </span>
-          </div>
-
-          {/* Header row */}
-          <div 
-            className="flex items-start gap-2"
-            onClick={handleExpand}
-          >
-            <Avatar className={cn(
-              "h-8 w-8 flex-shrink-0",
-              isInbound ? "ring-2 ring-green-400" : "ring-2 ring-blue-400"
-            )}>
-              <AvatarFallback className={cn(
-                "text-xs font-medium",
-                isInbound 
-                  ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" 
-                  : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-              )}>
-                {senderInitials}
-              </AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1 min-w-0 overflow-hidden">
-              <p className={cn(
-                "text-sm truncate",
-                isUnread ? "font-bold text-foreground" : "font-medium text-foreground"
-              )}>
-                {sender}
-              </p>
-              
-              <p className={cn(
-                "text-sm mt-0.5 line-clamp-2",
-                isUnread ? "font-semibold" : "font-medium text-foreground/90"
-              )} style={{ wordBreak: 'break-word' }}>
-                {email.subject}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-1 flex-shrink-0">
-              {email.attachments && email.attachments.length > 0 && (
-                <Paperclip className="h-3.5 w-3.5 text-muted-foreground" />
-              )}
-              {isExpanded ? (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              )}
-            </div>
-          </div>
-
-          {/* Preview (when collapsed) */}
-          {!isExpanded && (
-            <p className="text-xs text-muted-foreground mt-2 line-clamp-2" style={{ wordBreak: 'break-word' }}>
-              {bodyPreview}
             </p>
-          )}
-
-          {/* Full content (when expanded) */}
-          {isExpanded && (
-            <div className="mt-3 pt-3 border-t border-border/50 space-y-3 overflow-hidden">
-              {/* Full date */}
-              <p className="text-xs text-muted-foreground">
-                {emailDate 
-                  ? format(new Date(emailDate), "EEEE dd MMMM yyyy 'à' HH:mm", { locale: fr })
-                  : ''
-                }
-              </p>
-              
-              {/* Recipients */}
-              <div className="text-xs text-muted-foreground space-y-0.5 overflow-hidden">
-                <p className="truncate">De : {email.from_email || 'Moi'}</p>
-                <p className="truncate">À : {email.to_email}</p>
-                {email.cc && email.cc.length > 0 && (
-                  <p className="truncate">Cc : {email.cc.join(', ')}</p>
-                )}
-              </div>
-
-              {/* Body */}
-              <div className="text-sm max-h-[300px] overflow-y-auto overflow-x-hidden">
-                {renderBody()}
-              </div>
-
-              {/* Attachments */}
-              {email.attachments && email.attachments.length > 0 && (
-                <div className="pt-2 border-t border-border/50">
-                  <p className="text-xs font-medium text-muted-foreground mb-1.5">
-                    <Paperclip className="h-3 w-3 inline mr-1" />
-                    {email.attachments.length} pièce(s) jointe(s)
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {email.attachments.map((att: any, idx: number) => (
-                      <Badge key={idx} variant="outline" className="text-xs truncate max-w-[150px]">
-                        {att.name || `Fichier ${idx + 1}`}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
+            
+            {/* Recipients */}
+            <div className="text-xs text-muted-foreground space-y-0.5">
+              <p className="truncate"><span className="font-medium">De :</span> {email.from_email || 'Moi'}</p>
+              <p className="truncate"><span className="font-medium">À :</span> {email.to_email}</p>
+              {email.cc && email.cc.length > 0 && (
+                <p className="truncate"><span className="font-medium">Cc :</span> {email.cc.join(', ')}</p>
               )}
-
-              {/* Actions */}
-              <div className="flex gap-2 pt-2">
-                <Button 
-                  size="sm"
-                  variant={isInbound ? "default" : "outline"}
-                  className={cn(
-                    "flex-1 h-8",
-                    isInbound && "bg-green-600 hover:bg-green-700"
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onReply(email);
-                  }}
-                >
-                  <Reply className="h-3.5 w-3.5 mr-1" />
-                  Répondre
-                </Button>
-                <Button 
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 h-8"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onFollowUp(email);
-                  }}
-                >
-                  <CornerUpRight className="h-3.5 w-3.5 mr-1" />
-                  Relancer
-                </Button>
-              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {/* Body */}
+            <div className="text-sm max-h-[250px] overflow-y-auto pr-1">
+              {renderBody()}
+            </div>
+
+            {/* Attachments */}
+            {email.attachments && email.attachments.length > 0 && (
+              <div className="pt-2 border-t border-border/40">
+                <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                  <Paperclip className="h-3 w-3" />
+                  {email.attachments.length} pièce(s) jointe(s)
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {email.attachments.map((att: any, idx: number) => (
+                    <Badge key={idx} variant="outline" className="text-[10px] truncate max-w-[140px]">
+                      {att.name || `Fichier ${idx + 1}`}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-1">
+              <Button 
+                size="sm"
+                variant={isInbound ? "default" : "outline"}
+                className={cn(
+                  "flex-1 h-8 text-xs",
+                  isInbound && "bg-emerald-600 hover:bg-emerald-700"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReply(email);
+                }}
+              >
+                <Reply className="h-3.5 w-3.5 mr-1.5" />
+                Répondre
+              </Button>
+              <Button 
+                size="sm"
+                variant="outline"
+                className="flex-1 h-8 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFollowUp(email);
+                }}
+              >
+                <CornerUpRight className="h-3.5 w-3.5 mr-1.5" />
+                Relancer
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
