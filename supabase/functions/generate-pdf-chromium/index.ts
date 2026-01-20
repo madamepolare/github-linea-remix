@@ -73,8 +73,8 @@ serve(async (req) => {
           waitUntil: 'networkidle0',
           timeout: 30000,
         },
-        // Wait extra time for fonts to render
-        waitFor: 500,
+        // Wait extra time for fonts to render (Browserless uses waitForTimeout)
+        waitForTimeout: 500,
       }),
     });
 
