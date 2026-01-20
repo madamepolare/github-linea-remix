@@ -155,7 +155,9 @@ async function generateVapidJwt(
     ["sign"],
   );
 
-  const derSignature = new Uint8Array(
+  // WebCrypto ECDSA returns raw IEEE P1363 format (r||s, 64 bytes for P-256)
+  // This is already the format JWT expects, no conversion needed
+  const signature = new Uint8Array(
     await crypto.subtle.sign(
       { name: "ECDSA", hash: "SHA-256" },
       key,
@@ -163,8 +165,7 @@ async function generateVapidJwt(
     ),
   );
 
-  const joseSig = derToJoseEcdsa256(derSignature);
-  const signatureB64 = bytesToBase64Url(joseSig);
+  const signatureB64 = bytesToBase64Url(signature);
   return `${unsignedToken}.${signatureB64}`;
 }
 
