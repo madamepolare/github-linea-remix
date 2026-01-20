@@ -139,7 +139,3 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
   );
 }
 
-/**
- * Exporte la fonction pour générer le HTML (utilisé par QuoteBuilder pour l'impression)
- */
-export { generateQuoteHtml } from '@/lib/generateHtmlPDF';
