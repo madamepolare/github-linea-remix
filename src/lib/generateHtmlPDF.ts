@@ -23,6 +23,12 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       margin: 0; 
     }
     @media print {
+      html, body { 
+        width: 210mm;
+        height: 297mm;
+        margin: 0;
+        padding: 0;
+      }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .page-break { page-break-before: always; }
     }
@@ -38,6 +44,7 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       background: var(--background-color, #fff);
       line-height: 1.5;
       font-weight: 400;
+      margin: 0;
       padding: 0;
     }
     
@@ -45,7 +52,7 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
     .topbar {
       width: 100%;
       background: #f5f5f5;
-      padding: 6px 20mm;
+      padding: 6px 56px;
       font-size: 8px;
       color: #666;
       font-family: system-ui, sans-serif;
@@ -55,7 +62,7 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
     
     /* ===== MAIN CONTENT ===== */
     .main-content {
-      padding: 15mm 20mm;
+      padding: 42px 56px;
     }
     
     /* ===== TYPOGRAPHY ===== */
