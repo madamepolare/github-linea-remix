@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, forwardRef } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Check, ChevronDown, ChevronUp, Download, ExternalLink, FileText, Image as ImageIcon, MessageSquare, MoreHorizontal, Pencil, Reply, Send, Smile, Trash2, X } from "lucide-react";
@@ -40,7 +40,7 @@ interface MessageItemProps {
   showInlineReplies?: boolean;
 }
 
-export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage = false, onReply, showInlineReplies = true }: MessageItemProps) {
+export const MessageItem = forwardRef<HTMLDivElement, MessageItemProps>(function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage = false, onReply, showInlineReplies = true }, ref) {
   const { user } = useAuth();
   const { data: profiles = [] } = useWorkspaceProfiles();
   const { toggleReaction, deleteMessage, updateMessage, createMessage } = useTeamMessageMutations();
@@ -120,6 +120,7 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
   return (
     <>
       <div
+        ref={ref}
         className={cn(
           "group relative flex gap-2.5 md:gap-3 py-1.5 px-2 -mx-2 rounded-xl transition-colors touch-manipulation",
           isHovered && "bg-muted/50",
@@ -510,4 +511,4 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
       )}
     </>
   );
-}
+});
