@@ -99,12 +99,14 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
           let query = supabase
             .from('crm_emails')
             .select(`*, contact:contacts(id, name, email), company:crm_companies(id, name)`)
-            .eq('workspace_id', activeWorkspaceId) // Filter by active workspace
+            .eq('workspace_id', activeWorkspaceId)
             .order('created_at', { ascending: false });
           
           if (contact.email) {
-            // Match by contact_id OR by email address (from/to) - use wildcards for ilike
-            query = query.or(`contact_id.eq.${entityId},from_email.ilike.%${contact.email}%,to_email.ilike.%${contact.email}%`);
+            // Match by contact_id OR by exact email address (from/to)
+            // Use exact match (eq) instead of ilike to avoid matching partial emails
+            const contactEmail = contact.email.toLowerCase().trim();
+            query = query.or(`contact_id.eq.${entityId},from_email.eq.${contactEmail},to_email.eq.${contactEmail}`);
           } else {
             query = query.eq('contact_id', entityId);
           }
@@ -128,20 +130,20 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
           let query = supabase
             .from('crm_emails')
             .select(`*, contact:contacts(id, name, email), company:crm_companies(id, name)`)
-            .eq('workspace_id', activeWorkspaceId) // Filter by active workspace
+            .eq('workspace_id', activeWorkspaceId)
             .order('created_at', { ascending: false });
           
-          // Build OR conditions for company_id, contact_ids, and email addresses
+          // Build OR conditions for company_id, contact_ids, and exact email addresses
           const orConditions: string[] = [`company_id.eq.${entityId}`];
           if (contactIds.length > 0) {
             orConditions.push(`contact_id.in.(${contactIds.join(',')})`);
           }
           contactEmails.forEach(email => {
             if (email) {
-              // Use wildcards for proper ilike matching
-              const escapedEmail = email.replace(/[%_]/g, '\\$&');
-              orConditions.push(`from_email.ilike.%${escapedEmail}%`);
-              orConditions.push(`to_email.ilike.%${escapedEmail}%`);
+              // Use exact match (eq) instead of ilike to avoid matching partial emails
+              const normalizedEmail = email.toLowerCase().trim();
+              orConditions.push(`from_email.eq.${normalizedEmail}`);
+              orConditions.push(`to_email.eq.${normalizedEmail}`);
             }
           });
           
