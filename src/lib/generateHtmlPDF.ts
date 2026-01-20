@@ -81,7 +81,7 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
     
     /* ===== MAIN CONTENT ===== */
     .main-content {
-      padding: 42px 56px;
+      padding: 42px 56px 76px;
     }
     
     /* ===== TYPOGRAPHY ===== */
@@ -974,14 +974,14 @@ export async function downloadQuotePdf(
 ): Promise<void> {
   const { default: html2canvas } = await import('html2canvas');
   const { jsPDF } = await import('jspdf');
-  
+
   const html = generateQuoteHtml(document, lines, agencyInfo, theme);
-  
+
   // A4 dimensions at 96 DPI
   const A4_WIDTH_PX = 794;
   const A4_HEIGHT_PX = 1123;
   const SCALE = 2; // Higher quality (2x resolution)
-  
+
   // Create a hidden container for rendering
   const container = window.document.createElement('div');
   container.style.cssText = `
@@ -994,83 +994,150 @@ export async function downloadQuotePdf(
     z-index: -1;
   `;
   window.document.body.appendChild(container);
-  
+
   // Create iframe for isolated rendering
   const iframe = window.document.createElement('iframe');
   iframe.style.cssText = `
     width: ${A4_WIDTH_PX}px;
-    height: ${A4_HEIGHT_PX * 10}px;
+    height: ${A4_HEIGHT_PX}px;
     border: none;
     background: white;
   `;
   container.appendChild(iframe);
-  
+
   // Write HTML to iframe
   const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-  if (!iframeDoc) {
+  const iframeWin = iframe.contentWindow;
+  if (!iframeDoc || !iframeWin) {
     container.remove();
     throw new Error('Impossible de créer le document PDF');
   }
-  
+
   iframeDoc.open();
   iframeDoc.write(html);
   iframeDoc.close();
-  
+
   // Wait for images and fonts to load
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
+  await new Promise((resolve) => setTimeout(resolve, 700));
+
+  const computeSmartPageBreaks = (): Array<{ start: number; height: number }> => {
+    iframeWin.scrollTo(0, 0);
+
+    const contentHeight = Math.max(
+      iframeDoc.body.scrollHeight,
+      iframeDoc.documentElement.scrollHeight
+    );
+
+    const selectors = [
+      '.header',
+      '.info-grid',
+      '.context-section',
+      '.options-section',
+      '.totals-section',
+      '.payment-section',
+      '.signature-section',
+      '.pricing-table tr',
+    ];
+
+    const keepTogetherEls = Array.from(
+      iframeDoc.querySelectorAll(selectors.join(','))
+    ) as HTMLElement[];
+
+    const rects = keepTogetherEls
+      .map((el) => {
+        const r = el.getBoundingClientRect();
+        const top = r.top + iframeWin.scrollY;
+        const bottom = r.bottom + iframeWin.scrollY;
+        return { top, bottom };
+      })
+      .filter((r) => Number.isFinite(r.top) && Number.isFinite(r.bottom) && r.bottom > r.top)
+      .sort((a, b) => a.top - b.top);
+
+    const pages: Array<{ start: number; height: number }> = [];
+    let start = 0;
+
+    while (start < contentHeight - 1) {
+      const idealEnd = start + A4_HEIGHT_PX;
+      let end = Math.min(idealEnd, contentHeight);
+
+      // If the page boundary cuts through an element, move the break up to the element's top.
+      for (const r of rects) {
+        if (r.top < end && r.bottom > end) {
+          const candidate = Math.max(start + 120, Math.floor(r.top) - 8);
+          if (candidate < end) end = candidate;
+          break;
+        }
+      }
+
+      // Safety: ensure progress.
+      if (end <= start + 80) {
+        end = Math.min(idealEnd, contentHeight);
+      }
+
+      pages.push({ start, height: Math.min(A4_HEIGHT_PX, Math.max(1, end - start)) });
+      start = end;
+    }
+
+    return pages;
+  };
+
   try {
-    // Get actual content height
-    const contentHeight = iframeDoc.body.scrollHeight;
-    const totalPages = Math.ceil(contentHeight / A4_HEIGHT_PX);
-    
+    const pages = computeSmartPageBreaks();
+
+    // Render FULL document once to a large canvas
+    const fullCanvas = await html2canvas(iframeDoc.body, {
+      scale: SCALE,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      width: A4_WIDTH_PX,
+      windowWidth: A4_WIDTH_PX,
+      logging: false,
+    });
+
     // Create PDF (A4 dimensions in mm)
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4',
     });
-    
+
     // A4 in mm
     const pdfWidth = 210;
     const pdfHeight = 297;
-    
-    // Render each page separately by scrolling and capturing
-    for (let page = 0; page < totalPages; page++) {
-      if (page > 0) {
-        pdf.addPage();
-      }
-      
-      // Calculate the Y offset for this page
-      const yOffset = page * A4_HEIGHT_PX;
-      
-      // Render this page section to canvas
-      const canvas = await html2canvas(iframeDoc.body, {
-        scale: SCALE,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: A4_WIDTH_PX,
-        height: A4_HEIGHT_PX,
-        windowWidth: A4_WIDTH_PX,
-        windowHeight: A4_HEIGHT_PX,
-        x: 0,
-        y: yOffset,
-        logging: false,
-      });
-      
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      
-      // Add the page image - exactly fills the A4 page
+
+    // Slice the big canvas into clean A4 pages (no stretching)
+    const pageW = A4_WIDTH_PX * SCALE;
+    const pageH = A4_HEIGHT_PX * SCALE;
+
+    const pageCanvas = window.document.createElement('canvas');
+    pageCanvas.width = pageW;
+    pageCanvas.height = pageH;
+    const ctx = pageCanvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas context unavailable');
+
+    pages.forEach(({ start, height }, idx) => {
+      if (idx > 0) pdf.addPage();
+
+      // Clear + white background
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, pageW, pageH);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, pageW, pageH);
+
+      const sy = Math.round(start * SCALE);
+      const sh = Math.round(height * SCALE);
+
+      // Draw only the slice we want on this page; keep the rest white.
+      ctx.drawImage(fullCanvas, 0, sy, pageW, sh, 0, 0, pageW, sh);
+
+      const imgData = pageCanvas.toDataURL('image/png', 1.0);
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    }
-    
-    // Download PDF
+    });
+
     const pdfFilename = filename || `Devis ${document.document_number || 'brouillon'}`;
     pdf.save(`${pdfFilename}.pdf`);
-    
   } finally {
-    // Cleanup
     container.remove();
   }
 }
