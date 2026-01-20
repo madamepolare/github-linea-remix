@@ -30,18 +30,21 @@ serve(async (req) => {
     }
 
     // Call PDFShift API
+    // Docs: https://docs.pdfshift.io/api-reference/convert-to-pdf
+    // NOTE: PDFShift v3 does NOT support `print_background` nor `prefer_css_page_size`.
     const response = await fetch('https://api.pdfshift.io/v3/convert/pdf', {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${btoa(`api:${apiKey}`)}`,
+        // PDFShift supports both X-API-Key and Basic auth. X-API-Key is simplest.
+        'X-API-Key': apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         source: html,
         format: 'A4',
-        margin: '0',
-        print_background: true,
-        prefer_css_page_size: true,
+        use_print: true,
+        disable_backgrounds: false,
+        margin: { top: '0', right: '0', bottom: '0', left: '0' },
       }),
     });
 
