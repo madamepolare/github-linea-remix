@@ -11,9 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   DropdownMenu,
@@ -25,16 +23,18 @@ import {
 import {
   MoreHorizontal,
   Mail,
-  Phone,
   Building2,
   Trash2,
   Target,
   ArrowUpDown,
-  ArrowRight,
   User,
 } from "lucide-react";
 import { useContactPipeline, PipelineEntry } from "@/hooks/useContactPipeline";
 import { Pipeline, PipelineStage } from "@/hooks/useCRMPipelines";
+import { useTableSelection } from "@/hooks/useTableSelection";
+import { useTableSort } from "@/hooks/useTableSort";
+import { BulkActionsBar, type BulkAction } from "@/components/shared/BulkActionsBar";
+import { TableSkeleton } from "@/components/shared/TableSkeleton";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -48,15 +48,17 @@ interface ProspectionListViewProps {
 export function ProspectionListView({ pipeline, search = "" }: ProspectionListViewProps) {
   const { entries, isLoading, removeEntry, moveEntry } = useContactPipeline(pipeline.id);
   
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<string>("entered_at");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  
   // Email dialog state
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [selectedEmailEntry, setSelectedEmailEntry] = useState<PipelineEntry | null>(null);
 
   const stages = pipeline.stages || [];
+
+  // Use shared sorting hook
+  const { sortColumn, sortDirection, handleSort, getSortIcon } = useTableSort<PipelineEntry>({
+    defaultColumn: "entered_at",
+    defaultDirection: "desc",
+  });
 
   // Filter and sort entries
   const filteredEntries = useMemo(() => {
@@ -78,90 +80,75 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
       let aVal: any;
       let bVal: any;
 
-      if (sortBy === "name") {
+      if (sortColumn === "name") {
         aVal = a.contact?.name || a.company?.name || "";
         bVal = b.contact?.name || b.company?.name || "";
-      } else if (sortBy === "stage") {
+      } else if (sortColumn === "stage") {
         const aStage = stages.find((s) => s.id === a.stage_id);
         const bStage = stages.find((s) => s.id === b.stage_id);
         aVal = aStage?.sort_order || 0;
         bVal = bStage?.sort_order || 0;
-      } else if (sortBy === "entered_at") {
+      } else if (sortColumn === "entered_at") {
         aVal = a.entered_at || a.created_at || "";
         bVal = b.entered_at || b.created_at || "";
-      } else if (sortBy === "last_email") {
+      } else if (sortColumn === "last_email") {
         aVal = a.last_email_sent_at || "";
         bVal = b.last_email_sent_at || "";
       }
 
       if (typeof aVal === "string") aVal = aVal.toLowerCase();
       if (typeof bVal === "string") bVal = bVal.toLowerCase();
-      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
       return 0;
     });
 
     return result;
-  }, [entries, search, sortBy, sortDir, stages]);
+  }, [entries, search, sortColumn, sortDirection, stages]);
 
-  const handleSelectAll = useCallback((checked: boolean) => {
-    if (checked) {
-      setSelectedIds(new Set(filteredEntries.map((e) => e.id)));
-    } else {
-      setSelectedIds(new Set());
-    }
-  }, [filteredEntries]);
+  // Use shared selection hook
+  const {
+    selectedIds,
+    selectedCount,
+    isAllSelected,
+    isPartiallySelected,
+    isSelected,
+    handleSelectAll,
+    handleSelectOne,
+    clearSelection,
+  } = useTableSelection({
+    items: filteredEntries,
+    getItemId: (e) => e.id,
+  });
 
-  const handleSelectOne = useCallback((id: string, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }, []);
-
-  const handleSort = (column: string) => {
-    if (sortBy === column) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortDir("asc");
-    }
-  };
-
-  const handleBulkDelete = () => {
+  const handleBulkDelete = useCallback(() => {
     selectedIds.forEach((id) => {
       removeEntry.mutate(id);
     });
-    setSelectedIds(new Set());
-  };
+    clearSelection();
+  }, [selectedIds, removeEntry, clearSelection]);
 
   const getStageById = (stageId: string): PipelineStage | undefined => {
     return stages.find((s) => s.id === stageId);
   };
 
-  const isAllSelected = filteredEntries.length > 0 && selectedIds.size === filteredEntries.length;
+  // Bulk actions configuration
+  const bulkActions: BulkAction[] = useMemo(() => [
+    {
+      id: "delete",
+      label: "Supprimer",
+      icon: Trash2,
+      onClick: handleBulkDelete,
+      variant: "destructive",
+      showInBar: true,
+    },
+  ], [handleBulkDelete]);
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-0">
-          <div className="divide-y">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="flex items-center gap-3 px-4 py-3">
-                <Skeleton className="h-4 w-4" />
-                <Skeleton className="h-8 w-8 rounded-full" />
-                <div className="flex-1 space-y-1.5">
-                  <Skeleton className="h-3.5 w-32" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-                <Skeleton className="h-5 w-16" />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-3">
+        <TableSkeleton rows={8} columns={5} showCheckbox showAvatar={false} />
+      </div>
     );
   }
 
@@ -182,21 +169,12 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
   return (
     <div className="space-y-3">
       {/* Bulk actions bar */}
-      {selectedIds.size > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 p-3 bg-muted rounded-lg"
-        >
-          <span className="text-sm font-medium">
-            {selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}
-          </span>
-          <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
-            <Trash2 className="h-4 w-4 mr-1" />
-            Supprimer
-          </Button>
-        </motion.div>
-      )}
+      <BulkActionsBar
+        selectedCount={selectedCount}
+        entityLabel={{ singular: "entrée", plural: "entrées" }}
+        onClearSelection={clearSelection}
+        actions={bulkActions}
+      />
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
@@ -206,6 +184,9 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
                 <TableHead className="w-10 pr-0">
                   <Checkbox
                     checked={isAllSelected}
+                    ref={(el) => {
+                      if (el) (el as any).indeterminate = isPartiallySelected;
+                    }}
                     onCheckedChange={handleSelectAll}
                     aria-label="Sélectionner tout"
                     className="translate-y-[2px]"
@@ -219,7 +200,7 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
                     Contact / Entreprise
                     <ArrowUpDown className={cn(
                       "h-3 w-3",
-                      sortBy === "name" ? "text-foreground" : "text-muted-foreground/50"
+                      getSortIcon("name") ? "text-foreground" : "text-muted-foreground/50"
                     )} />
                   </div>
                 </TableHead>
@@ -231,7 +212,7 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
                     Étape
                     <ArrowUpDown className={cn(
                       "h-3 w-3",
-                      sortBy === "stage" ? "text-foreground" : "text-muted-foreground/50"
+                      getSortIcon("stage") ? "text-foreground" : "text-muted-foreground/50"
                     )} />
                   </div>
                 </TableHead>
@@ -243,7 +224,7 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
                     Date d'entrée
                     <ArrowUpDown className={cn(
                       "h-3 w-3",
-                      sortBy === "entered_at" ? "text-foreground" : "text-muted-foreground/50"
+                      getSortIcon("entered_at") ? "text-foreground" : "text-muted-foreground/50"
                     )} />
                   </div>
                 </TableHead>
@@ -255,7 +236,7 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
                     Dernier email
                     <ArrowUpDown className={cn(
                       "h-3 w-3",
-                      sortBy === "last_email" ? "text-foreground" : "text-muted-foreground/50"
+                      getSortIcon("last_email") ? "text-foreground" : "text-muted-foreground/50"
                     )} />
                   </div>
                 </TableHead>
@@ -268,7 +249,6 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
                 const isContact = !!entry.contact;
                 const name = entry.contact?.name || entry.company?.name || "Sans nom";
                 const email = entry.contact?.email || entry.company?.email;
-                const avatar = entry.contact?.avatar_url || entry.company?.logo_url;
                 const initials = name
                   .split(" ")
                   .map((n) => n[0])
@@ -276,7 +256,7 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
                   .toUpperCase()
                   .slice(0, 2);
 
-                const isSelected = selectedIds.has(entry.id);
+                const selected = isSelected(entry.id);
 
                 return (
                   <motion.tr
@@ -286,12 +266,12 @@ export function ProspectionListView({ pipeline, search = "" }: ProspectionListVi
                     transition={{ delay: Math.min(index * 0.02, 0.2) }}
                     className={cn(
                       "group transition-colors",
-                      isSelected ? "bg-primary/5" : "hover:bg-muted/40"
+                      selected ? "bg-primary/5" : "hover:bg-muted/40"
                     )}
                   >
                     <TableCell className="py-2 pr-0" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
-                        checked={isSelected}
+                        checked={selected}
                         onCheckedChange={(checked) =>
                           handleSelectOne(entry.id, checked as boolean)
                         }

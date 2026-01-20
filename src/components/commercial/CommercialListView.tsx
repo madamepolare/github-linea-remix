@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   MoreVertical, 
@@ -6,7 +6,6 @@ import {
   Copy, 
   Send, 
   Eye, 
-  X,
   Building2,
   Mail,
   Download,
@@ -20,7 +19,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -36,6 +35,8 @@ import {
   CommercialDocument,
   STATUS_LABELS, 
 } from '@/lib/commercialTypes';
+import { useTableSelection } from '@/hooks/useTableSelection';
+import { BulkActionsBar, type BulkAction } from '@/components/shared/BulkActionsBar';
 import { cn } from '@/lib/utils';
 
 interface CommercialListViewProps {
@@ -64,7 +65,21 @@ export const CommercialListView = ({
   onBulkSendEmail,
 }: CommercialListViewProps) => {
   const navigate = useNavigate();
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  
+  // Use shared selection hook
+  const {
+    selectedIds,
+    selectedCount,
+    isAllSelected,
+    isPartiallySelected,
+    isSelected,
+    handleSelectAll,
+    handleSelectOne,
+    clearSelection,
+  } = useTableSelection({
+    items: documents,
+    getItemId: (d) => d.id,
+  });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('fr-FR', { 
@@ -100,37 +115,46 @@ export const CommercialListView = ({
     }
   };
 
-  // Selection handlers
-  const handleSelectAll = (checked: boolean) => {
-    setSelectedIds(checked ? new Set(documents.map(d => d.id)) : new Set());
-  };
-
-  const handleSelectOne = (id: string, checked: boolean, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const newSet = new Set(selectedIds);
-    checked ? newSet.add(id) : newSet.delete(id);
-    setSelectedIds(newSet);
-  };
-
-  const handleClearSelection = () => setSelectedIds(new Set());
-
-  const handleBulkDelete = () => {
-    if (confirm(`Supprimer ${selectedIds.size} document(s) ?`)) {
+  const handleBulkDelete = useCallback(() => {
+    if (confirm(`Supprimer ${selectedCount} document(s) ?`)) {
       if (onBulkDelete) {
         onBulkDelete(Array.from(selectedIds));
       } else {
         selectedIds.forEach(id => onDelete(id));
       }
-      setSelectedIds(new Set());
+      clearSelection();
     }
-  };
+  }, [selectedIds, selectedCount, onBulkDelete, onDelete, clearSelection]);
 
-  const handleBulkSendEmail = () => {
+  const handleBulkSendEmail = useCallback(() => {
     onBulkSendEmail?.(Array.from(selectedIds));
-  };
+  }, [selectedIds, onBulkSendEmail]);
 
-  const allSelected = documents.length > 0 && selectedIds.size === documents.length;
-  const someSelected = selectedIds.size > 0 && selectedIds.size < documents.length;
+  // Bulk actions configuration
+  const bulkActions: BulkAction[] = useMemo(() => [
+    {
+      id: "email",
+      label: "Envoyer",
+      icon: Mail,
+      onClick: handleBulkSendEmail,
+      showInBar: true,
+    },
+    {
+      id: "export",
+      label: "Export",
+      icon: Download,
+      onClick: () => console.log("Export"),
+      showInBar: true,
+    },
+    {
+      id: "delete",
+      label: "Supprimer",
+      icon: Trash2,
+      onClick: handleBulkDelete,
+      variant: "destructive",
+      showInBar: true,
+    },
+  ], [handleBulkDelete, handleBulkSendEmail]);
 
   if (documents.length === 0) {
     return (
@@ -152,9 +176,11 @@ export const CommercialListView = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Checkbox
-            checked={allSelected}
+            checked={isAllSelected}
             onCheckedChange={handleSelectAll}
-            ref={(el) => el && ((el as any).indeterminate = someSelected)}
+            ref={(el) => {
+              if (el) (el as any).indeterminate = isPartiallySelected;
+            }}
             className="ml-1"
           />
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -180,7 +206,7 @@ export const CommercialListView = ({
       {/* Cards list */}
       <div className="space-y-2">
         {documents.map((doc, index) => {
-          const isSelected = selectedIds.has(doc.id);
+          const docSelected = isSelected(doc.id);
           const config = statusConfig[doc.status] || statusConfig.draft;
           const StatusIcon = config.icon;
           
@@ -194,7 +220,7 @@ export const CommercialListView = ({
               <Card 
                 className={cn(
                   "group cursor-pointer hover:shadow-md transition-all duration-200",
-                  isSelected && "ring-2 ring-primary/50"
+                  docSelected && "ring-2 ring-primary/50"
                 )}
                 onClick={() => navigate(`/commercial/quote/${doc.id}`)}
               >
@@ -203,8 +229,8 @@ export const CommercialListView = ({
                     {/* Checkbox */}
                     <div onClick={(e) => e.stopPropagation()}>
                       <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(checked) => handleSelectOne(doc.id, checked as boolean, { stopPropagation: () => {} } as React.MouseEvent)}
+                        checked={docSelected}
+                        onCheckedChange={(checked) => handleSelectOne(doc.id, checked as boolean)}
                       />
                     </div>
 
@@ -326,60 +352,12 @@ export const CommercialListView = ({
       </div>
 
       {/* Bulk Actions Bar */}
-      <AnimatePresence>
-        {selectedIds.size > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-lg bg-foreground text-background shadow-xl"
-          >
-            <div className="flex items-center gap-3 pr-3 border-r border-background/20">
-              <span className="text-sm font-medium">
-                {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 hover:bg-background/20 text-background"
-                onClick={handleClearSelection}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1.5 text-background hover:bg-background/20"
-                onClick={handleBulkSendEmail}
-              >
-                <Mail className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Envoyer</span>
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1.5 text-background hover:bg-background/20"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Export</span>
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1.5 text-background hover:bg-background/20"
-                onClick={handleBulkDelete}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <BulkActionsBar
+        selectedCount={selectedCount}
+        entityLabel={{ singular: "document", plural: "documents" }}
+        onClearSelection={clearSelection}
+        actions={bulkActions}
+      />
     </div>
   );
 };

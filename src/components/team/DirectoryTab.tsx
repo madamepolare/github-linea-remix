@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useTeamMembers } from "@/hooks/useTeamMembers";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Mail, Phone, Download, Building2 } from "lucide-react";
+import { Mail, Phone, Download, Building2 } from "lucide-react";
+import { ContentFiltersBar } from "@/components/shared/ContentFiltersBar";
+import { GridCardSkeleton } from "@/components/shared/CardListSkeleton";
 
 const roleLabels: Record<string, string> = {
   owner: "Propriétaire",
@@ -48,27 +48,20 @@ END:VCARD`;
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-10 w-80" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <Skeleton key={i} className="h-48 rounded-xl" />
-          ))}
-        </div>
+        <GridCardSkeleton count={8} columns={4} />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="relative w-full sm:w-96">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Rechercher par nom, email, poste..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
-      </div>
+      <ContentFiltersBar
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: "Rechercher par nom, email, poste...",
+        }}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {filteredMembers?.map((member) => {
