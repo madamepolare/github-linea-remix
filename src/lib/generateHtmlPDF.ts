@@ -1083,6 +1083,7 @@ export async function downloadQuotePdf(
 
   try {
     const pages = computeSmartPageBreaks();
+    const totalPages = pages.length;
 
     // Render FULL document once to a large canvas
     const fullCanvas = await html2canvas(iframeDoc.body, {
@@ -1094,6 +1095,24 @@ export async function downloadQuotePdf(
       windowWidth: A4_WIDTH_PX,
       logging: false,
     });
+
+    // Capture mini-header for pages 2+ (agency info + doc number)
+    // We'll render a separate header canvas from the .header element
+    let headerCanvas: HTMLCanvasElement | null = null;
+    const headerEl = iframeDoc.querySelector('.header') as HTMLElement | null;
+    const headerHeight = headerEl ? headerEl.offsetHeight : 0;
+    
+    if (headerEl && totalPages > 1) {
+      headerCanvas = await html2canvas(headerEl, {
+        scale: SCALE,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: A4_WIDTH_PX,
+        windowWidth: A4_WIDTH_PX,
+        logging: false,
+      });
+    }
 
     // Create PDF (A4 dimensions in mm)
     const pdf = new jsPDF({
@@ -1116,6 +1135,10 @@ export async function downloadQuotePdf(
     const ctx = pageCanvas.getContext('2d');
     if (!ctx) throw new Error('Canvas context unavailable');
 
+    // Footer dimensions
+    const footerMarginBottom = 10; // mm from bottom
+    const footerFontSize = 8;
+
     pages.forEach(({ start, height }, idx) => {
       if (idx > 0) pdf.addPage();
 
@@ -1125,14 +1148,36 @@ export async function downloadQuotePdf(
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, pageW, pageH);
 
+      // For pages 2+, draw the header at the top first
+      let contentYOffset = 0;
+      if (idx > 0 && headerCanvas) {
+        const headerH = headerCanvas.height;
+        // Draw header at top
+        ctx.drawImage(headerCanvas, 0, 0);
+        contentYOffset = headerH;
+      }
+
       const sy = Math.round(start * SCALE);
       const sh = Math.round(height * SCALE);
 
-      // Draw only the slice we want on this page; keep the rest white.
-      ctx.drawImage(fullCanvas, 0, sy, pageW, sh, 0, 0, pageW, sh);
+      // Draw content (offset down if we added a header)
+      if (idx > 0 && headerCanvas) {
+        // Draw content below the header
+        ctx.drawImage(fullCanvas, 0, sy, pageW, sh, 0, contentYOffset, pageW, sh);
+      } else {
+        // First page: draw normally
+        ctx.drawImage(fullCanvas, 0, sy, pageW, sh, 0, 0, pageW, sh);
+      }
 
       const imgData = pageCanvas.toDataURL('image/png', 1.0);
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+      // Add page number footer
+      pdf.setFontSize(footerFontSize);
+      pdf.setTextColor(120, 120, 120);
+      const pageText = `${idx + 1} / ${totalPages}`;
+      const textWidth = pdf.getTextWidth(pageText);
+      pdf.text(pageText, (pdfWidth - textWidth) / 2, pdfHeight - footerMarginBottom);
     });
 
     const pdfFilename = filename || `Devis ${document.document_number || 'brouillon'}`;
