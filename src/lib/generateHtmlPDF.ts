@@ -952,7 +952,7 @@ export async function downloadQuotePdf(
   `;
   window.document.body.appendChild(container);
   
-  // Create iframe for isolated rendering
+  // Create iframe for isolated rendering with exact A4 dimensions
   const iframe = window.document.createElement('iframe');
   iframe.style.cssText = `
     width: 794px;
@@ -977,14 +977,20 @@ export async function downloadQuotePdf(
   await new Promise(resolve => setTimeout(resolve, 500));
   
   try {
-    // Render to canvas - capture the full document
+    // A4 dimensions at 96 DPI
+    const A4_WIDTH_PX = 794;
+    const A4_HEIGHT_PX = 1123;
+    
+    // Render to canvas - capture exactly A4 dimensions
     const canvas = await html2canvas(iframeDoc.body, {
-      scale: 2, // Higher quality
+      scale: 2, // Higher quality (2x resolution)
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
-      width: 794,
-      windowWidth: 794,
+      width: A4_WIDTH_PX,
+      height: A4_HEIGHT_PX,
+      windowWidth: A4_WIDTH_PX,
+      windowHeight: A4_HEIGHT_PX,
       logging: false,
     });
     
@@ -996,20 +1002,13 @@ export async function downloadQuotePdf(
     });
     
     const imgData = canvas.toDataURL('image/png', 1.0);
-    const pdfWidth = 210; // A4 width in mm
-    const pdfHeight = 297; // A4 height in mm
     
-    // Fill the entire A4 page width, maintain aspect ratio for height
-    // Canvas is rendered at scale 2x, so divide by 2 to get original pixel dimensions
-    const imgWidthPx = canvas.width / 2;
-    const imgHeightPx = canvas.height / 2;
+    // A4 in mm - place image to fill exactly
+    const pdfWidth = 210;
+    const pdfHeight = 297;
     
-    // Calculate the height proportionally based on A4 width
-    const aspectRatio = imgHeightPx / imgWidthPx;
-    const finalHeight = pdfWidth * aspectRatio;
-    
-    // Add image at position (0, 0) filling the full A4 width
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, Math.min(finalHeight, pdfHeight));
+    // Add image at (0,0) covering full A4 page
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
     
     // Download PDF
     const pdfFilename = filename || `Devis ${document.document_number || 'brouillon'}`;
