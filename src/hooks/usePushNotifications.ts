@@ -193,9 +193,15 @@ export function usePushNotifications() {
         return { success: false, message: 'User not authenticated' };
       }
 
+      if (!activeWorkspace?.id) {
+        toast.error('Espace de travail non trouvé');
+        return { success: false, message: 'Workspace not found' };
+      }
+
       const { data, error } = await supabase.functions.invoke('send-push-notification', {
         body: {
           userId: user.id,
+          workspaceId: activeWorkspace.id,
           title: '🔔 Test de notification',
           body: 'Si vous voyez ceci, les notifications push fonctionnent correctement !',
           tag: 'test-notification',
@@ -205,24 +211,28 @@ export function usePushNotifications() {
 
       if (error) {
         console.error('Test notification error:', error);
-        toast.error('Erreur lors de l\'envoi de la notification test');
+        toast.error("Erreur lors de l'envoi de la notification test");
         return { success: false, message: error.message };
       }
 
       if (data?.sent > 0) {
         toast.success('Notification test envoyée !');
         return { success: true };
-      } else {
-        toast.warning('Aucun appareil enregistré pour recevoir les notifications');
-        return { success: false, message: 'No subscriptions found' };
       }
+
+      if (Array.isArray(data?.errors) && data.errors.length > 0) {
+        toast.error(`Erreur push: ${data.errors[0]}`);
+        return { success: false, message: data.errors[0] };
+      }
+
+      toast.warning('Aucun appareil enregistré pour recevoir les notifications');
+      return { success: false, message: 'No subscriptions found' };
     } catch (error) {
       console.error('Test notification error:', error);
-      toast.error('Erreur lors de l\'envoi');
+      toast.error("Erreur lors de l'envoi");
       return { success: false, message: String(error) };
     }
-  }, []);
-
+  }, [activeWorkspace?.id]);
   return {
     ...state,
     subscribe,
