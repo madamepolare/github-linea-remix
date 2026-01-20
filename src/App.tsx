@@ -47,6 +47,7 @@ const Welcome = lazy(() => import("./pages/Welcome"));
 const ModuleDetail = lazy(() => import("./pages/ModuleDetail"));
 const SolutionDetail = lazy(() => import("./pages/SolutionDetail"));
 const Roadmap = lazy(() => import("./pages/Roadmap"));
+const AppRoadmap = lazy(() => import("./pages/AppRoadmap"));
 const About = lazy(() => import("./pages/About"));
 const Blog = lazy(() => import("./pages/Blog"));
 const Contact = lazy(() => import("./pages/Contact"));
@@ -178,6 +179,7 @@ const App = () => (
                   <Route path="/media-planning" element={<Suspense fallback={<PageLoader />}><MediaPlanning /></Suspense>} />
                   <Route path="/documentation" element={<Suspense fallback={<PageLoader />}><Documentation /></Suspense>} />
                   <Route path="/documentation/:id" element={<Suspense fallback={<PageLoader />}><DocumentationPage /></Suspense>} />
+                  <Route path="/app-roadmap" element={<Suspense fallback={<PageLoader />}><AppRoadmap /></Suspense>} />
                 </Route>
 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

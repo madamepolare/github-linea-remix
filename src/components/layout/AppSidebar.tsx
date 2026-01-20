@@ -450,7 +450,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
         {/* Roadmap */}
         <NavItemComponent 
-          item={{ title: "Roadmap", icon: Map, href: "/roadmap" }} 
+          item={{ title: "Roadmap", icon: Map, href: "/app-roadmap" }} 
           onClick={onNavigate} 
         />
       </div>
