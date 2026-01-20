@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Send, MessageSquare, User, Clock, Trash2 } from "lucide-react";
+import { Send, MessageSquare, User, Clock, Trash2, Copy, Check, CheckCircle2, Circle } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { useRoadmapFeedback, RoadmapFeedback } from "@/hooks/useRoadmapFeedback"
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { ROADMAP_STATUSES } from "@/hooks/useRoadmap";
+import { toast } from "sonner";
 
 interface RoadmapItemDetailProps {
   item: {
@@ -37,11 +38,12 @@ interface RoadmapItemDetailProps {
 export function RoadmapItemDetail({ item, open, onOpenChange }: RoadmapItemDetailProps) {
   const { user } = useAuth();
   const [content, setContent] = useState("");
+  const [copied, setCopied] = useState(false);
   
   // Check if this is a static item (not in database)
   const isStaticItem = item?.id.startsWith('static-') || false;
   
-  const { feedbacks, isLoading, createFeedback, deleteFeedback } = useRoadmapFeedback(
+  const { feedbacks, isLoading, createFeedback, deleteFeedback, markAsResolved } = useRoadmapFeedback(
     isStaticItem ? null : (item?.id || null), 
     item?.module_slug || null
   );
@@ -52,6 +54,23 @@ export function RoadmapItemDetail({ item, open, onOpenChange }: RoadmapItemDetai
       { roadmapItemId: item.id, content: content.trim() },
       { onSuccess: () => setContent("") }
     );
+  };
+
+  const handleCopyFeedbacks = () => {
+    if (feedbacks.length === 0) return;
+    
+    const prompt = `# Retours pour: ${item?.title}
+
+${feedbacks.map(fb => `- "${fb.content}" 
+  Par: ${fb.author?.full_name || 'Anonyme'} 
+  Date: ${format(new Date(fb.created_at), "d MMMM yyyy à HH:mm", { locale: fr })}
+  ${fb.source === 'feedback_mode' ? `Route: ${fb.route_path}` : ''}`).join('\n\n')}
+`;
+    
+    navigator.clipboard.writeText(prompt);
+    setCopied(true);
+    toast.success(`${feedbacks.length} retour(s) copié(s) !`);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const getStatusConfig = (status: string) =>
@@ -125,13 +144,33 @@ export function RoadmapItemDetail({ item, open, onOpenChange }: RoadmapItemDetai
           )}
 
           {/* Feedbacks List */}
-          <div className="flex-1 overflow-hidden">
-            <div className="px-4 py-3 border-b bg-background">
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b bg-background flex items-center justify-between">
               <span className="text-sm font-medium">
                 Retours ({feedbacks.length})
               </span>
+              {feedbacks.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={handleCopyFeedbacks}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3 w-3 text-green-600" />
+                      Copié !
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3" />
+                      Copier tout
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
-            <ScrollArea className="flex-1 h-[calc(100%-48px)]">
+            <ScrollArea className="flex-1">
               <div className="p-4 space-y-4">
                 {isLoading ? (
                   <p className="text-sm text-muted-foreground">Chargement...</p>
@@ -148,6 +187,9 @@ export function RoadmapItemDetail({ item, open, onOpenChange }: RoadmapItemDetai
                       feedback={feedback}
                       isOwner={feedback.user_id === user?.id}
                       onDelete={() => deleteFeedback.mutate(feedback.id)}
+                      onToggleResolved={(isResolved) => 
+                        markAsResolved.mutate({ feedbackId: feedback.id, isResolved })
+                      }
                     />
                   ))
                 )}
@@ -164,15 +206,34 @@ interface FeedbackCardProps {
   feedback: RoadmapFeedback;
   isOwner: boolean;
   onDelete: () => void;
+  onToggleResolved: (isResolved: boolean) => void;
 }
 
-function FeedbackCard({ feedback, isOwner, onDelete }: FeedbackCardProps) {
+function FeedbackCard({ feedback, isOwner, onDelete, onToggleResolved }: FeedbackCardProps) {
   const isFeedbackMode = feedback.source === 'feedback_mode';
+  const isResolved = (feedback as any).is_resolved;
   
   return (
-    <div className="p-3 rounded-lg border bg-card space-y-2">
+    <div className={cn(
+      "p-3 rounded-lg border bg-card space-y-2",
+      isResolved && "opacity-60"
+    )}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
+          {isFeedbackMode && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 p-0 shrink-0"
+              onClick={() => onToggleResolved(!isResolved)}
+            >
+              {isResolved ? (
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              ) : (
+                <Circle className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
+          )}
           <Avatar className="h-6 w-6">
             <AvatarImage src={feedback.author?.avatar_url || undefined} />
             <AvatarFallback className="text-xs">
@@ -210,7 +271,9 @@ function FeedbackCard({ feedback, isOwner, onDelete }: FeedbackCardProps) {
           {feedback.route_path}
         </code>
       )}
-      <p className="text-sm whitespace-pre-wrap">{feedback.content}</p>
+      <p className={cn("text-sm whitespace-pre-wrap", isResolved && "line-through")}>
+        {feedback.content}
+      </p>
     </div>
   );
 }

@@ -1,6 +1,5 @@
-import { ChevronUp, ExternalLink } from "lucide-react";
+import { ChevronUp, ExternalLink, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { RoadmapItem, ROADMAP_STATUSES } from "@/hooks/useRoadmap";
 import { DynamicIcon } from "@/components/ui/dynamic-icon";
@@ -11,9 +10,10 @@ interface RoadmapItemCardProps {
   onVote?: (itemId: string, remove: boolean) => void;
   showVotes?: boolean;
   onClick?: () => void;
+  feedbackCount?: number;
 }
 
-export function RoadmapItemCard({ item, onVote, showVotes = true, onClick }: RoadmapItemCardProps) {
+export function RoadmapItemCard({ item, onVote, showVotes = true, onClick, feedbackCount = 0 }: RoadmapItemCardProps) {
   const statusConfig = ROADMAP_STATUSES.find(s => s.value === item.status);
 
   const getModuleHref = () => {
@@ -53,7 +53,10 @@ export function RoadmapItemCard({ item, onVote, showVotes = true, onClick }: Roa
       {/* Vote button */}
       {showVotes && onVote && (
         <button
-          onClick={() => onVote(item.id, !!item.user_voted)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onVote(item.id, !!item.user_voted);
+          }}
           className={cn(
             "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-colors shrink-0",
             item.user_voted
@@ -87,8 +90,18 @@ export function RoadmapItemCard({ item, onVote, showVotes = true, onClick }: Roa
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <h3 className="font-medium text-foreground">{item.title}</h3>
+            {feedbackCount > 0 && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                <MessageSquare className="h-3 w-3" />
+                {feedbackCount}
+              </span>
+            )}
             {href && item.status === 'delivered' && (
-              <Link to={href} className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <Link 
+                to={href} 
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <ExternalLink className="h-3.5 w-3.5 text-muted-foreground hover:text-primary" />
               </Link>
             )}
