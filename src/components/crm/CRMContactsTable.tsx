@@ -14,16 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CountryFlag } from "@/components/ui/country-flag";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,8 +25,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   MoreHorizontal,
-  Mail,
-  Phone,
   Building2,
   Pencil,
   Trash2,
@@ -46,28 +36,29 @@ import {
   CheckCircle2,
   Target,
   User,
-  LayoutGrid,
-  LayoutList,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
 } from "lucide-react";
 import { useContacts, Contact } from "@/hooks/useContacts";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
 import { useContactPipelineEntries } from "@/hooks/useContactPipelineEntries";
+import { useTableSelection } from "@/hooks/useTableSelection";
+import { useTableSort } from "@/hooks/useTableSort";
 import { ContactDetailSheet } from "./ContactDetailSheet";
 import { ContactFormDialog } from "./ContactFormDialog";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { AutoCategorizeHelper } from "./AutoCategorizeHelper";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
-import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
 import { CRMBulkEmailDialog } from "./CRMBulkEmailDialog";
 import { PipelineBadges } from "./PipelineBadges";
 import { ContactMobileCard } from "./shared/CRMMobileCards";
+import { ContentFiltersBar } from "@/components/shared/ContentFiltersBar";
+import { ViewModeToggle, AlphabetFilter, StatusTabs } from "@/components/shared/filters";
+import { BulkActionsBar, type BulkAction } from "@/components/shared/BulkActionsBar";
+import { TablePagination } from "@/components/shared/TablePagination";
+import { TableSkeleton } from "@/components/shared/TableSkeleton";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { Mail, Trash2 as TrashIcon, Download, Tag } from "lucide-react";
 
 export interface CRMContactsTableProps {
   search?: string;
@@ -87,16 +78,18 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
   const [searchQuery, setSearchQuery] = useState(externalSearch);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<string>("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [pageSize, setPageSize] = useState<number>(50);
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
   const [letterFilter, setLetterFilter] = useState<string | null>(null);
 
   const effectiveSearch = externalSearch || searchQuery;
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+  // Sorting hook
+  const { sortColumn, sortDirection, handleSort, sortData, getSortIcon } = useTableSort<Contact>({
+    defaultColumn: "name",
+    defaultDirection: "asc",
+  });
 
   // Use hook with server-side filtering
   const { 
@@ -104,7 +97,6 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
     allContactsCount, 
     isLoading, 
     deleteContact, 
-    updateContact, 
     confirmContact, 
     statsByType, 
     statsByStatus,
@@ -118,39 +110,40 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
     letterFilter: letterFilter || undefined,
   });
 
+  // Selection hook
+  const {
+    selectedIds,
+    selectedCount,
+    isAllSelected,
+    isPartiallySelected,
+    isSelected,
+    handleSelectAll,
+    handleSelectOne,
+    clearSelection,
+  } = useTableSelection({
+    items: contacts,
+    getItemId: (c) => c.id,
+  });
+
   // Auto-switch to cards on mobile
   const effectiveViewMode = isMobile ? "cards" : viewMode;
 
-  // Local sorting only (filtering is done server-side)
+  // Local sorting (filtering is done server-side)
   const sortedContacts = useMemo(() => {
-    let result = [...contacts];
-
-    // Sort
-    result.sort((a, b) => {
-      let aVal: any = a[sortBy as keyof Contact];
-      let bVal: any = b[sortBy as keyof Contact];
-      if (sortBy === "company") {
-        aVal = a.company?.name || "";
-        bVal = b.company?.name || "";
+    return sortData(contacts, (contact, column) => {
+      if (column === "company") {
+        return contact.company?.name || "";
       }
-      if (typeof aVal === "string") aVal = aVal.toLowerCase();
-      if (typeof bVal === "string") bVal = bVal.toLowerCase();
-      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
-      return 0;
+      return (contact as any)[column];
     });
+  }, [contacts, sortData]);
 
-    return result;
-  }, [contacts, sortBy, sortDir]);
-
-  // Status filter options
-  const statusFilterOptions: FilterOption[] = useMemo(() => {
-    return [
-      { id: "all", label: "Tous", count: statsByStatus?.all || 0 },
-      { id: "lead", label: "Leads", color: "#f97316", count: statsByStatus?.lead || 0 },
-      { id: "confirmed", label: "Confirmés", color: "#22c55e", count: statsByStatus?.confirmed || 0 },
-    ];
-  }, [statsByStatus]);
+  // Status filter options for tabs
+  const statusTabs = useMemo(() => [
+    { id: "all", label: "Tous", count: statsByStatus?.all || 0 },
+    { id: "lead", label: "Leads", count: statsByStatus?.lead || 0, icon: Target },
+    { id: "confirmed", label: "Confirmés", count: statsByStatus?.confirmed || 0, icon: CheckCircle2 },
+  ], [statsByStatus]);
 
   // Type filter options
   const typeFilterOptions: FilterOption[] = useMemo(() => {
@@ -162,66 +155,67 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
     }));
   }, [contactTypes, statsByType]);
 
-  // Selection handlers
-  const handleSelectAll = useCallback((checked: boolean) => {
-    if (checked) {
-      setSelectedIds(new Set(sortedContacts.map((c) => c.id)));
-    } else {
-      setSelectedIds(new Set());
-    }
-  }, [sortedContacts]);
-
-  const handleSelectOne = useCallback((id: string, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }, []);
-
-  const handleSort = (column: string) => {
-    if (sortBy === column) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortDir("asc");
-    }
-  };
-
   const handleBulkDelete = () => {
     selectedIds.forEach((id) => {
       deleteContact.mutate(id);
     });
-    setSelectedIds(new Set());
+    clearSelection();
   };
 
-  const isAllSelected = sortedContacts.length > 0 && selectedIds.size === sortedContacts.length;
+  // Bulk actions configuration
+  const bulkActions: BulkAction[] = useMemo(() => [
+    {
+      id: "email",
+      label: "Email",
+      icon: Mail,
+      onClick: () => setBulkEmailOpen(true),
+      showInBar: true,
+    },
+    {
+      id: "export",
+      label: "Exporter",
+      icon: Download,
+      onClick: () => console.log("Export"),
+      showInBar: true,
+    },
+    {
+      id: "tag",
+      label: "Ajouter tag",
+      icon: Tag,
+      onClick: () => console.log("Add tag"),
+      showInBar: false,
+    },
+    {
+      id: "delete",
+      label: "Supprimer",
+      icon: TrashIcon,
+      onClick: handleBulkDelete,
+      variant: "destructive",
+      showInBar: false,
+    },
+  ], [handleBulkDelete]);
+
+  // Clear all filters
+  const handleClearAllFilters = useCallback(() => {
+    setSearchQuery("");
+    setSelectedTypes([]);
+    setSelectedStatus("all");
+    setLetterFilter(null);
+  }, []);
+
+  // Count active filters
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (selectedTypes.length > 0) count++;
+    if (selectedStatus !== "all") count++;
+    if (letterFilter) count++;
+    return count;
+  }, [selectedTypes, selectedStatus, letterFilter]);
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-9 w-64" />
-          <Skeleton className="h-9 w-24" />
-        </div>
-        <Card>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-3">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-8 w-8 rounded-full" />
-                  <div className="flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-32" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                  <Skeleton className="h-5 w-16" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <TableSkeleton rows={8} columns={6} showCheckbox showAvatar />
       </div>
     );
   }
@@ -244,101 +238,64 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
   return (
     <>
       <div className="space-y-3">
-        {/* Status tabs */}
-        <div className="flex items-center gap-1 border-b">
-          {statusFilterOptions.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => setSelectedStatus(option.id)}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors",
-                selectedStatus === option.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {option.id === "lead" && <Target className="h-3.5 w-3.5" />}
-              {option.id === "confirmed" && <CheckCircle2 className="h-3.5 w-3.5" />}
-              {option.label}
-              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
-                {option.count}
-              </Badge>
-            </button>
-          ))}
-        </div>
-
-        {/* Filters + actions */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
+        {/* Status tabs as secondary bar */}
+        <ContentFiltersBar
+          viewToggle={
+            <div className="hidden md:block">
+              <ViewModeToggle
+                value={effectiveViewMode}
+                onChange={(v) => setViewMode(v as "table" | "cards")}
+              />
+            </div>
+          }
+          search={{
+            value: searchQuery,
+            onChange: setSearchQuery,
+            placeholder: "Rechercher un contact...",
+          }}
+          filters={
             <CRMQuickFilters
-              search={searchQuery}
-              onSearchChange={setSearchQuery}
               types={typeFilterOptions}
               selectedTypes={selectedTypes}
               onTypesChange={setSelectedTypes}
-              placeholder="Rechercher un contact..."
               totalCount={pagination.totalCount}
               filteredCount={sortedContacts.length}
-              onClearAllFilters={() => {
-                setSearchQuery("");
-                setSelectedTypes([]);
-                setSelectedStatus("all");
-                setLetterFilter(null);
-              }}
+              compactMode
             />
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <AutoCategorizeHelper />
-            <CRMDataQualityManager />
-            {onImportContacts && (
-              <Button variant="outline" size="sm" className="h-9 hidden sm:inline-flex" onClick={onImportContacts}>
-                <Upload className="h-4 w-4 mr-1.5" />
-                Importer
-              </Button>
-            )}
-            {/* View mode toggle - hidden on mobile */}
-            <div className="hidden md:flex items-center border rounded-md">
-              <Button
-                variant={effectiveViewMode === "table" ? "secondary" : "ghost"}
-                size="sm"
-                className="h-8 px-2 rounded-r-none"
-                onClick={() => setViewMode("table")}
-              >
-                <LayoutList className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={effectiveViewMode === "cards" ? "secondary" : "ghost"}
-                size="sm"
-                className="h-8 px-2 rounded-l-none"
-                onClick={() => setViewMode("cards")}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
+          }
+          actions={
+            <div className="flex items-center gap-2">
+              <AutoCategorizeHelper />
+              <CRMDataQualityManager />
+              {onImportContacts && (
+                <Button variant="outline" size="sm" className="h-8 hidden sm:inline-flex" onClick={onImportContacts}>
+                  <Upload className="h-3.5 w-3.5 mr-1.5" />
+                  Importer
+                </Button>
+              )}
             </div>
-          </div>
-        </div>
-
-        {/* Alphabet filter - hide on mobile */}
-        <div className="hidden sm:flex items-center gap-0.5 overflow-x-auto scrollbar-none pb-1">
-          {alphabet.map((letter) => {
-            const hasContacts = availableLetters.includes(letter);
-            return (
-              <Button
-                key={letter}
-                variant={letterFilter === letter ? "default" : "ghost"}
-                size="sm"
-                className={cn(
-                  "h-6 w-6 p-0 text-[10px] font-medium shrink-0",
-                  !hasContacts && "text-muted-foreground/30"
-                )}
-                onClick={() => setLetterFilter(letterFilter === letter ? null : letter)}
-                disabled={!hasContacts}
-              >
-                {letter}
-              </Button>
-            );
-          })}
-        </div>
+          }
+          onClearAll={handleClearAllFilters}
+          activeFiltersCount={activeFiltersCount}
+          secondaryBar={
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              {/* Status tabs */}
+              <StatusTabs
+                options={statusTabs}
+                value={selectedStatus}
+                onChange={setSelectedStatus}
+              />
+              {/* Alphabet filter - hide on mobile */}
+              <div className="hidden sm:block ml-auto">
+                <AlphabetFilter
+                  value={letterFilter}
+                  onChange={setLetterFilter}
+                  availableLetters={availableLetters}
+                />
+              </div>
+            </div>
+          }
+        />
 
         {/* Content - Table or Cards */}
         {sortedContacts.length === 0 ? (
@@ -347,11 +304,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
               <p className="text-sm text-muted-foreground">
                 Aucun contact trouvé{effectiveSearch ? ` pour "${effectiveSearch}"` : ""}
               </p>
-              <Button variant="link" size="sm" onClick={() => {
-                setSearchQuery("");
-                setSelectedTypes([]);
-                setLetterFilter(null);
-              }}>
+              <Button variant="link" size="sm" onClick={handleClearAllFilters}>
                 Effacer les filtres
               </Button>
             </div>
@@ -360,7 +313,6 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
           /* Mobile/Card View */
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {sortedContacts.map((contact) => {
-              const isSelected = selectedIds.has(contact.id);
               const typeLabel = contact.contact_type ? getContactTypeLabel(contact.contact_type) : undefined;
               const typeColor = contact.contact_type ? getContactTypeColor(contact.contact_type) : undefined;
 
@@ -376,7 +328,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                   companyName={contact.company?.name}
                   status={contact.status as "lead" | "confirmed" | undefined}
                   typeBadge={typeLabel ? { label: typeLabel, color: typeColor } : undefined}
-                  isSelected={isSelected}
+                  isSelected={isSelected(contact.id)}
                   onSelect={(checked) => handleSelectOne(contact.id, checked)}
                   onClick={() => navigate(`/crm/contacts/${contact.id}`)}
                   onEdit={canEditContacts ? () => setEditingContact(contact) : undefined}
@@ -396,6 +348,9 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                     <TableHead className="w-10 pr-0">
                       <Checkbox
                         checked={isAllSelected}
+                        ref={(el) => {
+                          if (el) (el as any).indeterminate = isPartiallySelected;
+                        }}
                         onCheckedChange={handleSelectAll}
                         aria-label="Sélectionner tout"
                         className="translate-y-[2px]"
@@ -409,7 +364,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                         Contact
                         <ArrowUpDown className={cn(
                           "h-3 w-3",
-                          sortBy === "name" ? "text-foreground" : "text-muted-foreground/50"
+                          getSortIcon("name") ? "text-foreground" : "text-muted-foreground/50"
                         )} />
                       </div>
                     </TableHead>
@@ -423,7 +378,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                         Entreprise
                         <ArrowUpDown className={cn(
                           "h-3 w-3",
-                          sortBy === "company" ? "text-foreground" : "text-muted-foreground/50"
+                          getSortIcon("company") ? "text-foreground" : "text-muted-foreground/50"
                         )} />
                       </div>
                     </TableHead>
@@ -435,7 +390,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                 </TableHeader>
                 <TableBody>
                   {sortedContacts.map((contact, index) => {
-                    const isSelected = selectedIds.has(contact.id);
+                    const contactSelected = isSelected(contact.id);
                     
                     return (
                       <motion.tr
@@ -445,13 +400,13 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                         transition={{ delay: Math.min(index * 0.02, 0.2) }}
                         className={cn(
                           "group cursor-pointer transition-colors",
-                          isSelected ? "bg-muted/30" : "hover:bg-muted/20"
+                          contactSelected ? "bg-muted/30" : "hover:bg-muted/20"
                         )}
                         onClick={() => navigate(`/crm/contacts/${contact.id}`)}
                       >
                         <TableCell className="py-2 pr-0" onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={isSelected}
+                            checked={contactSelected}
                             onCheckedChange={(checked) => handleSelectOne(contact.id, checked as boolean)}
                             aria-label={`Sélectionner ${contact.name}`}
                           />
@@ -515,7 +470,6 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
                           />
                         </TableCell>
                         <TableCell className="py-2">
-                          {/* Show status badge (Lead or Contact) */}
                           {(() => {
                             const isLead = contact.status === 'lead';
                             const displayLabel = isLead ? 'Lead' : 'Contact';
@@ -599,81 +553,26 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
           </div>
         )}
 
-        {/* Pagination controls */}
+        {/* Pagination - using shared component */}
         {pagination.totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>
-                {((pagination.page - 1) * pagination.pageSize) + 1}–{Math.min(pagination.page * pagination.pageSize, pagination.totalCount)} sur {pagination.totalCount}
-              </span>
-              <span className="text-muted-foreground/50">•</span>
-              <span>Page {pagination.page} / {pagination.totalPages}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Page size selector */}
-              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
-                <SelectTrigger className="h-8 w-[80px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
-              <span className="text-sm text-muted-foreground">par page</span>
-              
-              {/* Navigation buttons */}
-              <div className="flex items-center gap-1 ml-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => pagination.goToPage(1)}
-                  disabled={pagination.page === 1}
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={pagination.prevPage}
-                  disabled={pagination.page === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={pagination.nextPage}
-                  disabled={pagination.page === pagination.totalPages}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => pagination.goToPage(pagination.totalPages)}
-                  disabled={pagination.page === pagination.totalPages}
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
+          <TablePagination
+            page={pagination.page}
+            pageSize={pageSize}
+            totalCount={pagination.totalCount}
+            totalPages={pagination.totalPages}
+            onPageChange={pagination.goToPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[25, 50, 100]}
+          />
         )}
       </div>
 
-      {/* Bulk actions */}
-      <CRMBulkActionsBar
-        selectedCount={selectedIds.size}
-        onClearSelection={() => setSelectedIds(new Set())}
-        onDelete={handleBulkDelete}
-        onSendEmail={() => setBulkEmailOpen(true)}
-        entityType="contacts"
+      {/* Bulk actions - using shared component */}
+      <BulkActionsBar
+        selectedCount={selectedCount}
+        entityLabel={{ singular: "contact", plural: "contacts" }}
+        onClearSelection={clearSelection}
+        actions={bulkActions}
       />
 
       {/* Bulk email dialog */}
@@ -682,7 +581,7 @@ export function CRMContactsTable({ search: externalSearch = "", onCreateContact,
         onOpenChange={setBulkEmailOpen}
         contacts={contacts.filter(c => selectedIds.has(c.id))}
         entityType="contacts"
-        onComplete={() => setSelectedIds(new Set())}
+        onComplete={clearSelection}
       />
 
       {/* Detail sheet */}
