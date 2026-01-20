@@ -68,6 +68,19 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
   const { data: emails = [], isLoading, error } = useQuery({
     queryKey,
     queryFn: async () => {
+      // Get current user's active workspace
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('active_workspace_id')
+        .eq('user_id', user.id)
+        .single();
+      
+      const activeWorkspaceId = profile?.active_workspace_id;
+      if (!activeWorkspaceId) return [];
+      
       // Cascade logic: fetch emails based on entity relationships
       let allEmails: Email[] = [];
       
@@ -86,6 +99,7 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
           let query = supabase
             .from('crm_emails')
             .select(`*, contact:contacts(id, name, email), company:crm_companies(id, name)`)
+            .eq('workspace_id', activeWorkspaceId) // Filter by active workspace
             .order('created_at', { ascending: false });
           
           if (contact.email) {
@@ -114,6 +128,7 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
           let query = supabase
             .from('crm_emails')
             .select(`*, contact:contacts(id, name, email), company:crm_companies(id, name)`)
+            .eq('workspace_id', activeWorkspaceId) // Filter by active workspace
             .order('created_at', { ascending: false });
           
           // Build OR conditions for company_id, contact_ids, and email addresses
@@ -166,6 +181,7 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
           let query = supabase
             .from('crm_emails')
             .select(`*, contact:contacts(id, name, email), company:crm_companies(id, name)`)
+            .eq('workspace_id', activeWorkspaceId) // Filter by active workspace
             .order('created_at', { ascending: false });
           
           // Build OR conditions
@@ -213,6 +229,7 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
           let query = supabase
             .from('crm_emails')
             .select(`*, contact:contacts(id, name, email), company:crm_companies(id, name)`)
+            .eq('workspace_id', activeWorkspaceId) // Filter by active workspace
             .order('created_at', { ascending: false });
           
           // Build OR conditions
@@ -259,6 +276,7 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
           let query = supabase
             .from('crm_emails')
             .select(`*, contact:contacts(id, name, email), company:crm_companies(id, name)`)
+            .eq('workspace_id', activeWorkspaceId) // Filter by active workspace
             .order('created_at', { ascending: false });
           
           const orConditions: string[] = [`lead_id.eq.${entityId}`];
