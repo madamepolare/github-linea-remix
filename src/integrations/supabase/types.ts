@@ -9265,6 +9265,182 @@ export type Database = {
           },
         ]
       }
+      roadmap_ideas: {
+        Row: {
+          admin_notes: string | null
+          category: string | null
+          converted_to_roadmap_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          priority: string | null
+          status: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          votes_count: number | null
+          workspace_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          category?: string | null
+          converted_to_roadmap_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          votes_count?: number | null
+          workspace_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          category?: string | null
+          converted_to_roadmap_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          votes_count?: number | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_ideas_converted_to_roadmap_id_fkey"
+            columns: ["converted_to_roadmap_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roadmap_ideas_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_items: {
+        Row: {
+          category: string
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_public: boolean | null
+          module_slug: string | null
+          priority: number | null
+          quarter: string | null
+          release_date: string | null
+          release_version: string | null
+          status: string
+          title: string
+          updated_at: string
+          votes_count: number | null
+          workspace_id: string | null
+        }
+        Insert: {
+          category?: string
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_public?: boolean | null
+          module_slug?: string | null
+          priority?: number | null
+          quarter?: string | null
+          release_date?: string | null
+          release_version?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          votes_count?: number | null
+          workspace_id?: string | null
+        }
+        Update: {
+          category?: string
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_public?: boolean | null
+          module_slug?: string | null
+          priority?: number | null
+          quarter?: string | null
+          release_date?: string | null
+          release_version?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          votes_count?: number | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_votes: {
+        Row: {
+          created_at: string
+          id: string
+          idea_id: string | null
+          roadmap_item_id: string | null
+          user_id: string
+          vote_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          idea_id?: string | null
+          roadmap_item_id?: string | null
+          user_id: string
+          vote_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          idea_id?: string | null
+          roadmap_item_id?: string | null
+          user_id?: string
+          vote_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_votes_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roadmap_votes_roadmap_item_id_fkey"
+            columns: ["roadmap_item_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       skills: {
         Row: {
           category: string | null
