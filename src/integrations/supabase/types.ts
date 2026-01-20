@@ -2368,11 +2368,13 @@ export type Database = {
           received_at: string | null
           reply_to_email_id: string | null
           sent_at: string | null
+          sent_via: string | null
           status: string | null
           subject: string
           synced_from_gmail: boolean | null
           tender_id: string | null
           to_email: string
+          workspace_email_account_id: string | null
           workspace_id: string
         }
         Insert: {
@@ -2397,11 +2399,13 @@ export type Database = {
           received_at?: string | null
           reply_to_email_id?: string | null
           sent_at?: string | null
+          sent_via?: string | null
           status?: string | null
           subject: string
           synced_from_gmail?: boolean | null
           tender_id?: string | null
           to_email: string
+          workspace_email_account_id?: string | null
           workspace_id: string
         }
         Update: {
@@ -2426,11 +2430,13 @@ export type Database = {
           received_at?: string | null
           reply_to_email_id?: string | null
           sent_at?: string | null
+          sent_via?: string | null
           status?: string | null
           subject?: string
           synced_from_gmail?: boolean | null
           tender_id?: string | null
           to_email?: string
+          workspace_email_account_id?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -2474,6 +2480,13 @@ export type Database = {
             columns: ["tender_id"]
             isOneToOne: false
             referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_emails_workspace_email_account_id_fkey"
+            columns: ["workspace_email_account_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_email_accounts"
             referencedColumns: ["id"]
           },
           {
