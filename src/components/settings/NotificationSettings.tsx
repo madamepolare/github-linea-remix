@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, MessageSquare, AtSign, CheckSquare, FolderKanban, UserPlus, Moon, Mail, Bell, Heart, Reply, Smartphone } from "lucide-react";
 import { PushNotificationToggle } from "./PushNotificationToggle";
+import { IOSInstallPrompt } from "./IOSInstallPrompt";
 
 interface NotificationToggleProps {
   id: string;
@@ -270,6 +271,7 @@ export function NotificationSettings() {
           />
           <Separator />
           <PushNotificationToggle />
+          <IOSInstallPrompt />
           <Separator />
           <NotificationToggle
             id="email_enabled"

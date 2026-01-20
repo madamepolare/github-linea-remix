@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, Smartphone, AlertCircle, BellRing } from "lucide-react";
+import { IOSInstallPrompt } from "./IOSInstallPrompt";
 
 export function PushNotificationToggle() {
   const { 
