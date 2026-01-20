@@ -45,9 +45,9 @@ serve(async (req) => {
         use_print: true,
         disable_backgrounds: false,
         margin: 0,
-        zoom: 1,
-        // Inject CSS to force A4 width on PDFShift renderer
-        css: 'html, body { width: 210mm !important; min-width: 210mm !important; max-width: 210mm !important; margin: 0 !important; padding: 0 !important; }',
+        // Force viewport to exact A4 pixel width (794px at 96dpi)
+        // This ensures the browser renders at the same width as the preview
+        viewport: { width: 794, height: 1123 },
       }),
     });
 
