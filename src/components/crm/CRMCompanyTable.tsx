@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CountryFlag } from "@/components/ui/country-flag";
 import {
@@ -30,10 +29,9 @@ import {
   Building2,
   ExternalLink,
   ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
+  Mail,
+  Download,
+  Tag,
 } from "lucide-react";
 import { useCRMCompanies, CRMCompanyEnriched } from "@/hooks/useCRMCompanies";
 import { useCRMSettings } from "@/hooks/useCRMSettings";
@@ -41,7 +39,6 @@ import { CompanyCategory } from "@/lib/crmTypes";
 import { CompanyFormDialog } from "./CompanyFormDialog";
 import { InlineEditCell } from "./InlineEditCell";
 import { CRMQuickFilters, FilterOption } from "./CRMQuickFilters";
-import { CRMBulkActionsBar } from "./CRMBulkActionsBar";
 import { CRMBulkEmailDialog } from "./CRMBulkEmailDialog";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { AutoCategorizeHelper } from "./AutoCategorizeHelper";
@@ -50,6 +47,10 @@ import { PipelineBadges } from "./PipelineBadges";
 import { CompanyMobileCard } from "./shared/CRMMobileCards";
 import { ContentFiltersBar } from "@/components/shared/ContentFiltersBar";
 import { ViewModeToggle, AlphabetFilter } from "@/components/shared/filters";
+import { BulkActionsBar, type BulkAction } from "@/components/shared/BulkActionsBar";
+import { TablePagination } from "@/components/shared/TablePagination";
+import { TableSkeleton } from "@/components/shared/TableSkeleton";
+import { useTableSelection } from "@/hooks/useTableSelection";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
@@ -66,6 +67,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
   const [searchQuery, setSearchQuery] = useState(search);
   const [sortBy, setSortBy] = useState<string>("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [pageSize, setPageSize] = useState<number>(50);
 
   // Pass filters to hook for server-side filtering
   const { 
@@ -79,8 +81,6 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
     availableLetters,
     pagination,
     goToPage,
-    nextPage,
-    prevPage,
   } = useCRMCompanies({ 
     category: selectedCategory !== "all" ? selectedCategory as CompanyCategory : undefined, 
     search: searchQuery,
@@ -89,21 +89,31 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
     sortDir,
   });
   
-  const { companyCategories, companyTypes, getCategoryFromType } = useCRMSettings();
-  const { entriesByCompanyId, isLoading: isLoadingPipelines } = useContactPipelineEntries();
+  const { companyCategories, companyTypes } = useCRMSettings();
+  const { entriesByCompanyId } = useContactPipelineEntries();
   const isMobile = useMediaQuery("(max-width: 768px)");
   
   const [editingCompany, setEditingCompany] = useState<CRMCompanyEnriched | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
 
+  // Selection hook
+  const {
+    selectedIds,
+    selectedCount,
+    isAllSelected,
+    isPartiallySelected,
+    isSelected,
+    handleSelectAll,
+    handleSelectOne,
+    clearSelection,
+  } = useTableSelection({
+    items: companies,
+    getItemId: (c) => c.id,
+  });
+
   // Auto-switch to cards on mobile
   const effectiveViewMode = isMobile ? "cards" : viewMode;
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-
-  // Use companies from server (already filtered and paginated)
-  const filteredCompanies = companies;
 
   // Category filter chips - use totalCount from pagination
   const categoryChips: FilterOption[] = useMemo(() => {
@@ -119,27 +129,6 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
     return chips.filter((c) => c.count > 0 || c.id === "all");
   }, [statsByCategory, pagination.totalCount, companyCategories]);
 
-  // Selection handlers
-  const handleSelectAll = useCallback((checked: boolean) => {
-    if (checked) {
-      setSelectedIds(new Set(filteredCompanies.map((c) => c.id)));
-    } else {
-      setSelectedIds(new Set());
-    }
-  }, [filteredCompanies]);
-
-  const handleSelectOne = useCallback((id: string, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) {
-        next.add(id);
-      } else {
-        next.delete(id);
-      }
-      return next;
-    });
-  }, []);
-
   const handleInlineUpdate = useCallback((id: string, field: string, value: string) => {
     updateCompany.mutate({ id, [field]: value });
   }, [updateCompany]);
@@ -153,39 +142,68 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
     }
   };
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = useCallback(() => {
     selectedIds.forEach((id) => {
       deleteCompany.mutate(id);
     });
-    setSelectedIds(new Set());
-  };
+    clearSelection();
+  }, [selectedIds, deleteCompany, clearSelection]);
 
-  const isAllSelected = filteredCompanies.length > 0 && selectedIds.size === filteredCompanies.length;
+  // Bulk actions configuration
+  const bulkActions: BulkAction[] = useMemo(() => [
+    {
+      id: "email",
+      label: "Email",
+      icon: Mail,
+      onClick: () => setBulkEmailOpen(true),
+      showInBar: true,
+    },
+    {
+      id: "export",
+      label: "Exporter",
+      icon: Download,
+      onClick: () => console.log("Export"),
+      showInBar: true,
+    },
+    {
+      id: "tag",
+      label: "Ajouter tag",
+      icon: Tag,
+      onClick: () => console.log("Add tag"),
+      showInBar: false,
+    },
+    {
+      id: "delete",
+      label: "Supprimer",
+      icon: Trash2,
+      onClick: handleBulkDelete,
+      variant: "destructive",
+      showInBar: false,
+    },
+  ], [handleBulkDelete]);
+
+  // Clear all filters
+  const handleClearAllFilters = useCallback(() => {
+    setSearchQuery("");
+    setSelectedCategory("all");
+    setLetterFilter(null);
+  }, []);
+
+  // Count active filters
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (selectedCategory !== "all") count++;
+    if (letterFilter) count++;
+    return count;
+  }, [selectedCategory, letterFilter]);
+
+  // Use companies from server (already filtered and paginated)
+  const filteredCompanies = companies;
 
   if (isLoading && !isFetching) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-9 w-64" />
-          <Skeleton className="h-9 w-24" />
-        </div>
-        <Card>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="flex items-center gap-3 px-4 py-3">
-                  <Skeleton className="h-4 w-4" />
-                  <Skeleton className="h-7 w-7 rounded" />
-                  <div className="flex-1 space-y-1.5">
-                    <Skeleton className="h-3.5 w-32" />
-                    <Skeleton className="h-3 w-24" />
-                  </div>
-                  <Skeleton className="h-5 w-12" />
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <TableSkeleton rows={8} columns={5} showCheckbox showAvatar={false} />
       </div>
     );
   }
@@ -484,66 +502,28 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
               </Table>
             </div>
             
-            {/* Pagination Controls */}
+            {/* Pagination Controls - using shared component */}
             {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t">
-                <div className="text-xs text-muted-foreground">
-                  {((pagination.page - 1) * pagination.pageSize) + 1}–{Math.min(pagination.page * pagination.pageSize, pagination.totalCount)} sur {pagination.totalCount}
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => goToPage(1)}
-                    disabled={pagination.page === 1}
-                  >
-                    <ChevronsLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={prevPage}
-                    disabled={pagination.page === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-xs px-2">
-                    Page {pagination.page} / {pagination.totalPages}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={nextPage}
-                    disabled={pagination.page === pagination.totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => goToPage(pagination.totalPages)}
-                    disabled={pagination.page === pagination.totalPages}
-                  >
-                    <ChevronsRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <TablePagination
+                page={pagination.page}
+                pageSize={pageSize}
+                totalCount={pagination.totalCount}
+                totalPages={pagination.totalPages}
+                onPageChange={goToPage}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={[25, 50, 100]}
+              />
             )}
           </div>
         )}
       </div>
 
-      {/* Bulk actions */}
-      <CRMBulkActionsBar
-        selectedCount={selectedIds.size}
-        onClearSelection={() => setSelectedIds(new Set())}
-        onDelete={handleBulkDelete}
-        onSendEmail={() => setBulkEmailOpen(true)}
-        entityType="companies"
+      {/* Bulk actions - using shared component */}
+      <BulkActionsBar
+        selectedCount={selectedCount}
+        entityLabel={{ singular: "entreprise", plural: "entreprises" }}
+        onClearSelection={clearSelection}
+        actions={bulkActions}
       />
 
       {/* Bulk email dialog */}
@@ -552,7 +532,7 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
         onOpenChange={setBulkEmailOpen}
         companies={companies.filter(c => selectedIds.has(c.id))}
         entityType="companies"
-        onComplete={() => setSelectedIds(new Set())}
+        onComplete={clearSelection}
       />
 
       {/* Edit dialog */}
