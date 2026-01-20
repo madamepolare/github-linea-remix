@@ -12,11 +12,8 @@ interface QuotePreviewPanelProps {
   selectedThemeId?: string | null;
 }
 
-// A4 dimensions (210×297mm @ 96dpi)
-// Keep the internal "paper" size fixed and scale it with CSS transform,
-// otherwise the iframe will show its own scrollbars/cropping.
+// A4 width (210mm @ 96dpi)
 const A4_WIDTH_PX = 794;
-const A4_HEIGHT_PX = 1123;
 
 /**
  * QuotePreviewPanel - 100% HTML Rendering
@@ -31,6 +28,7 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [contentHeight, setContentHeight] = useState(1123); // Default A4 height
   
   // Get selected theme or default
   const currentTheme = selectedThemeId 
@@ -60,7 +58,7 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
     return generateQuoteHtml(document, lines, agencyData, currentTheme);
   }, [currentTheme, document, lines, agencyInfo]);
 
-  // Update iframe content when HTML changes
+  // Update iframe content when HTML changes and measure content height
   useEffect(() => {
     if (iframeRef.current && htmlPreview) {
       const doc = iframeRef.current.contentDocument;
@@ -68,6 +66,14 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
         doc.open();
         doc.write(htmlPreview);
         doc.close();
+        
+        // Wait for content to render, then measure height
+        setTimeout(() => {
+          if (doc.body) {
+            const height = doc.body.scrollHeight;
+            setContentHeight(Math.max(height, 1123)); // Min A4 height
+          }
+        }, 100);
       }
     }
   }, [htmlPreview]);
@@ -102,7 +108,7 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
 
   // Wrapper uses the scaled size so outer scroll is handled by our container (not the iframe)
   const scaledWidth = Math.floor(A4_WIDTH_PX * scale);
-  const scaledHeight = Math.floor(A4_HEIGHT_PX * scale);
+  const scaledHeight = Math.floor(contentHeight * scale);
 
   return (
     <div
@@ -112,12 +118,12 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
     >
       {/* Wrapper with scaled dimensions */}
       <div className="flex-shrink-0" style={{ width: scaledWidth, height: scaledHeight }}>
-        {/* Fixed-size A4 paper scaled down/up */}
+        {/* Fixed-width paper scaled down/up, height adapts to content */}
         <div
           className="bg-white shadow-xl rounded-sm origin-top-left overflow-hidden"
           style={{
             width: A4_WIDTH_PX,
-            height: A4_HEIGHT_PX,
+            height: contentHeight,
             transform: `scale(${scale})`,
           }}
         >
@@ -128,7 +134,7 @@ export function QuotePreviewPanel({ document, lines, zoom, selectedThemeId }: Qu
             className="border-0 block"
             style={{
               width: A4_WIDTH_PX,
-              height: A4_HEIGHT_PX,
+              height: contentHeight,
               background: 'white',
               overflow: 'hidden',
             }}
