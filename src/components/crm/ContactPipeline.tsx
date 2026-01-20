@@ -292,6 +292,7 @@ function EntryCard({
   // Email reply indicators
   const hasUnreadReplies = (entry.unread_replies_count || 0) > 0;
   const isAwaitingResponse = entry.awaiting_response && !hasUnreadReplies;
+  const hasReplied = !!entry.last_inbound_email_at && !hasUnreadReplies;
   
   // Calculate days since last email sent (for awaiting response indicator)
   const daysSinceEmail = entry.last_email_sent_at 
@@ -303,15 +304,158 @@ function EntryCard({
       className={cn(
         "shadow-sm hover:shadow-md transition-shadow cursor-pointer",
         hasUnreadReplies && "border-green-500 border-l-4 bg-green-50/30 dark:bg-green-950/20",
-        !hasUnreadReplies && hasOverdue && "border-red-500 border-l-4",
-        !hasUnreadReplies && !hasOverdue && hasNoActions && "border-amber-500 border-l-4",
-        !hasUnreadReplies && !hasOverdue && !hasNoActions && hasUrgent && "border-orange-500 border-l-4"
+        hasReplied && "border-green-500 border-l-4",
+        !hasUnreadReplies && !hasReplied && hasOverdue && "border-red-500 border-l-4",
+        !hasUnreadReplies && !hasReplied && !hasOverdue && hasNoActions && "border-amber-500 border-l-4",
+        !hasUnreadReplies && !hasReplied && !hasOverdue && !hasNoActions && hasUrgent && "border-orange-500 border-l-4"
       )} 
       onClick={onClick}
     >
       <CardContent className="p-3">
         <div className="flex items-start gap-3">
           <Avatar className="h-9 w-9">
+            <AvatarImage src={isContact ? entry.contact?.avatar_url : entry.company?.logo_url} />
+            <AvatarFallback className="text-xs">
+              {name.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1">
+              {isContact ? (
+                <User className="h-3 w-3 text-muted-foreground" />
+              ) : (
+                <Building2 className="h-3 w-3 text-muted-foreground" />
+              )}
+              <span className="font-medium text-sm truncate">{name}</span>
+            </div>
+            
+            {/* Company for contacts */}
+            {isContact && entry.company && (
+              <p className="text-xs text-muted-foreground truncate">
+                {entry.company.name}
+              </p>
+            )}
+            
+            {/* Email */}
+            {email && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                <Mail className="h-3 w-3" />
+                <span className="truncate">{email}</span>
+              </div>
+            )}
+            
+            {/* Last email sent */}
+            {entry.last_email_sent_at && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                <Send className="h-3 w-3" />
+                <span>
+                  {format(new Date(entry.last_email_sent_at), "dd MMM", { locale: fr })}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Alert and email indicators */}
+          <div className="flex flex-col items-end gap-1">
+            {/* Unread replies badge - highest priority */}
+            {hasUnreadReplies && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge className="h-5 px-1.5 gap-0.5 bg-green-600 hover:bg-green-700 animate-pulse">
+                    <Mail className="h-3 w-3" />
+                    <span className="text-[10px]">{entry.unread_replies_count}</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {entry.unread_replies_count} réponse{(entry.unread_replies_count || 0) > 1 ? 's' : ''} non lue{(entry.unread_replies_count || 0) > 1 ? 's' : ''}
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Replied badge (read) */}
+            {hasReplied && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="h-5 px-1.5 gap-0.5 border-green-500 text-green-600">
+                    <MessageSquare className="h-3 w-3" />
+                    <span className="text-[10px]">Répondu</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Réponse reçue
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Awaiting response badge */}
+            {isAwaitingResponse && daysSinceEmail > 0 && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="h-5 px-1.5 gap-0.5 border-blue-500 text-blue-600">
+                    <Clock className="h-3 w-3" />
+                    <span className="text-[10px]">{daysSinceEmail}j</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  En attente de réponse depuis {daysSinceEmail} jour{daysSinceEmail > 1 ? 's' : ''}
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {hasOverdue && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="destructive" className="h-5 px-1.5 gap-0.5">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span className="text-[10px]">{overdueCount}</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {overdueCount} action{overdueCount > 1 ? 's' : ''} en retard
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {hasNoActions && !hasOverdue && !hasUnreadReplies && !hasReplied && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="h-5 px-1.5 border-amber-500 text-amber-600">
+                    <Clock className="h-3 w-3" />
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Aucune action planifiée
+                </TooltipContent>
+              </Tooltip>
+            )}
+            
+            {hasUrgent && !hasOverdue && !hasNoActions && !hasUnreadReplies && !hasReplied && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="h-5 px-1.5 border-orange-500 text-orange-600">
+                    <AlertTriangle className="h-3 w-3" />
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Action urgente aujourd'hui
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {pendingCount > 0 && !hasOverdue && !hasUrgent && !hasUnreadReplies && !hasReplied && (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Badge variant="outline" className="h-5 px-1.5 text-green-600 border-green-500">
+                    <CheckCircle className="h-3 w-3" />
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {pendingCount} action{pendingCount > 1 ? 's' : ''} planifiée{pendingCount > 1 ? 's' : ''}
+                </TooltipContent>
+              </Tooltip>
+            )}
+
             <AvatarImage src={isContact ? entry.contact?.avatar_url : entry.company?.logo_url} />
             <AvatarFallback className="text-xs">
               {name.slice(0, 2).toUpperCase()}
