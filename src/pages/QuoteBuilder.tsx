@@ -59,7 +59,7 @@ import { ThemePreviewSelector } from '@/components/commercial/ThemePreviewSelect
 import { isArchitectureContractType, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
 import { getDefaultConditionsForType, serializeConditions } from '@/lib/contractConditionsUnified';
-import { downloadQuotePdf } from '@/lib/generateHtmlPDF';
+import { downloadVectorPdf } from '@/lib/generateVectorPDF';
 import { useQuoteThemes } from '@/hooks/useQuoteThemes';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
@@ -486,8 +486,8 @@ export default function QuoteBuilder() {
       
       const filename = `Devis ${document.document_number || 'brouillon'}`;
       
-      // Download PDF directly without print dialog
-      await downloadQuotePdf(document, lines, agencyData, selectedTheme, filename);
+      // Download vector PDF (true vector, not rasterized)
+      await downloadVectorPdf(document, lines, agencyData, selectedTheme, filename);
       
       toast.success('PDF téléchargé');
     } catch (err) {
