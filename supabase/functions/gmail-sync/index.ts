@@ -343,9 +343,29 @@ serve(async (req) => {
             const isInbound = toEmail === connection.gmail_email.toLowerCase();
             const otherEmail = isInbound ? fromEmail : toEmail;
 
-            // Try to match to a contact or company
+            // Try to match to a contact or company by address
             const matchedContact = contactsByEmail.get(otherEmail);
             const matchedCompany = companiesByEmail.get(otherEmail);
+
+            // If inbound, prefer association from existing outbound email in same thread (pipeline context)
+            // This prevents mismatches when the sender email belongs to a contact attached to a different company.
+            let threadContactId: string | null = null;
+            let threadCompanyId: string | null = null;
+            if (isInbound && message.threadId) {
+              const { data: lastOutbound } = await supabaseAdmin
+                .from('crm_emails')
+                .select('contact_id, company_id')
+                .eq('workspace_id', connection.workspace_id)
+                .eq('gmail_thread_id', message.threadId)
+                .eq('direction', 'outbound')
+                .order('sent_at', { ascending: false, nullsFirst: false })
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+              threadContactId = lastOutbound?.contact_id || null;
+              threadCompanyId = lastOutbound?.company_id || null;
+            }
 
             const emailRecord = {
               workspace_id: connection.workspace_id,
@@ -362,8 +382,8 @@ serve(async (req) => {
               is_read: !message.labelIds?.includes('UNREAD'),
               labels: message.labelIds || [],
               synced_from_gmail: true,
-              contact_id: matchedContact?.id || null,
-              company_id: matchedContact?.crm_company_id || matchedCompany?.id || null,
+              contact_id: threadContactId || matchedContact?.id || null,
+              company_id: threadCompanyId || matchedContact?.crm_company_id || matchedCompany?.id || null,
               cc: cc ? cc.split(',').map(e => extractEmail(e.trim())) : null,
               created_by: connection.user_id || null,
               workspace_email_account_id: connection.is_workspace_account ? connection.id : null,
