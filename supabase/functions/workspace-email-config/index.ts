@@ -11,17 +11,17 @@ serve(async (req) => {
   }
 
   try {
-    const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
+    const WORKSPACE_GOOGLE_CLIENT_ID = Deno.env.get('WORKSPACE_GOOGLE_CLIENT_ID');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 
-    if (!GOOGLE_CLIENT_ID) {
-      throw new Error('Google OAuth not configured');
+    if (!WORKSPACE_GOOGLE_CLIENT_ID) {
+      throw new Error('Workspace Google OAuth not configured');
     }
 
     const redirectUri = `${SUPABASE_URL}/functions/v1/workspace-email-oauth-callback`;
 
     return new Response(JSON.stringify({
-      clientId: GOOGLE_CLIENT_ID,
+      clientId: WORKSPACE_GOOGLE_CLIENT_ID,
       redirectUri,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
