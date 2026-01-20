@@ -7,7 +7,7 @@ import { useProjectCategorySettings } from "@/hooks/useProjectCategorySettings";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "@/components/ui/skeleton";
+import { GridCardSkeleton } from "@/components/shared/CardListSkeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -303,12 +303,8 @@ export function ProjectListView({ onCreateProject }: ProjectListViewProps) {
 
   if (isLoading) {
     return (
-      <div className="p-4 sm:p-6 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-[200px] w-full rounded-xl" />
-          ))}
-        </div>
+      <div className="p-4 sm:p-6">
+        <GridCardSkeleton count={6} columns={3} />
       </div>
     );
   }
