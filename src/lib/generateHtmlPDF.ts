@@ -3,6 +3,7 @@
  * 
  * Ce module génère des devis en HTML avec support complet des thèmes.
  * Le même HTML est utilisé pour l'aperçu ET l'impression PDF native.
+ * Supporte le téléchargement direct en PDF via html2canvas + jsPDF.
  */
 
 import { QuoteDocument, QuoteLine } from '@/types/quoteTypes';
