@@ -78,18 +78,18 @@ export function SingleEmailCard({
 
   return (
     <div className={cn(
-      "relative",
+      "relative w-full",
       isInbound && "animate-in slide-in-from-left-2 duration-300"
     )}>
       {/* Colored left border for inbound emails */}
       {isInbound && (
-        <div className="absolute -left-1 top-2 bottom-2 w-1 bg-gradient-to-b from-green-500 to-emerald-400 rounded-full" />
+        <div className="absolute left-0 top-2 bottom-2 w-1 bg-gradient-to-b from-green-500 to-emerald-400 rounded-full" />
       )}
       
       <Card className={cn(
-        "transition-all cursor-pointer hover:shadow-md overflow-hidden",
+        "transition-all cursor-pointer hover:shadow-md overflow-hidden w-full",
         isInbound 
-          ? "bg-green-50/80 dark:bg-green-950/30 border-green-200 dark:border-green-800 ml-2 shadow-sm shadow-green-100/50 dark:shadow-green-900/20" 
+          ? "bg-green-50/80 dark:bg-green-950/30 border-green-200 dark:border-green-800 shadow-sm shadow-green-100/50 dark:shadow-green-900/20" 
           : "bg-muted/30 border-border",
         isUnread && "ring-2 ring-green-400/50"
       )}>

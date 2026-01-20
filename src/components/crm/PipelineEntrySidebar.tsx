@@ -390,45 +390,47 @@ export function PipelineEntrySidebar({
                 </div>
               </div>
 
-              <ScrollArea className="h-[calc(100vh-420px)] pr-3">
-                {emailsLoading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="h-20 bg-muted/50 rounded-lg animate-pulse" />
-                    ))}
-                  </div>
-                ) : emails.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Mail className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
-                    <p className="text-sm text-muted-foreground">Aucun email</p>
-                    {gmailConnected && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-3"
-                        onClick={() => setComposeOpen(true)}
-                      >
-                        Envoyer un email
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-3 pb-4 pr-1">
-                    {/* Display emails chronologically (oldest first) */}
-                    {[...emails]
-                      .sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())
-                      .map(email => (
-                        <SingleEmailCard
-                          key={email.id}
-                          email={email}
-                          onReply={handleReplyEmail}
-                          onFollowUp={handleFollowUpEmail}
-                          onMarkAsRead={markAsRead}
-                        />
-                      ))
-                    }
-                  </div>
-                )}
+              <ScrollArea className="h-[calc(100vh-420px)]">
+                <div className="pr-4">
+                  {emailsLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="h-20 bg-muted/50 rounded-lg animate-pulse" />
+                      ))}
+                    </div>
+                  ) : emails.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Mail className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+                      <p className="text-sm text-muted-foreground">Aucun email</p>
+                      {gmailConnected && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-3"
+                          onClick={() => setComposeOpen(true)}
+                        >
+                          Envoyer un email
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-3 pb-4">
+                      {/* Display emails chronologically (oldest first) */}
+                      {[...emails]
+                        .sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())
+                        .map(email => (
+                          <SingleEmailCard
+                            key={email.id}
+                            email={email}
+                            onReply={handleReplyEmail}
+                            onFollowUp={handleFollowUpEmail}
+                            onMarkAsRead={markAsRead}
+                          />
+                        ))
+                      }
+                    </div>
+                  )}
+                </div>
               </ScrollArea>
             </TabsContent>
 
