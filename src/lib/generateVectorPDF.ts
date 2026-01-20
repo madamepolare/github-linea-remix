@@ -1,21 +1,18 @@
 /**
- * Vector PDF Generator
+ * Vector PDF Generator using PDFShift
  * 
- * Génère des PDFs vectoriels (texte sélectionnable, zoom infini sans pixelisation)
- * en utilisant l'impression native du navigateur depuis le HTML.
- * 
- * Cette approche conserve tout le design CSS du template tout en produisant
- * un PDF vectoriel natif.
+ * Génère des PDFs vectoriels fidèles au template HTML via le service PDFShift.
+ * Le PDF est généré côté serveur pour une qualité parfaite.
  */
 
+import { supabase } from '@/integrations/supabase/client';
 import { QuoteDocument, QuoteLine } from '@/types/quoteTypes';
 import { QuoteTheme } from '@/hooks/useQuoteThemes';
 import { AgencyInfo } from './quoteTemplateVariables';
 import { generateQuoteHtml } from './generateHtmlPDF';
 
 /**
- * Download PDF using native browser print (vector output)
- * Opens print dialog which allows saving as PDF with full design fidelity
+ * Download PDF using PDFShift (vector output, faithful to template)
  */
 export async function downloadVectorPdf(
   document: Partial<QuoteDocument>,
@@ -27,71 +24,38 @@ export async function downloadVectorPdf(
   // Generate the HTML with full theming
   const html = generateQuoteHtml(document, lines, agencyInfo, theme || undefined);
 
-  // Open a new window for printing (better cross-browser support)
-  const printWindow = window.open('', '_blank', 'width=800,height=600');
-  if (!printWindow) {
-    throw new Error('Popup blocked - please allow popups for PDF download');
+  // Call the edge function to generate PDF
+  const { data, error } = await supabase.functions.invoke('generate-pdf', {
+    body: {
+      html,
+      filename: filename || `Devis_${document.document_number || 'brouillon'}`
+    }
+  });
+
+  if (error) {
+    console.error('PDF generation error:', error);
+    throw new Error('Erreur lors de la génération du PDF');
   }
 
-  // Add enhanced print styles
-  const enhancedHtml = html.replace('</head>', `
-    <style>
-      @media print {
-        @page {
-          size: A4;
-          margin: 0;
-        }
-        html, body {
-          width: 210mm;
-          min-height: 297mm;
-          margin: 0;
-          padding: 0;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-          color-adjust: exact !important;
-        }
-        .main-content {
-          padding-bottom: 15mm;
-        }
-        /* Page break control */
-        .no-break, .keep-together, .header, .info-grid, .totals-section, .signature-section {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-        }
-        .pricing-table tr {
-          page-break-inside: avoid !important;
-        }
-      }
-      @media screen {
-        body {
-          background: #f0f0f0;
-          display: flex;
-          justify-content: center;
-          padding: 20px;
-        }
-        .main-content {
-          background: white;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-          max-width: 210mm;
-        }
-      }
-    </style>
-    <script>
-      // Auto-print after load
-      window.onload = function() {
-        setTimeout(function() {
-          window.print();
-        }, 300);
-      };
-      // Close window after print
-      window.onafterprint = function() {
-        window.close();
-      };
-    </script>
-  </head>`);
+  if (!data?.pdf) {
+    throw new Error('Aucun PDF reçu du serveur');
+  }
 
-  // Write to print window
-  printWindow.document.open();
-  printWindow.document.write(enhancedHtml);
-  printWindow.document.close();
+  // Convert base64 to blob and download
+  const binaryString = atob(data.pdf);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  const blob = new Blob([bytes], { type: 'application/pdf' });
+
+  // Create download link
+  const url = URL.createObjectURL(blob);
+  const link = window.document.createElement('a');
+  link.href = url;
+  link.download = `${data.filename || filename || 'document'}.pdf`;
+  window.document.body.appendChild(link);
+  link.click();
+  window.document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
