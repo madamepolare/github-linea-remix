@@ -1602,9 +1602,11 @@ export type Database = {
           is_read: boolean | null
           mentions: string[] | null
           parent_id: string | null
+          sent_via: string | null
           thread_id: string | null
           title: string | null
           updated_at: string | null
+          workspace_email_account_id: string | null
           workspace_id: string
         }
         Insert: {
@@ -1624,9 +1626,11 @@ export type Database = {
           is_read?: boolean | null
           mentions?: string[] | null
           parent_id?: string | null
+          sent_via?: string | null
           thread_id?: string | null
           title?: string | null
           updated_at?: string | null
+          workspace_email_account_id?: string | null
           workspace_id: string
         }
         Update: {
@@ -1646,9 +1650,11 @@ export type Database = {
           is_read?: boolean | null
           mentions?: string[] | null
           parent_id?: string | null
+          sent_via?: string | null
           thread_id?: string | null
           title?: string | null
           updated_at?: string | null
+          workspace_email_account_id?: string | null
           workspace_id?: string
         }
         Relationships: [
@@ -1657,6 +1663,13 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "communications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "communications_workspace_email_account_id_fkey"
+            columns: ["workspace_email_account_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_email_accounts"
             referencedColumns: ["id"]
           },
           {
@@ -12119,6 +12132,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "workspace_disciplines_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_email_accounts: {
+        Row: {
+          access_token: string | null
+          connected_by: string | null
+          created_at: string | null
+          display_name: string | null
+          email_type: string
+          gmail_email: string
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          refresh_token: string
+          token_expires_at: string | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          connected_by?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          email_type?: string
+          gmail_email: string
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          refresh_token: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          access_token?: string | null
+          connected_by?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          email_type?: string
+          gmail_email?: string
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          refresh_token?: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_email_accounts_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
