@@ -481,6 +481,26 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
     },
   });
 
+  // Delete email mutation
+  const deleteEmailMutation = useMutation({
+    mutationFn: async (emailId: string) => {
+      const { error } = await supabase
+        .from('crm_emails')
+        .delete()
+        .eq('id', emailId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Email supprimé');
+      queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (error: Error) => {
+      toast.error('Erreur lors de la suppression');
+      console.error(error);
+    },
+  });
+
   return {
     emails,
     threads,
@@ -491,5 +511,7 @@ export function useEntityEmails({ entityType, entityId, enabled = true }: UseEnt
     sendEmail: sendEmailMutation.mutateAsync,
     isSending: sendEmailMutation.isPending,
     markAsRead: markAsReadMutation.mutateAsync,
+    deleteEmail: deleteEmailMutation.mutateAsync,
+    isDeleting: deleteEmailMutation.isPending,
   };
 }

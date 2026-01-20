@@ -50,7 +50,7 @@ export function PipelineEntrySidebar({
   const entityId = isContact ? entry?.contact_id : entry?.company_id;
   const entity = entry?.contact || entry?.company;
   
-  const { emails, threads, stats, isLoading: emailsLoading, gmailConnected, markAsRead } = useEntityEmails({
+  const { emails, threads, stats, isLoading: emailsLoading, gmailConnected, markAsRead, deleteEmail } = useEntityEmails({
     entityType: entityType as any,
     entityId: entityId || '',
     enabled: open && !!entityId,
@@ -424,6 +424,7 @@ export function PipelineEntrySidebar({
                           onReply={handleReplyEmail}
                           onFollowUp={handleFollowUpEmail}
                           onMarkAsRead={markAsRead}
+                          onDelete={deleteEmail}
                         />
                       ))
                     }
