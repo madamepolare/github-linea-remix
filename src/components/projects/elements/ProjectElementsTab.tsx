@@ -1,15 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   AlertDialog,
@@ -21,14 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Plus,
-  Search,
-  LayoutGrid,
-  List,
-  FolderOpen,
-  Filter,
-} from "lucide-react";
+import { Plus, FolderOpen, Filter } from "lucide-react";
 import { useProjectElements, ProjectElement } from "@/hooks/useProjectElements";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ElementCard } from "./ElementCard";
@@ -39,6 +23,10 @@ import {
   ELEMENT_TYPE_CONFIG,
   ELEMENT_CATEGORIES,
 } from "@/lib/elementTypes";
+import { ContentFiltersBar } from "@/components/shared/ContentFiltersBar";
+import { ViewModeToggle } from "@/components/shared/filters";
+import { MultiSelectFilter } from "@/components/shared/filters/MultiSelectFilter";
+import { GridCardSkeleton } from "@/components/shared/CardListSkeleton";
 import { cn } from "@/lib/utils";
 
 interface ProjectElementsTabProps {
@@ -58,17 +46,30 @@ export function ProjectElementsTab({ projectId }: ProjectElementsTabProps) {
   const { isAtLeast } = usePermissions();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [selectedElement, setSelectedElement] = useState<ProjectElement | null>(
-    null
-  );
+  const [selectedElement, setSelectedElement] = useState<ProjectElement | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const canEdit = isAtLeast("member");
   const canDelete = isAtLeast("admin");
+
+  // Filter options
+  const typeOptions = useMemo(() => 
+    (Object.keys(ELEMENT_TYPE_CONFIG) as ElementType[]).map((type) => ({
+      id: type,
+      label: ELEMENT_TYPE_CONFIG[type].label,
+    })), 
+  []);
+
+  const categoryOptions = useMemo(() => 
+    ELEMENT_CATEGORIES.map((cat) => ({
+      id: cat.value,
+      label: cat.label,
+    })), 
+  []);
 
   const filteredElements = useMemo(() => {
     return elements.filter((element) => {
@@ -76,28 +77,24 @@ export function ProjectElementsTab({ projectId }: ProjectElementsTabProps) {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const matchesTitle = element.title.toLowerCase().includes(query);
-        const matchesDescription = element.description
-          ?.toLowerCase()
-          .includes(query);
-        const matchesTags = element.tags?.some((tag) =>
-          tag.toLowerCase().includes(query)
-        );
+        const matchesDescription = element.description?.toLowerCase().includes(query);
+        const matchesTags = element.tags?.some((tag) => tag.toLowerCase().includes(query));
         if (!matchesTitle && !matchesDescription && !matchesTags) return false;
       }
 
       // Type filter
-      if (typeFilter !== "all" && element.element_type !== typeFilter) {
+      if (selectedTypes.length > 0 && !selectedTypes.includes(element.element_type)) {
         return false;
       }
 
       // Category filter
-      if (categoryFilter !== "all" && element.category !== categoryFilter) {
+      if (selectedCategories.length > 0 && element.category && !selectedCategories.includes(element.category)) {
         return false;
       }
 
       return true;
     });
-  }, [elements, searchQuery, typeFilter, categoryFilter]);
+  }, [elements, searchQuery, selectedTypes, selectedCategories]);
 
   const pinnedElements = filteredElements.filter((e) => e.is_pinned);
   const unpinnedElements = filteredElements.filter((e) => !e.is_pinned);
@@ -121,97 +118,71 @@ export function ProjectElementsTab({ projectId }: ProjectElementsTabProps) {
     await togglePin.mutateAsync({ id, is_pinned: isPinned });
   };
 
+  const handleClearAllFilters = useCallback(() => {
+    setSearchQuery("");
+    setSelectedTypes([]);
+    setSelectedCategories([]);
+  }, []);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (selectedTypes.length > 0) count++;
+    if (selectedCategories.length > 0) count++;
+    return count;
+  }, [selectedTypes, selectedCategories]);
+
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-10 w-64" />
-          <Skeleton className="h-10 w-32" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
-        </div>
+        <GridCardSkeleton count={6} columns={3} />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex flex-1 gap-2 items-center w-full sm:w-auto">
-          <div className="relative flex-1 sm:max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+      {/* Unified Filter Bar */}
+      <ContentFiltersBar
+      viewToggle={
+          <ViewModeToggle
+            value={viewMode === "grid" ? "cards" : "table"}
+            onChange={(v) => setViewMode(v === "cards" ? "grid" : "list")}
+          />
+        }
+        search={{
+          value: searchQuery,
+          onChange: setSearchQuery,
+          placeholder: "Rechercher un élément...",
+        }}
+        filters={
+          <div className="flex items-center gap-2">
+            <MultiSelectFilter
+              icon={Filter}
+              label="Type"
+              options={typeOptions}
+              selected={selectedTypes}
+              onChange={setSelectedTypes}
+            />
+            <MultiSelectFilter
+              icon={FolderOpen}
+              label="Catégorie"
+              options={categoryOptions}
+              selected={selectedCategories}
+              onChange={setSelectedCategories}
             />
           </div>
-
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[140px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les types</SelectItem>
-              {(Object.keys(ELEMENT_TYPE_CONFIG) as ElementType[]).map(
-                (type) => (
-                  <SelectItem key={type} value={type}>
-                    {ELEMENT_TYPE_CONFIG[type].label}
-                  </SelectItem>
-                )
-              )}
-            </SelectContent>
-          </Select>
-
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Catégorie" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes</SelectItem>
-              {ELEMENT_CATEGORIES.map((cat) => (
-                <SelectItem key={cat.value} value={cat.value}>
-                  {cat.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex border rounded-lg overflow-hidden">
-            <Button
-              variant={viewMode === "grid" ? "default" : "ghost"}
-              size="icon"
-              className="rounded-none"
-              onClick={() => setViewMode("grid")}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="icon"
-              className="rounded-none"
-              onClick={() => setViewMode("list")}
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {canEdit && (
-            <Button onClick={() => setCreateDialogOpen(true)}>
+        }
+        actions={
+          canEdit && (
+            <Button onClick={() => setCreateDialogOpen(true)} size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Ajouter
             </Button>
-          )}
-        </div>
-      </div>
+          )
+        }
+        onClearAll={handleClearAllFilters}
+        activeFiltersCount={activeFiltersCount}
+      />
 
       {/* Stats */}
       <div className="flex gap-2 flex-wrap">
@@ -229,7 +200,7 @@ export function ProjectElementsTab({ projectId }: ProjectElementsTabProps) {
           icon={FolderOpen}
           title="Aucun élément"
           description={
-            searchQuery || typeFilter !== "all" || categoryFilter !== "all"
+            searchQuery || selectedTypes.length > 0 || selectedCategories.length > 0
               ? "Aucun élément ne correspond à vos critères de recherche."
               : "Ajoutez des éléments pour constituer votre base de connaissances projet."
           }
