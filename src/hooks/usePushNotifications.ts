@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
+type SendTestResult = { success: boolean; message?: string };
+
 interface PushNotificationState {
   isSupported: boolean;
   isSubscribed: boolean;
@@ -183,11 +185,50 @@ export function usePushNotifications() {
     }
   }, []);
 
+  const sendTestNotification = useCallback(async (): Promise<SendTestResult> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Utilisateur non connecté');
+        return { success: false, message: 'User not authenticated' };
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-push-notification', {
+        body: {
+          userId: user.id,
+          title: '🔔 Test de notification',
+          body: 'Si vous voyez ceci, les notifications push fonctionnent correctement !',
+          tag: 'test-notification',
+          url: '/settings'
+        }
+      });
+
+      if (error) {
+        console.error('Test notification error:', error);
+        toast.error('Erreur lors de l\'envoi de la notification test');
+        return { success: false, message: error.message };
+      }
+
+      if (data?.sent > 0) {
+        toast.success('Notification test envoyée !');
+        return { success: true };
+      } else {
+        toast.warning('Aucun appareil enregistré pour recevoir les notifications');
+        return { success: false, message: 'No subscriptions found' };
+      }
+    } catch (error) {
+      console.error('Test notification error:', error);
+      toast.error('Erreur lors de l\'envoi');
+      return { success: false, message: String(error) };
+    }
+  }, []);
+
   return {
     ...state,
     subscribe,
     unsubscribe,
-    checkExistingSubscription
+    checkExistingSubscription,
+    sendTestNotification
   };
 }
 
