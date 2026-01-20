@@ -6363,6 +6363,39 @@ export type Database = {
           },
         ]
       }
+      permissions: {
+        Row: {
+          category: string
+          code: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_system: boolean | null
+          name: string
+          sort_order: number | null
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          sort_order?: number | null
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
       permit_milestones: {
         Row: {
           completed_date: string | null
@@ -11993,6 +12026,47 @@ export type Database = {
           },
         ]
       }
+      workspace_role_permissions: {
+        Row: {
+          created_at: string | null
+          granted: boolean | null
+          granted_by: string | null
+          id: string
+          permission_code: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          granted?: boolean | null
+          granted_by?: string | null
+          id?: string
+          permission_code: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          granted?: boolean | null
+          granted_by?: string | null
+          id?: string
+          permission_code?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_role_permissions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_settings: {
         Row: {
           created_at: string | null
@@ -12341,6 +12415,14 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_role"]
       }
       get_user_workspace_ids: { Args: { _user_id: string }; Returns: string[] }
+      has_permission: {
+        Args: {
+          _permission_code: string
+          _user_id: string
+          _workspace_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
