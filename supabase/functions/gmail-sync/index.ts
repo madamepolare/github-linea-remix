@@ -125,14 +125,39 @@ serve(async (req) => {
     const authHeader = req.headers.get('authorization');
     let targetConnections: ConnectionToSync[] = [];
     let isUserTriggered = false;
+    let isCronJob = false;
 
-    // Determine if this is a user-triggered call or a cron/anonymous call
-    // Cron calls use the anon key in the Authorization header
-    if (authHeader) {
+    // Parse body to check for cron trigger signature
+    let body: any = {};
+    try {
+      const text = await req.text();
+      if (text) {
+        body = JSON.parse(text);
+      }
+    } catch {
+      // Empty or invalid body - that's fine
+    }
+
+    // Cron jobs include triggered_at in body OR use the anon key directly
+    if (body?.triggered_at) {
+      isCronJob = true;
+      console.log('Cron-triggered sync detected via body signature');
+    }
+
+    // Determine if this is a user-triggered call
+    // If we have an auth header and it's NOT a cron job, try to authenticate as user
+    if (authHeader && !isCronJob) {
       const token = authHeader.replace('Bearer ', '');
-      // If the token is NOT the anon key, it's a user JWT
-      if (token !== SUPABASE_ANON_KEY) {
-        isUserTriggered = true;
+      // Check if it looks like a user JWT (has 3 parts with ES256 header)
+      // Anon key is HS256, user JWTs are ES256
+      try {
+        const headerPart = token.split('.')[0];
+        const decoded = JSON.parse(atob(headerPart));
+        if (decoded.alg === 'ES256') {
+          isUserTriggered = true;
+        }
+      } catch {
+        // Not a valid JWT structure, treat as cron
       }
     }
 
@@ -144,61 +169,65 @@ serve(async (req) => {
 
       const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
       if (userError || !user) {
-        throw new Error('User not authenticated');
-      }
+        console.log('User auth failed, falling back to cron mode');
+        isCronJob = true;
+        isUserTriggered = false;
+      } else {
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('active_workspace_id')
+          .eq('user_id', user.id)
+          .single();
 
-      const { data: profile } = await supabaseAdmin
-        .from('profiles')
-        .select('active_workspace_id')
-        .eq('user_id', user.id)
-        .single();
+        if (!profile?.active_workspace_id) {
+          throw new Error('No active workspace');
+        }
 
-      if (!profile?.active_workspace_id) {
-        throw new Error('No active workspace');
-      }
+        const userWorkspaceId = profile.active_workspace_id;
 
-      const userWorkspaceId = profile.active_workspace_id;
+        // Get personal connection
+        const { data: personalConn } = await supabaseAdmin
+          .from('gmail_connections')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('workspace_id', userWorkspaceId)
+          .eq('is_active', true)
+          .single();
 
-      // Get personal connection
-      const { data: personalConn } = await supabaseAdmin
-        .from('gmail_connections')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('workspace_id', userWorkspaceId)
-        .eq('is_active', true)
-        .single();
-
-      if (personalConn) {
-        targetConnections.push({
-          ...personalConn,
-          is_workspace_account: false,
-        });
-      }
-
-      // Get workspace email accounts
-      const { data: workspaceAccounts } = await supabaseAdmin
-        .from('workspace_email_accounts')
-        .select('*')
-        .eq('workspace_id', userWorkspaceId)
-        .eq('is_active', true);
-
-      if (workspaceAccounts) {
-        for (const account of workspaceAccounts) {
+        if (personalConn) {
           targetConnections.push({
-            id: account.id,
-            refresh_token: account.refresh_token,
-            access_token: account.access_token,
-            token_expires_at: account.token_expires_at,
-            gmail_email: account.gmail_email,
-            workspace_id: account.workspace_id,
-            user_id: account.connected_by,
-            is_workspace_account: true,
-            history_id: account.history_id,
+            ...personalConn,
+            is_workspace_account: false,
           });
         }
+
+        // Get workspace email accounts
+        const { data: workspaceAccounts } = await supabaseAdmin
+          .from('workspace_email_accounts')
+          .select('*')
+          .eq('workspace_id', userWorkspaceId)
+          .eq('is_active', true);
+
+        if (workspaceAccounts) {
+          for (const account of workspaceAccounts) {
+            targetConnections.push({
+              id: account.id,
+              refresh_token: account.refresh_token,
+              access_token: account.access_token,
+              token_expires_at: account.token_expires_at,
+              gmail_email: account.gmail_email,
+              workspace_id: account.workspace_id,
+              user_id: account.connected_by,
+              is_workspace_account: true,
+              history_id: account.history_id,
+            });
+          }
+        }
       }
-    } else {
-      // Cron-triggered sync - sync all active workspace email accounts
+    }
+    
+    // Cron-triggered sync or fallback - sync all active workspace email accounts
+    if (isCronJob || (!isUserTriggered && targetConnections.length === 0)) {
       // We only sync workspace accounts via cron (not personal accounts) for privacy
       console.log('Cron-triggered sync: syncing all active workspace email accounts');
 
@@ -209,6 +238,7 @@ serve(async (req) => {
         .eq('is_active', true);
 
       if (workspaceAccounts) {
+        targetConnections = []; // Clear in case of fallback
         for (const account of workspaceAccounts) {
           targetConnections.push({
             id: account.id,
