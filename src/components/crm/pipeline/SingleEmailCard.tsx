@@ -6,10 +6,10 @@ import {
   CornerUpRight,
   Paperclip,
   ChevronDown,
-  ChevronUp,
   ArrowDownLeft,
   ArrowUpRight,
-  MessageSquareReply
+  MessageSquareReply,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,13 +22,15 @@ interface SingleEmailCardProps {
   onReply: (email: Email) => void;
   onFollowUp: (email: Email) => void;
   onMarkAsRead?: (emailId: string) => void;
+  onDelete?: (emailId: string) => void;
 }
 
 export function SingleEmailCard({ 
   email, 
   onReply, 
   onFollowUp,
-  onMarkAsRead 
+  onMarkAsRead,
+  onDelete
 }: SingleEmailCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isInbound = email.direction === 'inbound';
@@ -95,7 +97,7 @@ export function SingleEmailCard({
       onClick={handleExpand}
     >
       <div className="p-3 space-y-2">
-        {/* Top row: Direction + Reply indicator + Time */}
+        {/* Top row: Direction + Reply indicator + Time + Delete */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             {/* Direction badge */}
@@ -133,12 +135,29 @@ export function SingleEmailCard({
             )}
           </div>
           
-          <span className="text-[10px] text-muted-foreground shrink-0">
-            {emailDate 
-              ? formatDistanceToNow(new Date(emailDate), { addSuffix: true, locale: fr })
-              : ''
-            }
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-muted-foreground shrink-0">
+              {emailDate 
+                ? formatDistanceToNow(new Date(emailDate), { addSuffix: true, locale: fr })
+                : ''
+              }
+            </span>
+            
+            {/* Delete button */}
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(email.id);
+                }}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Sender + Subject row */}
