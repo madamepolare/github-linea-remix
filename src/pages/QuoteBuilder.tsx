@@ -59,8 +59,7 @@ import { ThemePreviewSelector } from '@/components/commercial/ThemePreviewSelect
 import { isArchitectureContractType, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
 import { getDefaultConditionsForType, serializeConditions } from '@/lib/contractConditionsUnified';
-import { downloadPixelPerfectPdf } from '@/lib/generatePixelPerfectPDF';
-import { generateQuoteHtml } from '@/lib/generateHtmlPDF';
+import { downloadChromiumPdf } from '@/lib/generateChromiumPDF';
 import { useQuoteThemes } from '@/hooks/useQuoteThemes';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
@@ -459,7 +458,7 @@ export default function QuoteBuilder() {
 
   const handleDownloadPDF = async () => {
     try {
-      toast.info('Génération du PDF en cours...');
+      toast.info('Génération du PDF vectoriel en cours...');
       
       // Get selected theme
       const selectedTheme = selectedThemeId 
@@ -487,13 +486,10 @@ export default function QuoteBuilder() {
       
       const filename = `Devis_${document.document_number || 'brouillon'}`;
       
-      // Generate the exact same HTML as the preview
-      const html = generateQuoteHtml(document, lines, agencyData, selectedTheme);
+      // Download vector PDF via Chromium (Browserless)
+      await downloadChromiumPdf(document, lines, agencyData, selectedTheme, filename);
       
-      // Capture pixel-perfect and export to PDF
-      await downloadPixelPerfectPdf(html, filename);
-      
-      toast.success('PDF téléchargé');
+      toast.success('PDF vectoriel téléchargé');
     } catch (err) {
       console.error('Error downloading PDF:', err);
       toast.error('Erreur lors du téléchargement du PDF');
