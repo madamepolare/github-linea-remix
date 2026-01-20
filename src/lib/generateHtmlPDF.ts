@@ -921,3 +921,102 @@ export function printQuoteHtml(
     }, 300);
   };
 }
+
+/**
+ * Télécharge le devis en PDF directement (sans boîte de dialogue d'impression)
+ * Utilise html2canvas + jsPDF pour un rendu fidèle
+ */
+export async function downloadQuotePdf(
+  document: Partial<QuoteDocument>,
+  lines: QuoteLine[],
+  agencyInfo: AgencyInfo | null,
+  theme?: QuoteTheme,
+  filename?: string
+): Promise<void> {
+  const { default: html2canvas } = await import('html2canvas');
+  const { jsPDF } = await import('jspdf');
+  
+  const html = generateQuoteHtml(document, lines, agencyInfo, theme);
+  
+  // Create a hidden container for rendering
+  const container = window.document.createElement('div');
+  container.style.cssText = `
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    width: 794px;
+    height: auto;
+    background: white;
+    z-index: -1;
+  `;
+  window.document.body.appendChild(container);
+  
+  // Create iframe for isolated rendering
+  const iframe = window.document.createElement('iframe');
+  iframe.style.cssText = `
+    width: 794px;
+    height: 1123px;
+    border: none;
+    background: white;
+  `;
+  container.appendChild(iframe);
+  
+  // Write HTML to iframe
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!iframeDoc) {
+    container.remove();
+    throw new Error('Impossible de créer le document PDF');
+  }
+  
+  iframeDoc.open();
+  iframeDoc.write(html);
+  iframeDoc.close();
+  
+  // Wait for images and fonts to load
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  try {
+    // Render to canvas
+    const canvas = await html2canvas(iframeDoc.body, {
+      scale: 2, // Higher quality
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      width: 794,
+      windowWidth: 794,
+      logging: false,
+    });
+    
+    // Create PDF (A4 dimensions in mm)
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+    
+    const imgData = canvas.toDataURL('image/png', 1.0);
+    const pdfWidth = 210; // A4 width in mm
+    const pdfHeight = 297; // A4 height in mm
+    
+    // Calculate image dimensions to fit A4
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const ratio = Math.min(pdfWidth / (imgWidth / 2), pdfHeight / (imgHeight / 2));
+    
+    const finalWidth = (imgWidth / 2) * ratio;
+    const finalHeight = (imgHeight / 2) * ratio;
+    
+    // Center the image on the page
+    const xOffset = (pdfWidth - finalWidth) / 2;
+    
+    pdf.addImage(imgData, 'PNG', xOffset, 0, finalWidth, finalHeight);
+    
+    // Download PDF
+    const pdfFilename = filename || `Devis ${document.document_number || 'brouillon'}`;
+    pdf.save(`${pdfFilename}.pdf`);
+    
+  } finally {
+    // Cleanup
+    container.remove();
+  }
+}
