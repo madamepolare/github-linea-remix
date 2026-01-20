@@ -20,16 +20,29 @@ interface GmailMessage {
   internalDate?: string;
 }
 
-async function refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
-  const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
-  const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
+interface ConnectionToSync {
+  id: string;
+  refresh_token: string;
+  access_token: string;
+  token_expires_at: string;
+  gmail_email: string;
+  workspace_id: string;
+  user_id?: string;
+  is_workspace_account: boolean;
+  history_id?: number;
+}
 
+async function refreshAccessToken(
+  refreshToken: string, 
+  clientId: string, 
+  clientSecret: string
+): Promise<{ access_token: string; expires_in: number }> {
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID!,
-      client_secret: GOOGLE_CLIENT_SECRET!,
+      client_id: clientId,
+      client_secret: clientSecret,
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
     }),
@@ -99,12 +112,18 @@ serve(async (req) => {
 
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
+  const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
+  const WORKSPACE_GOOGLE_CLIENT_ID = Deno.env.get('WORKSPACE_GOOGLE_CLIENT_ID');
+  const WORKSPACE_GOOGLE_CLIENT_SECRET = Deno.env.get('WORKSPACE_GOOGLE_CLIENT_SECRET');
+  
   const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
     // Check if this is a user-triggered sync or cron
     const authHeader = req.headers.get('authorization');
-    let targetConnections: any[] = [];
+    let targetConnections: ConnectionToSync[] = [];
+    let userWorkspaceId: string | null = null;
 
     if (authHeader && !authHeader.includes(Deno.env.get('SUPABASE_ANON_KEY')!)) {
       // User-triggered sync
@@ -127,45 +146,116 @@ serve(async (req) => {
         throw new Error('No active workspace');
       }
 
-      const { data: connection } = await supabaseAdmin
+      userWorkspaceId = profile.active_workspace_id;
+
+      // Get personal connection
+      const { data: personalConn } = await supabaseAdmin
         .from('gmail_connections')
         .select('*')
         .eq('user_id', user.id)
-        .eq('workspace_id', profile.active_workspace_id)
+        .eq('workspace_id', userWorkspaceId)
         .eq('is_active', true)
         .single();
 
-      if (connection) {
-        targetConnections = [connection];
+      if (personalConn) {
+        targetConnections.push({
+          ...personalConn,
+          is_workspace_account: false,
+        });
+      }
+
+      // Get workspace email accounts
+      const { data: workspaceAccounts } = await supabaseAdmin
+        .from('workspace_email_accounts')
+        .select('*')
+        .eq('workspace_id', userWorkspaceId)
+        .eq('is_active', true);
+
+      if (workspaceAccounts) {
+        for (const account of workspaceAccounts) {
+          targetConnections.push({
+            id: account.id,
+            refresh_token: account.refresh_token,
+            access_token: account.access_token,
+            token_expires_at: account.token_expires_at,
+            gmail_email: account.gmail_email,
+            workspace_id: account.workspace_id,
+            user_id: account.connected_by,
+            is_workspace_account: true,
+            history_id: account.history_id,
+          });
+        }
       }
     } else {
       // Cron-triggered sync - sync all active connections
-      const { data: connections } = await supabaseAdmin
+      
+      // Personal connections
+      const { data: personalConns } = await supabaseAdmin
         .from('gmail_connections')
         .select('*')
         .eq('is_active', true);
 
-      targetConnections = connections || [];
+      if (personalConns) {
+        for (const conn of personalConns) {
+          targetConnections.push({
+            ...conn,
+            is_workspace_account: false,
+          });
+        }
+      }
+
+      // Workspace email accounts
+      const { data: workspaceAccounts } = await supabaseAdmin
+        .from('workspace_email_accounts')
+        .select('*')
+        .eq('is_active', true);
+
+      if (workspaceAccounts) {
+        for (const account of workspaceAccounts) {
+          targetConnections.push({
+            id: account.id,
+            refresh_token: account.refresh_token,
+            access_token: account.access_token,
+            token_expires_at: account.token_expires_at,
+            gmail_email: account.gmail_email,
+            workspace_id: account.workspace_id,
+            user_id: account.connected_by,
+            is_workspace_account: true,
+            history_id: account.history_id,
+          });
+        }
+      }
     }
 
-    console.log(`Syncing ${targetConnections.length} Gmail connection(s)`);
+    console.log(`Syncing ${targetConnections.length} Gmail connection(s) (${targetConnections.filter(c => c.is_workspace_account).length} workspace accounts)`);
 
     let totalSynced = 0;
     let errors: string[] = [];
 
     for (const connection of targetConnections) {
       try {
+        // Select correct OAuth credentials based on account type
+        const clientId = connection.is_workspace_account ? WORKSPACE_GOOGLE_CLIENT_ID : GOOGLE_CLIENT_ID;
+        const clientSecret = connection.is_workspace_account ? WORKSPACE_GOOGLE_CLIENT_SECRET : GOOGLE_CLIENT_SECRET;
+
+        if (!clientId || !clientSecret) {
+          console.log(`Skipping ${connection.gmail_email}: missing OAuth credentials for ${connection.is_workspace_account ? 'workspace' : 'personal'} account`);
+          continue;
+        }
+
         // Refresh token if needed
         let accessToken = connection.access_token;
         const tokenExpiry = new Date(connection.token_expires_at);
 
         if (tokenExpiry <= new Date(Date.now() + 60000)) {
           console.log(`Refreshing token for ${connection.gmail_email}`);
-          const newTokens = await refreshAccessToken(connection.refresh_token);
+          const newTokens = await refreshAccessToken(connection.refresh_token, clientId, clientSecret);
           accessToken = newTokens.access_token;
 
+          // Update token in correct table
+          const tableName = connection.is_workspace_account ? 'workspace_email_accounts' : 'gmail_connections';
           await supabaseAdmin
-            .from('gmail_connections')
+            .from(tableName)
             .update({
               access_token: newTokens.access_token,
               token_expires_at: new Date(Date.now() + newTokens.expires_in * 1000).toISOString(),
@@ -181,8 +271,19 @@ serve(async (req) => {
           .eq('workspace_id', connection.workspace_id)
           .not('email', 'is', null);
 
+        // Also get known companies
+        const { data: companies } = await supabaseAdmin
+          .from('crm_companies')
+          .select('id, email')
+          .eq('workspace_id', connection.workspace_id)
+          .not('email', 'is', null);
+
         const contactsByEmail = new Map(
           (contacts || []).map(c => [c.email?.toLowerCase(), c])
+        );
+
+        const companiesByEmail = new Map(
+          (companies || []).map(c => [c.email?.toLowerCase(), { id: c.id }])
         );
 
         // Fetch recent messages from Gmail (last 50)
@@ -234,7 +335,6 @@ serve(async (req) => {
             const from = getHeader(headers, 'From');
             const to = getHeader(headers, 'To');
             const subject = getHeader(headers, 'Subject');
-            const date = getHeader(headers, 'Date');
             const cc = getHeader(headers, 'Cc');
 
             const fromEmail = extractEmail(from);
@@ -245,8 +345,9 @@ serve(async (req) => {
             const isInbound = toEmail === connection.gmail_email.toLowerCase();
             const otherEmail = isInbound ? fromEmail : toEmail;
 
-            // Try to match to a contact
+            // Try to match to a contact or company
             const matchedContact = contactsByEmail.get(otherEmail);
+            const matchedCompany = companiesByEmail.get(otherEmail);
 
             const emailRecord = {
               workspace_id: connection.workspace_id,
@@ -264,9 +365,11 @@ serve(async (req) => {
               labels: message.labelIds || [],
               synced_from_gmail: true,
               contact_id: matchedContact?.id || null,
-              company_id: matchedContact?.crm_company_id || null,
+              company_id: matchedContact?.crm_company_id || matchedCompany?.id || null,
               cc: cc ? cc.split(',').map(e => extractEmail(e.trim())) : null,
-              created_by: connection.user_id,
+              created_by: connection.user_id || null,
+              workspace_email_account_id: connection.is_workspace_account ? connection.id : null,
+              sent_via: connection.is_workspace_account ? 'workspace' : 'personal',
             };
 
             const { error: insertError } = await supabaseAdmin
@@ -285,8 +388,9 @@ serve(async (req) => {
 
         // Update history_id for incremental sync
         if (listResult.historyId) {
+          const tableName = connection.is_workspace_account ? 'workspace_email_accounts' : 'gmail_connections';
           await supabaseAdmin
-            .from('gmail_connections')
+            .from(tableName)
             .update({ history_id: parseInt(listResult.historyId) })
             .eq('id', connection.id);
         }
