@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Check, ChevronDown, ChevronUp, Download, ExternalLink, FileText, Image as ImageIcon, MessageSquare, MoreHorizontal, Pencil, Reply, Send, Smile, Trash2, X } from "lucide-react";
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { renderContentWithMentions, MentionInput } from "@/components/shared/MentionInput";
 import { useWorkspaceProfiles } from "@/hooks/useWorkspaceProfiles";
 import { motion, AnimatePresence } from "framer-motion";
+import { Input } from "@/components/ui/input";
 
 interface Attachment {
   url: string;
@@ -51,9 +52,13 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
   const [isThreadExpanded, setIsThreadExpanded] = useState(false);
-  const [showInlineReplyInput, setShowInlineReplyInput] = useState(false);
   const [inlineReplyContent, setInlineReplyContent] = useState("");
-  const [inlineReplyMentions, setInlineReplyMentions] = useState<string[]>([]);
+  const replyInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch thread messages when expanded
+  const { data: threadMessages, isLoading: isLoadingThread } = useThreadMessages(
+    isThreadExpanded ? message.id : null
+  );
 
   const isOwn = message.created_by === user?.id;
   const showActions = isHovered || isDropdownOpen;
@@ -273,6 +278,80 @@ export function MessageItem({ message, showAuthor, onOpenThread, isThreadMessage
               {message.reply_count} réponse{message.reply_count > 1 ? "s" : ""}
             </button>
           )}
+
+          {/* Inline Thread Replies */}
+          <AnimatePresence>
+            {isThreadExpanded && !isThreadMessage && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="mt-3 ml-2 pl-3 border-l-2 border-primary/20 space-y-2"
+              >
+                {isLoadingThread ? (
+                  <div className="flex items-center gap-2 py-2">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span className="text-xs text-muted-foreground">Chargement...</span>
+                  </div>
+                ) : (
+                  <>
+                    {threadMessages?.map((reply) => (
+                      <div key={reply.id} className="flex gap-2 py-1">
+                        <Avatar className="h-6 w-6 shrink-0">
+                          <AvatarImage src={reply.author?.avatar_url || undefined} />
+                          <AvatarFallback className="text-[10px]">
+                            {getInitials(reply.author?.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="font-medium text-xs">{reply.author?.full_name || "Utilisateur"}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {format(new Date(reply.created_at), "HH:mm", { locale: fr })}
+                            </span>
+                          </div>
+                          <p className="text-sm break-words">{renderContentWithMentions(reply.content, profiles)}</p>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Inline Reply Input */}
+                    <form
+                      className="flex items-center gap-2 mt-2"
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!inlineReplyContent.trim()) return;
+                        await createMessage.mutateAsync({
+                          channel_id: message.channel_id,
+                          content: inlineReplyContent,
+                          mentions: [],
+                          parent_id: message.id,
+                        });
+                        setInlineReplyContent("");
+                      }}
+                    >
+                      <Input
+                        ref={replyInputRef}
+                        value={inlineReplyContent}
+                        onChange={(e) => setInlineReplyContent(e.target.value)}
+                        placeholder="Répondre..."
+                        className="flex-1 h-8 text-sm"
+                      />
+                      <Button
+                        type="submit"
+                        size="icon-sm"
+                        disabled={!inlineReplyContent.trim() || createMessage.isPending}
+                        className="h-8 w-8 rounded-full"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                      </Button>
+                    </form>
+                  </>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Desktop Actions (hover) */}
