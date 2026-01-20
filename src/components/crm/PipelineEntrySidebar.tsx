@@ -413,7 +413,7 @@ export function PipelineEntrySidebar({
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-3 pb-4 pr-1">
+                  <div className="space-y-2 pb-4">
                     {/* Display emails reverse chronologically (newest first) */}
                     {[...emails]
                       .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
