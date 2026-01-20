@@ -4,17 +4,34 @@ import { cn } from "@/lib/utils";
 import { RoadmapItem, ROADMAP_STATUSES } from "@/hooks/useRoadmap";
 import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { Link } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface RoadmapItemCardProps {
   item: RoadmapItem;
   onVote?: (itemId: string, remove: boolean) => void;
+  onStatusChange?: (itemId: string, status: RoadmapItem['status']) => void;
   showVotes?: boolean;
   onClick?: () => void;
   feedbackCount?: number;
 }
 
-export function RoadmapItemCard({ item, onVote, showVotes = true, onClick, feedbackCount = 0 }: RoadmapItemCardProps) {
+export function RoadmapItemCard({ 
+  item, 
+  onVote, 
+  onStatusChange,
+  showVotes = true, 
+  onClick, 
+  feedbackCount = 0 
+}: RoadmapItemCardProps) {
   const statusConfig = ROADMAP_STATUSES.find(s => s.value === item.status);
+  const { isAdmin, isOwner } = usePermissions();
+  const canChangeStatus = (isAdmin || isOwner) && onStatusChange && !item.id.startsWith('static-');
 
   const getModuleHref = () => {
     if (!item.module_slug) return null;
@@ -41,6 +58,12 @@ export function RoadmapItemCard({ item, onVote, showVotes = true, onClick, feedb
   };
 
   const href = getModuleHref();
+
+  const StatusBadge = () => (
+    <Badge className={cn("shrink-0 text-xs", statusConfig?.color)}>
+      {statusConfig?.label}
+    </Badge>
+  );
 
   return (
     <div 
@@ -106,9 +129,37 @@ export function RoadmapItemCard({ item, onVote, showVotes = true, onClick, feedb
               </Link>
             )}
           </div>
-          <Badge className={cn("shrink-0 text-xs", statusConfig?.color)}>
-            {statusConfig?.label}
-          </Badge>
+          
+          {canChangeStatus ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <button className="focus:outline-none">
+                  <StatusBadge />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-popover">
+                {ROADMAP_STATUSES.map((status) => (
+                  <DropdownMenuItem
+                    key={status.value}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStatusChange(item.id, status.value as RoadmapItem['status']);
+                    }}
+                    className={cn(
+                      "cursor-pointer",
+                      item.status === status.value && "bg-accent"
+                    )}
+                  >
+                    <span className={cn("px-2 py-0.5 rounded text-xs", status.color)}>
+                      {status.label}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <StatusBadge />
+          )}
         </div>
         {item.description && (
           <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{item.description}</p>
