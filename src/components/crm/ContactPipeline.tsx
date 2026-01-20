@@ -1,45 +1,19 @@
 import { useState, useMemo } from "react";
-import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  Building2, 
-  User, 
   Mail, 
-  Phone, 
   Plus, 
-  MoreHorizontal,
-  Calendar,
-  Send,
-  AlertTriangle,
-  Clock,
-  CheckCircle,
   Users
 } from "lucide-react";
 import { Pipeline, PipelineStage } from "@/hooks/useCRMPipelines";
 import { useContactPipeline, PipelineEntry } from "@/hooks/useContactPipeline";
-import { usePipelineActions } from "@/hooks/usePipelineActions";
-import { useAuth } from "@/contexts/AuthContext";
 import { PipelineEmailModal } from "./PipelineEmailModal";
 import { BulkAddToPipelineDialog } from "./BulkAddToPipelineDialog";
 import { BulkEmailDialog } from "./BulkEmailDialog";
 import { PipelineEntrySidebar } from "./PipelineEntrySidebar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { format, differenceInHours, isPast, isToday } from "date-fns";
-import { fr } from "date-fns/locale";
+import { KanbanBoard, KanbanColumn } from "@/components/shared/KanbanBoard";
+import { PipelineEntryKanbanCard } from "./pipeline/PipelineEntryKanbanCard";
 import { cn } from "@/lib/utils";
 
 export interface ContactPipelineProps {
@@ -57,25 +31,29 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
   const [sidebarEntry, setSidebarEntry] = useState<PipelineEntry | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Group entries by stage
-  const entriesByStage = useMemo(() => {
-    const grouped: Record<string, PipelineEntry[]> = {};
-    pipeline.stages.forEach((stage) => {
-      grouped[stage.id] = entries.filter((e) => e.stage_id === stage.id);
-    });
-    return grouped;
+  // Build Kanban columns from pipeline stages
+  const kanbanColumns: KanbanColumn<PipelineEntry>[] = useMemo(() => {
+    return pipeline.stages.map((stage) => ({
+      id: stage.id,
+      label: stage.name,
+      color: stage.color || "#6B7280",
+      items: entries.filter((e) => e.stage_id === stage.id),
+      metadata: stage.requires_email_on_enter ? (
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Mail className="h-3 w-3" />
+          <span>Email requis</span>
+        </div>
+      ) : undefined,
+    }));
   }, [entries, pipeline.stages]);
 
-  const handleDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
+  const handleDrop = (entryId: string, fromStageId: string, toStageId: string) => {
+    if (fromStageId === toStageId) return;
 
-    const entryId = result.draggableId;
-    const newStageId = result.destination.droppableId;
     const entry = entries.find((e) => e.id === entryId);
-    
-    if (!entry || entry.stage_id === newStageId) return;
+    if (!entry) return;
 
-    const newStage = pipeline.stages.find((s) => s.id === newStageId);
+    const newStage = pipeline.stages.find((s) => s.id === toStageId);
     
     if (newStage?.requires_email_on_enter) {
       // Open email modal
@@ -84,7 +62,7 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
       setEmailModalOpen(true);
     } else {
       // Move directly
-      moveEntry.mutate({ entryId, newStageId });
+      moveEntry.mutate({ entryId, newStageId: toStageId });
     }
   };
 
@@ -105,19 +83,6 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
     setSelectedEntry(null);
     setTargetStage(null);
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="flex-shrink-0 w-72">
-            <Skeleton className="h-8 w-full mb-2" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-        ))}
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4">
@@ -150,73 +115,28 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
         </div>
       </div>
 
-      {/* Kanban Board */}
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <div className={`flex gap-4 overflow-x-auto pb-4 ${kanbanHeightClass}`}>
-          {pipeline.stages.map((stage) => (
-            <div key={stage.id} className="flex-shrink-0 w-72">
-              {/* Stage Header */}
-              <div className="flex items-center gap-2 mb-3 px-1">
-                <div
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: stage.color || "#6B7280" }}
-                />
-                <span className="font-medium text-sm">{stage.name}</span>
-                <Badge variant="outline" className="text-xs ml-auto">
-                  {entriesByStage[stage.id]?.length || 0}
-                </Badge>
-                {stage.requires_email_on_enter && (
-                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                )}
-              </div>
-
-              {/* Stage Column */}
-              <Droppable droppableId={stage.id}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`min-h-[200px] p-2 rounded-lg border border-dashed transition-colors ${
-                      snapshot.isDraggingOver
-                        ? "bg-accent/50 border-primary"
-                        : "bg-muted/30 border-border"
-                    }`}
-                  >
-                    {entriesByStage[stage.id]?.map((entry, index) => (
-                      <Draggable
-                        key={entry.id}
-                        draggableId={entry.id}
-                        index={index}
-                      >
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={`mb-2 ${
-                              snapshot.isDragging ? "rotate-2" : ""
-                            }`}
-                          >
-                            <EntryCard
-                              entry={entry}
-                              onRemove={() => removeEntry.mutate(entry.id)}
-                              onClick={() => {
-                                setSidebarEntry(entry);
-                                setSidebarOpen(true);
-                              }}
-                            />
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </div>
-          ))}
-        </div>
-      </DragDropContext>
+      {/* Kanban Board using shared component */}
+      <div className={cn("overflow-hidden", kanbanHeightClass)}>
+        <KanbanBoard<PipelineEntry>
+          columns={kanbanColumns}
+          isLoading={isLoading}
+          onDrop={handleDrop}
+          getItemId={(entry) => entry.id}
+          renderCard={(entry, isDragging) => (
+            <PipelineEntryKanbanCard
+              entry={entry}
+              onClick={() => {
+                setSidebarEntry(entry);
+                setSidebarOpen(true);
+              }}
+              onRemove={() => removeEntry.mutate(entry.id)}
+              isDragging={isDragging}
+            />
+          )}
+          emptyColumnContent="Aucune entrée"
+          className="h-full px-0"
+        />
+      </div>
 
       {/* Email Modal */}
       <PipelineEmailModal
@@ -256,229 +176,5 @@ export function ContactPipeline({ pipeline, kanbanHeightClass = "h-[600px]" }: C
         }}
       />
     </div>
-  );
-}
-
-// Entry Card Component with action alerts and email reply badges
-function EntryCard({
-  entry,
-  onRemove,
-  onClick,
-}: {
-  entry: PipelineEntry;
-  onRemove: () => void;
-  onClick: () => void;
-}) {
-  const { activeWorkspace } = useAuth();
-  const { actions, pendingCount, overdueCount } = usePipelineActions(entry.id, activeWorkspace?.id);
-  
-  const isContact = !!entry.contact;
-  const entity = entry.contact || entry.company;
-  const name = entity?.name || "Sans nom";
-  const email = isContact ? entry.contact?.email : entry.company?.email;
-
-  // Check for urgent upcoming action (within 24h)
-  const urgentAction = actions.find(a => {
-    if (a.status !== 'pending' || !a.due_date) return false;
-    const hoursUntil = differenceInHours(new Date(a.due_date), new Date());
-    return hoursUntil > 0 && hoursUntil <= 24;
-  });
-
-  // Determine alert state
-  const hasOverdue = overdueCount > 0;
-  const hasNoActions = pendingCount === 0;
-  const hasUrgent = !!urgentAction && !hasOverdue;
-  
-  // Email reply indicators
-  const hasUnreadReplies = (entry.unread_replies_count || 0) > 0;
-  const isAwaitingResponse = entry.awaiting_response && !hasUnreadReplies;
-  const hasReplied = !!entry.last_inbound_email_at && !hasUnreadReplies;
-  
-  // Calculate days since last email sent (for awaiting response indicator)
-  const daysSinceEmail = entry.last_email_sent_at 
-    ? Math.floor((Date.now() - new Date(entry.last_email_sent_at).getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
-
-  return (
-    <Card 
-      className={cn(
-        "shadow-sm hover:shadow-md transition-shadow cursor-pointer",
-        hasUnreadReplies && "border-green-500 border-l-4 bg-green-50/30 dark:bg-green-950/20",
-        hasReplied && "border-green-500 border-l-4",
-        !hasUnreadReplies && !hasReplied && hasOverdue && "border-red-500 border-l-4",
-        !hasUnreadReplies && !hasReplied && !hasOverdue && hasNoActions && "border-amber-500 border-l-4",
-        !hasUnreadReplies && !hasReplied && !hasOverdue && !hasNoActions && hasUrgent && "border-orange-500 border-l-4"
-      )} 
-      onClick={onClick}
-    >
-      <CardContent className="p-3">
-        <div className="flex items-start gap-3">
-          <Avatar className="h-9 w-9">
-            <AvatarImage src={isContact ? entry.contact?.avatar_url : entry.company?.logo_url} />
-            <AvatarFallback className="text-xs">
-              {name.slice(0, 2).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1">
-              {isContact ? (
-                <User className="h-3 w-3 text-muted-foreground" />
-              ) : (
-                <Building2 className="h-3 w-3 text-muted-foreground" />
-              )}
-              <span className="font-medium text-sm truncate">{name}</span>
-            </div>
-            
-            {/* Company for contacts */}
-            {isContact && entry.company && (
-              <p className="text-xs text-muted-foreground truncate">
-                {entry.company.name}
-              </p>
-            )}
-            
-            {/* Email */}
-            {email && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                <Mail className="h-3 w-3" />
-                <span className="truncate">{email}</span>
-              </div>
-            )}
-            
-            {/* Last email sent */}
-            {entry.last_email_sent_at && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                <Send className="h-3 w-3" />
-                <span>
-                  {format(new Date(entry.last_email_sent_at), "dd MMM", { locale: fr })}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Alert and email indicators */}
-          <div className="flex flex-col items-end gap-1">
-            {/* Unread replies badge - highest priority */}
-            {hasUnreadReplies && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge className="h-5 px-1.5 gap-0.5 bg-green-600 hover:bg-green-700 animate-pulse">
-                    <Mail className="h-3 w-3" />
-                    <span className="text-[10px]">{entry.unread_replies_count}</span>
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {entry.unread_replies_count} réponse{(entry.unread_replies_count || 0) > 1 ? 's' : ''} non lue{(entry.unread_replies_count || 0) > 1 ? 's' : ''}
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {/* Awaiting response badge */}
-            {isAwaitingResponse && daysSinceEmail > 0 && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="outline" className="h-5 px-1.5 gap-0.5 border-blue-500 text-blue-600">
-                    <Clock className="h-3 w-3" />
-                    <span className="text-[10px]">{daysSinceEmail}j</span>
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  En attente de réponse depuis {daysSinceEmail} jour{daysSinceEmail > 1 ? 's' : ''}
-                </TooltipContent>
-              </Tooltip>
-            )}
-            
-            {hasOverdue && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="destructive" className="h-5 px-1.5 gap-0.5">
-                    <AlertTriangle className="h-3 w-3" />
-                    <span className="text-[10px]">{overdueCount}</span>
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {overdueCount} action{overdueCount > 1 ? 's' : ''} en retard
-                </TooltipContent>
-              </Tooltip>
-            )}
-            
-            {hasNoActions && !hasOverdue && !hasUnreadReplies && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="outline" className="h-5 px-1.5 border-amber-500 text-amber-600">
-                    <Clock className="h-3 w-3" />
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Aucune action planifiée
-                </TooltipContent>
-              </Tooltip>
-            )}
-            
-            {hasUrgent && !hasOverdue && !hasNoActions && !hasUnreadReplies && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="outline" className="h-5 px-1.5 border-orange-500 text-orange-600">
-                    <AlertTriangle className="h-3 w-3" />
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Action urgente aujourd'hui
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            {pendingCount > 0 && !hasOverdue && !hasUrgent && !hasUnreadReplies && (
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="outline" className="h-5 px-1.5 text-green-600 border-green-500">
-                    <CheckCircle className="h-3 w-3" />
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {pendingCount} action{pendingCount > 1 ? 's' : ''} planifiée{pendingCount > 1 ? 's' : ''}
-                </TooltipContent>
-              </Tooltip>
-            )}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemove();
-                  }}
-                >
-                  Retirer du pipeline
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        
-        {/* Notes preview */}
-        {entry.notes && (
-          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-            {entry.notes}
-          </p>
-        )}
-        
-        {/* Entry date */}
-        {entry.entered_at && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
-            <Calendar className="h-3 w-3" />
-            <span>
-              Entré le {format(new Date(entry.entered_at), "dd MMM yyyy", { locale: fr })}
-            </span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
   );
 }
