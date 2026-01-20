@@ -7,10 +7,10 @@ import { ContactFormDialog } from "./ContactFormDialog";
 import { CompanyFormDialog } from "./CompanyFormDialog";
 import { CRMDataQualityManager } from "./CRMDataQualityManager";
 import { CRMAddDropdown } from "./CRMAddDropdown";
-import { ModuleFiltersBar } from "@/components/shared/ModuleFiltersBar";
+import { ContentFiltersBar } from "@/components/shared/ContentFiltersBar";
+import { ViewModeToggle } from "@/components/shared/filters";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Select,
   SelectContent,
@@ -19,11 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Target,
-  LayoutGrid,
-  List,
-} from "lucide-react";
+import { Target } from "lucide-react";
 
 interface CRMProspectionViewProps {
   searchQuery?: string;
@@ -94,8 +90,14 @@ export function CRMProspectionView({ searchQuery = "" }: CRMProspectionViewProps
 
   // Filters for the filter bar
   const filters = (
-    <div className="flex items-center gap-2">
+    <>
       {pipelineSelector}
+    </>
+  );
+
+  // Actions on the right
+  const actions = (
+    <div className="flex items-center gap-2">
       <CRMAddDropdown
         onCreateContact={() => setCreateContactOpen(true)}
         onCreateCompany={() => setCreateCompanyOpen(true)}
@@ -105,29 +107,13 @@ export function CRMProspectionView({ searchQuery = "" }: CRMProspectionViewProps
     </div>
   );
 
-  // View toggle
+  // View toggle using new component
   const viewToggle = (
-    <ToggleGroup
-      type="single"
-      value={viewMode}
-      onValueChange={(value) => value && setViewMode(value as "pipeline" | "list")}
-      className="border rounded-lg p-0.5"
-    >
-      <ToggleGroupItem
-        value="pipeline"
-        aria-label="Vue pipeline"
-        className="h-8 w-8 p-0 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-      >
-        <LayoutGrid className="h-4 w-4" />
-      </ToggleGroupItem>
-      <ToggleGroupItem
-        value="list"
-        aria-label="Vue liste"
-        className="h-8 w-8 p-0 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-      >
-        <List className="h-4 w-4" />
-      </ToggleGroupItem>
-    </ToggleGroup>
+    <ViewModeToggle
+      value={viewMode === "pipeline" ? "pipeline" : "list"}
+      onChange={(v) => setViewMode(v === "pipeline" ? "pipeline" : "list")}
+      variant="kanban"
+    />
   );
 
   const renderContent = () => {
@@ -174,10 +160,11 @@ export function CRMProspectionView({ searchQuery = "" }: CRMProspectionViewProps
   return (
     <>
       <div className="space-y-4">
-        <ModuleFiltersBar
+        <ContentFiltersBar
           viewToggle={viewToggle}
           search={{ value: search, onChange: setSearch, placeholder: "Rechercher dans le pipeline..." }}
           filters={filters}
+          actions={actions}
         />
 
         {renderContent()}

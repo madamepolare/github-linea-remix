@@ -30,8 +30,6 @@ import {
   Building2,
   ExternalLink,
   ArrowUpDown,
-  LayoutGrid,
-  LayoutList,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -50,6 +48,8 @@ import { AutoCategorizeHelper } from "./AutoCategorizeHelper";
 import { useContactPipelineEntries } from "@/hooks/useContactPipelineEntries";
 import { PipelineBadges } from "./PipelineBadges";
 import { CompanyMobileCard } from "./shared/CRMMobileCards";
+import { ContentFiltersBar } from "@/components/shared/ContentFiltersBar";
+import { ViewModeToggle, AlphabetFilter } from "@/components/shared/filters";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
@@ -208,72 +208,57 @@ export function CRMCompanyTable({ category = "all", search = "", onCreateCompany
   return (
     <>
       <div className="space-y-3">
-        {/* Filters */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
+        {/* Unified Filter Bar */}
+        <ContentFiltersBar
+          viewToggle={
+            <div className="hidden md:block">
+              <ViewModeToggle
+                value={effectiveViewMode}
+                onChange={(v) => setViewMode(v as "table" | "cards")}
+              />
+            </div>
+          }
+          search={{
+            value: searchQuery,
+            onChange: setSearchQuery,
+            placeholder: "Rechercher une entreprise...",
+          }}
+          filters={
             <CRMQuickFilters
-              search={searchQuery}
-              onSearchChange={setSearchQuery}
               categories={categoryChips}
               selectedCategory={selectedCategory}
               onCategoryChange={setSelectedCategory}
-              placeholder="Rechercher une entreprise..."
               totalCount={allCompanies.length}
               filteredCount={filteredCompanies.length}
-              onClearAllFilters={() => {
-                setSearchQuery("");
-                setSelectedCategory("all");
-                setLetterFilter(null);
-              }}
+              compactMode
             />
-          </div>
-          <AutoCategorizeHelper />
-          <CRMDataQualityManager />
-          {/* View mode toggle - hidden on mobile */}
-          <div className="hidden md:flex items-center border rounded-md">
-            <Button
-              variant={effectiveViewMode === "table" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-8 px-2 rounded-r-none"
-              onClick={() => setViewMode("table")}
-            >
-              <LayoutList className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={effectiveViewMode === "cards" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-8 px-2 rounded-l-none"
-              onClick={() => setViewMode("cards")}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Alphabet filter - hide on mobile */}
-        <div className="hidden sm:flex items-center gap-0.5 overflow-x-auto scrollbar-none pb-1">
-          {alphabet.map((letter) => {
-            const hasCompanies = availableLetters.includes(letter);
-            return (
-              <Button
-                key={letter}
-                variant={letterFilter === letter ? "default" : "ghost"}
-                size="sm"
-                className={cn(
-                  "h-6 w-6 p-0 text-[10px] font-medium shrink-0",
-                  !hasCompanies && "text-muted-foreground/30"
-                )}
-                onClick={() => setLetterFilter(letterFilter === letter ? null : letter)}
-                disabled={!hasCompanies}
-              >
-                {letter}
-              </Button>
-            );
-          })}
-          {isFetching && (
-            <div className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          )}
-        </div>
+          }
+          actions={
+            <div className="flex items-center gap-2">
+              <AutoCategorizeHelper />
+              <CRMDataQualityManager />
+            </div>
+          }
+          onClearAll={() => {
+            setSearchQuery("");
+            setSelectedCategory("all");
+            setLetterFilter(null);
+          }}
+          activeFiltersCount={
+            (selectedCategory !== "all" ? 1 : 0) + 
+            (letterFilter ? 1 : 0)
+          }
+          secondaryBar={
+            <div className="hidden sm:block">
+              <AlphabetFilter
+                value={letterFilter}
+                onChange={setLetterFilter}
+                availableLetters={availableLetters}
+                isLoading={isFetching}
+              />
+            </div>
+          }
+        />
 
         {/* Content - Table or Cards */}
         {filteredCompanies.length === 0 ? (
