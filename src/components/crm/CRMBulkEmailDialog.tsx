@@ -199,6 +199,7 @@ export function CRMBulkEmailDialog({
           body: personalizedBody.replace(/\n/g, "<br>"),
           contactId: recipient.type === "contact" ? recipient.id : undefined,
           companyId: recipient.type === "company" ? recipient.id : undefined,
+          sendVia: 'workspace',
         });
 
         results.push({ recipientId: recipient.id, success: true });

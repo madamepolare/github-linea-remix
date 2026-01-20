@@ -172,6 +172,7 @@ Cordialement`;
             tenderId: tender.id,
             contactId: candidate.contact_id || undefined,
             companyId: candidate.company_id || undefined,
+            sendVia: 'workspace',
           });
           successCount++;
         } catch (error) {
