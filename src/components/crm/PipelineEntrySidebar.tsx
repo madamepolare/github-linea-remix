@@ -413,10 +413,10 @@ export function PipelineEntrySidebar({
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-3 pb-4 pr-2">
-                    {/* Display emails chronologically (oldest first) */}
+                  <div className="space-y-3 pb-4 pr-1">
+                    {/* Display emails reverse chronologically (newest first) */}
                     {[...emails]
-                      .sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())
+                      .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
                       .map(email => (
                         <SingleEmailCard
                           key={email.id}
