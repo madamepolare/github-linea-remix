@@ -299,7 +299,7 @@ export function KanbanCard({ children, onClick, accentColor, className, isComple
         "p-3 sm:p-4 rounded-lg bg-white dark:bg-background border cursor-pointer transition-all duration-200",
         "hover:border-border/60",
         isCompleted && "opacity-50",
-        accentColor ? "border-2" : "border-border/30",
+        !accentColor && "border-border/30",
         className
       )}
       style={accentColor ? { borderColor: accentColor } : undefined}
