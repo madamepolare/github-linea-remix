@@ -1055,9 +1055,13 @@ export async function downloadQuotePdf(
 
     const pages: Array<{ start: number; height: number }> = [];
     let start = 0;
+    
+    // Reserve space at bottom for page numbers (40px ~= 10mm)
+    const FOOTER_RESERVE_PX = 40;
+    const USABLE_HEIGHT = A4_HEIGHT_PX - FOOTER_RESERVE_PX;
 
     while (start < contentHeight - 1) {
-      const idealEnd = start + A4_HEIGHT_PX;
+      const idealEnd = start + USABLE_HEIGHT;
       let end = Math.min(idealEnd, contentHeight);
 
       // If the page boundary cuts through an element, move the break up to the element's top.
@@ -1074,7 +1078,7 @@ export async function downloadQuotePdf(
         end = Math.min(idealEnd, contentHeight);
       }
 
-      pages.push({ start, height: Math.min(A4_HEIGHT_PX, Math.max(1, end - start)) });
+      pages.push({ start, height: Math.min(USABLE_HEIGHT, Math.max(1, end - start)) });
       start = end;
     }
 
@@ -1096,14 +1100,26 @@ export async function downloadQuotePdf(
       logging: false,
     });
 
-    // Capture mini-header for pages 2+ (agency info + doc number)
-    // We'll render a separate header canvas from the .header element
-    let headerCanvas: HTMLCanvasElement | null = null;
+    // Capture header + info-grid for pages 2+ (full sidebar with agency, client, contact info)
+    let sidebarCanvas: HTMLCanvasElement | null = null;
     const headerEl = iframeDoc.querySelector('.header') as HTMLElement | null;
-    const headerHeight = headerEl ? headerEl.offsetHeight : 0;
+    const infoGridEl = iframeDoc.querySelector('.info-grid') as HTMLElement | null;
     
-    if (headerEl && totalPages > 1) {
-      headerCanvas = await html2canvas(headerEl, {
+    if (totalPages > 1 && (headerEl || infoGridEl)) {
+      // Create a wrapper to capture both header and info-grid together
+      const wrapperDiv = iframeDoc.createElement('div');
+      wrapperDiv.style.cssText = 'position: absolute; top: 0; left: 0; width: ' + A4_WIDTH_PX + 'px; background: #fff; padding: 42px 42px 0 42px; box-sizing: border-box;';
+      
+      if (headerEl) {
+        wrapperDiv.appendChild(headerEl.cloneNode(true));
+      }
+      if (infoGridEl) {
+        wrapperDiv.appendChild(infoGridEl.cloneNode(true));
+      }
+      
+      iframeDoc.body.appendChild(wrapperDiv);
+      
+      sidebarCanvas = await html2canvas(wrapperDiv, {
         scale: SCALE,
         useCORS: true,
         allowTaint: true,
@@ -1112,6 +1128,8 @@ export async function downloadQuotePdf(
         windowWidth: A4_WIDTH_PX,
         logging: false,
       });
+      
+      wrapperDiv.remove();
     }
 
     // Create PDF (A4 dimensions in mm)
@@ -1148,21 +1166,21 @@ export async function downloadQuotePdf(
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, pageW, pageH);
 
-      // For pages 2+, draw the header at the top first
+      // For pages 2+, draw the sidebar (header + info-grid) at the top first
       let contentYOffset = 0;
-      if (idx > 0 && headerCanvas) {
-        const headerH = headerCanvas.height;
-        // Draw header at top
-        ctx.drawImage(headerCanvas, 0, 0);
-        contentYOffset = headerH;
+      if (idx > 0 && sidebarCanvas) {
+        const sidebarH = sidebarCanvas.height;
+        // Draw sidebar at top
+        ctx.drawImage(sidebarCanvas, 0, 0);
+        contentYOffset = sidebarH;
       }
 
       const sy = Math.round(start * SCALE);
       const sh = Math.round(height * SCALE);
 
-      // Draw content (offset down if we added a header)
-      if (idx > 0 && headerCanvas) {
-        // Draw content below the header
+      // Draw content (offset down if we added a sidebar)
+      if (idx > 0 && sidebarCanvas) {
+        // Draw content below the sidebar
         ctx.drawImage(fullCanvas, 0, sy, pageW, sh, 0, contentYOffset, pageW, sh);
       } else {
         // First page: draw normally
