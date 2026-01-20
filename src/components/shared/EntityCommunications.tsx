@@ -741,9 +741,14 @@ export function EntityCommunications({
           />
         )}
 
-        {/* Message input with send button */}
-        <div className="flex gap-2 items-end">
-          <div className="flex-1">
+        {/* Message input with send button - chatty style */}
+        <div 
+          className={cn(
+            "relative flex items-end rounded-2xl bg-muted/50 transition-all duration-200",
+            createType === "note" && "bg-yellow-50/50 dark:bg-yellow-950/20"
+          )}
+        >
+          <div className="flex-1 min-w-0 py-1 pl-3">
             <MentionInput
               placeholder={
                 createType === "comment"
@@ -757,20 +762,25 @@ export function EntityCommunications({
                 setNewContent(value);
                 setNewMentions(mentions);
               }}
-              className={cn(
-                "text-sm",
-                createType === "note" && "bg-yellow-50/50 dark:bg-yellow-950/20"
-              )}
-              minHeight="40px"
+              className="border-0 bg-transparent shadow-none focus-visible:ring-0 resize-none text-base"
+              minHeight="36px"
             />
           </div>
           <Button
             size="icon"
             onClick={handleSubmit}
             disabled={!newContent.trim() || createCommunication.isPending}
-            className="h-9 w-9 shrink-0"
+            className={cn(
+              "shrink-0 h-9 w-9 mr-1.5 mb-1.5 rounded-full transition-all duration-200",
+              newContent.trim() && !createCommunication.isPending
+                ? "bg-primary text-primary-foreground shadow-md hover:shadow-lg hover:scale-105" 
+                : "bg-muted text-muted-foreground"
+            )}
           >
-            <Send className="h-4 w-4" />
+            <Send className={cn(
+              "h-4 w-4 transition-transform",
+              newContent.trim() && "-rotate-45"
+            )} />
           </Button>
         </div>
       </div>
