@@ -59,7 +59,8 @@ import { ThemePreviewSelector } from '@/components/commercial/ThemePreviewSelect
 import { isArchitectureContractType, getDefaultMOEConfig } from '@/lib/moeContractDefaults';
 import { isCommunicationContractType, getDefaultCommunicationConfig } from '@/lib/communicationContractDefaults';
 import { getDefaultConditionsForType, serializeConditions } from '@/lib/contractConditionsUnified';
-import { downloadNativeVectorPdf } from '@/lib/generateNativePDF';
+import { downloadPixelPerfectPdf } from '@/lib/generatePixelPerfectPDF';
+import { generateQuoteHtml } from '@/lib/generateHtmlPDF';
 import { useQuoteThemes } from '@/hooks/useQuoteThemes';
 import { useAgencyInfo } from '@/hooks/useAgencyInfo';
 import { useCommercialDocuments } from '@/hooks/useCommercialDocuments';
@@ -484,10 +485,13 @@ export default function QuoteBuilder() {
         code_naf: agencyInfo?.code_naf,
       };
       
-      const filename = `Devis ${document.document_number || 'brouillon'}`;
+      const filename = `Devis_${document.document_number || 'brouillon'}`;
       
-      // Download native vector PDF (jsPDF + autoTable, no rasterization)
-      await downloadNativeVectorPdf(document, lines, agencyData, selectedTheme, filename);
+      // Generate the exact same HTML as the preview
+      const html = generateQuoteHtml(document, lines, agencyData, selectedTheme);
+      
+      // Capture pixel-perfect and export to PDF
+      await downloadPixelPerfectPdf(html, filename);
       
       toast.success('PDF téléchargé');
     } catch (err) {
