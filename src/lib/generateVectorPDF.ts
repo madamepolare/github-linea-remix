@@ -21,10 +21,14 @@ export async function downloadVectorPdf(
   theme?: QuoteTheme | null,
   filename?: string
 ): Promise<void> {
+  console.log('[PDF] Starting vector PDF generation via PDFShift...');
+  
   // Generate the HTML with full theming
   const html = generateQuoteHtml(document, lines, agencyInfo, theme || undefined);
+  console.log('[PDF] HTML generated, length:', html.length);
 
   // Call the edge function to generate PDF
+  console.log('[PDF] Calling generate-pdf edge function...');
   const { data, error } = await supabase.functions.invoke('generate-pdf', {
     body: {
       html,
@@ -32,14 +36,19 @@ export async function downloadVectorPdf(
     }
   });
 
+  console.log('[PDF] Edge function response:', { data: data ? 'received' : 'null', error });
+
   if (error) {
-    console.error('PDF generation error:', error);
-    throw new Error('Erreur lors de la génération du PDF');
+    console.error('[PDF] Generation error:', error);
+    throw new Error(`Erreur lors de la génération du PDF: ${error.message || error}`);
   }
 
   if (!data?.pdf) {
+    console.error('[PDF] No PDF in response:', data);
     throw new Error('Aucun PDF reçu du serveur');
   }
+
+  console.log('[PDF] PDF received, size:', data.pdf.length);
 
   // Convert base64 to blob and download
   const binaryString = atob(data.pdf);
