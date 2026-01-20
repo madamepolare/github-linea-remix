@@ -202,12 +202,50 @@ export function useWorkspaceEmail() {
     }
   }, [user, fetchAccounts]);
 
+  const sendEmail = useCallback(async (params: {
+    to: string | string[];
+    subject: string;
+    body: string;
+    cc?: string[];
+    bcc?: string[];
+    replyTo?: string;
+    contactId?: string;
+    companyId?: string;
+    leadId?: string;
+    projectId?: string;
+    tenderId?: string;
+    workspaceEmailAccountId?: string;
+  }) => {
+    if (status.accounts.length === 0) {
+      throw new Error('Aucun email workspace configuré');
+    }
+
+    const { data, error } = await supabase.functions.invoke('gmail-send-email', {
+      body: {
+        ...params,
+        sendVia: 'workspace',
+        workspaceEmailAccountId: params.workspaceEmailAccountId || status.defaultAccount?.id,
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (data?.error) {
+      throw new Error(data.error);
+    }
+
+    return data;
+  }, [status.accounts, status.defaultAccount]);
+
   return {
     ...status,
     connect,
     disconnect,
     setDefault,
     updateDisplayName,
+    sendEmail,
     refresh: fetchAccounts,
   };
 }

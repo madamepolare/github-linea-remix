@@ -7,8 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Mail, Send, ChevronDown, ChevronUp, AlertCircle, X, Settings, Sparkles, Loader2 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Mail, Send, ChevronDown, ChevronUp, AlertCircle, X, Settings, Sparkles, Loader2, Building2, User } from "lucide-react";
 import { useGmailConnection } from "@/hooks/useGmailConnection";
+import { useWorkspaceEmail } from "@/hooks/useWorkspaceEmail";
 import { useEmailTemplates } from "@/hooks/useEmailTemplates";
 import { useContacts } from "@/hooks/useContacts";
 import { Link } from "react-router-dom";
@@ -47,11 +49,14 @@ export function UnifiedEmailDialog({
   onSuccess,
 }: UnifiedEmailDialogProps) {
   const gmailConnection = useGmailConnection();
+  const workspaceEmail = useWorkspaceEmail();
   const { templates = [] } = useEmailTemplates();
   const { contacts = [] } = useContacts();
 
-  const gmailStatus = { connected: gmailConnection.connected, email: gmailConnection.email };
-  const gmailLoading = gmailConnection.isLoading;
+  const hasWorkspaceEmail = workspaceEmail.accounts.length > 0;
+  const hasPersonalEmail = gmailConnection.connected;
+  const hasAnyEmail = hasWorkspaceEmail || hasPersonalEmail;
+  const gmailLoading = gmailConnection.isLoading || workspaceEmail.isLoading;
 
   const [to, setTo] = useState<string[]>([]);
   const [toInput, setToInput] = useState("");
@@ -64,6 +69,8 @@ export function UnifiedEmailDialog({
   const [showCcBcc, setShowCcBcc] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [isSending, setIsSending] = useState(false);
+  const [sendVia, setSendVia] = useState<'workspace' | 'personal'>('workspace');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [contactSuggestions, setContactSuggestions] = useState<typeof contacts>([]);
   
   // AI generation state
@@ -83,8 +90,17 @@ export function UnifiedEmailDialog({
       setSelectedTemplate("");
       setAiPrompt("");
       setShowAiPrompt(false);
+      
+      // Set default sender
+      if (hasWorkspaceEmail) {
+        setSendVia('workspace');
+        setSelectedAccountId(workspaceEmail.defaultAccount?.id || workspaceEmail.accounts[0]?.id || "");
+      } else if (hasPersonalEmail) {
+        setSendVia('personal');
+        setSelectedAccountId("");
+      }
     }
-  }, [open, defaultTo, defaultSubject, defaultBody]);
+  }, [open, defaultTo, defaultSubject, defaultBody, hasWorkspaceEmail, hasPersonalEmail, workspaceEmail.defaultAccount, workspaceEmail.accounts]);
 
   // Contact autocomplete
   useEffect(() => {
@@ -229,8 +245,8 @@ export function UnifiedEmailDialog({
       return;
     }
 
-    if (!gmailStatus.connected) {
-      toast.error("Gmail non connecté. Veuillez connecter votre compte dans les paramètres.");
+    if (!hasAnyEmail) {
+      toast.error("Aucun compte email configuré. Veuillez connecter un compte dans les paramètres.");
       return;
     }
 
@@ -270,6 +286,8 @@ export function UnifiedEmailDialog({
         leadId: entityContext.leadId,
         projectId: entityContext.projectId,
         tenderId: entityContext.tenderId,
+        sendVia,
+        workspaceEmailAccountId: sendVia === 'workspace' ? selectedAccountId : undefined,
       });
 
       toast.success("Email envoyé avec succès");
@@ -282,8 +300,22 @@ export function UnifiedEmailDialog({
     }
   };
 
-  const isGmailReady = gmailStatus.connected && !gmailLoading;
+  const isEmailReady = hasAnyEmail && !gmailLoading;
   const displayRecipient = recipientName || (to.length > 0 ? to[0] : null);
+  
+  // Get current sender display
+  const getCurrentSenderDisplay = () => {
+    if (sendVia === 'workspace' && selectedAccountId) {
+      const account = workspaceEmail.accounts.find(a => a.id === selectedAccountId);
+      if (account) {
+        return account.display_name || account.gmail_email;
+      }
+    }
+    if (sendVia === 'personal' && gmailConnection.email) {
+      return gmailConnection.email;
+    }
+    return null;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -292,7 +324,7 @@ export function UnifiedEmailDialog({
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
             Nouvel email
-            {gmailStatus.connected && (
+            {hasAnyEmail && (
               <Badge variant="outline" className="ml-2 text-xs">via Gmail</Badge>
             )}
           </DialogTitle>
@@ -303,15 +335,15 @@ export function UnifiedEmailDialog({
           )}
         </DialogHeader>
 
-        {!isGmailReady && (
+        {!isEmailReady && (
           <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                Gmail non connecté
+                Aucun email configuré
               </p>
               <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                Connectez votre compte Gmail pour envoyer des emails.
+                Connectez un compte Gmail pour envoyer des emails.
               </p>
               <Button asChild variant="outline" size="sm" className="mt-2">
                 <Link to="/settings?tab=emails">
@@ -324,6 +356,36 @@ export function UnifiedEmailDialog({
         )}
 
         <div className="space-y-4">
+          {/* Sender Selection */}
+          {isEmailReady && (hasWorkspaceEmail || hasPersonalEmail) && (
+            <div className="space-y-2 p-3 bg-muted/30 rounded-lg border">
+              <Label className="text-sm font-medium">Envoyer depuis</Label>
+              <RadioGroup value={sendVia} onValueChange={(v) => setSendVia(v as 'workspace' | 'personal')} className="space-y-2">
+                {hasWorkspaceEmail && (
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="workspace" id="send-workspace" />
+                    <Label htmlFor="send-workspace" className="flex items-center gap-2 cursor-pointer font-normal">
+                      <Building2 className="h-4 w-4 text-primary" />
+                      <span>
+                        {workspaceEmail.defaultAccount?.display_name || workspaceEmail.defaultAccount?.gmail_email || 'Email Workspace'}
+                      </span>
+                      <Badge variant="secondary" className="text-[10px]">Workspace</Badge>
+                    </Label>
+                  </div>
+                )}
+                {hasPersonalEmail && (
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="personal" id="send-personal" />
+                    <Label htmlFor="send-personal" className="flex items-center gap-2 cursor-pointer font-normal">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span>{gmailConnection.email}</span>
+                      <Badge variant="outline" className="text-[10px]">Personnel</Badge>
+                    </Label>
+                  </div>
+                )}
+              </RadioGroup>
+            </div>
+          )}
           {/* AI Generation Section */}
           <Collapsible open={showAiPrompt} onOpenChange={setShowAiPrompt}>
             <CollapsibleTrigger asChild>
@@ -517,7 +579,7 @@ export function UnifiedEmailDialog({
           </Button>
           <Button 
             onClick={handleSend} 
-            disabled={isSending || !isGmailReady || to.length === 0}
+            disabled={isSending || !isEmailReady || to.length === 0}
           >
             {isSending ? (
               <>Envoi en cours...</>

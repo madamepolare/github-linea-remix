@@ -166,13 +166,18 @@ export function useGmailConnection() {
     leadId?: string;
     projectId?: string;
     tenderId?: string;
+    sendVia?: 'personal' | 'workspace';
+    workspaceEmailAccountId?: string;
   }) => {
-    if (!status.connected) {
+    if (!status.connected && params.sendVia === 'personal') {
       throw new Error('Gmail non connecté');
     }
 
     const { data, error } = await supabase.functions.invoke('gmail-send-email', {
-      body: params,
+      body: {
+        ...params,
+        sendVia: params.sendVia || 'workspace', // Default to workspace
+      },
     });
 
     if (error) {

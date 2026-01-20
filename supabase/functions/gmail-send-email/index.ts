@@ -13,7 +13,10 @@ interface SendEmailRequest {
   cc?: string[];
   bcc?: string[];
   replyTo?: string;
-  skipSignature?: boolean; // Optional flag to skip adding signature
+  skipSignature?: boolean;
+  // Sender selection
+  sendVia?: 'personal' | 'workspace';
+  workspaceEmailAccountId?: string; // Optional: specific workspace account
   // CRM tracking fields
   contactId?: string;
   companyId?: string;
@@ -40,12 +43,10 @@ function processSignatureTemplate(
 
   let result = signature;
   
-  // Replace simple variables
   Object.entries(values).forEach(([key, value]) => {
     result = result.replace(new RegExp(key.replace(/[{}]/g, "\\$&"), "g"), value);
   });
 
-  // Handle conditional blocks: {{#key}}content{{/key}}
   result = result.replace(/\{\{#(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (_, key, content) => {
     const value = values[`{{${key}}}`];
     return value ? content : "";
@@ -54,16 +55,28 @@ function processSignatureTemplate(
   return result;
 }
 
-async function refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
-  const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_CLIENT_ID');
-  const GOOGLE_CLIENT_SECRET = Deno.env.get('GOOGLE_CLIENT_SECRET');
+async function refreshAccessToken(
+  refreshToken: string, 
+  isWorkspace: boolean = false
+): Promise<{ access_token: string; expires_in: number }> {
+  // Use appropriate credentials based on account type
+  const clientId = isWorkspace 
+    ? Deno.env.get('WORKSPACE_GOOGLE_CLIENT_ID') 
+    : Deno.env.get('GOOGLE_CLIENT_ID');
+  const clientSecret = isWorkspace 
+    ? Deno.env.get('WORKSPACE_GOOGLE_CLIENT_SECRET') 
+    : Deno.env.get('GOOGLE_CLIENT_SECRET');
+
+  if (!clientId || !clientSecret) {
+    throw new Error('Google OAuth credentials not configured');
+  }
 
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID!,
-      client_secret: GOOGLE_CLIENT_SECRET!,
+      client_id: clientId,
+      client_secret: clientSecret,
       refresh_token: refreshToken,
       grant_type: 'refresh_token',
     }),
@@ -80,6 +93,7 @@ async function refreshAccessToken(refreshToken: string): Promise<{ access_token:
 
 function createMimeMessage(
   from: string,
+  fromName: string | null,
   to: string | string[],
   subject: string,
   htmlBody: string,
@@ -88,9 +102,10 @@ function createMimeMessage(
   replyTo?: string
 ): string {
   const toAddresses = Array.isArray(to) ? to.join(', ') : to;
+  const fromHeader = fromName ? `${fromName} <${from}>` : from;
   
   let headers = [
-    `From: ${from}`,
+    `From: ${fromHeader}`,
     `To: ${toAddresses}`,
     `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
     'MIME-Version: 1.0',
@@ -110,7 +125,6 @@ function createMimeMessage(
 
   const message = headers.join('\r\n') + '\r\n\r\n' + btoa(unescape(encodeURIComponent(htmlBody)));
   
-  // URL-safe base64 encoding
   return btoa(message)
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
@@ -131,7 +145,6 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    // Create client with user's auth
     const supabaseUser = createClient(SUPABASE_URL!, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } }
     });
@@ -141,13 +154,17 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    const { to, subject, body, cc, bcc, replyTo, skipSignature, contactId, companyId, leadId, projectId, tenderId }: SendEmailRequest = await req.json();
+    const { 
+      to, subject, body, cc, bcc, replyTo, skipSignature, 
+      sendVia = 'workspace', // Default to workspace if available
+      workspaceEmailAccountId,
+      contactId, companyId, leadId, projectId, tenderId 
+    }: SendEmailRequest = await req.json();
 
     if (!to || !subject || !body) {
       throw new Error('Missing required fields: to, subject, body');
     }
 
-    // Get user's active workspace and profile info
     const { data: profile } = await supabaseUser
       .from('profiles')
       .select('active_workspace_id, full_name')
@@ -159,27 +176,94 @@ serve(async (req) => {
       throw new Error('No active workspace');
     }
 
-    // Get Gmail connection with service role
     const supabaseAdmin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
-    
-    const { data: connection, error: connError } = await supabaseAdmin
-      .from('gmail_connections')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('workspace_id', workspaceId)
-      .eq('is_active', true)
-      .single();
 
-    if (connError || !connection) {
-      throw new Error('Gmail not connected. Please connect your Gmail account in settings.');
-    }
-
-    // Get workspace data for email signature
+    // Get workspace data for signature
     const { data: workspace } = await supabaseAdmin
       .from('workspaces')
       .select('name, phone, email, website, address, city, postal_code, email_signature, email_signature_enabled')
       .eq('id', workspaceId)
       .single();
+
+    // Determine which account to use
+    let connection: any = null;
+    let isWorkspaceAccount = false;
+    let senderDisplayName: string | null = null;
+
+    // Try workspace email first if sendVia is 'workspace' or we have a specific account ID
+    if (sendVia === 'workspace' || workspaceEmailAccountId) {
+      let query = supabaseAdmin
+        .from('workspace_email_accounts')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .eq('is_active', true);
+
+      if (workspaceEmailAccountId) {
+        query = query.eq('id', workspaceEmailAccountId);
+      } else {
+        query = query.eq('is_default', true);
+      }
+
+      const { data: workspaceAccount } = await query.single();
+      
+      if (workspaceAccount) {
+        connection = workspaceAccount;
+        isWorkspaceAccount = true;
+        senderDisplayName = workspaceAccount.display_name;
+      }
+    }
+
+    // Fall back to personal account if no workspace account or sendVia is 'personal'
+    if (!connection && sendVia === 'personal') {
+      const { data: personalConn, error: connError } = await supabaseAdmin
+        .from('gmail_connections')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('workspace_id', workspaceId)
+        .eq('is_active', true)
+        .single();
+
+      if (!connError && personalConn) {
+        connection = personalConn;
+      }
+    }
+
+    // If still no connection, try workspace default then personal
+    if (!connection) {
+      // Try workspace default
+      const { data: wsDefault } = await supabaseAdmin
+        .from('workspace_email_accounts')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .eq('is_active', true)
+        .eq('is_default', true)
+        .single();
+
+      if (wsDefault) {
+        connection = wsDefault;
+        isWorkspaceAccount = true;
+        senderDisplayName = wsDefault.display_name;
+      } else {
+        // Try personal
+        const { data: personal } = await supabaseAdmin
+          .from('gmail_connections')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('workspace_id', workspaceId)
+          .eq('is_active', true)
+          .single();
+
+        if (personal) {
+          connection = personal;
+        }
+      }
+    }
+
+    if (!connection) {
+      throw new Error('Aucun compte email configuré. Veuillez connecter un compte Gmail dans les paramètres.');
+    }
+
+    const senderEmail = connection.gmail_email;
 
     // Prepare email body with signature
     let finalBody = body;
@@ -187,7 +271,7 @@ serve(async (req) => {
     if (!skipSignature && workspace?.email_signature_enabled && workspace?.email_signature) {
       const processedSignature = processSignatureTemplate(
         workspace.email_signature,
-        { fullName: profile?.full_name || '', email: connection.gmail_email },
+        { fullName: profile?.full_name || '', email: senderEmail },
         {
           name: workspace.name,
           phone: workspace.phone,
@@ -199,7 +283,6 @@ serve(async (req) => {
         }
       );
       
-      // Add separator and signature
       finalBody = `${body}<br><br>--<br>${processedSignature}`;
     }
 
@@ -207,14 +290,15 @@ serve(async (req) => {
     let accessToken = connection.access_token;
     const tokenExpiry = new Date(connection.token_expires_at);
     
-    if (tokenExpiry <= new Date(Date.now() + 60000)) { // Refresh if expiring in 1 minute
+    if (tokenExpiry <= new Date(Date.now() + 60000)) {
       console.log('Refreshing access token...');
-      const newTokens = await refreshAccessToken(connection.refresh_token);
+      const newTokens = await refreshAccessToken(connection.refresh_token, isWorkspaceAccount);
       accessToken = newTokens.access_token;
       
-      // Update stored token
+      // Update stored token in appropriate table
+      const updateTable = isWorkspaceAccount ? 'workspace_email_accounts' : 'gmail_connections';
       await supabaseAdmin
-        .from('gmail_connections')
+        .from(updateTable)
         .update({
           access_token: newTokens.access_token,
           token_expires_at: new Date(Date.now() + newTokens.expires_in * 1000).toISOString(),
@@ -225,7 +309,8 @@ serve(async (req) => {
 
     // Create and send email via Gmail API
     const rawMessage = createMimeMessage(
-      connection.gmail_email,
+      senderEmail,
+      senderDisplayName,
       to,
       subject,
       finalBody,
@@ -250,7 +335,7 @@ serve(async (req) => {
     }
 
     const gmailResult = await gmailResponse.json();
-    console.log('Email sent via Gmail:', gmailResult.id);
+    console.log('Email sent via Gmail:', gmailResult.id, 'via:', isWorkspaceAccount ? 'workspace' : 'personal');
 
     // Record email in CRM
     const toEmail = Array.isArray(to) ? to[0] : to;
@@ -259,7 +344,7 @@ serve(async (req) => {
       .insert({
         workspace_id: workspaceId,
         to_email: toEmail,
-        from_email: connection.gmail_email,
+        from_email: senderEmail,
         subject,
         body,
         status: 'sent',
@@ -280,7 +365,6 @@ serve(async (req) => {
 
     if (emailError) {
       console.error('Failed to record email:', emailError);
-      // Don't throw - email was sent successfully
     }
 
     // Update pipeline entry to mark as awaiting response
@@ -305,6 +389,8 @@ serve(async (req) => {
       messageId: gmailResult.id,
       threadId: gmailResult.threadId,
       emailRecordId: emailRecord?.id,
+      sentVia: isWorkspaceAccount ? 'workspace' : 'personal',
+      sentFrom: senderEmail,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
