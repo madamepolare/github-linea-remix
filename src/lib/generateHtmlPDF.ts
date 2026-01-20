@@ -49,6 +49,24 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       padding: 0;
     }
     
+    /* ===== PAGE BREAK CONTROL ===== */
+    .no-break {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .break-before {
+      page-break-before: always;
+      break-before: page;
+    }
+    .break-after {
+      page-break-after: always;
+      break-after: page;
+    }
+    .keep-together {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    
     /* ===== TOPBAR ===== */
     .topbar {
       width: 100%;
@@ -81,6 +99,8 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       margin-bottom: 25px;
       padding-bottom: 20px;
       border-bottom: 2px solid var(--primary-color, #1a1a1a);
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .header-agency {
       max-width: 240px;
@@ -153,6 +173,8 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       padding: 15px;
       background: var(--table-header-bg, #fafafa);
       border-radius: 4px;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .info-block {
       min-width: 0;
@@ -246,6 +268,8 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       background: #fefefe;
       border-left: 3px solid var(--accent-color, #2563eb);
       border-radius: 0 4px 4px 0;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .context-title {
       font-size: 9px;
@@ -303,6 +327,10 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       padding: 10px;
       vertical-align: top;
       border-bottom: 1px solid var(--border-color, #eee);
+    }
+    .pricing-table tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .pricing-table tr:nth-child(even) {
       background: rgba(0,0,0,0.01);
@@ -373,6 +401,8 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       background: #fffbeb;
       border: 1px dashed #d97706;
       border-radius: 4px;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .options-title {
       font-size: 9px;
@@ -405,12 +435,16 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       margin: 20px 0;
       display: flex;
       justify-content: flex-end;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .totals-box {
       width: 220px;
       background: var(--table-header-bg, #f8f8f8);
       padding: 12px 15px;
       border-radius: 4px;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .totals-row {
       display: flex;
@@ -451,6 +485,8 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       padding: 12px 15px;
       background: #f0fdf4;
       border-radius: 4px;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .payment-title {
       font-size: 9px;
@@ -479,6 +515,8 @@ const DEFAULT_HTML_TEMPLATE = `<!DOCTYPE html>
       margin-top: 30px;
       padding-top: 20px;
       border-top: 1px solid var(--border-color, #e5e5e5);
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .signature-box {
       flex: 1;
