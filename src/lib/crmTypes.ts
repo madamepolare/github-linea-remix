@@ -113,4 +113,5 @@ export interface CRMFilters {
   letterFilter: string | null;
   sortBy: string;
   sortDir: 'asc' | 'desc';
+  pageSize?: number;
 }

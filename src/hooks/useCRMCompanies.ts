@@ -55,9 +55,9 @@ export function useCRMCompanies(filters?: Partial<CRMFilters>) {
   const { toast } = useToast();
   const { getCompanyTypesForCategory, getCompanyTypeCategory } = useCRMSettings();
 
-  // Pagination state
+  // Pagination state - use filter pageSize if provided (for loading all items)
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [pageSize, setPageSize] = useState(filters?.pageSize || DEFAULT_PAGE_SIZE);
 
   // Reset page when filters change
   useEffect(() => {

@@ -42,8 +42,6 @@ export function BulkAddToPipelineDialog({
   pipeline,
 }: BulkAddToPipelineDialogProps) {
   const { entries, addBulkEntries } = useContactPipeline(pipeline.id);
-  const { contacts } = useContacts();
-  const { companies } = useCRMCompanies();
   const { companyCategories, betSpecialties, getCompanyTypeLabel } = useCRMSettings();
 
   const [entityType, setEntityType] = useState<EntityType>(
@@ -59,6 +57,16 @@ export function BulkAddToPipelineDialog({
   const [contactStatusFilter, setContactStatusFilter] = useState<string>("all");
   const [isAdding, setIsAdding] = useState(false);
 
+  // Fetch ALL contacts and companies with server-side search (large page size)
+  const { contacts, isLoading: contactsLoading } = useContacts({ 
+    search: entityType === "contact" ? search : undefined,
+    pageSize: 1000 
+  });
+  const { companies, isLoading: companiesLoading } = useCRMCompanies({ 
+    search: entityType === "company" ? search : undefined,
+    pageSize: 1000
+  });
+
   // Get already added entity IDs
   const existingContactIds = new Set(
     entries.filter((e) => e.contact_id).map((e) => e.contact_id)
@@ -67,14 +75,11 @@ export function BulkAddToPipelineDialog({
     entries.filter((e) => e.company_id).map((e) => e.company_id)
   );
 
-  // Filter entities
+  // Filter entities (search is now server-side, only apply local filters)
   const filteredEntities = useMemo(() => {
     if (entityType === "contact") {
       return (contacts || []).filter((c) => {
         if (existingContactIds.has(c.id)) return false;
-        if (search && !c.name.toLowerCase().includes(search.toLowerCase())) {
-          return false;
-        }
         // Filter by contact status
         if (contactStatusFilter === "lead" && c.status !== "lead") {
           return false;
@@ -90,9 +95,6 @@ export function BulkAddToPipelineDialog({
     } else {
       return (companies || []).filter((c) => {
         if (existingCompanyIds.has(c.id)) return false;
-        if (search && !c.name.toLowerCase().includes(search.toLowerCase())) {
-          return false;
-        }
         if (categoryFilter !== "all" && c.industry !== categoryFilter) {
           return false;
         }
@@ -109,7 +111,6 @@ export function BulkAddToPipelineDialog({
     entityType,
     contacts,
     companies,
-    search,
     categoryFilter,
     specialtyFilter,
     contactStatusFilter,
