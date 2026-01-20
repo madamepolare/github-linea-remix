@@ -87,10 +87,10 @@ export function SingleEmailCard({
       )}
       
       <Card className={cn(
-        "transition-all cursor-pointer hover:shadow-md",
+        "transition-all cursor-pointer hover:shadow-md overflow-hidden",
         isInbound 
-          ? "bg-green-50/80 dark:bg-green-950/30 border-green-200 dark:border-green-800 ml-2 mr-0 shadow-sm shadow-green-100/50 dark:shadow-green-900/20" 
-          : "bg-muted/30 border-border ml-0 mr-2",
+          ? "bg-green-50/80 dark:bg-green-950/30 border-green-200 dark:border-green-800 ml-2 shadow-sm shadow-green-100/50 dark:shadow-green-900/20" 
+          : "bg-muted/30 border-border",
         isUnread && "ring-2 ring-green-400/50"
       )}>
         <CardContent className="p-3">

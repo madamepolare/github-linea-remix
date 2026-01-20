@@ -390,7 +390,7 @@ export function PipelineEntrySidebar({
                 </div>
               </div>
 
-              <ScrollArea className="h-[calc(100vh-420px)]">
+              <ScrollArea className="h-[calc(100vh-420px)] pr-3">
                 {emailsLoading ? (
                   <div className="space-y-3">
                     {[1, 2, 3].map(i => (
@@ -413,7 +413,7 @@ export function PipelineEntrySidebar({
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-3 pb-4">
+                  <div className="space-y-3 pb-4 pr-1">
                     {/* Display emails chronologically (oldest first) */}
                     {[...emails]
                       .sort((a, b) => new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime())
