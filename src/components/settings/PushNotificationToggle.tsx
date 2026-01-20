@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Smartphone, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Smartphone, AlertCircle, BellRing } from "lucide-react";
 
 export function PushNotificationToggle() {
   const { 
@@ -11,8 +13,11 @@ export function PushNotificationToggle() {
     isLoading, 
     permission,
     subscribe, 
-    unsubscribe 
+    unsubscribe,
+    sendTestNotification
   } = usePushNotifications();
+  
+  const [isSendingTest, setIsSendingTest] = useState(false);
 
   const handleToggle = async (checked: boolean) => {
     if (checked) {
@@ -20,6 +25,12 @@ export function PushNotificationToggle() {
     } else {
       await unsubscribe();
     }
+  };
+
+  const handleSendTest = async () => {
+    setIsSendingTest(true);
+    await sendTestNotification();
+    setIsSendingTest(false);
   };
 
   if (!isSupported) {
@@ -82,9 +93,25 @@ export function PushNotificationToggle() {
             Recevoir des alertes même quand l'application n'est pas ouverte
           </p>
           {isSubscribed && (
-            <Badge variant="secondary" className="text-xs mt-1">
-              Activé sur cet appareil
-            </Badge>
+            <div className="flex items-center gap-2 mt-1.5">
+              <Badge variant="secondary" className="text-xs">
+                Activé sur cet appareil
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={handleSendTest}
+                disabled={isSendingTest}
+              >
+                {isSendingTest ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <BellRing className="h-3 w-3 mr-1" />
+                )}
+                Tester
+              </Button>
+            </div>
           )}
         </div>
       </div>
