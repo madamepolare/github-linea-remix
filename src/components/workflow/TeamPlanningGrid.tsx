@@ -16,7 +16,7 @@ import { useUpdateTimeEntry, TeamTimeEntry } from "@/hooks/useTeamTimeEntries";
 import { usePlanningData } from "@/hooks/usePlanningData";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 import { ResizablePlanningItem, PlanningItem } from "./ResizablePlanningItem";
 import { AddTimeEntryDialog } from "./AddTimeEntryDialog";
 import { EditTimeEntryDialog } from "./EditTimeEntryDialog";
+import { AbsenceLottie } from "./AbsenceLottie";
 
 interface TeamPlanningGridProps {
   onEventClick?: (schedule: TaskSchedule) => void;
@@ -1261,6 +1262,15 @@ function DayCell({
   onCellMouseEnter,
   onCellMouseUp,
 }: DayCellProps) {
+  // Check if there's an absence for this cell
+  const absenceItem = useMemo(() => {
+    return items.find(item => item.type === "absence");
+  }, [items]);
+  
+  const hasAbsence = !!absenceItem;
+  const absenceType = hasAbsence ? (absenceItem.originalData as TeamAbsence)?.absence_type : null;
+  const absenceLabel = hasAbsence ? absenceItem.title : null;
+
   const getOccupancyColor = (rate: number) => {
     if (rate === 0) return "";
     if (rate < 50) return "text-amber-600 dark:text-amber-400";
@@ -1285,6 +1295,11 @@ function DayCell({
     }
   }, [day, member, onCellClick]);
 
+  // Non-absence items only
+  const nonAbsenceItems = useMemo(() => {
+    return items.filter(item => item.type !== "absence");
+  }, [items]);
+
   return (
     <TooltipProvider delayDuration={200}>
       <div
@@ -1292,9 +1307,10 @@ function DayCell({
           "relative border-r p-1 flex flex-col transition-all duration-200 ease-out select-none",
           isWeekend && "bg-muted/20",
           isToday && "bg-primary/5 ring-1 ring-inset ring-primary/20",
-          occupancy > 0 && getOccupancyBg(occupancy),
+          !hasAbsence && occupancy > 0 && getOccupancyBg(occupancy),
           isDragOver && "bg-primary/15 ring-2 ring-inset ring-primary/50 shadow-lg scale-[1.02]",
-          isInSelection && "bg-primary/20 ring-2 ring-inset ring-primary/40"
+          isInSelection && "bg-primary/20 ring-2 ring-inset ring-primary/40",
+          hasAbsence && "bg-muted/40"
         )}
         style={{ width: cellWidth }}
         onDragOver={(e) => onDragOver(e, cellKey)}
@@ -1310,9 +1326,47 @@ function DayCell({
         onMouseEnter={() => onCellMouseEnter?.(day, member)}
         onMouseUp={() => onCellMouseUp?.()}
       >
-        {/* Items planifiés avec hauteur proportionnelle et resize */}
-        <div className="flex-1 space-y-0.5 overflow-hidden pointer-events-auto">
-          {items.slice(0, 5).map(item => (
+        {/* Absence overlay with lottie animation */}
+        {hasAbsence && absenceType && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+            <div className="flex flex-col items-center gap-1 opacity-80">
+              <AbsenceLottie type={absenceType} size={32} />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-[9px] font-medium text-muted-foreground bg-background/80 px-1.5 py-0.5 rounded max-w-[90%] truncate pointer-events-auto cursor-default">
+                    {absenceLabel}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">
+                  {absenceLabel}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        )}
+
+        {/* Diagonal stripes pattern for absence */}
+        {hasAbsence && (
+          <div 
+            className="absolute inset-0 pointer-events-none opacity-10"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 4px,
+                currentColor 4px,
+                currentColor 5px
+              )`
+            }}
+          />
+        )}
+
+        {/* Items planifiés (excluding absence items which are shown as overlay) */}
+        <div className={cn(
+          "flex-1 space-y-0.5 overflow-hidden pointer-events-auto",
+          hasAbsence && "opacity-40"
+        )}>
+          {nonAbsenceItems.slice(0, 5).map(item => (
             <ResizablePlanningItem
               key={item.id}
               item={item}
@@ -1328,9 +1382,9 @@ function DayCell({
               onViewTimeEntry={onViewTimeEntry}
             />
           ))}
-          {items.length > 5 && (
+          {nonAbsenceItems.length > 5 && (
             <div className="text-[10px] text-muted-foreground text-center font-medium bg-muted/50 rounded px-1 py-0.5">
-              +{items.length - 5} autres
+              +{nonAbsenceItems.length - 5} autres
             </div>
           )}
         </div>
@@ -1340,7 +1394,7 @@ function DayCell({
           data-cell-background
           className={cn(
             "absolute inset-0 cursor-pointer transition-colors -z-0",
-            !isInSelection && "hover:bg-accent/30"
+            !isInSelection && !hasAbsence && "hover:bg-accent/30"
           )}
         />
 
@@ -1361,7 +1415,7 @@ function DayCell({
         )}
 
         {/* Taux d'occupation */}
-        {occupancy > 0 && !isDragOver && (
+        {occupancy > 0 && !isDragOver && !hasAbsence && (
           <div className={cn(
             "text-[10px] font-semibold text-center mt-auto opacity-80 pointer-events-none z-10",
             getOccupancyColor(occupancy)
