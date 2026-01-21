@@ -35,28 +35,53 @@ export interface CreateApprenticeScheduleInput {
   pdf_filename?: string;
 }
 
+// Day name to day number mapping (Monday = 1, Sunday = 0)
+const DAY_NAME_TO_NUMBER: Record<string, number> = {
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+};
+
 // Generate school absence dates from schedule
 export function generateSchoolDates(schedule: ApprenticeSchedule): Date[] {
   const startDate = new Date(schedule.start_date);
   const endDate = new Date(schedule.end_date);
   const schoolDates: Date[] = [];
   
-  if (schedule.pattern_type === 'weekly') {
-    // Simple pattern: first X days of week are school
+  const customPattern = schedule.custom_pattern as { school_days?: string[]; school_dates?: string[] } | null;
+  
+  if (schedule.pattern_type === 'weekly' && customPattern?.school_days) {
+    // Weekly pattern with specific days of the week (e.g., ["thursday", "friday"])
+    const schoolDayNumbers = customPattern.school_days.map(day => DAY_NAME_TO_NUMBER[day]).filter(Boolean);
+    
     const allDays = eachDayOfInterval({ start: startDate, end: endDate });
     allDays.forEach(day => {
       if (isWeekend(day)) return;
-      const dayOfWeek = day.getDay(); // 1 = Monday, 5 = Friday
-      // Assume school days are at the end of the week
-      if (dayOfWeek > (5 - schedule.school_days_per_week)) {
+      const dayOfWeek = day.getDay();
+      if (schoolDayNumbers.includes(dayOfWeek)) {
         schoolDates.push(day);
       }
     });
-  } else if (schedule.pattern_type === 'custom' && schedule.custom_pattern) {
-    // Custom pattern from parsed PDF
-    const customDates = schedule.custom_pattern.school_dates || [];
-    customDates.forEach((dateStr: string) => {
-      schoolDates.push(new Date(dateStr));
+  } else if (schedule.pattern_type === 'custom' && customPattern?.school_dates) {
+    // Custom pattern with specific dates from parsed PDF
+    customPattern.school_dates.forEach((dateStr: string) => {
+      const date = new Date(dateStr);
+      if (!isNaN(date.getTime())) {
+        schoolDates.push(date);
+      }
+    });
+  } else if (schedule.pattern_type === 'weekly' && schedule.school_days_per_week) {
+    // Legacy: simple pattern based on number of school days per week
+    const allDays = eachDayOfInterval({ start: startDate, end: endDate });
+    allDays.forEach(day => {
+      if (isWeekend(day)) return;
+      const dayOfWeek = day.getDay();
+      // Assume school days are at the end of the week
+      if (dayOfWeek > (5 - (schedule.school_days_per_week || 0))) {
+        schoolDates.push(day);
+      }
     });
   }
   
