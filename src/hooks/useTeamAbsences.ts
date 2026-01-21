@@ -7,7 +7,7 @@ export interface TeamAbsence {
   id: string;
   workspace_id: string;
   user_id: string;
-  absence_type: "conge_paye" | "rtt" | "maladie" | "sans_solde" | "formation" | "teletravail" | "autre";
+  absence_type: "conge_paye" | "rtt" | "maladie" | "sans_solde" | "formation" | "teletravail" | "ecole" | "autre";
   start_date: string;
   end_date: string;
   start_half_day: boolean;
@@ -28,6 +28,7 @@ export const absenceTypeLabels: Record<TeamAbsence["absence_type"], string> = {
   sans_solde: "Sans solde",
   formation: "Formation",
   teletravail: "Télétravail",
+  ecole: "École",
   autre: "Autre",
 };
 
