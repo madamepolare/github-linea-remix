@@ -157,7 +157,7 @@ export function useDeleteTimeEntry() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["team-time-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["team-time-entries"], refetchType: "all" });
       toast({ title: "Temps supprimé" });
     },
     onError: () => {

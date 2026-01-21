@@ -25,7 +25,7 @@ import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 import { ResizablePlanningItem, PlanningItem } from "./ResizablePlanningItem";
 import { AddTimeEntryDialog } from "./AddTimeEntryDialog";
 import { EditTimeEntryDialog } from "./EditTimeEntryDialog";
-import { AbsenceLottie } from "./AbsenceLottie";
+import { AbsenceIcon } from "./AbsenceIcon";
 
 interface TeamPlanningGridProps {
   onEventClick?: (schedule: TaskSchedule) => void;
@@ -1326,23 +1326,20 @@ function DayCell({
         onMouseEnter={() => onCellMouseEnter?.(day, member)}
         onMouseUp={() => onCellMouseUp?.()}
       >
-        {/* Absence overlay with lottie animation */}
+        {/* Absence overlay with icon */}
         {hasAbsence && absenceType && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-            <div className="flex flex-col items-center gap-1 opacity-80">
-              <AbsenceLottie type={absenceType} size={32} />
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="text-[9px] font-medium text-muted-foreground bg-background/80 px-1.5 py-0.5 rounded max-w-[90%] truncate pointer-events-auto cursor-default">
-                    {absenceLabel}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">
-                  {absenceLabel}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="absolute inset-0 flex items-center justify-center z-10 cursor-default">
+                <div className="bg-background/90 rounded-full p-2 shadow-sm">
+                  <AbsenceIcon type={absenceType} size={24} />
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              {absenceLabel}
+            </TooltipContent>
+          </Tooltip>
         )}
 
         {/* Diagonal stripes pattern for absence */}
