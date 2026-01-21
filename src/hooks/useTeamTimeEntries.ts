@@ -156,8 +156,15 @@ export function useDeleteTimeEntry() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["team-time-entries"], refetchType: "all" });
+    onSuccess: async () => {
+      // Invalidate all queries that start with "team-time-entries" to ensure planning refresh
+      await queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey;
+          return Array.isArray(key) && key[0] === "team-time-entries";
+        },
+        refetchType: "all" 
+      });
       toast({ title: "Temps supprimé" });
     },
     onError: () => {
