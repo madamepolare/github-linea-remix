@@ -1,12 +1,13 @@
 import { useMemo } from "react";
-import { format, startOfWeek, addDays, subDays } from "date-fns";
+import { format, startOfWeek, addDays, subDays, isWithinInterval, isSameDay } from "date-fns";
 import { useTaskSchedules } from "./useTaskSchedules";
 import { useTeamMembers } from "./useTeamMembers";
 import { useWorkspaceEvents } from "./useWorkspaceEvents";
 import { useAllProjectMembers } from "./useProjects";
-import { useTeamAbsences } from "./useTeamAbsences";
+import { useTeamAbsences, TeamAbsence } from "./useTeamAbsences";
 import { useTeamTimeEntries } from "./useTeamTimeEntries";
 import { useTeams } from "./useTeams";
+import { useApprenticeSchedules, generateSchoolDates } from "./useApprenticeSchedules";
 
 interface UsePlanningDataOptions {
   currentDate: Date;
@@ -66,6 +67,9 @@ export function usePlanningData({ currentDate, daysToShow = 21 }: UsePlanningDat
   // Fetch teams (static data)
   const { teams, userTeamsMap, isLoading: teamsLoading } = useTeams();
 
+  // Fetch apprentice schedules for school day absences
+  const { data: apprenticeSchedules, isLoading: apprenticeSchedulesLoading } = useApprenticeSchedules();
+
   // Filter events to the visible date range (since events hook fetches all)
   const filteredEvents = useMemo(() => {
     if (!events) return [];
@@ -80,22 +84,97 @@ export function usePlanningData({ currentDate, daysToShow = 21 }: UsePlanningDat
     });
   }, [events, dateRange]);
 
-  // Filter absences to the visible date range
+  // Filter absences to the visible date range and add school days from apprentice schedules
   const filteredAbsences = useMemo(() => {
-    if (!absences) return [];
-    
+    const result: TeamAbsence[] = [];
     const rangeStart = new Date(dateRange.startDate);
     const rangeEnd = new Date(dateRange.endDate);
     
-    return absences.filter(absence => {
-      const absenceStart = new Date(absence.start_date);
-      const absenceEnd = new Date(absence.end_date);
-      return absenceStart <= rangeEnd && absenceEnd >= rangeStart;
-    });
-  }, [absences, dateRange]);
+    // Add real absences
+    if (absences) {
+      absences.forEach(absence => {
+        const absenceStart = new Date(absence.start_date);
+        const absenceEnd = new Date(absence.end_date);
+        if (absenceStart <= rangeEnd && absenceEnd >= rangeStart) {
+          result.push(absence);
+        }
+      });
+    }
+    
+    // Generate virtual "école" absences from apprentice schedules
+    if (apprenticeSchedules) {
+      apprenticeSchedules.forEach(schedule => {
+        const schoolDates = generateSchoolDates(schedule);
+        
+        // Group consecutive school dates into single absence periods
+        let currentStart: Date | null = null;
+        let currentEnd: Date | null = null;
+        
+        schoolDates.forEach((date) => {
+          // Only include dates in visible range
+          if (!isWithinInterval(date, { start: rangeStart, end: rangeEnd })) return;
+          
+          if (!currentStart) {
+            currentStart = date;
+            currentEnd = date;
+          } else if (currentEnd) {
+            const daysDiff = (date.getTime() - currentEnd.getTime()) / (1000 * 60 * 60 * 24);
+            // If within 3 days (accounting for weekends), extend the period
+            if (daysDiff <= 3) {
+              currentEnd = date;
+            } else {
+              // Save current period and start new
+              result.push({
+                id: `school-${schedule.id}-${format(currentStart, 'yyyy-MM-dd')}`,
+                workspace_id: schedule.workspace_id,
+                user_id: schedule.user_id,
+                absence_type: "ecole",
+                start_date: format(currentStart, 'yyyy-MM-dd'),
+                end_date: format(currentEnd, 'yyyy-MM-dd'),
+                start_half_day: false,
+                end_half_day: false,
+                reason: schedule.schedule_name,
+                status: "approved",
+                approved_by: null,
+                approved_at: null,
+                rejection_reason: null,
+                created_at: schedule.created_at,
+                updated_at: schedule.updated_at,
+              });
+              currentStart = date;
+              currentEnd = date;
+            }
+          }
+        });
+        
+        // Don't forget the last period
+        if (currentStart && currentEnd) {
+          result.push({
+            id: `school-${schedule.id}-${format(currentStart, 'yyyy-MM-dd')}`,
+            workspace_id: schedule.workspace_id,
+            user_id: schedule.user_id,
+            absence_type: "ecole",
+            start_date: format(currentStart, 'yyyy-MM-dd'),
+            end_date: format(currentEnd, 'yyyy-MM-dd'),
+            start_half_day: false,
+            end_half_day: false,
+            reason: schedule.schedule_name,
+            status: "approved",
+            approved_by: null,
+            approved_at: null,
+            rejection_reason: null,
+            created_at: schedule.created_at,
+            updated_at: schedule.updated_at,
+          });
+        }
+      });
+    }
+    
+    return result;
+  }, [absences, apprenticeSchedules, dateRange]);
 
   const isLoading = schedulesLoading || membersLoading || eventsLoading || 
-    projectMembersLoading || absencesLoading || timeEntriesLoading || teamsLoading;
+    projectMembersLoading || absencesLoading || timeEntriesLoading || teamsLoading || apprenticeSchedulesLoading;
 
   return {
     // Data
