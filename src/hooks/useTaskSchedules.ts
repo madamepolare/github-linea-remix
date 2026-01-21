@@ -252,7 +252,7 @@ export function useTaskSchedules(options?: UseTaskSchedulesOptions) {
   };
 }
 
-// Hook pour récupérer les tâches à planifier (toutes les tâches non terminées, même si elles ont déjà des créneaux)
+// Hook pour récupérer les tâches à planifier (limité aux tâches prioritaires pour performance)
 export function useUnscheduledTasks() {
   const { activeWorkspace } = useAuth();
 
@@ -261,26 +261,39 @@ export function useUnscheduledTasks() {
     queryFn: async () => {
       if (!activeWorkspace?.id) return [];
 
-      // Récupérer toutes les tâches non terminées
+      // Récupérer seulement les tâches non terminées sans parent (pas les sous-tâches)
+      // Limiter à 100 tâches les plus prioritaires pour performance
       const { data: tasks, error: tasksError } = await supabase
         .from("tasks")
         .select(`
-          *,
+          id,
+          title,
+          status,
+          priority,
+          estimated_hours,
+          due_date,
+          assigned_to,
+          project_id,
           project:projects(id, name, color)
         `)
         .eq("workspace_id", activeWorkspace.id)
         .neq("status", "done")
         .neq("status", "archived")
+        .is("parent_id", null) // Exclude subtasks to reduce N+1 queries
         .order("priority", { ascending: true })
-        .order("due_date", { ascending: true, nullsFirst: false });
+        .order("due_date", { ascending: true, nullsFirst: false })
+        .limit(100); // Limit for performance
 
       if (tasksError) throw tasksError;
 
-      // Récupérer le temps total planifié pour chaque tâche
+      // Récupérer le temps total planifié pour ces tâches seulement
+      const taskIds = (tasks || []).map(t => t.id);
+      if (taskIds.length === 0) return [];
+
       const { data: schedules } = await supabase
         .from("task_schedules")
         .select("task_id, start_datetime, end_datetime")
-        .eq("workspace_id", activeWorkspace.id);
+        .in("task_id", taskIds);
 
       // Calculer les heures planifiées par tâche
       const scheduledHoursMap = new Map<string, number>();
@@ -299,5 +312,6 @@ export function useUnscheduledTasks() {
       }));
     },
     enabled: !!activeWorkspace?.id,
+    staleTime: 30000, // Keep data fresh for 30 seconds
   });
 }

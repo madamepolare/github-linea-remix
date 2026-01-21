@@ -582,11 +582,23 @@ export function useAllProjectMembers() {
     queryFn: async () => {
       if (!activeWorkspace?.id) return new Map<string, Set<string>>();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      // First get all project IDs for this workspace
+      const { data: projects, error: projectsError } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("workspace_id", activeWorkspace.id)
+        .eq("is_archived", false);
+
+      if (projectsError) throw projectsError;
+
+      const projectIds = projects?.map(p => p.id) || [];
+      if (projectIds.length === 0) return new Map<string, Set<string>>();
+
+      // Then get members for those projects
+      const { data, error } = await supabase
         .from("project_members")
         .select("user_id, project_id")
-        .eq("workspace_id", activeWorkspace.id);
+        .in("project_id", projectIds);
 
       if (error) throw error;
 
