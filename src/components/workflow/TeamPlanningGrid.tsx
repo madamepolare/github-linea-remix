@@ -61,7 +61,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const [teamColumnCollapsed, setTeamColumnCollapsed] = useState(false);
   const [selectedMemberIds, setSelectedMemberIds] = useState<Set<string>>(new Set());
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
-  const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
+  const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set(["0c71f43c-bfa5-4437-b22f-5d94bdd6f0f9"])); // Default to "Agence" team
   const [showNonAssigned, setShowNonAssigned] = useState(false);
   const [memberFilterOpen, setMemberFilterOpen] = useState(false);
   const [projectFilterOpen, setProjectFilterOpen] = useState(false);
