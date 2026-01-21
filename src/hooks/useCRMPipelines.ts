@@ -394,6 +394,64 @@ export function useCRMPipelines() {
     },
   });
 
+  // Duplicate a pipeline with all its stages
+  const duplicatePipeline = useMutation({
+    mutationFn: async (pipelineId: string) => {
+      // Get the original pipeline
+      const originalPipeline = pipelines?.find(p => p.id === pipelineId);
+      if (!originalPipeline) throw new Error("Pipeline non trouvé");
+
+      // Create new pipeline
+      const { data: newPipeline, error: pipelineError } = await supabase
+        .from("crm_pipelines")
+        .insert({
+          workspace_id: activeWorkspace!.id,
+          name: `${originalPipeline.name} (copie)`,
+          description: originalPipeline.description,
+          color: originalPipeline.color,
+          is_default: false,
+          sort_order: (pipelines?.length || 0),
+          pipeline_type: originalPipeline.pipeline_type || "opportunity",
+          target_contact_type: originalPipeline.target_contact_type,
+          email_ai_prompt: originalPipeline.email_ai_prompt,
+        })
+        .select()
+        .single();
+
+      if (pipelineError) throw pipelineError;
+
+      // Duplicate stages if any
+      if (originalPipeline.stages && originalPipeline.stages.length > 0) {
+        const stagesData = originalPipeline.stages.map((stage, i) => ({
+          pipeline_id: newPipeline.id,
+          name: stage.name,
+          color: stage.color,
+          probability: stage.probability,
+          sort_order: i,
+          requires_email_on_enter: stage.requires_email_on_enter || false,
+          is_final_stage: stage.is_final_stage || false,
+          email_ai_prompt: stage.email_ai_prompt,
+          email_template_id: stage.email_template_id,
+        }));
+
+        const { error: stagesError } = await supabase
+          .from("crm_pipeline_stages")
+          .insert(stagesData);
+
+        if (stagesError) throw stagesError;
+      }
+
+      return newPipeline;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey });
+      toast({ title: "Pipeline dupliqué" });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Erreur", description: error.message });
+    },
+  });
+
   return {
     pipelines: pipelines || [],
     opportunityPipelines,
@@ -403,6 +461,7 @@ export function useCRMPipelines() {
     createPipeline,
     updatePipeline,
     deletePipeline,
+    duplicatePipeline,
     createDefaultPipeline,
     createDefaultContactPipelines,
     createStage,
