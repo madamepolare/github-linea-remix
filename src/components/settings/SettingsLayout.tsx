@@ -145,13 +145,6 @@ export function getSettingsGroups(t: (key: string) => string): SettingsGroup[] {
         { id: 'feedback', label: t('settings.sections.feedback'), icon: <MessageSquarePlus className="h-4 w-4" />, description: t('settings.sections.feedbackDesc') },
       ],
     },
-    {
-      id: 'development',
-      label: 'Développement',
-      sections: [
-        { id: 'page-inspector', label: 'Inspecteur IA', icon: <Search className="h-4 w-4" />, description: 'Analyse IA des pages pour détecter les incohérences', badge: 'Nouveau' },
-      ],
-    },
   ];
 }
 
