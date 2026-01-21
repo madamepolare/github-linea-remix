@@ -44,9 +44,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Convert to base64 for AI processing
+    // Convert to base64 for AI processing - handle large files properly
     const arrayBuffer = await fileData.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Build base64 in chunks to avoid stack overflow
+    let base64 = "";
+    const chunkSize = 32768; // 32KB chunks
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+      base64 += String.fromCharCode.apply(null, [...chunk]);
+    }
+    base64 = btoa(base64);
 
     // Use Lovable AI to analyze the calendar
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
