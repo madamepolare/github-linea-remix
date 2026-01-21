@@ -236,6 +236,8 @@ export function useTasks(options?: UseTasksOptions) {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["deliverable-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["deliverable-full-task"] });
+      queryClient.invalidateQueries({ queryKey: ["unscheduled-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["task-schedules"] });
       toast.success("Task deleted");
     },
     onError: (error) => {
