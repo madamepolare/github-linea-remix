@@ -67,10 +67,16 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const [projectFilterOpen, setProjectFilterOpen] = useState(false);
   const [teamFilterOpen, setTeamFilterOpen] = useState(false);
   
-  // Time entry dialog state (add)
+  // Time entry dialog state (add) - supports multi-day selection
   const [timeEntryDialogOpen, setTimeEntryDialogOpen] = useState(false);
   const [selectedCellDate, setSelectedCellDate] = useState<Date | null>(null);
+  const [selectedCellEndDate, setSelectedCellEndDate] = useState<Date | null>(null);
   const [selectedCellMember, setSelectedCellMember] = useState<TeamMember | null>(null);
+  
+  // Multi-day drag selection state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartCell, setDragStartCell] = useState<{ date: Date; member: TeamMember } | null>(null);
+  const [dragCurrentCell, setDragCurrentCell] = useState<{ date: Date; member: TeamMember } | null>(null);
   
   // Time entry edit dialog state
   const [editTimeEntryDialogOpen, setEditTimeEntryDialogOpen] = useState(false);
@@ -115,6 +121,48 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     setSelectedTimeEntry(entry);
     setEditTimeEntryDialogOpen(true);
   }, []);
+
+  // Multi-day drag selection handlers
+  const handleCellMouseDown = useCallback((date: Date, member: TeamMember) => {
+    setIsDragging(true);
+    setDragStartCell({ date, member });
+    setDragCurrentCell({ date, member });
+  }, []);
+
+  const handleCellMouseEnter = useCallback((date: Date, member: TeamMember) => {
+    if (isDragging && dragStartCell && dragStartCell.member.user_id === member.user_id) {
+      setDragCurrentCell({ date, member });
+    }
+  }, [isDragging, dragStartCell]);
+
+  const handleCellMouseUp = useCallback(() => {
+    if (isDragging && dragStartCell && dragCurrentCell) {
+      // Same member, open dialog with date range
+      if (dragStartCell.member.user_id === dragCurrentCell.member.user_id) {
+        const startDate = dragStartCell.date <= dragCurrentCell.date ? dragStartCell.date : dragCurrentCell.date;
+        const endDate = dragStartCell.date <= dragCurrentCell.date ? dragCurrentCell.date : dragStartCell.date;
+        
+        setSelectedCellDate(startDate);
+        setSelectedCellEndDate(endDate);
+        setSelectedCellMember(dragStartCell.member);
+        setTimeEntryDialogOpen(true);
+      }
+    }
+    setIsDragging(false);
+    setDragStartCell(null);
+    setDragCurrentCell(null);
+  }, [isDragging, dragStartCell, dragCurrentCell]);
+
+  // Check if a cell is in the current selection range
+  const isCellInSelection = useCallback((date: Date, memberId: string) => {
+    if (!isDragging || !dragStartCell || !dragCurrentCell) return false;
+    if (dragStartCell.member.user_id !== memberId) return false;
+    
+    const startDate = dragStartCell.date <= dragCurrentCell.date ? dragStartCell.date : dragCurrentCell.date;
+    const endDate = dragStartCell.date <= dragCurrentCell.date ? dragCurrentCell.date : dragStartCell.date;
+    
+    return date >= startDate && date <= endDate;
+  }, [isDragging, dragStartCell, dragCurrentCell]);
 
   // Handler pour démarrer le drag d'une tâche planifiée
   const handleScheduleDragStart = useCallback((e: React.DragEvent, scheduleId: string, taskTitle: string) => {
@@ -1002,10 +1050,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                       getOccupancyRate={getOccupancyRate}
                       onEventClick={onEventClick}
                       onCellClick={(date, member) => {
-                        setSelectedCellDate(date);
-                        setSelectedCellMember(member);
-                        setTimeEntryDialogOpen(true);
-                        onCellClick?.(date, member);
+                        // Single click fallback (if no drag happened)
                       }}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
@@ -1020,6 +1065,10 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                       onChangeTime={handleChangeScheduleTime}
                       onResizeTimeEntry={handleResizeTimeEntry}
                       onViewTimeEntry={handleViewTimeEntry}
+                      onCellMouseDown={handleCellMouseDown}
+                      onCellMouseEnter={handleCellMouseEnter}
+                      onCellMouseUp={handleCellMouseUp}
+                      isCellInSelection={isCellInSelection}
                     />
                   ))
                 )}
@@ -1037,11 +1086,12 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
         onOpenChange={setTaskSheetOpen}
       />
 
-      {/* Add Time Entry Dialog */}
+      {/* Add Time Entry Dialog - supports multi-day */}
       <AddTimeEntryDialog
         open={timeEntryDialogOpen}
         onOpenChange={setTimeEntryDialogOpen}
         date={selectedCellDate}
+        endDate={selectedCellEndDate}
         member={selectedCellMember}
       />
 
@@ -1075,6 +1125,11 @@ interface MemberRowProps {
   onChangeTime: (scheduleId: string, newStart: Date, newEnd: Date) => void;
   onResizeTimeEntry: (entryId: string, newDurationMinutes: number) => void;
   onViewTimeEntry: (entry: TeamTimeEntry) => void;
+  // Multi-day drag selection
+  onCellMouseDown?: (date: Date, member: TeamMember) => void;
+  onCellMouseEnter?: (date: Date, member: TeamMember) => void;
+  onCellMouseUp?: () => void;
+  isCellInSelection?: (date: Date, memberId: string) => boolean;
 }
 
 function MemberRow({
@@ -1097,6 +1152,10 @@ function MemberRow({
   onChangeTime,
   onResizeTimeEntry,
   onViewTimeEntry,
+  onCellMouseDown,
+  onCellMouseEnter,
+  onCellMouseUp,
+  isCellInSelection,
 }: MemberRowProps) {
   const memberEmail = member.profile?.email || null;
   
@@ -1109,6 +1168,7 @@ function MemberRow({
         const isToday = isSameDay(day, new Date());
         const weekend = isWeekend(day);
         const isDragOver = dragOverCell === cellKey;
+        const isInSelection = isCellInSelection?.(day, member.user_id) ?? false;
         
         return (
           <DayCell
@@ -1121,6 +1181,7 @@ function MemberRow({
             isToday={isToday}
             isWeekend={weekend}
             isDragOver={isDragOver}
+            isInSelection={isInSelection}
             onEventClick={onEventClick}
             onCellClick={onCellClick}
             onDragOver={onDragOver}
@@ -1134,6 +1195,9 @@ function MemberRow({
             onChangeTime={onChangeTime}
             onResizeTimeEntry={onResizeTimeEntry}
             onViewTimeEntry={onViewTimeEntry}
+            onCellMouseDown={onCellMouseDown}
+            onCellMouseEnter={onCellMouseEnter}
+            onCellMouseUp={onCellMouseUp}
           />
         );
       })}
@@ -1150,6 +1214,7 @@ interface DayCellProps {
   isToday: boolean;
   isWeekend: boolean;
   isDragOver: boolean;
+  isInSelection?: boolean;
   onEventClick?: (schedule: TaskSchedule) => void;
   onCellClick?: (date: Date, member: TeamMember) => void;
   onDragOver: (e: React.DragEvent, cellKey: string) => void;
@@ -1163,6 +1228,10 @@ interface DayCellProps {
   onChangeTime: (scheduleId: string, newStart: Date, newEnd: Date) => void;
   onResizeTimeEntry: (entryId: string, newDurationMinutes: number) => void;
   onViewTimeEntry: (entry: TeamTimeEntry) => void;
+  // Multi-day drag selection
+  onCellMouseDown?: (date: Date, member: TeamMember) => void;
+  onCellMouseEnter?: (date: Date, member: TeamMember) => void;
+  onCellMouseUp?: () => void;
 }
 
 function DayCell({
@@ -1174,6 +1243,7 @@ function DayCell({
   isToday,
   isWeekend,
   isDragOver,
+  isInSelection,
   onEventClick,
   onCellClick,
   onDragOver,
@@ -1187,6 +1257,9 @@ function DayCell({
   onChangeTime,
   onResizeTimeEntry,
   onViewTimeEntry,
+  onCellMouseDown,
+  onCellMouseEnter,
+  onCellMouseUp,
 }: DayCellProps) {
   const getOccupancyColor = (rate: number) => {
     if (rate === 0) return "";
@@ -1216,19 +1289,29 @@ function DayCell({
     <TooltipProvider delayDuration={200}>
       <div
         className={cn(
-          "relative border-r p-1 flex flex-col transition-all duration-200 ease-out",
+          "relative border-r p-1 flex flex-col transition-all duration-200 ease-out select-none",
           isWeekend && "bg-muted/20",
           isToday && "bg-primary/5 ring-1 ring-inset ring-primary/20",
           occupancy > 0 && getOccupancyBg(occupancy),
-          isDragOver && "bg-primary/15 ring-2 ring-inset ring-primary/50 shadow-lg scale-[1.02]"
+          isDragOver && "bg-primary/15 ring-2 ring-inset ring-primary/50 shadow-lg scale-[1.02]",
+          isInSelection && "bg-primary/20 ring-2 ring-inset ring-primary/40"
         )}
         style={{ width: cellWidth }}
         onDragOver={(e) => onDragOver(e, cellKey)}
         onDragLeave={onDragLeave}
         onDrop={(e) => onDrop(e, day, member)}
+        onMouseDown={(e) => {
+          // Only start drag selection from background, not from items
+          if ((e.target as HTMLElement).closest('[data-cell-background]') || e.target === e.currentTarget) {
+            e.preventDefault();
+            onCellMouseDown?.(day, member);
+          }
+        }}
+        onMouseEnter={() => onCellMouseEnter?.(day, member)}
+        onMouseUp={() => onCellMouseUp?.()}
       >
         {/* Items planifiés avec hauteur proportionnelle et resize */}
-        <div className="flex-1 space-y-0.5 overflow-hidden">
+        <div className="flex-1 space-y-0.5 overflow-hidden pointer-events-auto">
           {items.slice(0, 5).map(item => (
             <ResizablePlanningItem
               key={item.id}
@@ -1252,12 +1335,21 @@ function DayCell({
           )}
         </div>
 
-        {/* Clickable background zone for adding time entry */}
+        {/* Clickable background zone for adding time entry - now also handles drag start */}
         <div 
           data-cell-background
-          className="absolute inset-0 cursor-pointer hover:bg-accent/30 transition-colors -z-0"
-          onClick={handleCellBackgroundClick}
+          className={cn(
+            "absolute inset-0 cursor-pointer transition-colors -z-0",
+            !isInSelection && "hover:bg-accent/30"
+          )}
         />
+
+        {/* Selection indicator */}
+        {isInSelection && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <div className="w-3 h-3 rounded-full bg-primary/60 animate-pulse" />
+          </div>
+        )}
 
         {/* Indicateur de drop zone */}
         {isDragOver && (

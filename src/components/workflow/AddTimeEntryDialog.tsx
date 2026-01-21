@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,15 +23,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProjects } from "@/hooks/useProjects";
 import { useTasks } from "@/hooks/useTasks";
 import { useCreateTimeEntry } from "@/hooks/useTeamTimeEntries";
-import { format } from "date-fns";
+import { format, eachDayOfInterval, isWeekend } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Clock, FolderKanban, ListTodo, Plus, Home } from "lucide-react";
+import { Clock, FolderKanban, ListTodo, Plus, Home, Calendar } from "lucide-react";
 import { TeamMember } from "@/hooks/useTeamMembers";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 
 interface AddTimeEntryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   date: Date | null;
+  endDate?: Date | null; // Optional end date for multi-day selection
   member: TeamMember | null;
 }
 
@@ -39,6 +42,7 @@ export function AddTimeEntryDialog({
   open,
   onOpenChange,
   date,
+  endDate,
   member,
 }: AddTimeEntryDialogProps) {
   const { projects } = useProjects();
@@ -50,6 +54,8 @@ export function AddTimeEntryDialog({
   const [taskId, setTaskId] = useState<string>("");
   const [description, setDescription] = useState("");
   const [durationMinutes, setDurationMinutes] = useState(60);
+  const [skipWeekends, setSkipWeekends] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Separate internal and client projects
   const internalProjects = projects?.filter(p => p.is_internal) || [];
@@ -60,6 +66,24 @@ export function AddTimeEntryDialog({
     ? tasks?.filter(t => t.project_id === projectId) || []
     : tasks || [];
 
+  // Calculate days in the selection
+  const selectedDays = useMemo(() => {
+    if (!date) return [];
+    const start = date;
+    const end = endDate || date;
+    const sortedStart = start <= end ? start : end;
+    const sortedEnd = start <= end ? end : start;
+    
+    const allDays = eachDayOfInterval({ start: sortedStart, end: sortedEnd });
+    
+    if (skipWeekends) {
+      return allDays.filter(d => !isWeekend(d));
+    }
+    return allDays;
+  }, [date, endDate, skipWeekends]);
+
+  const isMultiDay = selectedDays.length > 1;
+
   useEffect(() => {
     if (open) {
       setMode("project");
@@ -67,31 +91,44 @@ export function AddTimeEntryDialog({
       setTaskId("");
       setDescription("");
       setDurationMinutes(60);
+      setSkipWeekends(true);
     }
   }, [open]);
 
   const handleSubmit = async () => {
-    if (!date) return;
+    if (selectedDays.length === 0) return;
 
-    // Check if project is internal
-    const selectedProject = projects?.find(p => p.id === projectId);
-    const isBillable = selectedProject ? !selectedProject.is_internal : true;
+    setIsSubmitting(true);
 
-    await createEntry.mutateAsync({
-      date: format(date, "yyyy-MM-dd"),
-      project_id: projectId || null,
-      task_id: mode === "task" && taskId ? taskId : null,
-      description: description || null,
-      duration_minutes: durationMinutes,
-      is_billable: isBillable,
-      status: "draft",
-    });
+    try {
+      // Check if project is internal
+      const selectedProject = projects?.find(p => p.id === projectId);
+      const isBillable = selectedProject ? !selectedProject.is_internal : true;
 
-    onOpenChange(false);
+      // Create time entry for each selected day
+      for (const day of selectedDays) {
+        await createEntry.mutateAsync({
+          date: format(day, "yyyy-MM-dd"),
+          project_id: projectId || null,
+          task_id: mode === "task" && taskId ? taskId : null,
+          description: description || null,
+          duration_minutes: durationMinutes,
+          is_billable: isBillable,
+          status: "draft",
+        });
+      }
+
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const durationHours = Math.floor(durationMinutes / 60);
   const durationMins = durationMinutes % 60;
+  const totalMinutes = durationMinutes * selectedDays.length;
+  const totalHours = Math.floor(totalMinutes / 60);
+  const totalMins = totalMinutes % 60;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,14 +139,44 @@ export function AddTimeEntryDialog({
             Ajouter du temps
           </DialogTitle>
           {date && (
-            <p className="text-sm text-muted-foreground">
-              {format(date, "EEEE d MMMM yyyy", { locale: fr })}
-              {member?.profile?.full_name && ` • ${member.profile.full_name}`}
-            </p>
+            <div className="text-sm text-muted-foreground">
+              {isMultiDay ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    {format(selectedDays[0], "d MMM", { locale: fr })} → {format(selectedDays[selectedDays.length - 1], "d MMM yyyy", { locale: fr })}
+                  </span>
+                  <Badge variant="secondary" className="text-xs">
+                    {selectedDays.length} jours
+                  </Badge>
+                </div>
+              ) : (
+                <span>
+                  {format(date, "EEEE d MMMM yyyy", { locale: fr })}
+                </span>
+              )}
+              {member?.profile?.full_name && <span> • {member.profile.full_name}</span>}
+            </div>
           )}
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Multi-day options */}
+          {endDate && date && endDate.getTime() !== date.getTime() && (
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="skip-weekends"
+                  checked={skipWeekends}
+                  onCheckedChange={setSkipWeekends}
+                />
+                <Label htmlFor="skip-weekends" className="text-sm cursor-pointer">
+                  Exclure les week-ends
+                </Label>
+              </div>
+            </div>
+          )}
+
           {/* Mode selection */}
           <Tabs value={mode} onValueChange={(v) => setMode(v as "project" | "task")}>
             <TabsList className="grid w-full grid-cols-2">
@@ -241,7 +308,7 @@ export function AddTimeEntryDialog({
 
           {/* Duration */}
           <div className="space-y-2">
-            <Label>Durée (minutes)</Label>
+            <Label>Durée par jour (minutes)</Label>
             <Input
               type="number"
               min={15}
@@ -250,7 +317,12 @@ export function AddTimeEntryDialog({
               onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 0)}
             />
             <p className="text-xs text-muted-foreground">
-              = {durationHours}h{durationMins > 0 ? ` ${durationMins}min` : ""}
+              = {durationHours}h{durationMins > 0 ? ` ${durationMins}min` : ""} par jour
+              {isMultiDay && (
+                <span className="font-medium text-primary ml-2">
+                  → Total: {totalHours}h{totalMins > 0 ? ` ${totalMins}min` : ""} ({selectedDays.length} jours)
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -261,10 +333,10 @@ export function AddTimeEntryDialog({
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={createEntry.isPending || (mode === "task" && !taskId && !projectId)}
+            disabled={isSubmitting || (mode === "task" && !taskId && !projectId)}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Ajouter
+            {isMultiDay ? `Ajouter (${selectedDays.length} jours)` : "Ajouter"}
           </Button>
         </DialogFooter>
       </DialogContent>
