@@ -38,7 +38,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, Target, Users, Layers, Mail, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronDown, ChevronUp, Target, Users, Layers, Mail, Sparkles, Loader2, Copy } from "lucide-react";
 import { DEFAULT_CONTACT_TYPES } from "@/lib/crmDefaults";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -67,6 +67,7 @@ export function PipelineSettings() {
     createPipeline,
     updatePipeline,
     deletePipeline,
+    duplicatePipeline,
     createDefaultPipeline,
     createDefaultContactPipelines,
     createStage,
@@ -98,6 +99,7 @@ export function PipelineSettings() {
     probability: 0,
     requires_email_on_enter: false,
     is_final_stage: false,
+    email_ai_prompt: "",
   });
   const [generatedStages, setGeneratedStages] = useState<GeneratedStage[]>([]);
   const [isGeneratingStages, setIsGeneratingStages] = useState(false);
@@ -212,6 +214,7 @@ export function PipelineSettings() {
       probability: 0,
       requires_email_on_enter: false,
       is_final_stage: false,
+      email_ai_prompt: "",
     });
     setIsStageDialogOpen(true);
   };
@@ -225,6 +228,7 @@ export function PipelineSettings() {
       probability: stage.probability || 0,
       requires_email_on_enter: stage.requires_email_on_enter || false,
       is_final_stage: stage.is_final_stage || false,
+      email_ai_prompt: stage.email_ai_prompt || "",
     });
     setIsStageDialogOpen(true);
   };
@@ -238,6 +242,7 @@ export function PipelineSettings() {
         probability: stageForm.probability,
         requires_email_on_enter: stageForm.requires_email_on_enter,
         is_final_stage: stageForm.is_final_stage,
+        email_ai_prompt: stageForm.email_ai_prompt || null,
       });
     } else if (currentPipelineId) {
       await createStage.mutateAsync({
@@ -247,9 +252,14 @@ export function PipelineSettings() {
         probability: stageForm.probability,
         requires_email_on_enter: stageForm.requires_email_on_enter,
         is_final_stage: stageForm.is_final_stage,
+        email_ai_prompt: stageForm.email_ai_prompt || undefined,
       });
     }
     setIsStageDialogOpen(false);
+  };
+
+  const handleDuplicatePipeline = async (pipelineId: string) => {
+    await duplicatePipeline.mutateAsync(pipelineId);
   };
 
   const handleDelete = async () => {
@@ -339,6 +349,19 @@ export function PipelineSettings() {
                         </Badge>
                       </div>
                       <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Dupliquer le pipeline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDuplicatePipeline(pipeline.id);
+                          }}
+                          disabled={duplicatePipeline.isPending}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -759,6 +782,25 @@ export function PipelineSettings() {
                 ))}
               </div>
             </div>
+
+            {/* Prompt AI helper for email generation */}
+            {currentPipelineType === "contact" && (
+              <div className="space-y-2 pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <Label>Prompt d'aide pour les emails</Label>
+                </div>
+                <Textarea
+                  value={stageForm.email_ai_prompt}
+                  onChange={(e) => setStageForm({ ...stageForm, email_ai_prompt: e.target.value })}
+                  placeholder="Ex: Rédige un email de prise de contact professionnel pour présenter nos services d'architecture..."
+                  className="h-20 text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Ce prompt guidera l'IA lors de la génération d'emails pour cette étape
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsStageDialogOpen(false)}>
