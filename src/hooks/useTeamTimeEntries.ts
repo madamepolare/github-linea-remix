@@ -108,7 +108,7 @@ export function useCreateTimeEntry() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["team-time-entries"] });
+      queryClient.invalidateQueries({ queryKey: ["team-time-entries"], refetchType: "all" });
       toast({ title: "Temps enregistré" });
     },
     onError: () => {
