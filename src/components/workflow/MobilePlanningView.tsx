@@ -10,11 +10,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
-import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
-import { useTeamMembers } from "@/hooks/useTeamMembers";
-import { useWorkspaceEvents } from "@/hooks/useWorkspaceEvents";
-import { useTeamAbsences, absenceTypeLabels } from "@/hooks/useTeamAbsences";
+import { TaskSchedule } from "@/hooks/useTaskSchedules";
+import { absenceTypeLabels } from "@/hooks/useTeamAbsences";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePlanningData } from "@/hooks/usePlanningData";
 
 interface MobilePlanningViewProps {
   onEventClick?: (schedule: TaskSchedule) => void;
@@ -25,12 +24,14 @@ export function MobilePlanningView({ onEventClick }: MobilePlanningViewProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   
-  const { schedules, isLoading: schedulesLoading } = useTaskSchedules();
-  const { data: members, isLoading: membersLoading } = useTeamMembers();
-  const { data: events, isLoading: eventsLoading } = useWorkspaceEvents();
-  const { data: absences } = useTeamAbsences({ status: "approved" });
-
-  const isLoading = schedulesLoading || membersLoading || eventsLoading;
+  // Optimized data fetching with date range filtering
+  const { 
+    schedules, 
+    members, 
+    events, 
+    absences, 
+    isLoading,
+  } = usePlanningData({ currentDate: currentWeekStart, daysToShow: 7 });
 
   // Generate days for the week
   const weekDays = useMemo(() => {

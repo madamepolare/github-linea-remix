@@ -4,14 +4,13 @@ import { fr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar, Clock, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
-import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
-import { useWorkspaceEvents, UnifiedWorkspaceEvent, WorkspaceEvent, TenderWorkspaceEvent } from "@/hooks/useWorkspaceEvents";
-import { useAllProjectMembers, useProjects } from "@/hooks/useProjects";
+import { TaskSchedule } from "@/hooks/useTaskSchedules";
+import { TeamMember } from "@/hooks/useTeamMembers";
+import { WorkspaceEvent, TenderWorkspaceEvent } from "@/hooks/useWorkspaceEvents";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTeamAbsences, absenceTypeLabels } from "@/hooks/useTeamAbsences";
-import { useTeamTimeEntries, TeamTimeEntry } from "@/hooks/useTeamTimeEntries";
-import { useTeams } from "@/hooks/useTeams";
+import { absenceTypeLabels } from "@/hooks/useTeamAbsences";
+import { TeamTimeEntry } from "@/hooks/useTeamTimeEntries";
+import { usePlanningData } from "@/hooks/usePlanningData";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,16 +69,19 @@ export function TimelinePlanningGrid({ onEventClick, onTaskDrop }: TimelinePlann
   const [editTimeEntryDialogOpen, setEditTimeEntryDialogOpen] = useState(false);
   const [selectedTimeEntry, setSelectedTimeEntry] = useState<TeamTimeEntry | null>(null);
 
-  const { schedules, isLoading: schedulesLoading, createSchedule, deleteSchedule, updateSchedule } = useTaskSchedules();
-  const { data: members, isLoading: membersLoading } = useTeamMembers();
-  const { data: events, isLoading: eventsLoading } = useWorkspaceEvents();
-  const { data: userProjectsMap } = useAllProjectMembers();
-  const { data: absences } = useTeamAbsences({ status: "approved" });
-  const { data: timeEntries } = useTeamTimeEntries();
-  const { projects } = useProjects();
-  const { teams, userTeamsMap } = useTeams();
-
-  const isLoading = schedulesLoading || membersLoading || eventsLoading;
+  // Optimized data fetching with date range filtering
+  const { 
+    schedules, 
+    members, 
+    events, 
+    absences, 
+    timeEntries, 
+    userProjectsMap,
+    createSchedule, 
+    deleteSchedule, 
+    updateSchedule,
+    isLoading,
+  } = usePlanningData({ currentDate, daysToShow: DAYS_TO_SHOW });
 
   // Auto-select current logged-in user as default ("Mon agenda")
   useEffect(() => {
