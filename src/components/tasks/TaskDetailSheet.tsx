@@ -488,13 +488,14 @@ export function TaskDetailSheet({
               <div className="flex items-center gap-2 mt-3 text-sm">
                 {/* Entity relation - clickable to change */}
                 {relatedType && relatedId && (
-                  <Popover open={relationPopoverOpen} onOpenChange={setRelationPopoverOpen}>
+                  <Popover open={relationPopoverOpen} onOpenChange={setRelationPopoverOpen} modal={false}>
                     <PopoverTrigger asChild>
                       <button
                         onClick={(e) => {
                           e.preventDefault();
-                          // Show confirmation before opening popover
-                          setShowRelationChangeConfirm(true);
+                          e.stopPropagation();
+                          // Open popover directly - confirmation only for type changes
+                          setRelationPopoverOpen(true);
                         }}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-primary/5 text-primary hover:bg-primary/10 transition-all border border-primary/10"
                       >
@@ -502,7 +503,7 @@ export function TaskDetailSheet({
                         <LinkedEntityBadge entityType={relatedType} entityId={relatedId} />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80 p-3" align="start">
+                    <PopoverContent className="w-80 p-3" align="start" onInteractOutside={(e) => e.preventDefault()}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <label className="text-sm font-medium">Entité liée</label>
@@ -521,10 +522,14 @@ export function TaskDetailSheet({
                         <EntitySelector
                           entityType={relatedType}
                           entityId={relatedId}
-                          onEntityTypeChange={setRelatedType}
+                          onEntityTypeChange={(type) => {
+                            setRelatedType(type);
+                            if (!type) setRelationPopoverOpen(false);
+                          }}
                           onEntityIdChange={setRelatedId}
                           deliverableId={deliverableId}
                           onDeliverableIdChange={setDeliverableId}
+                          onRequestChange={handleRequestRelationChange}
                         />
                       </div>
                     </PopoverContent>
@@ -564,7 +569,7 @@ export function TaskDetailSheet({
 
               {/* Link button - only show if no relation yet */}
               {!relatedType && (
-                <Popover>
+                <Popover modal={false}>
                   <PopoverTrigger asChild>
                     <button
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-all"
@@ -573,7 +578,7 @@ export function TaskDetailSheet({
                       Lier
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-3" align="start">
+                  <PopoverContent className="w-80 p-3" align="start" onInteractOutside={(e) => e.preventDefault()}>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Entité liée</label>
                       <EntitySelector
