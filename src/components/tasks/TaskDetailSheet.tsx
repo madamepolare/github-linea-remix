@@ -567,15 +567,15 @@ export function TaskDetailSheet({
                 {priorityConfig.label}
               </button>
 
-              {/* Link button - only show if no relation yet */}
-              {!relatedType && (
+              {/* Link button - show if no complete relation (type + id) */}
+              {!(relatedType && relatedId) && (
                 <Popover modal={false}>
                   <PopoverTrigger asChild>
                     <button
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-all"
                     >
                       <Link2 className="h-3.5 w-3.5" />
-                      Lier
+                      {relatedType ? "Sélectionner..." : "Lier"}
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-3" align="start" onInteractOutside={(e) => e.preventDefault()}>
