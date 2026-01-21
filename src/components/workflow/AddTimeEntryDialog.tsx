@@ -108,6 +108,7 @@ export function AddTimeEntryDialog({
       // Create time entry for each selected day
       for (const day of selectedDays) {
         await createEntry.mutateAsync({
+          user_id: member?.user_id, // Use selected member's user_id
           date: format(day, "yyyy-MM-dd"),
           project_id: projectId || null,
           task_id: mode === "task" && taskId ? taskId : null,

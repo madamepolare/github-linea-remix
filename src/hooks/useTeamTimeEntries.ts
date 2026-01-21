@@ -99,7 +99,7 @@ export function useCreateTimeEntry() {
         .insert({
           ...entry,
           workspace_id: activeWorkspace.id,
-          user_id: user.id,
+          user_id: entry.user_id || user.id, // Use provided user_id or fallback to current user
         })
         .select()
         .single();
