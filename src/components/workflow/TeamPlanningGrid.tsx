@@ -7,13 +7,13 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
-import { TaskSchedule, useTaskSchedules } from "@/hooks/useTaskSchedules";
-import { useTeamMembers, TeamMember } from "@/hooks/useTeamMembers";
-import { useWorkspaceEvents, UnifiedWorkspaceEvent, WorkspaceEvent, TenderWorkspaceEvent } from "@/hooks/useWorkspaceEvents";
-import { useAllProjectMembers, useProjects } from "@/hooks/useProjects";
-import { useTeamAbsences, TeamAbsence, absenceTypeLabels } from "@/hooks/useTeamAbsences";
-import { useTeamTimeEntries, useUpdateTimeEntry, TeamTimeEntry } from "@/hooks/useTeamTimeEntries";
-import { useTeams } from "@/hooks/useTeams";
+import { TaskSchedule } from "@/hooks/useTaskSchedules";
+import { TeamMember } from "@/hooks/useTeamMembers";
+import { WorkspaceEvent, TenderWorkspaceEvent } from "@/hooks/useWorkspaceEvents";
+import { useProjects } from "@/hooks/useProjects";
+import { TeamAbsence, absenceTypeLabels } from "@/hooks/useTeamAbsences";
+import { useUpdateTimeEntry, TeamTimeEntry } from "@/hooks/useTeamTimeEntries";
+import { usePlanningData } from "@/hooks/usePlanningData";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -76,17 +76,26 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const [editTimeEntryDialogOpen, setEditTimeEntryDialogOpen] = useState(false);
   const [selectedTimeEntry, setSelectedTimeEntry] = useState<TeamTimeEntry | null>(null);
   
-  const { schedules, isLoading: schedulesLoading, createSchedule, deleteSchedule, updateSchedule } = useTaskSchedules();
-  const { data: members, isLoading: membersLoading } = useTeamMembers();
-  const { data: events, isLoading: eventsLoading } = useWorkspaceEvents();
-  const { data: userProjectsMap, isLoading: projectMembersLoading } = useAllProjectMembers();
-  const { data: absences, isLoading: absencesLoading } = useTeamAbsences({ status: "approved" });
-  const { data: timeEntries, isLoading: timeEntriesLoading } = useTeamTimeEntries();
+  // Optimized data fetching with date range filtering
+  const { 
+    schedules, 
+    members, 
+    events, 
+    absences, 
+    timeEntries, 
+    userProjectsMap, 
+    teams, 
+    userTeamsMap,
+    createSchedule, 
+    deleteSchedule, 
+    updateSchedule,
+    isLoading: planningDataLoading,
+  } = usePlanningData({ currentDate, daysToShow: DAYS_TO_SHOW });
+  
   const { projects, isLoading: projectsLoading } = useProjects();
-  const { teams, userTeamsMap } = useTeams();
   const updateTimeEntry = useUpdateTimeEntry();
 
-  const isLoading = schedulesLoading || membersLoading || eventsLoading || projectMembersLoading || absencesLoading || timeEntriesLoading || projectsLoading;
+  const isLoading = planningDataLoading || projectsLoading;
 
   // Handler pour voir les détails d'une tâche
   const handleViewTask = useCallback((schedule: TaskSchedule) => {
