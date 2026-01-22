@@ -25,7 +25,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { 
   Plus, 
@@ -447,221 +446,286 @@ export function QuoteLinesEditor({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Action bar with Add dropdown and AI button */}
+      {/* Action bar - unified with QuoteFeesTab */}
       <div className="flex items-center gap-2">
+        {/* Add dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm" className="h-8 sm:h-9 text-xs sm:text-sm">
-              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <Button size="sm" className="h-8 text-xs">
+              <Plus className="h-3.5 w-3.5 mr-1.5" strokeWidth={1.25} />
               Ajouter
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56 sm:w-64">
-            <DropdownMenuItem onClick={addGroup}><FolderPlus className="h-4 w-4 mr-2" />Nouveau groupe</DropdownMenuItem>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem onClick={addGroup}>
+              <FolderPlus className="h-4 w-4 mr-2" strokeWidth={1.25} />
+              Nouveau groupe
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => addLine('service')}><Package className="h-4 w-4 mr-2" />Ligne libre</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLine('option')}><Gift className="h-4 w-4 mr-2" />Option</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLine('expense')}><Receipt className="h-4 w-4 mr-2" />Frais</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addLine('discount')}><MinusCircle className="h-4 w-4 mr-2" />Remise</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addLine('service')}>
+              <Package className="h-4 w-4 mr-2" strokeWidth={1.25} />
+              Ligne libre
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addLine('option')}>
+              <Gift className="h-4 w-4 mr-2" strokeWidth={1.25} />
+              Option
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addLine('expense')}>
+              <Receipt className="h-4 w-4 mr-2" strokeWidth={1.25} />
+              Frais
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addLine('discount')}>
+              <MinusCircle className="h-4 w-4 mr-2" strokeWidth={1.25} />
+              Remise
+            </DropdownMenuItem>
             {(baseTemplates.length > 0 || complementaryTemplates.length > 0) && (
               <>
                 <DropdownMenuSeparator />
-                <div className="px-2 py-1.5 text-xs text-muted-foreground font-medium flex items-center justify-between">
-                  <span>Phases (Paramètres)</span>
-                  <a href="/settings/phases" target="_blank" className="text-primary hover:underline text-xs">Gérer →</a>
+                <div className="px-2 py-1.5 text-xs text-muted-foreground font-medium">
+                  Phases (Paramètres)
                 </div>
               </>
             )}
-            {baseTemplates.length > 0 && (<DropdownMenuSub><DropdownMenuSubTrigger><FileText className="h-4 w-4 mr-2" />Phases de base</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 overflow-y-auto">{baseTemplates.map(t => (<DropdownMenuItem key={t.id} onClick={() => addLineFromTemplate(t)}><Badge variant="outline" className="mr-2 text-xs font-mono">{t.code}</Badge><span className="truncate">{t.name}</span></DropdownMenuItem>))}</DropdownMenuSubContent></DropdownMenuSub>)}
-            {complementaryTemplates.length > 0 && (<DropdownMenuSub><DropdownMenuSubTrigger><FileText className="h-4 w-4 mr-2" />Phases complémentaires</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 overflow-y-auto">{complementaryTemplates.map(t => (<DropdownMenuItem key={t.id} onClick={() => addLineFromTemplate(t)}><Badge variant="outline" className="mr-2 text-xs font-mono">{t.code}</Badge><span className="truncate">{t.name}</span></DropdownMenuItem>))}</DropdownMenuSubContent></DropdownMenuSub>)}
-            {(baseTemplates.length === 0 && complementaryTemplates.length === 0) && (
+            {baseTemplates.length > 0 && (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <FileText className="h-4 w-4 mr-2" strokeWidth={1.25} />
+                  Phases de base
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
+                  {baseTemplates.map(t => (
+                    <DropdownMenuItem key={t.id} onClick={() => addLineFromTemplate(t)}>
+                      <Badge variant="outline" className="mr-2 text-xs font-mono">{t.code}</Badge>
+                      <span className="truncate">{t.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )}
+            {complementaryTemplates.length > 0 && (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <FileText className="h-4 w-4 mr-2" strokeWidth={1.25} />
+                  Phases complémentaires
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
+                  {complementaryTemplates.map(t => (
+                    <DropdownMenuItem key={t.id} onClick={() => addLineFromTemplate(t)}>
+                      <Badge variant="outline" className="mr-2 text-xs font-mono">{t.code}</Badge>
+                      <span className="truncate">{t.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )}
+            {activePricingGrids.length > 0 && (
               <>
                 <DropdownMenuSeparator />
-                <div className="px-2 py-2 text-xs text-muted-foreground text-center">
-                  <p>Aucune phase définie</p>
-                  <a href="/settings/phases" target="_blank" className="text-primary hover:underline">Configurer les phases →</a>
-                </div>
+                {activePricingGrids.map(grid => (
+                  <DropdownMenuSub key={grid.id}>
+                    <DropdownMenuSubTrigger>
+                      <Grid3X3 className="h-4 w-4 mr-2" strokeWidth={1.25} />
+                      {grid.name}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="max-h-80 overflow-y-auto">
+                      {grid.items.map((item: any, idx: number) => (
+                        <DropdownMenuItem key={idx} onClick={() => addLineFromPricingGrid(item)}>
+                          <div className="flex flex-col">
+                            <span>{item.name}</span>
+                            {item.unit_price && (
+                              <span className="text-xs text-muted-foreground">
+                                {formatCurrency(item.unit_price)}
+                              </span>
+                            )}
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                ))}
               </>
             )}
-            {activePricingGrids.length > 0 && (<><DropdownMenuSeparator />{activePricingGrids.map(grid => (<DropdownMenuSub key={grid.id}><DropdownMenuSubTrigger><Grid3X3 className="h-4 w-4 mr-2" />{grid.name}</DropdownMenuSubTrigger><DropdownMenuSubContent className="max-h-80 overflow-y-auto">{grid.items.map((item: any, idx: number) => (<DropdownMenuItem key={idx} onClick={() => addLineFromPricingGrid(item)}><div className="flex flex-col"><span>{item.name}</span>{item.unit_price && <span className="text-xs text-muted-foreground">{formatCurrency(item.unit_price)}</span>}</div></DropdownMenuItem>))}</DropdownMenuSubContent></DropdownMenuSub>))}</>)}
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Load Quote Template Button - opens dialog */}
-        {quoteTemplates && quoteTemplates.length > 0 && (
-          <>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-8 sm:h-9 text-xs sm:text-sm gap-1.5"
-              onClick={() => setShowTemplateDialog(true)}
-            >
-              <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Charger template</span>
-              <span className="sm:hidden">Template</span>
-            </Button>
-            
-            <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Layers className="h-5 w-5" />
-                    Charger un template de devis
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-2">
-                  {/* Template selection */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Template</label>
-                    <div className="grid gap-2 max-h-48 overflow-y-auto">
-                      {quoteTemplates.map(template => (
-                        <div
-                          key={template.id}
-                          onClick={() => setSelectedTemplate(template)}
-                          className={cn(
-                            "p-3 border rounded-lg cursor-pointer transition-colors",
-                            selectedTemplate?.id === template.id
-                              ? "border-primary bg-primary/5"
-                              : "hover:bg-muted/50"
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Layers className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="font-medium">{template.name}</span>
-                            <Badge variant="secondary" className="text-xs ml-auto">
-                              {template.phases.length} phases
-                            </Badge>
-                          </div>
-                          {template.description && (
-                            <p className="text-xs text-muted-foreground mt-1 ml-6">
-                              {template.description}
-                            </p>
-                          )}
+        {/* Load template button */}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 text-xs gap-1.5"
+          onClick={() => setShowTemplateDialog(true)}
+        >
+          <Download className="h-3.5 w-3.5" strokeWidth={1.25} />
+          Charger template
+        </Button>
+
+        {/* AI generation button */}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 text-xs gap-1.5"
+          onClick={() => setShowAIDialog(true)}
+        >
+          <Sparkles className="h-3.5 w-3.5" strokeWidth={1.25} />
+          Générer IA
+        </Button>
+      </div>
+
+      {/* Template Dialog */}
+      <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5" />
+              Charger un template de devis
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            {quoteTemplates && quoteTemplates.length > 0 ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Template</label>
+                  <div className="grid gap-2 max-h-48 overflow-y-auto">
+                    {quoteTemplates.map(template => (
+                      <div
+                        key={template.id}
+                        onClick={() => setSelectedTemplate(template)}
+                        className={cn(
+                          "p-3 border rounded-lg cursor-pointer transition-colors",
+                          selectedTemplate?.id === template.id
+                            ? "border-primary bg-primary/5"
+                            : "hover:bg-muted/50"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Layers className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <span className="font-medium">{template.name}</span>
+                          <Badge variant="secondary" className="text-xs ml-auto">
+                            {template.phases.length} phases
+                          </Badge>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {/* Budget target input */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Budget cible HT (optionnel)</label>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={templateBudget}
-                        onChange={(e) => setTemplateBudget(e.target.value)}
-                        className="text-right"
-                        placeholder="Ex: 15000"
-                      />
-                      <span className="text-muted-foreground">€</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {templateBudget && parseFloat(templateBudget) > 0
-                        ? "L'IA répartira intelligemment ce budget entre les phases du template."
-                        : "Laissez vide pour charger le template avec les prix par défaut."}
-                    </p>
-                  </div>
-                  
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        setShowTemplateDialog(false);
-                        setSelectedTemplate(null);
-                        setTemplateBudget('');
-                      }}
-                    >
-                      Annuler
-                    </Button>
-                    <Button
-                      className="flex-1"
-                      onClick={handleLoadTemplateWithBudget}
-                      disabled={!selectedTemplate || isLoadingTemplate}
-                    >
-                      {isLoadingTemplate ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Génération...
-                        </>
-                      ) : templateBudget && parseFloat(templateBudget) > 0 ? (
-                        <>
-                          <Sparkles className="h-4 w-4 mr-2" />
-                          Charger avec IA
-                        </>
-                      ) : (
-                        <>
-                          <Download className="h-4 w-4 mr-2" />
-                          Charger
-                        </>
-                      )}
-                    </Button>
+                        {template.description && (
+                          <p className="text-xs text-muted-foreground mt-1 ml-6">
+                            {template.description}
+                          </p>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </DialogContent>
-            </Dialog>
-          </>
-        )}
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Budget cible HT (optionnel)</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={templateBudget}
+                      onChange={(e) => setTemplateBudget(e.target.value)}
+                      className="text-right"
+                      placeholder="Ex: 15000"
+                    />
+                    <span className="text-muted-foreground">€</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {templateBudget && parseFloat(templateBudget) > 0
+                      ? "L'IA répartira intelligemment ce budget entre les lignes."
+                      : "Laissez vide pour charger avec les prix par défaut."}
+                  </p>
+                </div>
+                
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowTemplateDialog(false);
+                      setSelectedTemplate(null);
+                      setTemplateBudget('');
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleLoadTemplateWithBudget}
+                    disabled={!selectedTemplate || isLoadingTemplate}
+                  >
+                    {isLoadingTemplate ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Chargement...
+                      </>
+                    ) : templateBudget && parseFloat(templateBudget) > 0 ? (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Charger avec IA
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        Charger
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Layers className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Aucun template de devis configuré</p>
+                <a href="/settings/quotes" className="text-primary hover:underline text-sm">
+                  Configurer les templates →
+                </a>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
-        <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Génération IA</span>
-              <span className="sm:hidden">IA</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Génération IA du devis
-              </DialogTitle>
-            </DialogHeader>
-            <AIQuoteGenerator 
-              document={document} 
-              existingLines={lines} 
-              onLinesGenerated={(newLines) => {
-                onLinesChange(newLines);
-                setShowAIDialog(false);
-              }} 
-              onDocumentChange={onDocumentChange} 
-              pricingItems={allPricingItems} 
-            />
-          </DialogContent>
-        </Dialog>
+      {/* AI Generation Dialog */}
+      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Génération IA du devis
+            </DialogTitle>
+          </DialogHeader>
+          <AIQuoteGenerator 
+            document={document} 
+            existingLines={lines} 
+            onLinesGenerated={(newLines) => {
+              onLinesChange(newLines);
+              setShowAIDialog(false);
+            }} 
+            onDocumentChange={onDocumentChange} 
+            pricingItems={allPricingItems} 
+          />
+        </DialogContent>
+      </Dialog>
 
-        {/* Budget cible - moved to top action bar */}
-        <Dialog open={budgetDialogOpen} onOpenChange={setBudgetDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 sm:h-9 text-xs sm:text-sm gap-1.5">
-              <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Budget cible</span>
-              <span className="sm:hidden">Budget</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Ajuster vers un budget cible
-              </DialogTitle>
-            </DialogHeader>
-            <BudgetTargetForm 
-              currentTotal={totalHT} 
-              lines={lines}
-              document={document}
-              onApply={(targetBudget) => {
-                adjustToTarget(targetBudget);
-                setBudgetDialogOpen(false);
-              }}
-              onApplyWithAI={(updatedLines) => onLinesChange(updatedLines)}
-              onClose={() => setBudgetDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
-      </div>
+      {/* Budget target dialog */}
+      <Dialog open={budgetDialogOpen} onOpenChange={setBudgetDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Ajuster vers un budget cible
+            </DialogTitle>
+          </DialogHeader>
+          <BudgetTargetForm 
+            currentTotal={totalHT} 
+            lines={lines}
+            document={document}
+            onApply={(targetBudget) => {
+              adjustToTarget(targetBudget);
+              setBudgetDialogOpen(false);
+            }}
+            onApplyWithAI={(updatedLines) => onLinesChange(updatedLines)}
+            onClose={() => setBudgetDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
 
       {lines.length === 0 ? (
         <Card><CardContent className="py-8 sm:py-12 text-center"><FileText className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3 sm:mb-4" /><p className="text-sm sm:text-base text-muted-foreground">Aucune ligne dans ce devis</p></CardContent></Card>
