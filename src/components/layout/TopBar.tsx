@@ -35,8 +35,8 @@ export function TopBar({
   const { entityConfig } = useTopBar();
   const module = moduleOverride || getModuleFromPath(location.pathname);
   
-  // Don't show topbar for dashboard, messages (handled by GlobalTopBar), or if no module found
-  if (!module || module.slug === "dashboard" || module.slug === "messages") {
+  // Don't show topbar for dashboard or if no module found
+  if (!module || module.slug === "dashboard") {
     return null;
   }
 
