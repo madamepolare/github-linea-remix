@@ -344,7 +344,7 @@ export function QuoteLineItemCompact({
                       updateLine(line.id, { percentage_fee: percentage });
                     }
                   }}
-                  className="h-8 w-16 text-center text-sm border-0 bg-transparent tabular-nums text-blue-700"
+                  className="h-8 w-20 text-center text-sm border-0 bg-transparent tabular-nums text-blue-700"
                   step="0.5"
                   min={0}
                 />
