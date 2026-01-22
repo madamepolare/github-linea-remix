@@ -24,6 +24,8 @@ import { Task } from "@/hooks/useTasks";
 import { TaskDetailSheet } from "@/components/tasks/TaskDetailSheet";
 import { ResizablePlanningItem, PlanningItem } from "./ResizablePlanningItem";
 import { AddTimeEntryDialog } from "./AddTimeEntryDialog";
+import { AddAbsenceDialog } from "./AddAbsenceDialog";
+import { PlanningActionMenu } from "./PlanningActionMenu";
 import { EditTimeEntryDialog } from "./EditTimeEntryDialog";
 import { AbsenceIcon } from "./AbsenceIcon";
 
@@ -83,6 +85,12 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const [editTimeEntryDialogOpen, setEditTimeEntryDialogOpen] = useState(false);
   const [selectedTimeEntry, setSelectedTimeEntry] = useState<TeamTimeEntry | null>(null);
   
+  // Action menu state (choose between time entry and absence)
+  const [actionMenuOpen, setActionMenuOpen] = useState(false);
+  
+  // Absence dialog state
+  const [absenceDialogOpen, setAbsenceDialogOpen] = useState(false);
+  
   // Optimized data fetching with date range filtering
   const { 
     schedules, 
@@ -138,7 +146,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
 
   const handleCellMouseUp = useCallback(() => {
     if (isDragging && dragStartCell && dragCurrentCell) {
-      // Same member, open dialog with date range
+      // Same member, open action menu with date range
       if (dragStartCell.member.user_id === dragCurrentCell.member.user_id) {
         const startDate = dragStartCell.date <= dragCurrentCell.date ? dragStartCell.date : dragCurrentCell.date;
         const endDate = dragStartCell.date <= dragCurrentCell.date ? dragCurrentCell.date : dragStartCell.date;
@@ -146,13 +154,22 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
         setSelectedCellDate(startDate);
         setSelectedCellEndDate(endDate);
         setSelectedCellMember(dragStartCell.member);
-        setTimeEntryDialogOpen(true);
+        setActionMenuOpen(true); // Open action menu instead of time entry dialog directly
       }
     }
     setIsDragging(false);
     setDragStartCell(null);
     setDragCurrentCell(null);
   }, [isDragging, dragStartCell, dragCurrentCell]);
+
+  // Handlers for action menu selection
+  const handleSelectTimeEntry = useCallback(() => {
+    setTimeEntryDialogOpen(true);
+  }, []);
+
+  const handleSelectAbsence = useCallback(() => {
+    setAbsenceDialogOpen(true);
+  }, []);
 
   // Check if a cell is in the current selection range
   const isCellInSelection = useCallback((date: Date, memberId: string) => {
@@ -1087,10 +1104,30 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
         onOpenChange={setTaskSheetOpen}
       />
 
+      {/* Planning Action Menu - choose between time entry and absence */}
+      <PlanningActionMenu
+        open={actionMenuOpen}
+        onOpenChange={setActionMenuOpen}
+        date={selectedCellDate}
+        endDate={selectedCellEndDate}
+        member={selectedCellMember}
+        onSelectTimeEntry={handleSelectTimeEntry}
+        onSelectAbsence={handleSelectAbsence}
+      />
+
       {/* Add Time Entry Dialog - supports multi-day */}
       <AddTimeEntryDialog
         open={timeEntryDialogOpen}
         onOpenChange={setTimeEntryDialogOpen}
+        date={selectedCellDate}
+        endDate={selectedCellEndDate}
+        member={selectedCellMember}
+      />
+
+      {/* Add Absence Dialog */}
+      <AddAbsenceDialog
+        open={absenceDialogOpen}
+        onOpenChange={setAbsenceDialogOpen}
         date={selectedCellDate}
         endDate={selectedCellEndDate}
         member={selectedCellMember}
