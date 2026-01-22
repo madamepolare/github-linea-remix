@@ -282,7 +282,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   return (
     <motion.aside
       initial={false}
-      animate={{ width: collapsed ? 72 : 260 }}
+      animate={{ width: collapsed ? 56 : 220 }}
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       className={cn(
         "fixed left-0 top-0 z-40 flex h-screen flex-col",
