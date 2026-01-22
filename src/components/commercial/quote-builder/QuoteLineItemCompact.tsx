@@ -331,14 +331,17 @@ export function QuoteLineItemCompact({
                   value={line.percentage_fee || 0}
                   onChange={(e) => {
                     const percentage = parseFloat(e.target.value) || 0;
-                    // Recalculate amount based on construction budget
-                    if (document.construction_budget && document.fee_percentage) {
-                      const totalFees = (document.construction_budget * document.fee_percentage) / 100;
+                    const budget = document.construction_budget || 0;
+                    const feeRate = document.fee_percentage || 12;
+                    // Always recalculate amount based on construction budget
+                    if (budget > 0) {
+                      const totalFees = (budget * feeRate) / 100;
                       const newAmount = (totalFees * percentage) / 100;
                       updateLine(line.id, { 
                         percentage_fee: percentage, 
                         amount: newAmount,
-                        unit_price: newAmount
+                        unit_price: newAmount,
+                        quantity: 1
                       });
                     } else {
                       updateLine(line.id, { percentage_fee: percentage });
