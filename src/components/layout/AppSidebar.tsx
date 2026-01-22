@@ -291,22 +291,34 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       )}
     >
       {/* Workspace Switcher */}
-      <div className="relative flex items-center justify-between h-14 px-3 border-b border-border/40">
+      <div className={cn(
+        "relative flex items-center border-b border-border/40",
+        collapsed ? "justify-center h-12 px-0" : "justify-between h-12 px-2"
+      )}>
         {activeWorkspace ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button 
-                className="flex flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/50"
+                className={cn(
+                  "flex items-center rounded-md transition-colors hover:bg-muted/50",
+                  collapsed ? "justify-center p-1" : "flex-1 gap-2 px-1.5 py-1 text-left"
+                )}
               >
                 {/* Logo - uses favicon > logo fallback */}
                 {workspaceIconUrl ? (
                   <img 
                     src={workspaceIconUrl} 
                     alt={activeWorkspace.name} 
-                    className="h-8 w-8 rounded-lg object-cover"
+                    className={cn(
+                      "rounded-md object-cover",
+                      collapsed ? "h-7 w-7" : "h-6 w-6"
+                    )}
                   />
                 ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground/5 text-foreground font-medium text-sm">
+                  <div className={cn(
+                    "flex items-center justify-center rounded-md bg-foreground/5 text-foreground font-medium",
+                    collapsed ? "h-7 w-7 text-sm" : "h-6 w-6 text-xs"
+                  )}>
                     {fallbackLetter}
                   </div>
                 )}
@@ -318,7 +330,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                         {activeWorkspace.name}
                       </p>
                     </div>
-                    <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" strokeWidth={THIN_STROKE} />
+                    <ChevronsUpDown className="h-3 w-3 text-muted-foreground/50 shrink-0" strokeWidth={1.25} />
                   </>
                 )}
               </button>
