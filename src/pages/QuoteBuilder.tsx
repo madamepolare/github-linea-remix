@@ -188,6 +188,7 @@ export default function QuoteBuilder() {
   const [zoom, setZoom] = useState(100);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [showConvertToSubProjectDialog, setShowConvertToSubProjectDialog] = useState(false);
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
@@ -254,8 +255,17 @@ export default function QuoteBuilder() {
       if (existingDoc.project?.id) {
         setLinkedProjectId(existingDoc.project.id);
       }
+      // Mark initial load as complete after data is loaded
+      setTimeout(() => setIsInitialLoad(false), 100);
     }
   }, [existingDoc, isNew]);
+
+  // For new documents, mark initial load complete immediately
+  useEffect(() => {
+    if (isNew) {
+      setTimeout(() => setIsInitialLoad(false), 100);
+    }
+  }, [isNew]);
 
   // Load existing phases as lines
   useEffect(() => {
@@ -264,7 +274,7 @@ export default function QuoteBuilder() {
     }
   }, [phases]);
 
-  // Calculate totals whenever lines change
+  // Calculate totals whenever lines change (but don't mark as changed - this is derived state)
   useEffect(() => {
     const includedLines = lines.filter(l => l.is_included && l.line_type !== 'discount');
     const discountLines = lines.filter(l => l.line_type === 'discount');
@@ -274,17 +284,21 @@ export default function QuoteBuilder() {
     const total = subtotal - totalDiscount;
     
     setDocument(prev => ({ ...prev, total_amount: total }));
-    setHasChanges(true);
+    // Don't set hasChanges here - totals are derived, not user changes
   }, [lines]);
 
   const handleDocumentChange = (updates: Partial<QuoteDocument>) => {
     setDocument(prev => ({ ...prev, ...updates }));
-    setHasChanges(true);
+    if (!isInitialLoad) {
+      setHasChanges(true);
+    }
   };
 
   const handleLinesChange = (newLines: QuoteLine[]) => {
     setLines(newLines);
-    setHasChanges(true);
+    if (!isInitialLoad) {
+      setHasChanges(true);
+    }
   };
 
   // Reset active tab if it becomes unavailable
