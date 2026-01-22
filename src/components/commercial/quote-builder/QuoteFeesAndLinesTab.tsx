@@ -1,19 +1,13 @@
 // Combined Fees and Lines Tab for quote builder
-// Two distinct sections: Honoraires % (phases) + Prestations forfaitaires (fixed lines)
+// Internal tabs: Honoraires % (phases) | Prestations forfaitaires (fixed lines)
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { QuoteDocument, QuoteLine } from '@/types/quoteTypes';
 import { QuoteFeesTab } from './QuoteFeesTab';
 import { QuoteLinesEditor } from './QuoteLinesEditor';
-import { Calculator, List, Percent, Package, ChevronDown, ChevronUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Calculator, List } from 'lucide-react';
 
 interface QuoteFeesAndLinesTabProps {
   document: Partial<QuoteDocument>;
@@ -30,11 +24,6 @@ export function QuoteFeesAndLinesTab({
   onLinesChange,
   showFeesSubTab = true
 }: QuoteFeesAndLinesTabProps) {
-  // Section visibility states
-  const [showHonoraires, setShowHonoraires] = useState(true);
-  const [showPrestations, setShowPrestations] = useState(true);
-  const [honorairesCollapsed, setHonorairesCollapsed] = useState(false);
-  const [prestationsCollapsed, setPrestationsCollapsed] = useState(false);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
@@ -74,13 +63,11 @@ export function QuoteFeesAndLinesTab({
 
   // Grand total
   const grandTotal = useMemo(() => {
-    return (showHonoraires ? honorairesTotals.total : 0) + 
-           (showPrestations ? prestationsTotals.total : 0);
-  }, [showHonoraires, showPrestations, honorairesTotals.total, prestationsTotals.total]);
+    return honorairesTotals.total + prestationsTotals.total;
+  }, [honorairesTotals.total, prestationsTotals.total]);
 
   // Handler for fixed lines changes (preserves phase lines)
   const handleFixedLinesChange = (newFixedLines: QuoteLine[]) => {
-    // Keep phase lines, replace fixed lines
     const updatedLines = [...phaseLines, ...newFixedLines];
     onLinesChange(updatedLines);
   };
@@ -99,133 +86,63 @@ export function QuoteFeesAndLinesTab({
 
   return (
     <div className="space-y-4">
-      {/* Summary header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-muted/30 rounded-lg border">
+      {/* Summary header - plain text */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          {showHonoraires && (
-            <span className="flex items-center gap-1.5">
-              <Percent className="h-3.5 w-3.5" />
-              Honoraires: {formatCurrency(honorairesTotals.total)}
-            </span>
-          )}
-          {showHonoraires && showPrestations && <span>+</span>}
-          {showPrestations && (
-            <span className="flex items-center gap-1.5">
-              <Package className="h-3.5 w-3.5" />
-              Prestations: {formatCurrency(prestationsTotals.total)}
-            </span>
-          )}
+          <span className="flex items-center gap-1.5">
+            <Calculator className="h-3.5 w-3.5" strokeWidth={1.25} />
+            Honoraires: {formatCurrency(honorairesTotals.total)}
+          </span>
+          <span>+</span>
+          <span className="flex items-center gap-1.5">
+            <List className="h-3.5 w-3.5" strokeWidth={1.25} />
+            Prestations: {formatCurrency(prestationsTotals.total)}
+          </span>
         </div>
         <div className="text-base font-semibold">
           Total HT: {formatCurrency(grandTotal)}
         </div>
       </div>
 
-      {/* Section toggles */}
-      <div className="flex items-center gap-6 px-1">
-        <div className="flex items-center gap-2">
-          <Switch
-            id="show-honoraires"
-            checked={showHonoraires}
-            onCheckedChange={setShowHonoraires}
+      {/* Internal tabs for switching between the two modes */}
+      <Tabs defaultValue="honoraires" className="w-full">
+        <TabsList className="w-full grid grid-cols-2 h-10">
+          <TabsTrigger value="honoraires" className="gap-2 text-sm">
+            <Calculator className="h-4 w-4" strokeWidth={1.25} />
+            <span className="hidden sm:inline">Honoraires %</span>
+            <span className="sm:hidden">Honoraires</span>
+            <Badge variant="secondary" className="text-xs ml-1">
+              {honorairesTotals.count}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="prestations" className="gap-2 text-sm">
+            <List className="h-4 w-4" strokeWidth={1.25} />
+            <span className="hidden sm:inline">Prestations forfaitaires</span>
+            <span className="sm:hidden">Prestations</span>
+            <Badge variant="secondary" className="text-xs ml-1">
+              {prestationsTotals.count}
+            </Badge>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="honoraires" className="mt-4">
+          <QuoteFeesTab
+            document={document}
+            onDocumentChange={onDocumentChange}
+            lines={lines}
+            onLinesChange={onLinesChange}
           />
-          <Label htmlFor="show-honoraires" className="text-sm cursor-pointer">
-            Honoraires %
-          </Label>
-        </div>
-        <div className="flex items-center gap-2">
-          <Switch
-            id="show-prestations"
-            checked={showPrestations}
-            onCheckedChange={setShowPrestations}
+        </TabsContent>
+
+        <TabsContent value="prestations" className="mt-4">
+          <QuoteLinesEditor
+            lines={fixedLines}
+            onLinesChange={handleFixedLinesChange}
+            document={document}
+            onDocumentChange={onDocumentChange}
           />
-          <Label htmlFor="show-prestations" className="text-sm cursor-pointer">
-            Prestations forfaitaires
-          </Label>
-        </div>
-      </div>
-
-      {/* Section 1: Honoraires % (phases basées sur le budget travaux) */}
-      {showHonoraires && (
-        <section className="rounded-lg border bg-card overflow-hidden">
-          <button
-            onClick={() => setHonorairesCollapsed(!honorairesCollapsed)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 border-b hover:bg-muted/50 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <Calculator className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">Honoraires sur budget travaux</span>
-              <Badge variant="secondary" className="text-xs">
-                {honorairesTotals.count} phase{honorairesTotals.count > 1 ? 's' : ''}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-sm">{formatCurrency(honorairesTotals.total)}</span>
-              {honorairesCollapsed ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
-              )}
-            </div>
-          </button>
-          
-          {!honorairesCollapsed && (
-            <div className="p-4">
-              <QuoteFeesTab
-                document={document}
-                onDocumentChange={onDocumentChange}
-                lines={lines}
-                onLinesChange={onLinesChange}
-              />
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Section 2: Prestations forfaitaires (lignes à montant fixe) */}
-      {showPrestations && (
-        <section className="rounded-lg border bg-card overflow-hidden">
-          <button
-            onClick={() => setPrestationsCollapsed(!prestationsCollapsed)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 border-b hover:bg-muted/50 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <List className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">Prestations forfaitaires</span>
-              <Badge variant="secondary" className="text-xs">
-                {prestationsTotals.count} ligne{prestationsTotals.count > 1 ? 's' : ''}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-sm">{formatCurrency(prestationsTotals.total)}</span>
-              {prestationsCollapsed ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
-              )}
-            </div>
-          </button>
-          
-          {!prestationsCollapsed && (
-            <div className="p-4">
-              <QuoteLinesEditor
-                lines={fixedLines}
-                onLinesChange={handleFixedLinesChange}
-                document={document}
-                onDocumentChange={onDocumentChange}
-              />
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Empty state when both sections are disabled */}
-      {!showHonoraires && !showPrestations && (
-        <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-          <Package className="h-10 w-10 mb-3 opacity-50" />
-          <p className="text-sm">Activez au moins une section pour commencer</p>
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
