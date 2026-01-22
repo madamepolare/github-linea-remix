@@ -33,6 +33,7 @@ import {
   Pencil,
   Receipt,
   RefreshCw,
+  Settings,
   Shield,
   ShoppingCart,
   Sparkles,
@@ -48,7 +49,7 @@ import { ChantierDashboard } from "@/components/projects/ChantierDashboard";
 import { ProjectPlanningTab } from "@/components/projects/ProjectPlanningTab";
 import { ProjectMOESection } from "@/components/projects/ProjectMOESection";
 import { PhaseQuickEditDialog } from "@/components/projects/PhaseQuickEditDialog";
-import { EditProjectDialog } from "@/components/projects/EditProjectDialog";
+
 import { TeamManagementDialog } from "@/components/projects/TeamManagementDialog";
 import { ClientTeamDialog } from "@/components/projects/ClientTeamDialog";
 import { ModulesSelector } from "@/components/projects/ModulesSelector";
@@ -114,7 +115,6 @@ export default function ProjectDetail() {
   const { data: discipline } = useWorkspaceDiscipline();
   const [activeTab, setActiveTab] = useState("overview");
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-  const [projectEditOpen, setProjectEditOpen] = useState(false);
   const [teamEditOpen, setTeamEditOpen] = useState(false);
   const [clientTeamOpen, setClientTeamOpen] = useState(false);
 
@@ -224,7 +224,7 @@ export default function ProjectDetail() {
         activeTab,
         onTabChange: setActiveTab,
         actions: teamMembersDisplay,
-        onSettings: () => setProjectEditOpen(true),
+        onSettings: () => navigate(`/projects/${id}/settings`),
       });
     }
 
@@ -295,7 +295,7 @@ export default function ProjectDetail() {
               isGeneratingSummary={isGeneratingSummary}
               onUpdateProject={(updates) => updateProject.mutate({ id: project.id, ...updates })}
               isUpdatingProject={updateProject.isPending}
-              onOpenProjectEdit={() => setProjectEditOpen(true)}
+              onOpenProjectEdit={() => navigate(`/projects/${project.id}/settings`)}
               onOpenTeamEdit={() => setTeamEditOpen(true)}
               onOpenClientTeam={() => setClientTeamOpen(true)}
               projectMembers={projectMembers}
@@ -335,13 +335,6 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      <EditProjectDialog
-        open={projectEditOpen}
-        onOpenChange={setProjectEditOpen}
-        project={project}
-        onSave={(updates) => updateProject.mutate({ id: project.id, ...updates } as any)}
-        isSaving={updateProject.isPending}
-      />
 
       <TeamManagementDialog
         open={teamEditOpen}
@@ -690,8 +683,8 @@ function OverviewTab({ project, phases, progressPercent, onRefreshSummary, isGen
                 size="sm"
                 onClick={onOpenProjectEdit}
               >
-                <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                Modifier
+                <Settings className="h-3.5 w-3.5 mr-1.5" />
+                Paramètres
               </Button>
             </div>
             <dl className="space-y-3 text-sm">
