@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -134,7 +134,16 @@ export function QuoteLineItemCompact({
   
   // Get ALL phase templates for phase code dropdown (no project_type filter)
   const { templates: phaseTemplates } = usePhaseTemplates();
-  const activeTemplates = phaseTemplates.filter(t => t.is_active);
+  
+  // Dedupe templates by code to prevent duplicate dropdown items
+  const activeTemplates = useMemo(() => {
+    const seen = new Set<string>();
+    return phaseTemplates.filter(t => {
+      if (!t.is_active || seen.has(t.code)) return false;
+      seen.add(t.code);
+      return true;
+    });
+  }, [phaseTemplates]);
   
   // Determine if line is external/production type
   const isExternalLine = line.line_type === 'expense' || line.pricing_ref?.startsWith('PROD-');
