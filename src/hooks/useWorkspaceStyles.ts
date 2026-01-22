@@ -93,8 +93,11 @@ export function applyStyles(settings: StyleSettings) {
     root.style.setProperty("--accent", theme.accent);
   }
   
-  // Apply typography
-  root.style.setProperty("--font-size-base", `${settings.baseFontSize}px`);
+  // Apply typography - scale root font size (affects all rem-based sizes)
+  // Base is 16px, so we calculate a percentage multiplier
+  const fontSizePercent = (settings.baseFontSize / 16) * 100;
+  root.style.fontSize = `${fontSizePercent}%`;
+  
   root.style.setProperty("--font-weight-heading", settings.headingWeight);
   root.style.setProperty("--font-weight-body", settings.bodyWeight);
   root.style.setProperty("--radius", `${settings.borderRadius}px`);
