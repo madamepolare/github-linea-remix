@@ -411,7 +411,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-2 py-2 scrollbar-thin">
+      <nav className="flex-1 overflow-y-auto px-1 py-2 scrollbar-thin">
         {/* Core Navigation */}
         <div className="space-y-0.5">
           {coreNavigation.map((item) => (
