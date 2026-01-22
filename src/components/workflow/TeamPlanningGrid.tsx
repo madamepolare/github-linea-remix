@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { format, addDays, startOfWeek, isSameDay, isWeekend, addWeeks, subWeeks, startOfMonth, endOfMonth, eachDayOfInterval, differenceInMinutes, startOfDay, setHours, parseISO, addHours } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye, GripVertical, CheckCircle2, ExternalLink, Copy, Move, Plus, PanelLeftClose, PanelLeft, FolderKanban, Check, X, UsersRound, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Calendar, Clock, Trash2, Eye, GripVertical, CheckCircle2, ExternalLink, Copy, Move, Plus, PanelLeftClose, PanelLeft, FolderKanban, Check, X, UsersRound, ChevronDown, Sofa } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1363,7 +1363,7 @@ function DayCell({
       <div
         className={cn(
           "relative border-r p-1 flex flex-col transition-all duration-200 ease-out select-none",
-          isWeekend && "bg-muted/20",
+          isWeekend && "bg-muted/50",
           isToday && "bg-primary/5 ring-1 ring-inset ring-primary/20",
           !isBlockingAbsence && occupancy > 0 && getOccupancyBg(occupancy),
           isDragOver && "bg-primary/15 ring-2 ring-inset ring-primary/50 shadow-lg scale-[1.02]",
@@ -1384,6 +1384,13 @@ function DayCell({
         onMouseEnter={() => onCellMouseEnter?.(day, member)}
         onMouseUp={() => onCellMouseUp?.()}
       >
+        {/* Weekend indicator - sofa icon */}
+        {isWeekend && !isBlockingAbsence && (
+          <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
+            <Sofa className="h-8 w-8 text-muted-foreground/20" strokeWidth={1} />
+          </div>
+        )}
+        
         {/* Télétravail indicator - small home icon at top */}
         {isTeletravail && (
           <Tooltip>

@@ -296,6 +296,7 @@ export default function QuoteBuilder() {
   }, [lines]);
 
   const handleDocumentChange = (updates: Partial<QuoteDocument>) => {
+    if (isLocked) return; // Block changes when locked
     setDocument(prev => ({ ...prev, ...updates }));
     if (!isInitialLoad) {
       setHasChanges(true);
@@ -303,6 +304,7 @@ export default function QuoteBuilder() {
   };
 
   const handleLinesChange = (newLines: QuoteLine[]) => {
+    if (isLocked) return; // Block changes when locked
     setLines(newLines);
     if (!isInitialLoad) {
       setHasChanges(true);
@@ -331,6 +333,12 @@ export default function QuoteBuilder() {
   }, [currentContractType?.id]);
 
   const handleSave = async () => {
+    // Block save when locked
+    if (isLocked) {
+      toast.error("Ce devis est verrouillé. Déverrouillez-le pour le modifier.");
+      return;
+    }
+    
     // Wait for auth to be ready
     if (authLoading) {
       toast.error("Chargement en cours, veuillez patienter...");
@@ -646,7 +654,28 @@ export default function QuoteBuilder() {
   }
 
   // Allow clicking Save even if auth/workspace still loading so we can show a clear message.
-  const canClickSave = !isSaving;
+  const canClickSave = !isSaving && !isLocked;
+  
+  // Delete quote handler
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const handleDeleteQuote = async () => {
+    if (!id || isNew) return;
+    
+    try {
+      const { error } = await supabase
+        .from('commercial_documents')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast.success('Devis supprimé');
+      navigate('/commercial/quotes');
+    } catch (err) {
+      console.error('Error deleting quote:', err);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
 
   return (
     <LineFeatureProvider contractType={currentContractType}>
@@ -889,7 +918,11 @@ export default function QuoteBuilder() {
                 Dupliquer
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem 
+                className="text-destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={isNew}
+              >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Supprimer
               </DropdownMenuItem>
@@ -1175,6 +1208,32 @@ export default function QuoteBuilder() {
             >
               <Unlock className="h-4 w-4 mr-2" />
               Déverrouiller
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Supprimer ce devis ?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le devis "{document.title || 'Sans titre'}" 
+              sera définitivement supprimé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteQuote}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
