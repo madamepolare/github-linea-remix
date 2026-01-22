@@ -228,8 +228,8 @@ export function QuoteLineItemCompact({
             </TooltipContent>
           </Tooltip>
 
-          {/* Phase code dropdown - for phase/service types */}
-          {activeTemplates.length > 0 && (line.line_type === 'phase' || line.line_type === 'service') && (
+          {/* Phase code dropdown - only for phase lines (Honoraires tab) */}
+          {activeTemplates.length > 0 && line.line_type === 'phase' && (
             <Select
               value={line.phase_code || '__none__'}
               onValueChange={handlePhaseCodeChange}
