@@ -1020,9 +1020,48 @@ export function QuoteLinesEditor({
                     <span className="text-xs font-medium">Honoraires %</span>
                   </div>
                   <div className="flex-1 h-px bg-blue-200" />
-                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 text-[10px]">
-                    {totalPercentageFee.toFixed(1)}% des honoraires
+                  <Badge 
+                    variant="secondary" 
+                    className={cn(
+                      "text-[10px]",
+                      Math.abs(totalPercentageFee - 100) < 0.1 
+                        ? "bg-green-50 text-green-700" 
+                        : "bg-blue-50 text-blue-700"
+                    )}
+                  >
+                    {totalPercentageFee.toFixed(1)}%
                   </Badge>
+                  {Math.abs(totalPercentageFee - 100) >= 0.1 && percentageLines.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-[10px] text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      onClick={() => {
+                        if (totalPercentageFee === 0) return;
+                        const ratio = 100 / totalPercentageFee;
+                        const budget = document.construction_budget || 0;
+                        const feeRate = document.fee_percentage || 12;
+                        const totalFees = (budget * feeRate) / 100;
+                        
+                        const updatedLines = lines.map(line => {
+                          if (line.pricing_mode === 'percentage' && line.percentage_fee) {
+                            const newPercentage = line.percentage_fee * ratio;
+                            const newAmount = budget > 0 ? (totalFees * newPercentage) / 100 : 0;
+                            return { 
+                              ...line, 
+                              percentage_fee: Math.round(newPercentage * 10) / 10,
+                              amount: newAmount,
+                              unit_price: newAmount
+                            };
+                          }
+                          return line;
+                        });
+                        onLinesChange(updatedLines);
+                      }}
+                    >
+                      Ajuster à 100%
+                    </Button>
+                  )}
                   <span className="text-xs font-semibold text-blue-700 tabular-nums">
                     {formatCurrency(percentageTotal)}
                   </span>
