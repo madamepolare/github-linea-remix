@@ -1049,6 +1049,7 @@ export type Database = {
           phase_code: string
           phase_description: string | null
           phase_name: string
+          pricing_mode: string | null
           purchase_price: number | null
           quantity: number | null
           recurrence_months: number | null
@@ -1076,6 +1077,7 @@ export type Database = {
           phase_code: string
           phase_description?: string | null
           phase_name: string
+          pricing_mode?: string | null
           purchase_price?: number | null
           quantity?: number | null
           recurrence_months?: number | null
@@ -1103,6 +1105,7 @@ export type Database = {
           phase_code?: string
           phase_description?: string | null
           phase_name?: string
+          pricing_mode?: string | null
           purchase_price?: number | null
           quantity?: number | null
           recurrence_months?: number | null

@@ -276,66 +276,146 @@ export function QuoteLineItemCompact({
 
           {/* Financial columns - fixed widths for table alignment */}
           <div className="flex items-center gap-3 shrink-0">
-            {/* Quantity + Unit group */}
-            <div className="flex items-center h-8 bg-muted/40 rounded-lg overflow-hidden">
-              <Input
-                type="number"
-                value={line.quantity || 1}
-                onChange={(e) => {
-                  const quantity = parseFloat(e.target.value) || 1;
-                  const unitPrice = line.unit_price || 0;
-                  updateLine(line.id, { 
-                    quantity: quantity, 
-                    amount: unitPrice * quantity 
-                  });
-                }}
-                className="h-8 w-16 text-center text-sm border-0 bg-transparent tabular-nums focus:bg-muted/60"
-                min={0}
-              />
-              <div className="h-5 w-px bg-border/50" />
-              <Select
-                value={line.unit || 'forfait'}
-                onValueChange={(value) => updateLine(line.id, { unit: value })}
-              >
-                <SelectTrigger className="h-8 w-24 text-xs border-0 bg-transparent hover:bg-muted/60 px-2">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-background z-50">
-                  {UNIT_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Pricing mode toggle for phases */}
+            {line.line_type === 'phase' && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "h-8 w-8 p-0",
+                      line.pricing_mode === 'percentage' 
+                        ? "text-blue-600 bg-blue-50 hover:bg-blue-100" 
+                        : "text-emerald-600 bg-emerald-50 hover:bg-emerald-100"
+                    )}
+                    onClick={() => {
+                      const newMode = line.pricing_mode === 'percentage' ? 'fixed' : 'percentage';
+                      // When switching to percentage, recalculate amount if budget exists
+                      if (newMode === 'percentage' && document.construction_budget && document.fee_percentage) {
+                        const totalFees = (document.construction_budget * document.fee_percentage) / 100;
+                        const newAmount = (totalFees * (line.percentage_fee || 0)) / 100;
+                        updateLine(line.id, { pricing_mode: newMode, amount: newAmount, unit_price: newAmount });
+                      } else {
+                        updateLine(line.id, { pricing_mode: newMode });
+                      }
+                    }}
+                  >
+                    {line.pricing_mode === 'percentage' ? (
+                      <Percent className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    ) : (
+                      <Euro className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{line.pricing_mode === 'percentage' ? 'Mode % (cliquer pour forfait)' : 'Mode forfait (cliquer pour %)'}</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
 
-            {/* Unit price (PU) */}
-            <div className="flex items-center h-8 bg-muted/30 border border-dashed rounded-lg overflow-hidden">
-              <span className="text-xs text-muted-foreground pl-2 shrink-0">PU</span>
-              <Input
-                type="number"
-                value={line.unit_price || 0}
-                onChange={(e) => {
-                  const unitPrice = parseFloat(e.target.value) || 0;
-                  const quantity = line.quantity || 1;
-                  updateLine(line.id, { 
-                    unit_price: unitPrice, 
-                    amount: unitPrice * quantity 
-                  });
-                }}
-                className="h-8 w-24 text-right tabular-nums text-sm border-0 bg-transparent px-2"
-                placeholder="0"
-              />
-              <span className="text-xs text-muted-foreground pr-2 shrink-0">€</span>
-            </div>
+            {/* Percentage input - only for phases in percentage mode */}
+            {line.line_type === 'phase' && line.pricing_mode === 'percentage' ? (
+              <div className="flex items-center h-8 bg-blue-50 border border-blue-200 rounded-lg overflow-hidden">
+                <Input
+                  type="number"
+                  value={line.percentage_fee || 0}
+                  onChange={(e) => {
+                    const percentage = parseFloat(e.target.value) || 0;
+                    // Recalculate amount based on construction budget
+                    if (document.construction_budget && document.fee_percentage) {
+                      const totalFees = (document.construction_budget * document.fee_percentage) / 100;
+                      const newAmount = (totalFees * percentage) / 100;
+                      updateLine(line.id, { 
+                        percentage_fee: percentage, 
+                        amount: newAmount,
+                        unit_price: newAmount
+                      });
+                    } else {
+                      updateLine(line.id, { percentage_fee: percentage });
+                    }
+                  }}
+                  className="h-8 w-16 text-center text-sm border-0 bg-transparent tabular-nums text-blue-700"
+                  step="0.5"
+                  min={0}
+                />
+                <span className="text-xs text-blue-600 pr-2 shrink-0">%</span>
+              </div>
+            ) : (
+              <>
+                {/* Quantity + Unit group */}
+                <div className="flex items-center h-8 bg-muted/40 rounded-lg overflow-hidden">
+                  <Input
+                    type="number"
+                    value={line.quantity || 1}
+                    onChange={(e) => {
+                      const quantity = parseFloat(e.target.value) || 1;
+                      const unitPrice = line.unit_price || 0;
+                      updateLine(line.id, { 
+                        quantity: quantity, 
+                        amount: unitPrice * quantity 
+                      });
+                    }}
+                    className="h-8 w-16 text-center text-sm border-0 bg-transparent tabular-nums focus:bg-muted/60"
+                    min={0}
+                  />
+                  <div className="h-5 w-px bg-border/50" />
+                  <Select
+                    value={line.unit || 'forfait'}
+                    onValueChange={(value) => updateLine(line.id, { unit: value })}
+                  >
+                    <SelectTrigger className="h-8 w-24 text-xs border-0 bg-transparent hover:bg-muted/60 px-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      {UNIT_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Unit price (PU) */}
+                <div className="flex items-center h-8 bg-muted/30 border border-dashed rounded-lg overflow-hidden">
+                  <span className="text-xs text-muted-foreground pl-2 shrink-0">PU</span>
+                  <Input
+                    type="number"
+                    value={line.unit_price || 0}
+                    onChange={(e) => {
+                      const unitPrice = parseFloat(e.target.value) || 0;
+                      const quantity = line.quantity || 1;
+                      updateLine(line.id, { 
+                        unit_price: unitPrice, 
+                        amount: unitPrice * quantity 
+                      });
+                    }}
+                    className="h-8 w-24 text-right tabular-nums text-sm border-0 bg-transparent px-2"
+                    placeholder="0"
+                  />
+                  <span className="text-xs text-muted-foreground pr-2 shrink-0">€</span>
+                </div>
+              </>
+            )}
 
             {/* Total amount - read-only, calculated */}
-            <div className="flex items-center h-8 bg-primary/5 border border-primary/20 rounded-lg overflow-hidden px-3 min-w-[100px]">
-              <span className="tabular-nums font-semibold text-sm text-primary">
-                {((line.quantity || 1) * (line.unit_price || 0)).toLocaleString('fr-FR')}
+            <div className={cn(
+              "flex items-center h-8 border rounded-lg overflow-hidden px-3 min-w-[100px]",
+              line.pricing_mode === 'percentage' 
+                ? "bg-blue-50 border-blue-200" 
+                : "bg-primary/5 border-primary/20"
+            )}>
+              <span className={cn(
+                "tabular-nums font-semibold text-sm",
+                line.pricing_mode === 'percentage' ? "text-blue-700" : "text-primary"
+              )}>
+                {(line.amount || 0).toLocaleString('fr-FR')}
               </span>
-              <span className="text-sm text-primary/70 ml-1 font-medium">€</span>
+              <span className={cn(
+                "text-sm ml-1 font-medium",
+                line.pricing_mode === 'percentage' ? "text-blue-600/70" : "text-primary/70"
+              )}>€</span>
             </div>
 
             {/* Margin indicator - fixed width */}
