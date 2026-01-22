@@ -52,7 +52,7 @@ export function ThemeToggle({ collapsed = false }: { collapsed?: boolean }) {
           transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
           className="absolute inset-0"
         >
-          <Sun className="h-[18px] w-[18px]" strokeWidth={1.5} />
+          <Sun className="h-[18px] w-[18px]" strokeWidth={1.25} />
         </motion.div>
         <motion.div
           initial={false}
@@ -64,7 +64,7 @@ export function ThemeToggle({ collapsed = false }: { collapsed?: boolean }) {
           transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
           className="absolute inset-0"
         >
-          <Moon className="h-[18px] w-[18px]" strokeWidth={1.5} />
+          <Moon className="h-[18px] w-[18px]" strokeWidth={1.25} />
         </motion.div>
       </div>
       {!collapsed && (
