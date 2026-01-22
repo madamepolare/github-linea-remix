@@ -35,7 +35,8 @@ import {
   Trash2,
   Copy,
   Eye,
-  EyeOff
+  EyeOff,
+  Plus
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
@@ -186,6 +187,31 @@ export function QuoteFeesTab({
     setPhases(items);
   };
 
+  const addPhase = (template?: { code: string; name: string; percentage?: number }) => {
+    const newCode = template?.code || `P${phases.length + 1}`;
+    const newPhase: PhaseConfig = {
+      code: newCode,
+      name: template?.name || 'Nouvelle phase',
+      percentage: template?.percentage || 0,
+      isIncluded: true,
+      amount: 0
+    };
+    setPhases([...phases, newPhase]);
+  };
+
+  const deletePhase = (code: string) => {
+    setPhases(prev => prev.filter(p => p.code !== code));
+  };
+
+  const duplicatePhase = (phase: PhaseConfig) => {
+    const newPhase: PhaseConfig = {
+      ...phase,
+      code: `${phase.code}-copy`,
+      name: `${phase.name} (copie)`
+    };
+    setPhases([...phases, newPhase]);
+  };
+
   const includedPhases = phases.filter(p => p.isIncluded);
   const totalPercentage = includedPhases.reduce((sum, p) => sum + p.percentage, 0);
   const totalAmount = includedPhases.reduce((sum, p) => sum + p.amount, 0);
@@ -274,6 +300,38 @@ export function QuoteFeesTab({
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" strokeWidth={1.25} />
           Réinit.
         </Button>
+      </div>
+
+      {/* Add phase button */}
+      <div className="flex items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" className="h-8 text-xs">
+              <Plus className="h-3.5 w-3.5 mr-1.5" strokeWidth={1.25} />
+              Ajouter une phase
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem onClick={() => addPhase()}>
+              <Target className="h-4 w-4 mr-2" strokeWidth={1.25} />
+              Phase libre
+            </DropdownMenuItem>
+            {templates.filter(t => t.is_active).length > 0 && (
+              <>
+                <DropdownMenuSeparator />
+                {templates.filter(t => t.is_active).map(t => (
+                  <DropdownMenuItem 
+                    key={t.code} 
+                    onClick={() => addPhase({ code: t.code, name: t.name, percentage: t.default_percentage })}
+                  >
+                    <Badge variant="outline" className="mr-2 text-xs font-mono">{t.code}</Badge>
+                    {t.name}
+                  </DropdownMenuItem>
+                ))}
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Phases List - Same UI as QuoteLinesEditor */}
@@ -383,6 +441,26 @@ export function QuoteFeesTab({
                                 {phase.isIncluded ? 'Exclure du total' : 'Inclure au total'}
                               </TooltipContent>
                             </Tooltip>
+
+                            {/* Actions dropdown */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => duplicatePhase(phase)}>
+                                  <Copy className="h-4 w-4 mr-2" />
+                                  Dupliquer
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => deletePhase(phase.code)} className="text-destructive">
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Supprimer
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
 
                             {/* Expand/collapse */}
                             <CollapsibleTrigger asChild>
