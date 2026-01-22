@@ -631,145 +631,160 @@ export default function QuoteBuilder() {
     <div className="h-full flex flex-col bg-background">
       
       {/* Header */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b bg-card shrink-0 gap-3">
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+      <div className="flex items-center justify-between h-12 px-4 sm:px-6 border-b bg-card shrink-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {/* Back button */}
           <Button variant="ghost" size="icon" onClick={handleBack} className="shrink-0 h-8 w-8">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           
-          {/* Document badge */}
-          <Badge variant="secondary" className="shrink-0 text-xs">
+          {/* Document type badge */}
+          <Badge variant="outline" className="shrink-0 text-xs font-medium">
             Devis
           </Badge>
           
-          <Separator orientation="vertical" className="h-6 hidden sm:block" />
-          
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-3">
+          {/* Title & metadata */}
+          <div className="min-w-0 flex-1 ml-2">
+            <div className="flex items-center gap-2">
               <input
                 type="text"
                 value={document.title || ''}
                 onChange={(e) => handleDocumentChange({ title: e.target.value })}
                 placeholder={isNew ? 'Titre du projet... *' : 'Édition du devis *'}
                 className={cn(
-                  "font-semibold text-base sm:text-lg tracking-tight bg-transparent border-0 focus:ring-0 focus:outline-none w-full min-w-0 placeholder:text-muted-foreground",
+                  "font-medium text-sm bg-transparent border-0 focus:ring-0 focus:outline-none w-full min-w-0 placeholder:text-muted-foreground truncate",
                   !document.title?.trim() && "placeholder:text-destructive/60"
                 )}
                 required
               />
-              <Select
-                value={document.status || 'draft'}
-                onValueChange={(v) => handleDocumentChange({ status: v as DocumentStatus })}
-              >
-                <SelectTrigger className="h-8 w-auto min-w-[120px] text-xs font-medium shrink-0 rounded-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(DOCUMENT_STATUS_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      <div className="flex items-center gap-2">
-                        <span className={cn(
-                          "w-2 h-2 rounded-full",
-                          value === 'draft' && "bg-muted-foreground",
-                          value === 'sent' && "bg-blue-500",
-                          value === 'accepted' && "bg-green-500",
-                          value === 'rejected' && "bg-destructive",
-                          value === 'expired' && "bg-amber-500",
-                          value === 'signed' && "bg-primary"
-                        )} />
-                        {label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {document.document_number || 'Brouillon'} {document.client_company?.name ? `• ${document.client_company.name}` : ''}
+            <p className="text-xs text-muted-foreground truncate">
+              {document.document_number || 'Brouillon'}{document.client_company?.name ? ` • ${document.client_company.name}` : ''}
             </p>
           </div>
         </div>
         
-        <div className="flex items-center gap-1 shrink-0">
-          {/* Toggle preview - icon only */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => setShowPreview(!showPreview)}
-                className="hidden lg:flex h-8 w-8"
-              >
-                {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{showPreview ? 'Masquer aperçu' : 'Afficher aperçu'}</TooltipContent>
-          </Tooltip>
+        {/* Right side: Status + Actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Status select */}
+          <Select
+            value={document.status || 'draft'}
+            onValueChange={(v) => handleDocumentChange({ status: v as DocumentStatus })}
+          >
+            <SelectTrigger className="h-8 w-auto min-w-[110px] text-xs font-medium rounded-full border-0 bg-muted/50">
+              <div className="flex items-center gap-1.5">
+                <span className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  document.status === 'draft' && "bg-muted-foreground",
+                  document.status === 'sent' && "bg-blue-500",
+                  document.status === 'accepted' && "bg-green-500",
+                  document.status === 'rejected' && "bg-destructive",
+                  document.status === 'expired' && "bg-amber-500",
+                  document.status === 'signed' && "bg-primary"
+                )} />
+                <SelectValue />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(DOCUMENT_STATUS_LABELS).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "w-2 h-2 rounded-full",
+                      value === 'draft' && "bg-muted-foreground",
+                      value === 'sent' && "bg-blue-500",
+                      value === 'accepted' && "bg-green-500",
+                      value === 'rejected' && "bg-destructive",
+                      value === 'expired' && "bg-amber-500",
+                      value === 'signed' && "bg-primary"
+                    )} />
+                    {label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           
-          {/* Download PDF - icon only */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={handleDownloadPDF}
-                className="h-8 w-8"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Télécharger PDF</TooltipContent>
-          </Tooltip>
+          {/* Icon actions group */}
+          <div className="flex items-center">
+            {/* Toggle preview */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setShowPreview(!showPreview)}
+                  className="hidden lg:flex h-8 w-8"
+                >
+                  {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{showPreview ? 'Masquer aperçu' : 'Afficher aperçu'}</TooltipContent>
+            </Tooltip>
+            
+            {/* Download PDF */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={handleDownloadPDF}
+                  className="h-8 w-8"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Télécharger PDF</TooltipContent>
+            </Tooltip>
+            
+            {/* Public link */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={async () => {
+                    try {
+                      if (!document.id || !document.workspace_id) return;
+                      const url = await getOrCreatePublicQuoteLink({
+                        documentId: document.id,
+                        workspaceId: document.workspace_id,
+                      });
+                      await navigator.clipboard.writeText(url);
+                      toast.success('Lien client copié !');
+                    } catch (e) {
+                      console.error(e);
+                      toast.error('Impossible de générer le lien');
+                    }
+                  }}
+                  disabled={isNew}
+                  className="h-8 w-8"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copier le lien client</TooltipContent>
+            </Tooltip>
+            
+            {/* Save button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSave}
+                  disabled={!canClickSave}
+                  title={!activeWorkspace ? 'Aucun workspace actif' : authLoading ? 'Chargement de session…' : undefined}
+                  className="h-8 w-8"
+                >
+                  <Save className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</TooltipContent>
+            </Tooltip>
+          </div>
           
-          {/* Public link - icon only */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={async () => {
-                  try {
-                    if (!document.id || !document.workspace_id) return;
-                    const url = await getOrCreatePublicQuoteLink({
-                      documentId: document.id,
-                      workspaceId: document.workspace_id,
-                    });
-                    await navigator.clipboard.writeText(url);
-                    toast.success('Lien client copié !');
-                  } catch (e) {
-                    console.error(e);
-                    toast.error('Impossible de générer le lien');
-                  }
-                }}
-                disabled={isNew}
-                className="h-8 w-8"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Copier le lien client</TooltipContent>
-          </Tooltip>
-          
-          <Separator orientation="vertical" className="h-5 mx-1" />
-          
-          {/* Save button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost"
-                size="icon"
-                onClick={handleSave}
-                disabled={!canClickSave}
-                title={!activeWorkspace ? 'Aucun workspace actif' : authLoading ? 'Chargement de session…' : undefined}
-                className="h-8 w-8"
-              >
-                <Save className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{isSaving ? 'Enregistrement...' : 'Enregistrer'}</TooltipContent>
-          </Tooltip>
-          
-          {/* "Gagné" button - marks as accepted and offers project/sub-project creation */}
+          {/* Primary actions */}
           {canConvertToProject && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -786,7 +801,6 @@ export default function QuoteBuilder() {
             </Tooltip>
           )}
           
-          {/* Create project from signed quote */}
           {canCreateProjectFromSigned && (
             <Tooltip>
               <TooltipTrigger asChild>
