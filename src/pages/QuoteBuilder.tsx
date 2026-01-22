@@ -686,18 +686,7 @@ export default function QuoteBuilder() {
             onValueChange={(v) => handleDocumentChange({ status: v as DocumentStatus })}
           >
             <SelectTrigger className="h-8 w-auto min-w-[110px] text-xs font-medium rounded-full border-0 bg-muted/50">
-              <div className="flex items-center gap-1.5">
-                <span className={cn(
-                  "w-1.5 h-1.5 rounded-full",
-                  document.status === 'draft' && "bg-muted-foreground",
-                  document.status === 'sent' && "bg-blue-500",
-                  document.status === 'accepted' && "bg-green-500",
-                  document.status === 'rejected' && "bg-destructive",
-                  document.status === 'expired' && "bg-amber-500",
-                  document.status === 'signed' && "bg-primary"
-                )} />
-                <SelectValue />
-              </div>
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {Object.entries(DOCUMENT_STATUS_LABELS).map(([value, label]) => (
