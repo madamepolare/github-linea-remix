@@ -103,27 +103,48 @@ export function QuoteLinesEditor({
   const groups = lines.filter(l => l.line_type === 'group');
   const getGroupLines = (groupId: string) => lines.filter(l => l.group_id === groupId && l.line_type !== 'group');
   
-  // Sort ungrouped lines by phase_code to auto-group lines with same phase
-  const ungroupedLines = lines
-    .filter(l => !l.group_id && l.line_type !== 'group')
-    .sort((a, b) => {
-      // Lines with phase_code come first, grouped together
-      const aCode = a.phase_code || 'zzz'; // Lines without code go to end
-      const bCode = b.phase_code || 'zzz';
-      if (aCode !== bCode) return aCode.localeCompare(bCode);
-      // Within same phase_code, maintain sort_order
-      return (a.sort_order || 0) - (b.sort_order || 0);
-    });
+  // Separate lines into percentage-based and fixed-based sections
+  const percentageLines = useMemo(() => 
+    lines
+      .filter(l => l.pricing_mode === 'percentage' && !l.group_id && l.line_type !== 'group')
+      .sort((a, b) => {
+        const aCode = a.phase_code || 'zzz';
+        const bCode = b.phase_code || 'zzz';
+        if (aCode !== bCode) return aCode.localeCompare(bCode);
+        return (a.sort_order || 0) - (b.sort_order || 0);
+      }),
+    [lines]
+  );
+
+  const fixedLines = useMemo(() => 
+    lines
+      .filter(l => l.pricing_mode !== 'percentage' && !l.group_id && l.line_type !== 'group')
+      .sort((a, b) => {
+        const aCode = a.phase_code || 'zzz';
+        const bCode = b.phase_code || 'zzz';
+        if (aCode !== bCode) return aCode.localeCompare(bCode);
+        return (a.sort_order || 0) - (b.sort_order || 0);
+      }),
+    [lines]
+  );
   
   const getGroupSubtotal = (groupId: string) => {
     return getGroupLines(groupId).filter(l => l.is_included && l.line_type !== 'discount').reduce((sum, l) => sum + (l.amount || 0), 0);
   };
 
-  // Check if any lines use percentage pricing mode
-  const hasPercentageLines = useMemo(() => 
-    lines.some(l => l.pricing_mode === 'percentage'), 
-    [lines]
+  // Calculate totals per section
+  const percentageTotal = useMemo(() => 
+    percentageLines.filter(l => l.is_included).reduce((sum, l) => sum + (l.amount || 0), 0),
+    [percentageLines]
   );
+
+  const totalPercentage = useMemo(() => 
+    percentageLines.filter(l => l.is_included).reduce((sum, l) => sum + (l.percentage_fee || 0), 0),
+    [percentageLines]
+  );
+
+  // Check if any lines use percentage pricing mode
+  const hasPercentageLines = percentageLines.length > 0;
 
   // Construction budget and fee percentage for percentage-based calculations
   const constructionBudget = document.construction_budget || 0;
@@ -407,22 +428,52 @@ export function QuoteLinesEditor({
     const draggedLine = lines.find(l => l.id === draggableId);
     if (!draggedLine || draggedLine.line_type === 'group') return;
 
-    // Determine source and destination group IDs
-    const sourceGroupId = source.droppableId === 'ungrouped' ? undefined : source.droppableId;
-    const destGroupId = destination.droppableId === 'ungrouped' ? undefined : destination.droppableId;
+    // Handle section-based droppable IDs (percentage, fixed, or group IDs)
+    const isPercentageSection = (id: string) => id === 'percentage';
+    const isFixedSection = (id: string) => id === 'fixed';
+    const isSection = (id: string) => isPercentageSection(id) || isFixedSection(id);
 
-    // Update the line's group assignment
+    // Determine source and destination group IDs (null for sections)
+    const sourceGroupId = isSection(source.droppableId) ? undefined : source.droppableId;
+    const destGroupId = isSection(destination.droppableId) ? undefined : destination.droppableId;
+
+    // Determine pricing mode based on destination section
+    let newPricingMode = draggedLine.pricing_mode;
+    if (isPercentageSection(destination.droppableId) && draggedLine.line_type === 'phase') {
+      newPricingMode = 'percentage';
+    } else if (isFixedSection(destination.droppableId)) {
+      newPricingMode = 'fixed';
+    }
+
+    // Update the line's group assignment and pricing mode
     const updatedLines = lines.map(l => {
       if (l.id === draggableId) {
-        return { ...l, group_id: destGroupId };
+        const updates: Partial<QuoteLine> = { group_id: destGroupId };
+        if (newPricingMode !== draggedLine.pricing_mode) {
+          updates.pricing_mode = newPricingMode;
+          // Recalculate amount when switching to percentage mode
+          if (newPricingMode === 'percentage' && constructionBudget > 0 && l.percentage_fee) {
+            const newAmount = (totalFees * l.percentage_fee) / 100;
+            updates.amount = newAmount;
+            updates.unit_price = newAmount;
+          }
+        }
+        return { ...l, ...updates };
       }
       return l;
     });
 
-    // Reorder within the destination group
-    const destLines = destGroupId 
-      ? updatedLines.filter(l => l.group_id === destGroupId && l.line_type !== 'group')
-      : updatedLines.filter(l => !l.group_id && l.line_type !== 'group');
+    // Reorder within the destination section/group
+    let destLines: QuoteLine[];
+    if (isPercentageSection(destination.droppableId)) {
+      destLines = updatedLines.filter(l => l.pricing_mode === 'percentage' && !l.group_id && l.line_type !== 'group');
+    } else if (isFixedSection(destination.droppableId)) {
+      destLines = updatedLines.filter(l => l.pricing_mode !== 'percentage' && !l.group_id && l.line_type !== 'group');
+    } else if (destGroupId) {
+      destLines = updatedLines.filter(l => l.group_id === destGroupId && l.line_type !== 'group');
+    } else {
+      destLines = updatedLines.filter(l => !l.group_id && l.line_type !== 'group');
+    }
     
     // Remove the dragged line from its current position
     const withoutDragged = destLines.filter(l => l.id !== draggableId);
@@ -435,11 +486,9 @@ export function QuoteLinesEditor({
     const finalLines = updatedLines.map(line => {
       if (line.line_type === 'group') return line;
       
-      const inDestGroup = destGroupId 
-        ? line.group_id === destGroupId 
-        : !line.group_id;
+      const inDest = withoutDragged.some(l => l.id === line.id);
       
-      if (inDestGroup) {
+      if (inDest) {
         const newIndex = withoutDragged.findIndex(l => l.id === line.id);
         if (newIndex !== -1) {
           return { ...line, sort_order: newIndex };
@@ -921,27 +970,80 @@ export function QuoteLinesEditor({
               );
             })}
             
-            {/* Ungrouped lines droppable area */}
-            <Droppable droppableId="ungrouped">
-              {(provided, snapshot) => (
-                <div 
-                  ref={provided.innerRef} 
-                  {...provided.droppableProps}
-                  className={cn(
-                    "space-y-2 min-h-[40px] transition-colors rounded-lg p-1",
-                    snapshot.isDraggingOver && "bg-muted/50 ring-2 ring-muted ring-inset"
-                  )}
-                >
-                  {ungroupedLines.map((line, index) => renderDraggableLine(line, index, false))}
-                  {provided.placeholder}
-                  {ungroupedLines.length === 0 && groups.length > 0 && (
-                    <div className="text-center py-3 text-xs text-muted-foreground border-2 border-dashed rounded-lg">
-                      Lignes non groupées
+            {/* Percentage-based lines section */}
+            {percentageLines.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-2 py-1.5">
+                  <div className="flex items-center gap-1.5 text-blue-600">
+                    <Percent className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    <span className="text-xs font-medium">Honoraires %</span>
+                  </div>
+                  <div className="flex-1 h-px bg-blue-200" />
+                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 text-[10px]">
+                    {totalPercentage.toFixed(1)}%
+                  </Badge>
+                  <span className="text-xs font-semibold text-blue-700 tabular-nums">
+                    {formatCurrency(percentageTotal)}
+                  </span>
+                </div>
+                <Droppable droppableId="percentage">
+                  {(provided, snapshot) => (
+                    <div 
+                      ref={provided.innerRef} 
+                      {...provided.droppableProps}
+                      className={cn(
+                        "space-y-2 min-h-[40px] transition-colors rounded-lg p-1 border-l-2 border-blue-200 ml-1",
+                        snapshot.isDraggingOver && "bg-blue-50/50 ring-2 ring-blue-200 ring-inset"
+                      )}
+                    >
+                      {percentageLines.map((line, index) => renderDraggableLine(line, index, false))}
+                      {provided.placeholder}
                     </div>
                   )}
+                </Droppable>
+              </div>
+            )}
+
+            {/* Fixed-price lines section */}
+            {fixedLines.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-2 py-1.5">
+                  <div className="flex items-center gap-1.5 text-emerald-600">
+                    <Euro className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    <span className="text-xs font-medium">Prestations forfaitaires</span>
+                  </div>
+                  <div className="flex-1 h-px bg-emerald-200" />
+                  <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 text-[10px]">
+                    {fixedLines.filter(l => l.is_included).length} lignes
+                  </Badge>
+                  <span className="text-xs font-semibold text-emerald-700 tabular-nums">
+                    {formatCurrency(fixedLines.filter(l => l.is_included && l.line_type !== 'discount').reduce((sum, l) => sum + (l.amount || 0), 0))}
+                  </span>
                 </div>
-              )}
-            </Droppable>
+                <Droppable droppableId="fixed">
+                  {(provided, snapshot) => (
+                    <div 
+                      ref={provided.innerRef} 
+                      {...provided.droppableProps}
+                      className={cn(
+                        "space-y-2 min-h-[40px] transition-colors rounded-lg p-1 border-l-2 border-emerald-200 ml-1",
+                        snapshot.isDraggingOver && "bg-emerald-50/50 ring-2 ring-emerald-200 ring-inset"
+                      )}
+                    >
+                      {fixedLines.map((line, index) => renderDraggableLine(line, index, false))}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+            )}
+
+            {/* Empty state when no lines outside groups */}
+            {percentageLines.length === 0 && fixedLines.length === 0 && groups.length > 0 && (
+              <div className="text-center py-3 text-xs text-muted-foreground border-2 border-dashed rounded-lg">
+                Lignes non groupées
+              </div>
+            )}
           </div>
         </DragDropContext>
       )}
