@@ -40,7 +40,7 @@ import {
   ChevronUp,
   Copy,
   MoreHorizontal,
-  FileText,
+  Target,
   Package,
   Gift,
   Receipt,
@@ -70,12 +70,12 @@ import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
 import { cn } from '@/lib/utils';
 
 const TYPE_ICONS: Record<QuoteLine['line_type'], React.ReactNode> = {
-  phase: <FileText className="h-4 w-4" />,
-  service: <Package className="h-4 w-4" />,
-  option: <Gift className="h-4 w-4" />,
-  expense: <Receipt className="h-4 w-4" />,
-  discount: <MinusCircle className="h-4 w-4" />,
-  group: <Folder className="h-4 w-4" />
+  phase: <Target className="h-4 w-4" strokeWidth={1.25} />,
+  service: <Package className="h-4 w-4" strokeWidth={1.25} />,
+  option: <Gift className="h-4 w-4" strokeWidth={1.25} />,
+  expense: <Receipt className="h-4 w-4" strokeWidth={1.25} />,
+  discount: <MinusCircle className="h-4 w-4" strokeWidth={1.25} />,
+  group: <Folder className="h-4 w-4" strokeWidth={1.25} />
 };
 
 const TYPE_LABELS: Record<QuoteLine['line_type'], string> = {
