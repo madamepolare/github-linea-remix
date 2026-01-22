@@ -290,10 +290,10 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         "border-r border-border/40"
       )}
     >
-      {/* Workspace Switcher */}
+      {/* Workspace Logo/Favicon */}
       <div className={cn(
-        "relative flex items-center border-b border-border/40",
-        collapsed ? "justify-center h-12 px-0" : "justify-between h-12 px-2"
+        "flex items-center justify-center border-b border-border/40",
+        collapsed ? "h-12 px-0" : "h-12 px-2"
       )}>
         {activeWorkspace ? (
           <DropdownMenu>
@@ -301,23 +301,22 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
               <button 
                 className={cn(
                   "flex items-center rounded-md transition-colors hover:bg-muted/50",
-                  collapsed ? "justify-center p-1" : "flex-1 gap-2 px-1.5 py-1 text-left"
+                  collapsed ? "justify-center p-1.5" : "flex-1 gap-2 px-1.5 py-1 text-left"
                 )}
               >
-                {/* Logo - uses favicon > logo fallback */}
                 {workspaceIconUrl ? (
                   <img 
                     src={workspaceIconUrl} 
                     alt={activeWorkspace.name} 
                     className={cn(
                       "rounded-md object-cover",
-                      collapsed ? "h-7 w-7" : "h-6 w-6"
+                      collapsed ? "h-8 w-8" : "h-6 w-6"
                     )}
                   />
                 ) : (
                   <div className={cn(
-                    "flex items-center justify-center rounded-md bg-foreground/5 text-foreground font-medium",
-                    collapsed ? "h-7 w-7 text-sm" : "h-6 w-6 text-xs"
+                    "flex items-center justify-center rounded-md bg-foreground/5 text-foreground font-semibold",
+                    collapsed ? "h-8 w-8 text-sm" : "h-6 w-6 text-xs"
                   )}>
                     {fallbackLetter}
                   </div>
@@ -335,7 +334,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 )}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-60">
+            <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
                 Workspaces
               </DropdownMenuLabel>
@@ -346,28 +345,28 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                   onClick={() => handleWorkspaceSwitch(workspace.id)}
                   disabled={switchingWorkspace === workspace.id}
                   className={cn(
-                    "flex items-center justify-between rounded-lg",
+                    "flex items-center justify-between rounded-md",
                     workspace.id === activeWorkspace.id && "bg-muted/50"
                   )}
                 >
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2">
                     {workspace.logo_url ? (
                       <img 
                         src={workspace.logo_url} 
                         alt={workspace.name} 
-                        className="h-6 w-6 rounded-md object-cover"
+                        className="h-5 w-5 rounded object-cover"
                       />
                     ) : (
-                      <div className="flex h-6 w-6 items-center justify-center rounded-md bg-foreground/5 text-xs font-medium">
+                      <div className="flex h-5 w-5 items-center justify-center rounded bg-foreground/5 text-[10px] font-medium">
                         {workspace.name.slice(0, 1).toUpperCase()}
                       </div>
                     )}
                     <span className="text-sm">{workspace.name}</span>
                   </div>
                   {switchingWorkspace === workspace.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
                   ) : workspace.id === activeWorkspace.id ? (
-                    <Check className="h-3.5 w-3.5 text-foreground shrink-0" />
+                    <Check className="h-3 w-3 text-foreground shrink-0" />
                   ) : null}
                 </DropdownMenuItem>
               ))}
@@ -376,35 +375,43 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
                 onClick={() => navigate("/settings/workspace/new")}
                 className="text-muted-foreground"
               >
-                <Plus className="h-3.5 w-3.5 mr-2" />
+                <Plus className="h-3 w-3 mr-2" />
                 Nouveau workspace
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <div className="flex items-center gap-2.5 px-2">
-            <div className="h-8 w-8 rounded-lg bg-muted animate-pulse" />
+          <div className={cn(
+            "flex items-center",
+            collapsed ? "justify-center" : "gap-2 px-2"
+          )}>
+            <div className={cn(
+              "rounded-md bg-muted animate-pulse",
+              collapsed ? "h-8 w-8" : "h-6 w-6"
+            )} />
             {!collapsed && <div className="h-4 w-20 rounded bg-muted animate-pulse" />}
           </div>
         )}
-        
-        {/* Collapse toggle */}
+      </div>
+
+      {/* Collapse Toggle - between separators */}
+      <div className="flex items-center justify-center py-1.5 border-b border-border/40">
         <Button
           variant="ghost"
           size="icon"
           onClick={toggle}
-          className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 shrink-0"
+          className="h-7 w-7 rounded-md text-foreground hover:bg-muted/50"
         >
           {collapsed ? (
-            <ChevronRight className="h-3.5 w-3.5" strokeWidth={THIN_STROKE} />
+            <ChevronRight className="h-4 w-4" strokeWidth={1.25} />
           ) : (
-            <ChevronLeft className="h-3.5 w-3.5" strokeWidth={THIN_STROKE} />
+            <ChevronLeft className="h-4 w-4" strokeWidth={1.25} />
           )}
         </Button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-2.5 py-3 scrollbar-thin">
+      <nav className="flex-1 overflow-y-auto px-2 py-2 scrollbar-thin">
         {/* Core Navigation */}
         <div className="space-y-0.5">
           {coreNavigation.map((item) => (
