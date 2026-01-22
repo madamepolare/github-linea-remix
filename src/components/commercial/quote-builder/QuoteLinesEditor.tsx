@@ -360,7 +360,9 @@ export function QuoteLinesEditor({
     onLinesChange(lines.map(line => {
       if (line.id === id) {
         const updated = { ...line, ...updates };
-        if ('quantity' in updates || 'unit_price' in updates) {
+        // Only auto-calculate amount for fixed pricing mode when qty/price changes
+        // For percentage mode, amount is passed directly in updates
+        if (updated.pricing_mode !== 'percentage' && ('quantity' in updates || 'unit_price' in updates) && !('amount' in updates)) {
           updated.amount = (updated.quantity || 1) * (updated.unit_price || 0);
         }
         return updated;
