@@ -993,9 +993,9 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
           </div>
 
           {/* Grille des jours (scrollable) */}
-          <ScrollArea 
-            className="flex-1"
-            onScrollCapture={(e) => {
+          <div 
+            className="flex-1 overflow-auto"
+            onScroll={(e) => {
               // Sync vertical scroll with members column
               const scrollTop = (e.target as HTMLElement).scrollTop;
               const membersContent = document.getElementById('members-scroll-content');
@@ -1092,8 +1092,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                 )}
               </div>
             </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+          </div>
         </div>
       </div>
 
