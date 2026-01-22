@@ -216,25 +216,32 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     const content = (
       <div
         className={cn(
-          "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200",
+          "relative flex items-center gap-3 px-2 py-2 text-sm transition-all duration-200",
           "cursor-pointer select-none",
+          collapsed ? "justify-center" : "",
           active
-            ? "bg-foreground/5 text-foreground font-semibold"
-            : "text-foreground/80 font-medium hover:bg-muted/50 hover:text-foreground"
+            ? "text-foreground font-semibold"
+            : "text-foreground/70 font-medium hover:text-foreground"
         )}
       >
-        {/* Active indicator */}
-        {active && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-foreground rounded-full" />
-        )}
-        
-        <item.icon
+        {/* Icon with background for active state */}
+        <div
           className={cn(
-            "h-[18px] w-[18px] shrink-0 transition-colors",
-            active ? "text-foreground" : "text-foreground/60"
+            "flex items-center justify-center rounded-lg transition-all duration-200",
+            collapsed ? "h-10 w-10" : "h-8 w-8",
+            active
+              ? "bg-foreground text-background shadow-sm"
+              : "text-foreground/60 hover:bg-muted/60"
           )}
-          strokeWidth={1.75}
-        />
+        >
+          <item.icon
+            className={cn(
+              "shrink-0 transition-colors",
+              collapsed ? "h-5 w-5" : "h-[18px] w-[18px]"
+            )}
+            strokeWidth={1.5}
+          />
+        </div>
 
         {!collapsed && (
           <span className="flex-1 truncate text-left">
