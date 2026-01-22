@@ -85,24 +85,6 @@ export function QuoteFeesAndLinesTab({
 
   return (
     <div className="space-y-4">
-      {/* Summary header - plain text */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <Calculator className="h-3.5 w-3.5" strokeWidth={1.25} />
-            Honoraires: {formatCurrency(honorairesTotals.total)}
-          </span>
-          <span>+</span>
-          <span className="flex items-center gap-1.5">
-            <List className="h-3.5 w-3.5" strokeWidth={1.25} />
-            Prestations: {formatCurrency(prestationsTotals.total)}
-          </span>
-        </div>
-        <div className="text-base font-semibold">
-          Total HT: {formatCurrency(grandTotal)}
-        </div>
-      </div>
-
       {/* Internal tabs for switching between the two modes */}
       <Tabs defaultValue="honoraires" className="w-full">
         <TabsList className="w-full h-9 p-0.5 bg-muted/50 rounded-lg">
