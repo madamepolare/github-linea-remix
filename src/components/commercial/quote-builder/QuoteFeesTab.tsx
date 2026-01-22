@@ -1,31 +1,47 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Euro, Percent, Calculator, Layers, RefreshCw } from 'lucide-react';
-import { QuoteDocument, QuoteLine } from '@/types/quoteTypes';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { 
+  Euro, 
+  Percent, 
+  Calculator, 
+  RefreshCw, 
+  GripVertical,
+  Target,
+  ChevronDown,
+  ChevronUp,
+  MoreHorizontal,
+  Trash2,
+  Copy,
+  Eye,
+  EyeOff
+} from 'lucide-react';
+import { QuoteDocument, QuoteLine, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
 import { getDisciplineBySlug, DisciplinePhase, DISCIPLINE_CONFIGS } from '@/lib/disciplinesConfig';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface QuoteFeesTabProps {
   document: Partial<QuoteDocument>;
@@ -49,6 +65,7 @@ export function QuoteFeesTab({
   onLinesChange 
 }: QuoteFeesTabProps) {
   const { templates } = usePhaseTemplates(document.project_type as any);
+  const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   
   // Get discipline-based phases as fallback
   const disciplinePhases = useMemo(() => {
@@ -58,13 +75,11 @@ export function QuoteFeesTab({
         return DISCIPLINE_CONFIGS[slug].defaultPhases;
       }
     }
-    // Default to architecture phases for fee-based contracts
     return DISCIPLINE_CONFIGS.architecture.defaultPhases;
   }, [document.project_type]);
 
   // Initialize phases from lines or defaults
   const [phases, setPhases] = useState<PhaseConfig[]>(() => {
-    // If we have existing lines that look like phases, use them
     const existingPhases = lines.filter(l => l.line_type === 'phase' || l.phase_code);
     if (existingPhases.length > 0) {
       return existingPhases.map(l => ({
@@ -75,7 +90,6 @@ export function QuoteFeesTab({
         amount: l.amount || 0
       }));
     }
-    // Otherwise use discipline defaults
     return disciplinePhases.map(p => ({
       code: p.code,
       name: p.name,
@@ -88,26 +102,22 @@ export function QuoteFeesTab({
   const constructionBudget = document.construction_budget || 0;
   const feePercentage = document.fee_percentage || 12;
 
-  // Calculate total fees based on budget
   const totalFees = useMemo(() => {
     return (constructionBudget * feePercentage) / 100;
   }, [constructionBudget, feePercentage]);
 
-  // Update phase amounts when budget or percentages change
   useEffect(() => {
     const updatedPhases = phases.map(p => ({
       ...p,
       amount: p.isIncluded ? (totalFees * p.percentage) / 100 : 0
     }));
     
-    // Only update if amounts actually changed
     const hasChanged = updatedPhases.some((p, i) => p.amount !== phases[i].amount);
     if (hasChanged) {
       setPhases(updatedPhases);
     }
   }, [totalFees, phases]);
 
-  // Sync phases to lines
   useEffect(() => {
     const phaseLines: QuoteLine[] = phases.map((p, index) => ({
       id: `phase-${p.code}`,
@@ -126,7 +136,6 @@ export function QuoteFeesTab({
       deliverables: []
     }));
     
-    // Merge with non-phase lines
     const otherLines = lines.filter(l => l.line_type !== 'phase' && !l.phase_code);
     onLinesChange([...phaseLines, ...otherLines]);
   }, [phases]);
@@ -143,6 +152,12 @@ export function QuoteFeesTab({
     ));
   };
 
+  const handleNameChange = (code: string, name: string) => {
+    setPhases(prev => prev.map(p => 
+      p.code === code ? { ...p, name } : p
+    ));
+  };
+
   const handleResetToDefaults = () => {
     const defaultPhases = disciplinePhases.map(p => ({
       code: p.code,
@@ -155,6 +170,22 @@ export function QuoteFeesTab({
     toast.success('Phases réinitialisées');
   };
 
+  const toggleExpanded = (code: string) => {
+    const newExpanded = new Set(expandedPhases);
+    newExpanded.has(code) ? newExpanded.delete(code) : newExpanded.add(code);
+    setExpandedPhases(newExpanded);
+  };
+
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    
+    const items = Array.from(phases);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    setPhases(items);
+  };
+
   const includedPhases = phases.filter(p => p.isIncluded);
   const totalPercentage = includedPhases.reduce((sum, p) => sum + p.percentage, 0);
   const totalAmount = includedPhases.reduce((sum, p) => sum + p.amount, 0);
@@ -163,180 +194,253 @@ export function QuoteFeesTab({
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
 
   return (
-    <div className="space-y-6">
-      {/* Budget & Fee Configuration */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Calculator className="h-4 w-4" />
-            Base de calcul des honoraires
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Euro className="h-3.5 w-3.5 text-muted-foreground" />
-                Budget travaux (€ HT)
-              </Label>
-              <Input
-                type="number"
-                value={constructionBudget || ''}
-                onChange={(e) => onDocumentChange({ 
-                  ...document, 
-                  construction_budget: parseFloat(e.target.value) || 0 
-                })}
-                placeholder="Ex: 150000"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Percent className="h-3.5 w-3.5 text-muted-foreground" />
-                Taux d'honoraires (%)
-              </Label>
-              <Input
-                type="number"
-                value={feePercentage || ''}
-                onChange={(e) => onDocumentChange({ 
-                  ...document, 
-                  fee_percentage: parseFloat(e.target.value) || 0 
-                })}
-                placeholder="Ex: 12"
-                step="0.5"
-              />
-            </div>
-          </div>
+    <div className="space-y-4">
+      {/* Budget & Fee Configuration - Compact inline */}
+      <div className="flex flex-wrap items-center gap-4 p-3 bg-muted/30 rounded-lg border border-dashed">
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
+            <Euro className="h-3.5 w-3.5" strokeWidth={1.25} />
+            Budget travaux
+          </Label>
+          <Input
+            type="number"
+            value={constructionBudget || ''}
+            onChange={(e) => onDocumentChange({ 
+              ...document, 
+              construction_budget: parseFloat(e.target.value) || 0 
+            })}
+            placeholder="150000"
+            className="h-8 w-32 text-sm"
+          />
+          <span className="text-xs text-muted-foreground">€ HT</span>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Label className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
+            <Percent className="h-3.5 w-3.5" strokeWidth={1.25} />
+            Taux
+          </Label>
+          <Input
+            type="number"
+            value={feePercentage || ''}
+            onChange={(e) => onDocumentChange({ 
+              ...document, 
+              fee_percentage: parseFloat(e.target.value) || 0 
+            })}
+            placeholder="12"
+            step="0.5"
+            className="h-8 w-20 text-sm"
+          />
+          <span className="text-xs text-muted-foreground">%</span>
+        </div>
 
-          {constructionBudget > 0 && (
-            <div className="bg-muted/50 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Honoraires totaux estimés</span>
-                <span className="text-lg font-bold text-primary">
-                  {formatCurrency(totalFees)}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {feePercentage}% de {formatCurrency(constructionBudget)}
-              </p>
+        {constructionBudget > 0 && (
+          <>
+            <div className="h-6 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              <Calculator className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.25} />
+              <span className="text-sm font-semibold text-primary">
+                {formatCurrency(totalFees)}
+              </span>
+            </div>
+          </>
+        )}
+
+        <div className="flex-1" />
+
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="disclose-budget"
+            checked={document.construction_budget_disclosed ?? false}
+            onCheckedChange={(checked) => 
+              onDocumentChange({ 
+                ...document, 
+                construction_budget_disclosed: checked as boolean 
+              })
+            }
+            className="h-4 w-4"
+          />
+          <Label htmlFor="disclose-budget" className="text-xs text-muted-foreground">
+            Afficher sur doc
+          </Label>
+        </div>
+
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={handleResetToDefaults}
+          className="h-8 text-xs"
+        >
+          <RefreshCw className="h-3.5 w-3.5 mr-1.5" strokeWidth={1.25} />
+          Réinit.
+        </Button>
+      </div>
+
+      {/* Phases List - Same UI as QuoteLinesEditor */}
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId="phases">
+          {(provided) => (
+            <div
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="space-y-2"
+            >
+              {phases.map((phase, index) => (
+                <Draggable key={phase.code} draggableId={phase.code} index={index}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      className={cn(
+                        snapshot.isDragging && "opacity-90 shadow-xl ring-2 ring-primary/50 rounded-lg"
+                      )}
+                    >
+                      <Collapsible open={expandedPhases.has(phase.code)}>
+                        <div
+                          className={cn(
+                            "border rounded-xl transition-all",
+                            !phase.isIncluded && 'border-dashed border-muted-foreground/30 bg-muted/20',
+                            expandedPhases.has(phase.code) && 'shadow-md ring-1 ring-primary/10'
+                          )}
+                        >
+                          {/* Compact header */}
+                          <div className="flex items-center gap-2 p-3">
+                            {/* Drag handle */}
+                            <div 
+                              {...provided.dragHandleProps}
+                              className="cursor-grab shrink-0 p-1 hover:bg-muted rounded active:cursor-grabbing"
+                            >
+                              <GripVertical className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            
+                            {/* Type icon */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className={cn("p-1.5 rounded-lg shrink-0 cursor-default", LINE_TYPE_COLORS.phase)}>
+                                  <Target className="h-4 w-4" strokeWidth={1.25} />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p>Phase mission</p>
+                              </TooltipContent>
+                            </Tooltip>
+
+                            {/* Phase code badge */}
+                            <Badge variant="outline" className="shrink-0 text-xs font-mono bg-muted/50 px-2">
+                              {phase.code}
+                            </Badge>
+
+                            {/* Title */}
+                            <div className="flex-1 min-w-0">
+                              <Input
+                                value={phase.name}
+                                onChange={(e) => handleNameChange(phase.code, e.target.value)}
+                                className="h-8 font-medium border-transparent hover:border-input focus:border-input bg-transparent text-sm"
+                                placeholder="Nom de la phase..."
+                              />
+                            </div>
+
+                            {/* Percentage input */}
+                            <div className="flex items-center h-8 bg-muted/40 rounded-lg overflow-hidden">
+                              <Input
+                                type="number"
+                                value={phase.percentage}
+                                onChange={(e) => 
+                                  handlePercentageChange(phase.code, parseFloat(e.target.value) || 0)
+                                }
+                                className="h-8 w-16 text-center text-sm border-0 bg-transparent tabular-nums focus:bg-muted/60"
+                                step="0.5"
+                                disabled={!phase.isIncluded}
+                              />
+                              <span className="text-xs text-muted-foreground pr-2">%</span>
+                            </div>
+
+                            {/* Amount - read-only */}
+                            <div className="flex items-center h-8 bg-primary/5 border border-primary/20 rounded-lg overflow-hidden px-3 min-w-[100px]">
+                              <span className="tabular-nums font-semibold text-sm text-primary">
+                                {phase.isIncluded ? phase.amount.toLocaleString('fr-FR') : '—'}
+                              </span>
+                              <span className="text-sm text-primary/70 ml-1 font-medium">€</span>
+                            </div>
+
+                            {/* Include/Exclude toggle */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0"
+                                  onClick={() => handlePhaseToggle(phase.code, !phase.isIncluded)}
+                                >
+                                  {phase.isIncluded ? (
+                                    <Eye className="h-4 w-4 text-muted-foreground" strokeWidth={1.25} />
+                                  ) : (
+                                    <EyeOff className="h-4 w-4 text-muted-foreground" strokeWidth={1.25} />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {phase.isIncluded ? 'Exclure du total' : 'Inclure au total'}
+                              </TooltipContent>
+                            </Tooltip>
+
+                            {/* Expand/collapse */}
+                            <CollapsibleTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => toggleExpanded(phase.code)}
+                              >
+                                {expandedPhases.has(phase.code) ? (
+                                  <ChevronUp className="h-4 w-4" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </CollapsibleTrigger>
+                          </div>
+
+                          {/* Expanded content */}
+                          <CollapsibleContent>
+                            <div className="border-t bg-gradient-to-b from-muted/30 to-transparent p-4">
+                              <p className="text-xs text-muted-foreground">
+                                Détails de la phase à venir (livrables, équipe assignée, dates...)
+                              </p>
+                            </div>
+                          </CollapsibleContent>
+                        </div>
+                      </Collapsible>
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </Droppable>
+      </DragDropContext>
 
-      {/* Phases Breakdown */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Layers className="h-4 w-4" />
-              Répartition par phases
-            </CardTitle>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={handleResetToDefaults}
-            >
-              <RefreshCw className="h-3.5 w-3.5 mr-2" />
-              Réinitialiser
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10"></TableHead>
-                <TableHead className="w-20">Code</TableHead>
-                <TableHead>Phase</TableHead>
-                <TableHead className="w-24 text-right">%</TableHead>
-                <TableHead className="w-32 text-right">Montant HT</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {phases.map((phase) => (
-                <TableRow 
-                  key={phase.code}
-                  className={!phase.isIncluded ? 'opacity-50' : ''}
-                >
-                  <TableCell>
-                    <Checkbox
-                      checked={phase.isIncluded}
-                      onCheckedChange={(checked) => 
-                        handlePhaseToggle(phase.code, checked as boolean)
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-mono text-xs">
-                      {phase.code}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">{phase.name}</TableCell>
-                  <TableCell className="text-right">
-                    <Input
-                      type="number"
-                      value={phase.percentage}
-                      onChange={(e) => 
-                        handlePercentageChange(phase.code, parseFloat(e.target.value) || 0)
-                      }
-                      className="w-20 text-right h-8"
-                      step="0.5"
-                      disabled={!phase.isIncluded}
-                    />
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {phase.isIncluded ? formatCurrency(phase.amount) : '-'}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          <Separator className="my-4" />
-
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-4">
-              <span className="text-muted-foreground">Total</span>
-              <Badge 
-                variant={totalPercentage === 100 ? 'default' : 'destructive'}
-                className="font-mono"
-              >
-                {totalPercentage.toFixed(1)}%
-              </Badge>
-              {totalPercentage !== 100 && (
-                <span className="text-xs text-destructive">
-                  (devrait être 100%)
-                </span>
-              )}
-            </div>
-            <span className="text-lg font-bold">
-              {formatCurrency(totalAmount)}
+      {/* Summary footer */}
+      <div className="flex items-center justify-between p-3 bg-muted/20 rounded-lg border">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">Total phases</span>
+          <Badge 
+            variant={totalPercentage === 100 ? 'default' : 'destructive'}
+            className="font-mono text-xs"
+          >
+            {totalPercentage.toFixed(1)}%
+          </Badge>
+          {totalPercentage !== 100 && (
+            <span className="text-xs text-destructive">
+              (devrait être 100%)
             </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Budget Disclosure Option */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center space-x-3">
-            <Checkbox
-              id="disclose-budget"
-              checked={document.construction_budget_disclosed ?? false}
-              onCheckedChange={(checked) => 
-                onDocumentChange({ 
-                  ...document, 
-                  construction_budget_disclosed: checked as boolean 
-                })
-              }
-            />
-            <Label htmlFor="disclose-budget" className="text-sm">
-              Afficher le budget travaux sur le document client
-            </Label>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
+        <span className="text-lg font-bold tabular-nums">
+          {formatCurrency(totalAmount)}
+        </span>
+      </div>
     </div>
   );
 }
