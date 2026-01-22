@@ -100,7 +100,10 @@ export function applyStyles(settings: StyleSettings) {
   
   root.style.setProperty("--font-weight-heading", settings.headingWeight);
   root.style.setProperty("--font-weight-body", settings.bodyWeight);
-  root.style.setProperty("--radius", `${settings.borderRadius}px`);
+  
+  // Apply border radius (in rem so it scales with font size)
+  const radiusRem = settings.borderRadius / 16;
+  root.style.setProperty("--radius", `${radiusRem}rem`);
   
   // Load and apply heading font
   const headingFontData = FONT_OPTIONS.find(f => f.id === settings.headingFont);
