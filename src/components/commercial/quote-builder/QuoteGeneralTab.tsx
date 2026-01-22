@@ -77,16 +77,14 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
     new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(value);
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4">
       {/* Type de contrat + Description projet */}
-      <Card>
-        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
-          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Type & Description
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
+      <section className="rounded-lg border bg-card">
+        <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Type & Description</h3>
+        </div>
+        <div className="p-4 space-y-4">
           <div className="space-y-2">
             <Label className="text-sm flex items-center gap-1">
               Type de contrat
@@ -128,154 +126,141 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
               className="text-sm"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      {/* Avenant toggle + Link to existing project */}
+      {/* Avenant toggle */}
       {onLinkedProjectChange && (
-        <Card className="border-dashed">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileEdit className="h-4 w-4" />
-                Avenant
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="is_amendment"
-                  checked={document.is_amendment || false}
-                  onCheckedChange={(checked) => {
-                    onDocumentChange({ ...document, is_amendment: checked });
-                    if (!checked) {
-                      onLinkedProjectChange(undefined);
-                    }
-                  }}
-                />
-                <Label htmlFor="is_amendment" className="text-sm cursor-pointer">
-                  Ce document est un avenant
-                </Label>
-              </div>
+        <section className="rounded-lg border bg-card">
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+            <div className="flex items-center gap-2">
+              <FileEdit className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-medium">Avenant</h3>
             </div>
-          </CardHeader>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="is_amendment"
+                checked={document.is_amendment || false}
+                onCheckedChange={(checked) => {
+                  onDocumentChange({ ...document, is_amendment: checked });
+                  if (!checked) {
+                    onLinkedProjectChange(undefined);
+                  }
+                }}
+              />
+              <Label htmlFor="is_amendment" className="text-sm cursor-pointer">
+                Ce document est un avenant
+              </Label>
+            </div>
+          </div>
           
           {document.is_amendment && (
-            <CardContent>
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2 text-sm">
-                  <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
-                  Rattacher à un projet existant
-                </Label>
-                <Select
-                  value={linkedProjectId || 'none'}
-                  onValueChange={(v) => {
-                    const newProjectId = v === 'none' ? undefined : v;
-                    onLinkedProjectChange(newProjectId);
-                    
-                    // Auto-fill client info from selected project
-                    if (newProjectId) {
-                      const selectedProject = projects?.find(p => p.id === newProjectId);
-                      if (selectedProject) {
-                        const updates: Partial<QuoteDocument> = { ...document };
+            <div className="p-4 space-y-3">
+              <Label className="flex items-center gap-2 text-sm">
+                <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                Rattacher à un projet existant
+              </Label>
+              <Select
+                value={linkedProjectId || 'none'}
+                onValueChange={(v) => {
+                  const newProjectId = v === 'none' ? undefined : v;
+                  onLinkedProjectChange(newProjectId);
+                  
+                  if (newProjectId) {
+                    const selectedProject = projects?.find(p => p.id === newProjectId);
+                    if (selectedProject) {
+                      const updates: Partial<QuoteDocument> = { ...document };
+                      
+                      if (selectedProject.crm_company_id) {
+                        updates.client_company_id = selectedProject.crm_company_id;
                         
-                        // Auto-fill company from project
-                        if (selectedProject.crm_company_id) {
-                          updates.client_company_id = selectedProject.crm_company_id;
-                          
-                          // Try to get contact info from existing commercial documents for this project
-                          const projectDocs = commercialDocuments?.filter(d => d.project?.id === newProjectId);
-                          const latestDoc = projectDocs?.sort((a, b) => 
-                            new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-                          )[0];
-                          
-                          if (latestDoc) {
-                            // Pre-fill contacts from the latest document of this project
-                            if (latestDoc.client_contact?.id) {
-                              updates.client_contact_id = latestDoc.client_contact.id;
-                            }
-                            if (latestDoc.billing_contact?.id) {
-                              updates.billing_contact_id = latestDoc.billing_contact.id;
-                            }
-                          } else {
-                            // Fallback: get primary contact from company
-                            const company = companies?.find(c => c.id === selectedProject.crm_company_id);
-                            if (company?.primary_contact?.id) {
-                              updates.client_contact_id = company.primary_contact.id;
-                            }
-                            // Check for billing_contact_id on company
-                            if (company?.billing_contact_id) {
-                              updates.billing_contact_id = company.billing_contact_id;
-                            }
+                        const projectDocs = commercialDocuments?.filter(d => d.project?.id === newProjectId);
+                        const latestDoc = projectDocs?.sort((a, b) => 
+                          new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+                        )[0];
+                        
+                        if (latestDoc) {
+                          if (latestDoc.client_contact?.id) {
+                            updates.client_contact_id = latestDoc.client_contact.id;
+                          }
+                          if (latestDoc.billing_contact?.id) {
+                            updates.billing_contact_id = latestDoc.billing_contact.id;
+                          }
+                        } else {
+                          const company = companies?.find(c => c.id === selectedProject.crm_company_id);
+                          if (company?.primary_contact?.id) {
+                            updates.client_contact_id = company.primary_contact.id;
+                          }
+                          if (company?.billing_contact_id) {
+                            updates.billing_contact_id = company.billing_contact_id;
                           }
                         }
-                        
-                        // Auto-fill project location info
-                        if (selectedProject.address) {
-                          updates.project_address = selectedProject.address;
-                        }
-                        if (selectedProject.city) {
-                          updates.project_city = selectedProject.city;
-                        }
-                        if (selectedProject.surface) {
-                          updates.project_surface = selectedProject.surface;
-                        }
-                        if (selectedProject.budget) {
-                          updates.project_budget = selectedProject.budget;
-                        }
-                        
-                        onDocumentChange(updates);
                       }
+                      
+                      if (selectedProject.address) {
+                        updates.project_address = selectedProject.address;
+                      }
+                      if (selectedProject.city) {
+                        updates.project_city = selectedProject.city;
+                      }
+                      if (selectedProject.surface) {
+                        updates.project_surface = selectedProject.surface;
+                      }
+                      if (selectedProject.budget) {
+                        updates.project_budget = selectedProject.budget;
+                      }
+                      
+                      onDocumentChange(updates);
                     }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un projet..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Aucun projet lié</SelectItem>
-                    {projects?.filter(p => !p.is_archived).map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-2 h-2 rounded-full"
-                            style={{ backgroundColor: project.color }}
-                          />
-                          <span>{project.name}</span>
-                          {project.crm_company?.name && (
-                            <Badge variant="outline" className="ml-1 text-xs">
-                              {project.crm_company.name}
-                            </Badge>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {linkedProjectId && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1">
-                    <FolderKanban className="h-3 w-3" />
-                    Ce devis sera enregistré comme avenant au projet sélectionné
-                  </p>
-                )}
-              </div>
-            </CardContent>
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un projet..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Aucun projet lié</SelectItem>
+                  {projects?.filter(p => !p.is_archived).map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: project.color }}
+                        />
+                        <span>{project.name}</span>
+                        {project.crm_company?.name && (
+                          <Badge variant="outline" className="ml-1 text-xs">
+                            {project.crm_company.name}
+                          </Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {linkedProjectId && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <FolderKanban className="h-3 w-3" />
+                  Ce devis sera enregistré comme avenant au projet sélectionné
+                </p>
+              )}
+            </div>
           )}
-        </Card>
+        </section>
       )}
 
-      <Card className={cn(!document.client_company_id && "border-destructive/30")}>
-        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
-          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Client & Facturation
-            <span className="text-destructive text-sm">*</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 px-3 sm:px-6">
+      {/* Client & Facturation */}
+      <section className={cn("rounded-lg border bg-card", !document.client_company_id && "border-destructive/30")}>
+        <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
+          <Building2 className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Client & Facturation</h3>
+          <span className="text-destructive text-sm">*</span>
+        </div>
+        <div className="p-4 space-y-4">
           <ClientSelector
             selectedCompanyId={document.client_company_id}
             selectedContactId={document.client_contact_id}
             onCompanyChange={(id, companyName, billingInfo) => {
-              // Auto-fill reference_client from CRM if available
               onDocumentChange({ 
                 ...document, 
                 client_company_id: id,
@@ -285,8 +270,7 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
             onContactChange={(id) => onDocumentChange({ ...document, client_contact_id: id })}
           />
           
-          {/* Marché public toggle + N° Réf Marché */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t">
+          <div className="flex flex-col sm:flex-row gap-3 pt-3 border-t">
             <div className="flex items-center gap-3">
               <Switch
                 id="is_public_market"
@@ -305,14 +289,13 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                   value={document.market_reference || ''}
                   onChange={(e) => onDocumentChange({ ...document, market_reference: e.target.value })}
                   placeholder="N° Réf Marché"
-                  className="h-9 sm:h-10"
+                  className="h-9"
                 />
               </div>
             )}
           </div>
           
-          {/* Contact facturation juste après */}
-          <div className="space-y-2 pt-2 border-t">
+          <div className="space-y-2 pt-3 border-t">
             <Label className="flex items-center gap-2 text-sm">
               <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
               Contact facturation
@@ -326,7 +309,7 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                 })
               }
             >
-              <SelectTrigger className="h-9 sm:h-10">
+              <SelectTrigger className="h-9">
                 <SelectValue placeholder="Même que contact principal" />
               </SelectTrigger>
               <SelectContent>
@@ -345,23 +328,21 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Responsable interne */}
-      <Card>
-        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
-          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-            <UserCircle className="h-4 w-4" />
-            Responsable interne
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 sm:px-6">
+      <section className="rounded-lg border bg-card">
+        <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
+          <UserCircle className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Responsable interne</h3>
+        </div>
+        <div className="p-4">
           <Select
             value={document.internal_owner_id || ''}
             onValueChange={(v) => onDocumentChange({ ...document, internal_owner_id: v || undefined })}
           >
-            <SelectTrigger className="h-9 sm:h-10">
+            <SelectTrigger className="h-9">
               <SelectValue placeholder="Choisir un responsable..." />
             </SelectTrigger>
             <SelectContent>
@@ -380,122 +361,118 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
               ))}
             </SelectContent>
           </Select>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Project Details - Only for architecture/scenography types */}
       {isArchitectureType && (
-      <Card>
-        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
-          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            Localisation & Surface
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {fields.address !== false && (
-              <div className="space-y-2">
-                <Label className="text-sm">Adresse</Label>
-                <Input
-                  value={document.project_address || ''}
-                  onChange={(e) => onDocumentChange({ ...document, project_address: e.target.value })}
-                  placeholder="Adresse du projet"
-                  className="h-9 sm:h-10"
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-2">
-                <Label className="text-sm">Code postal</Label>
-                <Input
-                  value={document.postal_code || ''}
-                  onChange={(e) => onDocumentChange({ ...document, postal_code: e.target.value })}
-                  placeholder="75001"
-                  className="h-9 sm:h-10"
-                />
-              </div>
-              {fields.city !== false && (
+        <section className="rounded-lg border bg-card">
+          <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-medium">Localisation & Surface</h3>
+          </div>
+          <div className="p-4 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {fields.address !== false && (
                 <div className="space-y-2">
-                  <Label className="text-sm">Ville</Label>
+                  <Label className="text-sm">Adresse</Label>
                   <Input
-                    value={document.project_city || ''}
-                    onChange={(e) => onDocumentChange({ ...document, project_city: e.target.value })}
-                    placeholder="Ville"
-                    className="h-9 sm:h-10"
+                    value={document.project_address || ''}
+                    onChange={(e) => onDocumentChange({ ...document, project_address: e.target.value })}
+                    placeholder="Adresse du projet"
+                    className="h-9"
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label className="text-sm">Code postal</Label>
+                  <Input
+                    value={document.postal_code || ''}
+                    onChange={(e) => onDocumentChange({ ...document, postal_code: e.target.value })}
+                    placeholder="75001"
+                    className="h-9"
+                  />
+                </div>
+                {fields.city !== false && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Ville</Label>
+                    <Input
+                      value={document.project_city || ''}
+                      onChange={(e) => onDocumentChange({ ...document, project_city: e.target.value })}
+                      placeholder="Ville"
+                      className="h-9"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {fields.surface !== false && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-sm">
+                    <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
+                    Surface (m²)
+                  </Label>
+                  <Input
+                    type="number"
+                    value={document.project_surface || ''}
+                    onChange={(e) => onDocumentChange({ ...document, project_surface: parseFloat(e.target.value) || undefined })}
+                    placeholder="0"
+                    className="h-9"
+                  />
+                </div>
+              )}
+
+              {fields.budget && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-sm">
+                    <Euro className="h-3.5 w-3.5 text-muted-foreground" />
+                    Budget global
+                  </Label>
+                  <Input
+                    type="number"
+                    value={document.project_budget || ''}
+                    onChange={(e) => onDocumentChange({ ...document, project_budget: parseFloat(e.target.value) || undefined })}
+                    placeholder="0"
+                    className="h-9"
                   />
                 </div>
               )}
             </div>
 
-            {fields.surface !== false && (
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm">
-                  <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
-                  Surface (m²)
-                </Label>
-                <Input
-                  type="number"
-                  value={document.project_surface || ''}
-                  onChange={(e) => onDocumentChange({ ...document, project_surface: parseFloat(e.target.value) || undefined })}
-                  placeholder="0"
-                  className="h-9 sm:h-10"
-                />
-              </div>
-            )}
-
-            {fields.budget && (
-              <div className="space-y-2">
+            {fields.construction_budget && (
+              <div className="space-y-2 pt-3 border-t">
                 <Label className="flex items-center gap-2 text-sm">
                   <Euro className="h-3.5 w-3.5 text-muted-foreground" />
-                  Budget global
+                  Budget travaux (base honoraires)
                 </Label>
                 <Input
                   type="number"
-                  value={document.project_budget || ''}
-                  onChange={(e) => onDocumentChange({ ...document, project_budget: parseFloat(e.target.value) || undefined })}
+                  value={document.construction_budget || ''}
+                  onChange={(e) => onDocumentChange({ ...document, construction_budget: parseFloat(e.target.value) || undefined })}
                   placeholder="0"
-                  className="h-9 sm:h-10"
+                  className="h-9"
                 />
+                {document.construction_budget && document.fee_percentage && (
+                  <p className="text-xs text-muted-foreground">
+                    Honoraires estimés : {formatCurrency(document.construction_budget * (document.fee_percentage / 100))}
+                  </p>
+                )}
               </div>
             )}
           </div>
-
-          {fields.construction_budget && (
-            <div className="space-y-2 pt-2 border-t">
-              <Label className="flex items-center gap-2 text-sm">
-                <Euro className="h-3.5 w-3.5 text-muted-foreground" />
-                Budget travaux (base honoraires)
-              </Label>
-              <Input
-                type="number"
-                value={document.construction_budget || ''}
-                onChange={(e) => onDocumentChange({ ...document, construction_budget: parseFloat(e.target.value) || undefined })}
-                placeholder="0"
-                className="h-9 sm:h-10"
-              />
-              {document.construction_budget && document.fee_percentage && (
-                <p className="text-xs text-muted-foreground">
-                  Honoraires estimés : {formatCurrency(document.construction_budget * (document.fee_percentage / 100))}
-                </p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        </section>
       )}
 
       {/* Dates prévisionnelles */}
-      <Card>
-        <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
-          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4" />
-            Dates prévisionnelles
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 sm:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      <section className="rounded-lg border bg-card">
+        <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
+          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Dates prévisionnelles</h3>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label className="text-sm">Date signature attendue</Label>
               <Popover>
@@ -503,7 +480,7 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full h-9 sm:h-10 justify-start text-left font-normal",
+                      "w-full h-9 justify-start text-left font-normal",
                       !document.expected_signature_date && "text-muted-foreground"
                     )}
                   >
@@ -534,7 +511,7 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full h-9 sm:h-10 justify-start text-left font-normal",
+                      "w-full h-9 justify-start text-left font-normal",
                       !document.expected_start_date && "text-muted-foreground"
                     )}
                   >
@@ -565,7 +542,7 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full h-9 sm:h-10 justify-start text-left font-normal",
+                      "w-full h-9 justify-start text-left font-normal",
                       !document.expected_end_date && "text-muted-foreground"
                     )}
                   >
@@ -589,27 +566,25 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
               </Popover>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Fee Mode - Only show if construction_budget field is active */}
       {fields.construction_budget && (
-        <Card>
-          <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
-            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              <Euro className="h-4 w-4" />
-              Mode de calcul des honoraires
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 sm:px-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <section className="rounded-lg border bg-card">
+          <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
+            <Euro className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-medium">Mode de calcul des honoraires</h3>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Mode</Label>
                 <Select
                   value={document.fee_mode || 'fixed'}
                   onValueChange={(v) => onDocumentChange({ ...document, fee_mode: v as any })}
                 >
-                  <SelectTrigger className="h-9 sm:h-10">
+                  <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -630,7 +605,7 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                     onChange={(e) => onDocumentChange({ ...document, fee_percentage: parseFloat(e.target.value) || undefined })}
                     placeholder="12"
                     step="0.5"
-                    className="h-9 sm:h-10"
+                    className="h-9"
                   />
                 </div>
               )}
@@ -643,13 +618,13 @@ export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, o
                     value={document.hourly_rate || ''}
                     onChange={(e) => onDocumentChange({ ...document, hourly_rate: parseFloat(e.target.value) || undefined })}
                     placeholder="85"
-                    className="h-9 sm:h-10"
+                    className="h-9"
                   />
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       )}
     </div>
   );
