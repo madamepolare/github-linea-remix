@@ -41,36 +41,70 @@ export function useTeamTimeEntries(filters?: TimeEntryFilters) {
     queryFn: async (): Promise<TeamTimeEntry[]> => {
       if (!activeWorkspace) return [];
 
-      let query = supabase
-        .from("team_time_entries")
-        .select(`
-          *,
-          project:projects(name),
-          task:tasks(title)
-        `)
-        .eq("workspace_id", activeWorkspace.id)
-        .order("date", { ascending: false });
+      const baseQuery = () => {
+        let q = supabase
+          .from("team_time_entries")
+          .select(`
+            *,
+            project:projects(name),
+            task:tasks(title, project_id)
+          `)
+          .eq("workspace_id", activeWorkspace.id)
+          .order("date", { ascending: false });
 
-      if (filters?.userId) {
-        query = query.eq("user_id", filters.userId);
-      }
-      if (filters?.projectId) {
-        query = query.eq("project_id", filters.projectId);
-      }
-      if (filters?.startDate) {
-        query = query.gte("date", filters.startDate);
-      }
-      if (filters?.endDate) {
-        query = query.lte("date", filters.endDate);
-      }
-      if (filters?.status) {
-        query = query.eq("status", filters.status);
+        if (filters?.userId) {
+          q = q.eq("user_id", filters.userId);
+        }
+        if (filters?.startDate) {
+          q = q.gte("date", filters.startDate);
+        }
+        if (filters?.endDate) {
+          q = q.lte("date", filters.endDate);
+        }
+        if (filters?.status) {
+          q = q.eq("status", filters.status);
+        }
+
+        return q;
+      };
+
+      // No project filter => unchanged behavior
+      if (!filters?.projectId) {
+        const { data, error } = await baseQuery();
+        if (error) throw error;
+        return (data || []) as TeamTimeEntry[];
       }
 
-      const { data, error } = await query;
+      const projectId = filters.projectId;
 
-      if (error) throw error;
-      return data as TeamTimeEntry[];
+      // Fetch task IDs for this project to include time entries linked via task_id
+      const { data: projectTasks, error: tasksError } = await supabase
+        .from("tasks")
+        .select("id")
+        .eq("project_id", projectId);
+
+      if (tasksError) throw tasksError;
+      const projectTaskIds = (projectTasks || []).map((t) => t.id);
+
+      // 1) Entries with direct project_id
+      const { data: directEntries, error: directError } = await baseQuery().eq("project_id", projectId);
+      if (directError) throw directError;
+
+      // 2) Entries linked via task_id
+      let taskLinkedEntries: any[] = [];
+      if (projectTaskIds.length > 0) {
+        const { data: taskEntries, error: taskError } = await baseQuery().in("task_id", projectTaskIds);
+        if (taskError) throw taskError;
+        taskLinkedEntries = taskEntries || [];
+      }
+
+      // Merge + dedupe
+      const map = new Map<string, TeamTimeEntry>();
+      [...(directEntries || []), ...taskLinkedEntries].forEach((e: any) => map.set(e.id, e));
+
+      return Array.from(map.values()).sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
     },
     enabled: !!activeWorkspace,
   });
