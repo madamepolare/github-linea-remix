@@ -3,7 +3,6 @@
 
 import { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { QuoteDocument, QuoteLine } from '@/types/quoteTypes';
 import { QuoteFeesTab } from './QuoteFeesTab';
 import { QuoteLinesEditor } from './QuoteLinesEditor';
@@ -106,22 +105,32 @@ export function QuoteFeesAndLinesTab({
 
       {/* Internal tabs for switching between the two modes */}
       <Tabs defaultValue="honoraires" className="w-full">
-        <TabsList className="w-full grid grid-cols-2 h-10">
-          <TabsTrigger value="honoraires" className="gap-2 text-sm">
-            <Calculator className="h-4 w-4" strokeWidth={1.25} />
-            <span className="hidden sm:inline">Honoraires %</span>
-            <span className="sm:hidden">Honoraires</span>
-            <Badge variant="secondary" className="text-xs ml-1">
-              {honorairesTotals.count}
-            </Badge>
+        <TabsList className="w-full h-9 p-0.5 bg-muted/50 rounded-lg">
+          <TabsTrigger 
+            value="honoraires" 
+            className="flex-1 h-8 gap-1.5 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md transition-all"
+          >
+            <Calculator className="h-3.5 w-3.5" strokeWidth={1.25} />
+            <span>Honoraires</span>
+            <span className="text-[10px] text-muted-foreground ml-0.5">
+              ({honorairesTotals.count})
+            </span>
+            <span className="hidden sm:inline text-[10px] font-normal text-muted-foreground border-l pl-1.5 ml-1">
+              {formatCurrency(honorairesTotals.total)}
+            </span>
           </TabsTrigger>
-          <TabsTrigger value="prestations" className="gap-2 text-sm">
-            <List className="h-4 w-4" strokeWidth={1.25} />
-            <span className="hidden sm:inline">Prestations forfaitaires</span>
-            <span className="sm:hidden">Prestations</span>
-            <Badge variant="secondary" className="text-xs ml-1">
-              {prestationsTotals.count}
-            </Badge>
+          <TabsTrigger 
+            value="prestations" 
+            className="flex-1 h-8 gap-1.5 text-xs font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md transition-all"
+          >
+            <List className="h-3.5 w-3.5" strokeWidth={1.25} />
+            <span>Prestations</span>
+            <span className="text-[10px] text-muted-foreground ml-0.5">
+              ({prestationsTotals.count})
+            </span>
+            <span className="hidden sm:inline text-[10px] font-normal text-muted-foreground border-l pl-1.5 ml-1">
+              {formatCurrency(prestationsTotals.total)}
+            </span>
           </TabsTrigger>
         </TabsList>
 
