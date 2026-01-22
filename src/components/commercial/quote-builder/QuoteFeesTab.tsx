@@ -22,6 +22,20 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Euro, 
   Percent, 
@@ -36,11 +50,16 @@ import {
   Copy,
   Eye,
   EyeOff,
-  Plus
+  Plus,
+  Download,
+  Sparkles,
+  Loader2,
+  Layers
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
 import { getDisciplineBySlug, DisciplinePhase, DISCIPLINE_CONFIGS } from '@/lib/disciplinesConfig';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -67,6 +86,10 @@ export function QuoteFeesTab({
 }: QuoteFeesTabProps) {
   const { templates } = usePhaseTemplates(document.project_type as any);
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false);
+  const [showAIDialog, setShowAIDialog] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
   
   // Get discipline-based phases as fallback
   const disciplinePhases = useMemo(() => {
@@ -212,6 +235,120 @@ export function QuoteFeesTab({
     setPhases([...phases, newPhase]);
   };
 
+  const handlePhaseCodeChange = (oldCode: string, newCode: string) => {
+    setPhases(prev => prev.map(p => 
+      p.code === oldCode ? { ...p, code: newCode } : p
+    ));
+  };
+
+  // Load phases from discipline template
+  const loadFromDisciplineTemplate = () => {
+    const templatePhases = disciplinePhases.map(p => ({
+      code: p.code,
+      name: p.name,
+      percentage: p.percentage || 0,
+      isIncluded: true,
+      amount: (totalFees * (p.percentage || 0)) / 100
+    }));
+    setPhases(templatePhases);
+    setShowTemplateDialog(false);
+    toast.success('Phases chargées depuis le template discipline');
+  };
+
+  // Load from phase templates configured in settings
+  const loadFromPhaseTemplates = () => {
+    const activeTemplates = templates.filter(t => t.is_active);
+    if (activeTemplates.length === 0) {
+      toast.error('Aucun template de phase actif');
+      return;
+    }
+    
+    const templatePhases = activeTemplates.map(t => ({
+      code: t.code,
+      name: t.name,
+      percentage: t.default_percentage || 0,
+      isIncluded: true,
+      amount: (totalFees * (t.default_percentage || 0)) / 100
+    }));
+    setPhases(templatePhases);
+    setShowTemplateDialog(false);
+    toast.success('Phases chargées depuis les templates');
+  };
+
+  // Generate phases with AI
+  const generateWithAI = async () => {
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-phase-templates', {
+        body: {
+          projectType: document.project_type || 'architecture',
+          projectTypeLabel: document.title || 'Projet',
+          discipline: document.project_type || 'architecture',
+          disciplineName: document.project_type || 'Architecture',
+          customPrompt: aiPrompt || undefined
+        }
+      });
+
+      if (error) {
+        if (error.message?.includes('429')) {
+          toast.error('Limite de requêtes dépassée, réessayez plus tard.');
+          return;
+        }
+        if (error.message?.includes('402')) {
+          toast.error('Crédits IA insuffisants.');
+          return;
+        }
+        throw error;
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Convert AI response to phases
+      const basePhases = (data.basePhases || []).map((p: any) => ({
+        code: p.code,
+        name: p.name,
+        percentage: p.default_percentage || 0,
+        isIncluded: true,
+        amount: (totalFees * (p.default_percentage || 0)) / 100
+      }));
+
+      const compPhases = (data.complementaryPhases || []).map((p: any) => ({
+        code: p.code,
+        name: p.name,
+        percentage: p.default_percentage || 0,
+        isIncluded: false, // Complementary phases are optional by default
+        amount: 0
+      }));
+
+      setPhases([...basePhases, ...compPhases]);
+      setShowAIDialog(false);
+      setAiPrompt('');
+      toast.success(`${basePhases.length} phases de base + ${compPhases.length} phases complémentaires générées`);
+    } catch (error) {
+      console.error('Error generating phases:', error);
+      toast.error('Erreur lors de la génération IA');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Get all available phase codes for dropdown
+  const availablePhaseCodes = useMemo(() => {
+    const disciplineCodes = disciplinePhases.map(p => ({ code: p.code, name: p.name }));
+    const templateCodes = templates.filter(t => t.is_active).map(t => ({ code: t.code, name: t.name }));
+    
+    // Merge and dedupe
+    const allCodes = [...disciplineCodes];
+    templateCodes.forEach(tc => {
+      if (!allCodes.find(c => c.code === tc.code)) {
+        allCodes.push(tc);
+      }
+    });
+    return allCodes;
+  }, [disciplinePhases, templates]);
+
   const includedPhases = phases.filter(p => p.isIncluded);
   const totalPercentage = includedPhases.reduce((sum, p) => sum + p.percentage, 0);
   const totalAmount = includedPhases.reduce((sum, p) => sum + p.amount, 0);
@@ -302,13 +439,13 @@ export function QuoteFeesTab({
         </Button>
       </div>
 
-      {/* Add phase button */}
+      {/* Action bar */}
       <div className="flex items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="sm" className="h-8 text-xs">
               <Plus className="h-3.5 w-3.5 mr-1.5" strokeWidth={1.25} />
-              Ajouter une phase
+              Ajouter
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56">
@@ -332,7 +469,134 @@ export function QuoteFeesTab({
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Load template button */}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 text-xs gap-1.5"
+          onClick={() => setShowTemplateDialog(true)}
+        >
+          <Download className="h-3.5 w-3.5" strokeWidth={1.25} />
+          Charger template
+        </Button>
+
+        {/* AI generation button */}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 text-xs gap-1.5"
+          onClick={() => setShowAIDialog(true)}
+        >
+          <Sparkles className="h-3.5 w-3.5" strokeWidth={1.25} />
+          Générer IA
+        </Button>
       </div>
+
+      {/* Template Dialog */}
+      <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="h-5 w-5" />
+              Charger un template de phases
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="grid gap-2">
+              <div
+                onClick={loadFromDisciplineTemplate}
+                className="p-3 border rounded-lg cursor-pointer transition-colors hover:bg-muted/50"
+              >
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-muted-foreground shrink-0" strokeWidth={1.25} />
+                  <span className="font-medium">Template discipline</span>
+                  <Badge variant="secondary" className="text-xs ml-auto">
+                    {disciplinePhases.length} phases
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1 ml-6">
+                  Phases standards pour {document.project_type || 'architecture'}
+                </p>
+              </div>
+
+              {templates.filter(t => t.is_active).length > 0 && (
+                <div
+                  onClick={loadFromPhaseTemplates}
+                  className="p-3 border rounded-lg cursor-pointer transition-colors hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="font-medium">Templates personnalisés</span>
+                    <Badge variant="secondary" className="text-xs ml-auto">
+                      {templates.filter(t => t.is_active).length} phases
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 ml-6">
+                    Phases configurées dans les paramètres
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Generation Dialog */}
+      <Dialog open={showAIDialog} onOpenChange={setShowAIDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Génération IA des phases
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label className="text-sm">Description du projet (optionnel)</Label>
+              <Textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="Ex: Rénovation d'un appartement haussmannien de 120m², création d'une cuisine ouverte..."
+                className="min-h-[100px] text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                L'IA génèrera des phases adaptées à votre projet. Laissez vide pour les phases standards.
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setShowAIDialog(false);
+                  setAiPrompt('');
+                }}
+              >
+                Annuler
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={generateWithAI}
+                disabled={isGenerating}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Génération...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Générer les phases
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Phases List - Same UI as QuoteLinesEditor */}
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -383,10 +647,33 @@ export function QuoteFeesTab({
                               </TooltipContent>
                             </Tooltip>
 
-                            {/* Phase code badge */}
-                            <Badge variant="outline" className="shrink-0 text-xs font-mono bg-muted/50 px-2">
-                              {phase.code}
-                            </Badge>
+                            {/* Phase code dropdown */}
+                            <Select 
+                              value={phase.code} 
+                              onValueChange={(newCode) => handlePhaseCodeChange(phase.code, newCode)}
+                            >
+                              <SelectTrigger className="h-8 w-[90px] shrink-0 text-xs font-mono bg-muted/50 border-muted">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {/* Current value always available */}
+                                {!availablePhaseCodes.find(c => c.code === phase.code) && (
+                                  <SelectItem value={phase.code}>
+                                    {phase.code}
+                                  </SelectItem>
+                                )}
+                                {availablePhaseCodes.map(c => (
+                                  <SelectItem key={c.code} value={c.code}>
+                                    <span className="font-mono">{c.code}</span>
+                                    <span className="text-muted-foreground ml-1.5">- {c.name}</span>
+                                  </SelectItem>
+                                ))}
+                                {/* Custom option */}
+                                <SelectItem value="__custom__" disabled className="text-muted-foreground">
+                                  — Personnalisé —
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
 
                             {/* Title */}
                             <div className="flex-1 min-w-0">
