@@ -16,9 +16,9 @@ import {
   XCircle,
   AlertCircle,
   Calendar,
-  TrendingUp,
-  TrendingDown,
-  Minus
+  Smile,
+  Meh,
+  Frown
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -115,26 +115,22 @@ export const CommercialListView = ({
     const margin = totalAmount - totalCost;
     const marginPercentage = (margin / totalAmount) * 100;
     
-    // Determine smiley and color based on margin percentage
-    let emoji: string;
+    // Determine icon and color based on margin percentage (like project view)
+    let Icon: typeof Smile;
     let color: string;
-    let Icon: typeof TrendingUp;
     
     if (marginPercentage < 0) {
-      emoji = '😞';
-      color = 'text-red-500';
-      Icon = TrendingDown;
+      Icon = Frown;
+      color = 'text-destructive';
     } else if (marginPercentage < 20) {
-      emoji = '😐';
+      Icon = Meh;
       color = 'text-amber-500';
-      Icon = Minus;
     } else {
-      emoji = '😊';
+      Icon = Smile;
       color = 'text-emerald-500';
-      Icon = TrendingUp;
     }
     
-    return { marginPercentage, emoji, color, Icon };
+    return { marginPercentage, Icon, color };
   }, []);
 
   // Handle send email for a single document
@@ -346,27 +342,29 @@ export const CommercialListView = ({
                         return (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="hidden lg:flex items-center gap-1.5 shrink-0 w-20">
-                                <span className="text-base">{profitability.emoji}</span>
-                                <div className={cn("flex items-center gap-0.5 text-xs font-medium", profitability.color)}>
-                                  <ProfitIcon className="h-3 w-3" />
+                              <button type="button" className="hidden lg:flex items-center gap-1.5 shrink-0 focus:outline-none">
+                                <ProfitIcon className={cn("h-5 w-5", profitability.color)} />
+                                <span className={cn("text-xs font-medium", profitability.color)}>
                                   {profitability.marginPercentage.toFixed(0)}%
-                                </div>
-                              </div>
+                                </span>
+                              </button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Rentabilité: {profitability.marginPercentage.toFixed(1)}%</p>
+                              <p>Marge: {profitability.marginPercentage.toFixed(1)}%</p>
                             </TooltipContent>
                           </Tooltip>
                         );
                       })()}
                     </div>
 
-                    {/* Amount */}
-                    <div className="text-right shrink-0 min-w-20">
+                    {/* Amount HT / TTC */}
+                    <div className="text-right shrink-0 min-w-28">
                       <span className="font-semibold text-sm tabular-nums">
-                        {formatCurrency(doc.total_amount || 0)}
+                        {formatCurrency(doc.total_amount || 0)} HT
                       </span>
+                      <div className="text-xs text-muted-foreground tabular-nums">
+                        {formatCurrency((doc.total_amount || 0) * (1 + (doc.vat_rate || 20) / 100))} TTC
+                      </div>
                       {/* Mobile: show status badge here */}
                       <div className="lg:hidden mt-0.5">
                         <Badge 
@@ -465,7 +463,18 @@ export const CommercialListView = ({
           defaultTo={selectedDocForEmail.client_contact?.email || selectedDocForEmail.client_company?.name}
           recipientName={selectedDocForEmail.client_contact?.name || selectedDocForEmail.client_company?.name}
           companyName={selectedDocForEmail.client_company?.name}
-          defaultSubject={`Devis ${selectedDocForEmail.document_number} - ${selectedDocForEmail.title}`}
+          defaultSubject={`Proposition commerciale - ${selectedDocForEmail.title}`}
+          defaultBody={`Bonjour${selectedDocForEmail.client_contact?.name ? ` ${selectedDocForEmail.client_contact.name}` : ''},
+
+Suite à notre échange, je vous prie de trouver ci-joint notre proposition commerciale pour le projet ${selectedDocForEmail.title}.
+
+Le montant total de notre proposition s'élève à ${formatCurrency(selectedDocForEmail.total_amount || 0)} HT.
+
+${selectedDocForEmail.valid_until ? `Ce devis est valable jusqu'au ${format(new Date(selectedDocForEmail.valid_until), 'dd MMMM yyyy', { locale: fr })}.` : ''}
+
+Je reste à votre disposition pour toute question.
+
+Bien cordialement,`}
           context={`Devis: ${selectedDocForEmail.title} (${formatCurrency(selectedDocForEmail.total_amount || 0)})`}
           onSuccess={() => {
             setEmailDialogOpen(false);
