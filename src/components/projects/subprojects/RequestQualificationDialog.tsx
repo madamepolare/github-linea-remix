@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, DollarSign, XCircle, Loader2, Package, Sparkles } from "lucide-react";
+import { CheckCircle, DollarSign, XCircle, Package, Sparkles } from "lucide-react";
+import { ButtonLoader } from "@/components/ui/patterns";
 import { cn } from "@/lib/utils";
 
 interface RequestQualificationDialogProps {
@@ -165,8 +166,8 @@ export function RequestQualificationDialog({
           <Button onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                En cours...
+                <ButtonLoader />
+                <span className="ml-2">En cours...</span>
               </>
             ) : (
               <>

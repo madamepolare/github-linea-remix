@@ -7,11 +7,11 @@ import {
   Link2, 
   Copy, 
   ExternalLink, 
-  Loader2,
   CheckCircle2,
   Globe,
   Sparkles
 } from 'lucide-react';
+import { ButtonLoader } from "@/components/ui/patterns";
 import { QuoteDocument } from '@/types/quoteTypes';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -116,8 +116,8 @@ export function QuoteSharingSettings({ document, onDocumentChange }: QuoteSharin
             >
               {isGeneratingLink ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Génération en cours...
+                  <ButtonLoader />
+                  <span className="ml-2">Génération en cours...</span>
                 </>
               ) : (
                 <>
