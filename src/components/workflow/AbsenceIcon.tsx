@@ -48,7 +48,7 @@ export function AbsenceIcon({ type, size = 20, className }: AbsenceIconProps) {
     <Icon 
       size={size} 
       className={`${colorClass} ${className || ""}`}
-      strokeWidth={1.5}
+      strokeWidth={1.25}
     />
   );
 }

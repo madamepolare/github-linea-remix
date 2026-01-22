@@ -62,7 +62,7 @@ export function ContactStatsCards({ leads, emailsCount = 0, tasksCount = 0 }: Co
         <Card key={stat.label}>
           <CardContent className="p-4 flex items-center gap-3">
             <div className={`h-10 w-10 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
-              <stat.icon className={`h-5 w-5 ${stat.color}`} strokeWidth={1.5} />
+              <stat.icon className={`h-5 w-5 ${stat.color}`} strokeWidth={1.25} />
             </div>
             <div>
               <p className="text-xl font-bold">{stat.value}</p>
