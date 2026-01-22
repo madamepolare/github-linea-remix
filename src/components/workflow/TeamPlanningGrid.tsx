@@ -1304,8 +1304,32 @@ function DayCell({
   }, [items]);
   
   const hasAbsence = !!absenceItem;
-  const absenceType = hasAbsence ? (absenceItem.originalData as TeamAbsence)?.absence_type : null;
+  const absenceData = hasAbsence ? (absenceItem.originalData as TeamAbsence) : null;
+  const absenceType = absenceData?.absence_type ?? null;
   const absenceLabel = hasAbsence ? absenceItem.title : null;
+  
+  // Télétravail is not a blocking absence - allow time entries
+  const isTeletravail = absenceType === 'teletravail';
+  const isBlockingAbsence = hasAbsence && !isTeletravail;
+  
+  // Check for half-day absences
+  const isStartHalfDay = absenceData?.start_half_day ?? false;
+  const isEndHalfDay = absenceData?.end_half_day ?? false;
+  const startDate = absenceData?.start_date ? parseISO(absenceData.start_date) : null;
+  const endDate = absenceData?.end_date ? parseISO(absenceData.end_date) : null;
+  
+  // Determine if this specific day is a half-day
+  const isHalfDayAbsence = useMemo(() => {
+    if (!hasAbsence || !startDate || !endDate) return null;
+    const isStartDay = isSameDay(day, startDate);
+    const isEndDay = isSameDay(day, endDate);
+    
+    // If it's the start day and start_half_day is true, it's an afternoon absence
+    if (isStartDay && isStartHalfDay) return 'afternoon';
+    // If it's the end day and end_half_day is true, it's a morning absence
+    if (isEndDay && isEndHalfDay) return 'morning';
+    return null;
+  }, [hasAbsence, startDate, endDate, day, isStartHalfDay, isEndHalfDay]);
 
   const getOccupancyColor = (rate: number) => {
     if (rate === 0) return "";
@@ -1343,10 +1367,10 @@ function DayCell({
           "relative border-r p-1 flex flex-col transition-all duration-200 ease-out select-none",
           isWeekend && "bg-muted/20",
           isToday && "bg-primary/5 ring-1 ring-inset ring-primary/20",
-          !hasAbsence && occupancy > 0 && getOccupancyBg(occupancy),
+          !isBlockingAbsence && occupancy > 0 && getOccupancyBg(occupancy),
           isDragOver && "bg-primary/15 ring-2 ring-inset ring-primary/50 shadow-lg scale-[1.02]",
           isInSelection && "bg-primary/20 ring-2 ring-inset ring-primary/40",
-          hasAbsence && "bg-muted/40"
+          isBlockingAbsence && !isHalfDayAbsence && "bg-muted/40"
         )}
         style={{ width: cellWidth }}
         onDragOver={(e) => onDragOver(e, cellKey)}
@@ -1362,8 +1386,27 @@ function DayCell({
         onMouseEnter={() => onCellMouseEnter?.(day, member)}
         onMouseUp={() => onCellMouseUp?.()}
       >
-        {/* Absence overlay with icon */}
-        {hasAbsence && absenceType && (
+        {/* Télétravail indicator - small home icon at top */}
+        {isTeletravail && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="absolute top-1 right-1 z-20">
+                <div className="bg-blue-100 dark:bg-blue-900/40 rounded p-0.5">
+                  <svg className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                  </svg>
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Télétravail
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* Full-day blocking absence overlay with icon */}
+        {isBlockingAbsence && absenceType && !isHalfDayAbsence && (
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="absolute inset-0 flex items-center justify-center z-10 cursor-default">
@@ -1378,10 +1421,50 @@ function DayCell({
           </Tooltip>
         )}
 
-        {/* Diagonal stripes pattern for absence */}
-        {hasAbsence && (
+        {/* Half-day absence overlay - only covers half the cell */}
+        {isBlockingAbsence && absenceType && isHalfDayAbsence && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div 
+                className={cn(
+                  "absolute left-0 right-0 flex items-center justify-center z-10 cursor-default bg-muted/50",
+                  isHalfDayAbsence === 'morning' ? "top-0 h-1/2 border-b border-border/30" : "bottom-0 h-1/2 border-t border-border/30"
+                )}
+              >
+                <div className="bg-background/90 rounded-full p-1.5 shadow-sm">
+                  <AbsenceIcon type={absenceType} size={18} />
+                </div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              {absenceLabel} ({isHalfDayAbsence === 'morning' ? 'Matin' : 'Après-midi'})
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* Diagonal stripes pattern for full-day blocking absence */}
+        {isBlockingAbsence && !isHalfDayAbsence && (
           <div 
             className="absolute inset-0 pointer-events-none opacity-10"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 4px,
+                currentColor 4px,
+                currentColor 5px
+              )`
+            }}
+          />
+        )}
+
+        {/* Diagonal stripes for half-day absence (only half) */}
+        {isBlockingAbsence && isHalfDayAbsence && (
+          <div 
+            className={cn(
+              "absolute left-0 right-0 pointer-events-none opacity-10",
+              isHalfDayAbsence === 'morning' ? "top-0 h-1/2" : "bottom-0 h-1/2"
+            )}
             style={{
               backgroundImage: `repeating-linear-gradient(
                 45deg,
@@ -1397,7 +1480,7 @@ function DayCell({
         {/* Items planifiés (excluding absence items which are shown as overlay) */}
         <div className={cn(
           "flex-1 space-y-0.5 overflow-hidden pointer-events-auto",
-          hasAbsence && "opacity-40"
+          isBlockingAbsence && !isHalfDayAbsence && "opacity-40"
         )}>
           {nonAbsenceItems.slice(0, 5).map(item => (
             <ResizablePlanningItem
@@ -1427,7 +1510,7 @@ function DayCell({
           data-cell-background
           className={cn(
             "absolute inset-0 cursor-pointer transition-colors -z-0",
-            !isInSelection && !hasAbsence && "hover:bg-accent/30"
+            !isInSelection && !isBlockingAbsence && "hover:bg-accent/30"
           )}
         />
 
@@ -1448,7 +1531,7 @@ function DayCell({
         )}
 
         {/* Taux d'occupation */}
-        {occupancy > 0 && !isDragOver && !hasAbsence && (
+        {occupancy > 0 && !isDragOver && !isBlockingAbsence && (
           <div className={cn(
             "text-[10px] font-semibold text-center mt-auto opacity-80 pointer-events-none z-10",
             getOccupancyColor(occupancy)
