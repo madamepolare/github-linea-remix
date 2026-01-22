@@ -14,7 +14,6 @@ import { PlanSettings } from "@/components/settings/PlanSettings";
 import { ModulesSettings } from "@/components/settings/ModulesSettings";
 import { EmailTemplatesSettings } from "@/components/settings/EmailTemplatesSettings";
 import { FeedbackSettings } from "@/components/settings/FeedbackSettings";
-import { StyleSettings } from "@/components/settings/StyleSettings";
 import { DesignSystemSettings } from "@/components/settings/design-system";
 
 import { DisciplineSettings } from "@/components/settings/DisciplineSettings";
@@ -48,8 +47,6 @@ export default function Settings() {
         return <WorkspaceSettings />;
       case "discipline":
         return <DisciplineSettings />;
-      case "style":
-        return <StyleSettings />;
       case "design-system":
         return <DesignSystemSettings />;
       case "modules":

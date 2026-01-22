@@ -68,9 +68,9 @@ export function getSettingsGroups(t: (key: string) => string): SettingsGroup[] {
       sections: [
         { id: 'workspace', label: t('settings.sections.workspace'), icon: <Building2 className="h-4 w-4" />, description: t('settings.sections.workspaceDesc') },
         { id: 'discipline', label: t('settings.sections.discipline'), icon: <Compass className="h-4 w-4" />, description: t('settings.sections.disciplineDesc') },
-        { id: 'style', label: t('settings.sections.style'), icon: <Palette className="h-4 w-4" />, description: t('settings.sections.styleDesc') },
-        { id: 'design-system', label: 'Design System', icon: <Layers className="h-4 w-4" />, description: 'Catalogue des composants et tokens visuels', badge: 'Dev' },
+        { id: 'design-system', label: 'Design System', icon: <Layers className="h-4 w-4" />, description: 'Thème, polices et tokens visuels' },
         { id: 'modules', label: t('settings.sections.modules'), icon: <Puzzle className="h-4 w-4" />, description: t('settings.sections.modulesDesc') },
+        { id: 'plan', label: t('settings.sections.plan'), icon: <CreditCard className="h-4 w-4" />, description: t('settings.sections.planDesc') },
         { id: 'plan', label: t('settings.sections.plan'), icon: <CreditCard className="h-4 w-4" />, description: t('settings.sections.planDesc') },
       ],
     },
