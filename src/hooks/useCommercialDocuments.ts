@@ -100,13 +100,15 @@ export const useCommercialDocuments = () => {
           client_company:crm_companies(id, name, logo_url),
           client_contact:contacts!commercial_documents_client_contact_id_fkey(id, name, email),
           billing_contact:contacts!commercial_documents_billing_contact_id_fkey(id, name, email),
-          project:projects!commercial_documents_project_id_fkey(id, name)
+          project:projects!commercial_documents_project_id_fkey(id, name),
+          phases:commercial_document_phases(id, amount, purchase_price, is_included)
         `)
         .eq('workspace_id', activeWorkspace.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as CommercialDocument[];
+      // Cast with unknown for partial phases data in list view
+      return data as unknown as CommercialDocument[];
     },
     enabled: !!activeWorkspace?.id
   });

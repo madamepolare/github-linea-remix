@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   MoreVertical, 
@@ -15,7 +15,10 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Calendar
+  Calendar,
+  TrendingUp,
+  TrendingDown,
+  Minus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -24,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +42,7 @@ import {
 import { useTableSelection } from '@/hooks/useTableSelection';
 import { BulkActionsBar, type BulkAction } from '@/components/shared/BulkActionsBar';
 import { cn } from '@/lib/utils';
+import { UnifiedEmailDialog } from '@/components/emails/UnifiedEmailDialog';
 
 interface CommercialListViewProps {
   documents: CommercialDocument[];
@@ -66,6 +71,10 @@ export const CommercialListView = ({
 }: CommercialListViewProps) => {
   const navigate = useNavigate();
   
+  // Email dialog state
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [selectedDocForEmail, setSelectedDocForEmail] = useState<CommercialDocument | null>(null);
+  
   // Use shared selection hook
   const {
     selectedIds,
@@ -88,6 +97,52 @@ export const CommercialListView = ({
       maximumFractionDigits: 0 
     }).format(value);
   };
+
+  // Calculate profitability from phases
+  const getProfitability = useCallback((doc: CommercialDocument) => {
+    // Phases in list view have partial data (id, amount, purchase_price, is_included)
+    const phases = (doc.phases as unknown) as Array<{ id: string; amount: number; purchase_price: number | null; is_included: boolean }> | undefined;
+    if (!phases || phases.length === 0) {
+      return null;
+    }
+
+    const includedPhases = phases.filter(p => p.is_included !== false);
+    const totalAmount = includedPhases.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const totalCost = includedPhases.reduce((sum, p) => sum + (p.purchase_price || 0), 0);
+    
+    if (totalAmount === 0) return null;
+    
+    const margin = totalAmount - totalCost;
+    const marginPercentage = (margin / totalAmount) * 100;
+    
+    // Determine smiley and color based on margin percentage
+    let emoji: string;
+    let color: string;
+    let Icon: typeof TrendingUp;
+    
+    if (marginPercentage < 0) {
+      emoji = '😞';
+      color = 'text-red-500';
+      Icon = TrendingDown;
+    } else if (marginPercentage < 20) {
+      emoji = '😐';
+      color = 'text-amber-500';
+      Icon = Minus;
+    } else {
+      emoji = '😊';
+      color = 'text-emerald-500';
+      Icon = TrendingUp;
+    }
+    
+    return { marginPercentage, emoji, color, Icon };
+  }, []);
+
+  // Handle send email for a single document
+  const handleSendEmail = useCallback((doc: CommercialDocument, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedDocForEmail(doc);
+    setEmailDialogOpen(true);
+  }, []);
 
   // Calculate totals
   const totals = useMemo(() => ({
@@ -171,6 +226,7 @@ export const CommercialListView = ({
   }
 
   return (
+    <TooltipProvider>
     <div className="space-y-3">
       {/* Header with totals */}
       <div className="flex items-center justify-between">
@@ -281,6 +337,29 @@ export const CommercialListView = ({
                         <Calendar className="h-3.5 w-3.5" />
                         {format(new Date(doc.created_at), 'dd MMM yyyy', { locale: fr })}
                       </div>
+
+                      {/* Profitability */}
+                      {(() => {
+                        const profitability = getProfitability(doc);
+                        if (!profitability) return null;
+                        const ProfitIcon = profitability.Icon;
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="hidden lg:flex items-center gap-1.5 shrink-0 w-20">
+                                <span className="text-base">{profitability.emoji}</span>
+                                <div className={cn("flex items-center gap-0.5 text-xs font-medium", profitability.color)}>
+                                  <ProfitIcon className="h-3 w-3" />
+                                  {profitability.marginPercentage.toFixed(0)}%
+                                </div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Rentabilité: {profitability.marginPercentage.toFixed(1)}%</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      })()}
                     </div>
 
                     {/* Amount */}
@@ -298,6 +377,23 @@ export const CommercialListView = ({
                         </Badge>
                       </div>
                     </div>
+
+                    {/* Send Email Button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => handleSendEmail(doc, e)}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Envoyer par email</p>
+                      </TooltipContent>
+                    </Tooltip>
 
                     {/* Actions */}
                     <div onClick={(e) => e.stopPropagation()}>
@@ -358,6 +454,26 @@ export const CommercialListView = ({
         onClearSelection={clearSelection}
         actions={bulkActions}
       />
+
+      {/* Email Dialog */}
+      {selectedDocForEmail && (
+        <UnifiedEmailDialog
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+          entityType={selectedDocForEmail.client_contact_id ? "contact" : "company"}
+          entityId={selectedDocForEmail.client_contact_id || selectedDocForEmail.client_company_id || ""}
+          defaultTo={selectedDocForEmail.client_contact?.email || selectedDocForEmail.client_company?.name}
+          recipientName={selectedDocForEmail.client_contact?.name || selectedDocForEmail.client_company?.name}
+          companyName={selectedDocForEmail.client_company?.name}
+          defaultSubject={`Devis ${selectedDocForEmail.document_number} - ${selectedDocForEmail.title}`}
+          context={`Devis: ${selectedDocForEmail.title} (${formatCurrency(selectedDocForEmail.total_amount || 0)})`}
+          onSuccess={() => {
+            setEmailDialogOpen(false);
+            setSelectedDocForEmail(null);
+          }}
+        />
+      )}
     </div>
+    </TooltipProvider>
   );
 };
