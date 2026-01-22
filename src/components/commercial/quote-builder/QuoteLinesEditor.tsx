@@ -97,7 +97,19 @@ export function QuoteLinesEditor({
   // Get all groups
   const groups = lines.filter(l => l.line_type === 'group');
   const getGroupLines = (groupId: string) => lines.filter(l => l.group_id === groupId && l.line_type !== 'group');
-  const ungroupedLines = lines.filter(l => !l.group_id && l.line_type !== 'group');
+  
+  // Sort ungrouped lines by phase_code to auto-group lines with same phase
+  const ungroupedLines = lines
+    .filter(l => !l.group_id && l.line_type !== 'group')
+    .sort((a, b) => {
+      // Lines with phase_code come first, grouped together
+      const aCode = a.phase_code || 'zzz'; // Lines without code go to end
+      const bCode = b.phase_code || 'zzz';
+      if (aCode !== bCode) return aCode.localeCompare(bCode);
+      // Within same phase_code, maintain sort_order
+      return (a.sort_order || 0) - (b.sort_order || 0);
+    });
+  
   const getGroupSubtotal = (groupId: string) => {
     return getGroupLines(groupId).filter(l => l.is_included && l.line_type !== 'discount').reduce((sum, l) => sum + (l.amount || 0), 0);
   };
@@ -463,6 +475,10 @@ export function QuoteLinesEditor({
               Nouveau groupe
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => addLine('phase')}>
+              <Target className="h-4 w-4 mr-2" strokeWidth={1.25} />
+              Phase
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => addLine('service')}>
               <Package className="h-4 w-4 mr-2" strokeWidth={1.25} />
               Ligne libre
