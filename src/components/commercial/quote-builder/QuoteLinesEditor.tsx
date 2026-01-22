@@ -140,7 +140,8 @@ export function QuoteLinesEditor({
     [percentageLines]
   );
 
-  const totalPercentage = useMemo(() => 
+  // Sum of percentage_fee values (represents % of total fees, not % of budget)
+  const totalPercentageFee = useMemo(() => 
     percentageLines.filter(l => l.is_included).reduce((sum, l) => sum + (l.percentage_fee || 0), 0),
     [percentageLines]
   );
@@ -152,6 +153,12 @@ export function QuoteLinesEditor({
   const constructionBudget = document.construction_budget || 0;
   const feePercentage = document.fee_percentage || 12;
   const totalFees = useMemo(() => (constructionBudget * feePercentage) / 100, [constructionBudget, feePercentage]);
+  
+  // Calculate actual percentage of budget that percentageTotal represents
+  const actualBudgetPercentage = useMemo(() => {
+    if (constructionBudget === 0) return 0;
+    return (percentageTotal / constructionBudget) * 100;
+  }, [percentageTotal, constructionBudget]);
 
   // Auto-recalculate amounts for percentage-based lines when budget/fee changes
   useEffect(() => {
@@ -575,7 +582,7 @@ export function QuoteLinesEditor({
               </span>
             </div>
             <span className="text-xs text-muted-foreground">
-              ({totalPercentage.toFixed(1)}%)
+              ({actualBudgetPercentage.toFixed(1)}% du budget)
             </span>
           </div>
 
@@ -1012,7 +1019,7 @@ export function QuoteLinesEditor({
                   </div>
                   <div className="flex-1 h-px bg-blue-200" />
                   <Badge variant="secondary" className="bg-blue-50 text-blue-700 text-[10px]">
-                    {totalPercentage.toFixed(1)}%
+                    {totalPercentageFee.toFixed(1)}% des honoraires
                   </Badge>
                   <span className="text-xs font-semibold text-blue-700 tabular-nums">
                     {formatCurrency(percentageTotal)}
