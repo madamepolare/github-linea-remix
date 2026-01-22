@@ -216,47 +216,42 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     const content = (
       <div
         className={cn(
-          "relative flex items-center gap-3 px-2 py-2 text-sm transition-all duration-200",
+          "relative flex items-center gap-2 px-1 py-1 text-sm transition-all duration-150",
           "cursor-pointer select-none",
           collapsed ? "justify-center" : "",
           active
-            ? "text-foreground font-semibold"
-            : "text-foreground/70 font-medium hover:text-foreground"
+            ? "text-foreground font-medium"
+            : "text-foreground font-normal hover:text-foreground"
         )}
       >
         {/* Icon with background for active state */}
         <div
           className={cn(
-            "flex items-center justify-center rounded-lg transition-all duration-200",
-            collapsed ? "h-10 w-10" : "h-8 w-8",
+            "flex items-center justify-center rounded-md transition-all duration-150",
+            collapsed ? "h-9 w-9" : "h-7 w-7",
             active
-              ? "bg-foreground text-background shadow-sm"
-              : "text-foreground/60 hover:bg-muted/60"
+              ? "bg-foreground text-background"
+              : "text-foreground hover:bg-foreground/5"
           )}
         >
           <item.icon
             className={cn(
-              "shrink-0 transition-colors",
-              collapsed ? "h-5 w-5" : "h-[18px] w-[18px]"
+              "shrink-0",
+              collapsed ? "h-[18px] w-[18px]" : "h-4 w-4"
             )}
-            strokeWidth={1.5}
+            strokeWidth={1.25}
           />
         </div>
 
         {!collapsed && (
-          <span className="flex-1 truncate text-left">
+          <span className="flex-1 truncate text-left text-foreground">
             {item.title}
           </span>
         )}
 
         {/* Extension indicator */}
         {!collapsed && item.isExtension && (
-          <span className={cn(
-            "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
-            active 
-              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" 
-              : "bg-muted text-muted-foreground"
-          )}>
+          <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground font-medium">
             Ext
           </span>
         )}
